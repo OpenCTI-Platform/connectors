@@ -1,0 +1,42 @@
+{
+	"name": "MITRE ATT&CK",
+	"description": "Import data from MITRE ATT&CK",
+	"fields": {
+		"entities": {
+			"type": "select",
+			"multiple": true,
+			"description": "Entities to be synchronized",
+			"default": [],
+			"options": [
+				{
+					"label": "Attack patterns",
+					"key": "attack-pattern"
+				},
+				{
+					"label": "Courses of action",
+					"key": "course-of-action"
+				},
+				{
+					"label": "Intrusion sets",
+					"key": "intrusion-set"
+				},
+				{
+					"label": "Malwares",
+					"key": "malware"
+				}
+			]
+		},
+		"cron": {
+			"type": "select",
+			"multiple": false,
+			"description": "Synchronization scheduling",
+			"default": "daily",
+			"options": [
+				{
+					"label": "Daily",
+					"key": "daily"
+				}
+			]
+		}
+	}
+}
