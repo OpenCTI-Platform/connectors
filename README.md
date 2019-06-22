@@ -8,9 +8,7 @@ The following repository is used to store the OpenCTI connectors for the platfor
 
 ## License
 
-**Unless specified otherwise**, connectors are released under the [AGPL](https://github.com/OpenCTI-Platform/connectors/blob/master/LICENSE) (Affero General Public License).
-
-If a connector is released by its author under a different license, the subfolder corresponding to it will contain a *LICENSE* file.
+**Unless specified otherwise**, connectors are released under the [AGPL](https://github.com/OpenCTI-Platform/connectors/blob/master/LICENSE) (Affero General Public License). If a connector is released by its author under a different license, the subfolder corresponding to it will contain a *LICENSE* file.
 
 ## Contributing
 
