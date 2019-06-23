@@ -26,6 +26,11 @@
 				}
 			]
 		},
+		"enterprise_file_url": {
+			"type": "text",
+			"description": "Enterprise ATT&CK URL",
+			"default": "https://github.com/mitre/cti/blob/master/enterprise-attack/enterprise-attack.json?raw=true"
+		},
 		"cron": {
 			"type": "select",
 			"multiple": false,

@@ -5,9 +5,6 @@ import shutil
 import urllib3
 from pycti import OpenCTI
 
-URL_ENTERPRISE_ATTACK = 'https://github.com/mitre/cti/blob/master/enterprise-attack/enterprise-attack.json?raw=true'
-
-
 class Mitre:
     def __init__(self, config):
         # Initialize config
@@ -29,7 +26,7 @@ class Mitre:
 
     def run(self):
         http = urllib3.PoolManager()
-        with http.request('GET', URL_ENTERPRISE_ATTACK, preload_content=False) as r, open('./enterprise.json', 'wb') as out_file:
+        with http.request('GET', self.config['mitre']['enterprise_file_url'], preload_content=False) as r, open('./enterprise.json', 'wb') as out_file:
             shutil.copyfileobj(r, out_file)
 
         self.opencti.stix2_import_bundle_from_file('./enterprise.json', False, self.config['mitre']['entities'])
