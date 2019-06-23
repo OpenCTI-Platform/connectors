@@ -34,7 +34,7 @@
 				}
 			]
 		},
-		"enable": {
+		"active": {
 			"type": "switch",
 			"description": "Enable synchronization",
 			"default": false

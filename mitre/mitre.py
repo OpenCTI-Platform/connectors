@@ -33,3 +33,4 @@ class Mitre:
             shutil.copyfileobj(r, out_file)
 
         self.opencti.stix2_import_bundle_from_file('./enterprise.json', False, self.config['mitre']['entities'])
+        os.remove('./enterprise.json')
