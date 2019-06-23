@@ -26,11 +26,14 @@ class Misp:
             True
         )
 
+    def set_config(self, config):
+        self.config = config
+
     def get_config(self):
         return self.config['misp']
 
     def run(self):
-        result = self.misp.search('events', tags=['OpenCTI: Import'])
+        result = self.misp.search('events', tags=[self.config['misp']['tag']])
 
         for event in result['response']:
             # Default values
@@ -72,7 +75,7 @@ class Misp:
                     self.process_attribute(report_id, author_id, event_threats, event_markings, attribute)
 
             self.misp.tag(event['Event']['uuid'], 'OpenCTI: Imported')
-            self.misp.untag(event['Event']['uuid'], 'OpenCTI: Import')
+            self.misp.untag(event['Event']['uuid'], self.config['misp']['tag'])
 
     def process_attribute(self, report_id, author_id, event_threats, event_markings, attribute):
         type = self.resolve_type(attribute['type'])

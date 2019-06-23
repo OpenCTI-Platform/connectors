@@ -33,6 +33,11 @@
 					"key": "realtime"
 				}
 			]
+		},
+		"enable": {
+			"type": "switch",
+			"description": "Enable synchronization",
+			"default": false
 		}
 	}
 }
