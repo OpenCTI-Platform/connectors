@@ -37,8 +37,11 @@ class Misp:
 
         for event in result['response']:
             # Default values
-            author_id = self.opencti.create_identity_if_not_exists('Organization', event['Event']['Orgc']['name'], '')[
-                'id']
+            author_id = self.opencti.create_identity_if_not_exists(
+                'Organization',
+                event['Event']['Orgc']['name'],
+                ''
+            )['id']
             event_threats = self.prepare_threats(event['Event']['Galaxy'])
             event_markings = self.resolve_markings(event['Event']['Tag'])
 

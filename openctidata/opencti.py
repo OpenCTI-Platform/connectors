@@ -6,7 +6,7 @@ import urllib.request
 from pycti import OpenCTI
 
 
-class Opencti:
+class Openctidata:
     def __init__(self, config):
         # Initialize config
         self.config = config
