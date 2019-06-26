@@ -29,5 +29,5 @@ class Mitre:
         with http.request('GET', self.config['mitre']['enterprise_file_url'], preload_content=False) as r, open('./enterprise.json', 'wb') as out_file:
             shutil.copyfileobj(r, out_file)
 
-        self.opencti.stix2_import_bundle_from_file('./enterprise.json', False, self.config['mitre']['entities'])
+        self.opencti.stix2_import_bundle_from_file('./enterprise.json', True, self.config['mitre']['entities'])
         os.remove('./enterprise.json')

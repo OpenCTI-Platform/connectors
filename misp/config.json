@@ -1,6 +1,6 @@
 {
 	"name": "MISP",
-	"description": "Import data from a MISP instance",
+	"description": "Import data from a MISP instance.",
 	"fields": {
 		"name": {
 			"type": "text",
@@ -29,7 +29,7 @@
 			"default": "realtime",
 			"options": [
 				{
-					"label": "Real time",
+					"label": "Real time (5 min)",
 					"key": "realtime"
 				}
 			]

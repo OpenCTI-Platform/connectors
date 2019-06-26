@@ -1,6 +1,6 @@
 {
 	"name": "MITRE ATT&CK",
-	"description": "Import data from MITRE ATT&CK",
+	"description": "Import data from MITRE ATT&CK.",
 	"fields": {
 		"entities": {
 			"type": "select",
@@ -23,23 +23,27 @@
 				{
 					"label": "Malwares",
 					"key": "malware"
+				},
+				{
+					"label": "Tools",
+					"key": "tool"
 				}
 			]
 		},
 		"enterprise_file_url": {
 			"type": "text",
 			"description": "Enterprise ATT&CK URL",
-			"default": "https://github.com/mitre/cti/blob/master/enterprise-attack/enterprise-attack.json?raw=true"
+			"default": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 		},
 		"cron": {
 			"type": "select",
 			"multiple": false,
 			"description": "Synchronization scheduling",
-			"default": "daily",
+			"default": "weekly",
 			"options": [
 				{
-					"label": "Daily",
-					"key": "daily"
+					"label": "Weekly",
+					"key": "weekly"
 				}
 			]
 		},

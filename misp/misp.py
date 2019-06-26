@@ -151,9 +151,40 @@ class Misp:
         for galaxy in galaxies:
             if galaxy['name'] == 'Intrusion Set':
                 for galaxy_entity in galaxy['GalaxyCluster']:
-                    threats.append({'type': 'Intrusion-Set', 'id':
-                        self.opencti.create_intrusion_set_if_not_exists(galaxy_entity['value'],
-                                                                        galaxy_entity['description'])['id']})
+                    threats.append({
+                        'type': 'Intrusion-Set',
+                        'id': self.opencti.create_intrusion_set_if_not_exists(
+                            galaxy_entity['value'],
+                            galaxy_entity['description']
+                        )['id']
+                    })
+            if galaxy['name'] == 'Threat Actor':
+                for galaxy_entity in galaxy['GalaxyCluster']:
+                    threats.append({
+                        'type': 'Intrusion-Set',
+                        'id': self.opencti.create_intrusion_set_if_not_exists(
+                            galaxy_entity['value'],
+                            galaxy_entity['description']
+                        )['id']
+                    })
+            if galaxy['name'] == 'Malware':
+                for galaxy_entity in galaxy['GalaxyCluster']:
+                    threats.append({
+                        'type': 'Malware',
+                        'id': self.opencti.create_malware_if_not_exists(
+                            galaxy_entity['value'],
+                            galaxy_entity['description']
+                        )['id']
+                    })
+            if galaxy['name'] == 'Tool':
+                for galaxy_entity in galaxy['GalaxyCluster']:
+                    threats.append({
+                        'type': 'Tool',
+                        'id': self.opencti.create_tool_if_not_exists(
+                            galaxy_entity['value'],
+                            galaxy_entity['description']
+                        )['id']
+                    })
         return threats
 
     def resolve_type(self, type):
