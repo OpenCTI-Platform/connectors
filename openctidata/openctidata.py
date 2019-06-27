@@ -3,6 +3,7 @@
 import os
 import json
 import urllib.request
+import datetime
 from pycti import OpenCTI
 
 
@@ -59,4 +60,15 @@ class Openctidata:
                         subsector_id,
                         'description',
                         subsector['description']
+                    )
+                    self.opencti.create_relation_if_not_exists(
+                        sector_id,
+                        'sector',
+                        subsector_id,
+                        'sector',
+                        'gathering',
+                        'Subsector from OpenCTI connector',
+                        datetime.datetime.utcnow().replace(microsecond=0, tzinfo=datetime.timezone.utc).isoformat(),
+                        datetime.datetime.utcnow().replace(microsecond=0, tzinfo=datetime.timezone.utc).isoformat(),
+                        5
                     )

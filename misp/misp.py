@@ -81,7 +81,7 @@ class Misp:
             self.misp.untag(event['Event']['uuid'], self.config['misp']['tag'])
 
     def process_attribute(self, report_id, author_id, event_threats, event_markings, attribute):
-        type = self.resolve_type(attribute['type'])
+        type = self.resolve_type(attribute['type'], attribute['value'])
         if type is not None:
             # Default values
             attribute_threats = self.prepare_threats(attribute['Galaxy'])
@@ -190,7 +190,7 @@ class Misp:
                     })
         return threats
 
-    def resolve_type(self, type):
+    def resolve_type(self, type, value):
         types = {
             'ip-src': 'IPv4-Addr',
             'ip-dst': 'IPv4-Addr',
@@ -202,7 +202,11 @@ class Misp:
             'sha256': 'File-SHA256'
         }
         if type in types:
-            return types[type]
+            resolved_type = types[type]
+            if resolved_type == 'IPv4-Addr' and len(value) > 16:
+                return 'IPv6-Addr'
+            else:
+                return resolved_type
         else:
             return None
 
