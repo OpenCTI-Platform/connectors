@@ -68,7 +68,7 @@ class Openctidata:
                         'sector',
                         'gathering',
                         'Subsector from OpenCTI connector',
-                        datetime.datetime.utcnow().replace(microsecond=0, tzinfo=datetime.timezone.utc).isoformat(),
-                        datetime.datetime.utcnow().replace(microsecond=0, tzinfo=datetime.timezone.utc).isoformat(),
+                        '1900-01-01T00:00:00.000Z',
+                        '1900-01-01T00:00:00.000Z',
                         5
                     )
