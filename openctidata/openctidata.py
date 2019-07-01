@@ -61,6 +61,11 @@ class Openctidata:
                         'description',
                         subsector['description']
                     )
+                    # Temporary for fixing multiple relations of previous version
+                    old_relations = self.opencti.get_stix_relations(sector_id, subsector_id)
+                    for old_relation in old_relations:
+                        self.opencti.delete_relation(old_relation['id'])
+
                     self.opencti.create_relation_if_not_exists(
                         sector_id,
                         'sector',
