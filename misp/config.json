@@ -22,6 +22,11 @@
 			"description": "Tag for events that have to be imported",
 			"default": ""
 		},
+		"untag_event": {
+			"type": "switch",
+			"description": "Remove the tag given above from the event",
+			"default": true
+		},
 		"cron": {
 			"type": "select",
 			"multiple": false,
