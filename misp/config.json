@@ -27,6 +27,16 @@
 			"description": "Remove the tag given above from the event",
 			"default": true
 		},
+		"imported_tag": {
+			"type": "text",
+			"description": "Tag to be set after successful import of MISP event",
+			"default": "OpenCTI: Imported"
+		},
+		"tag_event": {
+			"type": "switch",
+			"description": "Enable tagging of successfully processed MISP events with the above set tag.",
+			"default": true
+		},
 		"cron": {
 			"type": "select",
 			"multiple": false,

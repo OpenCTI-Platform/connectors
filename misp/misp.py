@@ -77,9 +77,10 @@ class Misp:
                 for attribute in object['Attribute']:
                     self.process_attribute(report_id, author_id, event_threats, event_markings, attribute)
 
-            self.misp.tag(event['Event']['uuid'], 'OpenCTI: Imported')
             if self.config['misp']['untag_event']:
                 self.misp.untag(event['Event']['uuid'], self.config['misp']['tag'])
+            if self.config['misp']['tag_event']:
+                self.misp.tag(event['Event']['uuid'], self.config['misp']['imported_tag'])
 
     def process_attribute(self, report_id, author_id, event_threats, event_markings, attribute):
         type = self.resolve_type(attribute['type'], attribute['value'])

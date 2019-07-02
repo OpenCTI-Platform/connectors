@@ -3,7 +3,6 @@
 import os
 import json
 import urllib.request
-import datetime
 from pycti import OpenCTI
 
 
@@ -31,36 +30,17 @@ class Openctidata:
             sectors_data = urllib.request.urlopen(self.config['openctidata']['sectors_file_url']).read()
             sectors = json.loads(sectors_data)
             for sector in sectors:
-                sector_id = self.opencti.create_identity_if_not_exists(
-                    'Sector',
-                    sector['name'],
-                    sector['description']
-                )['id']
-                self.opencti.update_stix_domain_entity_field(
-                    sector_id,
-                    'name', sector['name']
-                )
-                self.opencti.update_stix_domain_entity_field(
-                    sector_id,
-                    'description',
-                    sector['description']
-                )
+                sector_id = self.opencti.create_identity_if_not_exists('Sector', sector['name'], sector['description'], None, sector['stix_id'])['id']
+                self.opencti.update_stix_domain_entity_field(sector_id, 'name', sector['name'])
+                self.opencti.update_stix_domain_entity_field(sector_id, 'description', sector['description'])
+                self.opencti.update_stix_domain_entity_field(sector_id, 'stix_id', sector['stix_id'])
+
                 for subsector in sector['subsectors']:
-                    subsector_id = self.opencti.create_identity_if_not_exists(
-                        'Sector',
-                        subsector['name'],
-                        subsector['description']
-                    )['id']
-                    self.opencti.update_stix_domain_entity_field(
-                        subsector_id,
-                        'name',
-                        subsector['name']
-                    )
-                    self.opencti.update_stix_domain_entity_field(
-                        subsector_id,
-                        'description',
-                        subsector['description']
-                    )
+                    subsector_id = self.opencti.create_identity_if_not_exists('Sector', subsector['name'], subsector['description'], None, subsector['stix_id'])['id']
+                    self.opencti.update_stix_domain_entity_field(subsector_id, 'name', subsector['name'])
+                    self.opencti.update_stix_domain_entity_field(subsector_id, 'description', subsector['description'])
+                    self.opencti.update_stix_domain_entity_field(subsector_id, 'stix_id', subsector['stix_id'])
+
                     # Temporary for fixing multiple relations of previous version
                     old_relations = self.opencti.get_stix_relations(sector_id, subsector_id)
                     for old_relation in old_relations:
