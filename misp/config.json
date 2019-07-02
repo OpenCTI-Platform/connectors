@@ -22,6 +22,11 @@
 			"description": "Tag for events that have to be imported",
 			"default": ""
 		},
+		"untag_event": {
+			"type": "switch",
+			"description": "Remove the tag given above from the event",
+			"default": true
+		},
 		"imported_tag": {
 			"type": "text",
 			"description": "Tag to be set after successful import of MISP event",
