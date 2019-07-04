@@ -1,14 +1,15 @@
 # coding: utf-8
 
 import os
-import shutil
-import urllib3
+import urllib.request
 from pycti import OpenCTI
 
+
 class Mitre:
-    def __init__(self, config):
+    def __init__(self, config, scheduler):
         # Initialize config
         self.config = config
+        self.scheduler = scheduler
 
         # Initialize OpenCTI client
         self.opencti = OpenCTI(
@@ -25,9 +26,5 @@ class Mitre:
         return self.config['mitre']
 
     def run(self):
-        http = urllib3.PoolManager()
-        with http.request('GET', self.config['mitre']['enterprise_file_url'], preload_content=False) as r, open('./enterprise.json', 'wb') as out_file:
-            shutil.copyfileobj(r, out_file)
-
-        self.opencti.stix2_import_bundle_from_file('./enterprise.json', True, self.config['mitre']['entities'])
-        os.remove('./enterprise.json')
+        enterprise_data = urllib.request.urlopen(self.config['mitre']['enterprise_file_url']).read()
+        self.scheduler.send_stix2_bundle(enterprise_data)
