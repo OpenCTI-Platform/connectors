@@ -7,9 +7,10 @@ from pycti import OpenCTI
 
 
 class Openctidata:
-    def __init__(self, config):
+    def __init__(self, config, scheduler):
         # Initialize config
         self.config = config
+        self.scheduler = scheduler
 
         # Initialize OpenCTI client
         self.opencti = OpenCTI(

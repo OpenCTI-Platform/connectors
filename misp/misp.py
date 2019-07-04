@@ -1,19 +1,18 @@
 # coding: utf-8
 
-import urllib3
 import os
 from datetime import datetime
 from dateutil.parser import parse
 from pycti import OpenCTI
 from pymisp import PyMISP
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Report, Indicator, Relationship, ExternalReference, TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
 
 
 class Misp:
-    def __init__(self, config):
+    def __init__(self, config, scheduler):
         # Initialize config
         self.config = config
+        self.scheduler = scheduler
 
         # Initialize MISP
         self.misp = PyMISP(self.config['misp']['url'], self.config['misp']['key'], False, 'json')
@@ -33,194 +32,220 @@ class Misp:
         return self.config['misp']
 
     def run(self):
-        result = self.misp.search('events', tags=[self.config['misp']['tag']])
-
+        added_threats = []
+        result = self.misp.search('events', tags=['OpenCTI: Import'])
         for event in result['response']:
             # Default values
-            author_id = self.opencti.create_identity_if_not_exists(
-                'Organization',
-                event['Event']['Orgc']['name'],
-                ''
-            )['id']
-            event_threats = self.prepare_threats(event['Event']['Galaxy'])
-            event_markings = self.resolve_markings(event['Event']['Tag'])
-
-            # Create the external reference of the event
-            external_reference_id = self.opencti.create_external_reference_if_not_exists(
-                self.config['misp']['name'],
-                self.config['misp']['url'] + '/events/view/' + event['Event']['uuid'],
-                event['Event']['uuid'])['id']
-
-            # Create the report of the event
-            report_id = self.opencti.create_report_if_not_exists_from_external_reference(
-                external_reference_id,
-                event['Event']['info'],
-                event['Event']['info'],
-                parse(event['Event']['date']).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                'external'
-            )['id']
-            self.opencti.update_stix_domain_entity_created_by_ref(report_id, author_id)
-
-            # Add markings to report
-            for marking in event_markings:
-                self.opencti.add_marking_definition_if_not_exists(report_id, marking)
-
-            # Add entities to report
-            for threat in event_threats:
-                self.opencti.add_object_ref_to_report_if_not_exists(report_id, threat['id'])
+            author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
+            report_threats = self.prepare_threats(event['Event']['Galaxy'])
+            report_markings = self.resolve_markings(event['Event']['Tag'])
+            reference_misp = ExternalReference(source_name=self.config['misp']['name'], url=self.config['misp']['url'] + '/events/view/' + event['Event']['uuid'])
 
             # Get all attributes
+            indicators = []
             for attribute in event['Event']['Attribute']:
-                self.process_attribute(report_id, author_id, event_threats, event_markings, attribute)
+                indicator = self.process_attribute(author, report_threats, attribute)
+                if indicator is not None:
+                    indicators.append(indicator)
+
             # get all attributes of object
             for object in event['Event']['Object']:
                 for attribute in object['Attribute']:
-                    self.process_attribute(report_id, author_id, event_threats, event_markings, attribute)
+                    indicator = self.process_attribute(author, report_threats, attribute)
+                    if indicator is not None:
+                        indicators.append(indicator)
 
-            if self.config['misp']['untag_event']:
+            bundle_objects = []
+            report_refs = [author]
+
+            for report_threat in report_threats:
+                report_refs.append(report_threat)
+                bundle_objects.append(report_threat)
+                added_threats.append(report_threat['name'])
+
+            for indicator in indicators:
+                report_refs.append(indicator['indicator'])
+                bundle_objects.append(indicator['indicator'])
+                for attribute_threat in indicator['attribute_threats']:
+                    if attribute_threat['name'] not in added_threats:
+                        report_refs.append(attribute_threat)
+                        bundle_objects.append(attribute_threat)
+                        added_threats.append(attribute_threat['name'])
+                for relationship in indicator['relationships']:
+                    report_refs.append(relationship)
+                    bundle_objects.append(relationship)
+
+            report = Report(
+                name=event['Event']['info'],
+                description=event['Event']['info'],
+                published=parse(event['Event']['date']),
+                created_by_ref=author,
+                object_marking_refs=report_markings,
+                labels=['threat-report'],
+                object_refs=report_refs,
+                external_references=[reference_misp],
+                custom_properties={
+                    'x_opencti_report_class': 'external'
+                }
+            )
+            bundle_objects.append(report)
+            bundle = Bundle(objects=bundle_objects).serialize()
+            self.scheduler.send_stix2_bundle(bundle)
+
+            if 'untag_event' not in self.config['misp'] or self.config['misp']['untag_event']:
                 self.misp.untag(event['Event']['uuid'], self.config['misp']['tag'])
-            if self.config['misp']['tag_event']:
+            if 'imported_tag' in self.config['misp'] and len(self.config['misp']['imported_tag']) > 2:
                 self.misp.tag(event['Event']['uuid'], self.config['misp']['imported_tag'])
 
-    def process_attribute(self, report_id, author_id, event_threats, event_markings, attribute):
-        type = self.resolve_type(attribute['type'], attribute['value'])
-        if type is not None:
+    def process_attribute(self, author, report_threats, attribute):
+        resolved_attributes = self.resolve_type(attribute['type'], attribute['value'])
+        if resolved_attributes is None:
+            return None
+
+        for resolved_attribute in resolved_attributes:
             # Default values
             attribute_threats = self.prepare_threats(attribute['Galaxy'])
             if 'Tag' in attribute:
                 attribute_markings = self.resolve_markings(attribute['Tag'])
             else:
-                attribute_markings = []
+                attribute_markings = [TLP_WHITE]
 
-            # Check necessary threats
-            if len(event_threats) == 0 and len(attribute_threats) == 0:
-                attribute_threats.append({'type': 'Threat-Actor', 'id': self.opencti.create_threat_actor_if_not_exists(
-                    'Unknown threats',
-                    'All unknown threats are representing by this pseudo threat actors.'
-                )['id']})
+            if len(report_threats) == 0 and len(attribute_threats) == 0:
+                attribute_threats.append(
+                    ThreatActor(
+                        name='Unknown threats',
+                        labels=['threat-actor'],
+                        description='All unknown threats are representing by this pseudo threat actor.'
+                    )
+                )
 
-            # Create observable
-            observable_id = self.opencti.create_stix_observable_if_not_exists(
-                type,
-                attribute['value'],
-                attribute['comment']
-            )['id']
-            self.opencti.update_stix_observable_created_by_ref(observable_id, author_id)
+            indicator = Indicator(
+                name='Indicator',
+                description=attribute['comment'],
+                pattern="[file:hashes.md5 = 'd41d8cd98f00b204e9800998ecf8427e']",
+                labels=['malicious-activity'],
+                created_by_ref=author,
+                object_marking_refs=attribute_markings,
+                custom_properties={
+                    'x_opencti_observable_type': resolved_attribute['type'],
+                    'x_opencti_observable_value': resolved_attribute['value'],
+                }
+            )
 
-            # Add observable to report
-            self.opencti.add_object_ref_to_report_if_not_exists(report_id, observable_id)
-
-            # Add threats to reports
-            for threat in attribute_threats:
-                self.opencti.add_object_ref_to_report_if_not_exists(report_id, threat['id'])
-
-            # Add threats to observables
-            for threat in event_threats:
-                relation_id = self.opencti.create_relation_if_not_exists(
-                    observable_id,
-                    'Observable',
-                    threat['id'],
-                    threat['type'],
-                    'indicates',
-                    attribute['comment'],
-                    datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                    datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                    2
-                )['id']
-                self.opencti.add_object_ref_to_report_if_not_exists(report_id, relation_id)
-            for threat in attribute_threats:
-                relation_id = self.opencti.create_relation_if_not_exists(
-                    observable_id,
-                    'Observable',
-                    threat['id'],
-                    threat['type'],
-                    'indicates',
-                    attribute['comment'],
-                    datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                    datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                    2
-                )['id']
-                self.opencti.add_object_ref_to_report_if_not_exists(report_id, relation_id)
-
-            # Add markings to observable
-            if len(attribute_markings) > 0:
-                for marking in attribute_markings:
-                    self.opencti.add_marking_definition_if_not_exists(observable_id, marking)
-                    self.opencti.add_marking_definition_if_not_exists(observable_id, marking)
-            else:
-                for marking in event_markings:
-                    self.opencti.add_marking_definition_if_not_exists(observable_id, marking)
+            relationships = []
+            for report_threat_ref in report_threats:
+                relationships.append(
+                    Relationship(
+                        relationship_type='indicates',
+                        created_by_ref=author,
+                        source_ref=indicator.id,
+                        target_ref=report_threat_ref.id,
+                        description=attribute['comment'],
+                        object_marking_refs=attribute_markings,
+                        custom_properties={
+                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                        }
+                    )
+                )
+            for attribute_threat_ref in attribute_threats:
+                relationships.append(
+                    Relationship(
+                        relationship_type='indicates',
+                        created_by_ref=author,
+                        source_ref=indicator.id,
+                        target_ref=attribute_threat_ref.id,
+                        description=attribute['comment'],
+                        object_marking_refs=attribute_markings,
+                        custom_properties={
+                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                        }
+                    )
+                )
+            return {'indicator': indicator, 'relationships': relationships, 'attribute_threats': attribute_threats}
 
     def prepare_threats(self, galaxies):
         threats = []
         for galaxy in galaxies:
-            if galaxy['name'] == 'Intrusion Set':
+            if galaxy['name'] == 'Threat Actor' or galaxy['name'] == 'Intrusion Set':
                 for galaxy_entity in galaxy['GalaxyCluster']:
-                    threats.append({
-                        'type': 'Intrusion-Set',
-                        'id': self.opencti.create_intrusion_set_if_not_exists(
-                            galaxy_entity['value'],
-                            galaxy_entity['description']
-                        )['id']
-                    })
-            if galaxy['name'] == 'Threat Actor':
-                for galaxy_entity in galaxy['GalaxyCluster']:
-                    threats.append({
-                        'type': 'Intrusion-Set',
-                        'id': self.opencti.create_intrusion_set_if_not_exists(
-                            galaxy_entity['value'],
-                            galaxy_entity['description']
-                        )['id']
-                    })
+                    threats.append(IntrusionSet(
+                        name=galaxy_entity['value'],
+                        labels=['intrusion-set'],
+                        description=galaxy_entity['description']
+                    ))
             if galaxy['name'] == 'Malware':
                 for galaxy_entity in galaxy['GalaxyCluster']:
-                    threats.append({
-                        'type': 'Malware',
-                        'id': self.opencti.create_malware_if_not_exists(
-                            galaxy_entity['value'],
-                            galaxy_entity['description']
-                        )['id']
-                    })
+                    threats.append(Malware(
+                        name=galaxy_entity['value'],
+                        labels=['malware'],
+                        description=galaxy_entity['description']
+                    ))
             if galaxy['name'] == 'Tool':
                 for galaxy_entity in galaxy['GalaxyCluster']:
-                    threats.append({
-                        'type': 'Tool',
-                        'id': self.opencti.create_tool_if_not_exists(
-                            galaxy_entity['value'],
-                            galaxy_entity['description']
-                        )['id']
-                    })
+                    threats.append(Tool(
+                        name=galaxy_entity['value'],
+                        labels=['tool'],
+                        description=galaxy_entity['description']
+                    ))
         return threats
 
     def resolve_type(self, type, value):
         types = {
-            'ip-src': 'IPv4-Addr',
-            'ip-dst': 'IPv4-Addr',
-            'domain': 'Domain',
-            'hostname': 'Domain',
-            'url': 'URL',
-            'md5': 'File-MD5',
-            'sha1': 'File-SHA1',
-            'sha256': 'File-SHA256'
+            'md5': ['File-MD5'],
+            'sha1': ['File-SHA1'],
+            'sha256': ['File-SHA256'],
+            'filename': ['File-Name'],
+            'pdb': ['PDB-Path'],
+            'filename|md5': ['File-Name', 'File-MD5'],
+            'filename|sha1': ['File-Name', 'File-SHA1'],
+            'filename|sha256': ['File-Name', 'File-SHA256'],
+            'ip-src': ['IPv4-Addr'],
+            'ip-dst': ['IPv4-Addr'],
+            'hostname': ['Domain'],
+            'domain': ['Domain'],
+            'domain|ip': ['Domain', 'IPv4-Addr'],
+            'url': ['URL'],
+            'windows-service-name': ['Windows-Service-Name'],
+            'windows-service-displayname': ['Windows-Service-Display-Name'],
+            'windows-scheduled-task': ['Windows-Scheduled-Task']
         }
         if type in types:
-            resolved_type = types[type]
-            if resolved_type == 'IPv4-Addr' and len(value) > 16:
-                return 'IPv6-Addr'
+            resolved_types = types[type]
+            if len(resolved_types) == 2:
+                values = value.split('|')
+                if resolved_types[0] == 'IPv4-Addr':
+                    type_0 = self.detect_ip_version(values[0])
+                else:
+                    type_0 = resolved_types[0]
+                if resolved_types[1] == 'IPv4-Addr':
+                    type_1 = self.detect_ip_version(values[1])
+                else:
+                    type_1 = resolved_types[1]
+                return [{'type': type_0, 'value': values[0]}, {'type': type_1, 'value': values[1]}]
             else:
-                return resolved_type
+                if resolved_types[0] == 'IPv4-Addr':
+                    type_0 = self.detect_ip_version(value)
+                else:
+                    type_0 = resolved_types[0]
+                return [{'type': type_0, 'value': value}]
+
+    def detect_ip_version(self, value):
+        if len(value) > 16:
+            return 'IPv6-Addr'
         else:
-            return None
+            return 'IPv4-Addr'
 
     def resolve_markings(self, tags):
         markings = []
         for tag in tags:
             if tag['name'] == 'tlp:white':
-                markings.append(self.opencti.get_marking_definition_by_definition('TLP', 'TLP:WHITE')['id'])
+                markings.append(TLP_WHITE)
             if tag['name'] == 'tlp:green':
-                markings.append(self.opencti.get_marking_definition_by_definition('TLP', 'TLP:GREEN')['id'])
+                markings.append(TLP_GREEN)
             if tag['name'] == 'tlp:amber':
-                markings.append(self.opencti.get_marking_definition_by_definition('TLP', 'TLP:AMBER')['id'])
+                markings.append(TLP_AMBER)
             if tag['name'] == 'tlp:red':
-                markings.append(self.opencti.get_marking_definition_by_definition('TLP', 'TLP:RED')['id'])
+                markings.append(TLP_RED)
         return markings
