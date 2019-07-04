@@ -20,7 +20,7 @@
 		"tag": {
 			"type": "text",
 			"description": "Tag for events that have to be imported",
-			"default": ""
+			"default": "OpenCTI: Import"
 		},
 		"cron": {
 			"type": "select",
