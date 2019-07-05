@@ -33,6 +33,11 @@ class Misp:
         return self.config['misp']
 
     def run(self):
+        generic_actor = ThreatActor(
+            name='Unknown threats',
+            labels=['threat-actor'],
+            description='All unknown threats are representing by this pseudo threat actor.'
+        )
         added_threats = []
         result = self.misp.search('events', tags=['OpenCTI: Import'])
         for event in result['response']:
@@ -46,14 +51,14 @@ class Misp:
             # Get all attributes
             indicators = []
             for attribute in event['Event']['Attribute']:
-                indicator = self.process_attribute(author, report_threats, attribute)
+                indicator = self.process_attribute(author, report_threats, attribute, generic_actor)
                 if indicator is not None:
                     indicators.append(indicator)
 
             # get all attributes of object
             for object in event['Event']['Object']:
                 for attribute in object['Attribute']:
-                    indicator = self.process_attribute(author, report_threats, attribute)
+                    indicator = self.process_attribute(author, report_threats, attribute, generic_actor)
                     if indicator is not None:
                         indicators.append(indicator)
 
@@ -115,12 +120,7 @@ class Misp:
                 attribute_markings = [TLP_WHITE]
 
             if len(report_threats) == 0 and len(attribute_threats) == 0:
-                actor = ThreatActor(
-                    name='Unknown threats',
-                    labels=['threat-actor'],
-                    description='All unknown threats are representing by this pseudo threat actor.'
-                )
-                attribute_threats.append(actor)
+                attribute_threats.append(generic_actor)
 
             indicator = Indicator(
                 name='Indicator',
