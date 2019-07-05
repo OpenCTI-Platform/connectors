@@ -55,8 +55,10 @@ class Misp:
                     if indicator is not None:
                         indicators.append(indicator)
 
-            bundle_objects = []
-            report_refs = [author]
+            bundle_objects = [author]
+            report_refs = []
+            for report_marking in report_markings:
+                bundle_objects.append(report_marking)
 
             for report_threat in report_threats:
                 report_refs.append(report_threat)
@@ -170,22 +172,34 @@ class Misp:
         for galaxy in galaxies:
             if galaxy['name'] == 'Threat Actor' or galaxy['name'] == 'Intrusion Set':
                 for galaxy_entity in galaxy['GalaxyCluster']:
+                    if ' - G' in galaxy_entity['value']:
+                        name = galaxy_entity['value'].split(' - G')[0]
+                    else:
+                        name = galaxy_entity['value']
                     threats.append(IntrusionSet(
-                        name=galaxy_entity['value'],
+                        name=name,
                         labels=['intrusion-set'],
                         description=galaxy_entity['description']
                     ))
             if galaxy['name'] == 'Malware':
                 for galaxy_entity in galaxy['GalaxyCluster']:
+                    if ' - S' in galaxy_entity['value']:
+                        name = galaxy_entity['value'].split(' - S')[0]
+                    else:
+                        name = galaxy_entity['value']
                     threats.append(Malware(
-                        name=galaxy_entity['value'],
+                        name=name,
                         labels=['malware'],
                         description=galaxy_entity['description']
                     ))
             if galaxy['name'] == 'Tool':
                 for galaxy_entity in galaxy['GalaxyCluster']:
+                    if ' - S' in galaxy_entity['value']:
+                        name = galaxy_entity['value'].split(' - S')[0]
+                    else:
+                        name = galaxy_entity['value']
                     threats.append(Tool(
-                        name=galaxy_entity['value'],
+                        name=name,
                         labels=['tool'],
                         description=galaxy_entity['description']
                     ))
@@ -248,4 +262,6 @@ class Misp:
                 markings.append(TLP_AMBER)
             if tag['name'] == 'tlp:red':
                 markings.append(TLP_RED)
+        if len(markings) == 0:
+            markings.append(TLP_WHITE)
         return markings
