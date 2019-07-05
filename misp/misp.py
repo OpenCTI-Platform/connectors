@@ -106,7 +106,7 @@ class Misp:
             if 'imported_tag' in self.config['misp'] and len(self.config['misp']['imported_tag']) > 2:
                 self.misp.tag(event['Event']['uuid'], self.config['misp']['imported_tag'])
 
-    def process_attribute(self, author, report_threats, attribute):
+    def process_attribute(self, author, report_threats, attribute, generic_actor):
         resolved_attributes = self.resolve_type(attribute['type'], attribute['value'])
         if resolved_attributes is None:
             return None
