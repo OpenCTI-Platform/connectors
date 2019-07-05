@@ -5,7 +5,8 @@ from datetime import datetime
 from dateutil.parser import parse
 from pycti import OpenCTI
 from pymisp import PyMISP
-from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Report, Indicator, Relationship, ExternalReference, TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
+from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Report, Indicator, Relationship, ExternalReference, TLP_WHITE, TLP_GREEN, \
+    TLP_AMBER, TLP_RED
 
 
 class Misp:
@@ -39,7 +40,8 @@ class Misp:
             author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
             report_threats = self.prepare_threats(event['Event']['Galaxy'])
             report_markings = self.resolve_markings(event['Event']['Tag'])
-            reference_misp = ExternalReference(source_name=self.config['misp']['name'], url=self.config['misp']['url'] + '/events/view/' + event['Event']['uuid'])
+            reference_misp = ExternalReference(source_name=self.config['misp']['name'],
+                                               url=self.config['misp']['url'] + '/events/view/' + event['Event']['uuid'])
 
             # Get all attributes
             indicators = []
@@ -113,13 +115,12 @@ class Misp:
                 attribute_markings = [TLP_WHITE]
 
             if len(report_threats) == 0 and len(attribute_threats) == 0:
-                attribute_threats.append(
-                    ThreatActor(
-                        name='Unknown threats',
-                        labels=['threat-actor'],
-                        description='All unknown threats are representing by this pseudo threat actor.'
-                    )
+                actor = ThreatActor(
+                    name='Unknown threats',
+                    labels=['threat-actor'],
+                    description='All unknown threats are representing by this pseudo threat actor.'
                 )
+                attribute_threats.append(actor)
 
             indicator = Indicator(
                 name='Indicator',
