@@ -34,7 +34,7 @@ class Misp:
 
     def run(self):
         added_threats = []
-        result = self.misp.search('events', tags=['OpenCTI: Import'])
+        result = self.misp.search('events', tags=[self.config['misp']['tag']])
         for event in result['response']:
             # Default values
             author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
