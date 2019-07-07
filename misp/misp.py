@@ -181,10 +181,17 @@ class Misp:
                             name = galaxy_entity['value'].split(' - G')[0]
                         else:
                             name = galaxy_entity['value']
+                        if 'meta' in galaxy_entity and 'synonyms' in galaxy_entity['meta']:
+                            aliases = galaxy_entity['meta']['synonyms']
+                        else:
+                            aliases = [name]
                         threats.append(IntrusionSet(
                             name=name,
                             labels=['intrusion-set'],
-                            description=galaxy_entity['description']
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
                         ))
                 if galaxy['name'] == 'Malware':
                     for galaxy_entity in galaxy['GalaxyCluster']:
@@ -192,10 +199,17 @@ class Misp:
                             name = galaxy_entity['value'].split(' - S')[0]
                         else:
                             name = galaxy_entity['value']
+                        if 'meta' in galaxy_entity and 'synonyms' in galaxy_entity['meta']:
+                            aliases = galaxy_entity['meta']['synonyms']
+                        else:
+                            aliases = [name]
                         threats.append(Malware(
                             name=name,
                             labels=['malware'],
-                            description=galaxy_entity['description']
+                            description=galaxy_entity['description'],
+                            custom_properties = {
+                                'x_opencti_aliases': aliases
+                            }
                         ))
                 if galaxy['name'] == 'Tool':
                     for galaxy_entity in galaxy['GalaxyCluster']:
@@ -203,10 +217,17 @@ class Misp:
                             name = galaxy_entity['value'].split(' - S')[0]
                         else:
                             name = galaxy_entity['value']
+                        if 'meta' in galaxy_entity and 'synonyms' in galaxy_entity['meta']:
+                            aliases = galaxy_entity['meta']['synonyms']
+                        else:
+                            aliases = [name]
                         threats.append(Tool(
                             name=name,
                             labels=['tool'],
-                            description=galaxy_entity['description']
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
                         ))
             if galaxy['namespace'] == 'misp':
                 if galaxy['name'] == 'Threat Actor':
@@ -215,34 +236,62 @@ class Misp:
                             name = galaxy_entity['value'].replace('APT ', 'APT')
                         else:
                             name = galaxy_entity['value']
+                        if 'meta' in galaxy_entity and 'synonyms' in galaxy_entity['meta']:
+                            aliases = galaxy_entity['meta']['synonyms']
+                        else:
+                            aliases = [name]
                         threats.append(IntrusionSet(
                             name=name,
                             labels=['intrusion-set'],
-                            description=galaxy_entity['description']
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
                         ))
                 if galaxy['name'] == 'Tool':
                     for galaxy_entity in galaxy['GalaxyCluster']:
                         name = galaxy_entity['value']
+                        if 'meta' in galaxy_entity and 'synonyms' in galaxy_entity['meta']:
+                            aliases = galaxy_entity['meta']['synonyms']
+                        else:
+                            aliases = [name]
                         threats.append(Malware(
                             name=name,
                             labels=['malware'],
-                            description=galaxy_entity['description']
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
                         ))
                 if galaxy['name'] == 'Ransomware':
                     for galaxy_entity in galaxy['GalaxyCluster']:
                         name = galaxy_entity['value']
+                        if 'meta' in galaxy_entity and 'synonyms' in galaxy_entity['meta']:
+                            aliases = galaxy_entity['meta']['synonyms']
+                        else:
+                            aliases = [name]
                         threats.append(Malware(
                             name=name,
                             labels=['malware'],
-                            description=galaxy_entity['description']
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
                         ))
                 if galaxy['name'] == 'Malpedia':
                     for galaxy_entity in galaxy['GalaxyCluster']:
                         name = galaxy_entity['value']
+                        if 'meta' in galaxy_entity and 'synonyms' in galaxy_entity['meta']:
+                            aliases = galaxy_entity['meta']['synonyms']
+                        else:
+                            aliases = [name]
                         threats.append(Malware(
                             name=name,
                             labels=['malware'],
-                            description=galaxy_entity['description']
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
                         ))
         return threats
 
