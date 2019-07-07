@@ -27,4 +27,4 @@ class Mitre:
 
     def run(self):
         enterprise_data = urllib.request.urlopen(self.config['mitre']['enterprise_file_url']).read()
-        self.scheduler.send_stix2_bundle(enterprise_data)
+        self.scheduler.send_stix2_bundle(enterprise_data.decode('utf-8'))
