@@ -84,22 +84,23 @@ class Misp:
                     report_refs.append(relationship)
                     bundle_objects.append(relationship)
 
-            report = Report(
-                name=event['Event']['info'],
-                description=event['Event']['info'],
-                published=parse(event['Event']['date']),
-                created_by_ref=author,
-                object_marking_refs=report_markings,
-                labels=['threat-report'],
-                object_refs=report_refs,
-                external_references=[reference_misp],
-                custom_properties={
-                    'x_opencti_report_class': 'external'
-                }
-            )
-            bundle_objects.append(report)
-            bundle = Bundle(objects=bundle_objects).serialize()
-            self.scheduler.send_stix2_bundle(bundle)
+            if len(report_refs) > 0:
+                report = Report(
+                    name=event['Event']['info'],
+                    description=event['Event']['info'],
+                    published=parse(event['Event']['date']),
+                    created_by_ref=author,
+                    object_marking_refs=report_markings,
+                    labels=['threat-report'],
+                    object_refs=report_refs,
+                    external_references=[reference_misp],
+                    custom_properties={
+                        'x_opencti_report_class': 'external'
+                    }
+                )
+                bundle_objects.append(report)
+                bundle = Bundle(objects=bundle_objects).serialize()
+                self.scheduler.send_stix2_bundle(bundle)
 
             if 'untag_event' not in self.config['misp'] or self.config['misp']['untag_event']:
                 self.misp.untag(event['Event']['uuid'], self.config['misp']['tag'])
