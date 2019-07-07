@@ -45,8 +45,9 @@ class Misp:
             author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
             report_threats = self.prepare_threats(event['Event']['Galaxy'])
             report_markings = self.resolve_markings(event['Event']['Tag'])
-            reference_misp = ExternalReference(source_name=self.config['misp']['name'],
-                                               url=self.config['misp']['url'] + '/events/view/' + event['Event']['uuid'])
+            reference_misp = ExternalReference(
+                source_name=self.config['misp']['name'],
+                url=self.config['misp']['url'] + '/events/view/' + event['Event']['uuid'])
 
             # Get all attributes
             indicators = []
@@ -172,39 +173,77 @@ class Misp:
     def prepare_threats(self, galaxies):
         threats = []
         for galaxy in galaxies:
-            if galaxy['name'] == 'Threat Actor' or galaxy['name'] == 'Intrusion Set':
-                for galaxy_entity in galaxy['GalaxyCluster']:
-                    if ' - G' in galaxy_entity['value']:
-                        name = galaxy_entity['value'].split(' - G')[0]
-                    else:
+            # MITRE galaxies
+            if galaxy['namespace'] == 'mitre-attack':
+                if galaxy['name'] == 'Intrusion Set':
+                    for galaxy_entity in galaxy['GalaxyCluster']:
+                        if ' - G' in galaxy_entity['value']:
+                            name = galaxy_entity['value'].split(' - G')[0]
+                        else:
+                            name = galaxy_entity['value']
+                        threats.append(IntrusionSet(
+                            name=name,
+                            labels=['intrusion-set'],
+                            description=galaxy_entity['description']
+                        ))
+                if galaxy['name'] == 'Malware':
+                    for galaxy_entity in galaxy['GalaxyCluster']:
+                        if ' - S' in galaxy_entity['value']:
+                            name = galaxy_entity['value'].split(' - S')[0]
+                        else:
+                            name = galaxy_entity['value']
+                        threats.append(Malware(
+                            name=name,
+                            labels=['malware'],
+                            description=galaxy_entity['description']
+                        ))
+                if galaxy['name'] == 'Tool':
+                    for galaxy_entity in galaxy['GalaxyCluster']:
+                        if ' - S' in galaxy_entity['value']:
+                            name = galaxy_entity['value'].split(' - S')[0]
+                        else:
+                            name = galaxy_entity['value']
+                        threats.append(Tool(
+                            name=name,
+                            labels=['tool'],
+                            description=galaxy_entity['description']
+                        ))
+            if galaxy['namespace'] == 'misp':
+                if galaxy['name'] == 'Threat Actor':
+                    for galaxy_entity in galaxy['GalaxyCluster']:
+                        if 'APT ' in galaxy_entity['value']:
+                            name = galaxy_entity['value'].replace('APT ', 'APT')
+                        else:
+                            name = galaxy_entity['value']
+                        threats.append(IntrusionSet(
+                            name=name,
+                            labels=['intrusion-set'],
+                            description=galaxy_entity['description']
+                        ))
+                if galaxy['name'] == 'Tool':
+                    for galaxy_entity in galaxy['GalaxyCluster']:
                         name = galaxy_entity['value']
-                    threats.append(IntrusionSet(
-                        name=name,
-                        labels=['intrusion-set'],
-                        description=galaxy_entity['description']
-                    ))
-            if galaxy['name'] == 'Malware':
-                for galaxy_entity in galaxy['GalaxyCluster']:
-                    if ' - S' in galaxy_entity['value']:
-                        name = galaxy_entity['value'].split(' - S')[0]
-                    else:
+                        threats.append(Malware(
+                            name=name,
+                            labels=['malware'],
+                            description=galaxy_entity['description']
+                        ))
+                if galaxy['name'] == 'Ransomware':
+                    for galaxy_entity in galaxy['GalaxyCluster']:
                         name = galaxy_entity['value']
-                    threats.append(Malware(
-                        name=name,
-                        labels=['malware'],
-                        description=galaxy_entity['description']
-                    ))
-            if galaxy['name'] == 'Tool':
-                for galaxy_entity in galaxy['GalaxyCluster']:
-                    if ' - S' in galaxy_entity['value']:
-                        name = galaxy_entity['value'].split(' - S')[0]
-                    else:
+                        threats.append(Malware(
+                            name=name,
+                            labels=['malware'],
+                            description=galaxy_entity['description']
+                        ))
+                if galaxy['name'] == 'Malpedia':
+                    for galaxy_entity in galaxy['GalaxyCluster']:
                         name = galaxy_entity['value']
-                    threats.append(Tool(
-                        name=name,
-                        labels=['tool'],
-                        description=galaxy_entity['description']
-                    ))
+                        threats.append(Malware(
+                            name=name,
+                            labels=['malware'],
+                            description=galaxy_entity['description']
+                        ))
         return threats
 
     def resolve_type(self, type, value):
