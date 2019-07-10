@@ -28,6 +28,7 @@ class Misp:
             self.rabbitmq_username = config['rabbitmq']['username']
             self.rabbitmq_password = config['rabbitmq']['password']
             self.config['name'] = config['misp']['name']
+            self.config['confidence_level'] = config['misp']['confidence_level']
             self.config['url'] = config['misp']['url']
             self.config['key'] = config['misp']['key']
             self.config['tag'] = config['misp']['tag']
@@ -41,6 +42,7 @@ class Misp:
             self.rabbitmq_username = os.getenv('RABBITMQ_USERNAME', 'guest')
             self.rabbitmq_password = os.getenv('RABBITMQ_PASSWORD', 'guest')
             self.config['name'] = os.getenv('MISP_NAME', 'MISP')
+            self.config['confidence_level'] = int(os.getenv('MISP_CONFIDENCE_LEVEL', 3))
             self.config['url'] = os.getenv('MISP_URL', 'http://localhost')
             self.config['key'] = os.getenv('MISP_KEY', 'ChangeMe')
             self.config['tag'] = os.getenv('MISP_TAG', 'OpenCTI: Import')
@@ -50,7 +52,7 @@ class Misp:
             self.config['log_level'] = os.getenv('MISP_LOG_LEVEL', 'info')
 
         # Initialize OpenCTI Connector
-        self.opencti_connector = OpenCTIConnectorHelper(
+        self.opencti_connector_helper = OpenCTIConnectorHelper(
             CONNECTOR_IDENTIFIER,
             self.config,
             self.rabbitmq_hostname,
@@ -138,7 +140,7 @@ class Misp:
                 )
                 bundle_objects.append(report)
                 bundle = Bundle(objects=bundle_objects).serialize()
-                self.opencti_connector.send_stix2_bundle(bundle)
+                self.opencti_connector_helper.send_stix2_bundle(bundle)
 
             if 'untag_event' not in self.config or self.config['untag_event']:
                 self.misp.untag(event['Event']['uuid'], self.config['tag'])
@@ -189,6 +191,7 @@ class Misp:
                                 '%Y-%m-%dT%H:%M:%SZ'),
                             'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
                                 '%Y-%m-%dT%H:%M:%SZ'),
+                            'x_opencti_weight': self.config['confidence_level']
                         }
                     )
                 )
@@ -206,6 +209,7 @@ class Misp:
                                 '%Y-%m-%dT%H:%M:%SZ'),
                             'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
                                 '%Y-%m-%dT%H:%M:%SZ'),
+                            'x_opencti_weight': self.config['confidence_level']
                         }
                     )
                 )
