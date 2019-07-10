@@ -7,6 +7,8 @@ services:
       - RABBITMQ_PORT=5672 
       - RABBITMQ_USERNAME=guest
       - RABBITMQ_PASSWORD=guest
+      - OPENCTI_NAME=OpenCTI
+      - OPENCTI_CONFIDENCE_LEVEL=5
       - OPENCTI_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
       - OPENCTI_ENTITIES=sector,region,country,city
       - OPENCTI_INTERVAL=1 # Days

@@ -13,8 +13,6 @@ from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Re
     ExternalReference, TLP_WHITE, TLP_GREEN, \
     TLP_AMBER, TLP_RED
 
-CONNECTOR_IDENTIFIER = 'misp'
-
 
 class Misp:
     def __init__(self):
@@ -23,10 +21,7 @@ class Misp:
         self.config = dict()
         if os.path.isfile(config_file_path):
             config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            self.rabbitmq_hostname = config['rabbitmq']['hostname']
-            self.rabbitmq_port = config['rabbitmq']['port']
-            self.rabbitmq_username = config['rabbitmq']['username']
-            self.rabbitmq_password = config['rabbitmq']['password']
+            self.config_rabbitmq = config['rabbitmq']
             self.config['name'] = config['misp']['name']
             self.config['confidence_level'] = config['misp']['confidence_level']
             self.config['url'] = config['misp']['url']
@@ -37,10 +32,10 @@ class Misp:
             self.config['interval'] = config['misp']['interval']
             self.config['log_level'] = config['misp']['log_level']
         else:
-            self.rabbitmq_hostname = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
-            self.rabbitmq_port = os.getenv('RABBITMQ_PORT', 5672)
-            self.rabbitmq_username = os.getenv('RABBITMQ_USERNAME', 'guest')
-            self.rabbitmq_password = os.getenv('RABBITMQ_PASSWORD', 'guest')
+            self.config_rabbitmq['hostname'] = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
+            self.config_rabbitmq['port'] = os.getenv('RABBITMQ_PORT', 5672)
+            self.config_rabbitmq['username'] = os.getenv('RABBITMQ_USERNAME', 'guest')
+            self.config_rabbitmq['password'] = os.getenv('RABBITMQ_PASSWORD', 'guest')
             self.config['name'] = os.getenv('MISP_NAME', 'MISP')
             self.config['confidence_level'] = int(os.getenv('MISP_CONFIDENCE_LEVEL', 3))
             self.config['url'] = os.getenv('MISP_URL', 'http://localhost')
@@ -52,13 +47,11 @@ class Misp:
             self.config['log_level'] = os.getenv('MISP_LOG_LEVEL', 'info')
 
         # Initialize OpenCTI Connector
+        connector_identifier = ''.join(e for e in self.config['name'] if e.isalnum())
         self.opencti_connector_helper = OpenCTIConnectorHelper(
-            CONNECTOR_IDENTIFIER,
+            connector_identifier.lower(),
             self.config,
-            self.rabbitmq_hostname,
-            self.rabbitmq_port,
-            self.rabbitmq_username,
-            self.rabbitmq_password,
+            self.config_rabbitmq,
             self.config['log_level']
         )
 
