@@ -8,11 +8,12 @@ services:
       - RABBITMQ_USERNAME=guest
       - RABBITMQ_PASSWORD=guest
       - MISP_NAME=MISP
+      - MISP_CONFIDENCE_LEVEL=3
       - MISP_URL=http://localhost
       - MISP_KEY=ChangeMe
       - MISP_TAG=OpenCTI:\ Import
       - MISP_UNTAG_EVENT=True
       - MISP_IMPORTED_TAG=OpenCTI:\ Imported
-      - MISP_INTERVAL=1
+      - MISP_INTERVAL=1 # Minutes
       - MISP_LOG_LEVEL=info
     restart: always

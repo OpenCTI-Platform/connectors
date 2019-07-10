@@ -6,6 +6,7 @@ rabbitmq:
 
 misp:
   name: 'MISP'
+  confidence_level: 3
   url: 'http://localhost'
   key: 'ChangeMe'
   tag: 'OpenCTI: Import'

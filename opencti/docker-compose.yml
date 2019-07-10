@@ -1,0 +1,14 @@
+version: '3'
+services:
+  connector-opencti:
+    image: opencti/connector-opencti:1.1.0
+    environment:
+      - RABBITMQ_HOSTNAME=rabbitmq
+      - RABBITMQ_PORT=5672 
+      - RABBITMQ_USERNAME=guest
+      - RABBITMQ_PASSWORD=guest
+      - OPENCTI_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
+      - OPENCTI_ENTITIES=sector,region,country,city
+      - OPENCTI_INTERVAL=1 # Days
+      - OPENCTI_LOG_LEVEL=info
+    restart: always

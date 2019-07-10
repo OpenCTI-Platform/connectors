@@ -14,11 +14,11 @@ ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8 
 
 # Copy the connector
-COPY . /opt/opencti-connector-openctidata
+COPY . /opt/opencti-connector-opencti
 
 # Install Python modules
-RUN cd /opt/opencti-connector-openctidata && pip3 install -r requirements.txt
+RUN cd /opt/opencti-connector-opencti && pip3 install -r requirements.txt
 
 # Expose and entrypoint
-RUN chmod +x /opt/opencti-connector-openctidata/entrypoint.sh
-ENTRYPOINT ["/opt/opencti-connector-openctidata/entrypoint.sh"]
+RUN chmod +x /opt/opencti-connector-opencti/entrypoint.sh
+ENTRYPOINT ["/opt/opencti-connector-opencti/entrypoint.sh"]

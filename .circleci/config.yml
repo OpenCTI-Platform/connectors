@@ -18,18 +18,18 @@ jobs:
           command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}          
       - run:
           working_directory: ~/opencti/mitre
-          name: Build Docker image opencti/connector-openctidata
-          command: docker build -t opencti/connector-openctidata:latest . && docker tag opencti/connector-openctidata:latest opencti/connector-openctidata:${CIRCLE_TAG}       
+          name: Build Docker image opencti/connector-opencti
+          command: docker build -t opencti/connector-opencti:latest . && docker tag opencti/connector-opencti:latest opencti/connector-opencti:${CIRCLE_TAG}       
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker push opencti/connector-misp::latest
-            docker push opencti/connector-misp::${CIRCLE_TAG}
-            docker push opencti/connector-mitre::latest
-            docker push opencti/connector-mitre::${CIRCLE_TAG}
-            docker push opencti/connector-openctidata::latest
-            docker push opencti/connector-openctidata::${CIRCLE_TAG}
+            docker push opencti/connector-misp:latest
+            docker push opencti/connector-misp:${CIRCLE_TAG}
+            docker push opencti/connector-mitre:latest
+            docker push opencti/connector-mitre:${CIRCLE_TAG}
+            docker push opencti/connector-opencti:latest
+            docker push opencti/connector-opencti:${CIRCLE_TAG}
 
 workflows:
   opencti:
