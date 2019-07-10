@@ -3,4 +3,4 @@ __pycache__
 *.log
 test
 config.yml
-docker-compose-dev.yml
+docker-compose-test.yml
