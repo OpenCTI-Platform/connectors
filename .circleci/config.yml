@@ -1,0 +1,42 @@
+version: 2.1
+
+jobs:
+  build:
+    working_directory: ~/opencti
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          working_directory: ~/opencti/misp
+          name: Build Docker image opencti/connector-misp
+          command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/mitre
+          name: Build Docker image opencti/connector-mitre
+          command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}          
+      - run:
+          working_directory: ~/opencti/mitre
+          name: Build Docker image opencti/connector-openctidata
+          command: docker build -t opencti/connector-openctidata:latest . && docker tag opencti/connector-openctidata:latest opencti/connector-openctidata:${CIRCLE_TAG}       
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-misp::latest
+            docker push opencti/connector-misp::${CIRCLE_TAG}
+            docker push opencti/connector-mitre::latest
+            docker push opencti/connector-mitre::${CIRCLE_TAG}
+            docker push opencti/connector-openctidata::latest
+            docker push opencti/connector-openctidata::${CIRCLE_TAG}
+
+workflows:
+  opencti:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
