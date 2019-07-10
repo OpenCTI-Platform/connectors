@@ -8,42 +8,39 @@ import urllib.request
 
 from pycti import OpenCTIConnectorHelper
 
-CONNECTOR_IDENTIFIER = 'opencti'
 
-
-class Opencti:
+class OpenCTI:
     def __init__(self):
         # Get configuration
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
         self.config = dict()
         if os.path.isfile(config_file_path):
             config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            self.rabbitmq_hostname = config['rabbitmq']['hostname']
-            self.rabbitmq_port = config['rabbitmq']['port']
-            self.rabbitmq_username = config['rabbitmq']['username']
-            self.rabbitmq_password = config['rabbitmq']['password']
+            self.config_rabbitmq = config['rabbitmq']
+            self.config['name'] = config['opencti']['name']
+            self.config['confidence_level'] = config['opencti']['confidence_level']
             self.config['sectors_file_url'] = config['opencti']['sectors_file_url']
             self.config['entities'] = config['opencti']['entities'].split(',')
             self.config['interval'] = config['opencti']['interval']
             self.config['log_level'] = config['opencti']['log_level']
         else:
-            self.rabbitmq_hostname = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
-            self.rabbitmq_port = os.getenv('RABBITMQ_PORT', 5672)
-            self.rabbitmq_username = os.getenv('RABBITMQ_USERNAME', 'guest')
-            self.rabbitmq_password = os.getenv('RABBITMQ_PASSWORD', 'guest')
-            self.config['sectors_file_url'] = os.getenv('OPENCTI_SECTORS_FILE_URL', 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json')
+            self.config_rabbitmq['hostname'] = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
+            self.config_rabbitmq['port'] = os.getenv('RABBITMQ_PORT', 5672)
+            self.config_rabbitmq['username'] = os.getenv('RABBITMQ_USERNAME', 'guest')
+            self.config_rabbitmq['password'] = os.getenv('RABBITMQ_PASSWORD', 'guest')
+            self.config['name'] = os.getenv('OPENCTI_NAME', 'OpenCTI')
+            self.config['interval'] = int(os.getenv('OPENCTI_CONFIDENCE_LEVEL', 5))
+            self.config['confidence_level'] = os.getenv('OPENCTI_SECTORS_FILE_URL', 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json')
             self.config['entities'] = os.getenv('OPENCTI_ENTITIES', 'sector,region,country,city')
             self.config['interval'] = os.getenv('OPENCTI_INTERVAL', 1)
             self.config['log_level'] = os.getenv('OPENCTI_LOG_LEVEL', 'info')
 
         # Initialize OpenCTI Connector
+        connector_identifier = ''.join(e for e in self.config['name'] if e.isalnum())
         self.opencti_connector_helper = OpenCTIConnectorHelper(
-            CONNECTOR_IDENTIFIER,
+            connector_identifier.lower(),
             self.config,
-            self.rabbitmq_hostname,
-            self.rabbitmq_port,
-            self.rabbitmq_username,
-            self.rabbitmq_password,
+            self.config_rabbitmq,
             self.config['log_level']
         )
 
@@ -59,7 +56,7 @@ class Opencti:
 
 
 if __name__ == '__main__':
-    opencti = Opencti()
+    opencti = OpenCTI()
 
     # Configure logger
     numeric_level = getattr(logging, opencti.get_log_level().upper(), None)
@@ -67,10 +64,10 @@ if __name__ == '__main__':
         raise ValueError('Invalid log level: ' + opencti.get_log_level())
     logging.basicConfig(level=numeric_level)
 
-    logging.info('Starting the Opencti connector...')
+    logging.info('Starting the OpenCTI connector...')
     while True:
         try:
-            logging.info('Fetching new Opencti events...')
+            logging.info('Fetching OpenCTI datasets...')
             opencti.run()
             time.sleep(opencti.get_interval())
         except Exception as e:
