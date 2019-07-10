@@ -4,7 +4,7 @@ rabbitmq:
   username: 'guest'
   password: 'guest'
 
-openctidata:
+opencti:
   sectors_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json'
   entities: 'sector,region,country,city'
   interval: 1 # Days

@@ -9,7 +9,7 @@ while ! nc -z ${RABBITMQ_HOSTNAME} ${RABBITMQ_PORT}; do
 done
 
 # Correct working directory
-cd /opt/opencti-connector-openctidata
+cd /opt/opencti-connector-opencti
 
 # Start the connector
-python3 openctidata.py
+python3 opencti.py

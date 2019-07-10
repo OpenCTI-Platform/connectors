@@ -9,6 +9,6 @@ services:
       - RABBITMQ_PASSWORD=guest
       - MITRE_ENTERPRISE_FILE_URL=https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json
       - MITRE_ENTITIES=attack-pattern,course-of-action,intrusion-set,malware,tool
-      - MITRE_INTERVAL=7
+      - MITRE_INTERVAL=7 # Days
       - MITRE_LOG_LEVEL=info
     restart: always

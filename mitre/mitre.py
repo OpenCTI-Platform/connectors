@@ -36,7 +36,7 @@ class Mitre:
             self.config['log_level'] = os.getenv('MITRE_LOG_LEVEL', 'info')
 
         # Initialize OpenCTI Connector
-        self.opencti_connector = OpenCTIConnectorHelper(
+        self.opencti_connector_helper = OpenCTIConnectorHelper(
             CONNECTOR_IDENTIFIER,
             self.config,
             self.rabbitmq_hostname,
@@ -54,7 +54,7 @@ class Mitre:
 
     def run(self):
         enterprise_data = urllib.request.urlopen(self.config['enterprise_file_url']).read()
-        self.opencti_connector.send_stix2_bundle(enterprise_data.decode('utf-8'))
+        self.opencti_connector_helper.send_stix2_bundle(enterprise_data.decode('utf-8'))
 
 if __name__ == '__main__':
     mitre = Mitre()
