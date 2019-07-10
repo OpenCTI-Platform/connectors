@@ -8,7 +8,6 @@ import urllib.request
 
 from pycti import OpenCTIConnectorHelper
 
-CONNECTOR_IDENTIFIER = 'mitre'
 
 class Mitre:
     def __init__(self):
@@ -17,32 +16,31 @@ class Mitre:
         self.config = dict()
         if os.path.isfile(config_file_path):
             config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            self.rabbitmq_hostname = config['rabbitmq']['hostname']
-            self.rabbitmq_port = config['rabbitmq']['port']
-            self.rabbitmq_username = config['rabbitmq']['username']
-            self.rabbitmq_password = config['rabbitmq']['password']
+            self.config_rabbitmq = config['rabbitmq']
+            self.config['name'] = config['mitre']['name']
+            self.config['confidence_level'] = config['mitre']['confidence_level']
             self.config['enterprise_file_url'] = config['mitre']['enterprise_file_url']
             self.config['entities'] = config['mitre']['entities'].split(',')
             self.config['interval'] = config['mitre']['interval']
             self.config['log_level'] = config['mitre']['log_level']
         else:
-            self.rabbitmq_hostname = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
-            self.rabbitmq_port = os.getenv('RABBITMQ_PORT', 5672)
-            self.rabbitmq_username = os.getenv('RABBITMQ_USERNAME', 'guest')
-            self.rabbitmq_password = os.getenv('RABBITMQ_PASSWORD', 'guest')
+            self.config_rabbitmq['hostname'] = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
+            self.config_rabbitmq['port'] = os.getenv('RABBITMQ_PORT', 5672)
+            self.config_rabbitmq['username'] = os.getenv('RABBITMQ_USERNAME', 'guest')
+            self.config_rabbitmq['password'] = os.getenv('RABBITMQ_PASSWORD', 'guest')
+            self.config['name'] = os.getenv('MITRE_NAME', 'MITRE ATT&CK')
+            self.config['confidence_level'] = int(os.getenv('MITRE_CONFIDENCE_LEVEL', 3))
             self.config['enterprise_file_url'] = os.getenv('MITRE_ENTERPRISE_FILE_URL', 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json')
             self.config['entities'] = os.getenv('MITRE_ENTITIES', 'attack-pattern,course-of-action,intrusion-set,malware,tool')
             self.config['interval'] = os.getenv('MITRE_INTERVAL', 5)
             self.config['log_level'] = os.getenv('MITRE_LOG_LEVEL', 'info')
 
         # Initialize OpenCTI Connector
+        connector_identifier = ''.join(e for e in self.config['name'] if e.isalnum())
         self.opencti_connector_helper = OpenCTIConnectorHelper(
-            CONNECTOR_IDENTIFIER,
+            connector_identifier.lower(),
             self.config,
-            self.rabbitmq_hostname,
-            self.rabbitmq_port,
-            self.rabbitmq_username,
-            self.rabbitmq_password,
+            self.config_rabbitmq,
             self.config['log_level']
         )
 
@@ -56,6 +54,7 @@ class Mitre:
         enterprise_data = urllib.request.urlopen(self.config['enterprise_file_url']).read()
         self.opencti_connector_helper.send_stix2_bundle(enterprise_data.decode('utf-8'))
 
+
 if __name__ == '__main__':
     mitre = Mitre()
 
@@ -68,7 +67,7 @@ if __name__ == '__main__':
     logging.info('Starting the MITRE connector...')
     while True:
         try:
-            logging.info('Fetching new MITRE events...')
+            logging.info('Fetching the MITRE KNOWLEDGE...')
             mitre.run()
             time.sleep(mitre.get_interval())
         except Exception as e:
