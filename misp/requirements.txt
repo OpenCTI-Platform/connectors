@@ -1,3 +1,5 @@
+pycti
+PyYAML
 pymisp
 urllib3
 python-dateutil

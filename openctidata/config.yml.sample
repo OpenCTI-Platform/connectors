@@ -1,0 +1,11 @@
+rabbitmq:
+  hostname: 'localhost'
+  port: 5672
+  username: 'guest'
+  password: 'guest'
+
+openctidata:
+  sectors_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json'
+  entities: 'sector,region,country,city'
+  interval: 1 # Days
+  log_level: 'info'
