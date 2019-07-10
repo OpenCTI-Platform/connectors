@@ -43,7 +43,8 @@ class OpenCTIData:
             self.rabbitmq_hostname,
             self.rabbitmq_port,
             self.rabbitmq_username,
-            self.rabbitmq_password
+            self.rabbitmq_password,
+            self.config['log_level']
         )
 
     def get_log_level(self):
