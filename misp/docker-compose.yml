@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-misp:
+    image: opencti/connector-misp:1.1.0
+    environment:
+      - RABBITMQ_HOSTNAME=localhost
+      - RABBITMQ_PORT=5672 
+      - RABBITMQ_USERNAME=guest
+      - RABBITMQ_PASSWORD=guest
+      - MISP_NAME=MISP
+      - MISP_URL=http://localhost
+      - MISP_KEY=ChangeMe
+      - MISP_TAG=OpenCTI:\ Import
+      - MISP_UNTAG_EVENT=True
+      - MISP_IMPORTED_TAG=OpenCTI:\ Imported
+      - MISP_INTERVAL=1
+      - MISP_LOG_LEVEL=info
+    restart: always

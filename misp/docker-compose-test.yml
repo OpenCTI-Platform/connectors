@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-misp:
+    image: opencti/connector-misp:1.1.0
+    environment:
+      - RABBITMQ_HOSTNAME=opencti.io
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=admin
+      - RABBITMQ_PASSWORD=shos001
+      - MISP_NAME=MISP
+      - MISP_URL=https://misp.limeo.org
+      - MISP_KEY=mU1kG0oVIO9Y606GFBdiHbGqYPPJrK5YrxLEYZ4R
+      - MISP_TAG=OpenCTI:\ Import
+      - MISP_UNTAG_EVENT=True
+      - MISP_IMPORTED_TAG=OpenCTI:\ Imported
+      - MISP_INTERVAL=1
+      - MISP_LOG_LEVEL=info
+    restart: always
