@@ -1,0 +1,15 @@
+rabbitmq:
+  hostname: 'localhost'
+  port: 5672
+  username: 'guest'
+  password: 'guest'
+
+misp:
+  name: 'MISP'
+  url: 'http://localhost'
+  key: 'ChangeMe'
+  tag: 'OpenCTI: Import'
+  untag_event: True
+  imported_tag: 'OpenCTI: Imported'
+  interval: 1 # Minutes
+  log_level: 'info'

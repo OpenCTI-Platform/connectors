@@ -1,36 +1,72 @@
 # coding: utf-8
 
 import os
+import yaml
+import time
+import logging
+
 from datetime import datetime
 from dateutil.parser import parse
-from pycti import OpenCTI
+from pycti import OpenCTIConnectorHelper
 from pymisp import PyMISP
-from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Report, Indicator, Relationship, ExternalReference, TLP_WHITE, TLP_GREEN, \
+from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Report, Indicator, Relationship, \
+    ExternalReference, TLP_WHITE, TLP_GREEN, \
     TLP_AMBER, TLP_RED
+
+CONNECTOR_IDENTIFIER = 'misp'
 
 
 class Misp:
-    def __init__(self, config, scheduler):
-        # Initialize config
-        self.config = config
-        self.scheduler = scheduler
+    def __init__(self):
+        # Get configuration
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
+        self.config = dict()
+        if os.path.isfile(config_file_path):
+            config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            self.rabbitmq_hostname = config['rabbitmq']['hostname']
+            self.rabbitmq_port = config['rabbitmq']['port']
+            self.rabbitmq_username = config['rabbitmq']['username']
+            self.rabbitmq_password = config['rabbitmq']['password']
+            self.config['name'] = config['misp']['name']
+            self.config['url'] = config['misp']['url']
+            self.config['key'] = config['misp']['key']
+            self.config['tag'] = config['misp']['tag']
+            self.config['untag_event'] = config['misp']['untag_event']
+            self.config['imported_tag'] = config['misp']['imported_tag']
+            self.config['interval'] = config['misp']['interval']
+            self.config['log_level'] = config['misp']['log_level']
+        else:
+            self.rabbitmq_hostname = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
+            self.rabbitmq_port = os.getenv('RABBITMQ_PORT', 5672)
+            self.rabbitmq_username = os.getenv('RABBITMQ_USERNAME', 'guest')
+            self.rabbitmq_password = os.getenv('RABBITMQ_PASSWORD', 'guest')
+            self.config['name'] = os.getenv('MISP_NAME', 'MISP')
+            self.config['url'] = os.getenv('MISP_URL', 'http://localhost')
+            self.config['key'] = os.getenv('MISP_KEY', 'ChangeMe')
+            self.config['tag'] = os.getenv('MISP_TAG', 'OpenCTI: Import')
+            self.config['untag_event'] = os.getenv('MISP_UNTAG_EVENT', "True") == "True"
+            self.config['imported_tag'] = os.getenv('MISP_IMPORTED_TAG', 'OpenCTI: Imported')
+            self.config['interval'] = os.getenv('MISP_INTERVAL', 5)
+            self.config['log_level'] = os.getenv('MISP_LOG_LEVEL', 'info')
 
-        # Initialize MISP
-        self.misp = PyMISP(self.config['misp']['url'], self.config['misp']['key'], False, 'json')
-
-        # Initialize OpenCTI client
-        self.opencti = OpenCTI(
-            self.config['opencti']['api_url'],
-            self.config['opencti']['api_key'],
-            os.path.dirname(os.path.abspath(__file__)) + '/misp.log',
-            True
+        # Initialize OpenCTI Connector
+        self.opencti_connector = OpenCTIConnectorHelper(
+            CONNECTOR_IDENTIFIER,
+            self.config,
+            self.rabbitmq_hostname,
+            self.rabbitmq_port,
+            self.rabbitmq_username,
+            self.rabbitmq_password
         )
 
-    def set_config(self, config):
-        self.config = config
+        # Initialize MISP
+        self.misp = PyMISP(self.config['url'], self.config['key'], False, 'json')
 
-    def get_config(self):
-        return self.config['misp']
+    def get_log_level(self):
+        return self.config['log_level']
+
+    def get_interval(self):
+        return int(self.config['interval']) * 60
 
     def run(self):
         generic_actor = ThreatActor(
@@ -39,15 +75,15 @@ class Misp:
             description='All unknown threats are representing by this pseudo threat actor.'
         )
         added_threats = []
-        result = self.misp.search('events', tags=[self.config['misp']['tag']])
+        result = self.misp.search('events', tags=[self.config['tag']])
         for event in result['response']:
             # Default values
             author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
             report_threats = self.prepare_threats(event['Event']['Galaxy'])
             report_markings = self.resolve_markings(event['Event']['Tag'])
             reference_misp = ExternalReference(
-                source_name=self.config['misp']['name'],
-                url=self.config['misp']['url'] + '/events/view/' + event['Event']['uuid'])
+                source_name=self.config['name'],
+                url=self.config['url'] + '/events/view/' + event['Event']['uuid'])
 
             # Get all attributes
             indicators = []
@@ -101,12 +137,12 @@ class Misp:
                 )
                 bundle_objects.append(report)
                 bundle = Bundle(objects=bundle_objects).serialize()
-                self.scheduler.send_stix2_bundle(bundle)
+                self.opencti_connector.send_stix2_bundle(bundle)
 
-            if 'untag_event' not in self.config['misp'] or self.config['misp']['untag_event']:
-                self.misp.untag(event['Event']['uuid'], self.config['misp']['tag'])
-            if 'imported_tag' in self.config['misp'] and len(self.config['misp']['imported_tag']) > 2:
-                self.misp.tag(event['Event']['uuid'], self.config['misp']['imported_tag'])
+            if 'untag_event' not in self.config or self.config['untag_event']:
+                self.misp.untag(event['Event']['uuid'], self.config['tag'])
+            if 'imported_tag' in self.config and len(self.config['imported_tag']) > 2:
+                self.misp.tag(event['Event']['uuid'], self.config['imported_tag'])
 
     def process_attribute(self, author, report_threats, attribute, generic_actor):
         resolved_attributes = self.resolve_type(attribute['type'], attribute['value'])
@@ -148,8 +184,10 @@ class Misp:
                         description=attribute['comment'],
                         object_marking_refs=attribute_markings,
                         custom_properties={
-                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                '%Y-%m-%dT%H:%M:%SZ'),
+                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                '%Y-%m-%dT%H:%M:%SZ'),
                         }
                     )
                 )
@@ -163,8 +201,10 @@ class Misp:
                         description=attribute['comment'],
                         object_marking_refs=attribute_markings,
                         custom_properties={
-                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                '%Y-%m-%dT%H:%M:%SZ'),
+                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                '%Y-%m-%dT%H:%M:%SZ'),
                         }
                     )
                 )
@@ -207,7 +247,7 @@ class Misp:
                             name=name,
                             labels=['malware'],
                             description=galaxy_entity['description'],
-                            custom_properties = {
+                            custom_properties={
                                 'x_opencti_aliases': aliases
                             }
                         ))
@@ -355,3 +395,23 @@ class Misp:
         if len(markings) == 0:
             markings.append(TLP_WHITE)
         return markings
+
+
+if __name__ == '__main__':
+    misp = Misp()
+
+    # Configure logger
+    numeric_level = getattr(logging, misp.get_log_level().upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: ' + misp.get_log_level())
+    logging.basicConfig(level=numeric_level)
+
+    logging.info('Starting the MISP connector...')
+    while True:
+        try:
+            logging.info('Fetching new MISP events...')
+            misp.run()
+            time.sleep(misp.get_interval())
+        except Exception as e:
+            logging.error(e)
+            time.sleep(30)
