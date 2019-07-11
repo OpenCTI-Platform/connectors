@@ -14,7 +14,7 @@ ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8 
 
 # Copy the connector
-COPY . /opt/opencti-connector-opencti
+COPY src /opt/opencti-connector-opencti
 
 # Install Python modules
 RUN cd /opt/opencti-connector-opencti && pip3 install -r requirements.txt
