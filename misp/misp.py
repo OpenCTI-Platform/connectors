@@ -42,7 +42,7 @@ class Misp:
             self.config['url'] = os.getenv('MISP_URL', 'http://localhost')
             self.config['key'] = os.getenv('MISP_KEY', 'ChangeMe')
             self.config['tag'] = os.getenv('MISP_TAG', 'OpenCTI: Import')
-            self.config['untag_event'] = os.getenv('MISP_UNTAG_EVENT', "True") == "True"
+            self.config['untag_event'] = os.getenv('MISP_UNTAG_EVENT', "true") == "true"
             self.config['imported_tag'] = os.getenv('MISP_IMPORTED_TAG', 'OpenCTI: Imported')
             self.config['interval'] = os.getenv('MISP_INTERVAL', 5)
             self.config['log_level'] = os.getenv('MISP_LOG_LEVEL', 'info')
