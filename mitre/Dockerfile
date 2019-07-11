@@ -20,5 +20,6 @@ COPY src /opt/opencti-connector-mitre
 RUN cd /opt/opencti-connector-mitre && pip3 install -r requirements.txt
 
 # Expose and entrypoint
-RUN chmod +x /opt/opencti-connector-mitre/entrypoint.sh
-ENTRYPOINT ["/opt/opencti-connector-mitre/entrypoint.sh"]
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh 
+ENTRYPOINT ["/entrypoint.sh"]
