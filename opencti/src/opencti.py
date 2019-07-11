@@ -30,9 +30,9 @@ class OpenCTI:
             self.config_rabbitmq['username'] = os.getenv('RABBITMQ_USERNAME', 'guest')
             self.config_rabbitmq['password'] = os.getenv('RABBITMQ_PASSWORD', 'guest')
             self.config['name'] = os.getenv('OPENCTI_NAME', 'OpenCTI')
-            self.config['interval'] = int(os.getenv('OPENCTI_CONFIDENCE_LEVEL', 5))
-            self.config['confidence_level'] = os.getenv('OPENCTI_SECTORS_FILE_URL', 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json')
-            self.config['entities'] = os.getenv('OPENCTI_ENTITIES', 'sector,region,country,city')
+            self.config['confidence_level'] = int(os.getenv('OPENCTI_CONFIDENCE_LEVEL', 5))
+            self.config['sectors_file_url'] = os.getenv('OPENCTI_SECTORS_FILE_URL', 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json')
+            self.config['entities'] = os.getenv('OPENCTI_ENTITIES', 'sector,region,country,city').split(',')
             self.config['interval'] = os.getenv('OPENCTI_INTERVAL', 1)
             self.config['log_level'] = os.getenv('OPENCTI_LOG_LEVEL', 'info')
 

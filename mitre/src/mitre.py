@@ -32,7 +32,7 @@ class Mitre:
             self.config['name'] = os.getenv('MITRE_NAME', 'MITRE ATT&CK')
             self.config['confidence_level'] = int(os.getenv('MITRE_CONFIDENCE_LEVEL', 3))
             self.config['enterprise_file_url'] = os.getenv('MITRE_ENTERPRISE_FILE_URL', 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json')
-            self.config['entities'] = os.getenv('MITRE_ENTITIES', 'attack-pattern,course-of-action,intrusion-set,malware,tool')
+            self.config['entities'] = os.getenv('MITRE_ENTITIES', 'attack-pattern,course-of-action,intrusion-set,malware,tool').split(',')
             self.config['interval'] = os.getenv('MITRE_INTERVAL', 5)
             self.config['log_level'] = os.getenv('MITRE_LOG_LEVEL', 'info')
 
