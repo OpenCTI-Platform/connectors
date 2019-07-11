@@ -20,5 +20,6 @@ COPY src /opt/opencti-connector-opencti
 RUN cd /opt/opencti-connector-opencti && pip3 install -r requirements.txt
 
 # Expose and entrypoint
-RUN chmod +x /opt/opencti-connector-opencti/entrypoint.sh
-ENTRYPOINT ["/opt/opencti-connector-opencti/entrypoint.sh"]
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh 
+ENTRYPOINT ["/entrypoint.sh"]
