@@ -68,7 +68,7 @@ if __name__ == '__main__':
     logging.info('Starting the MITRE connector...')
     while True:
         try:
-            logging.info('Fetching the MITRE KNOWLEDGE...')
+            logging.info('Fetching the MITRE knowledge...')
             mitre.run()
             time.sleep(mitre.get_interval())
         except Exception as e:
