@@ -52,8 +52,8 @@ class OpenCTI:
         return int(self.config['interval']) * 60 * 60 * 24
 
     def run(self):
-        enterprise_data = urllib.request.urlopen(self.config['sectors_file_url']).read()
-        self.opencti_connector_helper.send_stix2_bundle(enterprise_data.decode('utf-8'))
+        sectors_data = urllib.request.urlopen(self.config['sectors_file_url']).read()
+        self.opencti_connector_helper.send_stix2_bundle(sectors_data.decode('utf-8'), self.config['entities'])
 
 
 if __name__ == '__main__':

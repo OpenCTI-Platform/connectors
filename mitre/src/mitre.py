@@ -53,7 +53,7 @@ class Mitre:
 
     def run(self):
         enterprise_data = urllib.request.urlopen(self.config['enterprise_file_url']).read()
-        self.opencti_connector_helper.send_stix2_bundle(enterprise_data.decode('utf-8'))
+        self.opencti_connector_helper.send_stix2_bundle(enterprise_data.decode('utf-8'), self.config['entities'])
 
 
 if __name__ == '__main__':
