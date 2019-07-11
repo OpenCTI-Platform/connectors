@@ -24,6 +24,7 @@ class Mitre:
             self.config['interval'] = config['mitre']['interval']
             self.config['log_level'] = config['mitre']['log_level']
         else:
+            self.config_rabbitmq = dict()
             self.config_rabbitmq['hostname'] = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
             self.config_rabbitmq['port'] = os.getenv('RABBITMQ_PORT', 5672)
             self.config_rabbitmq['username'] = os.getenv('RABBITMQ_USERNAME', 'guest')
