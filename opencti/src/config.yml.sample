@@ -8,6 +8,6 @@ opencti:
   name: 'OpenCTI'
   confidence_level: 5
   sectors_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json'
-  entities: 'sector,region,country,city'
+  entities: 'identity,sector,region,country,city'
   interval: 1 # Days
   log_level: 'info'
