@@ -4,7 +4,7 @@
 [![CircleCI](https://circleci.com/gh/OpenCTI-Platform/connectors.svg?style=shield)](https://circleci.com/gh/OpenCTI-Platform/connectors/tree/master)
 [![Slack Status](https://slack.luatix.org/badge.svg)](https://slack.luatix.org)
 
-The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications.
+The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications. To know how to enable connectors on OpenCTI, please read the [dedicated documentation](https://opencti-platform.github.io/docs/installation/connectors).
 
 ## License
 
@@ -12,7 +12,7 @@ The following repository is used to store the OpenCTI connectors for the platfor
 
 ## Contributing
 
-We welcome your **[contributions for new connectors](https://xxxxx)**. Please feel free to fork the code, play with it, make some patches and send us pull requests using [issues](https://github.com/OpenCTI-Platform/connectors/issues).
+We welcome your **[contributions for new connectors](https://opencti-platform.github.io/docs/development/connectors)**. Please feel free to fork the code, play with it, make some patches and send us pull requests using [issues](https://github.com/OpenCTI-Platform/connectors/issues).
 
 ## About
 
