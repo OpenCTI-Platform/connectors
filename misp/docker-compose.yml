@@ -3,17 +3,18 @@ services:
   connector-misp:
     image: opencti/connector-misp:1.1.0
     environment:
-      - RABBITMQ_HOSTNAME=localhost
-      - RABBITMQ_PORT=5672 
-      - RABBITMQ_USERNAME=guest
-      - RABBITMQ_PASSWORD=guest
-      - MISP_NAME=MISP
-      - MISP_CONFIDENCE_LEVEL=3
-      - MISP_URL=http://localhost
-      - MISP_KEY=ChangeMe
-      - MISP_TAG=OpenCTI:\ Import
-      - MISP_UNTAG_EVENT=true
-      - MISP_IMPORTED_TAG=OpenCTI:\ Imported
+      - RABBITMQ_HOSTNAME=localhost # Required
+      - RABBITMQ_PORT=5672 # Required
+      - RABBITMQ_USERNAME=guest # Required
+      - RABBITMQ_PASSWORD=guest # Required
+      - MISP_NAME=MISP # Required
+      - MISP_CONFIDENCE_LEVEL=3 # Required
+      - MISP_URL=http://localhost # Required
+      - MISP_KEY=ChangeMe # Required
+      - MISP_TAG=OpenCTI:\ Import # Optional, tags of events to be ingested (if not provided, import all!)
+      - MISP_UNTAG_EVENT=true # Optional, remove the tag after import
+      - MISP_IMPORTED_TAG=OpenCTI:\ Imported # Required, tag event after import
+      - MISP_FILTER_ON_IMPORTED_TAG=true # Required, use imported tag to know which events to not ingest
       - MISP_INTERVAL=1 # Minutes
       - MISP_LOG_LEVEL=info
     restart: always

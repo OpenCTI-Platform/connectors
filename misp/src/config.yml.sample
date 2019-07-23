@@ -5,12 +5,13 @@ rabbitmq:
   password: 'guest'
 
 misp:
-  name: 'MISP'
-  confidence_level: 3
-  url: 'http://localhost'
-  key: 'ChangeMe'
-  tag: 'OpenCTI: Import' # This tag will be used to ingest events
-  untag_event: True
-  imported_tag: 'OpenCTI: Imported' # This tag will be used to not ingest events
+  name: 'MISP' # Required
+  confidence_level: 3 # Required
+  url: 'http://localhost' # Required
+  key: 'ChangeMe' # Required
+  tag: 'OpenCTI: Import' # Optional, tags of events to be ingested (if not provided, import all!)
+  untag_event: True # Optional, remove the tag after import
+  imported_tag: 'OpenCTI: Imported' # Required, tag event after import
+  filter_on_imported_tag: True # Required, use imported tag to know which events to not ingest
   interval: 1 # Minutes
   log_level: 'info'
