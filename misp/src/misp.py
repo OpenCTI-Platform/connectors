@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper
-from pymisp import PyMISP
+from pymisp import ExpandedPyMISP
 from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Report, Indicator, Relationship, \
     ExternalReference, TLP_WHITE, TLP_GREEN, \
     TLP_AMBER, TLP_RED
@@ -26,9 +26,10 @@ class Misp:
             self.config['confidence_level'] = config['misp']['confidence_level']
             self.config['url'] = config['misp']['url']
             self.config['key'] = config['misp']['key']
-            self.config['tag'] = config['misp']['tag']
-            self.config['untag_event'] = config['misp']['untag_event']
+            self.config['tag'] = config['misp']['tag'] if 'tag' in config['misp'] else None
+            self.config['untag_event'] = config['misp']['untag_event'] if 'untag_event' in config['misp'] else None
             self.config['imported_tag'] = config['misp']['imported_tag']
+            self.config['filter_on_imported_tag'] = config['misp']['filter_on_imported_tag']
             self.config['interval'] = config['misp']['interval']
             self.config['log_level'] = config['misp']['log_level']
         else:
@@ -41,9 +42,10 @@ class Misp:
             self.config['confidence_level'] = int(os.getenv('MISP_CONFIDENCE_LEVEL', 3))
             self.config['url'] = os.getenv('MISP_URL', 'http://localhost')
             self.config['key'] = os.getenv('MISP_KEY', 'ChangeMe')
-            self.config['tag'] = os.getenv('MISP_TAG', 'OpenCTI: Import')
-            self.config['untag_event'] = os.getenv('MISP_UNTAG_EVENT', "true") == "true"
+            self.config['tag'] = os.getenv('MISP_TAG', None)
+            self.config['untag_event'] = os.getenv('MISP_UNTAG_EVENT', None) == "true"
             self.config['imported_tag'] = os.getenv('MISP_IMPORTED_TAG', 'OpenCTI: Imported')
+            self.config['filter_on_imported_tag'] = os.getenv('MISP_FILTER_ON_IMPORTED_TAG', "true") == "true"
             self.config['interval'] = os.getenv('MISP_INTERVAL', 5)
             self.config['log_level'] = os.getenv('MISP_LOG_LEVEL', 'info')
 
@@ -57,7 +59,7 @@ class Misp:
         )
 
         # Initialize MISP
-        self.misp = PyMISP(self.config['url'], self.config['key'], False, 'json')
+        self.misp = ExpandedPyMISP(self.config['url'], self.config['key'], False, 'json')
 
     def get_log_level(self):
         return self.config['log_level']
@@ -72,9 +74,16 @@ class Misp:
             description='All unknown threats are representing by this pseudo threat actor.'
         )
         added_threats = []
-        imported_tag = '!' + self.config['imported_tag']
-        result = self.misp.search('events', tags=[self.config['tag'], imported_tag])
-        for event in result['response']:
+        and_parameters = None
+        not_parameters= None
+        if self.config['tag'] is not None:
+            and_parameters = [self.config['tag']]
+        if self.config['filter_on_imported_tag']:
+            not_parameters = [self.config['imported_tag']]
+
+        complex_query = self.misp.build_complex_query(and_parameters=and_parameters, not_parameters=not_parameters)
+        result = self.misp.search('events', tags=complex_query)
+        for event in result:
             # Default values
             author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
             report_threats = self.prepare_threats(event['Event']['Galaxy'])
