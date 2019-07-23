@@ -68,11 +68,6 @@ class Misp:
         return int(self.config['interval']) * 60
 
     def run(self):
-        generic_actor = ThreatActor(
-            name='Unknown threats',
-            labels=['threat-actor'],
-            description='All unknown threats are representing by this pseudo threat actor.'
-        )
         and_parameters = None
         not_parameters = None
         if self.config['tag'] is not None:
@@ -81,8 +76,18 @@ class Misp:
             not_parameters = [self.config['imported_tag']]
 
         complex_query = self.misp.build_complex_query(and_parameters=and_parameters, not_parameters=not_parameters)
-        result = self.misp.search('events', tags=complex_query, limit=100)
-        for event in result:
+        for i in range(1, 200):
+            events = self.misp.search('events', tags=complex_query, limit=100, page=i)
+            print(events)
+            self.process_events(events)
+
+    def process_events(self, events):
+        for event in events:
+            generic_actor = ThreatActor(
+                name='Unknown threats',
+                labels=['threat-actor'],
+                description='All unknown threats are representing by this pseudo threat actor.'
+            )
             added_threats = []
             added_markings = []
             # Default values
