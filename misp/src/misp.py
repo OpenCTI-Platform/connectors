@@ -72,7 +72,8 @@ class Misp:
             description='All unknown threats are representing by this pseudo threat actor.'
         )
         added_threats = []
-        result = self.misp.search('events', tags=[self.config['tag']])
+        imported_tag = '!' + self.config['imported_tag']
+        result = self.misp.search('events', tags=[self.config['tag'], imported_tag])
         for event in result['response']:
             # Default values
             author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
@@ -138,8 +139,7 @@ class Misp:
 
             if 'untag_event' not in self.config or self.config['untag_event']:
                 self.misp.untag(event['Event']['uuid'], self.config['tag'])
-            if 'imported_tag' in self.config and len(self.config['imported_tag']) > 2:
-                self.misp.tag(event['Event']['uuid'], self.config['imported_tag'])
+            self.misp.tag(event['Event']['uuid'], self.config['imported_tag'])
 
     def process_attribute(self, author, report_threats, attribute, generic_actor):
         resolved_attributes = self.resolve_type(attribute['type'], attribute['value'])

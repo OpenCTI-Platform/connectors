@@ -9,8 +9,8 @@ misp:
   confidence_level: 3
   url: 'http://localhost'
   key: 'ChangeMe'
-  tag: 'OpenCTI: Import'
+  tag: 'OpenCTI: Import' # This tag will be used to ingest events
   untag_event: True
-  imported_tag: 'OpenCTI: Imported'
+  imported_tag: 'OpenCTI: Imported' # This tag will be used to not ingest events
   interval: 1 # Minutes
   log_level: 'info'
