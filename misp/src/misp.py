@@ -92,7 +92,10 @@ class Misp:
             # Default values
             author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
             report_threats = self.prepare_threats(event['Event']['Galaxy'])
-            report_markings = self.resolve_markings(event['Event']['Tag'])
+            if 'Tag' in event['Event']:
+                report_markings = self.resolve_markings(event['Event']['Tag'])
+            else:
+                report_markings = []
             reference_misp = ExternalReference(
                 source_name=self.config['name'],
                 url=self.config['url'] + '/events/view/' + event['Event']['uuid'])
