@@ -78,7 +78,6 @@ class Misp:
         complex_query = self.misp.build_complex_query(and_parameters=and_parameters, not_parameters=not_parameters)
         for i in range(1, 200):
             events = self.misp.search('events', tags=complex_query, limit=100, page=i)
-            print(events)
             self.process_events(events)
 
     def process_events(self, events):
