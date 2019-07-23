@@ -59,7 +59,7 @@ class Misp:
         )
 
         # Initialize MISP
-        self.misp = ExpandedPyMISP(self.config['url'], self.config['key'], False, 'json')
+        self.misp = ExpandedPyMISP(url=self.config['url'], key=self.config['key'], ssl=False, debug=False)
 
     def get_log_level(self):
         return self.config['log_level']
@@ -73,17 +73,18 @@ class Misp:
             labels=['threat-actor'],
             description='All unknown threats are representing by this pseudo threat actor.'
         )
-        added_threats = []
         and_parameters = None
-        not_parameters= None
+        not_parameters = None
         if self.config['tag'] is not None:
             and_parameters = [self.config['tag']]
         if self.config['filter_on_imported_tag']:
             not_parameters = [self.config['imported_tag']]
 
         complex_query = self.misp.build_complex_query(and_parameters=and_parameters, not_parameters=not_parameters)
-        result = self.misp.search('events', tags=complex_query)
+        result = self.misp.search('events', tags=complex_query, limit=100)
         for event in result:
+            added_threats = []
+            added_markings = []
             # Default values
             author = Identity(name=event['Event']['Orgc']['name'], identity_class='organization')
             report_threats = self.prepare_threats(event['Event']['Galaxy'])
@@ -109,7 +110,9 @@ class Misp:
             bundle_objects = [author]
             report_refs = []
             for report_marking in report_markings:
-                bundle_objects.append(report_marking)
+                if report_marking['id'] not in added_markings:
+                    bundle_objects.append(report_marking)
+                    added_markings.append(report_marking['id'])
 
             for report_threat in report_threats:
                 report_refs.append(report_threat)
@@ -124,6 +127,10 @@ class Misp:
                         report_refs.append(attribute_threat)
                         bundle_objects.append(attribute_threat)
                         added_threats.append(attribute_threat['name'])
+                for marking in indicator['markings']:
+                    if marking['id'] not in added_markings:
+                        bundle_objects.append(marking)
+                        added_markings.append(marking['id'])
                 for relationship in indicator['relationships']:
                     report_refs.append(relationship)
                     bundle_objects.append(relationship)
@@ -216,7 +223,7 @@ class Misp:
                         }
                     )
                 )
-            return {'indicator': indicator, 'relationships': relationships, 'attribute_threats': attribute_threats}
+            return {'indicator': indicator, 'relationships': relationships, 'attribute_threats': attribute_threats, 'markings': attribute_markings}
 
     def prepare_threats(self, galaxies):
         threats = []
