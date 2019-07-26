@@ -14,10 +14,10 @@ ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8 
 
 # Copy the connector
-COPY src /opt/opencti-connector-mitre
+COPY src /opt/opencti-connector-cve
 
 # Install Python modules
-RUN cd /opt/opencti-connector-mitre && pip3 install -r requirements.txt
+RUN cd /opt/opencti-connector-cve && pip3 install -r requirements.txt
 
 # Expose and entrypoint
 COPY entrypoint.sh /
