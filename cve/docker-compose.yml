@@ -10,7 +10,7 @@ services:
       - CVE_NAME=Common Vulnerabilities and Exposures
       - CVE_CONFIDENCE_LEVEL=3
       - CVE_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.gz
-      - CVE_ENTITIES=vulnerability
+      - CVE_ENTITIES=identity,vulnerability
       - CVE_INTERVAL=7 # Days
       - CVE_LOG_LEVEL=info
     restart: always

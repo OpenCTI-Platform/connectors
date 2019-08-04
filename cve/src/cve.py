@@ -68,7 +68,7 @@ class Cve:
         convert('data.json', 'data-stix2.json')
         with open('data-stix2.json') as stixjson:
             contents = stixjson.read()
-            self.opencti_connector_helper.send_stix2_bundle(contents.decode('utf-8'), self.config['entities'])
+            self.opencti_connector_helper.send_stix2_bundle(contents, self.config['entities'])
         
         # Remove files
         os.remove('data.json')
