@@ -8,6 +8,6 @@ cve:
   name: 'Common Vulnerabilities and Exposures'
   confidence_level: 3
   nvd_data_feed: 'https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.gz'
-  entities: 'vulnerability'
+  entities: 'identity,vulnerability'
   interval: 7 # Days
   log_level: 'info'

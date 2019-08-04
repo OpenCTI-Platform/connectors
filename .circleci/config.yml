@@ -19,7 +19,11 @@ jobs:
       - run:
           working_directory: ~/opencti/opencti
           name: Build Docker image opencti/connector-opencti
-          command: docker build -t opencti/connector-opencti:latest . && docker tag opencti/connector-opencti:latest opencti/connector-opencti:${CIRCLE_TAG}       
+          command: docker build -t opencti/connector-opencti:latest . && docker tag opencti/connector-opencti:latest opencti/connector-opencti:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/cve
+          name: Build Docker image opencti/connector-cve
+          command: docker build -t opencti/connector-cve:latest . && docker tag opencti/connector-cve:latest opencti/connector-cve:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -30,6 +34,8 @@ jobs:
             docker push opencti/connector-mitre:${CIRCLE_TAG}
             docker push opencti/connector-opencti:latest
             docker push opencti/connector-opencti:${CIRCLE_TAG}
+            docker push opencti/connector-cve:latest
+            docker push opencti/connector-cve:${CIRCLE_TAG}
 
   build_rolling:
     working_directory: ~/opencti
@@ -51,12 +57,17 @@ jobs:
           name: Build Docker image opencti/connector-opencti
           command: docker build -t opencti/connector-opencti:rolling .
       - run:
+          working_directory: ~/opencti/cve
+          name: Build Docker image opencti/connector-cve
+          command: docker build -t opencti/connector-cve:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling
+            docker push opencti/connector-cve:rolling
 workflows:
   opencti:
     jobs:
