@@ -1,0 +1,14 @@
+version: '3'
+services:
+  connector-pdfparser:
+    image: opencti/connector-pdfparser:1.1.2
+    environment:
+      - RABBITMQ_HOSTNAME=localhost
+      - RABBITMQ_PORT=5672 
+      - RABBITMQ_USERNAME=guest
+      - RABBITMQ_PASSWORD=guest
+      - PDFPARSER_NAME=PDFPARSER
+      - PDFPARSER_CONFIDENCE_LEVEL=3
+      - PDFPARSER_INTERVAL=7
+      - PDFPARSER_LOG_LEVEL=info
+    restart: always
