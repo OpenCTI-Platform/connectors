@@ -11,7 +11,6 @@ import shutil
 from pycti import OpenCTIConnectorHelper
 from cvetostix2 import convert
 
-
 class Cve:
     def __init__(self):
         # Get configuration

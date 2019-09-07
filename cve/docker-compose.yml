@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cve:
-    image: opencti/connector-cve:1.1.0
+    image: opencti/connector-cve:1.1.3
     environment:
       - RABBITMQ_HOSTNAME=rabbitmq
       - RABBITMQ_PORT=5672 
