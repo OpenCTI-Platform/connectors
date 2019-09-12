@@ -1,10 +1,14 @@
 # coding: utf-8
 
-import os
-import yaml
+import datetime
+import dateutil
+import json
 import logging
+import os
+import sys
 import time
 import urllib.request
+import yaml
 
 from pycti import OpenCTIConnectorHelper
 
@@ -12,17 +16,25 @@ from pycti import OpenCTIConnectorHelper
 class Mitre:
     def __init__(self):
         # Get configuration
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
+        self.config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
         self.config = dict()
-        if os.path.isfile(config_file_path):
-            config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            self.config_rabbitmq = config['rabbitmq']
-            self.config['name'] = config['mitre']['name']
-            self.config['confidence_level'] = config['mitre']['confidence_level']
-            self.config['enterprise_file_url'] = config['mitre']['enterprise_file_url']
-            self.config['entities'] = config['mitre']['entities'].split(',')
-            self.config['interval'] = config['mitre']['interval']
-            self.config['log_level'] = config['mitre']['log_level']
+        self.last_check = None
+
+        if os.path.isfile(self.config_file_path):
+            self.yaml_config = yaml.load(open(self.config_file_path), Loader=yaml.FullLoader)
+            self.config_rabbitmq = self.yaml_config['rabbitmq']
+            self.config['name'] = self.yaml_config['mitre']['name']
+            self.config['confidence_level'] = self.yaml_config['mitre']['confidence_level']
+            self.config['enterprise_file_url'] = self.yaml_config['mitre']['enterprise_file_url']
+            self.config['entities'] = self.yaml_config['mitre']['entities'].split(',')
+            self.config['interval'] = self.yaml_config['mitre']['interval']
+            self.config['log_level'] = self.yaml_config['mitre']['log_level']
+
+            if 'last_check' in self.yaml_config['mitre']:
+                # add the timezone back to allow comparison later
+                self.last_check = dateutil.parser.parse(
+                    self.yaml_config['mitre']['last_check']
+                ).replace(tzinfo=dateutil.tz.tzutc())
         else:
             self.config_rabbitmq = dict()
             self.config_rabbitmq['hostname'] = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
@@ -53,7 +65,37 @@ class Mitre:
 
     def run(self):
         enterprise_data = urllib.request.urlopen(self.config['enterprise_file_url']).read()
-        self.opencti_connector_helper.send_stix2_bundle(enterprise_data.decode('utf-8'), self.config['entities'])
+        if self.last_check is None:
+            self.opencti_connector_helper.send_stix2_bundle(enterprise_data.decode('utf-8'), self.config['entities'])
+        else:
+            bundle = json.loads(enterprise_data)
+
+            new_bundle = {
+                'type': bundle['type'],
+                'id': bundle['id'],
+                'spec_version': bundle['spec_version'],
+                'objects': []
+            }
+
+            new_object_count = 0
+            for object in bundle['objects']:
+                if 'modified' in object:
+                    mod = dateutil.parser.parse(object['modified'])
+                    if mod > self.last_check:
+                        new_bundle['objects'].append(object)
+                        new_object_count += 1
+                else:
+                    new_bundle['objects'].append(object)
+
+            logging.info(f"{new_object_count} objects to add")
+            if new_object_count:
+                self.opencti_connector_helper.send_stix2_bundle(json.dumps(new_bundle), self.config['entities'])
+
+        # write the new date back to the config file
+        if os.path.isfile(self.config_file_path):
+            self.yaml_config['mitre']['last_check'] = datetime.datetime.utcnow().isoformat()
+            with open(self.config_file_path, 'w') as f:
+                yaml.dump(self.yaml_config, f)
 
 
 if __name__ == '__main__':
@@ -74,3 +116,4 @@ if __name__ == '__main__':
         except Exception as e:
             logging.error(e)
             time.sleep(30)
+
