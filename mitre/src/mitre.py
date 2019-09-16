@@ -5,7 +5,6 @@ import dateutil
 import json
 import logging
 import os
-import sys
 import time
 import urllib.request
 import yaml
@@ -43,8 +42,12 @@ class Mitre:
             self.config_rabbitmq['password'] = os.getenv('RABBITMQ_PASSWORD', 'guest')
             self.config['name'] = os.getenv('MITRE_NAME', 'MITRE ATT&CK')
             self.config['confidence_level'] = int(os.getenv('MITRE_CONFIDENCE_LEVEL', 3))
-            self.config['enterprise_file_url'] = os.getenv('MITRE_ENTERPRISE_FILE_URL', 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json')
-            self.config['entities'] = os.getenv('MITRE_ENTITIES', 'attack-pattern,course-of-action,intrusion-set,malware,tool').split(',')
+            self.config['enterprise_file_url'] = os.getenv(
+                'MITRE_ENTERPRISE_FILE_URL',
+                'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json')
+            self.config['entities'] = os.getenv(
+                'MITRE_ENTITIES',
+                'attack-pattern,course-of-action,intrusion-set,malware,tool').split(',')
             self.config['interval'] = os.getenv('MITRE_INTERVAL', 5)
             self.config['log_level'] = os.getenv('MITRE_LOG_LEVEL', 'info')
 
@@ -66,8 +69,10 @@ class Mitre:
     def run(self):
         enterprise_data = urllib.request.urlopen(self.config['enterprise_file_url']).read()
         if self.last_check is None:
+            # no previous check, just send everything
             self.opencti_connector_helper.send_stix2_bundle(enterprise_data.decode('utf-8'), self.config['entities'])
         else:
+            # previous check, just send new/modified entries
             bundle = json.loads(enterprise_data)
 
             new_bundle = {
@@ -87,7 +92,7 @@ class Mitre:
                 else:
                     new_bundle['objects'].append(object)
 
-            logging.info(f"{new_object_count} objects to add")
+            logging.debug(f"{new_object_count} objects to add")
             if new_object_count:
                 self.opencti_connector_helper.send_stix2_bundle(json.dumps(new_bundle), self.config['entities'])
 
