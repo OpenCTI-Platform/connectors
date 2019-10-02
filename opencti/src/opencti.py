@@ -41,7 +41,7 @@ class OpenCTI:
         logging.info('Fetching OpenCTI datasets...')
         try:
             sectors_data = urllib.request.urlopen(self.sectors_file_url).read()
-            self.helper.api.send_stix2_bundle(sectors_data.decode('utf-8'), self.entities)
+            self.helper.send_stix2_bundle(sectors_data.decode('utf-8'), self.entities)
             time.sleep(self.get_interval())
         except (KeyboardInterrupt, SystemExit):
             logging.info('Connector stop')
