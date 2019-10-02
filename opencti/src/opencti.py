@@ -6,71 +6,52 @@ import logging
 import time
 import urllib.request
 
+from opencti_connector import OpenCTIConnector
 from pycti import OpenCTIConnectorHelper
+
+DEFAULT_URL = 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json'
 
 
 class OpenCTI:
     def __init__(self):
-        # Get configuration
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
-        self.config = dict()
-        if os.path.isfile(config_file_path):
-            config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            self.config_rabbitmq = config['rabbitmq']
-            self.config['name'] = config['opencti']['name']
-            self.config['confidence_level'] = config['opencti']['confidence_level']
-            self.config['sectors_file_url'] = config['opencti']['sectors_file_url']
-            self.config['entities'] = config['opencti']['entities'].split(',')
-            self.config['interval'] = config['opencti']['interval']
-            self.config['log_level'] = config['opencti']['log_level']
-        else:
-            self.config_rabbitmq = dict()
-            self.config_rabbitmq['hostname'] = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
-            self.config_rabbitmq['port'] = os.getenv('RABBITMQ_PORT', 5672)
-            self.config_rabbitmq['username'] = os.getenv('RABBITMQ_USERNAME', 'guest')
-            self.config_rabbitmq['password'] = os.getenv('RABBITMQ_PASSWORD', 'guest')
-            self.config['name'] = os.getenv('OPENCTI_NAME', 'OpenCTI')
-            self.config['confidence_level'] = int(os.getenv('OPENCTI_CONFIDENCE_LEVEL', 5))
-            self.config['sectors_file_url'] = os.getenv('OPENCTI_SECTORS_FILE_URL', 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json')
-            self.config['entities'] = os.getenv('OPENCTI_ENTITIES', 'sector,region,country,city').split(',')
-            self.config['interval'] = os.getenv('OPENCTI_INTERVAL', 1)
-            self.config['log_level'] = os.getenv('OPENCTI_LOG_LEVEL', 'info')
+        config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+        self.opencti_url = os.getenv('OPENCTI_URL') or config['opencti']['url']
+        self.opencti_token = os.getenv('OPENCTI_TOKEN') or config['opencti']['token']
+        self.name = os.getenv('OPENCTI_NAME', 'OpenCTI') or config['connector']['name']
+        self.confidence_level = int(os.getenv('OPENCTI_CONFIDENCE_LEVEL', 5)) or config['connector']['confidence_level']
+        self.sectors_file_url = os.getenv('OPENCTI_SECTORS_FILE_URL', DEFAULT_URL) or config['connector']['sectors_file_url']
+        self.entities = os.getenv('OPENCTI_ENTITIES', 'sector,region,country,city').split(',') or config['connector']['entities'].split(',')
+        self.interval = os.getenv('OPENCTI_INTERVAL', 1) or config['connector']['interval']
+        self.log_level = os.getenv('OPENCTI_LOG_LEVEL', 'info') or config['connector']['log_level']
 
         # Initialize OpenCTI Connector
-        connector_identifier = ''.join(e for e in self.config['name'] if e.isalnum())
-        self.opencti_connector_helper = OpenCTIConnectorHelper(
-            connector_identifier.lower(),
-            self.config,
-            self.config_rabbitmq,
-            self.config['log_level']
-        )
+        connector_id = '89c2c3bf-de2e-4880-bbea-aeeb408b7036'
+        connector_type = 'EXTERNAL_IMPORT'
+        connector = OpenCTIConnector(connector_id, self.name, connector_type, [])
+        self.helper = OpenCTIConnectorHelper(connector, self.opencti_url, self.opencti_token, self.log_level)
 
     def get_log_level(self):
-        return self.config['log_level']
+        return self.log_level
 
     def get_interval(self):
-        return int(self.config['interval']) * 60 * 60 * 24
+        return int(self.interval) * 60 * 60 * 24
 
-    def run(self):
-        sectors_data = urllib.request.urlopen(self.config['sectors_file_url']).read()
-        self.opencti_connector_helper.send_stix2_bundle(sectors_data.decode('utf-8'), self.config['entities'])
+    def process(self):
+        logging.info('Fetching OpenCTI datasets...')
+        try:
+            sectors_data = urllib.request.urlopen(self.sectors_file_url).read()
+            self.helper.api.send_stix2_bundle(sectors_data.decode('utf-8'), self.entities)
+            time.sleep(self.get_interval())
+        except (KeyboardInterrupt, SystemExit):
+            logging.info('Connector stop')
+        except Exception as e:
+            logging.error(e)
+            self.process()
 
 
 if __name__ == '__main__':
-    opencti = OpenCTI()
+    openCTIConnector = OpenCTI()
+    openCTIConnector.process()
 
-    # Configure logger
-    numeric_level = getattr(logging, opencti.get_log_level().upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: ' + opencti.get_log_level())
-    logging.basicConfig(level=numeric_level)
 
-    logging.info('Starting the OpenCTI connector...')
-    while True:
-        try:
-            logging.info('Fetching OpenCTI datasets...')
-            opencti.run()
-            time.sleep(opencti.get_interval())
-        except Exception as e:
-            logging.error(e)
-            time.sleep(30)

@@ -1,0 +1,8 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  name: 'Json Stix exporter'
+  scope: 'application/json'
+  log_level: 'info'
