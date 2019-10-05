@@ -6,7 +6,7 @@ import os
 import json
 
 from opencti_connector import OpenCTIConnector
-from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper
 
 
 class StixExporter:
@@ -32,10 +32,17 @@ class StixExporter:
             raise ValueError('Invalid log level: ' + self.log_level)
         logging.basicConfig(level=numeric_level)
 
-    def _process_message(self, data, channel, method, properties):
-        bundle = self.helper.api.stix2_export_entity(data['entity_type'], data['entity_id'], 'simple')
+    def _process_message(self, job_id, data, channel, method, properties):
+        entity_id = data['entity_id']
+        file_name = data['file_name']
+        entity_type = data['entity_type']
+        export_type = data['export_type']
+        logging.info('Exporting: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name)
+        bundle = self.helper.api.stix2_export_entity(entity_type, entity_id, export_type)
         json_bundle = json.dumps(bundle, indent=4)
-        self.helper.api.push_stix_domain_entity_export(data['entity_id'], data['export_id'], json_bundle)
+        logging.info('Uploading: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name)
+        self.helper.api.push_stix_domain_entity_export(job_id, entity_id, file_name, json_bundle)
+        logging.info('Exported done: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name)
 
     # Start the main loop
     def start(self):
