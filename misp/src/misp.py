@@ -1,79 +1,46 @@
-# coding: utf-8
-
 import os
 import yaml
 import time
-import logging
 
 from datetime import datetime
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper
 from pymisp import ExpandedPyMISP
 from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Report, Indicator, Relationship, \
     ExternalReference, TLP_WHITE, TLP_GREEN, \
     TLP_AMBER, TLP_RED
 
+from connector.opencti_connector_helper import OpenCTIConnectorHelper
+
 
 class Misp:
     def __init__(self):
-        # Get configuration
+        # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
-        self.config = dict()
-        if os.path.isfile(config_file_path):
-            config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            self.config_rabbitmq = config['rabbitmq']
-            self.config['name'] = config['misp']['name']
-            self.config['confidence_level'] = config['misp']['confidence_level']
-            self.config['url'] = config['misp']['url']
-            self.config['key'] = config['misp']['key']
-            self.config['tag'] = config['misp']['tag'] if 'tag' in config['misp'] else None
-            self.config['untag_event'] = config['misp']['untag_event'] if 'untag_event' in config['misp'] else None
-            self.config['imported_tag'] = config['misp']['imported_tag']
-            self.config['filter_on_imported_tag'] = config['misp']['filter_on_imported_tag']
-            self.config['interval'] = config['misp']['interval']
-            self.config['log_level'] = config['misp']['log_level']
-        else:
-            self.config_rabbitmq = dict()
-            self.config_rabbitmq['hostname'] = os.getenv('RABBITMQ_HOSTNAME', 'localhost')
-            self.config_rabbitmq['port'] = os.getenv('RABBITMQ_PORT', 5672)
-            self.config_rabbitmq['username'] = os.getenv('RABBITMQ_USERNAME', 'guest')
-            self.config_rabbitmq['password'] = os.getenv('RABBITMQ_PASSWORD', 'guest')
-            self.config['name'] = os.getenv('MISP_NAME', 'MISP')
-            self.config['confidence_level'] = int(os.getenv('MISP_CONFIDENCE_LEVEL', 3))
-            self.config['url'] = os.getenv('MISP_URL', 'http://localhost')
-            self.config['key'] = os.getenv('MISP_KEY', 'ChangeMe')
-            self.config['tag'] = os.getenv('MISP_TAG', None)
-            self.config['untag_event'] = os.getenv('MISP_UNTAG_EVENT', None) == "true"
-            self.config['imported_tag'] = os.getenv('MISP_IMPORTED_TAG', 'OpenCTI: Imported')
-            self.config['filter_on_imported_tag'] = os.getenv('MISP_FILTER_ON_IMPORTED_TAG', "true") == "true"
-            self.config['interval'] = os.getenv('MISP_INTERVAL', 5)
-            self.config['log_level'] = os.getenv('MISP_LOG_LEVEL', 'info')
-
-        # Initialize OpenCTI Connector
-        connector_identifier = ''.join(e for e in self.config['name'] if e.isalnum())
-        self.opencti_connector_helper = OpenCTIConnectorHelper(
-            connector_identifier.lower(),
-            self.config,
-            self.config_rabbitmq,
-            self.config['log_level']
-        )
+        config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+        self.helper = OpenCTIConnectorHelper(config)
+        # Extra config
+        self.misp_url = os.getenv('MISP_URL') or config['misp']['url']
+        self.misp_key = os.getenv('MISP_KEY') or config['misp']['key']
+        self.misp_tag = os.getenv('MISP_TAG') or config['misp']['tag'] if 'tag' in config['misp'] else None
+        self.misp_untag_event = os.getenv('MISP_UNTAG_EVENT') or config['misp']['untag_event'] \
+            if 'untag_event' in config['misp'] else None
+        self.misp_imported_tag = os.getenv('MISP_IMPORTED_TAG') or config['misp']['imported_tag']
+        self.misp_filter_on_imported_tag = os.getenv('MISP_FILTER_ON_IMPORTED_TAG') or config['misp']['filter_on_imported_tag']
+        self.misp_interval = os.getenv('MISP_INTERVAL') or config['misp']['interval']
 
         # Initialize MISP
-        self.misp = ExpandedPyMISP(url=self.config['url'], key=self.config['key'], ssl=False, debug=False)
-
-    def get_log_level(self):
-        return self.config['log_level']
+        self.misp = ExpandedPyMISP(url=self.misp_url, key=self.misp_key, ssl=False, debug=False)
 
     def get_interval(self):
-        return int(self.config['interval']) * 60
+        return int(self.misp_interval) * 60
 
     def run(self):
         and_parameters = None
         not_parameters = None
-        if self.config['tag'] is not None:
-            and_parameters = [self.config['tag']]
-        if self.config['filter_on_imported_tag']:
-            not_parameters = [self.config['imported_tag']]
+        if self.misp_tag is not None:
+            and_parameters = [self.misp_tag]
+        if self.misp_filter_on_imported_tag:
+            not_parameters = [self.misp_imported_tag]
 
         complex_query = self.misp.build_complex_query(and_parameters=and_parameters, not_parameters=not_parameters)
         events = self.misp.search('events', tags=complex_query)
@@ -96,8 +63,8 @@ class Misp:
             else:
                 report_markings = []
             reference_misp = ExternalReference(
-                source_name=self.config['name'],
-                url=self.config['url'] + '/events/view/' + event['Event']['uuid'])
+                source_name=self.helper.connect_name,
+                url=self.misp_url + '/events/view/' + event['Event']['uuid'])
 
             # Get all attributes
             indicators = []
@@ -157,11 +124,11 @@ class Misp:
                 )
                 bundle_objects.append(report)
                 bundle = Bundle(objects=bundle_objects).serialize()
-                self.opencti_connector_helper.send_stix2_bundle(bundle)
+                self.helper.send_stix2_bundle(bundle)
 
-            if 'untag_event' not in self.config or self.config['untag_event']:
-                self.misp.untag(event['Event']['uuid'], self.config['tag'])
-            self.misp.tag(event['Event']['uuid'], self.config['imported_tag'])
+            if self.misp_untag_event:
+                self.misp.untag(event['Event']['uuid'], self.misp_tag)
+            self.misp.tag(event['Event']['uuid'], self.misp_imported_tag)
 
     def process_attribute(self, author, report_threats, attribute, generic_actor):
         resolved_attributes = self.resolve_type(attribute['type'], attribute['value'])
@@ -207,7 +174,7 @@ class Misp:
                                 '%Y-%m-%dT%H:%M:%SZ'),
                             'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
                                 '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.config['confidence_level']
+                            'x_opencti_weight': self.helper.connect_confidence_level
                         }
                     )
                 )
@@ -225,7 +192,7 @@ class Misp:
                                 '%Y-%m-%dT%H:%M:%SZ'),
                             'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
                                 '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.config['confidence_level']
+                            'x_opencti_weight': self.helper.connect_confidence_level
                         }
                     )
                 )
@@ -420,19 +387,12 @@ class Misp:
 
 if __name__ == '__main__':
     misp = Misp()
-
-    # Configure logger
-    numeric_level = getattr(logging, misp.get_log_level().upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: ' + misp.get_log_level())
-    logging.basicConfig(level=numeric_level)
-
-    logging.info('Starting the MISP connector...')
+    misp.helper.log_info('Starting the MISP connector...')
     while True:
         try:
-            logging.info('Fetching new MISP events...')
+            misp.helper.log_info('Fetching new MISP events...')
             misp.run()
             time.sleep(misp.get_interval())
         except Exception as e:
-            logging.error(e)
+            misp.helper.log_error(str(e))
             time.sleep(30)

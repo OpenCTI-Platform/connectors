@@ -1,13 +1,17 @@
-rabbitmq:
-  hostname: 'localhost'
-  port: 5672
-  username: 'guest'
-  password: 'guest'
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Common Vulnerabilities and Exposures'
+  scope: 'identity,vulnerability'
+  confidence_level: 3
+  log_level: 'info'
 
 cve:
-  name: 'Common Vulnerabilities and Exposures'
-  confidence_level: 3
   nvd_data_feed: 'https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.gz'
-  entities: 'identity,vulnerability'
   interval: 7 # Days
-  log_level: 'info'
+
+

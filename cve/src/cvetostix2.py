@@ -8,6 +8,7 @@ from stix2 import Bundle
 from stix2 import Identity
 from stix2 import ExternalReference
 
+
 def convert(filename, output='output.json'):
     # Create the default author
     author = Identity(name='The MITRE Corporation', identity_class='organization')
