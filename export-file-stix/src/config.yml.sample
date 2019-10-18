@@ -7,4 +7,5 @@ connector:
   type: 'ChangeMe'
   name: 'My connector name'
   scope: 'Connector scopes'
+  confidence_level: 3
   log_level: 'info'

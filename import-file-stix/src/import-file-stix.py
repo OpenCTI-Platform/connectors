@@ -1,3 +1,4 @@
+import json
 import os
 import yaml
 
@@ -11,16 +12,13 @@ class StixImporter:
         config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
         self.helper = OpenCTIConnectorHelper(config)
 
-    def _process_message(self, job_id, job_answer, data):
+    def _process_message(self, data):
         file_path = data['file_path']
         file_uri = self.helper.opencti_url + file_path
         self.helper.log_info('Importing the file ' + file_uri)
-        imported_elements = self.helper.api.stix2_import_bundle_from_uri(file_uri, True)
-        if imported_elements is None:
-            job_answer.add_message('Nothing imported')
-        else:
-            for imported_element in imported_elements:
-                job_answer.add_message(imported_element['type'] + ' - ' + imported_element['id'])
+        file_content = self.helper.api.fetch_opencti_file(file_uri)
+        bundles_sent = self.helper.send_stix2_bundle(file_content)
+        return ['Sent ' + str(len(bundles_sent)) + ' stix bundle(s) for worker import']
 
     # Start the main loop
     def start(self):
