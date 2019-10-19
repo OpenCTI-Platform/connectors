@@ -3,7 +3,7 @@ import os
 import requests
 import json
 
-from stix2 import Relationship, Identity, Bundle, Indicator
+from stix2 import Relationship, Identity, Bundle
 
 from connector.opencti_connector_helper import OpenCTIConnectorHelper
 
@@ -15,33 +15,17 @@ class EnrichIpAddrGeo:
         config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
         self.helper = OpenCTIConnectorHelper(config)
 
-    def _process_message(self, data):
-        now = self.helper.date_now()  # Generate the current date
-        entity_id = data['entity_id']
-        observable = self.helper.api.get_stix_observable(entity_id)
-        # Extract IP from entity data
-        observable_id = observable['stix_id']
-        observable_value = observable['observable_value']
-        # Get the geo loc from the API
-        api_url = 'http://ip-api.com/json/' + observable_value
-        response = requests.request("GET", api_url, headers={
-            'accept': "application/json",
-            'content-type': "application/json"
-        })
-        json_data = json.loads(response.text)
-        observable_country = json_data['country']
-        observable_city = json_data['city']
-
+    def _generate_stix_bundle(self, country, city, observable_id):
         # Generate stix bundle
         country_identity = Identity(
-            name=observable_country,
+            name=country,
             identity_class='group',
             custom_properties={
                 'x_opencti_identity_type': 'country'
             }
         )
         city_identity = Identity(
-            name=observable_city,
+            name=city,
             identity_class='group',
             custom_properties={
                 'x_opencti_identity_type': 'city'
@@ -60,8 +44,23 @@ class EnrichIpAddrGeo:
                 'x_opencti_weight': self.helper.connect_confidence_level
             }
         )
-        bundle = Bundle(objects=[country_identity, city_identity,
+        return Bundle(objects=[country_identity, city_identity,
                                  city_to_country, observable_to_city]).serialize()
+
+    def _process_message(self, data):
+        entity_id = data['entity_id']
+        observable = self.helper.api.get_stix_observable(entity_id)
+        # Extract IP from entity data
+        observable_id = observable['stix_id']
+        observable_value = observable['observable_value']
+        # Get the geo loc from the API
+        api_url = 'http://ip-api.com/json/' + observable_value
+        response = requests.request("GET", api_url, headers={
+            'accept': "application/json",
+            'content-type': "application/json"
+        })
+        json_data = json.loads(response.text)
+        bundle = self._generate_stix_bundle(json_data['country'], json_data['city'], observable_id)
         bundles_sent = self.helper.send_stix2_bundle(bundle)
         return ['Sent ' + str(len(bundles_sent)) + ' stix bundle(s) for worker import']
 
