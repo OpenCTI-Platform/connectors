@@ -1,12 +1,12 @@
 FROM python:3.7.4-alpine3.10
 
 # Copy the connector
-COPY src /opt/import-file-stix
+COPY src /opt/opencti-connector-import-file-stix
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache add build-base=0.5-r1 && \
-    cd /opt/import-file-stix && \
+    cd /opt/opencti-connector-import-file-stix && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del build-base
 

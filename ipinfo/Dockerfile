@@ -1,12 +1,12 @@
 FROM python:3.7.4-alpine3.10
 
 # Copy the worker
-COPY src /opt/enrich-ip-addr-geo
+COPY src /opt/opencti-connector-ipinfo
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache add build-base=0.5-r1 && \
-    cd /opt/enrich-ip-addr-geo && \
+    cd /opt/opencti-connector-ipinfo && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del build-base
 
