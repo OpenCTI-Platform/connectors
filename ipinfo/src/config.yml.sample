@@ -1,0 +1,11 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'ChangeMe'
+  name: 'My connector name'
+  scope: 'Connector scopes'
+  confidence_level: 3
+  log_level: 'info'

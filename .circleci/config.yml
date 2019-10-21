@@ -9,9 +9,21 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
+          working_directory: ~/opencti/import-file-stix
+          name: Build Docker image opencti/connector-import-file-stix
+          command: docker build -t opencti/connector-import-file-stix:latest . && docker tag opencti/connector-import-file-stix:latest opencti/connector-import-file-stix:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/export-file-stix
+          name: Build Docker image opencti/connector-export-file-stix
+          command: docker build -t opencti/connector-export-file-stix:latest . && docker tag opencti/connector-export-file-stix:latest opencti/connector-export-file-stix:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/ipinfo
+          name: Build Docker image opencti/connector-ipinfo
+          command: docker build -t opencti/connector-ipinfo:latest . && docker tag opencti/connector-ipinfo:latest opencti/connector-ipinfo:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/mitre
           name: Build Docker image opencti/connector-mitre
@@ -28,8 +40,14 @@ jobs:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-import-file-stix:latest
+            docker push opencti/connector-import-file-stix:${CIRCLE_TAG}
+            docker push opencti/connector-export-file-stix:latest
+            docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
+            docker push opencti/connector-ipinfo:latest
+            docker push opencti/connector-ipinfo:${CIRCLE_TAG}
             docker push opencti/connector-mitre:latest
             docker push opencti/connector-mitre:${CIRCLE_TAG}
             docker push opencti/connector-opencti:latest
@@ -45,9 +63,21 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
+          working_directory: ~/opencti/import-file-stix
+          name: Build Docker image opencti/connector-import-file-stix
+          command: docker build -t opencti/connector-import-file-stix:rolling .
+      - run:
+          working_directory: ~/opencti/export-file-stix
+          name: Build Docker image opencti/connector-export-file-stix
+          command: docker build -t opencti/connector-export-file-stix:rolling .
+      - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:rolling .
+      - run:
+          working_directory: ~/opencti/ipinfo
+          name: Build Docker image opencti/connector-ipinfo
+          command: docker build -t opencti/connector-ipinfo:rolling .
       - run:
           working_directory: ~/opencti/mitre
           name: Build Docker image opencti/connector-mitre
@@ -64,7 +94,10 @@ jobs:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-import-file-stix:rolling
+            docker push opencti/connector-export-file-stix:rolling
             docker push opencti/connector-misp:rolling
+            docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling
             docker push opencti/connector-cve:rolling

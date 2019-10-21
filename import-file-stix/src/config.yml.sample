@@ -1,0 +1,11 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_IMPORT_FILE'
+  name: 'ImportFileStix2'
+  scope: 'application/json'
+  confidence_level: 3
+  log_level: 'info'

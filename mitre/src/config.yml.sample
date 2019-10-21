@@ -1,13 +1,16 @@
-rabbitmq:
-  hostname: 'localhost'
-  port: 5672
-  username: 'guest'
-  password: 'guest'
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'MITRE ATT&CK'
+  scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool'
+  confidence_level: 3
+  log_level: 'info'
 
 mitre:
-  name: 'MITRE ATT&CK'
-  confidence_level: 3
   enterprise_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json'
-  entities: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool'
+  pre_attack_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/pre-attack/pre-attack.json'
   interval: 7 # Days
-  log_level: 'info'

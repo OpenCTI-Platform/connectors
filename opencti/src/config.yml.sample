@@ -1,13 +1,16 @@
-rabbitmq:
-  hostname: 'localhost'
-  port: 5672
-  username: 'guest'
-  password: 'guest'
-
 opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
   name: 'OpenCTI'
+  scope: 'identity,sector,region,country,city'
   confidence_level: 5
-  sectors_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json'
-  entities: 'identity,sector,region,country,city'
-  interval: 1 # Days
   log_level: 'info'
+
+config:
+  sectors_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json'
+  geography_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json'
+  interval: 1 # Days

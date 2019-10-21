@@ -1,12 +1,16 @@
-rabbitmq:
-  hostname: 'localhost'
-  port: 5672
-  username: 'guest'
-  password: 'guest'
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'MISP' # Required
+  scope: 'misp'
+  confidence_level: 3
+  log_level: 'info'
 
 misp:
-  name: 'MISP' # Required
-  confidence_level: 3 # Required
   url: 'http://localhost' # Required
   key: 'ChangeMe' # Required
   tag: 'OpenCTI: Import' # Optional, tags of events to be ingested (if not provided, import all!)
@@ -14,4 +18,3 @@ misp:
   imported_tag: 'OpenCTI: Imported' # Required, tag event after import
   filter_on_imported_tag: True # Required, use imported tag to know which events to not ingest
   interval: 1 # Minutes
-  log_level: 'info'
