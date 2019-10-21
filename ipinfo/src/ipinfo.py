@@ -2,6 +2,7 @@ import yaml
 import os
 import requests
 import json
+import pycountry
 
 from stix2 import Relationship, Identity, Bundle
 from pycti import OpenCTIConnectorHelper
@@ -18,10 +19,11 @@ class IpInfoConnector:
     def _generate_stix_bundle(self, country, city, observable_id):
         # Generate stix bundle
         country_identity = Identity(
-            name=country,
+            name=country.name,
             identity_class='group',
             custom_properties={
-                'x_opencti_identity_type': 'country'
+                'x_opencti_identity_type': 'country',
+                'x_opencti_alias': [country.official_name],
             }
         )
         city_identity = Identity(
@@ -60,8 +62,8 @@ class IpInfoConnector:
             'content-type': "application/json",
         })
         json_data = json.loads(response.text)
-        print(json_data)
-        bundle = self._generate_stix_bundle(json_data['country'], json_data['city'], observable_id)
+        country = pycountry.countries.get(alpha_2=json_data['country'])
+        bundle = self._generate_stix_bundle(country, json_data['city'], observable_id)
         bundles_sent = self.helper.send_stix2_bundle(bundle)
         return ['Sent ' + str(len(bundles_sent)) + ' stix bundle(s) for worker import']
 
