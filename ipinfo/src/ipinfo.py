@@ -4,16 +4,16 @@ import requests
 import json
 
 from stix2 import Relationship, Identity, Bundle
+from pycti import OpenCTIConnectorHelper
 
-from connector.opencti_connector_helper import OpenCTIConnectorHelper
 
-
-class EnrichIpAddrGeo:
+class IpInfoConnector:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
         config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
         self.helper = OpenCTIConnectorHelper(config)
+        self.token = os.getenv('IPINFO_TOKEN') or config['ipinfo']['token']
 
     def _generate_stix_bundle(self, country, city, observable_id):
         # Generate stix bundle
@@ -45,21 +45,22 @@ class EnrichIpAddrGeo:
             }
         )
         return Bundle(objects=[country_identity, city_identity,
-                                 city_to_country, observable_to_city]).serialize()
+                               city_to_country, observable_to_city]).serialize()
 
     def _process_message(self, data):
         entity_id = data['entity_id']
         observable = self.helper.api.get_stix_observable(entity_id)
         # Extract IP from entity data
-        observable_id = observable['stix_id']
+        observable_id = observable['stix_id_key']
         observable_value = observable['observable_value']
         # Get the geo loc from the API
-        api_url = 'http://ip-api.com/json/' + observable_value
+        api_url = 'https://ipinfo.io/' + observable_value + '?token=' + self.token
         response = requests.request("GET", api_url, headers={
             'accept': "application/json",
-            'content-type': "application/json"
+            'content-type': "application/json",
         })
         json_data = json.loads(response.text)
+        print(json_data)
         bundle = self._generate_stix_bundle(json_data['country'], json_data['city'], observable_id)
         bundles_sent = self.helper.send_stix2_bundle(bundle)
         return ['Sent ' + str(len(bundles_sent)) + ' stix bundle(s) for worker import']
@@ -70,5 +71,5 @@ class EnrichIpAddrGeo:
 
 
 if __name__ == '__main__':
-    enrich_ip_addr_geo = EnrichIpAddrGeo()
-    enrich_ip_addr_geo.start()
+    ipInfoInstance = IpInfoConnector()
+    ipInfoInstance.start()

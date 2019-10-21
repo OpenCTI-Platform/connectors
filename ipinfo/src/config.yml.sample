@@ -4,8 +4,11 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'ChangeMe'
-  name: 'My connector name'
-  scope: 'Connector scopes'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'IpInfo'
+  scope: 'ipv4-addr'
   confidence_level: 3
   log_level: 'info'
+
+ipinfo:
+  token: 'ChangeMe'
