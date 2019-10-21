@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'INTERNAL_IMPORT_FILE'
-  name: 'My connector name'
+  name: 'ImportFileStix2'
   scope: 'application/json'
   confidence_level: 3
   log_level: 'info'

@@ -1,11 +1,10 @@
-import json
 import os
 import yaml
 
-from connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper
 
 
-class StixImporter:
+class ImportFileStix:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
@@ -26,5 +25,5 @@ class StixImporter:
 
 
 if __name__ == '__main__':
-    stix_imported = StixImporter()
-    stix_imported.start()
+    connectorImportFileStix = ImportFileStix()
+    connectorImportFileStix.start()

@@ -9,7 +9,7 @@ from stix2 import Bundle, Identity, ThreatActor, IntrusionSet, Malware, Tool, Re
     ExternalReference, TLP_WHITE, TLP_GREEN, \
     TLP_AMBER, TLP_RED
 
-from connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper
 
 
 class Misp:
@@ -35,16 +35,25 @@ class Misp:
         return int(self.misp_interval) * 60
 
     def run(self):
-        and_parameters = None
-        not_parameters = None
-        if self.misp_tag is not None:
-            and_parameters = [self.misp_tag]
-        if self.misp_filter_on_imported_tag:
-            not_parameters = [self.misp_imported_tag]
-
-        complex_query = self.misp.build_complex_query(and_parameters=and_parameters, not_parameters=not_parameters)
-        events = self.misp.search('events', tags=complex_query)
-        self.process_events(events)
+        self.helper.log_info('Fetching MISP events...')
+        while True:
+            try:
+                and_parameters = None
+                not_parameters = None
+                if self.misp_tag is not None:
+                    and_parameters = [self.misp_tag]
+                if self.misp_filter_on_imported_tag:
+                    not_parameters = [self.misp_imported_tag]
+                complex_query = self.misp.build_complex_query(and_parameters=and_parameters, not_parameters=not_parameters)
+                events = self.misp.search('events', tags=complex_query)
+                self.process_events(events)
+                time.sleep(self.get_interval())
+            except (KeyboardInterrupt, SystemExit):
+                self.helper.log_info('Connector stop')
+                exit(0)
+            except Exception as e:
+                self.helper.log_error(str(e))
+                time.sleep(10)
 
     def process_events(self, events):
         for event in events:
@@ -386,13 +395,5 @@ class Misp:
 
 
 if __name__ == '__main__':
-    misp = Misp()
-    misp.helper.log_info('Starting the MISP connector...')
-    while True:
-        try:
-            misp.helper.log_info('Fetching new MISP events...')
-            misp.run()
-            time.sleep(misp.get_interval())
-        except Exception as e:
-            misp.helper.log_error(str(e))
-            time.sleep(30)
+    mispConnector = Misp()
+    mispConnector.run()

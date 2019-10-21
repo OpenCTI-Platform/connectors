@@ -12,4 +12,5 @@ connector:
 
 mitre:
   enterprise_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json'
+  pre_attack_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/pre-attack/pre-attack.json'
   interval: 7 # Days

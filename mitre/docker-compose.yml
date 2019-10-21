@@ -1,16 +1,17 @@
 version: '3'
 services:
   connector-mitre:
-    image: opencti/connector-mitre:1.1.3
+    image: opencti/connector-mitre:2.0.0
     environment:
-      - RABBITMQ_HOSTNAME=rabbitmq
-      - RABBITMQ_PORT=5672 
-      - RABBITMQ_USERNAME=guest
-      - RABBITMQ_PASSWORD=guest
-      - MITRE_NAME=MITRE\ ATT&CK
-      - MITRE_CONFIDENCE_LEVEL=3
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=MITRE ATT&CK
+      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_LOG_LEVEL=info
       - MITRE_ENTERPRISE_FILE_URL=https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json
-      - MITRE_ENTITIES=identity,attack-pattern,course-of-action,intrusion-set,malware,tool
+      - MITRE_PRE_ATTACK_FILE_URL=https://raw.githubusercontent.com/mitre/cti/master/pre-attack/pre-attack.json
       - MITRE_INTERVAL=7 # Days
-      - MITRE_LOG_LEVEL=info
     restart: always

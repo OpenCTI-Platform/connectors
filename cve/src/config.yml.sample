@@ -13,5 +13,3 @@ connector:
 cve:
   nvd_data_feed: 'https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.gz'
   interval: 7 # Days
-
-

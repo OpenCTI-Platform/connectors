@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Go to the right directory
-cd /opt/enrich-ip-addr-geo
+cd /opt/ipinfo
 
 # Launch the worker
-python3 enrich-ip-addr-geo.py
+python3 ipinfo.py

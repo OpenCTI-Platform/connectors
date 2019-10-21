@@ -3,14 +3,14 @@ services:
   connector-cve:
     image: opencti/connector-cve:1.1.3
     environment:
-      - RABBITMQ_HOSTNAME=rabbitmq
-      - RABBITMQ_PORT=5672 
-      - RABBITMQ_USERNAME=guest
-      - RABBITMQ_PASSWORD=guest
-      - CVE_NAME=Common Vulnerabilities and Exposures
-      - CVE_CONFIDENCE_LEVEL=3
-      - CVE_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.gz
-      - CVE_ENTITIES=identity,vulnerability
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Common Vulnerabilities and Exposures
+      - CONNECTOR_SCOPE=identity,vulnerability
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_LOG_LEVEL=info
+      - CVE_NVD_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.gz
       - CVE_INTERVAL=7 # Days
-      - CVE_LOG_LEVEL=info
     restart: always

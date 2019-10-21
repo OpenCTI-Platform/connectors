@@ -7,7 +7,7 @@ import urllib.request
 import gzip
 import shutil
 
-from connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper
 from cvetostix2 import convert
 
 
@@ -18,41 +18,44 @@ class Cve:
         config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
-        self.cve_nvd_data_feed = os.getenv('CVE_DATA_FEED') or config['cve']['nvd_data_feed']
+        self.cve_nvd_data_feed = os.getenv('CVE_NVD_DATA_FEED') or config['cve']['nvd_data_feed']
         self.cve_interval = os.getenv('CVE_INTERVAL') or config['cve']['interval']
 
     def get_interval(self):
         return int(self.cve_interval) * 60 * 60 * 24
 
     def run(self):
-        # Downloading json.gz file
-        self.helper.log_info('Requesting the file')
-        urllib.request.urlretrieve(self.cve_nvd_data_feed, os.path.dirname(os.path.abspath(__file__)) + '/data.json.gz')
-        # Unzipping the file
-        self.helper.log_info('Unzipping the file')
-        with gzip.open('data.json.gz', 'rb') as f_in:
-            with open('data.json', 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        # Converting the file to stix2
-        self.helper.log_info('Converting the file')
-        convert('data.json', 'data-stix2.json')
-        with open('data-stix2.json') as stix_json:
-            contents = stix_json.read()
-            self.helper.send_stix2_bundle(contents, self.helper.connect_scope)
-        
-        # Remove files
-        os.remove('data.json')
-        os.remove('data.json.gz')
-        os.remove('data-stix2.json')
+        self.helper.log_info('Fetching CVE knowledge...')
+        while True:
+            try:
+                # Downloading json.gz file
+                self.helper.log_info('Requesting the file')
+                urllib.request.urlretrieve(self.cve_nvd_data_feed, os.path.dirname(os.path.abspath(__file__)) + '/data.json.gz')
+                # Unzipping the file
+                self.helper.log_info('Unzipping the file')
+                with gzip.open('data.json.gz', 'rb') as f_in:
+                    with open('data.json', 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                # Converting the file to stix2
+                self.helper.log_info('Converting the file')
+                convert('data.json', 'data-stix2.json')
+                with open('data-stix2.json') as stix_json:
+                    contents = stix_json.read()
+                    self.helper.send_stix2_bundle(contents, self.helper.connect_scope)
+
+                # Remove files
+                os.remove('data.json')
+                os.remove('data.json.gz')
+                os.remove('data-stix2.json')
+                time.sleep(self.get_interval())
+            except (KeyboardInterrupt, SystemExit):
+                self.helper.log_info('Connector stop')
+                exit(0)
+            except Exception as e:
+                self.helper.log_error(str(e))
+                time.sleep(10)
 
 
 if __name__ == '__main__':
-    cve = Cve()
-    while True:
-        try:
-            cve.helper.log_info('Fetching the CVE knowledge...')
-            cve.run()
-            time.sleep(cve.get_interval())
-        except Exception as e:
-            cve.helper.log_error(str(e))
-            time.sleep(30)
+    cveConnector = Cve()
+    cveConnector.run()

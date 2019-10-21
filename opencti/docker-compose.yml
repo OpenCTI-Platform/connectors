@@ -1,16 +1,17 @@
 version: '3'
 services:
   connector-opencti:
-    image: opencti/connector-opencti:1.1.3
+    image: opencti/connector-opencti:2.0.0
     environment:
-      - RABBITMQ_HOSTNAME=rabbitmq
-      - RABBITMQ_PORT=5672 
-      - RABBITMQ_USERNAME=guest
-      - RABBITMQ_PASSWORD=guest
-      - OPENCTI_NAME=OpenCTI
-      - OPENCTI_CONFIDENCE_LEVEL=5
-      - OPENCTI_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
-      - OPENCTI_ENTITIES=identity,sector,region,country,city
-      - OPENCTI_INTERVAL=1 # Days
-      - OPENCTI_LOG_LEVEL=info
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=OpenCTI
+      - CONNECTOR_SCOPE=identity,sector,region,country,city
+      - CONNECTOR_CONFIDENCE_LEVEL=5
+      - CONNECTOR_LOG_LEVEL=info
+      - CONFIG_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
+      - CONFIG_GEOGRAPHY_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json
+      - CONFIG_INTERVAL=1 # Days
     restart: always
