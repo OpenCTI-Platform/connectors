@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Correct working directory
-cd /opt/opencti-connector-cve
+cd /opt/import-file-stix
 
 # Start the connector
-python3 cve.py
+python3 import-file-stix.py
