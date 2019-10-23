@@ -53,7 +53,7 @@ class Misp:
                 exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(10)
+                time.sleep(self.get_interval())
 
     def process_events(self, events):
         for event in events:
