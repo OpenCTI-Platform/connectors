@@ -34,7 +34,7 @@ class OpenCTI:
                 exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(10)
+                time.sleep(600)
 
 
 if __name__ == '__main__':
