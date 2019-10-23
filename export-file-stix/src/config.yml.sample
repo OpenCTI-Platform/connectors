@@ -6,6 +6,6 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_EXPORT_FILE'
   name: 'ExportFileStix'
-  scope: 'Connector scopes'
+  scope: 'application/json'
   confidence_level: 3
   log_level: 'info'
