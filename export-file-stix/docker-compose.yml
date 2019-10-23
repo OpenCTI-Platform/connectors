@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-misp:
+  connector-export-file-stix:
     image: opencti/connector-export-file-stix:2.0.0
     environment:
       - OPENCTI_URL=http://localhost
