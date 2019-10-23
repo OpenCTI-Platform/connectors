@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-misp:
+  connector-ipinfo:
     image: opencti/connector-import-file-stix:2.0.0
     environment:
       - OPENCTI_URL=http://localhost
