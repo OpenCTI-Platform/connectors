@@ -10,7 +10,7 @@ class OpenCTI:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
-        config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+        config = yaml.load(open(config_file_path), Loader=yaml.FullLoader) if os.path.isfile(config_file_path) else {}
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.opencti_sectors_file_url = os.getenv('CONFIG_SECTORS_FILE_URL') or config['config']['sectors_file_url']

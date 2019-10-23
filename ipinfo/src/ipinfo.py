@@ -12,7 +12,7 @@ class IpInfoConnector:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
-        config = yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+        config = yaml.load(open(config_file_path), Loader=yaml.FullLoader) if os.path.isfile(config_file_path) else {}
         self.helper = OpenCTIConnectorHelper(config)
         self.token = os.getenv('IPINFO_TOKEN') or config['ipinfo']['token']
 
