@@ -7,6 +7,7 @@ import urllib.request
 import gzip
 import shutil
 
+from datetime import datetime
 from pycti import OpenCTIConnectorHelper
 from cvetostix2 import convert
 
@@ -28,26 +29,50 @@ class Cve:
         self.helper.log_info('Fetching CVE knowledge...')
         while True:
             try:
-                # Downloading json.gz file
-                self.helper.log_info('Requesting the file')
-                urllib.request.urlretrieve(self.cve_nvd_data_feed, os.path.dirname(os.path.abspath(__file__)) + '/data.json.gz')
-                # Unzipping the file
-                self.helper.log_info('Unzipping the file')
-                with gzip.open('data.json.gz', 'rb') as f_in:
-                    with open('data.json', 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
-                # Converting the file to stix2
-                self.helper.log_info('Converting the file')
-                convert('data.json', 'data-stix2.json')
-                with open('data-stix2.json') as stix_json:
-                    contents = stix_json.read()
-                    self.helper.send_stix2_bundle(contents, self.helper.connect_scope)
+                # Get the current timestamp and check
+                timestamp = int(time.time())
+                current_state = self.helper.get_state()
+                if current_state is not None and 'last_run' in current_state:
+                    last_run = current_state['last_run']
+                    self.helper.log_info(
+                        'Connector last run: ' + datetime.utcfromtimestamp(last_run).strftime('%Y-%m-%d %H:%M:%S'))
+                else:
+                    last_run = None
+                    self.helper.log_info('Connector has never run')
+                # If the last_run is more than interval-1 day
+                if last_run is None or ((timestamp - last_run) > ((int(self.cve_interval) - 1) * 60 * 60 * 24)):
+                    # Downloading json.gz file
+                    self.helper.log_info('Requesting the file')
+                    urllib.request.urlretrieve(self.cve_nvd_data_feed, os.path.dirname(os.path.abspath(__file__)) + '/data.json.gz')
+                    # Unzipping the file
+                    self.helper.log_info('Unzipping the file')
+                    with gzip.open('data.json.gz', 'rb') as f_in:
+                        with open('data.json', 'wb') as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+                    # Converting the file to stix2
+                    self.helper.log_info('Converting the file')
+                    convert('data.json', 'data-stix2.json')
+                    with open('data-stix2.json') as stix_json:
+                        contents = stix_json.read()
+                        self.helper.send_stix2_bundle(contents, self.helper.connect_scope)
 
-                # Remove files
-                os.remove('data.json')
-                os.remove('data.json.gz')
-                os.remove('data-stix2.json')
-                time.sleep(self.get_interval())
+                    # Remove files
+                    os.remove('data.json')
+                    os.remove('data.json.gz')
+                    os.remove('data-stix2.json')
+                    # Store the current timestamp as a last run
+                    self.helper.log_info('Connector successfully run, storing last_run as ' + str(timestamp))
+                    self.helper.set_state({'last_run': timestamp})
+                    # Sleep all interval
+                    self.helper.log_info(
+                        'Last_run stored, sleeping for: ' + str(round(self.get_interval() / 60 / 60 / 24, 2)) + ' days')
+                    time.sleep(self.get_interval())
+                else:
+                    new_interval = self.get_interval() - (timestamp - last_run)
+                    self.helper.log_info(
+                        'Connector will not run, sleeping for: ' + str(round(new_interval / 60 / 60 / 24, 2)) + ' days')
+                    # Sleep only remaining time
+                    time.sleep(new_interval)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info('Connector stop')
                 exit(0)
