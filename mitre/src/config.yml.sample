@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'MITRE ATT&CK'
-  scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool'
+  scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report'
   confidence_level: 3
   log_level: 'info'
 

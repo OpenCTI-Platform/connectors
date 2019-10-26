@@ -1,14 +1,14 @@
 version: '3'
 services:
   connector-mitre:
-    image: opencti/connector-mitre:2.0.0
+    image: opencti/connector-mitre:2.0.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=MITRE ATT&CK
-      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool
+      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
       - MITRE_ENTERPRISE_FILE_URL=https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json
