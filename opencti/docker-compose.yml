@@ -13,5 +13,5 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - CONFIG_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
       - CONFIG_GEOGRAPHY_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json
-      - CONFIG_INTERVAL=1 # Days
+      - CONFIG_INTERVAL=7 # Days
     restart: always
