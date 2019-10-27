@@ -60,7 +60,7 @@ class Misp:
             generic_actor = ThreatActor(
                 name='Unknown threats',
                 labels=['threat-actor'],
-                description='All unknown threats are representing by this pseudo threat actor.'
+                description='All unknown threats are represented by this pseudo threat actor. This entity helps to organize knowledge and indicators that could not be attributed to any other threats.'
             )
             added_threats = []
             added_markings = []
