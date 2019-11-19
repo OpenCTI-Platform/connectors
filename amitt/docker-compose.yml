@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-mitre:
+  connector-amitt:
     image: opencti/connector-amitt:2.0.3
     environment:
       - OPENCTI_URL=http://localhost
@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
-      - MITRE_ENTERPRISE_FILE_URL=https://raw.githubusercontent.com/VVX7/cti/master/amitt-attack/amitt-attack.json
-      - MITRE_PRE_ATTACK_FILE_URL=https://raw.githubusercontent.com/VVX7/cti/master/amitt-pre-attack/amitt-pre-attack.json
-      - MITRE_INTERVAL=7 # Days
+      - AMITT_ENTERPRISE_FILE_URL=https://raw.githubusercontent.com/VVX7/cti/master/amitt-attack/amitt-attack.json
+      - AMITT_PRE_ATTACK_FILE_URL=https://raw.githubusercontent.com/VVX7/cti/master/amitt-pre-attack/amitt-pre-attack.json
+      - AMITT_INTERVAL=7 # Days
     restart: always

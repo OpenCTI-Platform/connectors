@@ -10,7 +10,7 @@ connector:
   confidence_level: 3
   log_level: 'info'
 
-mitre:
+amitt:
   attack_file_url: 'https://raw.githubusercontent.com/VVX7/cti/master/amitt-attack/amitt-attack.json'
   pre_attack_file_url: 'https://raw.githubusercontent.com/VVX7/cti/master/amitt-pre-attack/amitt-pre-attack.json'
   interval: 7 # Days
