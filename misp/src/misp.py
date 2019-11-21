@@ -21,9 +21,9 @@ class Misp:
         # Extra config
         self.misp_url = os.getenv('MISP_URL') or config['misp']['url']
         self.misp_key = os.getenv('MISP_KEY') or config['misp']['key']
-        self.misp_tag = os.getenv('MISP_TAG') or config['misp']['tag'] if 'tag' in config['misp'] else None
-        self.misp_untag_event = os.getenv('MISP_UNTAG_EVENT') or config['misp']['untag_event'] \
-            if 'untag_event' in config['misp'] else None
+        self.misp_tag = os.getenv('MISP_TAG') or (config['misp']['tag'] if 'tag' in config['misp'] else None)
+        self.misp_untag_event = os.getenv('MISP_UNTAG_EVENT') or (config['misp']['untag_event'] \
+            if 'untag_event' in config['misp'] else None)
         self.misp_imported_tag = os.getenv('MISP_IMPORTED_TAG') or config['misp']['imported_tag']
         self.misp_filter_on_imported_tag = os.getenv('MISP_FILTER_ON_IMPORTED_TAG') or config['misp']['filter_on_imported_tag']
         self.misp_interval = os.getenv('MISP_INTERVAL') or config['misp']['interval']
