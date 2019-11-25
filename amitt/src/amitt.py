@@ -14,10 +14,10 @@ class Amitt:
         config = yaml.load(open(config_file_path), Loader=yaml.FullLoader) if os.path.isfile(config_file_path) else {}
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
-        self.amitt_attack_file_url = os.getenv('AMITT_FILE_URL') or config['amitt'][
-            'enterprise_file_url']
-        self.amitt_pre_attack_file_url = os.getenv('AMITT_PRE_ATTACK_FILE_URL') or config['amitt'][
-            'pre_attack_file_url']
+        self.amitt_file_url = os.getenv('AMITT_FILE_URL') or config['amitt'][
+            'amitt_file_url']
+        self.pre_amitt_file_url = os.getenv('PRE_AMITT_FILE_URL') or config['amitt'][
+            'pre_amitt_file_url']
         self.amitt_interval = os.getenv('AMITT_INTERVAL') or config['amitt']['interval']
 
     def get_interval(self):
@@ -40,10 +40,10 @@ class Amitt:
                 # If the last_run is more than interval-1 day
                 if last_run is None or ((timestamp - last_run) > ((int(self.amitt_interval) - 1) * 60 * 60 * 24)):
                     self.helper.log_info('Connector will run!')
-                    enterprise_data = urllib.request.urlopen(self.amitt_attack_file_url).read().decode('utf-8')
-                    self.helper.send_stix2_bundle(enterprise_data, self.helper.connect_scope)
-                    pre_attack_data = urllib.request.urlopen(self.amitt_pre_attack_file_url).read()
-                    self.helper.send_stix2_bundle(pre_attack_data.decode('utf-8'), self.helper.connect_scope)
+                    amitt_data = urllib.request.urlopen(self.amitt_file_url).read().decode('utf-8')
+                    self.helper.send_stix2_bundle(amitt_data, self.helper.connect_scope)
+                    pre_amitt_data = urllib.request.urlopen(self.pre_amitt_file_url).read()
+                    self.helper.send_stix2_bundle(pre_amitt_data.decode('utf-8'), self.helper.connect_scope)
                     # Store the current timestamp as a last run
                     self.helper.log_info('Connector successfully run, storing last_run as ' + str(timestamp))
                     self.helper.set_state({'last_run': timestamp})
