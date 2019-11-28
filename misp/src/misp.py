@@ -27,7 +27,6 @@ class Misp:
         self.misp_filter_on_imported_tag = os.getenv('MISP_FILTER_ON_IMPORTED_TAG') or config.get('misp', {}).get('filter_on_imported_tag')
         self.misp_interval = os.getenv('MISP_INTERVAL') or config.get('misp', {}).get('interval')
 
-
         # Initialize MISP
         self.misp = ExpandedPyMISP(url=self.misp_url, key=self.misp_key, ssl=False, debug=False)
 
