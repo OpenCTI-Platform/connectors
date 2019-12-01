@@ -19,17 +19,17 @@ class Misp:
         config = yaml.load(open(config_file_path), Loader=yaml.FullLoader) if os.path.isfile(config_file_path) else {}
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
-        self.misp_url = os.getenv('MISP_URL') or config['misp']['url']
-        self.misp_key = os.getenv('MISP_KEY') or config['misp']['key']
-        self.misp_tag = os.getenv('MISP_TAG') or config['misp']['tag'] if 'tag' in config['misp'] else None
-        self.misp_untag_event = os.getenv('MISP_UNTAG_EVENT') or config['misp']['untag_event'] \
-            if 'untag_event' in config['misp'] else None
-        self.misp_imported_tag = os.getenv('MISP_IMPORTED_TAG') or config['misp']['imported_tag']
-        self.misp_filter_on_imported_tag = os.getenv('MISP_FILTER_ON_IMPORTED_TAG') or config['misp']['filter_on_imported_tag']
-        self.misp_interval = os.getenv('MISP_INTERVAL') or config['misp']['interval']
+        self.misp_url = os.getenv('MISP_URL') or config.get('misp', {}).get('url')
+        self.misp_key = os.getenv('MISP_KEY') or config.get('misp', {}).get('key')
+        self.misp_tag = os.getenv('MISP_TAG') or config.get('misp', {}).get('tag')
+        self.misp_untag_event = os.getenv('MISP_UNTAG_EVENT') or config.get('misp', {}).get('untag_event')
+        self.misp_imported_tag = os.getenv('MISP_IMPORTED_TAG') or config.get('misp', {}).get('imported_tag')
+        self.misp_filter_on_imported_tag = os.getenv('MISP_FILTER_ON_IMPORTED_TAG') or config.get('misp', {}).get('filter_on_imported_tag')
+        self.misp_interval = os.getenv('MISP_INTERVAL') or config.get('misp', {}).get('interval')
 
         # Initialize MISP
         self.misp = ExpandedPyMISP(url=self.misp_url, key=self.misp_key, ssl=False, debug=False)
+
 
     def get_interval(self):
         return int(self.misp_interval) * 60
