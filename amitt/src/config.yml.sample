@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'AM!TT'
+  scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report'
+  confidence_level: 3
+  log_level: 'info'
+
+amitt:
+  amitt_file_url: 'https://raw.githubusercontent.com/VVX7/cti/master/amitt-attack/amitt-attack.json'
+  pre_amitt_file_url: 'https://raw.githubusercontent.com/VVX7/cti/master/amitt-pre-attack/amitt-pre-attack.json'
+  interval: 7 # Days
