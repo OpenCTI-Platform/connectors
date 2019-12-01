@@ -41,9 +41,9 @@ class Mitre:
                 if last_run is None or ((timestamp - last_run) > ((int(self.mitre_interval) - 1) * 60 * 60 * 24)):
                     self.helper.log_info('Connector will run!')
                     enterprise_data = urllib.request.urlopen(self.mitre_enterprise_file_url).read().decode('utf-8')
-                    #self.helper.send_stix2_bundle(enterprise_data, self.helper.connect_scope)
+                    self.helper.send_stix2_bundle(enterprise_data, self.helper.connect_scope)
                     pre_attack_data = urllib.request.urlopen(self.mitre_pre_attack_file_url).read()
-                    #self.helper.send_stix2_bundle(pre_attack_data.decode('utf-8'), self.helper.connect_scope)
+                    self.helper.send_stix2_bundle(pre_attack_data.decode('utf-8'), self.helper.connect_scope)
                     # Store the current timestamp as a last run
                     self.helper.log_info('Connector successfully run, storing last_run as ' + str(timestamp))
                     self.helper.set_state({'last_run': timestamp})

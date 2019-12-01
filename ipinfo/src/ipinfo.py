@@ -23,7 +23,7 @@ class IpInfoConnector:
             identity_class='group',
             custom_properties={
                 'x_opencti_identity_type': 'country',
-                'x_opencti_alias': [country.official_name],
+                'x_opencti_alias': [country.official_name if hasattr(country, 'official_name') else country.name],
             }
         )
         city_identity = Identity(
@@ -43,7 +43,8 @@ class IpInfoConnector:
             source_ref=observable_id,
             target_ref=city_identity.id,
             custom_properties={
-                'x_opencti_weight': self.helper.connect_confidence_level
+                'x_opencti_weight': self.helper.connect_confidence_level,
+                'x_opencti_ignore_dates': True
             }
         )
         return Bundle(objects=[country_identity, city_identity,
