@@ -45,16 +45,14 @@ class OpenCTI:
                     # Store the current timestamp as a last run
                     self.helper.log_info('Connector successfully run, storing last_run as ' + str(timestamp))
                     self.helper.set_state({'last_run': timestamp})
-                    # Sleep all interval
                     self.helper.log_info(
-                        'Last_run stored, sleeping for: ' + str(round(self.get_interval() / 60 / 60 / 24, 2)) + ' days')
-                    time.sleep(self.get_interval())
+                        'Last_run stored, next run in: ' + str(round(self.get_interval() / 60 / 60 / 24, 2)) + ' days')
+                    time.sleep(60)
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)
                     self.helper.log_info(
-                        'Connector will not run, sleeping for: ' + str(round(new_interval / 60 / 60 / 24, 2)) + ' days')
-                    # Sleep only remaining time
-                    time.sleep(new_interval)
+                        'Connector will not run, next run in: ' + str(round(new_interval / 60 / 60 / 24, 2)) + ' days')
+                    time.sleep(60)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info('Connector stop')
                 exit(0)
