@@ -47,12 +47,16 @@ class IpInfoConnector:
                 'x_opencti_ignore_dates': True
             }
         )
-        return Bundle(objects=[country_identity, city_identity,
-                               city_to_country, observable_to_city]).serialize()
+        return Bundle(objects=[
+            country_identity,
+            city_identity,
+            city_to_country,
+            observable_to_city
+        ]).serialize()
 
     def _process_message(self, data):
         entity_id = data['entity_id']
-        observable = self.helper.api.get_stix_observable(entity_id)
+        observable = self.helper.api.stix_observable.read(id=entity_id)
         # Extract IP from entity data
         observable_id = observable['stix_id_key']
         observable_value = observable['observable_value']
