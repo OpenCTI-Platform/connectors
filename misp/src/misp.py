@@ -128,7 +128,8 @@ class Misp:
                     object_refs=report_refs,
                     external_references=[reference_misp],
                     custom_properties={
-                        'x_opencti_report_class': 'Threat Report'
+                        'x_opencti_report_class': 'Threat Report',
+                        'x_opencti_object_status': 2
                     }
                 )
                 bundle_objects.append(report)
