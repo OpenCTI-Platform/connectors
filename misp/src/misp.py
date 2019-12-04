@@ -24,8 +24,13 @@ class Misp:
         self.misp_tag = os.getenv('MISP_TAG') or config.get('misp', {}).get('tag')
         self.misp_untag_event = os.getenv('MISP_UNTAG_EVENT') or config.get('misp', {}).get('untag_event')
         self.misp_imported_tag = os.getenv('MISP_IMPORTED_TAG') or config.get('misp', {}).get('imported_tag')
-        self.misp_filter_on_imported_tag = os.getenv('MISP_FILTER_ON_IMPORTED_TAG') or config.get('misp', {}).get('filter_on_imported_tag')
+        self.misp_filter_on_imported_tag = os.getenv('MISP_FILTER_ON_IMPORTED_TAG') == 'True' or config.get('misp', {}).get('filter_on_imported_tag')
+        if isinstance(self.misp_filter_on_imported_tag, str):
+            self.misp_filter_on_imported_tag = (self.misp_filter_on_imported_tag == 'True' or self.misp_filter_on_imported_tag == 'true')
         self.misp_interval = os.getenv('MISP_INTERVAL') or config.get('misp', {}).get('interval')
+        self.update_existing_data = os.getenv('CONNECTOR_UPDATE_EXISTING_DATA') or config['connector']['update_existing_data']
+        if isinstance(self.update_existing_data, str):
+            self.update_existing_data = (self.update_existing_data == 'True' or self.update_existing_data == 'true')
 
         # Initialize MISP
         self.misp = ExpandedPyMISP(url=self.misp_url, key=self.misp_key, ssl=False, debug=False)
@@ -134,7 +139,7 @@ class Misp:
                 )
                 bundle_objects.append(report)
                 bundle = Bundle(objects=bundle_objects).serialize()
-                self.helper.send_stix2_bundle(bundle)
+                self.helper.send_stix2_bundle(bundle, None, self.update_existing_data)
 
             if self.misp_untag_event:
                 self.misp.untag(event['Event']['uuid'], self.misp_tag)

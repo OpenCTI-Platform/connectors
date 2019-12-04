@@ -10,6 +10,7 @@ services:
       - CONNECTOR_NAME=MISP
       - CONNECTOR_SCOPE=misp
       - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - MISP_URL=http://localhost # Required
       - MISP_KEY=ChangeMe # Required

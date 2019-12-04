@@ -19,6 +19,9 @@ class Amitt:
         self.pre_amitt_file_url = os.getenv('PRE_AMITT_FILE_URL') or config['amitt'][
             'pre_amitt_file_url']
         self.amitt_interval = os.getenv('AMITT_INTERVAL') or config['amitt']['interval']
+        self.update_existing_data = os.getenv('CONNECTOR_UPDATE_EXISTING_DATA') or config['connector']['update_existing_data']
+        if isinstance(self.update_existing_data, str):
+            self.update_existing_data = (self.update_existing_data == 'True' or self.update_existing_data == 'true')
 
     def get_interval(self):
         return int(self.amitt_interval) * 60 * 60 * 24
@@ -41,9 +44,9 @@ class Amitt:
                 if last_run is None or ((timestamp - last_run) > ((int(self.amitt_interval) - 1) * 60 * 60 * 24)):
                     self.helper.log_info('Connector will run!')
                     amitt_data = urllib.request.urlopen(self.amitt_file_url).read().decode('utf-8')
-                    self.helper.send_stix2_bundle(amitt_data, self.helper.connect_scope)
+                    self.helper.send_stix2_bundle(amitt_data, self.helper.connect_scope, self.update_existing_data)
                     pre_amitt_data = urllib.request.urlopen(self.pre_amitt_file_url).read()
-                    self.helper.send_stix2_bundle(pre_amitt_data.decode('utf-8'), self.helper.connect_scope)
+                    self.helper.send_stix2_bundle(pre_amitt_data.decode('utf-8'), self.helper.connect_scope, self.update_existing_data)
                     # Store the current timestamp as a last run
                     self.helper.log_info('Connector successfully run, storing last_run as ' + str(timestamp))
                     self.helper.set_state({'last_run': timestamp})
