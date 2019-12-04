@@ -21,6 +21,9 @@ class Cve:
         # Extra config
         self.cve_nvd_data_feed = os.getenv('CVE_NVD_DATA_FEED') or config['cve']['nvd_data_feed']
         self.cve_interval = os.getenv('CVE_INTERVAL') or config['cve']['interval']
+        self.update_existing_data = os.getenv('CONNECTOR_UPDATE_EXISTING_DATA') or config['connector']['update_existing_data']
+        if isinstance(self.update_existing_data, str):
+            self.update_existing_data = (self.update_existing_data == 'True' or self.update_existing_data == 'true')
 
     def get_interval(self):
         return int(self.cve_interval) * 60 * 60 * 24
@@ -54,7 +57,7 @@ class Cve:
                     convert('data.json', 'data-stix2.json')
                     with open('data-stix2.json') as stix_json:
                         contents = stix_json.read()
-                        self.helper.send_stix2_bundle(contents, self.helper.connect_scope)
+                        self.helper.send_stix2_bundle(contents, self.helper.connect_scope, self.update_existing_data)
 
                     # Remove files
                     os.remove('data.json')

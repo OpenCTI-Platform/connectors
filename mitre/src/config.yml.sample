@@ -8,6 +8,7 @@ connector:
   name: 'MITRE ATT&CK'
   scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report'
   confidence_level: 3
+  update_existing_data: True
   log_level: 'info'
 
 mitre:

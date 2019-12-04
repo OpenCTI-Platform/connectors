@@ -8,6 +8,7 @@ connector:
   name: 'OpenCTI'
   scope: 'identity,sector,region,country,city'
   confidence_level: 5
+  update_existing_data: True
   log_level: 'info'
 
 config:
