@@ -63,7 +63,7 @@ class Amitt:
                 exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(self.get_interval())
+                time.sleep(60)
 
 
 if __name__ == '__main__':
