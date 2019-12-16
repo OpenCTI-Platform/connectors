@@ -5,7 +5,7 @@ import json
 import pycountry
 
 from stix2 import Relationship, Identity, Bundle
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class IpInfoConnector:
@@ -14,7 +14,7 @@ class IpInfoConnector:
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + '/config.yml'
         config = yaml.load(open(config_file_path), Loader=yaml.FullLoader) if os.path.isfile(config_file_path) else {}
         self.helper = OpenCTIConnectorHelper(config)
-        self.token = os.getenv('IPINFO_TOKEN') or config['ipinfo']['token']
+        self.token = get_config_variable('IPINFO_TOKEN', ['ipinfo', 'token'], config)
 
     def _generate_stix_bundle(self, country, city, observable_id):
         # Generate stix bundle

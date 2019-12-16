@@ -326,7 +326,13 @@ class Misp:
                 )
             # Event Attack Patterns
             for attack_pattern in event_elements['attack_patterns']:
-                for threat in (event_elements['intrusion_sets'] + event_elements['malwares'] + event_elements['tools']):
+                if len(event_elements['malwares']) > 0:
+                    threats = event_elements['malwares']
+                elif len(event_elements['intrusion_sets']) > 0:
+                    threats = event_elements['intrusion_sets']
+                else:
+                    threats = []
+                for threat in threats:
                     relationship_uses = Relationship(
                         relationship_type='uses',
                         created_by_ref=author,
@@ -347,7 +353,7 @@ class Misp:
                         relationship_type='indicates',
                         created_by_ref=author,
                         source_ref=indicator.id,
-                        target_ref='malware--fa42a846-8d90-4e51-bc29-71d5b4802168', # Fake
+                        target_ref='malware--fa42a846-8d90-4e51-bc29-71d5b4802168',  # Fake
                         description=attribute['comment'],
                         object_marking_refs=attribute_markings,
                         custom_properties={
@@ -363,9 +369,13 @@ class Misp:
                     relationships.append(relationship_indicates)
             # Attribute Attack Patterns
             for attack_pattern in attribute_elements['attack_patterns']:
-                for threat in (
-                        attribute_elements['intrusion_sets'] + attribute_elements['malwares'] + attribute_elements[
-                    'tools']):
+                if len(attribute_elements['malwares']) > 0:
+                    threats = attribute_elements['malwares']
+                elif len(attribute_elements['intrusion_sets']) > 0:
+                    threats = attribute_elements['intrusion_sets']
+                else:
+                    threats = []
+                for threat in threats:
                     relationship_uses = Relationship(
                         relationship_type='uses',
                         created_by_ref=author,
