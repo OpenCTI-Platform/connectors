@@ -14,9 +14,10 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - MISP_URL=http://localhost # Required
       - MISP_KEY=ChangeMe # Required
-      - MISP_TAG=OpenCTI:\ Import # Optional, tags of events to be ingested (if not provided, import all!)
-      - MISP_UNTAG_EVENT=true # Optional, remove the tag after import
-      - MISP_IMPORTED_TAG=OpenCTI:\ Imported # Required, tag event after import
-      - MISP_FILTER_ON_IMPORTED_TAG=true # Required, use imported tag to know which events to not ingest
-      - MISP_INTERVAL=1 # Minutes
+      - MISP_SSL_VERIFY=False # Required
+      - MISP_CREATE_REPORTS=True # Required, create report for MISP event
+      - MISP_REPORT_CLASS=MISP\ event # Optional, report_class if creating report for event
+      - MISP_IMPORT_FROM_DATE=2000-01-01 # Optional, import all event from this date
+      - MISP_IMPORT_TAGS=opencti:import,type:osint # Optional, list of tags used for import events
+      - MISP_INTERVAL=1 # Required, in minutes
     restart: always
