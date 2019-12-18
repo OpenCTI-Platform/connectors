@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-ipinfo:
-    image: opencti/connector-import-file-stix:latest
+    image: opencti/connector-ipinfo:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
