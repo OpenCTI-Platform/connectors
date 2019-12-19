@@ -100,8 +100,10 @@ class Misp:
             # Prepare the query
             kwargs = dict()
             if complex_query_tag is not None: kwargs['tags'] = complex_query_tag
-            if last_run is not None: kwargs['timestamp'] = last_run
-            if import_from_date is not None: kwargs['date_from'] = import_from_date
+            if last_run is not None:
+                kwargs['timestamp'] = last_run
+            elif import_from_date is not None:
+                kwargs['date_from'] = import_from_date
 
             # Query with pagination of 100
             current_page = 1
@@ -389,7 +391,8 @@ class Misp:
                                 '%Y-%m-%dT%H:%M:%SZ'),
                             'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
                                 '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.helper.connect_confidence_level
+                            'x_opencti_weight': self.helper.connect_confidence_level,
+                            'x_opencti_ignore_dates': True
                         }
                     )
                     relationships.append(relationship_uses)
@@ -407,7 +410,8 @@ class Misp:
                                 '%Y-%m-%dT%H:%M:%SZ'),
                             'x_opencti_weight': self.helper.connect_confidence_level,
                             'x_opencti_source_ref': indicator.id,
-                            'x_opencti_target_ref': relationship_uses.id
+                            'x_opencti_target_ref': relationship_uses.id,
+                            'x_opencti_ignore_dates': True
                         }
                     )
                     relationships.append(relationship_indicates)
@@ -444,6 +448,7 @@ class Misp:
 
     def prepare_elements(self, galaxies):
         elements = {'intrusion_sets': [], 'malwares': [], 'tools': [], 'attack_patterns': []}
+        added_names = []
         for galaxy in galaxies:
             # Get the linked intrusion sets
             if (
@@ -462,14 +467,16 @@ class Misp:
                         aliases = galaxy_entity['meta']['synonyms']
                     else:
                         aliases = [name]
-                    elements['intrusion_sets'].append(IntrusionSet(
-                        name=name,
-                        labels=['intrusion-set'],
-                        description=galaxy_entity['description'],
-                        custom_properties={
-                            'x_opencti_aliases': aliases
-                        }
-                    ))
+                    if name not in added_names:
+                        elements['intrusion_sets'].append(IntrusionSet(
+                            name=name,
+                            labels=['intrusion-set'],
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
+                        ))
+                        added_names.append(name)
             # Get the linked malwares
             if (
                     (galaxy['namespace'] == 'mitre-attack' and galaxy['name'] == 'Malware') or
@@ -487,14 +494,16 @@ class Misp:
                         aliases = galaxy_entity['meta']['synonyms']
                     else:
                         aliases = [name]
-                    elements['malwares'].append(Malware(
-                        name=name,
-                        labels=['malware'],
-                        description=galaxy_entity['description'],
-                        custom_properties={
-                            'x_opencti_aliases': aliases
-                        }
-                    ))
+                    if name not in added_names:
+                        elements['malwares'].append(Malware(
+                            name=name,
+                            labels=['malware'],
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
+                        ))
+                        added_names.append(name)
             # Get the linked tools
             if (
                     (galaxy['namespace'] == 'mitre-attack' and galaxy['name'] == 'Tool')
@@ -508,14 +517,16 @@ class Misp:
                         aliases = galaxy_entity['meta']['synonyms']
                     else:
                         aliases = [name]
-                    elements['tools'].append(Tool(
-                        name=name,
-                        labels=['tool'],
-                        description=galaxy_entity['description'],
-                        custom_properties={
-                            'x_opencti_aliases': aliases
-                        }
-                    ))
+                    if name not in added_names:
+                        elements['tools'].append(Tool(
+                            name=name,
+                            labels=['tool'],
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_aliases': aliases
+                            }
+                        ))
+                        added_names.append(name)
             # Get the linked attack_patterns
             if (
                     (galaxy['namespace'] == 'mitre-attack' and galaxy['name'] == 'Attack Pattern')
@@ -529,15 +540,17 @@ class Misp:
                         aliases = galaxy_entity['meta']['synonyms']
                     else:
                         aliases = [name]
-                    elements['attack_patterns'].append(AttackPattern(
-                        name=name,
-                        labels=['attack-pattern'],
-                        description=galaxy_entity['description'],
-                        custom_properties={
-                            'x_opencti_external_id': galaxy_entity['meta']['external_id'],
-                            'x_opencti_aliases': aliases
-                        }
-                    ))
+                    if name not in added_names:
+                        elements['attack_patterns'].append(AttackPattern(
+                            name=name,
+                            labels=['attack-pattern'],
+                            description=galaxy_entity['description'],
+                            custom_properties={
+                                'x_opencti_external_id': galaxy_entity['meta']['external_id'][0],
+                                'x_opencti_aliases': aliases,
+                            }
+                        ))
+                        added_names.append(name)
         return elements
 
     def resolve_type(self, type, value):
