@@ -110,6 +110,7 @@ class Misp:
                 kwargs['page'] = current_page
                 self.helper.log_info('Fetching MISP events with args: ' + json.dumps(kwargs))
                 events = self.misp.search('events', **kwargs)
+                self.helper.log_info('MISP returned ' + str(len(events)) + ' events.')
                 # Break if no more result
                 if len(events) == 0:
                     break
@@ -267,7 +268,7 @@ class Misp:
             ece = ObservationExpression(EqualityComparisonExpression(lhs, observable_value))
             try:
                 indicator = Indicator(
-                    name='Indicator',
+                    name=resolved_attribute['value'],
                     description=attribute['comment'],
                     pattern=str(ece),
                     valid_from=datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),

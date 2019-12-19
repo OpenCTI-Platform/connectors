@@ -34,7 +34,7 @@ If you are using it independently, remember that the connector will try to conne
 
 The MISP connector will check all new events or latest modified event since the last run for import. The import process has the following steps:
 
-- Iterate other MISP events to import.
+- Iterate other MISP events to import with the given parameters and on **modified events since the last run**.
 - Convert each associated galaxy to OpenCTI entities: `Threat actors` / `Intrusion sets` / `Malwares` / `Attack Patterns`).
 - Convert each attribute to `Indicators`.
 - Import all `Indicators`, `Threat actors`, `Intrusion sets`, `Malwares` and `Attack Patterns`.
