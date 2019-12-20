@@ -221,7 +221,7 @@ class Misp:
                 bundle_objects.append(object_relationship)
 
             ### Create the report if needed
-            if self.misp_create_report:
+            if self.misp_create_report and len(object_refs) > 0:
                 report = Report(
                     name=event['Event']['info'],
                     description=event['Event']['info'],
