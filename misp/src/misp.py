@@ -348,7 +348,8 @@ class Misp:
                                 '%Y-%m-%dT%H:%M:%SZ'),
                             'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
                                 '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.helper.connect_confidence_level
+                            'x_opencti_weight': self.helper.connect_confidence_level,
+                            'x_opencti_ignore_dates': True
                         }
                     )
                     relationships.append(relationship_uses)
