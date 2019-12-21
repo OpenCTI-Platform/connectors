@@ -12,6 +12,7 @@ from stix2 import Bundle, Identity, IntrusionSet, Malware, Tool, AttackPattern, 
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+PATTERNTYPES = ['yara', 'sigma', 'pcre', 'snort', 'suricata']
 OPENCTISTIX2 = {
     'autonomous-system': {'type': 'autonomous-system', 'path': ['number'],
                           'transform': {'operation': 'remove_string', 'value': 'AS'}},
@@ -260,19 +261,22 @@ class Misp:
             ### Create the indicator
             observable_type = resolved_attribute['type']
             observable_value = resolved_attribute['value']
+            pattern_type = 'stix'
             if observable_type not in OPENCTISTIX2:
                 return None
-
-            if 'transform' in OPENCTISTIX2[observable_type]:
-                if OPENCTISTIX2[observable_type]['transform']['operation'] == 'remove_string':
-                    observable_value = observable_value.replace(OPENCTISTIX2[observable_type]['transform']['value'], '')
-            lhs = ObjectPath(OPENCTISTIX2[observable_type]['type'], OPENCTISTIX2[observable_type]['path'])
-            ece = ObservationExpression(EqualityComparisonExpression(lhs, observable_value))
+            elif observable_type in PATTERNTYPES:
+                pattern_type = observable_type
+            else:
+                if 'transform' in OPENCTISTIX2[observable_type]:
+                    if OPENCTISTIX2[observable_type]['transform']['operation'] == 'remove_string':
+                        observable_value = observable_value.replace(OPENCTISTIX2[observable_type]['transform']['value'], '')
+                lhs = ObjectPath(OPENCTISTIX2[observable_type]['type'], OPENCTISTIX2[observable_type]['path'])
+                observable_value = ObservationExpression(EqualityComparisonExpression(lhs, observable_value))
             try:
                 indicator = Indicator(
                     name=resolved_attribute['value'],
                     description=attribute['comment'],
-                    pattern=str(ece),
+                    pattern=str(observable_value),
                     valid_from=datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
                     labels=['malicious-activity'],
                     created_by_ref=author,
@@ -280,7 +284,7 @@ class Misp:
                     custom_properties={
                         'x_opencti_observable_type': resolved_attribute['type'],
                         'x_opencti_observable_value': resolved_attribute['value'],
-                        'x_opencti_pattern_type': 'stix'
+                        'x_opencti_pattern_type': pattern_type
                     }
                 )
             except:
