@@ -262,10 +262,10 @@ class Misp:
             observable_type = resolved_attribute['type']
             observable_value = resolved_attribute['value']
             pattern_type = 'stix'
-            if observable_type not in OPENCTISTIX2:
-                return None
-            elif observable_type in PATTERNTYPES:
+            if observable_type in PATTERNTYPES:
                 pattern_type = observable_type
+            elif observable_type not in OPENCTISTIX2:
+                return None
             else:
                 if 'transform' in OPENCTISTIX2[observable_type]:
                     if OPENCTISTIX2[observable_type]['transform']['operation'] == 'remove_string':
