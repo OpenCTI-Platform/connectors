@@ -17,6 +17,10 @@ jobs:
           name: Build Docker image opencti/connector-export-file-stix
           command: docker build -t opencti/connector-export-file-stix:latest . && docker tag opencti/connector-export-file-stix:latest opencti/connector-export-file-stix:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/export-file-csv
+          name: Build Docker image opencti/connector-export-file-csv
+          command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
@@ -48,6 +52,8 @@ jobs:
             docker push opencti/connector-import-file-stix:${CIRCLE_TAG}
             docker push opencti/connector-export-file-stix:latest
             docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
+            docker push opencti/connector-export-file-csv:latest
+            docker push opencti/connector-export-file-csv:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
             docker push opencti/connector-ipinfo:latest
@@ -75,6 +81,10 @@ jobs:
           working_directory: ~/opencti/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
           command: docker build -t opencti/connector-export-file-stix:rolling .
+      - run:
+          working_directory: ~/opencti/export-file-csv
+          name: Build Docker image opencti/connector-export-file-csv
+          command: docker build -t opencti/connector-export-file-csv:rolling .
       - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
@@ -105,6 +115,7 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-import-file-stix:rolling
             docker push opencti/connector-export-file-stix:rolling
+            docker push opencti/connector-export-file-csv:rolling
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-mitre:rolling
