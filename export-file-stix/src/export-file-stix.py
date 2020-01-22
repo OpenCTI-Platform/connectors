@@ -14,16 +14,43 @@ class ExportFileStix:
 
     def _process_message(self, data):
         entity_id = data['entity_id']
-        file_name = data['file_name']
         entity_type = data['entity_type']
+        file_name = data['file_name']
         export_type = data['export_type']
+        list_args = data['list_args']
         max_marking_definition = data['max_marking_definition']
-        self.helper.log_info('Exporting: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name)
-        bundle = self.helper.api.stix2.export_entity(entity_type, entity_id, export_type, max_marking_definition)
-        json_bundle = json.dumps(bundle, indent=4)
-        self.helper.log_info('Uploading: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name)
-        self.helper.api.push_stix_domain_entity_export(entity_id, file_name, json_bundle)
-        self.helper.log_info('Export done: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name)
+        if entity_id is not None:
+            self.helper.log_info(
+                'Exporting: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name
+            )
+            bundle = self.helper.api.stix2.export_entity(entity_type, entity_id, export_type, max_marking_definition)
+            json_bundle = json.dumps(bundle, indent=4)
+            self.helper.log_info(
+                'Uploading: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name
+            )
+            self.helper.api.stix_domain_entity.push_entity_export(entity_id, file_name, json_bundle)
+            self.helper.log_info(
+                'Export done: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name
+            )
+        else:
+            self.helper.log_info('Exporting list: ' + entity_type + '/' + export_type + ' to ' + file_name)
+            bundle = self.helper.api.stix2.export_list(
+                entity_type.lower(),
+                list_args['search'],
+                list_args['filters'],
+                list_args['orderBy'],
+                list_args['orderMode'],
+                max_marking_definition
+            )
+            json_bundle = json.dumps(bundle, indent=4)
+            self.helper.log_info('Uploading: ' + entity_type + '/' + export_type + ' to ' + file_name)
+            self.helper.api.stix_domain_entity.push_list_export(
+                entity_type,
+                file_name,
+                json_bundle,
+                json.dumps(list_args)
+            )
+            self.helper.log_info('Export done: ' + entity_type + '/' + export_type + ' to ' + file_name)
         return ['Export done']
 
     # Start the main loop
