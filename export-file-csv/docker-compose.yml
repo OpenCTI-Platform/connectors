@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-export-file-stix:
+  connector-export-file-csv:
     image: opencti/connector-export-file-csv:latest
     environment:
       - OPENCTI_URL=http://localhost
