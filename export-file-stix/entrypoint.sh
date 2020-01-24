@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-export-file-stix
 
 # Launch the worker
-python3 export-file-csv.py
+python3 export-file-stix.py
