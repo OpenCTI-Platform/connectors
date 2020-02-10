@@ -16,6 +16,7 @@ class ExportFileStix:
         entity_id = data['entity_id']
         entity_type = data['entity_type']
         file_name = data['file_name']
+        file_context = data['file_context']
         export_type = data['export_type']
         list_args = data['list_args']
         max_marking_definition = data['max_marking_definition']
@@ -48,6 +49,7 @@ class ExportFileStix:
                 entity_type,
                 file_name,
                 json_bundle,
+                file_context,
                 json.dumps(list_args)
             )
             self.helper.log_info('Export done: ' + entity_type + '/' + export_type + ' to ' + file_name)

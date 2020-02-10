@@ -21,7 +21,9 @@ class ExportFileCsv:
         for d in data:
             row = []
             for h in headers:
-                if isinstance(d[h], str):
+                if h not in d:
+                    row.append('')
+                elif isinstance(d[h], str):
                     row.append(d[h])
                 elif isinstance(d[h], list):
                     if len(d[h]) > 0 and isinstance(d[h][0], str):
@@ -52,6 +54,7 @@ class ExportFileCsv:
         entity_id = data['entity_id']
         entity_type = data['entity_type']
         file_name = data['file_name']
+        file_context = data['file_context']
         export_type = data['export_type']
         list_args = data['list_args']
         max_marking_definition = data['max_marking_definition']
@@ -60,7 +63,12 @@ class ExportFileCsv:
                 'Exporting: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name
             )
             entity_data = self.helper.api.stix_domain_entity.read(id=entity_id)
-            csv_data = self.export_dict_list_to_csv([entity_data])
+            entities_list = [entity_data]
+            if 'objectRefsIds' in entity_data:
+                for id in entity_data['objectRefsIds']:
+                    entity = self.helper.api.stix_domain_entity.read(id=id)
+                    entities_list.append(entity)
+            csv_data = self.export_dict_list_to_csv(entities_list)
             self.helper.log_info(
                 'Uploading: ' + entity_type + '/' + export_type + '(' + entity_id + ') to ' + file_name
             )
@@ -108,7 +116,7 @@ class ExportFileCsv:
             )
             csv_data = self.export_dict_list_to_csv(entities_list)
             self.helper.log_info('Uploading: ' + entity_type + '/' + export_type + ' to ' + file_name)
-            self.helper.api.stix_domain_entity.push_list_export(entity_type, file_name, csv_data, json.dumps(list_args))
+            self.helper.api.stix_domain_entity.push_list_export(entity_type, file_name, csv_data, file_context, json.dumps(list_args))
             self.helper.log_info('Export done: ' + entity_type + '/' + export_type + ' to ' + file_name)
         return ['Export done']
 
