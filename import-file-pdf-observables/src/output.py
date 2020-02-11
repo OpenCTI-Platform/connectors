@@ -46,7 +46,6 @@ ind_registrykey.add_indicator_type("Host Characteristics")
 ind_dict = {
     'IP': ind_ip,
     'HASH': ind_file,
-
     'URL': ind_url,
     'Host': ind_domain,
     'Email': ind_email,

@@ -621,5 +621,10 @@ class Misp:
 
 
 if __name__ == '__main__':
-    mispConnector = Misp()
-    mispConnector.run()
+    try:
+        mispConnector = Misp()
+        mispConnector.run()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        exit(0)

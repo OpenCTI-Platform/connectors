@@ -1,5 +1,6 @@
 import os
 import yaml
+import time
 
 from pycti import OpenCTIConnectorHelper
 
@@ -26,5 +27,10 @@ class ImportFileStix:
 
 
 if __name__ == '__main__':
-    connectorImportFileStix = ImportFileStix()
-    connectorImportFileStix.start()
+    try:
+        connectorImportFileStix = ImportFileStix()
+        connectorImportFileStix.start()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        exit(0)

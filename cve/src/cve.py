@@ -91,5 +91,10 @@ class Cve:
 
 
 if __name__ == '__main__':
-    cveConnector = Cve()
-    cveConnector.run()
+    try:
+        cveConnector = Cve()
+        cveConnector.run()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        exit(0)
