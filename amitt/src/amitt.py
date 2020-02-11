@@ -82,5 +82,10 @@ class Amitt:
 
 
 if __name__ == '__main__':
-    amittConnector = Amitt()
-    amittConnector.run()
+    try:
+        amittConnector = Amitt()
+        amittConnector.run()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        exit(0)

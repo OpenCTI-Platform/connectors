@@ -1,0 +1,14 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_IMPORT_FILE'
+  name: 'ImportFilePdfObservables'
+  scope: 'application/pdf'
+  confidence_level: 3
+  log_level: 'info'
+
+pdf_observables:
+  create_indicator: False

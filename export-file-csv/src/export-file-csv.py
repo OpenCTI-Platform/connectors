@@ -3,6 +3,7 @@ import os
 import json
 import io
 import csv
+import time
 
 from pycti import OpenCTIConnectorHelper
 from pycti.utils.constants import IdentityTypes
@@ -126,5 +127,10 @@ class ExportFileCsv:
 
 
 if __name__ == '__main__':
-    connectorExportFileCsv = ExportFileCsv()
-    connectorExportFileCsv.start()
+    try:
+        connectorExportFileCsv = ExportFileCsv()
+        connectorExportFileCsv.start()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        exit(0)

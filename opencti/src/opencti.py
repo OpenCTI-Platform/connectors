@@ -85,5 +85,10 @@ class OpenCTI:
 
 
 if __name__ == '__main__':
-    openCTIConnector = OpenCTI()
-    openCTIConnector.run()
+    try:
+        openCTIConnector = OpenCTI()
+        openCTIConnector.run()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        exit(0)

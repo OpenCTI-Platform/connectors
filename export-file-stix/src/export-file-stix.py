@@ -1,6 +1,7 @@
 import yaml
 import os
 import json
+import time
 
 from pycti import OpenCTIConnectorHelper
 
@@ -61,5 +62,10 @@ class ExportFileStix:
 
 
 if __name__ == '__main__':
-    connectorExportFileStix = ExportFileStix()
-    connectorExportFileStix.start()
+    try:
+        connectorExportFileStix = ExportFileStix()
+        connectorExportFileStix.start()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        exit(0)

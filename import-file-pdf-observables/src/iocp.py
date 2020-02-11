@@ -178,9 +178,7 @@ class IOC_Parser(object):
             page_num = 0
             for page in pdf.pages:
                 page_num += 1
-
                 data = page.extractText()
-
                 list_pages.append(self.parse_page(fpath, data, page_num))
             self.handler.print_footer(fpath)
             return list_pages
@@ -191,6 +189,7 @@ class IOC_Parser(object):
 
     def parse_pdf_pdfminer(self, f, fpath):
         try:
+            list_pages = []
             laparams = LAParams()
             laparams.all_texts = True  
             rsrcmgr = PDFResourceManager()
@@ -210,9 +209,9 @@ class IOC_Parser(object):
                 interpreter.process_page(page)
                 data = retstr.getvalue()
                 retstr.close()
-
-                self.parse_page(fpath, data, page_num)
+                list_pages.append(self.parse_page(fpath, data, page_num))
             self.handler.print_footer(fpath)
+            return list_pages
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:

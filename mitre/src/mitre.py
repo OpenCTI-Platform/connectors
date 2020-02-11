@@ -85,5 +85,10 @@ class Mitre:
 
 
 if __name__ == '__main__':
-    mitreConnector = Mitre()
-    mitreConnector.run()
+    try:
+        mitreConnector = Mitre()
+        mitreConnector.run()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        exit(0)
