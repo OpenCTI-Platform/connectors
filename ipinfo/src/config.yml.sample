@@ -12,3 +12,4 @@ connector:
 
 ipinfo:
   token: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'

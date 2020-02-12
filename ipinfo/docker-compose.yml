@@ -12,4 +12,5 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
       - IPINFO_TOKEN=ChangeMe
+      - IPINFO_MAX_TLP=TLP:AMBER
     restart: always
