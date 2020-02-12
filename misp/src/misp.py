@@ -239,6 +239,7 @@ class Misp:
                 )
                 bundle_objects.append(report)
             bundle = Bundle(objects=bundle_objects).serialize()
+            print(bundle)
             self.helper.send_stix2_bundle(bundle, None, self.update_existing_data, False)
 
     def process_attribute(self, author, event_elements, event_markings, attribute):
@@ -261,9 +262,14 @@ class Misp:
             ### Create the indicator
             observable_type = resolved_attribute['type']
             observable_value = resolved_attribute['value']
+            name = resolved_attribute['value']
             pattern_type = 'stix'
             if observable_type in PATTERNTYPES:
                 pattern_type = observable_type
+                observable_type = 'Unknown'
+                genuine_pattern = "[file:hashes.md5 = 'd41d8cd98f00b204e9800998ecf8427e']"
+                pattern = observable_value
+                name = attribute['comment'] if len(attribute['comment']) > 0 else observable_type
             elif observable_type not in OPENCTISTIX2:
                 return None
             else:
@@ -271,24 +277,23 @@ class Misp:
                     if OPENCTISTIX2[observable_type]['transform']['operation'] == 'remove_string':
                         observable_value = observable_value.replace(OPENCTISTIX2[observable_type]['transform']['value'], '')
                 lhs = ObjectPath(OPENCTISTIX2[observable_type]['type'], OPENCTISTIX2[observable_type]['path'])
-                observable_value = ObservationExpression(EqualityComparisonExpression(lhs, observable_value))
-            try:
-                indicator = Indicator(
-                    name=resolved_attribute['value'],
-                    description=attribute['comment'],
-                    pattern=str(observable_value),
-                    valid_from=datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                    labels=['malicious-activity'],
-                    created_by_ref=author,
-                    object_marking_refs=attribute_markings,
-                    custom_properties={
-                        'x_opencti_observable_type': resolved_attribute['type'],
-                        'x_opencti_observable_value': resolved_attribute['value'],
-                        'x_opencti_pattern_type': pattern_type
-                    }
-                )
-            except:
-                return None
+                genuine_pattern = str(ObservationExpression(EqualityComparisonExpression(lhs, observable_value)))
+                pattern = genuine_pattern
+            indicator = Indicator(
+                name=name,
+                description=attribute['comment'],
+                pattern=genuine_pattern,
+                valid_from=datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                labels=['malicious-activity'],
+                created_by_ref=author,
+                object_marking_refs=attribute_markings,
+                custom_properties={
+                    'x_opencti_indicator_pattern': pattern,
+                    'x_opencti_observable_type': observable_type,
+                    'x_opencti_observable_value': observable_value,
+                    'x_opencti_pattern_type': pattern_type
+                }
+            )
 
             ### Create the relationships
             relationships = []
@@ -560,6 +565,7 @@ class Misp:
 
     def resolve_type(self, type, value):
         types = {
+            'yara': ['yara'],
             'md5': ['file-md5'],
             'sha1': ['file-sha1'],
             'sha256': ['file-sha256'],
