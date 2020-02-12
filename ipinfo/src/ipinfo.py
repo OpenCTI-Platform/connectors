@@ -15,6 +15,7 @@ class IpInfoConnector:
         config = yaml.load(open(config_file_path), Loader=yaml.FullLoader) if os.path.isfile(config_file_path) else {}
         self.helper = OpenCTIConnectorHelper(config)
         self.token = get_config_variable('IPINFO_TOKEN', ['ipinfo', 'token'], config)
+        self.max_tlp = get_config_variable('IPINFO_MAX_TLP', ['ipinfo', 'max_tlp'], config)
 
     def _generate_stix_bundle(self, country, city, observable_id):
         # Generate stix bundle
@@ -57,6 +58,15 @@ class IpInfoConnector:
     def _process_message(self, data):
         entity_id = data['entity_id']
         observable = self.helper.api.stix_observable.read(id=entity_id)
+        # Extract TLP
+        tlp = 'TLP:WHITE'
+        for marking_definition in observable['markingDefinitions']:
+            if marking_definition['definition_type'] == 'TLP':
+                tlp = marking_definition['definition']
+
+        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+            return ['Do not send any data, TLP of the observable is greater than MAX TLP']
+
         # Extract IP from entity data
         observable_id = observable['stix_id_key']
         observable_value = observable['observable_value']
