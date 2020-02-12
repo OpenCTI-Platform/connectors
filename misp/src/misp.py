@@ -239,7 +239,6 @@ class Misp:
                 )
                 bundle_objects.append(report)
             bundle = Bundle(objects=bundle_objects).serialize()
-            print(bundle)
             self.helper.send_stix2_bundle(bundle, None, self.update_existing_data, False)
 
     def process_attribute(self, author, event_elements, event_markings, attribute):
