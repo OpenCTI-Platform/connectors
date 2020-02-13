@@ -17,7 +17,7 @@ class ExportFileCsv:
 
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
-        headers = sorted([k for k, v in data[0].items()])
+        headers = sorted(set().union(*(d.keys() for d in data)))
         csv_data = [headers]
         for d in data:
             row = []
