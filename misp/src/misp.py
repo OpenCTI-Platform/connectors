@@ -242,195 +242,199 @@ class Misp:
             self.helper.send_stix2_bundle(bundle, None, self.update_existing_data, False)
 
     def process_attribute(self, author, event_elements, event_markings, attribute):
-        resolved_attributes = self.resolve_type(attribute['type'], attribute['value'])
-        if resolved_attributes is None:
+        try:
+            resolved_attributes = self.resolve_type(attribute['type'], attribute['value'])
+            if resolved_attributes is None:
+                return None
+
+            for resolved_attribute in resolved_attributes:
+                ### Pre-process
+                # Elements
+                attribute_elements = self.prepare_elements(attribute['Galaxy'])
+                # Markings
+                if 'Tag' in attribute:
+                    attribute_markings = self.resolve_markings(attribute['Tag'], with_default=False)
+                    if len(attribute_markings) == 0:
+                        attribute_markings = event_markings
+                else:
+                    attribute_markings = event_markings
+
+                ### Create the indicator
+                observable_type = resolved_attribute['type']
+                observable_value = resolved_attribute['value']
+                name = resolved_attribute['value']
+                pattern_type = 'stix'
+                if observable_type in PATTERNTYPES:
+                    pattern_type = observable_type
+                    observable_type = 'Unknown'
+                    genuine_pattern = "[file:hashes.md5 = 'd41d8cd98f00b204e9800998ecf8427e']"
+                    pattern = observable_value
+                    name = attribute['comment'] if len(attribute['comment']) > 0 else observable_type
+                elif observable_type not in OPENCTISTIX2:
+                    return None
+                else:
+                    if 'transform' in OPENCTISTIX2[observable_type]:
+                        if OPENCTISTIX2[observable_type]['transform']['operation'] == 'remove_string':
+                            observable_value = observable_value.replace(OPENCTISTIX2[observable_type]['transform']['value'], '')
+                    lhs = ObjectPath(OPENCTISTIX2[observable_type]['type'], OPENCTISTIX2[observable_type]['path'])
+                    genuine_pattern = str(ObservationExpression(EqualityComparisonExpression(lhs, observable_value)))
+                    pattern = genuine_pattern
+                    indicator = Indicator(
+                        name=name,
+                        description=attribute['comment'],
+                        pattern=genuine_pattern,
+                        valid_from=datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                        labels=['malicious-activity'],
+                        created_by_ref=author,
+                        object_marking_refs=attribute_markings,
+                        custom_properties={
+                            'x_opencti_indicator_pattern': pattern,
+                            'x_opencti_observable_type': observable_type,
+                            'x_opencti_observable_value': observable_value,
+                            'x_opencti_pattern_type': pattern_type
+                        }
+                    )
+
+                ### Create the relationships
+                relationships = []
+                # Event threats
+                for threat in (event_elements['intrusion_sets'] + event_elements['malwares'] + event_elements['tools']):
+                    relationships.append(
+                        Relationship(
+                            relationship_type='indicates',
+                            created_by_ref=author,
+                            source_ref=indicator.id,
+                            target_ref=threat.id,
+                            description=attribute['comment'],
+                            object_marking_refs=attribute_markings,
+                            custom_properties={
+                                'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_weight': self.helper.connect_confidence_level
+                            }
+                        )
+                    )
+                # Attribute threats
+                for threat in (attribute_elements['intrusion_sets'] + attribute_elements['malwares'] + attribute_elements[
+                    'tools']):
+                    relationships.append(
+                        Relationship(
+                            relationship_type='indicates',
+                            created_by_ref=author,
+                            source_ref=indicator.id,
+                            target_ref=threat.id,
+                            description=attribute['comment'],
+                            object_marking_refs=attribute_markings,
+                            custom_properties={
+                                'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_weight': self.helper.connect_confidence_level
+                            }
+                        )
+                    )
+                # Event Attack Patterns
+                for attack_pattern in event_elements['attack_patterns']:
+                    if len(event_elements['malwares']) > 0:
+                        threats = event_elements['malwares']
+                    elif len(event_elements['intrusion_sets']) > 0:
+                        threats = event_elements['intrusion_sets']
+                    else:
+                        threats = []
+                    for threat in threats:
+                        relationship_uses = Relationship(
+                            relationship_type='uses',
+                            created_by_ref=author,
+                            source_ref=threat.id,
+                            target_ref=attack_pattern.id,
+                            description=attribute['comment'],
+                            object_marking_refs=attribute_markings,
+                            custom_properties={
+                                'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_weight': self.helper.connect_confidence_level,
+                                'x_opencti_ignore_dates': True
+                            }
+                        )
+                        relationships.append(relationship_uses)
+                        relationship_indicates = Relationship(
+                            relationship_type='indicates',
+                            created_by_ref=author,
+                            source_ref=indicator.id,
+                            target_ref='malware--fa42a846-8d90-4e51-bc29-71d5b4802168',  # Fake
+                            description=attribute['comment'],
+                            object_marking_refs=attribute_markings,
+                            custom_properties={
+                                'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_weight': self.helper.connect_confidence_level,
+                                'x_opencti_source_ref': indicator.id,
+                                'x_opencti_target_ref': relationship_uses.id
+                            }
+                        )
+                        relationships.append(relationship_indicates)
+                # Attribute Attack Patterns
+                for attack_pattern in attribute_elements['attack_patterns']:
+                    if len(attribute_elements['malwares']) > 0:
+                        threats = attribute_elements['malwares']
+                    elif len(attribute_elements['intrusion_sets']) > 0:
+                        threats = attribute_elements['intrusion_sets']
+                    else:
+                        threats = []
+                    for threat in threats:
+                        relationship_uses = Relationship(
+                            relationship_type='uses',
+                            created_by_ref=author,
+                            source_ref=threat.id,
+                            target_ref=attack_pattern.id,
+                            description=attribute['comment'],
+                            object_marking_refs=attribute_markings,
+                            custom_properties={
+                                'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_weight': self.helper.connect_confidence_level,
+                                'x_opencti_ignore_dates': True
+                            }
+                        )
+                        relationships.append(relationship_uses)
+                        relationship_indicates = Relationship(
+                            relationship_type='indicates',
+                            created_by_ref=author,
+                            source_ref=indicator.id,
+                            target_ref='malware--fa42a846-8d90-4e51-bc29-71d5b4802168',  # Fake
+                            description=attribute['comment'],
+                            object_marking_refs=attribute_markings,
+                            custom_properties={
+                                'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
+                                    '%Y-%m-%dT%H:%M:%SZ'),
+                                'x_opencti_weight': self.helper.connect_confidence_level,
+                                'x_opencti_source_ref': indicator.id,
+                                'x_opencti_target_ref': relationship_uses.id,
+                                'x_opencti_ignore_dates': True
+                            }
+                        )
+                        relationships.append(relationship_indicates)
+
+                return {
+                    'indicator': indicator,
+                    'relationships': relationships,
+                    'attribute_elements': attribute_elements,
+                    'markings': attribute_markings
+                }
+        except:
             return None
 
-        for resolved_attribute in resolved_attributes:
-            ### Pre-process
-            # Elements
-            attribute_elements = self.prepare_elements(attribute['Galaxy'])
-            # Markings
-            if 'Tag' in attribute:
-                attribute_markings = self.resolve_markings(attribute['Tag'], with_default=False)
-                if len(attribute_markings) == 0:
-                    attribute_markings = event_markings
-            else:
-                attribute_markings = event_markings
-
-            ### Create the indicator
-            observable_type = resolved_attribute['type']
-            observable_value = resolved_attribute['value']
-            name = resolved_attribute['value']
-            pattern_type = 'stix'
-            if observable_type in PATTERNTYPES:
-                pattern_type = observable_type
-                observable_type = 'Unknown'
-                genuine_pattern = "[file:hashes.md5 = 'd41d8cd98f00b204e9800998ecf8427e']"
-                pattern = observable_value
-                name = attribute['comment'] if len(attribute['comment']) > 0 else observable_type
-            elif observable_type not in OPENCTISTIX2:
-                return None
-            else:
-                if 'transform' in OPENCTISTIX2[observable_type]:
-                    if OPENCTISTIX2[observable_type]['transform']['operation'] == 'remove_string':
-                        observable_value = observable_value.replace(OPENCTISTIX2[observable_type]['transform']['value'], '')
-                lhs = ObjectPath(OPENCTISTIX2[observable_type]['type'], OPENCTISTIX2[observable_type]['path'])
-                genuine_pattern = str(ObservationExpression(EqualityComparisonExpression(lhs, observable_value)))
-                pattern = genuine_pattern
-            indicator = Indicator(
-                name=name,
-                description=attribute['comment'],
-                pattern=genuine_pattern,
-                valid_from=datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime('%Y-%m-%dT%H:%M:%SZ'),
-                labels=['malicious-activity'],
-                created_by_ref=author,
-                object_marking_refs=attribute_markings,
-                custom_properties={
-                    'x_opencti_indicator_pattern': pattern,
-                    'x_opencti_observable_type': observable_type,
-                    'x_opencti_observable_value': observable_value,
-                    'x_opencti_pattern_type': pattern_type
-                }
-            )
-
-            ### Create the relationships
-            relationships = []
-            # Event threats
-            for threat in (event_elements['intrusion_sets'] + event_elements['malwares'] + event_elements['tools']):
-                relationships.append(
-                    Relationship(
-                        relationship_type='indicates',
-                        created_by_ref=author,
-                        source_ref=indicator.id,
-                        target_ref=threat.id,
-                        description=attribute['comment'],
-                        object_marking_refs=attribute_markings,
-                        custom_properties={
-                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.helper.connect_confidence_level
-                        }
-                    )
-                )
-            # Attribute threats
-            for threat in (attribute_elements['intrusion_sets'] + attribute_elements['malwares'] + attribute_elements[
-                'tools']):
-                relationships.append(
-                    Relationship(
-                        relationship_type='indicates',
-                        created_by_ref=author,
-                        source_ref=indicator.id,
-                        target_ref=threat.id,
-                        description=attribute['comment'],
-                        object_marking_refs=attribute_markings,
-                        custom_properties={
-                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.helper.connect_confidence_level
-                        }
-                    )
-                )
-            # Event Attack Patterns
-            for attack_pattern in event_elements['attack_patterns']:
-                if len(event_elements['malwares']) > 0:
-                    threats = event_elements['malwares']
-                elif len(event_elements['intrusion_sets']) > 0:
-                    threats = event_elements['intrusion_sets']
-                else:
-                    threats = []
-                for threat in threats:
-                    relationship_uses = Relationship(
-                        relationship_type='uses',
-                        created_by_ref=author,
-                        source_ref=threat.id,
-                        target_ref=attack_pattern.id,
-                        description=attribute['comment'],
-                        object_marking_refs=attribute_markings,
-                        custom_properties={
-                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.helper.connect_confidence_level,
-                            'x_opencti_ignore_dates': True
-                        }
-                    )
-                    relationships.append(relationship_uses)
-                    relationship_indicates = Relationship(
-                        relationship_type='indicates',
-                        created_by_ref=author,
-                        source_ref=indicator.id,
-                        target_ref='malware--fa42a846-8d90-4e51-bc29-71d5b4802168',  # Fake
-                        description=attribute['comment'],
-                        object_marking_refs=attribute_markings,
-                        custom_properties={
-                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.helper.connect_confidence_level,
-                            'x_opencti_source_ref': indicator.id,
-                            'x_opencti_target_ref': relationship_uses.id
-                        }
-                    )
-                    relationships.append(relationship_indicates)
-            # Attribute Attack Patterns
-            for attack_pattern in attribute_elements['attack_patterns']:
-                if len(attribute_elements['malwares']) > 0:
-                    threats = attribute_elements['malwares']
-                elif len(attribute_elements['intrusion_sets']) > 0:
-                    threats = attribute_elements['intrusion_sets']
-                else:
-                    threats = []
-                for threat in threats:
-                    relationship_uses = Relationship(
-                        relationship_type='uses',
-                        created_by_ref=author,
-                        source_ref=threat.id,
-                        target_ref=attack_pattern.id,
-                        description=attribute['comment'],
-                        object_marking_refs=attribute_markings,
-                        custom_properties={
-                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.helper.connect_confidence_level,
-                            'x_opencti_ignore_dates': True
-                        }
-                    )
-                    relationships.append(relationship_uses)
-                    relationship_indicates = Relationship(
-                        relationship_type='indicates',
-                        created_by_ref=author,
-                        source_ref=indicator.id,
-                        target_ref='malware--fa42a846-8d90-4e51-bc29-71d5b4802168',  # Fake
-                        description=attribute['comment'],
-                        object_marking_refs=attribute_markings,
-                        custom_properties={
-                            'x_opencti_first_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_last_seen': datetime.utcfromtimestamp(int(attribute['timestamp'])).strftime(
-                                '%Y-%m-%dT%H:%M:%SZ'),
-                            'x_opencti_weight': self.helper.connect_confidence_level,
-                            'x_opencti_source_ref': indicator.id,
-                            'x_opencti_target_ref': relationship_uses.id,
-                            'x_opencti_ignore_dates': True
-                        }
-                    )
-                    relationships.append(relationship_indicates)
-
-            return {
-                'indicator': indicator,
-                'relationships': relationships,
-                'attribute_elements': attribute_elements,
-                'markings': attribute_markings
-            }
 
     def process_observable_relations(self, object_attributes, result_table, start_element=0):
         if start_element == 0:
