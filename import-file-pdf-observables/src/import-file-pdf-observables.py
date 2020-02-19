@@ -52,7 +52,7 @@ class ImportFilePdfObservables:
         }
         i = 0
         parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json")
-        parsed = parser.parse('/home/oxid/Documents/test.pdf')
+        parsed = parser.parse(path)
         os.remove(path)
         if (parsed != []):
             for file in parsed:
