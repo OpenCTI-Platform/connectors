@@ -42,29 +42,33 @@ class Cve:
         return int(self.cve_interval) * 60 * 60 * 24
 
     def convert_and_send(self, url):
-        # Downloading json.gz file
-        self.helper.log_info("Requesting the file " + url)
-        urllib.request.urlretrieve(
-            self.cve_nvd_data_feed,
-            os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz",
-        )
-        # Unzipping the file
-        self.helper.log_info("Unzipping the file")
-        with gzip.open("data.json.gz", "rb") as f_in:
-            with open("data.json", "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        # Converting the file to stix2
-        self.helper.log_info("Converting the file")
-        convert("data.json", "data-stix2.json")
-        with open("data-stix2.json") as stix_json:
-            contents = stix_json.read()
-            self.helper.send_stix2_bundle(
-                contents, self.helper.connect_scope, self.update_existing_data
+        try:
+            # Downloading json.gz file
+            self.helper.log_info("Requesting the file " + url)
+            urllib.request.urlretrieve(
+                self.cve_nvd_data_feed,
+                os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz",
             )
-        # Remove files
-        os.remove("data.json")
-        os.remove("data.json.gz")
-        os.remove("data-stix2.json")
+            # Unzipping the file
+            self.helper.log_info("Unzipping the file")
+            with gzip.open("data.json.gz", "rb") as f_in:
+                with open("data.json", "wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            # Converting the file to stix2
+            self.helper.log_info("Converting the file")
+            convert("data.json", "data-stix2.json")
+            with open("data-stix2.json") as stix_json:
+                contents = stix_json.read()
+                self.helper.send_stix2_bundle(
+                    contents, self.helper.connect_scope, self.update_existing_data
+                )
+            # Remove files
+            os.remove("data.json")
+            os.remove("data.json.gz")
+            os.remove("data-stix2.json")
+        except Exception as e:
+            self.helper.log_error(str(e))
+            time.sleep(60)
 
     def run(self):
         self.helper.log_info("Fetching CVE knowledge...")
