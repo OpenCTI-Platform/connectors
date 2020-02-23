@@ -146,6 +146,8 @@ class VirusTotalConnector:
                     external_reference_id=external_reference['id']
                 )
 
+            return ["File found on VirusTotal, knowledge attached."]
+
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_observable.read(id=entity_id)
@@ -160,7 +162,7 @@ class VirusTotalConnector:
 
         observable_type = observable["entity_type"]
         if 'file' in observable_type:
-            self._process_file(observable)
+            return self._process_file(observable)
 
 
     # Start the main loop
