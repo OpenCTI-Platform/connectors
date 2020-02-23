@@ -29,10 +29,6 @@ jobs:
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/ipinfo
-          name: Build Docker image opencti/connector-ipinfo
-          command: docker build -t opencti/connector-ipinfo:latest . && docker tag opencti/connector-ipinfo:latest opencti/connector-ipinfo:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/mitre
           name: Build Docker image opencti/connector-mitre
           command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}          
@@ -49,6 +45,14 @@ jobs:
           name: Build Docker image opencti/connector-amitt
           command: docker build -t opencti/connector-amitt:latest . && docker tag opencti/connector-amitt:latest opencti/connector-amitt:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/ipinfo
+          name: Build Docker image opencti/connector-ipinfo
+          command: docker build -t opencti/connector-ipinfo:latest . && docker tag opencti/connector-ipinfo:latest opencti/connector-ipinfo:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/virustotal
+          name: Build Docker image opencti/connector-virustotal
+          command: docker build -t opencti/connector-virustotal:latest . && docker tag opencti/connector-virustotal:latest opencti/connector-virustotal:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -62,8 +66,6 @@ jobs:
             docker push opencti/connector-export-file-csv:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
-            docker push opencti/connector-ipinfo:latest
-            docker push opencti/connector-ipinfo:${CIRCLE_TAG}
             docker push opencti/connector-mitre:latest
             docker push opencti/connector-mitre:${CIRCLE_TAG}
             docker push opencti/connector-opencti:latest
@@ -72,6 +74,10 @@ jobs:
             docker push opencti/connector-cve:${CIRCLE_TAG}
             docker push opencti/connector-amitt:latest
             docker push opencti/connector-amitt:${CIRCLE_TAG}
+            docker push opencti/connector-ipinfo:latest
+            docker push opencti/connector-ipinfo:${CIRCLE_TAG}
+            docker push opencti/connector-virustotal:latest
+            docker push opencti/connector-virustotal:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -100,10 +106,6 @@ jobs:
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:rolling .
       - run:
-          working_directory: ~/opencti/ipinfo
-          name: Build Docker image opencti/connector-ipinfo
-          command: docker build -t opencti/connector-ipinfo:rolling .
-      - run:
           working_directory: ~/opencti/mitre
           name: Build Docker image opencti/connector-mitre
           command: docker build -t opencti/connector-mitre:rolling .
@@ -120,6 +122,14 @@ jobs:
           name: Build Docker image opencti/connector-amitt
           command: docker build -t opencti/connector-amitt:rolling .
       - run:
+          working_directory: ~/opencti/ipinfo
+          name: Build Docker image opencti/connector-ipinfo
+          command: docker build -t opencti/connector-ipinfo:rolling .
+      - run:
+          working_directory: ~/opencti/virustotal
+          name: Build Docker image opencti/connector-virustotal
+          command: docker build -t opencti/connector-virustotal:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -128,11 +138,12 @@ jobs:
             docker push opencti/connector-export-file-stix:rolling
             docker push opencti/connector-export-file-csv:rolling
             docker push opencti/connector-misp:rolling
-            docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling
             docker push opencti/connector-cve:rolling
             docker push opencti/connector-amitt:rolling
+            docker push opencti/connector-ipinfo:rolling
+            docker push opencti/connector-virustotal:rolling
 workflows:
   opencti:
     jobs:
