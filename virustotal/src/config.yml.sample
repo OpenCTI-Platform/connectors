@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'VirusTotal'
+  scope: 'file-md5,file-sha1,file-sha256'
+  confidence_level: 3
+  log_level: 'info'
+
+virustotal:
+  token: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'
