@@ -27,7 +27,7 @@ class PulseImporter:
         default_latest_timestamp: str,
         report_status: int,
     ) -> None:
-        """Initialize CrowdStrike indicator importer."""
+        """Initialize AlienVault indicator importer."""
         self.helper = helper
         self.client = client
         self.author = author
