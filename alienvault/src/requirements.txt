@@ -1,0 +1,4 @@
+pycti
+PyYAML
+pydantic
+OTXv2
