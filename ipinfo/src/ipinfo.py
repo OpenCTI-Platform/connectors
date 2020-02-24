@@ -75,7 +75,9 @@ class IpInfoConnector:
                 tlp = marking_definition["definition"]
 
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
-            raise ValueError("Do not send any data, TLP of the observable is greater than MAX TLP")
+            raise ValueError(
+                "Do not send any data, TLP of the observable is greater than MAX TLP"
+            )
 
         # Extract IP from entity data
         observable_id = observable["stix_id_key"]
@@ -90,7 +92,9 @@ class IpInfoConnector:
         json_data = json.loads(response.text)
         country = pycountry.countries.get(alpha_2=json_data["country"])
         if country is None:
-            raise ValueError("IpInfo was not able to find a country for this IP address")
+            raise ValueError(
+                "IpInfo was not able to find a country for this IP address"
+            )
         bundle = self._generate_stix_bundle(country, json_data["city"], observable_id)
         bundles_sent = self.helper.send_stix2_bundle(bundle)
         return ["Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"]
