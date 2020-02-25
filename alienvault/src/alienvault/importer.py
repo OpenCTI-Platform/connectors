@@ -26,6 +26,7 @@ class PulseImporter:
         update_existing_data: bool,
         default_latest_timestamp: str,
         report_status: int,
+        report_type: str,
     ) -> None:
         """Initialize AlienVault indicator importer."""
         self.helper = helper
@@ -35,6 +36,7 @@ class PulseImporter:
         self.update_existing_data = update_existing_data
         self.default_latest_timestamp = default_latest_timestamp
         self.report_status = report_status
+        self.report_type = report_type
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
@@ -89,6 +91,7 @@ class PulseImporter:
         object_marking_refs = [self.tlp_marking]
         confidence_level = self._confidence_level()
         report_status = self.report_status
+        report_type = self.report_type
 
         bundle_builder = PulseBundleBuilder(
             pulse,
@@ -97,6 +100,7 @@ class PulseImporter:
             object_marking_refs,
             confidence_level,
             report_status,
+            report_type,
         )
         return bundle_builder.build()
 

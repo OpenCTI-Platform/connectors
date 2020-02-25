@@ -34,6 +34,7 @@ class AlienVault:
     _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
     _CONFIG_PULSE_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.pulse_start_timestamp"
     _CONFIG_REPORT_STATUS = f"{_CONFIG_NAMESPACE}.report_status"
+    _CONFIG_REPORT_TYPE = f"{_CONFIG_NAMESPACE}.report_type"
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
@@ -74,6 +75,7 @@ class AlienVault:
         )
 
         report_status_str = self._get_configuration(config, self._CONFIG_REPORT_STATUS)
+        report_type = self._get_configuration(config, self._CONFIG_REPORT_TYPE)
         report_status = self._convert_report_status_str_to_report_status_int(
             report_status_str
         )
@@ -100,6 +102,7 @@ class AlienVault:
             update_existing_data,
             default_latest_pulse_timestamp,
             report_status,
+            report_type,
         )
 
     @staticmethod
