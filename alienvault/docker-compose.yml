@@ -16,6 +16,7 @@ services:
       - ALIENVAULT_API_KEY=ChangeMe
       - ALIENVAULT_TLP=White
       - ALIENVAULT_PULSE_START_TIMESTAMP=2020-01-01T00:00:00  # BEWARE! Could be a lot of pulses!
-      - ALIENVAULT_REPORT_STATUS=New
+      - ALIENVAULT_REPORT_TYPE=Threat Report
+      - ALIENVAULT_REPORT_STATUS=Analyzed
       - ALIENVAULT_INTERVAL_SEC=1800
     restart: always

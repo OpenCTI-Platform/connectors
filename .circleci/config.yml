@@ -25,6 +25,10 @@ jobs:
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/alienvault
+          name: Build Docker image opencti/connector-alienvault
+          command: docker build -t opencti/connector-alienvault:latest . && docker tag opencti/connector-alienvault:latest opencti/connector-alienvault:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
@@ -64,6 +68,8 @@ jobs:
             docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
             docker push opencti/connector-export-file-csv:latest
             docker push opencti/connector-export-file-csv:${CIRCLE_TAG}
+            docker push opencti/connector-alienvault:latest
+            docker push opencti/connector-alienvault:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
             docker push opencti/connector-mitre:latest
@@ -102,6 +108,10 @@ jobs:
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:rolling .
       - run:
+          working_directory: ~/opencti/alienvault
+          name: Build Docker image opencti/connector-alienvault
+          command: docker build -t opencti/connector-alienvault:rolling .
+      - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:rolling .
@@ -137,6 +147,7 @@ jobs:
             docker push opencti/connector-import-file-pdf-observables:rolling
             docker push opencti/connector-export-file-stix:rolling
             docker push opencti/connector-export-file-csv:rolling
+            docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling

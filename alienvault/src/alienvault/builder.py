@@ -2,6 +2,7 @@
 """OpenCTI AlienVault builder module."""
 
 import logging
+import random
 from datetime import datetime
 from typing import List
 
@@ -108,6 +109,7 @@ class PulseBundleBuilder:
         object_marking_refs: List[MarkingDefinition],
         confidence_level: int,
         report_status: int,
+        report_type: str,
     ) -> None:
         """Initialize pulse bundle builder."""
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -118,6 +120,7 @@ class PulseBundleBuilder:
         self.object_marking_refs = object_marking_refs
         self.confidence_level = confidence_level
         self.report_status = report_status
+        self.report_type = report_type
 
         self.first_seen = self.pulse.created
         self.last_seen = self.pulse.modified
@@ -360,7 +363,9 @@ class PulseBundleBuilder:
 
         tags = []
         for pulse_tag in self.pulse.tags:
-            tag = create_tag(self.source_name, pulse_tag, self._TAG_COLOR)
+            tag = create_tag(
+                self.source_name, pulse_tag, "#" + "%06x" % random.randint(0, 0xFFFFFF)
+            )
             tags.append(tag)
 
         return Report(
@@ -373,7 +378,7 @@ class PulseBundleBuilder:
             external_references=external_references,
             object_marking_refs=self.object_marking_refs,
             custom_properties={
-                CustomProperties.REPORT_CLASS: "Threat Report",
+                CustomProperties.REPORT_CLASS: self.report_type,
                 CustomProperties.OBJECT_STATUS: self.report_status,
                 CustomProperties.SRC_CONF_LEVEL: self.confidence_level,
                 CustomProperties.TAG_TYPE: tags,
