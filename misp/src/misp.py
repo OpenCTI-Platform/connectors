@@ -160,7 +160,16 @@ class Misp:
                 self.helper.log_info(
                     "Fetching MISP events with args: " + json.dumps(kwargs)
                 )
-                events = self.misp.search("events", **kwargs)
+                events = []
+                try:
+                    events = self.misp.search("events", **kwargs)
+                except Exception as e:
+                    self.helper.log_error(str(e))
+                    try:
+                        events = self.misp.search("events", **kwargs)
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+
                 self.helper.log_info("MISP returned " + str(len(events)) + " events.")
                 # Break if no more result
                 if len(events) == 0:
