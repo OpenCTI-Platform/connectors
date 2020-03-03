@@ -1,0 +1,4 @@
+-e git+https://github.com/certeu/crowdstrike-client#egg=crowdstrike-client
+pycti
+PyYAML
+lxml
