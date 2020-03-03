@@ -401,7 +401,7 @@ class IndicatorBundleBuilder:
         return reports
 
     def build(self) -> Optional[Bundle]:
-        """Build actor bundle."""
+        """Build indicator bundle."""
         # Create bundle with author.
         bundle_objects = [self.author]
 
