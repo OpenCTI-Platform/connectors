@@ -1,4 +1,4 @@
 pycti
-PyYAML
+PyYAML>=5.1
 pydantic
 OTXv2
