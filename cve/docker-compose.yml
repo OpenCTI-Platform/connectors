@@ -14,5 +14,6 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - CVE_IMPORT_HISTORY=true
       - CVE_NVD_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz
+      - CVE_HISTORY_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.1/
       - CVE_INTERVAL=7 # Days
     restart: always
