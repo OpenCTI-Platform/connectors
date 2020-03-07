@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CrowdStrike'
+  scope: 'crowdstrike'
+  confidence_level: 3
+  update_existing_data: false
+  log_level: 'info'
+
+crowdstrike:
+  base_url: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  tlp: 'Amber'
+  actor_start_timestamp: 0     # BEWARE! All the actors!
+  report_start_timestamp: 0    # BEWARE! All the reports!
+  report_status: 'New'
+  report_include_types: 'notice,tipper,intelligence report'
+  report_type: 'Threat Report'
+  indicator_start_timestamp: 0 # BEWARE! All the indicators!
+  indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'
+  interval_sec: 43200          # Seconds
