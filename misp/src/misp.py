@@ -174,7 +174,10 @@ class Misp:
                 # Break if no more result
                 if len(events) == 0:
                     break
-                self.process_events(events)
+                try:
+                    timestamp = self.process_events(events)
+                except Exception as e:
+                    self.helper.log_error(str(e))
                 current_page += 1
             # Set the last_run timestamp
             self.helper.set_state({"last_run": timestamp})
@@ -313,6 +316,7 @@ class Misp:
             self.helper.send_stix2_bundle(
                 bundle, None, self.update_existing_data, False
             )
+            return datetime.timestamp(parse(event["Event"]["date"]))
 
     def process_attribute(self, author, event_elements, event_markings, attribute):
         try:
