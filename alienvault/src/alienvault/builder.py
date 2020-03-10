@@ -99,7 +99,7 @@ class PulseBundleBuilder:
 
     _PATTERN_TYPE_YARA_OBSERVABLE_TYPE = "Unknown"
 
-    _TAG_COLOR = "#6cc221"
+    _TAG_COLOR = "#5fbc52"
 
     def __init__(
         self,
@@ -363,9 +363,7 @@ class PulseBundleBuilder:
 
         tags = []
         for pulse_tag in self.pulse.tags:
-            tag = create_tag(
-                self.source_name, pulse_tag, "#" + "%06x" % random.randint(0, 0xFFFFFF)
-            )
+            tag = create_tag(self.source_name, pulse_tag, self._TAG_COLOR)
             tags.append(tag)
 
         return Report(
