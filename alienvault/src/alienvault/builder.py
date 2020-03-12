@@ -99,7 +99,7 @@ class PulseBundleBuilder:
 
     _PATTERN_TYPE_YARA_OBSERVABLE_TYPE = "Unknown"
 
-    _TAG_COLOR = "#5fbc52"
+    _TAG_COLOR = "#489044"
 
     def __init__(
         self,
