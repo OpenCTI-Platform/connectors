@@ -1,7 +1,6 @@
 import os
 import yaml
 import time
-import urllib.request
 import feedparser
 from bs4 import BeautifulSoup
 
