@@ -145,9 +145,7 @@ class VirusTotalConnector:
             # Create tags
             for tag in attributes["tags"]:
                 tag_vt = self.helper.api.tag.create(
-                    tag_type="VirusTotal",
-                    value=tag,
-                    color="#0059f7",
+                    tag_type="VirusTotal", value=tag, color="#0059f7",
                 )
                 for created_observable in created_observables:
                     self.helper.api.stix_entity.add_tag(
