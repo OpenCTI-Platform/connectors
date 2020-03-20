@@ -1,0 +1,11 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CRYPTOLAEMUS'
+  scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report'
+  confidence_level: 3
+  log_level: 'info'
