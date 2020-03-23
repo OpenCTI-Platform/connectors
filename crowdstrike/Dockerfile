@@ -9,7 +9,6 @@ RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libxslt libxslt-dev libxml2 libxml2-dev && \
     cd /opt/opencti-connector-crowdstrike && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir antlr4-python3-runtime==4.7.2 && \
     apk del git build-base libxslt-dev libxml2-dev && \
     rm -rf /var/cache/apk/*
 
