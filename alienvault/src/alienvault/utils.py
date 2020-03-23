@@ -2,23 +2,24 @@
 """OpenCTI AlienVault utilities module."""
 
 from datetime import datetime
-from typing import Optional, List, Union, Mapping
+from typing import List, Mapping, Optional, Union
 
 from pycti.utils.constants import CustomProperties
+
 from stix2 import (
+    AttackPattern,
+    EqualityComparisonExpression,
     ExternalReference,
     Identity,
-    MarkingDefinition,
+    Indicator,
     IntrusionSet,
     Malware,
-    Vulnerability,
-    AttackPattern,
-    Relationship,
+    MarkingDefinition,
     ObjectPath,
-    EqualityComparisonExpression,
     ObservationExpression,
-    Indicator,
+    Relationship,
     StringConstant,
+    Vulnerability,
 )
 from stix2.core import STIXDomainObject, STIXRelationshipObject
 
@@ -26,7 +27,7 @@ from stix2.core import STIXDomainObject, STIXRelationshipObject
 def create_equality_observation_expression_str(
     object_path: ObjectPath, value: str
 ) -> str:
-    """Create observation expression string with pattern equality comparison expression."""
+    """Create observation expression string with pattern equality comparison expression."""  # noqa: E501
     operand = EqualityComparisonExpression(object_path, StringConstant(value))
     observation_expression = ObservationExpression(str(operand))
     return str(observation_expression)
