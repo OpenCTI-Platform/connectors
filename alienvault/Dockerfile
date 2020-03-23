@@ -9,7 +9,6 @@ RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic && \
     cd /opt/opencti-connector-alienvault && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir antlr4-python3-runtime==4.7.2 && \
     apk del git build-base && \
     rm -rf /var/cache/apk/*
 
