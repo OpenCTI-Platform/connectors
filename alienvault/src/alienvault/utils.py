@@ -95,10 +95,14 @@ def create_intrusion_set(
 
 
 def create_malware(
-    name: str, author: Identity, object_marking_refs: List[MarkingDefinition],
+    name: str,
+    author: Identity,
+    object_marking_refs: List[MarkingDefinition],
+    malware_id: Optional[str] = None,
 ) -> Malware:
     """Create a malware."""
     return Malware(
+        id=malware_id,
         created_by_ref=author,
         name=name,
         labels=["malware"],
