@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """OpenCTI AlienVault importer module."""
 
-from typing import Mapping, Any
+from typing import Any, Mapping
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2 import Identity, MarkingDefinition, Bundle
+
+from stix2 import Bundle, Identity, MarkingDefinition
 
 from alienvault.builder import PulseBundleBuilder
 from alienvault.client import AlienVaultClient
