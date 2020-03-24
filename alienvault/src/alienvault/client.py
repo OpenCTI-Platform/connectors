@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List
 
 from OTXv2 import OTXv2
+
 from pydantic import parse_obj_as
 
 from alienvault.models import Pulse

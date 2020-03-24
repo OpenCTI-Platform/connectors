@@ -3,22 +3,17 @@
 
 import os
 import time
-from typing import Dict, Any, Optional, Mapping, List
+from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
+
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
 )
 from pycti.utils.constants import CustomProperties
-from stix2 import (
-    TLP_WHITE,
-    TLP_GREEN,
-    TLP_AMBER,
-    TLP_RED,
-    MarkingDefinition,
-    Identity,
-)
+
+from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter

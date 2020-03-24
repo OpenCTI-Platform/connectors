@@ -4,7 +4,8 @@
 from typing import Mapping, Any, List, Optional
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2 import Identity, MarkingDefinition, Bundle
+
+from stix2 import Bundle, Identity, MarkingDefinition
 
 from alienvault.builder import PulseBundleBuilder
 from alienvault.client import AlienVaultClient

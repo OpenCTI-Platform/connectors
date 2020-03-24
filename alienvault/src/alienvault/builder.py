@@ -6,39 +6,41 @@ from datetime import datetime
 from typing import List, Mapping
 
 from pycti.utils.constants import CustomProperties, ObservableTypes
+
 from stix2 import (
-    Identity,
-    MarkingDefinition,
+    AttackPattern,
     Bundle,
+    ExternalReference,
+    Identity,
+    Indicator,
     IntrusionSet,
     Malware,
+    MarkingDefinition,
     Relationship,
-    AttackPattern,
-    Vulnerability,
-    Indicator,
     Report,
+    Vulnerability,
 )
 from stix2.core import STIXDomainObject
 
 from alienvault.models import Pulse, PulseIndicator
 from alienvault.utils import (
-    create_intrusion_set,
-    create_malware,
-    create_uses_relationships,
-    create_sector,
-    create_targets_relationships,
-    create_country,
     create_attack_pattern,
     create_attack_pattern_external_reference,
-    create_vulnerability_external_reference,
-    create_vulnerability,
-    create_object_path,
+    create_country,
     create_equality_observation_expression_str,
-    create_indicates_relationships,
-    create_object_refs,
     create_external_reference,
-    create_tag,
+    create_indicates_relationships,
     create_indicator,
+    create_intrusion_set,
+    create_malware,
+    create_object_path,
+    create_object_refs,
+    create_sector,
+    create_tag,
+    create_targets_relationships,
+    create_uses_relationships,
+    create_vulnerability,
+    create_vulnerability_external_reference,
 )
 
 
@@ -204,13 +206,13 @@ class PulseBundleBuilder:
             if not attack_id_clean:
                 continue
 
-            attack_pattern_external_references = create_attack_pattern_external_reference(
+            external_references = create_attack_pattern_external_reference(
                 attack_id_clean
             )
             attack_pattern = create_attack_pattern(
                 attack_id_clean,
                 self.author,
-                attack_pattern_external_references,
+                external_references,
                 self.object_marking_refs,
             )
             attack_patterns.append(attack_pattern)
@@ -365,17 +367,8 @@ class PulseBundleBuilder:
         )
 
     def _create_report(self, object_refs: List[STIXDomainObject]) -> Report:
-        external_references = []
-        for reference in self.pulse.references:
-            if not reference:
-                continue
-            external_reference = create_external_reference(self.source_name, reference)
-            external_references.append(external_reference)
-
-        tags = []
-        for pulse_tag in self.pulse.tags:
-            tag = create_tag(self.source_name, pulse_tag, self._TAG_COLOR)
-            tags.append(tag)
+        external_references = self._create_report_external_references()
+        tags = self._create_report_tags()
 
         return Report(
             created_by_ref=self.author,
@@ -393,6 +386,29 @@ class PulseBundleBuilder:
                 CustomProperties.TAG_TYPE: tags,
             },
         )
+
+    def _create_report_external_references(self) -> List[ExternalReference]:
+        external_references = [self._create_pulse_external_reference()]
+
+        for reference in self.pulse.references:
+            if not reference:
+                continue
+            external_reference = create_external_reference(self.source_name, reference)
+            external_references.append(external_reference)
+
+        return external_references
+
+    def _create_pulse_external_reference(self) -> ExternalReference:
+        pulse_id = self.pulse.id
+        pulse_url = self.pulse.url
+        return create_external_reference(self.source_name, pulse_url, pulse_id)
+
+    def _create_report_tags(self) -> List[Mapping[str, str]]:
+        tags = []
+        for pulse_tag in self.pulse.tags:
+            tag = create_tag(self.source_name, pulse_tag, self._TAG_COLOR)
+            tags.append(tag)
+        return tags
 
     def _create_reports(self, object_refs: List[STIXDomainObject]) -> List[Report]:
         return [self._create_report(object_refs)]
