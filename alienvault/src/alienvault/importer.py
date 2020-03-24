@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """OpenCTI AlienVault importer module."""
 
-from typing import Mapping, Any, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
@@ -41,7 +41,7 @@ class PulseImporter:
         self.report_type = report_type
         self.guess_malware = guess_malware
 
-        self.malware_guess_cache = {}
+        self.malware_guess_cache: Dict[str, str] = {}
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
