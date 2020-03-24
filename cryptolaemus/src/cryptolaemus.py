@@ -17,13 +17,11 @@ class Cryptolaemus:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.interval = 1 #1 Day interval between each scraping
+        self.interval = 1  # 1 Day interval between each scraping
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
+            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config,
         )
         self.data = {}
 
@@ -53,68 +51,85 @@ class Cryptolaemus:
                     self.helper.log_info("Connector has never run")
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
-                    (timestamp - last_run)
-                    > ((int(self.interval) - 1) * 60 * 60 * 24)
+                    (timestamp - last_run) > ((int(self.interval) - 1) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
-                    
+
                     ## CORE ##
-                    
+
                     # get feed content
-                    feed = feedparser.parse('https://paste.cryptolaemus.com/feed.xml')
-                    #variables
-                    Epoch1C2 = [] #List of C2 of Epoch1 Botnet
-                    Epoch2C2 = [] #List of C2 of Epoch2 Botnet
-                    Epoch3C2 = [] #List of C2 of Epoch3 Botnet
+                    feed = feedparser.parse("https://paste.cryptolaemus.com/feed.xml")
+                    # variables
+                    Epoch1C2 = []  # List of C2 of Epoch1 Botnet
+                    Epoch2C2 = []  # List of C2 of Epoch2 Botnet
+                    Epoch3C2 = []  # List of C2 of Epoch3 Botnet
                     # We will only extract the last item
-                    source = feed["items"][0]["id"] # Source of the data (id field in the rss feed)
-                    date = feed["items"][0]["updated"] # Date of data (updated fild in the rss feed)
-                    soup = BeautifulSoup(feed["items"][0]["content"][0]["value"],  'lxml') # Content (html format) of the rss feed first item
+                    source = feed["items"][0][
+                        "id"
+                    ]  # Source of the data (id field in the rss feed)
+                    date = feed["items"][0][
+                        "updated"
+                    ]  # Date of data (updated fild in the rss feed)
+                    soup = BeautifulSoup(
+                        feed["items"][0]["content"][0]["value"], "lxml"
+                    )  # Content (html format) of the rss feed first item
                     # parsing of content's feed (IP:port couples are in HTML <code> with no id an no significant parent node. We get the right content by indicating right <code> in the input array
-                    list1 = soup.find_all("code")[0].text.split('\n')
-                    list2 = soup.find_all("code")[3].text.split('\n')
-                    list3 = soup.find_all("code")[6].text.split('\n')
-                    #parsing of the IP:port couples
+                    list1 = soup.find_all("code")[0].text.split("\n")
+                    list2 = soup.find_all("code")[3].text.split("\n")
+                    list3 = soup.find_all("code")[6].text.split("\n")
+                    # parsing of the IP:port couples
                     for line in list1:
-                        Epoch1C2.append(line.split(':'))
+                        Epoch1C2.append(line.split(":"))
                     for line in list2:
-                        Epoch2C2.append(line.split(':'))
+                        Epoch2C2.append(line.split(":"))
                     for line in list3:
-                        Epoch3C2.append(line.split(':'))
+                        Epoch3C2.append(line.split(":"))
                     # Agregate
-                    self.data = {"Source":source, "Date":date, "Epoch1C2":Epoch1C2,  "Epoch2C2":Epoch2C2, "Epoch3C2":Epoch3C2}
-                    
-                    #Capitalize Cryptolaemus
-                    organization=self.helper.api.identity.create(
-                        type="Organization", name="Cryptolaemus Team", description="Team of Experts collecting and sharing daily update of C2 IP of Emotet's Epochs Botnets."
+                    self.data = {
+                        "Source": source,
+                        "Date": date,
+                        "Epoch1C2": Epoch1C2,
+                        "Epoch2C2": Epoch2C2,
+                        "Epoch3C2": Epoch3C2,
+                    }
+
+                    # Capitalize Cryptolaemus
+                    organization = self.helper.api.identity.create(
+                        type="Organization",
+                        name="Cryptolaemus Team",
+                        description="Team of Experts collecting and sharing daily update of C2 IP of Emotet's Epochs Botnets.",
                     )
                     external_reference = self.helper.api.external_reference.create(
-                        source_name="Cryptolaemus Team's Emotet C2 update of " + self.data["Date"], url=self.data["Source"]
+                        source_name="Cryptolaemus Team's Emotet C2 update of "
+                        + self.data["Date"],
+                        url=self.data["Source"],
                     )
                     malware = self.helper.api.malware.create(
-                            name="Emotet",
-                            description="Emotet is a modular malware variant which is primarily used as a downloader for other malware variants such as TrickBot and IcedID. Emotet first emerged in June 2014 and has been primarily used to target the banking sector. (Citation: Trend Micro Banking Malware Jan 2019)",
-                    ) 
-                    
+                        name="Emotet",
+                        description="Emotet is a modular malware variant which is primarily used as a downloader for other malware variants such as TrickBot and IcedID. Emotet first emerged in June 2014 and has been primarily used to target the banking sector. (Citation: Trend Micro Banking Malware Jan 2019)",
+                    )
+
                     # Capitalize Epoch1 C2
                     for ip in self.data["Epoch1C2"]:
                         indicator = self.helper.api.indicator.create(
                             name=ip[0],
-                            description="Botnet Epoch1 C2 IP Adress. Port: " +  ip[1],
+                            description="Botnet Epoch1 C2 IP Adress. Port: " + ip[1],
                             pattern_type="stix",
                             indicator_pattern="[ipv4-addr:value = '" + ip[0] + "']",
                             main_observable_type="IPv4-Addr",
                             valid_from=self.data["Date"],
-                        ) 
-                        if 'observableRefsIds' in indicator:
-                            for observable_id in indicator['observableRefsIds']:
+                        )
+                        if "observableRefsIds" in indicator:
+                            for observable_id in indicator["observableRefsIds"]:
                                 self.helper.api.stix_entity.add_external_reference(
-                                    id=observable_id, external_reference_id=external_reference["id"]
-                                )        
-                            
+                                    id=observable_id,
+                                    external_reference_id=external_reference["id"],
+                                )
+
                         self.helper.api.stix_entity.add_external_reference(
-                                id=indicator["id"], external_reference_id=external_reference["id"]
-                        )                                          
+                            id=indicator["id"],
+                            external_reference_id=external_reference["id"],
+                        )
                         relation = self.helper.api.stix_relation.create(
                             fromType="Indicator",
                             fromId=indicator["id"],
@@ -124,30 +139,32 @@ class Cryptolaemus:
                             first_seen=self.data["Date"],
                             last_seen=self.data["Date"],
                             description="IP Adress associated to Emotet Epoch1 botnet",
-                            weight=self.confidence_level, 
-                            role_played="C2 Server", 
-                            createdByRef=organization["id"], 
-                            ignore_dates=True, 
-                            update=True,                         
+                            weight=self.confidence_level,
+                            role_played="C2 Server",
+                            createdByRef=organization["id"],
+                            ignore_dates=True,
+                            update=True,
                         )
                         self.helper.api.stix_entity.add_external_reference(
-                                id=relation["id"], external_reference_id=external_reference["id"]
-                        )   
-                    
+                            id=relation["id"],
+                            external_reference_id=external_reference["id"],
+                        )
+
                     # Capitalize Epoch2 C2
                     for ip in self.data["Epoch2C2"]:
                         indicator = self.helper.api.indicator.create(
                             name=ip[0],
-                            description="Botnet Epoch2 C2 IP Adress. Port: " +  ip[1],
+                            description="Botnet Epoch2 C2 IP Adress. Port: " + ip[1],
                             pattern_type="stix",
                             indicator_pattern="[ipv4-addr:value = '" + ip[0] + "']",
                             main_observable_type="IPv4-Addr",
                             valid_from=self.data["Date"],
                             createdByRef=organization["id"],
-                        ) 
+                        )
                         self.helper.api.stix_entity.add_external_reference(
-                                id=indicator["id"], external_reference_id=external_reference["id"]
-                        )     
+                            id=indicator["id"],
+                            external_reference_id=external_reference["id"],
+                        )
                         relation = self.helper.api.stix_relation.create(
                             fromType="Indicator",
                             fromId=indicator["id"],
@@ -157,30 +174,32 @@ class Cryptolaemus:
                             first_seen=self.data["Date"],
                             last_seen=self.data["Date"],
                             description="IP Adress associated to Emotet Epoch2 botnet.",
-                            weight=self.confidence_level, 
-                            role_played="C2 Server", 
-                            createdByRef=organization["id"], 
-                            ignore_dates=True, 
-                            update=True,                         
-                        ) 
+                            weight=self.confidence_level,
+                            role_played="C2 Server",
+                            createdByRef=organization["id"],
+                            ignore_dates=True,
+                            update=True,
+                        )
                         self.helper.api.stix_entity.add_external_reference(
-                                id=relation["id"], external_reference_id=external_reference["id"]
-                        )                     
-                    
+                            id=relation["id"],
+                            external_reference_id=external_reference["id"],
+                        )
+
                     # Capitalize Epoch3 C2
                     for ip in self.data["Epoch3C2"]:
                         indicator = self.helper.api.indicator.create(
                             name=ip[0],
-                            description="Botnet Epoch3 C2 IP Adress. Port: " +  ip[1],
+                            description="Botnet Epoch3 C2 IP Adress. Port: " + ip[1],
                             pattern_type="stix",
                             indicator_pattern="[ipv4-addr:value = '" + ip[0] + "']",
                             main_observable_type="IPv4-Addr",
                             valid_from=self.data["Date"],
-                            createdByRef=organization["id"], 
-                        )  
+                            createdByRef=organization["id"],
+                        )
                         self.helper.api.stix_entity.add_external_reference(
-                                id=indicator["id"], external_reference_id=external_reference["id"]
-                        )                 
+                            id=indicator["id"],
+                            external_reference_id=external_reference["id"],
+                        )
                         relation = self.helper.api.stix_relation.create(
                             fromType="Indicator",
                             fromId=indicator["id"],
@@ -190,16 +209,17 @@ class Cryptolaemus:
                             first_seen=self.data["Date"],
                             last_seen=self.data["Date"],
                             description="IP Adress associated to Emotet Epoch3 botnet.",
-                            weight=self.confidence_level, 
-                            role_played="C2 Server", 
-                            createdByRef=organization["id"], 
-                            ignore_dates=True, 
-                            update=True,                         
-                        ) 
+                            weight=self.confidence_level,
+                            role_played="C2 Server",
+                            createdByRef=organization["id"],
+                            ignore_dates=True,
+                            update=True,
+                        )
                         self.helper.api.stix_entity.add_external_reference(
-                                id=indicator["id"], external_reference_id=external_reference["id"]
-                        )   
-                    
+                            id=indicator["id"],
+                            external_reference_id=external_reference["id"],
+                        )
+
                     # Store the current timestamp as a last run
                     self.helper.log_info(
                         "Connector successfully run, storing last_run as "
