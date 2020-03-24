@@ -39,6 +39,7 @@ class CrowdStrike:
     _CONFIG_REPORT_INCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.report_include_types"
     _CONFIG_REPORT_STATUS = f"{_CONFIG_NAMESPACE}.report_status"
     _CONFIG_REPORT_TYPE = f"{_CONFIG_NAMESPACE}.report_type"
+    _CONFIG_REPORT_GUESS_MALWARE = f"{_CONFIG_NAMESPACE}.report_guess_malware"
     _CONFIG_INDICATOR_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.indicator_start_timestamp"
     _CONFIG_INDICATOR_EXCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.indicator_exclude_types"
 
@@ -106,6 +107,10 @@ class CrowdStrike:
                 x.strip() for x in report_include_types_str.split(",")
             ]
 
+        report_guess_malware = bool(
+            self._get_configuration(config, self._CONFIG_REPORT_GUESS_MALWARE)
+        )
+
         indicator_start_timestamp = self._get_configuration(
             config, self._CONFIG_INDICATOR_START_TIMESTAMP, is_number=True
         )
@@ -119,8 +124,8 @@ class CrowdStrike:
                 x.strip() for x in indicator_exclude_types_str.split(",")
             ]
 
-        update_existing_data = self._get_configuration(
-            config, self._CONFIG_UPDATE_EXISTING_DATA
+        update_existing_data = bool(
+            self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
 
         # Create CrowdStrike client and importers
@@ -147,6 +152,7 @@ class CrowdStrike:
             report_include_types,
             self.report_status,
             report_type,
+            report_guess_malware,
         )
 
         self.indicator_importer = IndicatorImporter(

@@ -196,14 +196,16 @@ class IndicatorBundleBuilder:
         for actor_name in self.indicator.actors:
             name = actor_name
             aliases = []
-            motivations = []
+            primary_motivation = None
+            secondary_motivations = []
             external_references = []
 
             intrusion_set = create_intrusion_set(
                 name,
                 aliases,
                 self.author,
-                motivations,
+                primary_motivation,
+                secondary_motivations,
                 external_references,
                 self.object_marking_refs,
             )

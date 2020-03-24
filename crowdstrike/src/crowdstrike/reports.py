@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike report importer module."""
 
-from typing import Generator, List, Any, Mapping, Optional
+from typing import Generator, List, Any, Mapping, Optional, Dict
 
 from crowdstrike_client.api.intel import Reports
 from crowdstrike_client.api.models import Response
+from crowdstrike_client.api.models.base import Entity
 from crowdstrike_client.api.models.report import Report
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import Bundle, Identity, MarkingDefinition
@@ -34,23 +35,32 @@ class ReportImporter:
         include_types: List[str],
         report_status: int,
         report_type: str,
+        guess_malware: bool,
     ) -> None:
         """Initialize CrowdStrike report importer."""
         self.helper = helper
         self.reports_api = reports_api
         self.update_existing_data = update_existing_data
         self.author = author
+        self.default_latest_timestamp = default_latest_timestamp
         self.tlp_marking = tlp_marking
+        self.include_types = include_types
         self.report_status = report_status
         self.report_type = report_type
-        self.include_types = include_types
-        self.default_latest_timestamp = default_latest_timestamp
+        self.guess_malware = guess_malware
 
-        self.malwares_cache = set()
+        self.malware_guess_cache: Dict[str, str] = {}
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
-        self._info("Running report importer with state: {0}...", state)
+        self._info(
+            "Running report importer (update data: {0}, guess malware: {1}) with state: {2}...",
+            self.update_existing_data,
+            self.guess_malware,
+            state,
+        )
+
+        self._clear_malware_guess_cache()
 
         fetch_timestamp = state.get(
             self._LATEST_REPORT_TIMESTAMP, self.default_latest_timestamp
@@ -79,6 +89,9 @@ class ReportImporter:
         )
 
         return {self._LATEST_REPORT_TIMESTAMP: state_timestamp}
+
+    def _clear_malware_guess_cache(self):
+        self.malware_guess_cache.clear()
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
@@ -162,6 +175,7 @@ class ReportImporter:
         report_status = self.report_status
         report_type = self.report_type
         confidence_level = self._confidence_level()
+        guessed_malwares = self._guess_malwares_from_tags(report.tags)
 
         bundle_builder = ReportBundleBuilder(
             report,
@@ -171,9 +185,55 @@ class ReportImporter:
             report_status,
             report_type,
             confidence_level,
+            guessed_malwares,
             report_file,
         )
         return bundle_builder.build()
+
+    def _guess_malwares_from_tags(self, tags: List[Entity]) -> Mapping[str, str]:
+        if not self.guess_malware:
+            return {}
+
+        malwares = {}
+        for tag in tags:
+            name = tag.value
+            if name is None or not name:
+                continue
+            stix_id = self._get_malware_stix_id_by_name(name)
+            if stix_id is not None:
+                self._info("Found a malware ({0}) matching tag: '{1}'", stix_id, name)
+                malwares[name] = stix_id
+        return malwares
+
+    def _get_malware_stix_id_by_name(self, name: str) -> Optional[str]:
+        stix_id = self.malware_guess_cache.get(name)
+        if stix_id is not None:
+            return stix_id
+
+        stix_id = self._fetch_malware_stix_id_by_name(name)
+        if stix_id is None:
+            return None
+
+        self.malware_guess_cache[name] = stix_id
+        return stix_id
+
+    def _fetch_malware_stix_id_by_name(self, name: str) -> Optional[str]:
+        filters = [
+            self._create_filter("name", name),
+            self._create_filter("alias", name),
+        ]
+        for _filter in filters:
+            malwares = self.helper.api.malware.list(filters=_filter)
+            if malwares:
+                if len(malwares) > 1:
+                    self._info("More then one malware for '{0}'", name)
+                malware = malwares[0]
+                return malware["stix_id_key"]
+        return None
+
+    @staticmethod
+    def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
+        return [{"key": key, "values": [value]}]
 
     def _source_name(self) -> str:
         return self.helper.connect_name

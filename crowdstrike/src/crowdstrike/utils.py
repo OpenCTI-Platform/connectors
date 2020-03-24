@@ -163,9 +163,11 @@ def create_malware(
     kill_chain_phases: List[KillChainPhase],
     external_references: List[ExternalReference],
     object_marking_refs: List[MarkingDefinition],
+    malware_id: Optional[str] = None,
 ) -> Malware:
     """Create a malware."""
     return Malware(
+        id=malware_id,
         created_by_ref=author,
         name=name,
         kill_chain_phases=kill_chain_phases,
@@ -185,7 +187,8 @@ def create_intrusion_set(
     name: str,
     aliases: List[str],
     author: Identity,
-    motivations: List[str],
+    primary_motivation: Optional[str],
+    secondary_motivations: List[str],
     external_references: List[ExternalReference],
     object_marking_refs: List[MarkingDefinition],
 ) -> IntrusionSet:
@@ -194,7 +197,8 @@ def create_intrusion_set(
         created_by_ref=author,
         name=name,
         aliases=aliases,
-        secondary_motivations=motivations,
+        primary_motivation=primary_motivation,
+        secondary_motivations=secondary_motivations,
         labels=["intrusion-set"],
         external_references=external_references,
         object_marking_refs=object_marking_refs,
@@ -204,7 +208,8 @@ def create_intrusion_set(
 def create_intrusion_set_from_actor(
     actor: Actor,
     author: Identity,
-    motivations: List[str],
+    primary_motivation: Optional[str],
+    secondary_motivation: Optional[str],
     external_references: List[ExternalReference],
     object_marking_refs: List[MarkingDefinition],
 ) -> IntrusionSet:
@@ -218,8 +223,18 @@ def create_intrusion_set_from_actor(
     alias = name.replace(" ", "")
     aliases = [alias]
 
+    secondary_motivations = []
+    if secondary_motivation is not None and secondary_motivation:
+        secondary_motivations.append(secondary_motivation)
+
     return create_intrusion_set(
-        name, aliases, author, motivations, external_references, object_marking_refs
+        name,
+        aliases,
+        author,
+        primary_motivation,
+        secondary_motivations,
+        external_references,
+        object_marking_refs,
     )
 
 
