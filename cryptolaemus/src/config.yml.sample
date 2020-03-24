@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'CRYPTOLAEMUS'
-  scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report'
+  name: 'Cryptolaemus'
+  scope: 'cryptolaemus'
   confidence_level: 3
   log_level: 'info'
