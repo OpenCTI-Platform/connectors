@@ -1,24 +1,22 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
-from typing import Mapping, Any, Generator, List, Optional, Dict
+from typing import Any, Dict, Generator, List, Mapping, Optional
 
 from crowdstrike_client.api.intel import Indicators, Reports
 from crowdstrike_client.api.models import Indicator, Response
 from crowdstrike_client.api.models.report import Report
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2 import (
-    MarkingDefinition,
-    Identity,
-    Bundle,
-)
 
-from crowdstrike.indicator_bundle_builder import IndicatorReport, IndicatorBundleBuilder
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+
+from stix2 import Bundle, Identity, MarkingDefinition
+
+from crowdstrike.indicator_bundle_builder import IndicatorBundleBuilder, IndicatorReport
 from crowdstrike.utils import (
-    datetime_to_timestamp,
-    timestamp_to_datetime,
-    paginate,
     create_file_from_download,
+    datetime_to_timestamp,
+    paginate,
+    timestamp_to_datetime,
 )
 
 

@@ -3,20 +3,16 @@
 
 import os
 import time
-from typing import Dict, Any, Optional, List, Mapping
+from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
+
 from crowdstrike_client.client import CrowdStrikeClient
+
 from pycti import OpenCTIConnectorHelper
 from pycti.connector.opencti_connector_helper import get_config_variable
-from stix2 import (
-    Identity,
-    TLP_RED,
-    MarkingDefinition,
-    TLP_WHITE,
-    TLP_GREEN,
-    TLP_AMBER,
-)
+
+from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 from crowdstrike.actors import ActorImporter
 from crowdstrike.indicators import IndicatorImporter

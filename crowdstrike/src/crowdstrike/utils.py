@@ -7,32 +7,35 @@ import functools
 import logging
 from datetime import datetime
 from typing import (
-    List,
-    Union,
-    Optional,
-    Mapping,
-    TypeVar,
-    Callable,
-    Generator,
     Any,
+    Callable,
     Dict,
+    Generator,
+    List,
+    Mapping,
+    Optional,
     Tuple,
+    TypeVar,
+    Union,
 )
 
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.download import Download
 from crowdstrike_client.api.models.report import Actor, Entity, Report
+
 from lxml.html import fromstring
+
 from pycti.utils.constants import CustomProperties
+
 from stix2 import (
     ExternalReference,
-    IntrusionSet,
-    MarkingDefinition,
     Identity,
+    IntrusionSet,
+    KillChainPhase,
+    Malware,
+    MarkingDefinition,
     Relationship,
     Report as STIXReport,
-    Malware,
-    KillChainPhase,
     Vulnerability,
 )
 from stix2.core import STIXDomainObject, STIXRelationshipObject
@@ -180,7 +183,7 @@ def create_malware(
 
 def create_kill_chain_phase(kill_chain_name: str, phase_name: str) -> KillChainPhase:
     """Create a kill chain phase."""
-    return KillChainPhase(kill_chain_name=kill_chain_name, phase_name=phase_name,)
+    return KillChainPhase(kill_chain_name=kill_chain_name, phase_name=phase_name)
 
 
 def create_intrusion_set(
@@ -258,9 +261,12 @@ def create_sector(name: str, author: Identity) -> Identity:
     )
 
 
-def create_sector_from_entity(entity: Entity, author: Identity) -> Identity:
+def create_sector_from_entity(entity: Entity, author: Identity) -> Optional[Identity]:
     """Create a sector from entity."""
-    return create_sector(entity.value, author)
+    sector_name = entity.value
+    if sector_name is None or not sector_name:
+        return None
+    return create_sector(sector_name, author)
 
 
 def create_sectors_from_entities(
@@ -270,6 +276,8 @@ def create_sectors_from_entities(
     sectors = []
     for entity in entities:
         sector = create_sector_from_entity(entity, author)
+        if sector is None:
+            continue
         sectors.append(sector)
     return sectors
 
@@ -578,8 +586,15 @@ def split_countries_and_regions(
 
 def create_file_from_download(download: Download) -> Mapping[str, str]:
     """Create file mapping from Download model."""
+    filename = download.filename
+    if filename is None or not filename:
+        logger.error("File download missing a filename")
+        filename = "DOWNLOAD_MISSING_FILENAME"
+
+    base64_data = base64.b64encode(download.content.read())
+
     return {
-        "name": download.filename,
-        "data": base64.b64encode(download.content.read()),
+        "name": filename,
+        "data": base64_data.decode("utf-8"),
         "mime_type": "application/pdf",
     }

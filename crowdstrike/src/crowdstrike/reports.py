@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike report importer module."""
 
-from typing import Generator, List, Any, Mapping, Optional, Dict
+from typing import Any, Dict, Generator, List, Mapping, Optional
 
 from crowdstrike_client.api.intel import Reports
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.base import Entity
 from crowdstrike_client.api.models.report import Report
+
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+
 from stix2 import Bundle, Identity, MarkingDefinition
 
 from crowdstrike.report_bundle_builder import ReportBundleBuilder
 from crowdstrike.utils import (
-    datetime_to_timestamp,
-    timestamp_to_datetime,
-    paginate,
     create_file_from_download,
+    datetime_to_timestamp,
+    paginate,
+    timestamp_to_datetime,
 )
 
 
@@ -23,6 +25,8 @@ class ReportImporter:
     """CrowdStrike report importer."""
 
     _LATEST_REPORT_TIMESTAMP = "latest_report_timestamp"
+
+    _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
 
     def __init__(
         self,
@@ -54,7 +58,7 @@ class ReportImporter:
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
         self._info(
-            "Running report importer (update data: {0}, guess malware: {1}) with state: {2}...",
+            "Running report importer (update data: {0}, guess malware: {1}) with state: {2}...",  # noqa: E501
             self.update_existing_data,
             self.guess_malware,
             state,
@@ -75,9 +79,16 @@ class ReportImporter:
             if latest_fetched_report_timestamp is None:
                 first_in_batch = reports_batch[0]
 
-                latest_fetched_report_timestamp = datetime_to_timestamp(
-                    first_in_batch.created_date
-                )
+                created_date = first_in_batch.created_date
+                if created_date is None:
+                    self._error(
+                        "Missing created date for report {0} ({1})",
+                        first_in_batch.name,
+                        first_in_batch.id,
+                    )
+                    break
+
+                latest_fetched_report_timestamp = datetime_to_timestamp(created_date)
 
             self._process_reports(reports_batch)
 
@@ -128,7 +139,7 @@ class ReportImporter:
         fields: Optional[List[str]] = None,
     ) -> Response[Report]:
         self._info(
-            "Query reports limit: {0}, offset: {1}, sort: {2}, filter: {3}, fields: {4}",
+            "Query reports limit: {0}, offset: {1}, sort: {2}, filter: {3}, fields: {4}",  # noqa: E501
             limit,
             offset,
             sort,
@@ -175,7 +186,11 @@ class ReportImporter:
         report_status = self.report_status
         report_type = self.report_type
         confidence_level = self._confidence_level()
-        guessed_malwares = self._guess_malwares_from_tags(report.tags)
+        guessed_malwares: Mapping[str, str] = {}
+
+        tags = report.tags
+        if tags is not None:
+            guessed_malwares = self._guess_malwares_from_tags(tags)
 
         bundle_builder = ReportBundleBuilder(
             report,
@@ -199,23 +214,23 @@ class ReportImporter:
             name = tag.value
             if name is None or not name:
                 continue
-            stix_id = self._get_malware_stix_id_by_name(name)
-            if stix_id is not None:
-                self._info("Found a malware ({0}) matching tag: '{1}'", stix_id, name)
-                malwares[name] = stix_id
+
+            guess = self.malware_guess_cache.get(name)
+            if guess is None:
+                guess = self._GUESS_NOT_A_MALWARE
+
+                stix_id = self._fetch_malware_stix_id_by_name(name)
+                if stix_id is not None:
+                    guess = stix_id
+
+                self.malware_guess_cache[name] = guess
+
+            if guess == self._GUESS_NOT_A_MALWARE:
+                self._info("Tag '{0}' does not reference malware", name)
+            else:
+                self._info("Tag '{0}' references malware '{1}'", name, guess)
+                malwares[name] = guess
         return malwares
-
-    def _get_malware_stix_id_by_name(self, name: str) -> Optional[str]:
-        stix_id = self.malware_guess_cache.get(name)
-        if stix_id is not None:
-            return stix_id
-
-        stix_id = self._fetch_malware_stix_id_by_name(name)
-        if stix_id is None:
-            return None
-
-        self.malware_guess_cache[name] = stix_id
-        return stix_id
 
     def _fetch_malware_stix_id_by_name(self, name: str) -> Optional[str]:
         filters = [

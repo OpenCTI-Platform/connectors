@@ -2,35 +2,37 @@
 """OpenCTI CrowdStrike report bundle builder module."""
 
 import logging
-from typing import List, Tuple, Mapping, Optional
+from typing import List, Mapping, Optional, Tuple
 
 from crowdstrike_client.api.models.report import Report
+
 from stix2 import (
     Bundle,
     ExternalReference,
-    IntrusionSet,
-    Relationship,
     Identity,
-    Report as STIXReport,
-    MarkingDefinition,
+    IntrusionSet,
+    KillChainPhase,
     Malware,
+    MarkingDefinition,
+    Relationship,
+    Report as STIXReport,
 )
 from stix2.core import STIXDomainObject
 
 from crowdstrike.utils import (
     create_external_reference,
     create_intrusion_set_from_actor,
-    create_uses_relationships,
-    create_sectors_from_entities,
-    create_targets_relationships,
-    split_countries_and_regions,
+    create_malware,
     create_object_refs,
     create_organization,
-    create_tags,
+    create_sectors_from_entities,
     create_stix2_report_from_report,
+    create_tags,
+    create_targets_relationships,
+    create_uses_relationships,
     datetime_utc_epoch_start,
     datetime_utc_now,
-    create_malware,
+    split_countries_and_regions,
 )
 
 
@@ -98,9 +100,9 @@ class ReportBundleBuilder:
         for name, stix_id in self.guessed_malwares.items():
             logger.info("Creating malware '%s' (%s)", name, stix_id)
 
-            aliases = []
-            kill_chain_phases = []
-            external_references = []
+            aliases: List[str] = []
+            kill_chain_phases: List[KillChainPhase] = []
+            external_references: List[ExternalReference] = []
 
             malware = create_malware(
                 name,
@@ -115,10 +117,12 @@ class ReportBundleBuilder:
         return malwares
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
+        report_actors = self.report.actors
+        if report_actors is None:
+            return []
+
         primary_motivation = None
         secondary_motivation = None
-
-        report_actors = self.report.actors
 
         intrusion_sets = []
         for actor in report_actors:
@@ -170,7 +174,10 @@ class ReportBundleBuilder:
         )
 
     def _create_targeted_sectors(self) -> List[Identity]:
-        return create_sectors_from_entities(self.report.target_industries, self.author)
+        target_industries = self.report.target_industries
+        if target_industries is None:
+            return []
+        return create_sectors_from_entities(target_industries, self.author)
 
     def _create_targeted_regions_and_countries(
         self,
@@ -196,7 +203,10 @@ class ReportBundleBuilder:
         return files
 
     def _create_tags(self) -> List[Mapping[str, str]]:
-        return create_tags(self.report.tags, self.source_name)
+        tags = self.report.tags
+        if tags is None:
+            return []
+        return create_tags(tags, self.source_name)
 
     def _create_report(self, object_refs: List[STIXDomainObject]) -> STIXReport:
         external_references = self._create_external_references()

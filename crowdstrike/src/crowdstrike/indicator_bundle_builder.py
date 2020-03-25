@@ -2,43 +2,47 @@
 """OpenCTI CrowdStrike indicator bundle builder module."""
 
 import logging
-from typing import List, Optional, Mapping
+from typing import List, Mapping, Optional
 
 from crowdstrike_client.api.models import Indicator
 from crowdstrike_client.api.models.report import Report
+
 from pycti.utils.constants import CustomProperties
+
 from pydantic import BaseModel
+
 from stix2 import (
-    Indicator as STIXIndicator,
     Bundle,
+    EqualityComparisonExpression,
+    ExternalReference,
     Identity,
-    MarkingDefinition,
+    Indicator as STIXIndicator,
     IntrusionSet,
     KillChainPhase,
-    Report as STIXReport,
     Malware,
-    Relationship,
-    Vulnerability,
-    ObservationExpression,
+    MarkingDefinition,
     ObjectPath,
-    EqualityComparisonExpression,
+    ObservationExpression,
+    Relationship,
+    Report as STIXReport,
     StringConstant,
+    Vulnerability,
 )
 from stix2.core import STIXDomainObject
 
 from crowdstrike.utils import (
+    create_external_reference,
+    create_indicates_relationships,
     create_intrusion_set,
     create_kill_chain_phase,
     create_malware,
-    create_uses_relationships,
-    create_sector,
-    create_targets_relationships,
-    create_external_reference,
-    create_vulnerability,
-    create_indicates_relationships,
     create_object_refs,
-    create_tags,
+    create_sector,
     create_stix2_report_from_report,
+    create_tags,
+    create_targets_relationships,
+    create_uses_relationships,
+    create_vulnerability,
 )
 
 
@@ -126,7 +130,7 @@ class IndicatorBundleBuilder:
         _OPENCTI_TYPE_FILE_SHA256: {"type": "file", "path": ["hashes", "SHA256"]},
         # 'directory': {'type': 'directory', 'path': ['path']},
         _OPENCTI_TYPE_REGISTRY_KEY: {"type": "windows-registry-key", "path": ["key"]},
-        # 'registry-key-value': {'type': 'windows-registry-value-type', 'path': ['data']},
+        # 'registry-key-value': {'type': 'windows-registry-value-type', 'path': ['data']},  # noqa: E501
         # 'pdb-path': {'type': 'file', 'path': ['name']},
         _OPENCTI_TYPE_WINDOWS_SERVICE_NAME: {
             "type": "windows-service-ext",
@@ -195,10 +199,10 @@ class IndicatorBundleBuilder:
         intrusion_sets = []
         for actor_name in self.indicator.actors:
             name = actor_name
-            aliases = []
+            aliases: List[str] = []
             primary_motivation = None
-            secondary_motivations = []
-            external_references = []
+            secondary_motivations: List[str] = []
+            external_references: List[ExternalReference] = []
 
             intrusion_set = create_intrusion_set(
                 name,
@@ -223,27 +227,24 @@ class IndicatorBundleBuilder:
     def _create_malwares(
         self, kill_chain_phases: List[KillChainPhase]
     ) -> List[Malware]:
-        malwares = []
-
         indicator_malware_families = self.indicator.malware_families
-        if indicator_malware_families:
-            malware_external_references = []
+        if not indicator_malware_families:
+            return []
 
-            malware_name = indicator_malware_families[0]
-            malware_aliases = indicator_malware_families[1:]
+        name = indicator_malware_families[0]
+        aliases = indicator_malware_families[1:]
+        external_references: List[ExternalReference] = []
 
-            malware = create_malware(
-                malware_name,
-                malware_aliases,
-                self.author,
-                kill_chain_phases,
-                malware_external_references,
-                self.object_marking_refs,
-            )
+        malware = create_malware(
+            name,
+            aliases,
+            self.author,
+            kill_chain_phases,
+            external_references,
+            self.object_marking_refs,
+        )
 
-            malwares.append(malware)
-
-        return malwares
+        return [malware]
 
     def _create_uses_relationships(
         self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
@@ -365,16 +366,20 @@ class IndicatorBundleBuilder:
         object_marking_refs: List[MarkingDefinition],
         files: List[Mapping[str, str]],
     ) -> STIXReport:
-        external_references = []
-
         # Create external references.
-        external_reference = create_external_reference(
-            self.source_name, str(report.id), report.url
-        )
-        external_references.append(external_reference)
+        external_references = []
+        report_url = report.url
+        if report_url is not None and report_url:
+            external_reference = create_external_reference(
+                self.source_name, str(report.id), report_url
+            )
+            external_references.append(external_reference)
 
         # Create tags.
-        tags = create_tags(report.tags, self.source_name)
+        tags = []
+        report_tags = report.tags
+        if report_tags is not None:
+            tags = create_tags(report_tags, self.source_name)
 
         return create_stix2_report_from_report(
             report,
