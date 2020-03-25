@@ -18,6 +18,8 @@ class PulseImporter:
 
     _LATEST_PULSE_TIMESTAMP = "latest_pulse_timestamp"
 
+    _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
+
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -128,23 +130,23 @@ class PulseImporter:
         for tag in tags:
             if not tag:
                 continue
-            stix_id = self._get_malware_stix_id_by_name(tag)
-            if stix_id is not None:
-                self._info("Found a malware ({0}) matching tag: '{1}'", stix_id, tag)
-                malwares[tag] = stix_id
+
+            guess = self.malware_guess_cache.get(tag)
+            if guess is None:
+                guess = self._GUESS_NOT_A_MALWARE
+
+                stix_id = self._fetch_malware_stix_id_by_name(tag)
+                if stix_id is not None:
+                    guess = stix_id
+
+                self.malware_guess_cache[tag] = guess
+
+            if guess == self._GUESS_NOT_A_MALWARE:
+                self._info("Tag '{0}' does not reference malware", tag)
+            else:
+                self._info("Tag '{0}' references malware '{1}'", tag, guess)
+                malwares[tag] = guess
         return malwares
-
-    def _get_malware_stix_id_by_name(self, name: str) -> Optional[str]:
-        stix_id = self.malware_guess_cache.get(name)
-        if stix_id is not None:
-            return stix_id
-
-        stix_id = self._fetch_malware_stix_id_by_name(name)
-        if stix_id is None:
-            return None
-
-        self.malware_guess_cache[name] = stix_id
-        return stix_id
 
     def _fetch_malware_stix_id_by_name(self, name: str) -> Optional[str]:
         filters = [
