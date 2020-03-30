@@ -68,8 +68,8 @@ class CyberThreatCoalition:
         organization = stix2.Identity(
             name="Cyber Threat Coalition Team",
             identity_class="organization",
-            # description="Team of Experts collecting and sharing pandemic related "
-            #            "cyber threat intelligence during the COVID-19 crisis time"
+            description="Team of Experts collecting and sharing pandemic related "
+                        "cyber threat intelligence during the COVID-19 crisis time"
         )
 
         # add organization in bundle
