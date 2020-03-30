@@ -1,0 +1,15 @@
+version: '3'
+services:
+  connector-cryptolaemus:
+    image: opencti/connector-cyber-threat-coalition:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=CyberThreatCoalition
+      - CONNECTOR_SCOPE=indicator,report
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_LOG_LEVEL=info
+    restart: always
