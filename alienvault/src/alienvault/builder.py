@@ -111,6 +111,7 @@ class PulseBundleBuilder:
         confidence_level: int,
         report_status: int,
         report_type: str,
+        guessed_malwares: Mapping[str, str],
     ) -> None:
         """Initialize pulse bundle builder."""
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -122,6 +123,7 @@ class PulseBundleBuilder:
         self.confidence_level = confidence_level
         self.report_status = report_status
         self.report_type = report_type
+        self.guessed_malwares = guessed_malwares
 
         self.first_seen = self.pulse.created
         self.last_seen = self.pulse.modified
@@ -137,15 +139,25 @@ class PulseBundleBuilder:
         return intrusion_sets
 
     def _create_malwares(self) -> List[Malware]:
-        malwares = []
-        for malware_family in self.pulse.malware_families:
-            if not malware_family:
+        malware_list = []
+
+        # Create malwares based on guessed malwares.
+        for name, stix_id in self.guessed_malwares.items():
+            malware = create_malware(
+                name, self.author, self.object_marking_refs, malware_id=stix_id
+            )
+            malware_list.append(malware)
+
+        # Create malwares based on malware families in the Pulse.
+        for malware_name in self.pulse.malware_families:
+            if not malware_name or malware_name in self.guessed_malwares:
                 continue
             malware = create_malware(
-                malware_family, self.author, self.object_marking_refs
+                malware_name, self.author, self.object_marking_refs
             )
-            malwares.append(malware)
-        return malwares
+            malware_list.append(malware)
+
+        return malware_list
 
     def _create_uses_relationships(
         self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]

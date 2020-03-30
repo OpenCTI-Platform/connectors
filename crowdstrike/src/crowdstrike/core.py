@@ -3,20 +3,16 @@
 
 import os
 import time
-from typing import Dict, Any, Optional, List, Mapping
+from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
+
 from crowdstrike_client.client import CrowdStrikeClient
+
 from pycti import OpenCTIConnectorHelper
 from pycti.connector.opencti_connector_helper import get_config_variable
-from stix2 import (
-    Identity,
-    TLP_RED,
-    MarkingDefinition,
-    TLP_WHITE,
-    TLP_GREEN,
-    TLP_AMBER,
-)
+
+from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 from crowdstrike.actors import ActorImporter
 from crowdstrike.indicators import IndicatorImporter
@@ -39,6 +35,7 @@ class CrowdStrike:
     _CONFIG_REPORT_INCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.report_include_types"
     _CONFIG_REPORT_STATUS = f"{_CONFIG_NAMESPACE}.report_status"
     _CONFIG_REPORT_TYPE = f"{_CONFIG_NAMESPACE}.report_type"
+    _CONFIG_REPORT_GUESS_MALWARE = f"{_CONFIG_NAMESPACE}.report_guess_malware"
     _CONFIG_INDICATOR_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.indicator_start_timestamp"
     _CONFIG_INDICATOR_EXCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.indicator_exclude_types"
 
@@ -106,6 +103,10 @@ class CrowdStrike:
                 x.strip() for x in report_include_types_str.split(",")
             ]
 
+        report_guess_malware = bool(
+            self._get_configuration(config, self._CONFIG_REPORT_GUESS_MALWARE)
+        )
+
         indicator_start_timestamp = self._get_configuration(
             config, self._CONFIG_INDICATOR_START_TIMESTAMP, is_number=True
         )
@@ -119,8 +120,8 @@ class CrowdStrike:
                 x.strip() for x in indicator_exclude_types_str.split(",")
             ]
 
-        update_existing_data = self._get_configuration(
-            config, self._CONFIG_UPDATE_EXISTING_DATA
+        update_existing_data = bool(
+            self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
 
         # Create CrowdStrike client and importers
@@ -147,6 +148,7 @@ class CrowdStrike:
             report_include_types,
             self.report_status,
             report_type,
+            report_guess_malware,
         )
 
         self.indicator_importer = IndicatorImporter(

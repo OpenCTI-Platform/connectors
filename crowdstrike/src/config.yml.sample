@@ -16,11 +16,12 @@ crowdstrike:
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
   tlp: 'Amber'
-  actor_start_timestamp: 0     # BEWARE! All the actors!
-  report_start_timestamp: 0    # BEWARE! All the reports!
+  actor_start_timestamp: 0                                          # BEWARE! All the actors!
+  report_start_timestamp: 0                                         # BEWARE! All the reports!
   report_status: 'New'
   report_include_types: 'notice,tipper,intelligence report'
   report_type: 'Threat Report'
-  indicator_start_timestamp: 0 # BEWARE! All the indicators!
+  report_guess_malware: false                                       # Use report tags to guess malware
+  indicator_start_timestamp: 0                                      # BEWARE! All the indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'
-  interval_sec: 43200          # Seconds
+  interval_sec: 43200                                               # Seconds

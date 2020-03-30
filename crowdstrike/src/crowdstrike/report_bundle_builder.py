@@ -1,33 +1,38 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike report bundle builder module."""
+
 import logging
-from typing import List, Tuple, Mapping, Optional
+from typing import List, Mapping, Optional, Tuple
 
 from crowdstrike_client.api.models.report import Report
+
 from stix2 import (
     Bundle,
     ExternalReference,
-    IntrusionSet,
-    Relationship,
     Identity,
-    Report as STIXReport,
+    IntrusionSet,
+    KillChainPhase,
+    Malware,
     MarkingDefinition,
+    Relationship,
+    Report as STIXReport,
 )
 from stix2.core import STIXDomainObject
 
 from crowdstrike.utils import (
     create_external_reference,
     create_intrusion_set_from_actor,
-    create_uses_relationships,
-    create_sectors_from_entities,
-    create_targets_relationships,
-    split_countries_and_regions,
+    create_malware,
     create_object_refs,
     create_organization,
-    create_tags,
+    create_sectors_from_entities,
     create_stix2_report_from_report,
+    create_tags,
+    create_targets_relationships,
+    create_uses_relationships,
     datetime_utc_epoch_start,
     datetime_utc_now,
+    split_countries_and_regions,
 )
 
 
@@ -48,6 +53,7 @@ class ReportBundleBuilder:
         report_status: int,
         report_type: str,
         confidence_level: int,
+        guessed_malwares: Mapping[str, str],
         report_file: Optional[Mapping[str, str]] = None,
     ) -> None:
         """Initialize report bundle builder."""
@@ -59,6 +65,7 @@ class ReportBundleBuilder:
         self.report_status = report_status
         self.report_type = report_type
         self.report_file = report_file
+        self.guessed_malwares = guessed_malwares
 
         # Use report dates for first seen and last seen.
         first_seen = self.report.created_date
@@ -88,14 +95,34 @@ class ReportBundleBuilder:
             external_references.append(external_reference)
         return external_references
 
-    def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        # Create motivations.
-        # TODO: (multiple) motivations not supported?
-        motivations: List[str] = []
-        # for motivation in report.motivations:
-        #     motivations.append(motivation.value)
+    def _create_malwares(self) -> List[Malware]:
+        malwares = []
+        for name, stix_id in self.guessed_malwares.items():
+            logger.info("Creating malware '%s' (%s)", name, stix_id)
 
+            aliases: List[str] = []
+            kill_chain_phases: List[KillChainPhase] = []
+            external_references: List[ExternalReference] = []
+
+            malware = create_malware(
+                name,
+                aliases,
+                self.author,
+                kill_chain_phases,
+                external_references,
+                self.object_marking_refs,
+                malware_id=stix_id,
+            )
+            malwares.append(malware)
+        return malwares
+
+    def _create_intrusion_sets(self) -> List[IntrusionSet]:
         report_actors = self.report.actors
+        if report_actors is None:
+            return []
+
+        primary_motivation = None
+        secondary_motivation = None
 
         intrusion_sets = []
         for actor in report_actors:
@@ -111,7 +138,8 @@ class ReportBundleBuilder:
             intrusion_set = create_intrusion_set_from_actor(
                 actor,
                 self.author,
-                motivations,
+                primary_motivation,
+                secondary_motivation,
                 actor_external_references,
                 self.object_marking_refs,
             )
@@ -146,7 +174,10 @@ class ReportBundleBuilder:
         )
 
     def _create_targeted_sectors(self) -> List[Identity]:
-        return create_sectors_from_entities(self.report.target_industries, self.author)
+        target_industries = self.report.target_industries
+        if target_industries is None:
+            return []
+        return create_sectors_from_entities(target_industries, self.author)
 
     def _create_targeted_regions_and_countries(
         self,
@@ -172,7 +203,10 @@ class ReportBundleBuilder:
         return files
 
     def _create_tags(self) -> List[Mapping[str, str]]:
-        return create_tags(self.report.tags, self.source_name)
+        tags = self.report.tags
+        if tags is None:
+            return []
+        return create_tags(tags, self.source_name)
 
     def _create_report(self, object_refs: List[STIXDomainObject]) -> STIXReport:
         external_references = self._create_external_references()
@@ -201,9 +235,19 @@ class ReportBundleBuilder:
         # Add object marking definitions to bundle.
         bundle_objects.extend(self.object_marking_refs)
 
+        # Create malwares and add to bundle.
+        malwares = self._create_malwares()
+        bundle_objects.extend(malwares)
+
         # Create intrusion sets and add to bundle.
         intrusion_sets = self._create_intrusion_sets()
         bundle_objects.extend(intrusion_sets)
+
+        # Intrusion sets use malwares, add to bundle.
+        intrusion_sets_use_malwares = self._create_uses_relationships(
+            intrusion_sets, malwares
+        )
+        bundle_objects.extend(intrusion_sets_use_malwares)
 
         # Create target sectors and add to bundle.
         target_sectors = self._create_targeted_sectors()
@@ -214,6 +258,12 @@ class ReportBundleBuilder:
             intrusion_sets, target_sectors
         )
         bundle_objects.extend(intrusion_sets_target_sectors)
+
+        # Malwares target sectors, add to bundle.
+        malwares_target_sectors = self._create_targets_relationships(
+            malwares, target_sectors
+        )
+        bundle_objects.extend(malwares_target_sectors)
 
         # Create targeted countries and regions and add to bundle.
         target_regions, target_countries = self._create_targeted_regions_and_countries()
@@ -232,15 +282,32 @@ class ReportBundleBuilder:
         )
         bundle_objects.extend(intrusion_sets_target_countries)
 
+        # Malwares target regions, add to bundle.
+        malwares_target_regions = self._create_targets_relationships(
+            malwares, target_regions
+        )
+        bundle_objects.extend(malwares_target_regions)
+
+        # Malwares target countries, add to bundle.
+        malwares_target_countries = self._create_targets_relationships(
+            malwares, target_countries
+        )
+        bundle_objects.extend(malwares_target_countries)
+
         # Create object references for the report.
         object_refs = create_object_refs(
+            malwares,
             intrusion_sets,
+            intrusion_sets_use_malwares,
             target_sectors,
             intrusion_sets_target_sectors,
+            malwares_target_sectors,
             target_regions,
             intrusion_sets_target_regions,
+            malwares_target_regions,
             target_countries,
             intrusion_sets_target_countries,
+            malwares_target_countries,
         )
 
         # TODO: Ignore reports without any references or not?
