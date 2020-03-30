@@ -118,7 +118,10 @@ class CyberThreatCoalition:
                     report_object_refs.append(indicator['id'])
 
         # create a global threat report
+        report_uuid = "552b3ae6-8522-409d-8b72-a739bc1926aa"
+        
         stix_report = stix2.Report(
+            id=report_uuid,
             name="COVID-19 CyberThreat Coalition BlackList",
             type="report",
             description="",
