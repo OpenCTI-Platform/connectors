@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike actors importer module."""
 
-from typing import Mapping, Any, Generator, List, Optional
+from typing import Any, Generator, List, Mapping, Optional
 
 from crowdstrike_client.api.intel.actors import Actors
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.actor import Actor
+
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2 import Identity, MarkingDefinition, Bundle
+
+from stix2 import Bundle, Identity, MarkingDefinition
 
 from crowdstrike.actor_bundle_builder import ActorBundleBuilder
-from crowdstrike.utils import (
-    datetime_to_timestamp,
-    timestamp_to_datetime,
-    paginate,
-)
+from crowdstrike.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 
 
 class ActorImporter:
@@ -56,9 +54,16 @@ class ActorImporter:
             if latest_fetched_actor_timestamp is None:
                 first_in_batch = actors_batch[0]
 
-                latest_fetched_actor_timestamp = datetime_to_timestamp(
-                    first_in_batch.created_date
-                )
+                created_date = first_in_batch.created_date
+                if created_date is None:
+                    self._error(
+                        "Missing created date for actor {0} ({1})",
+                        first_in_batch.name,
+                        first_in_batch.id,
+                    )
+                    break
+
+                latest_fetched_actor_timestamp = datetime_to_timestamp(created_date)
 
             self._process_actors(actors_batch)
 
