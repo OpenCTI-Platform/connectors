@@ -568,3 +568,20 @@ def create_file_from_download(download: Download) -> Mapping[str, str]:
         "data": base64.b64encode(download.content.read()),
         "mime_type": "application/pdf",
     }
+
+
+def convert_comma_separated_str_to_list(input_str: str, trim: bool = True) -> List[str]:
+    """Convert comma separated string to list of strings."""
+    comma_separated_str = input_str.strip() if trim else input_str
+    if not comma_separated_str:
+        return []
+
+    result = []
+    for part_str in comma_separated_str.split(","):
+        value = part_str
+        if trim:
+            value = value.strip()
+        if not value:
+            continue
+        result.append(value)
+    return result

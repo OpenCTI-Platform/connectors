@@ -16,10 +16,11 @@ services:
       - CROWDSTRIKE_CLIENT_ID=ChangeMe
       - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
       - CROWDSTRIKE_TLP=amber
+      - CROWDSTRIKE_SCOPES=actor,report,indicator
       - CROWDSTRIKE_ACTOR_START_TIMESTAMP=0
       - CROWDSTRIKE_REPORT_START_TIMESTAMP=0    # BEWARE! A lot of reports!
       - CROWDSTRIKE_REPORT_STATUS=New
-      - CROWDSTRIKE_REPORT_INCLUDE_TYPES=notice,tipper,intelligence report
+      - CROWDSTRIKE_REPORT_INCLUDE_TYPES=notice,tipper,intelligence report,periodic report
       - CROWDSTRIKE_REPORT_TYPE=Threat Report
       - CROWDSTRIKE_INDICATOR_START_TIMESTAMP=0 # BEWARE! A lot of indicators!
       - CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES=hash_ion,hash_md5,hash_sha1

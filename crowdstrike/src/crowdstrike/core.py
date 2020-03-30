@@ -21,7 +21,7 @@ from stix2 import (
 from crowdstrike.actors import ActorImporter
 from crowdstrike.indicators import IndicatorImporter
 from crowdstrike.reports import ReportImporter
-from crowdstrike.utils import create_organization
+from crowdstrike.utils import create_organization, convert_comma_separated_str_to_list
 
 
 class CrowdStrike:
@@ -33,6 +33,7 @@ class CrowdStrike:
     _CONFIG_CLIENT_ID = f"{_CONFIG_NAMESPACE}.client_id"
     _CONFIG_CLIENT_SECRET = f"{_CONFIG_NAMESPACE}.client_secret"
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
+    _CONFIG_SCOPES = f"{_CONFIG_NAMESPACE}.scopes"
     _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
     _CONFIG_ACTOR_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.actor_start_timestamp"
     _CONFIG_REPORT_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.report_start_timestamp"
@@ -43,6 +44,10 @@ class CrowdStrike:
     _CONFIG_INDICATOR_EXCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.indicator_exclude_types"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
+
+    _CONFIG_SCOPE_ACTOR = "actor"
+    _CONFIG_SCOPE_REPORT = "report"
+    _CONFIG_SCOPE_INDICATOR = "indicator"
 
     _CONFIG_TLP_MAPPING = {
         "white": TLP_WHITE,
@@ -77,6 +82,12 @@ class CrowdStrike:
             config, self._CONFIG_INTERVAL_SEC, is_number=True
         )
 
+        scopes_str = self._get_configuration(config, self._CONFIG_SCOPES)
+        scopes = set()
+        if scopes_str is not None:
+            scopes = set(convert_comma_separated_str_to_list(scopes_str))
+        self.scopes = scopes
+
         tlp = self._get_configuration(config, self._CONFIG_TLP)
         self.tlp_marking = self._convert_tlp_to_marking_definition(tlp)
 
@@ -101,10 +112,10 @@ class CrowdStrike:
             config, self._CONFIG_REPORT_INCLUDE_TYPES
         )
         report_include_types = []
-        if report_include_types_str:
-            report_include_types = [
-                x.strip() for x in report_include_types_str.split(",")
-            ]
+        if report_include_types_str is not None:
+            report_include_types = convert_comma_separated_str_to_list(
+                report_include_types_str
+            )
 
         indicator_start_timestamp = self._get_configuration(
             config, self._CONFIG_INDICATOR_START_TIMESTAMP, is_number=True
@@ -114,10 +125,10 @@ class CrowdStrike:
             config, self._CONFIG_INDICATOR_EXCLUDE_TYPES
         )
         indicator_exclude_types = []
-        if indicator_exclude_types_str:
-            indicator_exclude_types = [
-                x.strip() for x in indicator_exclude_types_str.split(",")
-            ]
+        if indicator_exclude_types_str is not None:
+            indicator_exclude_types = convert_comma_separated_str_to_list(
+                indicator_exclude_types_str
+            )
 
         update_existing_data = self._get_configuration(
             config, self._CONFIG_UPDATE_EXISTING_DATA
@@ -238,9 +249,9 @@ class CrowdStrike:
 
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
                 if self._is_scheduled(last_run, timestamp):
-                    actor_importer_state = self.actor_importer.run(current_state)
-                    report_importer_state = self.report_importer.run(current_state)
-                    indicator_importer_state = self.indicator_importer.run(
+                    actor_importer_state = self._run_actor_importer(current_state)
+                    report_importer_state = self._run_report_importer(current_state)
+                    indicator_importer_state = self._run_indicator_importer(
                         current_state
                     )
 
@@ -270,3 +281,30 @@ class CrowdStrike:
             except Exception as e:
                 self.helper.log_error(str(e))
                 time.sleep(60)
+
+    def _run_actor_importer(
+        self, current_state: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        if self._is_scope_enabled(self._CONFIG_SCOPE_ACTOR):
+            return self.actor_importer.run(current_state)
+        return {}
+
+    def _run_report_importer(
+        self, current_state: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        if self._is_scope_enabled(self._CONFIG_SCOPE_REPORT):
+            return self.report_importer.run(current_state)
+        return {}
+
+    def _run_indicator_importer(
+        self, current_state: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        if self._is_scope_enabled(self._CONFIG_SCOPE_INDICATOR):
+            return self.indicator_importer.run(current_state)
+        return {}
+
+    def _is_scope_enabled(self, scope: str) -> bool:
+        result = scope in self.scopes
+        if not result:
+            self.helper.log_info(f"Scope '{scope}' is not enabled")
+        return result
