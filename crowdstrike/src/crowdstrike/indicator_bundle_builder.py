@@ -13,7 +13,6 @@ from pydantic import BaseModel
 
 from stix2 import (
     Bundle,
-    EqualityComparisonExpression,
     ExternalReference,
     Identity,
     Indicator as STIXIndicator,
@@ -21,11 +20,8 @@ from stix2 import (
     KillChainPhase,
     Malware,
     MarkingDefinition,
-    ObjectPath,
-    ObservationExpression,
     Relationship,
     Report as STIXReport,
-    StringConstant,
     Vulnerability,
 )
 from stix2.core import STIXDomainObject
@@ -288,17 +284,6 @@ class IndicatorBundleBuilder:
             )
             vulnerabilities.append(vulnerability)
         return vulnerabilities
-
-    def _create_indicator_pattern(
-        self, indicator_type: str, indicator_value: str
-    ) -> ObservationExpression:
-        stix2_typing = self._OPENCTI_TO_STIX2[indicator_type]
-        lhs = ObjectPath(stix2_typing["type"], stix2_typing["path"])
-        operand = str(
-            EqualityComparisonExpression(lhs, StringConstant(indicator_value))
-        )
-        observation_expression = ObservationExpression(operand)
-        return observation_expression
 
     def _create_indicator(
         self, kill_chain_phases: List[KillChainPhase]
