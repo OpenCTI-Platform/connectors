@@ -1,0 +1,4 @@
+pycti
+PyYAML
+python-dateutil
+feedparser

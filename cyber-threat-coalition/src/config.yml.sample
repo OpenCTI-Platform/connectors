@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: '98d89ece-cfed-11e9-bb65-2a2ae2dbcce0'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CyberThreatCoalition'
+  scope: 'indicator,report,identity'
+  confidence_level: 3
+  log_level: 'info'
+  update_existing_data: false
+
+cyber-threat-coalition:
+  base_url: 'https://blacklist.cyberthreatcoalition.org/vetted'
+  interval_sec: 21600 # Seconds (6 hours)
