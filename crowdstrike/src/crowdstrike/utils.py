@@ -28,14 +28,18 @@ from lxml.html import fromstring
 from pycti.utils.constants import CustomProperties
 
 from stix2 import (
+    EqualityComparisonExpression,
     ExternalReference,
     Identity,
     IntrusionSet,
     KillChainPhase,
     Malware,
     MarkingDefinition,
+    ObjectPath,
+    ObservationExpression,
     Relationship,
     Report as STIXReport,
+    StringConstant,
     Vulnerability,
 )
 from stix2.core import STIXDomainObject, STIXRelationshipObject
@@ -615,3 +619,17 @@ def convert_comma_separated_str_to_list(input_str: str, trim: bool = True) -> Li
             continue
         result.append(value)
     return result
+
+
+def create_object_path(object_type: str, property_path: List[str]) -> ObjectPath:
+    """Create pattern operand object (property) path."""
+    return ObjectPath(object_type, property_path)
+
+
+def create_equality_observation_expression_str(
+    object_path: ObjectPath, value: str
+) -> str:
+    """Create observation expression string with pattern equality comparison expression."""  # noqa: E501
+    operand = EqualityComparisonExpression(object_path, StringConstant(value))
+    observation_expression = ObservationExpression(str(operand))
+    return str(observation_expression)
