@@ -5,25 +5,27 @@ import logging
 from typing import List, Tuple
 
 from crowdstrike_client.api.models.actor import Actor
+
 from pycti.utils.constants import CustomProperties
+
 from stix2 import (
     Bundle,
     ExternalReference,
-    IntrusionSet,
     Identity,
-    Relationship,
+    IntrusionSet,
     MarkingDefinition,
+    Relationship,
 )
 from stix2.core import STIXDomainObject
 
 from crowdstrike.utils import (
     create_external_reference,
-    remove_html_tags,
     create_sectors_from_entities,
     create_targets_relationships,
-    split_countries_and_regions,
-    datetime_utc_now,
     datetime_utc_epoch_start,
+    datetime_utc_now,
+    remove_html_tags,
+    split_countries_and_regions,
 )
 
 
@@ -187,7 +189,7 @@ class ActorBundleBuilder:
         )
         bundle_objects.extend(intrusion_sets_target_regions)
 
-        # Create relationships between intrusion sets and targeted countries, add to bundle.
+        # Create relationships between intrusion sets and targeted countries, add to bundle.  # noqa: E501
         intrusion_sets_target_countries = self._create_targets_relationships(
             intrusion_sets, target_countries
         )
