@@ -123,6 +123,10 @@ class Malpedia:
                         url="https://malpedia.caad.fkie.fraunhofer.de"
                     )
 
+                    malpedia_organization = self.helper.api.identity.create(
+                        type="Organization",
+                        name="Malpedia",
+                        description="Malpedia is a free service offered by Fraunhofer FKIE.",)
 
                     # for family in families:
                     # print(json.dumps(list_of_families_json, indent=4, sort_keys=True))
@@ -154,8 +158,8 @@ class Malpedia:
                         list_yara = r.json()
                         for yara in list_yara:
                             # yara contains tlp level
-                            for name, rule in list_yara[yara].items():
-                                print("----------- Begin Yara : "+ name)
+                            for name_rule, rule in list_yara[yara].items():
+                                print("----------- Begin Yara : "+ name_rule)
                                 #extract yara date
                                 extract = re.search("([0-9]{4}\-[0-9]{2}\-[0-9]{2})", rule)
                                 if extract is None:
@@ -164,25 +168,26 @@ class Malpedia:
                                     date = extract.group(1)
                                 # extract tlp
                                 tlp = rule.split("TLP:")[1].split("\"")[0]
-                                print("Date ::::: " + date)
-                                print("name ::::: " + name)
+                                print("date ::::: " + date)
+                                print("name ::::: " + name_rule)
                                 print("rule ::::: " + rule)
 
                                 # add yara
                                 indicator = self.helper.api.indicator.create(
-                                    name=name,
+                                    name=name_rule,
                                     description="Yara from Malpedia",
                                     pattern_type="yara",
                                     indicator_pattern=rule,
-                                    main_observable_type="Yara-rule",
+                                    main_observable_type="File-SHA256",
                                     valid_from=date,
                                 )
-                                print("----------- Yara : " + name + " créée.")
+                                print("----------- Yara : " + name_rule + " créée.")
                                 print("----------------- Création Relation : ")
                                 print(indicator["id"])
                                 print(malware["id"])
                                 print(date)
                                 print(external_reference_malpedia["id"])
+                                print(families_json[name]["common_name"])
                                 relation = self.helper.api.stix_relation.create(
                                     fromType="Indicator",
                                     fromId=indicator["id"],
@@ -193,8 +198,8 @@ class Malpedia:
                                     last_seen=date,
                                     description="Yara rules for " + families_json[name]["common_name"] + ".",
                                     weight=self.confidence_level,
-                                    role_played="",
-                                    createdByRef=external_reference_malpedia["id"],
+                                    role_played="Unknown",
+                                    createdByRef=malpedia_organization,
                                     ignore_dates=True,
                                     update=True,
                                 )
