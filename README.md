@@ -12,37 +12,37 @@ The following repository is used to store the OpenCTI connectors for the platfor
 
 | Connector                               | Description                                   | Status                    | Last version                    |
 | ----------------------------------------|-----------------------------------------------|---------------------------|---------------------------------|
-| [AlienVault](alienvault)                | Import pulses from AlienVault                 | Production ready          | 3.0.3                           |
-| [AMITT](amitt)                          | Import datasets of the AMITT framework        | Production ready          | 3.0.3                           |
-| [CrowdStrike](crowdstrike)              | Import knowledge from CrowdStrike Falcon      | Production ready          | 3.0.3                           |
-| [Cryptolaemus](cryptolaemus)            | Import Emotet C2 from the Cryptolaemus group  | In development            | -                               |
-| [CVE](cve)                              | Import CVE vulnerabilities                    | Production ready          | 3.0.3                           |
-| [COVID-19 CTC](cyber-threat-coalition)  | Import the COVID-19 CTC blacklist             | In development            | -                               |
-| [Malpedia](malpedia)                    | Import the Malpedia malwares and indicators   | In development            | -                               |
-| [MISP](misp)                            | Import MISP events                            | Production ready          | 3.0.3                           |
-| [MITRE](mitre)                          | Import the MITRE ATT&CK / PRE-ATT&CK datasets | Production ready          | 3.0.3                           |
-| [OpenCTI](opencti)                      | Import the OpenCTI datasets                   | Production ready          | 3.0.3                           |
+| [AlienVault](alienvault)                | Import pulses from AlienVault                 | Released          | 3.0.3                           |
+| [AMITT](amitt)                          | Import datasets of the AMITT framework        | Released          | 3.0.3                           |
+| [CrowdStrike](crowdstrike)              | Import knowledge from CrowdStrike Falcon      | Released          | 3.0.3                           |
+| [Cryptolaemus](cryptolaemus)            | Import Emotet C2 from the Cryptolaemus group  | In development    | -                               |
+| [CVE](cve)                              | Import CVE vulnerabilities                    | Released          | 3.0.3                           |
+| [COVID-19 CTC](cyber-threat-coalition)  | Import the COVID-19 CTC blacklist             | In development    | -                               |
+| [Malpedia](malpedia)                    | Import the Malpedia malwares and indicators   | In development    | -                               |
+| [MISP](misp)                            | Import MISP events                            | Released          | 3.0.3                           |
+| [MITRE](mitre)                          | Import the MITRE ATT&CK / PRE-ATT&CK datasets | Released          | 3.0.3                           |
+| [OpenCTI](opencti)                      | Import the OpenCTI datasets                   | Released          | 3.0.3                           |
 
 ### Internal import files connectors
 
 | Connector                                               | Description                                   | Status                    | Last version                    |
 | --------------------------------------------------------|-----------------------------------------------|---------------------------|---------------------------------|
-| [ImportFilePdfObservables](import-file-pdf-observables) | Import observables from PDF files             | Production ready          | 3.0.3                           |
-| [ImportFileStix](import-file-stix)                      | Import knwoledge from STIX 2.0 bundles        | Production ready          | 3.0.3                           |
+| [ImportFilePdfObservables](import-file-pdf-observables) | Import observables from PDF files             | Released          | 3.0.3                           |
+| [ImportFileStix](import-file-stix)                      | Import knwoledge from STIX 2.0 bundles        | Released          | 3.0.3                           |
 
 ### Internal enrichment connectors
 
 | Connector                         | Description                                                 | Status                    | Last version                    |
 | ----------------------------------|-------------------------------------------------------------|---------------------------|---------------------------------|
-| [IpInfo](ipinfo)                  | Enrich IP addresses with geolocation                        | Production ready          | 3.0.3                           |
-| [VirusTotal](virustotal)          | Enrich file hashes with corresponding hashes and file names | Production ready          | 3.0.3                           |
+| [IpInfo](ipinfo)                  | Enrich IP addresses with geolocation                        | Released          | 3.0.3                           |
+| [VirusTotal](virustotal)          | Enrich file hashes with corresponding hashes and file names | Released          | 3.0.3                           |
 
 ### Internal export files connectors
 
 | Connector                                | Description                                   | Status                    | Last version                    |
 | -----------------------------------------|-----------------------------------------------|---------------------------|---------------------------------|
-| [ExportFileCSV](export-file-csv)         | Export entities in CSV                        | Production ready          | 3.0.3                           |
-| [ExportFileSTIX](export-file-stix)       | Export entities in STIX 2.0 bundles           | Production ready          | 3.0.3                           |
+| [ExportFileCSV](export-file-csv)         | Export entities in CSV                        | Released          | 3.0.3                           |
+| [ExportFileSTIX](export-file-stix)       | Export entities in STIX 2.0 bundles           | Released          | 3.0.3                           |
 
 ## License
 
