@@ -1,4 +1,0 @@
-pycti
-PyYAML
-urllib3
-python-dateutil
