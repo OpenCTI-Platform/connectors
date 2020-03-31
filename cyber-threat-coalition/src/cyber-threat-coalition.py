@@ -99,8 +99,6 @@ class CyberThreatCoalition:
                         opencti_type = 'url'
                     elif collection == 'hash':
                         opencti_type = self.get_hash_type(data)
-                        self.helper.log_info(opencti_type)
-                        self.helper.log_info(data)
 
                     indicator = stix2.Indicator(
                         name=data,
