@@ -17,7 +17,7 @@ The following repository is used to store the OpenCTI connectors for the platfor
 | [CrowdStrike](crowdstrike)              | Import knowledge from CrowdStrike Falcon      | Released                  | 3.1.0                           |
 | [Cryptolaemus](cryptolaemus)            | Import Emotet C2 from the Cryptolaemus group  | Released                  | 3.1.0                           |
 | [CVE](cve)                              | Import CVE vulnerabilities                    | Released                  | 3.1.0                           |
-| [COVID-19 CTC](cyber-threat-coalition)  | Import the COVID-19 CTC blacklist             | Released                  | -                               |
+| [COVID-19 CTC](cyber-threat-coalition)  | Import the COVID-19 CTC blacklist             | Released                  | 3.1.0                           |
 | [Malpedia](malpedia)                    | Import the Malpedia malwares and indicators   | In development            | -                               |
 | [MISP](misp)                            | Import MISP events                            | Released                  | 3.1.0                           |
 | [MITRE](mitre)                          | Import the MITRE ATT&CK / PRE-ATT&CK datasets | Released                  | 3.1.0                           |
