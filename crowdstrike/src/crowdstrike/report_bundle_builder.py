@@ -27,14 +27,12 @@ from crowdstrike.utils import (
     create_organization,
     create_sectors_from_entities,
     create_stix2_report_from_report,
-    create_tags,
     create_targets_relationships,
     create_uses_relationships,
     datetime_utc_epoch_start,
     datetime_utc_now,
     split_countries_and_regions,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -85,16 +83,6 @@ class ReportBundleBuilder:
         self.first_seen = first_seen
         self.last_seen = last_seen
 
-    def _create_external_references(self) -> List[ExternalReference]:
-        external_references = []
-        report_url = self.report.url
-        if report_url:
-            external_reference = create_external_reference(
-                self.source_name, str(self.report.id), report_url
-            )
-            external_references.append(external_reference)
-        return external_references
-
     def _create_malwares(self) -> List[Malware]:
         malwares = []
         for name, stix_id in self.guessed_malwares.items():
@@ -121,9 +109,6 @@ class ReportBundleBuilder:
         if report_actors is None:
             return []
 
-        primary_motivation = None
-        secondary_motivation = None
-
         intrusion_sets = []
         for actor in report_actors:
             actor_external_references = []
@@ -136,12 +121,7 @@ class ReportBundleBuilder:
                 actor_external_references.append(actor_external_reference)
 
             intrusion_set = create_intrusion_set_from_actor(
-                actor,
-                self.author,
-                primary_motivation,
-                secondary_motivation,
-                actor_external_references,
-                self.object_marking_refs,
+                actor, self.author, actor_external_references, self.object_marking_refs,
             )
 
             intrusion_sets.append(intrusion_set)
@@ -202,27 +182,18 @@ class ReportBundleBuilder:
             files.append(self.report_file)
         return files
 
-    def _create_tags(self) -> List[Mapping[str, str]]:
-        tags = self.report.tags
-        if tags is None:
-            return []
-        return create_tags(tags, self.source_name)
-
     def _create_report(self, object_refs: List[STIXDomainObject]) -> STIXReport:
-        external_references = self._create_external_references()
-        tags = self._create_tags()
         files = self._create_files()
 
         stix_report = create_stix2_report_from_report(
             self.report,
             self.author,
+            self.source_name,
             object_refs,
-            external_references,
             self.object_marking_refs,
             self.report_status,
             self.report_type,
             self.confidence_level,
-            tags,
             files,
         )
         return stix_report

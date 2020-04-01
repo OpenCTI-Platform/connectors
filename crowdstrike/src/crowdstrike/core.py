@@ -17,7 +17,8 @@ from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TL
 from crowdstrike.actors import ActorImporter
 from crowdstrike.indicators import IndicatorImporter
 from crowdstrike.reports import ReportImporter
-from crowdstrike.utils import create_organization, convert_comma_separated_str_to_list
+from crowdstrike.rules_yara_master import RulesYaraMasterImporter
+from crowdstrike.utils import convert_comma_separated_str_to_list, create_organization
 
 
 class CrowdStrike:
@@ -45,6 +46,7 @@ class CrowdStrike:
     _CONFIG_SCOPE_ACTOR = "actor"
     _CONFIG_SCOPE_REPORT = "report"
     _CONFIG_SCOPE_INDICATOR = "indicator"
+    _CONFIG_SCOPE_YARA_MASTER = "yara_master"
 
     _CONFIG_TLP_MAPPING = {
         "white": TLP_WHITE,
@@ -86,7 +88,7 @@ class CrowdStrike:
         self.scopes = scopes
 
         tlp = self._get_configuration(config, self._CONFIG_TLP)
-        self.tlp_marking = self._convert_tlp_to_marking_definition(tlp)
+        tlp_marking = self._convert_tlp_to_marking_definition(tlp)
 
         actor_start_timestamp = self._get_configuration(
             config, self._CONFIG_ACTOR_START_TIMESTAMP, is_number=True
@@ -97,7 +99,7 @@ class CrowdStrike:
         )
 
         report_status_str = self._get_configuration(config, self._CONFIG_REPORT_STATUS)
-        self.report_status = self._convert_report_status_str_to_report_status_int(
+        report_status = self._convert_report_status_str_to_report_status_int(
             report_status_str
         )
 
@@ -135,43 +137,54 @@ class CrowdStrike:
             self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
 
-        # Create CrowdStrike client and importers
-        self.client = CrowdStrikeClient(base_url, client_id, client_secret)
+        author = self._create_author()
 
-        self.author = self._create_author()
+        # Create CrowdStrike client and importers
+        client = CrowdStrikeClient(base_url, client_id, client_secret)
 
         self.actor_importer = ActorImporter(
             self.helper,
-            self.client.intel_api.actors,
+            client.intel_api.actors,
             update_existing_data,
-            self.author,
+            author,
             actor_start_timestamp,
-            self.tlp_marking,
+            tlp_marking,
         )
 
         self.report_importer = ReportImporter(
             self.helper,
-            self.client.intel_api.reports,
+            client.intel_api.reports,
             update_existing_data,
-            self.author,
+            author,
             report_start_timestamp,
-            self.tlp_marking,
+            tlp_marking,
             report_include_types,
-            self.report_status,
+            report_status,
             report_type,
             report_guess_malware,
         )
 
         self.indicator_importer = IndicatorImporter(
             self.helper,
-            self.client.intel_api.indicators,
-            self.client.intel_api.reports,
+            client.intel_api.indicators,
+            client.intel_api.reports,
             update_existing_data,
-            self.author,
+            author,
             indicator_start_timestamp,
-            self.tlp_marking,
+            tlp_marking,
             indicator_exclude_types,
-            self.report_status,
+            report_status,
+            report_type,
+        )
+
+        self.rules_yara_master_importer = RulesYaraMasterImporter(
+            self.helper,
+            client.intel_api.rules,
+            client.intel_api.reports,
+            author,
+            tlp_marking,
+            update_existing_data,
+            report_status,
             report_type,
         )
 
@@ -256,11 +269,15 @@ class CrowdStrike:
                     indicator_importer_state = self._run_indicator_importer(
                         current_state
                     )
+                    yara_master_importer_state = self._run_rules_yara_master_importer(
+                        current_state
+                    )
 
                     new_state = current_state.copy()
                     new_state.update(actor_importer_state)
                     new_state.update(report_importer_state)
                     new_state.update(indicator_importer_state)
+                    new_state.update(yara_master_importer_state)
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
                     self.helper.log_info(f"Storing new state: {new_state}")
@@ -303,6 +320,13 @@ class CrowdStrike:
     ) -> Mapping[str, Any]:
         if self._is_scope_enabled(self._CONFIG_SCOPE_INDICATOR):
             return self.indicator_importer.run(current_state)
+        return {}
+
+    def _run_rules_yara_master_importer(
+        self, current_state: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        if self._is_scope_enabled(self._CONFIG_SCOPE_YARA_MASTER):
+            return self.rules_yara_master_importer.run(current_state)
         return {}
 
     def _is_scope_enabled(self, scope: str) -> bool:
