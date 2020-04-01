@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-alienvault:
-    image: opencti/connector-alienvault:latest
+    image: opencti/connector-alienvault:3.1.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -15,9 +15,9 @@ services:
       - ALIENVAULT_BASE_URL=https://otx.alienvault.com
       - ALIENVAULT_API_KEY=ChangeMe
       - ALIENVAULT_TLP=White
-      - ALIENVAULT_PULSE_START_TIMESTAMP=2020-01-01T00:00:00  # BEWARE! Could be a lot of pulses!
+      - ALIENVAULT_PULSE_START_TIMESTAMP=2020-01-01T00:00:00 # BEWARE! Could be a lot of pulses!
       - ALIENVAULT_REPORT_TYPE=Threat Report
       - ALIENVAULT_REPORT_STATUS=Analyzed
-      - ALIENVAULT_GUESS_MALWARE=false                        # Use tags to guess malware.
+      - ALIENVAULT_GUESS_MALWARE=false # Use tags to guess malware.
       - ALIENVAULT_INTERVAL_SEC=1800
     restart: always
