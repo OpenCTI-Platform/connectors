@@ -129,7 +129,11 @@ class CyberThreatCoalition:
 
         # create a global threat report
         report_uuid = "report--552b3ae6-8522-409d-8b72-a739bc1926aa"
-        report_external_reference = stix2.ExternalReference(source_name='Cyber Threat Coalition', url='https://www.cyberthreatcoalition.org', external_id='COVID19-CTC')
+        report_external_reference = stix2.ExternalReference(
+            source_name="Cyber Threat Coalition",
+            url="https://www.cyberthreatcoalition.org",
+            external_id="COVID19-CTC",
+        )
 
         stix_report = stix2.Report(
             id=report_uuid,
