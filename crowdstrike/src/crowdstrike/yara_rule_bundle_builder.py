@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike YARA rule bundle builder module."""
 
-import logging
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
@@ -32,8 +31,6 @@ from crowdstrike.utils import (
     create_uses_relationships,
 )
 from crowdstrike.yara_rules_parser import YaraRule
-
-logger = logging.getLogger(__name__)
 
 
 class YaraRuleBundleBuilder:

@@ -16,7 +16,7 @@ crowdstrike:
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
   tlp: 'Amber'
-  scopes: 'actor,report,indicator'
+  scopes: 'actor,report,indicator,yara_master'
   actor_start_timestamp: 0                                          # BEWARE! All the actors!
   report_start_timestamp: 0                                         # BEWARE! All the reports!
   report_status: 'New'

@@ -4,7 +4,7 @@
 import zipfile
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from crowdstrike_client.api.intel import Reports, Rules
 from crowdstrike_client.api.models.download import Download
@@ -24,6 +24,9 @@ class RulesYaraMasterImporter:
 
     _E_TAG = "yara_master_e_tag"
     _LAST_MODIFIED = "yara_master_last_modified"
+
+    _KEY_ID = "id"
+    _KEY_INDICATOR_PATTERN = "indicator_pattern"
 
     def __init__(
         self,
@@ -50,25 +53,36 @@ class RulesYaraMasterImporter:
         """Run importer."""
         self._info("Running YARA master importer with state: {0}...", state)
 
-        self._clear_report_fetcher_cache()
-
-        e_tag = state.get(self._E_TAG)
+        # Ignore the Etag, see the comment below.
+        # e_tag = state.get(self._E_TAG)
 
         last_modified = state.get(self._LAST_MODIFIED)
         if last_modified is not None:
             last_modified = timestamp_to_datetime(last_modified)
 
-        download = self._download_yara_master(e_tag, last_modified)
-        self._process_content(download.content)
+        # TODO: CrowdStrike Etag and Last-Modified fails with HTTP 500.
+        # download = self._download_yara_master(e_tag, last_modified)
+        download = self._download_yara_master()
 
         latest_e_tag = download.e_tag
         latest_last_modified = download.last_modified
+
+        if last_modified is None or (
+            last_modified is not None
+            and latest_last_modified is not None
+            and latest_last_modified > last_modified
+        ):
+            self._process_content(download.content)
+        else:
+            self._info("YARA master not modified, skipping...")
 
         self._info(
             "YARA master importer completed, latest download {0} ({1}).",
             latest_last_modified,
             latest_e_tag,
         )
+
+        self._clear_report_fetcher_cache()
 
         new_state: Dict[str, Any] = {}
 
@@ -81,6 +95,7 @@ class RulesYaraMasterImporter:
         return new_state
 
     def _clear_report_fetcher_cache(self) -> None:
+        self._info("Clearing report fetcher cache...")
         self.report_fetcher.clear_cache()
 
     def _info(self, msg: str, *args: Any) -> None:
@@ -106,9 +121,9 @@ class RulesYaraMasterImporter:
 
     @staticmethod
     def _unzip_content(compressed_content: BytesIO) -> str:
-        yara_master_name = "crowdstrike_intel_yara.yara"
+        yara_master_filename = "crowdstrike_intel_yara.yara"
         with zipfile.ZipFile(compressed_content) as z:
-            with z.open(yara_master_name) as yara_master:
+            with z.open(yara_master_filename) as yara_master:
                 return yara_master.read().decode("utf-8")
 
     @staticmethod
@@ -120,17 +135,33 @@ class RulesYaraMasterImporter:
         self._info("Processing {0} YARA rules...", rule_count)
 
         failed = 0
-        for rule in rules:
-            result = self._process_rule(rule)
-            if not result:
-                failed += 1
+        updated = 0
+        not_updated = 0
 
-        imported = rule_count - failed
-        total = imported + failed
+        for rule in rules:
+            rule_name = rule.name
+
+            existing_rule = self._find_rule_by_name(rule_name)
+            if existing_rule is not None:
+                existing_rule_updated = self._update_if_needed(rule, existing_rule)
+                if existing_rule_updated:
+                    updated += 1
+                else:
+                    not_updated += 1
+            else:
+                result = self._process_rule(rule)
+                if not result:
+                    failed += 1
+
+        existing = updated + not_updated
+        imported = rule_count - failed - existing
+        total = existing + imported + failed
 
         self._info(
-            "Processing rules completed (imported: {0}, failed: {1}, total: {2})",
+            "Processing rules completed (imported: {0}, updated: {1} of {2}, failed: {3}, total: {4})",  # noqa: E501
             imported,
+            updated,
+            existing,
             failed,
             total,
         )
@@ -141,20 +172,99 @@ class RulesYaraMasterImporter:
         reports = self._get_reports_by_code(rule.reports)
 
         indicator_bundle = self._create_indicator_bundle(rule, reports)
-        if indicator_bundle is None:
-            self._error("Discarding '{0}' YARA indicator bundle", rule.name)
-            return False
 
         self._send_bundle(indicator_bundle)
 
         return True
+
+    def _update_if_needed(
+        self, new_rule: YaraRule, existing_rule: Tuple[str, YaraRule]
+    ) -> bool:
+        new_rule_name = new_rule.name
+        indicator_id, current_rule = existing_rule
+        if self._needs_updating(current_rule, new_rule):
+            updated = self._update_indicator_pattern(indicator_id, new_rule.rule)
+            if updated:
+                self._info("Rule '{0}' ({1}) updated", new_rule_name, indicator_id)
+            else:
+                self._error("Rule '{0}' ({1}) not updated", new_rule_name, indicator_id)
+            return updated
+        else:
+            self._info("Not updating rule '{0}' ({1})", new_rule_name, indicator_id)
+            return False
+
+    def _find_rule_by_name(self, name: str) -> Optional[Tuple[str, YaraRule]]:
+        indicator = self._fetch_indicator_by_name(name)
+        if indicator is None:
+            return None
+
+        indicator_id = indicator.get(self._KEY_ID)
+        if indicator_id is None or not indicator_id:
+            self._error("Indicator '{0}' without ID", name)
+            return None
+
+        indicator_pattern = indicator.get(self._KEY_INDICATOR_PATTERN)
+        if indicator_pattern is None or not indicator_pattern:
+            self._error("Indicator '{0}' without pattern", name)
+            return None
+
+        rules = YaraParser.parse(indicator_pattern)
+
+        if not rules:
+            self._error("Indicator '{0}' pattern without YARA rules", name)
+            return None
+
+        if len(rules) > 1:
+            self._error(
+                "Indicator '{0}' pattern contains more than one YARA rules", name
+            )
+            return None
+
+        return indicator_id, rules[0]
+
+    def _fetch_indicator_by_name(self, name: str) -> Optional[Mapping[str, Any]]:
+        values = [name]
+        filters = [{"key": "name", "values": values, "operator": "eq"}]
+        return self.helper.api.indicator.read(filters=filters)
+
+    def _needs_updating(self, current_rule: YaraRule, new_rule: YaraRule) -> bool:
+        if current_rule.name != new_rule.name:
+            self._error(
+                "Current ({0}) and new ({1}) YARA rules names do no match",
+                current_rule.name,
+                new_rule.name,
+            )
+            return False
+
+        self._info(
+            "Current rule last modified '{0}, new rule last modified '{1}''",
+            current_rule.last_modified,
+            new_rule.last_modified,
+        )
+
+        if new_rule.last_modified > current_rule.last_modified:
+            return True
+
+        return False
+
+    def _update_indicator_pattern(
+        self, indicator_id: str, new_indicator_pattern: str
+    ) -> bool:
+        updated = self.helper.api.stix_domain_entity.update_field(
+            id=indicator_id,
+            key=self._KEY_INDICATOR_PATTERN,
+            value=new_indicator_pattern,
+        )
+        if updated is None:
+            return False
+        return updated.get(self._KEY_ID) == indicator_id
 
     def _get_reports_by_code(self, codes: List[str]) -> List[FetchedReport]:
         return self.report_fetcher.get_by_codes(codes)
 
     def _create_indicator_bundle(
         self, rule: YaraRule, reports: List[FetchedReport]
-    ) -> Optional[Bundle]:
+    ) -> Bundle:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]

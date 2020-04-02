@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike YARA rules parser module."""
 
+import logging
 import re
 from datetime import date
 from io import StringIO
@@ -9,6 +10,9 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from crowdstrike.utils import convert_comma_separated_str_to_list
+
+
+logger = logging.getLogger(__name__)
 
 
 class YaraRule(BaseModel):
@@ -52,7 +56,17 @@ class YaraParser:
     @classmethod
     def parse(cls, yara_rules: str) -> List[YaraRule]:
         """Parse YARA rules string to list of YARA rule model."""
+        if not yara_rules:
+            logger.error("Not YARA rules to parse, empty string")
+            return []
+
         yara_rules_list = cls._split_yara_rules(yara_rules)
+        if not yara_rules_list:
+            logger.error("No YARA rules in the given string: %s", yara_rules)
+            return []
+
+        logger.info("Found %d YARA rules in the given string", len(yara_rules_list))
+
         return cls._parse_yara_rules_list(yara_rules_list)
 
     @classmethod
@@ -93,17 +107,17 @@ class YaraParser:
     def _parse_yara_rule(cls, yara_rule: str) -> Optional[YaraRule]:
         name = cls._get_name(yara_rule)
         if name is None:
-            print(f"No name for rule: {yara_rule}")
+            logger.error("No name for rule: %s", yara_rule)
             return None
 
         description = cls._get_description(yara_rule)
         if description is None:
-            print(f"No description for rule: {yara_rule}")
+            logger.error("No description for rule: %s", yara_rule)
             return None
 
         last_modified = cls._get_last_modified(yara_rule)
         if last_modified is None:
-            print(f"No last modified for rule: {yara_rule}")
+            logger.error("No last modified for rule: %s", yara_rule)
             return None
 
         reports = cls._get_reports(yara_rule)

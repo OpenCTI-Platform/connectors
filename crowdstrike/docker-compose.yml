@@ -16,7 +16,7 @@ services:
       - CROWDSTRIKE_CLIENT_ID=ChangeMe
       - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
       - CROWDSTRIKE_TLP=amber
-      - CROWDSTRIKE_SCOPES=actor,report,indicator
+      - CROWDSTRIKE_SCOPES=actor,report,indicator,yara_master
       - CROWDSTRIKE_ACTOR_START_TIMESTAMP=0
       - CROWDSTRIKE_REPORT_START_TIMESTAMP=0    # BEWARE! A lot of reports!
       - CROWDSTRIKE_REPORT_STATUS=New
