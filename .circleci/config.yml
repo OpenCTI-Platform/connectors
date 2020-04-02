@@ -37,7 +37,7 @@ jobs:
           name: Build Docker image opencti/connector-cryptolaemus
           command: docker build -t opencti/connector-cryptolaemus:latest . && docker tag opencti/connector-cryptolaemus:latest opencti/connector-cryptolaemus:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/cryptolaemus
+          working_directory: ~/opencti/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
           command: docker build -t opencti/connector-cyber-threat-coalition:latest . && docker tag opencti/connector-cyber-threat-coalition:latest opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
       - run:
