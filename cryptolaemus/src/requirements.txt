@@ -3,4 +3,4 @@ PyYAML
 urllib3
 python-dateutil
 feedparser
-BeautifulSoup
+beautifulsoup4
