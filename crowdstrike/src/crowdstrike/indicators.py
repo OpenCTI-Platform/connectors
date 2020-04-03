@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
-from typing import Any, Dict, Generator, List, Mapping, Optional
+from typing import Any, Generator, List, Mapping, Optional
 
 from crowdstrike_client.api.intel import Indicators, Reports
 from crowdstrike_client.api.models import Indicator, Response
-from crowdstrike_client.api.models.report import Report
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 from stix2 import Bundle, Identity, MarkingDefinition
 
-from crowdstrike.indicator_bundle_builder import IndicatorBundleBuilder, IndicatorReport
+from crowdstrike.indicator_bundle_builder import IndicatorBundleBuilder
+from crowdstrike.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike.utils import (
-    create_file_from_download,
     datetime_to_timestamp,
     paginate,
     timestamp_to_datetime,
@@ -41,7 +40,7 @@ class IndicatorImporter:
         """Initialize CrowdStrike indicator importer."""
         self.helper = helper
         self.indicators_api = indicators_api
-        self.reports_api = reports_api
+        self.report_fetcher = ReportFetcher(reports_api)
         self.update_existing_data = update_existing_data
         self.author = author
         self.default_latest_timestamp = default_latest_timestamp
@@ -50,13 +49,11 @@ class IndicatorImporter:
         self.report_status = report_status
         self.report_type = report_type
 
-        self.run_reports_cache: Dict[str, IndicatorReport] = {}
-
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
         self._info("Running indicator importer with state: {0}...", state)
 
-        self._clear_run_reports_cache()
+        self._clear_report_fetcher_cache()
 
         fetch_timestamp = state.get(
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
@@ -86,16 +83,8 @@ class IndicatorImporter:
 
         return {self._LATEST_INDICATOR_TIMESTAMP: state_timestamp}
 
-    def _clear_run_reports_cache(self) -> None:
-        self.run_reports_cache.clear()
-
-    def _get_run_reports_cache(self, report_code: str) -> Optional[IndicatorReport]:
-        return self.run_reports_cache.get(report_code)
-
-    def _put_run_reports_cache(
-        self, report_code: str, indicator_report: IndicatorReport
-    ) -> None:
-        self.run_reports_cache[report_code] = indicator_report
+    def _clear_report_fetcher_cache(self) -> None:
+        self.report_fetcher.clear_cache()
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
@@ -161,7 +150,7 @@ class IndicatorImporter:
     def _process_indicator(self, indicator: Indicator) -> bool:
         self._info("Processing indicator {0}...", indicator.id)
 
-        indicator_reports = self._get_indicator_reports(indicator.reports)
+        indicator_reports = self._get_reports_by_code(indicator.reports)
 
         indicator_bundle = self._create_indicator_bundle(indicator, indicator_reports)
         if indicator_bundle is None:
@@ -172,8 +161,11 @@ class IndicatorImporter:
 
         return True
 
+    def _get_reports_by_code(self, codes: List[str]) -> List[FetchedReport]:
+        return self.report_fetcher.get_by_codes(codes)
+
     def _create_indicator_bundle(
-        self, indicator: Indicator, indicator_reports: List[IndicatorReport]
+        self, indicator: Indicator, indicator_reports: List[FetchedReport]
     ) -> Optional[Bundle]:
         author = self.author
         source_name = self._source_name()
@@ -197,66 +189,6 @@ class IndicatorImporter:
         except TypeError as te:
             self._error(str(te))
             return None
-
-    def _get_indicator_reports(self, report_codes: List[str]) -> List[IndicatorReport]:
-        indicator_reports = []
-        for report_code in report_codes:
-            cached_indicator_report = self._get_run_reports_cache(report_code)
-            if cached_indicator_report is not None:
-                indicator_reports.append(cached_indicator_report)
-                continue
-
-            report = self._fetch_report(report_code)
-            if report is None:
-                continue
-
-            files = []
-            report_file = self._get_report_pdf(report.id)
-            if report_file is not None:
-                files.append(report_file)
-
-            indicator_report = IndicatorReport(report=report, files=files)
-
-            self._put_run_reports_cache(report_code, indicator_report)
-
-            indicator_reports.append(indicator_report)
-        return indicator_reports
-
-    def _fetch_report(self, report_code: str) -> Optional[Report]:
-        self._info("Fetching report {0}...", report_code)
-
-        ids = [report_code]
-        fields = ["__full__"]
-
-        response = self.reports_api.get_entities(ids, fields)
-
-        errors = response.errors
-        if errors:
-            self._error("Fetching report completed with errors")
-            for error in errors:
-                self._error("Error: {0} (code: {1})", error.message, error.code)
-
-        resources = response.resources
-        resources_count = len(resources)
-
-        if resources_count == 0:
-            self._info("Report code {0} returned nothing", report_code)
-            return None
-
-        if resources_count > 1:
-            self._error("Report code {0} returned more than one result", report_code)
-            return None
-
-        report = resources[0]
-        return report
-
-    def _get_report_pdf(self, report_id: int) -> Optional[Mapping[str, str]]:
-        download = self.reports_api.get_pdf(str(report_id))
-
-        if download is None:
-            return None
-
-        return create_file_from_download(download)
 
     def _source_name(self) -> str:
         return self.helper.connect_name

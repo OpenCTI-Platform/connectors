@@ -7,9 +7,7 @@ from typing import List, Mapping, Optional
 from crowdstrike_client.api.models import Indicator
 from crowdstrike_client.api.models.report import Report
 
-from pycti.utils.constants import CustomProperties, ObservableTypes
-
-from pydantic import BaseModel
+from pycti.utils.constants import ObservableTypes
 
 from stix2 import (
     Bundle,
@@ -26,32 +24,25 @@ from stix2 import (
 )
 from stix2.core import STIXDomainObject
 
+from crowdstrike.report_fetcher import FetchedReport
 from crowdstrike.utils import (
     create_equality_observation_expression_str,
     create_external_reference,
     create_indicates_relationships,
-    create_intrusion_set,
+    create_indicator,
+    create_intrusion_sets_from_names,
     create_kill_chain_phase,
     create_malware,
     create_object_path,
     create_object_refs,
     create_sector,
     create_stix2_report_from_report,
-    create_tags,
     create_targets_relationships,
     create_uses_relationships,
     create_vulnerability,
 )
 
-
 logger = logging.getLogger(__name__)
-
-
-class IndicatorReport(BaseModel):
-    """Indicator report model."""
-
-    report: Report
-    files: List[Mapping[str, str]] = []
 
 
 class IndicatorBundleBuilder:
@@ -140,7 +131,7 @@ class IndicatorBundleBuilder:
         confidence_level: int,
         indicator_report_status: int,
         indicator_report_type: str,
-        indicator_reports: List[IndicatorReport],
+        indicator_reports: List[FetchedReport],
     ) -> None:
         """Initialize indicator bundle builder."""
         self.indicator = indicator
@@ -175,26 +166,13 @@ class IndicatorBundleBuilder:
         return opencti_type
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        intrusion_sets = []
-        for actor_name in self.indicator.actors:
-            name = actor_name
-            aliases: List[str] = []
-            primary_motivation = None
-            secondary_motivations: List[str] = []
-            external_references: List[ExternalReference] = []
-
-            intrusion_set = create_intrusion_set(
-                name,
-                aliases,
-                self.author,
-                primary_motivation,
-                secondary_motivations,
-                external_references,
-                self.object_marking_refs,
-            )
-
-            intrusion_sets.append(intrusion_set)
-        return intrusion_sets
+        external_references: List[ExternalReference] = []
+        return create_intrusion_sets_from_names(
+            self.indicator.actors,
+            self.author,
+            external_references,
+            self.object_marking_refs,
+        )
 
     def _create_kill_chain_phases(self) -> List[KillChainPhase]:
         kill_chain_phases = []
@@ -288,23 +266,32 @@ class IndicatorBundleBuilder:
     def _create_indicator(
         self, kill_chain_phases: List[KillChainPhase]
     ) -> STIXIndicator:
-        stix_indicator = STIXIndicator(
-            created_by_ref=self.author,
-            name=self.indicator.indicator,
-            pattern=create_equality_observation_expression_str(
-                self._OPENCTI_TO_STIX2[self.opencti_type], self.indicator.indicator
-            ),
-            valid_from=self.indicator.published_date,
-            kill_chain_phases=kill_chain_phases,
-            labels=["malicious-activity"],
-            object_marking_refs=self.object_marking_refs,
-            custom_properties={
-                CustomProperties.OBSERVABLE_TYPE: str(self.opencti_type.value),
-                CustomProperties.OBSERVABLE_VALUE: self.indicator.indicator,
-                CustomProperties.PATTERN_TYPE: self._PATTERN_TYPE_STIX,
-            },
+        indicator = self.indicator
+
+        name = indicator.indicator
+        description = ""
+        valid_from = indicator.published_date
+        observable_type = str(self.opencti_type.value)
+        observable_value = indicator.indicator
+        pattern_type = self._PATTERN_TYPE_STIX
+        pattern_value = create_equality_observation_expression_str(
+            self._OPENCTI_TO_STIX2[self.opencti_type], self.indicator.indicator
         )
-        return stix_indicator
+        indicator_pattern = pattern_value
+
+        return create_indicator(
+            name,
+            description,
+            self.author,
+            valid_from,
+            kill_chain_phases,
+            observable_type,
+            observable_value,
+            pattern_type,
+            pattern_value,
+            indicator_pattern,
+            self.object_marking_refs,
+        )
 
     def _create_indicators(
         self, kill_chain_phases: List[KillChainPhase]
@@ -332,31 +319,15 @@ class IndicatorBundleBuilder:
         object_marking_refs: List[MarkingDefinition],
         files: List[Mapping[str, str]],
     ) -> STIXReport:
-        # Create external references.
-        external_references = []
-        report_url = report.url
-        if report_url is not None and report_url:
-            external_reference = create_external_reference(
-                self.source_name, str(report.id), report_url
-            )
-            external_references.append(external_reference)
-
-        # Create tags.
-        tags = []
-        report_tags = report.tags
-        if report_tags is not None:
-            tags = create_tags(report_tags, self.source_name)
-
         return create_stix2_report_from_report(
             report,
             author,
+            self.source_name,
             object_refs,
-            external_references,
             object_marking_refs,
             self.indicator_report_status,
             self.indicator_report_type,
             self.confidence_level,
-            tags,
             files,
         )
 
