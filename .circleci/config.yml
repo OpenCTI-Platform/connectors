@@ -37,6 +37,10 @@ jobs:
           name: Build Docker image opencti/connector-cryptolaemus
           command: docker build -t opencti/connector-cryptolaemus:latest . && docker tag opencti/connector-cryptolaemus:latest opencti/connector-cryptolaemus:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/cyber-threat-coalition
+          name: Build Docker image opencti/connector-cyber-threat-coalition
+          command: docker build -t opencti/connector-cyber-threat-coalition:latest . && docker tag opencti/connector-cyber-threat-coalition:latest opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
@@ -82,6 +86,8 @@ jobs:
             docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
             docker push opencti/connector-cryptolaemus:latest
             docker push opencti/connector-cryptolaemus:${CIRCLE_TAG}
+            docker push opencti/connector-cyber-threat-coalition:latest
+            docker push opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
             docker push opencti/connector-mitre:latest
@@ -132,6 +138,10 @@ jobs:
           name: Build Docker image opencti/connector-cryptolaemus
           command: docker build -t opencti/connector-cryptolaemus:rolling .
       - run:
+          working_directory: ~/opencti/cyber-threat-coalition
+          name: Build Docker image opencti/connector-cyber-threat-coalition
+          command: docker build -t opencti/connector-cyber-threat-coalition:rolling .
+      - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:rolling .
@@ -170,6 +180,7 @@ jobs:
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-crowdstrike:rolling
             docker push opencti/connector-cryptolaemus:rolling
+            docker push opencti/connector-cyber-threat-coalition:rolling
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling

@@ -1,15 +1,15 @@
 version: '3'
 services:
-  connector-cryptolaemus:
-    image: opencti/connector-cryptolaemus:3.1.0
+  connector-malpedia:
+    image: opencti/connector-malpedia:3.1.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=Cryptolaemus
-      - CONNECTOR_SCOPE=cryptolaemus
+      - CONNECTOR_NAME=Malpedia
+      - CONNECTOR_SCOPE=malpedia
       - CONNECTOR_CONFIDENCE_LEVEL=3
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
     restart: always

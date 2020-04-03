@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Malpedia'
+  scope: 'malpedia'
+  confidence_level: 3
+  log_level: 'info'
+
+malpedia:
+  MALPEDIA_API: 'https://malpedia.caad.fkie.fraunhofer.de/api/'
+  AUTH_KEY: 'ChangeMe'

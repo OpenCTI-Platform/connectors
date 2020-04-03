@@ -1,7 +1,7 @@
 version: '3'
 services:
-  connector-cryptolaemus:
-    image: opencti/connector-cyber-threat-coalition:latest
+  connector-cyber-threat-coalition:
+    image: opencti/connector-cyber-threat-coalition:3.1.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -12,4 +12,6 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
+      - CYBER_THREAT_COALITION_INTERVAL=21600 # Seconds (6 hours)
+      - CYBER_THREAT_COALITION_BASE_URL=https://blacklist.cyberthreatcoalition.org/vetted
     restart: always

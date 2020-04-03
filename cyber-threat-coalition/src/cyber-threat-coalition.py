@@ -16,12 +16,12 @@ from pycti.utils.constants import CustomProperties
 class CyberThreatCoalition:
 
     _OPENCTI_TYPE = {
-        'domain': "[domain-name:value = '{}']",
-        'ip': "[ipv4addr:value = '{}']",
-        'sha256': "[file:hashes.SHA256 = '{}']",
-        'sha1': "[file:hashes.SHA1 = '{}']",
-        'md5': "[file:hashes.MD5 = '{}']",
-        'url': "[url:value = '{}']"
+        "domain": "[domain-name:value = '{}']",
+        "ipv4-addr": "[ipv4-addr:value = '{}']",
+        "file-sha256": "[file:hashes.SHA256 = '{}']",
+        "file-sha1": "[file:hashes.SHA1 = '{}']",
+        "file-md5": "[file:hashes.MD5 = '{}']",
+        "url": "[url:value = '{}']",
     }
 
     _STATE_LAST_RUN = "last_run"
@@ -37,10 +37,16 @@ class CyberThreatCoalition:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.cyber_threat_coalition_interval = get_config_variable(
-            "CYBER_THREAT_COALITION_INTERVAL", ["cyber-threat-coalition", "interval_sec"], config, True
+            "CYBER_THREAT_COALITION_INTERVAL",
+            ["cyber-threat-coalition", "interval_sec"],
+            config,
+            True,
         )
         self.cyber_threat_coalition_base_url = get_config_variable(
-            "CYBER_THREAT_COALITION_BASE_URL", ["cyber-threat-coalition", "base_url"], config, False
+            "CYBER_THREAT_COALITION_BASE_URL",
+            ["cyber-threat-coalition", "base_url"],
+            config,
+            False,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -54,11 +60,11 @@ class CyberThreatCoalition:
     @staticmethod
     def get_hash_type(hash_value):
         if re.match(r"^[0-9a-fA-F]{32}$", hash_value):
-            return 'md5'
+            return "file-md5"
         elif re.match(r"^[0-9a-fA-F]{40}$", hash_value):
-            return 'sha1'
+            return "file-sha1"
         elif re.match(r"^[0-9a-fA-F]{64}$", hash_value):
-            return 'sha256'
+            return "file-sha256"
 
     def fetch_and_send(self):
 
@@ -69,7 +75,7 @@ class CyberThreatCoalition:
             name="Cyber Threat Coalition Team",
             identity_class="organization",
             description="Team of Experts collecting and sharing pandemic related "
-                        "cyber threat intelligence during the COVID-19 crisis time"
+            "cyber threat intelligence during the COVID-19 crisis time",
         )
 
         # add organization in bundle
@@ -79,25 +85,29 @@ class CyberThreatCoalition:
 
         for collection in ["domain", "ip", "url", "hash"]:
             # fetch backlist
-            url = self.cyber_threat_coalition_base_url+"/"+str(collection)+".txt"
+            url = self.cyber_threat_coalition_base_url + "/" + str(collection) + ".txt"
             response = requests.get(url=url)
             if response.status_code != 200:
-                raise Exception("Unable to fetch {0} blacklist, server returned status: {1}",
-                                collection, response.status_code)
+                raise Exception(
+                    "Unable to fetch {0} blacklist, server returned status: {1}",
+                    collection,
+                    response.status_code,
+                )
 
             opencti_type = None
             pattern_type = "stix"
+            tags = [{"tag_type": "Event", "value": "COVID-19", "color": "#fc036b"}]
 
             # parse content
             for data in response.iter_lines(decode_unicode=True):
                 if data and not data.startswith("#"):
-                    if collection == 'domain':
-                        opencti_type = 'domain'
-                    elif collection == 'ip':
-                        opencti_type = 'ip'
-                    elif collection == 'url':
-                        opencti_type = 'url'
-                    elif collection == 'hash':
+                    if collection == "domain":
+                        opencti_type = "domain"
+                    elif collection == "ip":
+                        opencti_type = "ipv4-addr"
+                    elif collection == "url":
+                        opencti_type = "url"
+                    elif collection == "hash":
                         opencti_type = self.get_hash_type(data)
 
                     indicator = stix2.Indicator(
@@ -105,29 +115,38 @@ class CyberThreatCoalition:
                         pattern=self._OPENCTI_TYPE[opencti_type].format(data),
                         labels=["malicious-activity"],
                         created_by_ref=organization,
+                        object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={
                             CustomProperties.OBSERVABLE_TYPE: opencti_type,
                             CustomProperties.OBSERVABLE_VALUE: data,
                             CustomProperties.PATTERN_TYPE: pattern_type,
-                        }
+                            CustomProperties.TAG_TYPE: tags,
+                        },
                     )
                     # add indicator in bundle and report_refs
                     bundle_objects.append(indicator)
-                    report_object_refs.append(indicator['id'])
+                    report_object_refs.append(indicator["id"])
 
         # create a global threat report
         report_uuid = "report--552b3ae6-8522-409d-8b72-a739bc1926aa"
+        report_external_reference = stix2.ExternalReference(
+            source_name="Cyber Threat Coalition",
+            url="https://www.cyberthreatcoalition.org",
+            external_id="COVID19-CTC",
+        )
 
         stix_report = stix2.Report(
             id=report_uuid,
-            name="COVID-19 CyberThreat Coalition BlackList",
+            name="COVID-19 Cyber Threat Coalition (CTC) BlackList",
             type="report",
-            description="",
-            published=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+            description="This report represents the whole COVID-19 CTC blacklist.",
+            published=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
             created_by_ref=organization,
             object_marking_refs=[stix2.TLP_WHITE],
             labels=["threat-report"],
-            object_refs=report_object_refs
+            external_references=[report_external_reference],
+            object_refs=report_object_refs,
+            custom_properties={CustomProperties.TAG_TYPE: tags,},
         )
 
         # add report in bundle
@@ -138,7 +157,7 @@ class CyberThreatCoalition:
 
         # send data
         self.helper.send_stix2_bundle(
-            bundle=bundle.serialize(),  update=self.update_existing_data
+            bundle=bundle.serialize(), update=self.update_existing_data
         )
 
     def _load_state(self) -> Dict[str, Any]:
@@ -155,7 +174,8 @@ class CyberThreatCoalition:
 
     @staticmethod
     def _get_state_value(
-            state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None) -> Any:
+        state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
+    ) -> Any:
         if state is not None:
             return state.get(key, default)
         return default
@@ -204,7 +224,7 @@ class CyberThreatCoalition:
                 self.helper.log_error(str(ex))
                 time.sleep(60)
 
-    
+
 if __name__ == "__main__":
     try:
         ctc_connector = CyberThreatCoalition()
