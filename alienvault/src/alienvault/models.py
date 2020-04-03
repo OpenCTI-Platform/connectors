@@ -17,7 +17,7 @@ class PulseIndicator(BaseModel):
     description: str
     created: datetime
     is_active: Union[bool, int]
-    content: str
+    content: Optional[str]
     observations: Optional[int] = None
     role: Optional[str] = None
     access_type: Optional[str] = None
@@ -35,7 +35,7 @@ class Pulse(BaseModel):
     author_name: str
     public: bool
     revision: int
-    adversary: str
+    adversary: Optional[str]
     malware_families: List[str]
     industries: List[str]
     attack_ids: List[str]
