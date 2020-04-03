@@ -131,7 +131,7 @@ class PulseBundleBuilder:
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
         intrusion_sets = []
         adversary = self.pulse.adversary
-        if adversary:
+        if adversary is not None and adversary:
             intrusion_set = create_intrusion_set(
                 adversary, self.author, self.object_marking_refs
             )
@@ -281,8 +281,16 @@ class PulseBundleBuilder:
             filter(lambda x: x.type == self._INDICATOR_TYPE_YARA, self.pulse.indicators)
         )
         for yara_pulse_indicator in yara_pulse_indicators:
+            yara_rule_str = yara_pulse_indicator.content
+            if yara_rule_str is None or not yara_rule_str:
+                continue
+
+            name = yara_pulse_indicator.title
+            if not name:
+                name = yara_pulse_indicator.indicator
+
             observable_type = self._PATTERN_TYPE_YARA_OBSERVABLE_TYPE
-            observable_value = yara_pulse_indicator.content
+            observable_value = yara_rule_str
 
             pattern_type = self._PATTERN_TYPE_YARA
 
@@ -290,10 +298,10 @@ class PulseBundleBuilder:
             pattern_value = "[file:hashes.md5 = 'd41d8cd98f00b204e9800998ecf8427e']"
 
             # YARA rule as indicator pattern.
-            indicator_pattern = yara_pulse_indicator.content
+            indicator_pattern = yara_rule_str
 
             yara_indicator = self._create_indicator(
-                yara_pulse_indicator.indicator,
+                name,
                 self._create_indicator_description(yara_pulse_indicator),
                 yara_pulse_indicator.created,
                 observable_type,

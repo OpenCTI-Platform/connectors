@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Mapping, Optional
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 from stix2 import Bundle, Identity, MarkingDefinition
+from stix2.exceptions import STIXError
 
 from alienvault.builder import PulseBundleBuilder
 from alienvault.client import AlienVaultClient
@@ -67,16 +68,23 @@ class PulseImporter:
 
         self._info("{0} pulse(s) since {1}...", pulse_count, fetch_datetime)
 
+        failed = 0
         for pulse in pulses:
-            self._process_pulse(pulse)
+            result = self._process_pulse(pulse)
+            if not result:
+                failed += 1
 
             if pulse.modified > latest_fetched_indicator_datetime:
                 latest_fetched_indicator_datetime = pulse.modified
 
         state_timestamp = latest_fetched_indicator_datetime
 
+        imported = pulse_count - failed
+
         self._info(
-            "Pulse importer completed (imported: {0}), latest fetch {1}.",
+            "Pulse importer completed (imported: {0}, failed: {1}, total: {2}), latest fetch {3}",  # noqa: E501
+            imported,
+            failed,
             pulse_count,
             state_timestamp,
         )
@@ -94,14 +102,18 @@ class PulseImporter:
         fmt_msg = msg.format(*args)
         self.helper.log_error(fmt_msg)
 
-    def _process_pulse(self, pulse: Pulse) -> None:
+    def _process_pulse(self, pulse: Pulse) -> bool:
         self._info("Processing pulse {0} ({1})...", pulse.name, pulse.id)
 
         pulse_bundle = self._create_pulse_bundle(pulse)
+        if pulse_bundle is None:
+            return False
 
         self._send_bundle(pulse_bundle)
 
-    def _create_pulse_bundle(self, pulse: Pulse) -> Bundle:
+        return True
+
+    def _create_pulse_bundle(self, pulse: Pulse) -> Optional[Bundle]:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]
@@ -120,7 +132,17 @@ class PulseImporter:
             report_type,
             guessed_malwares,
         )
-        return bundle_builder.build()
+
+        try:
+            return bundle_builder.build()
+        except STIXError as e:
+            self._error(
+                "Failed to build pulse bundle for '{0}' ({1}): {2}",
+                pulse.name,
+                pulse.id,
+                e,
+            )
+            return None
 
     def _guess_malwares_from_tags(self, tags: List[str]) -> Mapping[str, str]:
         if not self.guess_malware:
