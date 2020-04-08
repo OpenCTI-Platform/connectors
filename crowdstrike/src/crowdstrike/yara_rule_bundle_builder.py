@@ -18,7 +18,7 @@ from stix2 import (
     Relationship,
     Report as STIXReport,
 )
-from stix2.core import STIXDomainObject
+from stix2.v20 import _DomainObject
 
 from crowdstrike.report_fetcher import FetchedReport
 from crowdstrike.utils import (
@@ -146,7 +146,7 @@ class YaraRuleBundleBuilder:
         return malwares
 
     def _create_uses_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_uses_relationships(
             self.author,
@@ -203,7 +203,7 @@ class YaraRuleBundleBuilder:
         )
 
     def _create_indicates_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_indicates_relationships(
             self.author,
@@ -215,7 +215,7 @@ class YaraRuleBundleBuilder:
             self.confidence_level,
         )
 
-    def _create_reports(self, object_refs: List[STIXDomainObject]) -> List[STIXReport]:
+    def _create_reports(self, object_refs: List[_DomainObject]) -> List[STIXReport]:
         reports = []
         for rule_report in self.reports:
             report = self._create_report(
@@ -232,7 +232,7 @@ class YaraRuleBundleBuilder:
         self,
         report: Report,
         author: Identity,
-        object_refs: List[STIXDomainObject],
+        object_refs: List[_DomainObject],
         object_marking_refs: List[MarkingDefinition],
         files: List[Mapping[str, str]],
     ) -> STIXReport:
