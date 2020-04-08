@@ -22,7 +22,7 @@ from stix2 import (
     Report as STIXReport,
     Vulnerability,
 )
-from stix2.core import STIXDomainObject
+from stix2.v20 import _DomainObject
 
 from crowdstrike.report_fetcher import FetchedReport
 from crowdstrike.utils import (
@@ -204,7 +204,7 @@ class IndicatorBundleBuilder:
         return [malware]
 
     def _create_uses_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_uses_relationships(
             self.author,
@@ -224,7 +224,7 @@ class IndicatorBundleBuilder:
         return target_sectors
 
     def _create_targets_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_targets_relationships(
             self.author,
@@ -299,7 +299,7 @@ class IndicatorBundleBuilder:
         return [self._create_indicator(kill_chain_phases)]
 
     def _create_indicates_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_indicates_relationships(
             self.author,
@@ -315,7 +315,7 @@ class IndicatorBundleBuilder:
         self,
         report: Report,
         author: Identity,
-        object_refs: List[STIXDomainObject],
+        object_refs: List[_DomainObject],
         object_marking_refs: List[MarkingDefinition],
         files: List[Mapping[str, str]],
     ) -> STIXReport:
@@ -331,7 +331,7 @@ class IndicatorBundleBuilder:
             files,
         )
 
-    def _create_reports(self, object_refs: List[STIXDomainObject]) -> List[STIXReport]:
+    def _create_reports(self, object_refs: List[_DomainObject]) -> List[STIXReport]:
         reports = []
         for indicator_report in self.indicator_reports:
             stix2_report = self._create_report(

@@ -17,7 +17,7 @@ from stix2 import (
     Relationship,
     Report as STIXReport,
 )
-from stix2.core import STIXDomainObject
+from stix2.v20 import _DomainObject
 
 from crowdstrike.utils import (
     create_external_reference,
@@ -128,7 +128,7 @@ class ReportBundleBuilder:
         return intrusion_sets
 
     def _create_uses_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_uses_relationships(
             self.author,
@@ -141,7 +141,7 @@ class ReportBundleBuilder:
         )
 
     def _create_targets_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_targets_relationships(
             self.author,
@@ -182,7 +182,7 @@ class ReportBundleBuilder:
             files.append(self.report_file)
         return files
 
-    def _create_report(self, object_refs: List[STIXDomainObject]) -> STIXReport:
+    def _create_report(self, object_refs: List[_DomainObject]) -> STIXReport:
         files = self._create_files()
 
         stix_report = create_stix2_report_from_report(

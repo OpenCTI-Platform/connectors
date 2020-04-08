@@ -43,7 +43,7 @@ from stix2 import (
     StringConstant,
     Vulnerability,
 )
-from stix2.core import STIXDomainObject, STIXRelationshipObject
+from stix2.v20 import _DomainObject, _RelationshipObject
 
 
 logger = logging.getLogger(__name__)
@@ -346,8 +346,8 @@ def create_country(entity: Entity, author: Identity) -> Identity:
 def create_relationship(
     relationship_type: str,
     author: Identity,
-    source: STIXDomainObject,
-    target: STIXDomainObject,
+    source: _DomainObject,
+    target: _DomainObject,
     object_marking_refs: List[MarkingDefinition],
     first_seen: datetime,
     last_seen: datetime,
@@ -371,8 +371,8 @@ def create_relationship(
 def create_relationships(
     relationship_type: str,
     author: Identity,
-    sources: List[STIXDomainObject],
-    targets: List[STIXDomainObject],
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
     first_seen: datetime,
     last_seen: datetime,
@@ -398,8 +398,8 @@ def create_relationships(
 
 def create_targets_relationships(
     author: Identity,
-    sources: List[STIXDomainObject],
-    targets: List[STIXDomainObject],
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
     first_seen: datetime,
     last_seen: datetime,
@@ -420,8 +420,8 @@ def create_targets_relationships(
 
 def create_uses_relationships(
     author: Identity,
-    sources: List[STIXDomainObject],
-    targets: List[STIXDomainObject],
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
     first_seen: datetime,
     last_seen: datetime,
@@ -442,8 +442,8 @@ def create_uses_relationships(
 
 def create_indicates_relationships(
     author: Identity,
-    sources: List[STIXDomainObject],
-    targets: List[STIXDomainObject],
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
     first_seen: datetime,
     last_seen: datetime,
@@ -464,16 +464,16 @@ def create_indicates_relationships(
 
 def create_object_refs(
     *objects: Union[
-        STIXDomainObject,
-        STIXRelationshipObject,
-        List[STIXRelationshipObject],
-        List[STIXDomainObject],
+        _DomainObject,
+        _RelationshipObject,
+        List[_RelationshipObject],
+        List[_DomainObject],
     ]
-) -> List[STIXDomainObject]:
+) -> List[Union[_DomainObject, _RelationshipObject]]:
     """Create object references."""
     object_refs = []
     for obj in objects:
-        if isinstance(obj, STIXDomainObject):
+        if not isinstance(obj, list):
             object_refs.append(obj)
         else:
             object_refs.extend(obj)
@@ -515,7 +515,7 @@ def create_report(
     description: str,
     published: datetime,
     author: Identity,
-    object_refs: List[STIXDomainObject],
+    object_refs: List[_DomainObject],
     external_references: List[ExternalReference],
     object_marking_refs: List[MarkingDefinition],
     report_status: int,
@@ -548,7 +548,7 @@ def create_stix2_report_from_report(
     report: Report,
     author: Identity,
     source_name: str,
-    object_refs: List[STIXDomainObject],
+    object_refs: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
     report_status: int,
     report_type: str,
