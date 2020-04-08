@@ -20,7 +20,7 @@ from stix2 import (
     Report,
     Vulnerability,
 )
-from stix2.core import STIXDomainObject
+from stix2.v20 import _DomainObject
 
 from alienvault.models import Pulse, PulseIndicator
 from alienvault.utils import (
@@ -160,7 +160,7 @@ class PulseBundleBuilder:
         return malware_list
 
     def _create_uses_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_uses_relationships(
             self.author,
@@ -180,7 +180,7 @@ class PulseBundleBuilder:
         return target_sectors
 
     def _create_targets_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_targets_relationships(
             self.author,
@@ -362,7 +362,7 @@ class PulseBundleBuilder:
         return indicators
 
     def _create_indicates_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_indicates_relationships(
             self.author,
@@ -374,7 +374,7 @@ class PulseBundleBuilder:
             self.confidence_level,
         )
 
-    def _create_report(self, object_refs: List[STIXDomainObject]) -> Report:
+    def _create_report(self, object_refs: List[_DomainObject]) -> Report:
         external_references = self._create_report_external_references()
         tags = self._create_report_tags()
 
@@ -418,7 +418,7 @@ class PulseBundleBuilder:
             tags.append(tag)
         return tags
 
-    def _create_reports(self, object_refs: List[STIXDomainObject]) -> List[Report]:
+    def _create_reports(self, object_refs: List[_DomainObject]) -> List[Report]:
         return [self._create_report(object_refs)]
 
     def build(self) -> Bundle:
