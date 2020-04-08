@@ -16,7 +16,7 @@ from stix2 import (
     MarkingDefinition,
     Relationship,
 )
-from stix2.core import STIXDomainObject
+from stix2.v20 import _DomainObject
 
 from crowdstrike.utils import (
     create_external_reference,
@@ -130,7 +130,7 @@ class ActorBundleBuilder:
         return target_sectors
 
     def _create_targets_relationships(
-        self, sources: List[STIXDomainObject], targets: List[STIXDomainObject]
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_targets_relationships(
             self.author,
