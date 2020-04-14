@@ -6,6 +6,6 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'Hygiene'
-  scope: 'ipv4-addr,ipv6-addr,domain'
+  scope: 'ipv4-addr,ipv6-addr,domain,file-md5,file-sha1,file-sha256'
   confidence_level: 3
   log_level: 'info'

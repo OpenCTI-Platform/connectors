@@ -7,6 +7,15 @@ detection:
 
 * [misp-warninglists](https://github.com/MISP/misp-warninglists)
 
+The connector works for the following OpenCTI observable types:
+
+* ipv4-addr
+* ipv6-addr
+* domain
+* file-md5
+* file-sha1
+* file-sha256
+
 ## Installation
 
 Enabling this connector could be done by launching the Python process directly

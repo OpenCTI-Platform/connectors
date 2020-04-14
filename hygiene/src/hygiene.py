@@ -50,7 +50,9 @@ class HygieneConnector:
 
         # Check for supported types
         observable_type = observable["entity_type"]
-        if "ipv4-addr" or "ipv6-addr" or "domain" in observable_type:
+        supported_types = ['ipv4-addr','ipv6-addr','domain','file-md5','file-sha1','file-sha256']
+
+        if any(word in observable_type for word in supported_types):
             return self._process_observable(observable)
 
     # Start the main loop
