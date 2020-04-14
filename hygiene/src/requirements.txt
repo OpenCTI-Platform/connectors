@@ -1,3 +1,4 @@
 PyYAML
 pycti
+pika
 pymispwarninglists
