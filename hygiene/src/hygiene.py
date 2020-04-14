@@ -40,7 +40,7 @@ class HygieneConnector:
                 )
 
                 self.helper.api.stix_entity.add_tag(
-                    id=observable, tag_id=tag_hygiene["id"]
+                    id=observable['id'], tag_id=tag_hygiene["id"]
                 )
             return ["observable value found on warninglist and tagged accordingly"]
 
