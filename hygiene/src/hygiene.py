@@ -17,6 +17,11 @@ class HygieneConnector:
         self.helper = OpenCTIConnectorHelper(config)
         self.warninglists = WarningLists()
 
+        # Create Hygiene Tag
+        self.tag_hygiene = self.helper.api.tag.create(
+            tag_type="Hygiene", value="Hygiene", color="#fc0341",
+        )
+
     def _process_observable(self, observable):
         # Extract IPv4, IPv6 and Domain from entity data
         observable_value = observable["observable_value"]
@@ -35,14 +40,24 @@ class HygieneConnector:
                     "Type: %s | Name: %s | Version: %s | Descr: %s"
                     % (hit.type, hit.name, hit.version, hit.description)
                 )
-                # Create Hygiene Tag
-                tag_hygiene = self.helper.api.tag.create(
-                    tag_type="Hygiene", value="Hygiene:" + hit.name, color="#fc0341",
-                )
 
                 self.helper.api.stix_entity.add_tag(
-                    id=observable["id"], tag_id=tag_hygiene["id"]
+                    id=observable["id"], tag_id=self.tag_hygiene["id"]
                 )
+
+                # Create external references
+                external_reference_id = self.helper.api.external_reference.create(
+                    source_name="misp-warninglist",
+                    url="https://github.com/MISP/misp-warninglists",
+                    external_id=hit.name,
+                    description=hit.description,
+                )
+
+                self.helper.api.stix_entity.add_external_reference(
+                    id=observable["id"],
+                    external_reference_id=external_reference_id["id"],
+                )
+
             return ["observable value found on warninglist and tagged accordingly"]
 
     def _process_message(self, data):

@@ -32,5 +32,5 @@ No special configuration is needed.
 
 ## Behavior
 
-The connector adds a `Hygiene:$Info` tag on items that correspond to a warning
-list entry.
+1. Adds a `Hygiene` tag on items that correspond to a warning list entry.
+2. Adds an external reference that points to the warning list.
