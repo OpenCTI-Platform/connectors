@@ -1,0 +1,11 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Hygiene'
+  scope: 'ipv4-addr,ipv6-addr,domain'
+  confidence_level: 3
+  log_level: 'info'
