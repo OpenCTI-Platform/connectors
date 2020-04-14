@@ -1,10 +1,8 @@
-import yaml
 import os
-import json
+import yaml
 
 from pymispwarninglists import WarningLists
-from stix2 import Relationship, Identity, Bundle
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 
 
 class HygieneConnector:
@@ -24,15 +22,15 @@ class HygieneConnector:
         observable_value = observable["observable_value"]
 
         # Search in warninglist
-        r = self.warninglists.search(observable_value)
+        result = self.warninglists.search(observable_value)
 
         # Iterate over the hits
-        if r:
+        if result:
             self.helper.log_info(
                 "Hit found for %s in warninglists" % (observable_value)
             )
 
-            for hit in r:
+            for hit in result:
                 self.helper.log_info(
                     " %s %s %s %s" % (hit.type, hit.name, hit.version, hit.description)
                 )
