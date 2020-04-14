@@ -25,6 +25,10 @@ jobs:
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/hygiene
+          name: Build Docker image opencti/connector-hygiene
+          command: docker build -t opencti/connector-hygiene:latest . && docker tag opencti/connector-hygiene:latest opencti/connector-hygiene:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/alienvault
           name: Build Docker image opencti/connector-alienvault
           command: docker build -t opencti/connector-alienvault:latest . && docker tag opencti/connector-alienvault:latest opencti/connector-alienvault:${CIRCLE_TAG}
@@ -47,7 +51,7 @@ jobs:
       - run:
           working_directory: ~/opencti/mitre
           name: Build Docker image opencti/connector-mitre
-          command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/opencti
           name: Build Docker image opencti/connector-opencti
@@ -80,6 +84,8 @@ jobs:
             docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
             docker push opencti/connector-export-file-csv:latest
             docker push opencti/connector-export-file-csv:${CIRCLE_TAG}
+            docker push opencti/connector-hygiene:latest
+            docker push opencti/connector-hygiene:${CIRCLE_TAG}
             docker push opencti/connector-alienvault:latest
             docker push opencti/connector-alienvault:${CIRCLE_TAG}
             docker push opencti/connector-crowdstrike:latest
@@ -125,6 +131,10 @@ jobs:
           working_directory: ~/opencti/export-file-csv
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:rolling .
+      - run:
+          working_directory: ~/opencti/hygiene
+          name: Build Docker image opencti/connector-hygiene
+          command: docker build -t opencti/connector-hygiene:rolling .
       - run:
           working_directory: ~/opencti/alienvault
           name: Build Docker image opencti/connector-alienvault
@@ -177,6 +187,7 @@ jobs:
             docker push opencti/connector-import-file-pdf-observables:rolling
             docker push opencti/connector-export-file-stix:rolling
             docker push opencti/connector-export-file-csv:rolling
+            docker push opencti/connector-hygiene:rolling
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-crowdstrike:rolling
             docker push opencti/connector-cryptolaemus:rolling
