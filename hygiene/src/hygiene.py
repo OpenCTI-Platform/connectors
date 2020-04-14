@@ -32,7 +32,8 @@ class HygieneConnector:
 
             for hit in result:
                 self.helper.log_info(
-                    " %s %s %s %s" % (hit.type, hit.name, hit.version, hit.description)
+                    "Type: %s | Name: %s | Version: %s | Descr: %s"
+                    % (hit.type, hit.name, hit.version, hit.description)
                 )
                 # Create Hygiene Tag
                 tag_hygiene = self.helper.api.tag.create(
@@ -40,27 +41,14 @@ class HygieneConnector:
                 )
 
                 self.helper.api.stix_entity.add_tag(
-                    id=observable['id'], tag_id=tag_hygiene["id"]
+                    id=observable["id"], tag_id=tag_hygiene["id"]
                 )
             return ["observable value found on warninglist and tagged accordingly"]
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_observable.read(id=entity_id)
-
-        # Check for supported types
-        observable_type = observable["entity_type"]
-        supported_types = [
-            "ipv4-addr",
-            "ipv6-addr",
-            "domain",
-            "file-md5",
-            "file-sha1",
-            "file-sha256",
-        ]
-
-        if any(word in observable_type for word in supported_types):
-            return self._process_observable(observable)
+        return self._process_observable(observable)
 
     # Start the main loop
     def start(self):
