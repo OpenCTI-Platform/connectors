@@ -33,4 +33,4 @@ No special configuration is needed.
 ## Behavior
 
 1. Adds a `Hygiene` tag on items that correspond to a warning list entry.
-2. Adds an external reference that points to the warning list.
+2. Adds an external reference for every matching warning list.
