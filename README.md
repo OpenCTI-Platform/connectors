@@ -32,11 +32,11 @@ The following repository is used to store the OpenCTI connectors for the platfor
 
 ### Internal enrichment connectors
 
-| Connector                         | Description                                                 | Status                    | Last version                    |
-| ----------------------------------|-------------------------------------------------------------|---------------------------|---------------------------------|
-| [IpInfo](ipinfo)                  | Enrich IP addresses with geolocation                        | Released                  | 3.1.0                           |
-| [VirusTotal](virustotal)          | Enrich file hashes with corresponding hashes and file names | Released                  | 3.1.0                           |
-| [Hygiene](hygiene)                | Add hygiene tags to observables that are on warning-lists   | In development            | -                               |
+| Connector                         | Description                                                        | Status                    | Last version                    |
+| ----------------------------------|--------------------------------------------------------------------|---------------------------|---------------------------------|
+| [IpInfo](ipinfo)                  | Enrich IP addresses with geolocation                               | Released                  | 3.1.0                           |
+| [VirusTotal](virustotal)          | Enrich file hashes with corresponding hashes and file names        | Released                  | 3.1.0                           |
+| [Hygiene](hygiene)                | Add hygiene information to observables that are on warning-lists   | In development            | -                               |
 
 ### Internal export files connectors
 
