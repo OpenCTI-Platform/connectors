@@ -63,7 +63,6 @@ class ExportFileCsv:
         file_context = data["file_context"]
         export_type = data["export_type"]
         list_args = data["list_args"]
-        max_marking_definition = data["max_marking_definition"]
         if entity_id is not None:
             self.helper.log_info(
                 "Exporting: "
@@ -113,11 +112,6 @@ class ExportFileCsv:
                 + export_type
                 + " to "
                 + file_name
-            )
-            max_marking_definition_entity = (
-                self.helper.api.marking_definition.read(id=max_marking_definition)
-                if max_marking_definition is not None
-                else None
             )
 
             if IdentityTypes.has_value(entity_type):

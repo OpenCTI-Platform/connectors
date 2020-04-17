@@ -9,8 +9,6 @@ import json
 import iocp
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
-from stix2 import Bundle, Indicator, Report
-
 
 class ImportFilePdfObservables:
     def __init__(self):
