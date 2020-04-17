@@ -18,7 +18,7 @@ jobs:
           command: black --check .
   linter:
     docker:
-     - image: alpine/flake8
+      - image: alpine/flake8
     working_directory: ~/repo
     steps:
       - checkout
