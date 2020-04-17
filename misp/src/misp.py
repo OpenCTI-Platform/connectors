@@ -175,7 +175,7 @@ class Misp:
                 if len(events) == 0:
                     break
                 try:
-                     self.process_events(events)
+                    self.process_events(events)
                 except Exception as e:
                     self.helper.log_error(str(e))
                 current_page += 1
