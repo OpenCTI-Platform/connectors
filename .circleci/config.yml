@@ -1,6 +1,30 @@
 version: 2.1
 
 jobs:
+  ensure_formatting:
+    docker:
+      - image: circleci/python:3.7.7
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: install dependencies
+          command: sudo pip3 install black
+      - run:
+          name: confirm black version
+          command: black --version
+      - run:
+          name: run black check
+          command: black --check .
+  linter:
+    docker:
+     - image: alpine/flake8
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: flake8
+          command: flake8 --ignore=E,W ~/repo
   build:
     working_directory: ~/opencti
     docker:
