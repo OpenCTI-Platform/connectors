@@ -36,11 +36,10 @@
 ###################################################################################################
 
 import os
-import sys
 import fnmatch
 import argparse
 import re
-from io import StringIO, BytesIO
+from io import StringIO
 
 try:
     import configparser as ConfigParser
@@ -71,12 +70,7 @@ try:
     IMPORTS.append("beautifulsoup")
 except ImportError:
     pass
-try:
-    import requests
 
-    IMPORTS.append("requests")
-except ImportError:
-    pass
 
 # Import additional project source files
 import output
@@ -154,7 +148,7 @@ class IOC_Parser(object):
             for w in self.whitelist[ind_type]:
                 if w.findall(ind_match):
                     return True
-        except KeyError as e:
+        except KeyError:
             pass
         return False
 
@@ -276,10 +270,10 @@ class IOC_Parser(object):
                     "title",
                 ]:
                     continue
-                elif re.match("<!--.*-->", unicode(elem)):
+                elif re.match("<!--.*-->", str(elem)):
                     continue
                 else:
-                    text += unicode(elem)
+                    text += str(elem)
 
             self.handler.print_header(fpath)
             self.parse_page(fpath, text, 1)

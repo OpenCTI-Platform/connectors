@@ -2,7 +2,6 @@ import os
 import yaml
 import time
 import requests
-import json
 import re
 
 from datetime import datetime
@@ -122,7 +121,7 @@ class Malpedia:
                         self.MALPEDIA_API + api_call["API_LIST_ACTORS"],
                         headers={"Authorization": "apitoken " + self.AUTH_KEY},
                     )
-                    list_actors_json = r.json()
+                    #list_actors_json = r.json()
 
                     ### [TODO] y a pas de get/actors donc va falloir faire un appel pour chaque actor de la liste
 
@@ -190,7 +189,7 @@ class Malpedia:
                                 else:
                                     date = extract.group(1)
                                 # extract tlp
-                                tlp = rule.split("TLP:")[1].split('"')[0]
+                                #tlp = rule.split("TLP:")[1].split('"')[0]
                                 print("date ::::: " + date)
                                 print("name ::::: " + name_rule)
                                 print("rule ::::: " + rule)
@@ -211,7 +210,7 @@ class Malpedia:
                                 print(date)
                                 print(external_reference_malpedia["id"])
                                 print(families_json[name]["common_name"])
-                                relation = self.helper.api.stix_relation.create(
+                                self.helper.api.stix_relation.create(
                                     fromType="Indicator",
                                     fromId=indicator["id"],
                                     toType="Malware",

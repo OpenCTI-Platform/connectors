@@ -2,7 +2,6 @@ import yaml
 import os
 import requests
 import json
-import random
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
