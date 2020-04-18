@@ -71,7 +71,7 @@ jobs:
       - run:
           working_directory: ~/opencti/mitre
           name: Build Docker image opencti/connector-mitre
-          command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/opencti
           name: Build Docker image opencti/connector-opencti
@@ -213,6 +213,11 @@ jobs:
             docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-virustotal:rolling
 workflows:
+  version: 2
+  check-code:
+    jobs:
+      - ensure_formatting
+      - linter
   opencti:
     jobs:
       - build:
