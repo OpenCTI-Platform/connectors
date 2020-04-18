@@ -1,4 +1,4 @@
-FROM python:3.7.4-alpine3.10
+FROM python:3.7-alpine
 
 # Copy the worker
 COPY src /opt/opencti-connector-export-file-csv
