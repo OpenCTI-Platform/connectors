@@ -48,7 +48,9 @@ class Malpedia:
         if not self.client.health_check():
             self.helper.log_error("error in malpedia API health check")
 
-        self.knowledge_importer = KnowledgeImporter(self.helper, self.client)
+        self.knowledge_importer = KnowledgeImporter(
+            self.helper, self.client, self.confidence_level
+        )
 
     def get_interval(self) -> int:
         return int(self.INTERVAL_SEC)
@@ -139,7 +141,7 @@ class Malpedia:
                 exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(60)
+                exit(0)
 
     def _run_knowledge_importer(
         self, current_state: Mapping[str, Any]
