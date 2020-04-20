@@ -11,5 +11,6 @@ connector:
   log_level: 'info'
 
 malpedia:
-  MALPEDIA_API: 'https://malpedia.caad.fkie.fraunhofer.de/api/'
+  BASE_URL: 'https://malpedia.caad.fkie.fraunhofer.de/'
   AUTH_KEY: 'ChangeMe'
+  INTERVAL_SEC: 86400
