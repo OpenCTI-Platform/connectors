@@ -1,4 +1,4 @@
-FROM python:3.7.6-alpine3.11
+FROM python:3.7-alpine
 
 # Copy the connector
 COPY src /opt/opencti-connector-alienvault
