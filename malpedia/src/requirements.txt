@@ -1,4 +1,4 @@
 pycti
+pika
 PyYAML
-urllib3
 python-dateutil
