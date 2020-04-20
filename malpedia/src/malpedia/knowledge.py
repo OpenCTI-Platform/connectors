@@ -18,12 +18,16 @@ class KnowledgeImporter:
     _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
 
     def __init__(
-        self, helper: OpenCTIConnectorHelper, api_client: MalpediaClient
+        self,
+        helper: OpenCTIConnectorHelper,
+        api_client: MalpediaClient,
+        confidence_level: int,
     ) -> None:
         """Initialize Malpedia indicator importer."""
         self.helper = helper
         self.api_client = api_client
         self.guess_malware = True
+        self.confidence_level = confidence_level
 
         self.malware_guess_cache: Dict[str, str] = {}
 
@@ -31,23 +35,19 @@ class KnowledgeImporter:
         """Run importer."""
         self._info("Running Knowledge importer with state: {0}...", state)
 
-        bundle_objects = list()
         # create an identity for the coalition team
-        organization = stix2.Identity(
+        organization = self.helper.api.identity.create(
             name="Malpedia",
-            identity_class="organization",
+            type="Organization",
             description=" The primary goal of Malpedia is to provide a resource"
             " for rapid identification and actionable context when investigating"
             " malware. Openness to curated contributions shall ensure an"
             " accountable level of quality in order to foster meaningful and"
             " reproducible research.",
         )
-        # add organization in bundle
-        bundle_objects.append(organization)
 
         # Download the newest knowledge as json from the API
         families_json = self.api_client.query("get/families")
-        references_json = self.api_client.query("get/references")
 
         for family_id in families_json:
             if families_json[family_id]["common_name"] == "":
@@ -57,9 +57,11 @@ class KnowledgeImporter:
 
             updated = families_json[family_id]["updated"]
             if updated == "":
-                print(f"No updated for: {family_id} {families_json[family_id]}")
-            mp_modified = self._parse_timestamp(updated)
+                self._info(
+                    f"No updated value for: {family_id} {families_json[family_id]}"
+                )
 
+            self._info(f"Processing: {family_id} {families_json[family_id]}")
             # Use all names we have to guess an existing malware name
             to_guess = []
             to_guess.append(family_id)
@@ -72,35 +74,80 @@ class KnowledgeImporter:
             # If we cannot guess a malware in our data base we assum it is new
             # and create it:
             if guessed_malwares == {}:
-                stix_malware = stix2.Malware(
+                malware = self.helper.api.malware.create(
                     name=mp_name,
                     labels=["malware"],
                     created_by_ref=organization,
                     object_marking_refs=[stix2.TLP_WHITE],
-                    modified=mp_modified,
                     description=families_json[family_id]["description"],
                     custom_properties={
                         "x_opencti_aliases": families_json[family_id]["alt_names"]
                     },
                 )
-                bundle_objects.append(stix_malware)
-                # create stix bundle
-                bundle = stix2.Bundle(objects=bundle_objects)
 
-                # send data
-                self.helper.send_stix2_bundle(bundle=bundle.serialize(), update=True)
-
-                for ref_url in families_json[family_id]["url"]:
-                    ref_json = references_json[ref_url]
-                    if ref_json == {}:
-                        continue
-                    ref = stix2.ExternalReference(source_name="malpedia", url=ref_url,)
+                for ref_url in families_json[family_id]["urls"]:
+                    reference = self.helper.api.external_reference.create(
+                        source_name="malpedia",
+                        url=ref_url,
+                        description="Reference found in the Malpedia library",
+                    )
                     self.helper.api.stix_entity.add_external_reference(
-                        id=stix_malware["id"], external_reference_id=ref["id"],
+                        id=malware["id"], external_reference_id=reference["id"],
                     )
 
-        # send data
-        # self.helper.send_stix2_bundle(bundle=bundle.serialize(), update=True)
+                yara_rules = self.api_client.query("api/get/yara/" + family_id)
+                for tlp_level in yara_rules:
+                    # Honor malpedia TLP markings for yara rules
+                    TLP_MAPPING = {
+                        "tlp_white": stix2.TLP_WHITE,
+                        "tlp_green": stix2.TLP_GREEN,
+                        "tlp_amber": stix2.TLP_AMBER,
+                        "tlp_red": stix2.TLP_RED,
+                    }
+
+                    for yara_rule in tlp_level:
+                        indicator = self.helper.api.indicator.create(
+                            name=yara_rule,
+                            description="Yara from Malpedia",
+                            pattern_type="yara",
+                            indicator_pattern=tlp_level[yara_rule],
+                            main_observable_type="File-SHA256",
+                            marking_definitions=TLP_MAPPING[tlp_level],
+                        )
+
+                        self.helper.api.stix_relation.create(
+                            fromType="Indicator",
+                            fromId=indicator["id"],
+                            toType="Malware",
+                            toId=malware["id"],
+                            relationship_type="indicates",
+                            description="Yara rules for " + mp_name,
+                            weight=self.confidence_level,
+                            role_played="Unknown",
+                            createdByRef=organization,
+                            ignore_dates=True,
+                            update=True,
+                        )
+
+                samples = self.api_client.query("api/list/samples/" + family_id)
+                for sample in samples:
+                    observable = self.helper.api.stix_observable.create(
+                        type="File-SHA256",
+                        observable_value=sample["sha256"],
+                        description="Malpedia packer status: " + sample["status"],
+                        created_by_ref=organization,
+                        create_indicator=True,
+                    )
+
+                    self.helper.api.stix_observable_relation.create(
+                        fromId=observable["id"],
+                        fromType="File-SHA256",
+                        toId=malware["id"],
+                        toType="Malware",
+                        relationship_type="indicates",
+                        ignore_dates=True,
+                        created_by_ref=organization,
+                    )
 
     def _parse_timestamp(self, ts: str):
         try:

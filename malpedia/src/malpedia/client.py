@@ -37,5 +37,6 @@ class MalpediaClient:
 
     def current_version(self) -> int:
         response_json = self.query("get/version")
-        if not response_json == None:
-            return int(response_json["version"])
+        if response_json is None:
+            return 0
+        return int(response_json["version"])
