@@ -5,9 +5,11 @@ import datetime
 import dateutil.parser as dp
 import stix2
 
+from datetime import datetime
 from typing import Any, Dict, List, Mapping, Optional
 
 from .client import MalpediaClient
+from .utils import timestamp_to_datetime, datetime_to_timestamp
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
@@ -16,6 +18,7 @@ class KnowledgeImporter:
     """Malpedia Knowledge importer."""
 
     _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
+    _KNOWLEDGE_IMPORTER_STATE = "knowledge_importer_state"
 
     def __init__(
         self,
@@ -55,12 +58,6 @@ class KnowledgeImporter:
             else:
                 mp_name = families_json[family_id]["common_name"]
 
-            updated = families_json[family_id]["updated"]
-            if updated == "":
-                self._info(
-                    f"No updated value for: {family_id} {families_json[family_id]}"
-                )
-
             self._info(f"Processing: {family_id} {families_json[family_id]}")
             # Use all names we have to guess an existing malware name
             to_guess = []
@@ -77,7 +74,7 @@ class KnowledgeImporter:
                 malware = self.helper.api.malware.create(
                     name=mp_name,
                     labels=["malware"],
-                    created_by_ref=organization,
+                    created_by_ref=organization["id"],
                     object_marking_refs=[stix2.TLP_WHITE],
                     description=families_json[family_id]["description"],
                     custom_properties={
@@ -124,7 +121,7 @@ class KnowledgeImporter:
                             description="Yara rules for " + mp_name,
                             weight=self.confidence_level,
                             role_played="Unknown",
-                            createdByRef=organization,
+                            createdByRef=organization["id"],
                             ignore_dates=True,
                             update=True,
                         )
@@ -135,7 +132,7 @@ class KnowledgeImporter:
                         type="File-SHA256",
                         observable_value=sample["sha256"],
                         description="Malpedia packer status: " + sample["status"],
-                        created_by_ref=organization,
+                        created_by_ref=organization["id"],
                         create_indicator=True,
                     )
 
@@ -146,8 +143,15 @@ class KnowledgeImporter:
                         toType="Malware",
                         relationship_type="indicates",
                         ignore_dates=True,
-                        created_by_ref=organization,
+                        created_by_ref=organization["id"],
                     )
+
+        state_timestamp = datetime_to_timestamp(datetime.utcnow())
+        self._info(
+            "Knowldge importer completed, latest fetch {0}.",
+            timestamp_to_datetime(state_timestamp),
+        )
+        return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
 
     def _parse_timestamp(self, ts: str):
         try:
@@ -195,8 +199,8 @@ class KnowledgeImporter:
             self._create_filter("name", name),
             self._create_filter("alias", name),
         ]
-        for _filter in filters:
-            malwares = self.helper.api.malware.list(filters=_filter)
+        for fil in filters:
+            malwares = self.helper.api.malware.list(filters=fil)
             if malwares:
                 if len(malwares) > 1:
                     self._info("More then one malware for '{0}'", name)
