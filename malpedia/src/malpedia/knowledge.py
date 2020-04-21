@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia Knowledge importer module."""
 
-import datetime
 import dateutil.parser as dp
 import stix2
 
@@ -9,7 +8,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Mapping, Optional
 
 from .client import MalpediaClient
-from .utils import timestamp_to_datetime, datetime_to_timestamp
+from .utils import datetime_to_timestamp
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
@@ -36,7 +35,7 @@ class KnowledgeImporter:
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
-        self._info("Running Knowledge importer with state: {0}...", state)
+        self.helper.log_info("Running Knowledge importer with state: " + str(state))
 
         # create an identity for the coalition team
         organization = self.helper.api.identity.create(
@@ -58,7 +57,8 @@ class KnowledgeImporter:
             else:
                 mp_name = families_json[family_id]["common_name"]
 
-            self._info(f"Processing: {family_id} {families_json[family_id]}")
+            self.helper.log_info("Processing: " + mp_name)
+
             # Use all names we have to guess an existing malware name
             to_guess = []
             to_guess.append(family_id)
@@ -88,6 +88,7 @@ class KnowledgeImporter:
                         url=ref_url,
                         description="Reference found in the Malpedia library",
                     )
+
                     self.helper.api.stix_entity.add_external_reference(
                         id=malware["id"], external_reference_id=reference["id"],
                     )
@@ -147,10 +148,7 @@ class KnowledgeImporter:
                     )
 
         state_timestamp = datetime_to_timestamp(datetime.utcnow())
-        self._info(
-            "Knowldge importer completed, latest fetch {0}.",
-            timestamp_to_datetime(state_timestamp),
-        )
+        self.helper.log_info("Knowldge importer completed")
         return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
 
     def _parse_timestamp(self, ts: str):
