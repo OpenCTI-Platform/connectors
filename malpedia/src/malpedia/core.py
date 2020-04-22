@@ -31,14 +31,19 @@ class Malpedia:
         self.confidence_level = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config,
         )
+        self.update_existing_data = get_config_variable(
+            "CONNECTOR_UPDATE_EXISTING_DATA",
+            ["connector", "update_existing_data"],
+            config,
+        )
         self.BASE_URL = get_config_variable(
-            "BASE_URL", ["malpedia", "BASE_URL"], config
+            "MALPEDIA_BASE_URL", ["malpedia", "BASE_URL"], config
         )
         self.AUTH_KEY = get_config_variable(
-            "AUTH_KEY", ["malpedia", "AUTH_KEY"], config
+            "MALPEDIA_AUTH_KEY", ["malpedia", "AUTH_KEY"], config
         )
         self.INTERVAL_SEC = get_config_variable(
-            "INTERVAL_SEC", ["malpedia", "INTERVAL_SEC"], config
+            "MALPEDIA_INTERVAL_SEC", ["malpedia", "INTERVAL_SEC"], config
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.helper.log_info(f"loaded malpedia config: {config}")
@@ -49,7 +54,7 @@ class Malpedia:
             self.helper.log_error("error in malpedia API health check")
 
         self.knowledge_importer = KnowledgeImporter(
-            self.helper, self.client, self.confidence_level
+            self.helper, self.client, self.confidence_level, self.update_existing_data
         )
 
     def get_interval(self) -> int:
