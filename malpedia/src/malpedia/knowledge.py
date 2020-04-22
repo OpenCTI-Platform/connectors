@@ -24,13 +24,14 @@ class KnowledgeImporter:
         helper: OpenCTIConnectorHelper,
         api_client: MalpediaClient,
         confidence_level: int,
+        update_data: bool,
     ) -> None:
         """Initialize Malpedia indicator importer."""
         self.helper = helper
         self.api_client = api_client
         self.guess_malware = True
         self.confidence_level = confidence_level
-
+        self.update_data = update_data
         self.malware_guess_cache: Dict[str, str] = {}
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -70,7 +71,7 @@ class KnowledgeImporter:
 
             # If we cannot guess a malware in our data base we assum it is new
             # and create it:
-            if guessed_malwares == {}:
+            if guessed_malwares == {} or self.update_data:
                 malware = self.helper.api.malware.create(
                     name=mp_name,
                     labels=["malware"],
