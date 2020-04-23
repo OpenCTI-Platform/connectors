@@ -25,10 +25,11 @@ class MalpediaClient:
                 self.api_url + url_path,
                 headers={"Authorization": "apitoken " + self.api_key},
             )
+            data = r.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"error in malpedia query: {e}")
             return None
-        return r.json()
+        return data
 
     def health_check(self) -> bool:
         response_json = self.query("check/apikey")

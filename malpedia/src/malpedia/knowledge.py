@@ -2,7 +2,6 @@
 """OpenCTI Malpedia Knowledge importer module."""
 
 import dateutil.parser as dp
-import stix2
 
 from datetime import datetime
 from typing import Any, Dict, List, Mapping, Optional
@@ -18,6 +17,12 @@ class KnowledgeImporter:
 
     _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
     _KNOWLEDGE_IMPORTER_STATE = "knowledge_importer_state"
+    _TLP_MAPPING = {
+        "tlp_white": "TLP:WHITE",
+        "tlp_green": "TLP:GREEN",
+        "tlp_amber": "TLP:AMBER",
+        "tlp_red": "TLP:RED",
+    }
 
     def __init__(
         self,
@@ -72,18 +77,23 @@ class KnowledgeImporter:
             # If we cannot guess a malware in our data base we assum it is new
             # and create it:
             if guessed_malwares == {} or self.update_data:
+
+                descr = families_json[family_id]["description"]
+                alt_names = families_json[family_id]["alt_names"]
+
+                if descr == "" or alt_names == "":
+                    self.helper.log_error("Empty descr or alt_name for:" + family_id)
+
                 malware = self.helper.api.malware.create(
                     name=mp_name,
-                    labels=["malware"],
-                    created_by_ref=organization["id"],
-                    object_marking_refs=[stix2.TLP_WHITE],
-                    description=families_json[family_id]["description"],
-                    custom_properties={
-                        "x_opencti_aliases": families_json[family_id]["alt_names"]
-                    },
+                    createdByRef=organization["id"],
+                    description=descr,
+                    alias=alt_names,
                 )
 
                 for ref_url in families_json[family_id]["urls"]:
+                    if ref_url == "":
+                        continue
                     reference = self.helper.api.external_reference.create(
                         source_name="malpedia",
                         url=ref_url,
@@ -93,25 +103,42 @@ class KnowledgeImporter:
                     self.helper.api.stix_entity.add_external_reference(
                         id=malware["id"], external_reference_id=reference["id"],
                     )
+                    self.helper.log_info("Done with references for: " + family_id)
 
-                yara_rules = self.api_client.query("api/get/yara/" + family_id)
+                yara_rules = self.api_client.query("get/yara/" + family_id)
+
+                self.helper.log_info("importing yara rules for: " + family_id)
+
                 for tlp_level in yara_rules:
-                    # Honor malpedia TLP markings for yara rules
-                    TLP_MAPPING = {
-                        "tlp_white": stix2.TLP_WHITE,
-                        "tlp_green": stix2.TLP_GREEN,
-                        "tlp_amber": stix2.TLP_AMBER,
-                        "tlp_red": stix2.TLP_RED,
-                    }
 
-                    for yara_rule in tlp_level:
+                    self.helper.log_info(
+                        f"processing tlp_level ({tlp_level} with marking ({self._TLP_MAPPING[tlp_level]}))"
+                    )
+
+                    # Honor malpedia TLP markings for yara rules
+                    for yara_rule in yara_rules[tlp_level]:
+                        if yara_rule == "" or yara_rules[tlp_level][yara_rule] == "":
+                            continue
+
+                        my_tlp = self._TLP_MAPPING[tlp_level]
+                        if my_tlp == "":
+                            continue
+
+                        self.helper.log_info(
+                            "processing yara_rule ("
+                            + yara_rule
+                            + ") with length ("
+                            + str(len(yara_rules[tlp_level][yara_rule]))
+                            + ")"
+                        )
                         indicator = self.helper.api.indicator.create(
                             name=yara_rule,
                             description="Yara from Malpedia",
                             pattern_type="yara",
-                            indicator_pattern=tlp_level[yara_rule],
-                            main_observable_type="File-SHA256",
-                            marking_definitions=TLP_MAPPING[tlp_level],
+                            indicator_pattern=yara_rules[tlp_level][yara_rule],
+                            markingDefinitions=[my_tlp],
+                            main_observable_type="file-sha256",
+                            createdByRef=organization["id"],
                         )
 
                         self.helper.api.stix_relation.create(
@@ -128,24 +155,43 @@ class KnowledgeImporter:
                             update=True,
                         )
 
-                samples = self.api_client.query("api/list/samples/" + family_id)
+                samples = self.api_client.query("list/samples/" + family_id)
                 for sample in samples:
-                    observable = self.helper.api.stix_observable.create(
+                    if sample["sha256"] == "":
+                        continue
+                    hash_sha256 = sample["sha256"]
+
+                    self.helper.log_info("Processing sample: " + hash_sha256)
+
+                    self.helper.api.stix_observable.create(
                         type="File-SHA256",
-                        observable_value=sample["sha256"],
+                        observable_value=hash_sha256,
                         description="Malpedia packer status: " + sample["status"],
-                        created_by_ref=organization["id"],
-                        create_indicator=True,
+                        createdByRef=organization["id"],
+                        createIndicator=True,
                     )
 
-                    self.helper.api.stix_observable_relation.create(
-                        fromId=observable["id"],
-                        fromType="File-SHA256",
-                        toId=malware["id"],
+                    indicator = self.helper.api.indicator.read(
+                        filters=[
+                            {
+                                "key": "indicator_pattern",
+                                "values": [f"[file:hashes.SHA256 = '{hash_sha256}']"],
+                                "operator": "match" if len(hash_sha256) > 500 else "eq",
+                            }
+                        ]
+                    )
+
+                    self.helper.api.stix_relation.create(
+                        fromType="Indicator",
+                        fromId=indicator["id"],
                         toType="Malware",
+                        toId=malware["id"],
                         relationship_type="indicates",
+                        description="Sample in Malpedia database",
+                        weight=self.confidence_level,
+                        createdByRef=organization["id"],
                         ignore_dates=True,
-                        created_by_ref=organization["id"],
+                        update=True,
                     )
 
         state_timestamp = datetime_to_timestamp(datetime.utcnow())
@@ -210,3 +256,8 @@ class KnowledgeImporter:
     @staticmethod
     def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
         return [{"key": key, "values": [value]}]
+
+    def _fetch_indicator_by_name(self, name: str) -> Optional[Mapping[str, Any]]:
+        values = [name]
+        filters = [{"key": "name", "values": values, "operator": "eq"}]
+        return self.helper.api.indicator.read(filters=filters)
