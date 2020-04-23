@@ -3,17 +3,17 @@ services:
   connector-cve:
     image: opencti/connector-cve:3.1.0
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=Common Vulnerabilities and Exposures
-      - CONNECTOR_SCOPE=identity,vulnerability
-      - CONNECTOR_CONFIDENCE_LEVEL=3
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
-      - CONNECTOR_LOG_LEVEL=info
-      - CVE_IMPORT_HISTORY=true
-      - CVE_NVD_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz
-      - CVE_HISTORY_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.1/
-      - CVE_INTERVAL=7 # Days
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_TYPE=${CONNECTOR_TYPE}
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
+      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL}
+      - CONNECTOR_UPDATE_EXISTING_DATA=${CONNECTOR_UPDATE_EXISTING_DATA}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
+      - CVE_IMPORT_HISTORY=${CVE_IMPORT_HISTORY}
+      - CVE_NVD_DATA_FEED=${CVE_NVD_DATA_FEED}
+      - CVE_HISTORY_DATA_FEED=${CVE_HISTORY_DATA_FEED}
+      - CVE_INTERVAL=${CVE_INTERVAL} # Days
     restart: always

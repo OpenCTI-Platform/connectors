@@ -3,14 +3,14 @@ services:
   connector-ipinfo:
     image: opencti/connector-ipinfo:3.1.0
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
-      - CONNECTOR_NAME=IpInfo
-      - CONNECTOR_SCOPE='ipv4-addr'
-      - CONNECTOR_CONFIDENCE_LEVEL=3
-      - CONNECTOR_LOG_LEVEL=info
-      - IPINFO_TOKEN=ChangeMe
-      - IPINFO_MAX_TLP=TLP:AMBER
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_TYPE=${CONNECTOR_TYPE}
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
+      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
+      - IPINFO_TOKEN=${IPINFO_TOKEN}
+      - IPINFO_MAX_TLP=${IPINFO_MAX_TLP}
     restart: always

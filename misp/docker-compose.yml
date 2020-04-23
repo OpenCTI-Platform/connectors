@@ -3,21 +3,21 @@ services:
   connector-misp:
     image: opencti/connector-misp:3.1.0
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=MISP
-      - CONNECTOR_SCOPE=misp
-      - CONNECTOR_CONFIDENCE_LEVEL=3
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
-      - MISP_URL=http://localhost # Required
-      - MISP_KEY=ChangeMe # Required
-      - MISP_SSL_VERIFY=False # Required
-      - MISP_CREATE_REPORTS=True # Required, create report for MISP event
-      - MISP_REPORT_CLASS=MISP Event # Optional, report_class if creating report for event
-      - MISP_IMPORT_FROM_DATE=2000-01-01 # Optional, import all event from this date
-      - MISP_IMPORT_TAGS=opencti:import,type:osint # Optional, list of tags used for import events
-      - MISP_INTERVAL=1 # Required, in minutes
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_TYPE=${CONNECTOR_TYPE}
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
+      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL}
+      - CONNECTOR_UPDATE_EXISTING_DATA=${CONNECTOR_UPDATE_EXISTING_DATA}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
+      - MISP_URL=${MISP_URL} # Required
+      - MISP_KEY=${MISP_KEY} # Required
+      - MISP_SSL_VERIFY=${MISP_SSL_VERIFY} # Required
+      - MISP_CREATE_REPORTS=${MISP_CREATE_REPORTS} # Required, create report for MISP event
+      - MISP_REPORT_CLASS=${MISP_REPORT_CLASS} # Optional, report_class if creating report for event
+      - MISP_IMPORT_FROM_DATE=${MISP_IMPORT_FROM_DATE} # Optional, import all event from this date
+      - MISP_IMPORT_TAGS=${MISP_IMPORT_TAGS} # Optional, list of tags used for import events
+      - MISP_INTERVAL=${MISP_INTERVAL} # Required, in minutes
     restart: always
