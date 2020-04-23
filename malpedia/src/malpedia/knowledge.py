@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia Knowledge importer module."""
 
+import re
 import dateutil.parser as dp
 
 from datetime import datetime
@@ -117,7 +118,8 @@ class KnowledgeImporter:
 
                     # Honor malpedia TLP markings for yara rules
                     for yara_rule in yara_rules[tlp_level]:
-                        if yara_rule == "" or yara_rules[tlp_level][yara_rule] == "":
+                        raw_rule = yara_rules[tlp_level][yara_rule]
+                        if yara_rule == "" or raw_rule == "":
                             continue
 
                         my_tlp = self._TLP_MAPPING[tlp_level]
@@ -131,6 +133,14 @@ class KnowledgeImporter:
                             + str(len(yara_rules[tlp_level][yara_rule]))
                             + ")"
                         )
+
+                        # extract yara date
+                        extract = re.search("([0-9]{4}\-[0-9]{2}\-[0-9]{2})", raw_rule)
+                        if extract is None:
+                            date = families_json["date"]
+                        else:
+                            date = self._parse_timestamp(extract.group(1))
+
                         indicator = self.helper.api.indicator.create(
                             name=yara_rule,
                             description="Yara from Malpedia",
@@ -139,6 +149,7 @@ class KnowledgeImporter:
                             markingDefinitions=[my_tlp],
                             main_observable_type="file-sha256",
                             createdByRef=organization["id"],
+                            valid_from=date,
                         )
 
                         self.helper.api.stix_relation.create(
@@ -198,12 +209,12 @@ class KnowledgeImporter:
         self.helper.log_info("Knowldge importer completed")
         return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
 
-    def _parse_timestamp(self, ts: str):
+    def _parse_timestamp(self, ts: str) -> str:
         try:
-            return dp.isoparse(ts)
+            return dp.isoparse(ts).strftime("%Y-%m-%dT%H:%M:%S+00:00")
         except ValueError:
             self._error("error parsing ts: ", ts)
-            return datetime.datetime.now()
+            return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
