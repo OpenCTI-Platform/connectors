@@ -264,11 +264,11 @@ class KnowledgeImporter:
                 return malware["stix_id_key"]
         return None
 
-    @staticmethod
-    def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
-        return [{"key": key, "values": [value]}]
-
     def _fetch_indicator_by_name(self, name: str) -> Optional[Mapping[str, Any]]:
         values = [name]
         filters = [{"key": "name", "values": values, "operator": "eq"}]
         return self.helper.api.indicator.read(filters=filters)
+
+    @staticmethod
+    def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
+        return [{"key": key, "values": [value]}]
