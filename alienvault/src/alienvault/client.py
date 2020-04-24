@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import List
 
-from OTXv2 import OTXv2
+from OTXv2 import OTXv2  # type: ignore
 
 from pydantic import parse_obj_as
 
@@ -23,6 +23,7 @@ class AlienVaultClient:
     def get_pulses_subscribed(
         self, modified_since: datetime, limit: int = 20
     ) -> List[Pulse]:
+        """Return subscribed pulses."""
         pulse_data = self.otx.getsince(modified_since, limit=limit)
         pulses = parse_obj_as(List[Pulse], pulse_data)
         return pulses

@@ -5,9 +5,9 @@ import logging
 from datetime import datetime
 from typing import List, Mapping
 
-from pycti.utils.constants import CustomProperties, ObservableTypes
+from pycti.utils.constants import CustomProperties, ObservableTypes  # type: ignore
 
-from stix2 import (
+from stix2 import (  # type: ignore
     AttackPattern,
     Bundle,
     ExternalReference,
@@ -20,7 +20,7 @@ from stix2 import (
     Report,
     Vulnerability,
 )
-from stix2.v20 import _DomainObject
+from stix2.v20 import _DomainObject  # type: ignore
 
 from alienvault.models import Pulse, PulseIndicator
 from alienvault.utils import (
@@ -35,6 +35,7 @@ from alienvault.utils import (
     create_malware,
     create_object_path,
     create_object_refs,
+    create_organization,
     create_sector,
     create_tag,
     create_targets_relationships,
@@ -105,7 +106,7 @@ class PulseBundleBuilder:
     def __init__(
         self,
         pulse: Pulse,
-        author: Identity,
+        provider: Identity,
         source_name: str,
         object_marking_refs: List[MarkingDefinition],
         confidence_level: int,
@@ -117,7 +118,8 @@ class PulseBundleBuilder:
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self.pulse = pulse
-        self.author = author
+        self.pulse_author = self._determine_pulse_author(pulse, provider)
+        self.provider = provider
         self.source_name = source_name
         self.object_marking_refs = object_marking_refs
         self.confidence_level = confidence_level
@@ -128,12 +130,28 @@ class PulseBundleBuilder:
         self.first_seen = self.pulse.created
         self.last_seen = self.pulse.modified
 
+    @staticmethod
+    def _determine_pulse_author(pulse: Pulse, provider: Identity) -> Identity:
+        pulse_author = pulse.author_name
+        if not pulse_author:
+            return provider
+        if pulse_author == provider.name:
+            return provider
+        return create_organization(pulse_author, author=provider)
+
+    def _create_authors(self) -> List[Identity]:
+        authors = []
+        if self.pulse_author is not self.provider:
+            authors.append(self.provider)
+        authors.append(self.pulse_author)
+        return authors
+
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
         intrusion_sets = []
         adversary = self.pulse.adversary
         if adversary is not None and adversary:
             intrusion_set = create_intrusion_set(
-                adversary, self.author, self.object_marking_refs
+                adversary, self.pulse_author, self.object_marking_refs
             )
             intrusion_sets.append(intrusion_set)
         return intrusion_sets
@@ -144,7 +162,7 @@ class PulseBundleBuilder:
         # Create malwares based on guessed malwares.
         for name, stix_id in self.guessed_malwares.items():
             malware = create_malware(
-                name, self.author, self.object_marking_refs, malware_id=stix_id
+                name, self.pulse_author, self.object_marking_refs, malware_id=stix_id
             )
             malware_list.append(malware)
 
@@ -153,7 +171,7 @@ class PulseBundleBuilder:
             if not malware_name or malware_name in self.guessed_malwares:
                 continue
             malware = create_malware(
-                malware_name, self.author, self.object_marking_refs
+                malware_name, self.pulse_author, self.object_marking_refs
             )
             malware_list.append(malware)
 
@@ -163,7 +181,7 @@ class PulseBundleBuilder:
         self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_uses_relationships(
-            self.author,
+            self.pulse_author,
             sources,
             targets,
             self.object_marking_refs,
@@ -175,7 +193,9 @@ class PulseBundleBuilder:
     def _create_target_sectors(self) -> List[Identity]:
         target_sectors = []
         for industry in self.pulse.industries:
-            sector = create_sector(industry, self.author)
+            if not industry:
+                continue
+            sector = create_sector(industry, self.pulse_author)
             target_sectors.append(sector)
         return target_sectors
 
@@ -183,7 +203,7 @@ class PulseBundleBuilder:
         self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_targets_relationships(
-            self.author,
+            self.pulse_author,
             sources,
             targets,
             self.object_marking_refs,
@@ -195,7 +215,9 @@ class PulseBundleBuilder:
     def _create_target_countries(self) -> List[Identity]:
         target_countries = []
         for target_country in self.pulse.targeted_countries:
-            country = create_country(target_country, self.author)
+            if not target_country:
+                continue
+            country = create_country(target_country, self.pulse_author)
             target_countries.append(country)
         return target_countries
 
@@ -211,7 +233,7 @@ class PulseBundleBuilder:
             )
             attack_pattern = create_attack_pattern(
                 attack_id_clean,
-                self.author,
+                self.pulse_author,
                 external_references,
                 self.object_marking_refs,
             )
@@ -224,7 +246,7 @@ class PulseBundleBuilder:
         )
         return create_vulnerability(
             name,
-            self.author,
+            self.pulse_author,
             vulnerability_external_references,
             self.object_marking_refs,
         )
@@ -252,7 +274,7 @@ class PulseBundleBuilder:
     ) -> Indicator:
         return create_indicator(
             name,
-            self.author,
+            self.pulse_author,
             description,
             valid_from,
             observable_type,
@@ -365,7 +387,7 @@ class PulseBundleBuilder:
         self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
         return create_indicates_relationships(
-            self.author,
+            self.pulse_author,
             sources,
             targets,
             self.object_marking_refs,
@@ -379,7 +401,7 @@ class PulseBundleBuilder:
         tags = self._create_report_tags()
 
         return Report(
-            created_by_ref=self.author,
+            created_by_ref=self.pulse_author,
             name=self.pulse.name,
             description=self.pulse.description,
             published=self.pulse.created,
@@ -414,6 +436,8 @@ class PulseBundleBuilder:
     def _create_report_tags(self) -> List[Mapping[str, str]]:
         tags = []
         for pulse_tag in self.pulse.tags:
+            if not pulse_tag:
+                continue
             tag = create_tag(self.source_name, pulse_tag, self._TAG_COLOR)
             tags.append(tag)
         return tags
@@ -424,7 +448,11 @@ class PulseBundleBuilder:
     def build(self) -> Bundle:
         """Build pulse bundle."""
         # Prepare STIX2 bundle.
-        bundle_objects = [self.author]
+        bundle_objects = []
+
+        # Create author(s) and add to bundle.
+        authors = self._create_authors()
+        bundle_objects.extend(authors)
 
         # Add object marking definitions to bundle.
         bundle_objects.extend(self.object_marking_refs)
