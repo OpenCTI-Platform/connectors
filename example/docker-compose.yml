@@ -1,0 +1,15 @@
+version: "3"
+services:
+  connector-example:
+    image: opencti/connector-example:3.1.0
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=example
+      - CONNECTOR_SCOPE='ipv4-addr'
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_LOG_LEVEL=info
+      - EXAMPLE_VARIABLE=ChangeMe
+    restart: always
