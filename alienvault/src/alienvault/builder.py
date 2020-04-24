@@ -402,6 +402,8 @@ class PulseBundleBuilder:
 
         return Report(
             created_by_ref=self.pulse_author,
+            created=self.pulse.created,
+            modified=self.pulse.modified,
             name=self.pulse.name,
             description=self.pulse.description,
             published=self.pulse.created,
