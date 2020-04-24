@@ -3,10 +3,10 @@
 
 from typing import Any, Dict, List, Mapping, Optional
 
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore # noqa: E501
 
-from stix2 import Bundle, Identity, MarkingDefinition
-from stix2.exceptions import STIXError
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2.exceptions import STIXError  # type: ignore
 
 from alienvault.builder import PulseBundleBuilder
 from alienvault.client import AlienVaultClient
