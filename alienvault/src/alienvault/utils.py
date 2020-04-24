@@ -4,9 +4,9 @@
 from datetime import datetime
 from typing import List, Mapping, Optional, Union
 
-from pycti.utils.constants import CustomProperties
+from pycti.utils.constants import CustomProperties  # type: ignore
 
-from stix2 import (
+from stix2 import (  # type: ignore
     AttackPattern,
     EqualityComparisonExpression,
     ExternalReference,
@@ -19,9 +19,31 @@ from stix2 import (
     ObservationExpression,
     Relationship,
     StringConstant,
+    TLP_AMBER,
+    TLP_GREEN,
+    TLP_RED,
+    TLP_WHITE,
     Vulnerability,
 )
-from stix2.v20 import _DomainObject, _RelationshipObject
+from stix2.v20 import _DomainObject, _RelationshipObject  # type: ignore
+
+
+_TLP_MARKING_DEFINITION_MAPPING = {
+    "white": TLP_WHITE,
+    "green": TLP_GREEN,
+    "amber": TLP_AMBER,
+    "red": TLP_RED,
+}
+
+DEFAULT_TLP_MARKING_DEFINITION = TLP_WHITE
+
+
+def get_tlp_string_marking_definition(tlp: str) -> MarkingDefinition:
+    """Get marking definition for given TLP."""
+    marking_definition = _TLP_MARKING_DEFINITION_MAPPING.get(tlp.lower())
+    if marking_definition is None:
+        raise ValueError(f"Invalid TLP value '{tlp}'")
+    return marking_definition
 
 
 def create_equality_observation_expression_str(
@@ -44,6 +66,16 @@ def iso_datetime_str_to_datetime(string):
         return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%f")
     except ValueError:
         return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S")
+
+
+def create_organization(name: str, author: Optional[Identity] = None) -> Identity:
+    """Create an organization."""
+    return Identity(
+        created_by_ref=author,
+        name=name,
+        identity_class="organization",
+        custom_properties={CustomProperties.IDENTITY_TYPE: "organization"},
+    )
 
 
 def create_external_reference(

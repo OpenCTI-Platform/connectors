@@ -7,16 +7,20 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
 
-from pycti.connector.opencti_connector_helper import (
+from pycti.connector.opencti_connector_helper import (  # type: ignore
     OpenCTIConnectorHelper,
     get_config_variable,
 )
-from pycti.utils.constants import CustomProperties
 
-from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+from stix2 import Identity, MarkingDefinition  # type: ignore
 
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter
+from alienvault.utils import (
+    DEFAULT_TLP_MARKING_DEFINITION,
+    create_organization,
+    get_tlp_string_marking_definition,
+)
 
 
 class AlienVault:
@@ -35,13 +39,6 @@ class AlienVault:
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
 
-    _CONFIG_TLP_MAPPING = {
-        "white": TLP_WHITE,
-        "green": TLP_GREEN,
-        "amber": TLP_AMBER,
-        "red": TLP_RED,
-    }
-
     _CONFIG_REPORT_STATUS_MAPPING = {
         "new": 0,
         "in progress": 1,
@@ -56,8 +53,6 @@ class AlienVault:
     def __init__(self) -> None:
         """Initialize AlienVault connector."""
         config = self._read_configuration()
-
-        self.helper = OpenCTIConnectorHelper(config)
 
         # AlienVault connector configuration
         base_url = self._get_configuration(config, self._CONFIG_BASE_URL)
@@ -88,6 +83,10 @@ class AlienVault:
             self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
 
+        # Create OpenCTI connector helper
+        self.helper = OpenCTIConnectorHelper(config)
+
+        # Create AlienVault author
         author = self._create_author()
 
         # Create AlienVault client
@@ -108,11 +107,7 @@ class AlienVault:
 
     @staticmethod
     def _create_author() -> Identity:
-        return Identity(
-            name="AlienVault",
-            identity_class="organization",
-            custom_properties={CustomProperties.IDENTITY_TYPE: "organization"},
-        )
+        return create_organization("AlienVault")
 
     @staticmethod
     def _read_configuration() -> Dict[str, str]:
@@ -145,14 +140,15 @@ class AlienVault:
         cls, tlp_value: Optional[str]
     ) -> MarkingDefinition:
         if tlp_value is None:
-            return TLP_WHITE
-        return cls._CONFIG_TLP_MAPPING[tlp_value.lower()]
+            return DEFAULT_TLP_MARKING_DEFINITION
+        return get_tlp_string_marking_definition(tlp_value)
 
     @classmethod
     def _convert_report_status_str_to_report_status_int(cls, report_status: str) -> int:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
     def run(self):
+        """Run AlienVault connector."""
         self._info("Starting AlienVault connector...")
         while True:
             self._info("Running AlienVault connector...")
