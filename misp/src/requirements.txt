@@ -1,4 +1,4 @@
-pycti==3.1.2
+pycti==3.2.0
 PyYAML==5.3.1
 urllib3==1.25.9
 pymisp==2.4.119.1
