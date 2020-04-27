@@ -1,4 +1,2 @@
-requests
-PyYAML
-pika
-pycti
+pycti==3.1.1
+PyYAML==5.3.1
