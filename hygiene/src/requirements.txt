@@ -1,4 +1,3 @@
-PyYAML
-pycti
-pika
-pymispwarninglists
+PyYAML=5.3.1
+pycti=3.1.2
+pymispwarninglists=1.0
