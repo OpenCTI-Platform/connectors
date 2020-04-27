@@ -4,53 +4,19 @@
 [![CircleCI](https://circleci.com/gh/OpenCTI-Platform/connectors.svg?style=shield)](https://circleci.com/gh/OpenCTI-Platform/connectors/tree/master)
 [![Slack Status](https://slack.luatix.org/badge.svg)](https://slack.luatix.org)
 
-The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications. To know how to enable connectors on OpenCTI, please read the [dedicated documentation](https://opencti-platform.github.io/docs/installation/connectors).
+The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications. To know how to enable connectors on OpenCTI, please read the [dedicated documentation](https://www.notion.so/luatix/Connectors-4586c588462d4a1fb5e661f2d9837db8).
 
 ## Connectors list and statuses
 
-### External import connectors 
+This repository is used to host connectors that are supported by the core development team of OpenCTI. Nevertheless, the community is also developping a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the list of all available connectors and plugins in the [OpenCTI ecosystem dedicated space](https://www.notion.so/luatix/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
 
-| Connector                               | Description                                   | Status                    | Last version                    |
-| ----------------------------------------|-----------------------------------------------|---------------------------|---------------------------------|
-| [AlienVault](alienvault)                | Import pulses from AlienVault                 | Released                  | 3.1.0                           |
-| [AMITT](amitt)                          | Import datasets of the AMITT framework        | Released                  | 3.1.0                           |
-| [CrowdStrike](crowdstrike)              | Import knowledge from CrowdStrike Falcon      | Released                  | 3.1.0                           |
-| [Cryptolaemus](cryptolaemus)            | Import Emotet C2 from the Cryptolaemus group  | Released                  | 3.1.0                           |
-| [CVE](cve)                              | Import CVE vulnerabilities                    | Released                  | 3.1.0                           |
-| [COVID-19 CTC](cyber-threat-coalition)  | Import the COVID-19 CTC blacklist             | Released                  | 3.1.0                           |
-| [Malpedia](malpedia)                    | Import the Malpedia malwares and indicators   | In development            | -                               |
-| [MISP](misp)                            | Import MISP events                            | Released                  | 3.1.0                           |
-| [MITRE](mitre)                          | Import the MITRE ATT&CK / PRE-ATT&CK datasets | Released                  | 3.1.0                           |
-| [OpenCTI](opencti)                      | Import the OpenCTI datasets                   | Released                  | 3.1.0                           |
+## Contributing
 
-### Internal import files connectors
-
-| Connector                                               | Description                                   | Status                    | Last version                    |
-| --------------------------------------------------------|-----------------------------------------------|---------------------------|---------------------------------|
-| [ImportFilePdfObservables](import-file-pdf-observables) | Import observables from PDF files             | Released                  | 3.1.0                           |
-| [ImportFileStix](import-file-stix)                      | Import knwoledge from STIX 2.0 bundles        | Released                  | 3.1.0                           |
-
-### Internal enrichment connectors
-
-| Connector                         | Description                                                 | Status                    | Last version                    |
-| ----------------------------------|-------------------------------------------------------------|---------------------------|---------------------------------|
-| [IpInfo](ipinfo)                  | Enrich IP addresses with geolocation                        | Released                  | 3.1.0                           |
-| [VirusTotal](virustotal)          | Enrich file hashes with corresponding hashes and file names | Released                  | 3.1.0                           |
-
-### Internal export files connectors
-
-| Connector                                | Description                                   | Status                    | Last version                    |
-| -----------------------------------------|-----------------------------------------------|---------------------------|---------------------------------|
-| [ExportFileCSV](export-file-csv)         | Export entities in CSV                        | Released                  | 3.1.0                           |
-| [ExportFileSTIX](export-file-stix)       | Export entities in STIX 2.0 bundles           | Released                  | 3.1.0                           |
+We welcome your **[contributions for new connectors](https://www.notion.so/luatix/Connectors-70637122e18442a88ae666897f959023)**. We encourage you to look at the source of existing connector before developing your own. If you want to make your connector available to the community, **please keep it on your own repository or your own Github organization** and ask us to reference it in the [OpenCTI ecosystem](https://www.notion.so/luatix/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76) by commenting the notion.se page.
 
 ## License
 
 **Unless specified otherwise**, connectors are released under the [Apache 2.0](https://github.com/OpenCTI-Platform/connectors/blob/master/LICENSE). If a connector is released by its author under a different license, the subfolder corresponding to it will contain a *LICENSE* file.
-
-## Contributing
-
-We welcome your **[contributions for new connectors](https://opencti-platform.github.io/docs/development/connectors)**. Please feel free to fork the code, play with it, make some patches and send us pull requests using [issues](https://github.com/OpenCTI-Platform/connectors/issues).
 
 ## About
 
