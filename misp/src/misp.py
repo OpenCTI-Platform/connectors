@@ -196,12 +196,16 @@ class Misp:
                 name=event["Event"]["Orgc"]["name"], identity_class="organization"
             )
             # Elements
-            event_elements = self.prepare_elements(event["Event"]["Galaxy"])
+            event_elements = self.prepare_elements(event["Event"]["Galaxy"], author)
             # Markings
             if "Tag" in event["Event"]:
                 event_markings = self.resolve_markings(event["Event"]["Tag"])
             else:
                 event_markings = [TLP_WHITE]
+            # Tags
+            event_tags = []
+            if "Tag" in event["Event"]:
+                event_tags = self.resolve_tags(event["Event"]["Tag"])
             # ExternalReference
             event_external_reference = ExternalReference(
                 source_name=self.helper.connect_name,
@@ -309,6 +313,7 @@ class Misp:
                     custom_properties={
                         "x_opencti_report_class": self.misp_report_class,
                         "x_opencti_object_status": 2,
+                        "x_opencti_tags": event_tags
                     },
                 )
                 bundle_objects.append(report)
@@ -329,11 +334,15 @@ class Misp:
             for resolved_attribute in resolved_attributes:
                 ### Pre-process
                 # Elements
-                attribute_elements = self.prepare_elements(attribute["Galaxy"])
-                # Markings
+                attribute_elements = self.prepare_elements(attribute["Galaxy"], author)
+                # Markings & Tags
+                attribute_tags = []
                 if "Tag" in attribute:
                     attribute_markings = self.resolve_markings(
                         attribute["Tag"], with_default=False
+                    )
+                    attribute_tags = self.resolve_tags(
+                        attribute["Tag"]
                     )
                     if len(attribute_markings) == 0:
                         attribute_markings = event_markings
@@ -345,6 +354,7 @@ class Misp:
                 observable_value = resolved_attribute["value"]
                 name = resolved_attribute["value"]
                 pattern_type = "stix"
+                # observable type is yara for instance
                 if observable_type in PATTERNTYPES:
                     pattern_type = observable_type
                     observable_type = "Unknown"
@@ -357,8 +367,10 @@ class Misp:
                         if len(attribute["comment"]) > 0
                         else observable_type
                     )
+                # observable type is not in stix 2
                 elif observable_type not in OPENCTISTIX2:
                     return None
+                # observable type is in stix
                 else:
                     if "transform" in OPENCTISTIX2[observable_type]:
                         if (
@@ -378,23 +390,25 @@ class Misp:
                         )
                     )
                     pattern = genuine_pattern
-                    indicator = Indicator(
-                        name=name,
-                        description=attribute["comment"],
-                        pattern=genuine_pattern,
-                        valid_from=datetime.utcfromtimestamp(
-                            int(attribute["timestamp"])
-                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        labels=["malicious-activity"],
-                        created_by_ref=author,
-                        object_marking_refs=attribute_markings,
-                        custom_properties={
-                            "x_opencti_indicator_pattern": pattern,
-                            "x_opencti_observable_type": observable_type,
-                            "x_opencti_observable_value": observable_value,
-                            "x_opencti_pattern_type": pattern_type,
-                        },
-                    )
+
+                indicator = Indicator(
+                    name=name,
+                    description=attribute["comment"],
+                    pattern=genuine_pattern,
+                    valid_from=datetime.utcfromtimestamp(
+                        int(attribute["timestamp"])
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    labels=["malicious-activity"],
+                    created_by_ref=author,
+                    object_marking_refs=attribute_markings,
+                    custom_properties={
+                        "x_opencti_indicator_pattern": pattern,
+                        "x_opencti_observable_type": observable_type,
+                        "x_opencti_observable_value": observable_value,
+                        "x_opencti_pattern_type": pattern_type,
+                        "x_opencti_tags": attribute_tags
+                    },
+                )
 
                 ### Create the relationships
                 relationships = []
@@ -580,7 +594,7 @@ class Misp:
         else:
             return result_table
 
-    def prepare_elements(self, galaxies):
+    def prepare_elements(self, galaxies, author):
         elements = {
             "intrusion_sets": [],
             "malwares": [],
@@ -618,6 +632,7 @@ class Misp:
                                 name=name,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
+                                created_by_ref=author,
                                 custom_properties={"x_opencti_aliases": aliases},
                             )
                         )
@@ -645,6 +660,7 @@ class Misp:
                                 name=name,
                                 labels=["malware"],
                                 description=galaxy_entity["description"],
+                                created_by_ref=author,
                                 custom_properties={"x_opencti_aliases": aliases},
                             )
                         )
@@ -666,6 +682,7 @@ class Misp:
                                 name=name,
                                 labels=["tool"],
                                 description=galaxy_entity["description"],
+                                created_by_ref=author,
                                 custom_properties={"x_opencti_aliases": aliases},
                             )
                         )
@@ -690,6 +707,7 @@ class Misp:
                                 name=name,
                                 labels=["attack-pattern"],
                                 description=galaxy_entity["description"],
+                                created_by_ref=author,
                                 custom_properties={
                                     "x_opencti_external_id": galaxy_entity["meta"][
                                         "external_id"
@@ -766,6 +784,16 @@ class Misp:
             markings.append(TLP_WHITE)
         return markings
 
+    def resolve_tags(self, tags):
+        opencti_tags = []
+        for tag in tags:
+            if tag["name"] != "tlp:white" and tag["name"] != "tlp:green" and tag["name"] != "tlp:amber" and tag["name"] != "tlp:red":
+                opencti_tags.append({
+                    "tag_type": "MISP",
+                    "value": tag["name"],
+                    "color": "#008ac8"
+                })
+        return opencti_tags
 
 if __name__ == "__main__":
     try:
