@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'lastinfosec-cti'
+  scope: 'cyber threat intelligence'
+  update_existing_data: True
+  log_level: 'info'
+
+config:
+  lastinfosec_url: 'https://api.client.lastinfosec.com/v2/stix2/getlasthour?key='
+  lastinfosec_apikey: 'ChangeMe'
