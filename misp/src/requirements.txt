@@ -1,6 +1,6 @@
 pycti==3.2.0
 PyYAML==5.3.1
 urllib3==1.25.9
-pymisp==2.4.119.1
+pymisp==2.4.124
 python-dateutil==2.8.1
 stix2==1.4.0
