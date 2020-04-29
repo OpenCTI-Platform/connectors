@@ -313,7 +313,7 @@ class Misp:
                     custom_properties={
                         "x_opencti_report_class": self.misp_report_class,
                         "x_opencti_object_status": 2,
-                        "x_opencti_tags": event_tags
+                        "x_opencti_tags": event_tags,
                     },
                 )
                 bundle_objects.append(report)
@@ -341,9 +341,7 @@ class Misp:
                     attribute_markings = self.resolve_markings(
                         attribute["Tag"], with_default=False
                     )
-                    attribute_tags = self.resolve_tags(
-                        attribute["Tag"]
-                    )
+                    attribute_tags = self.resolve_tags(attribute["Tag"])
                     if len(attribute_markings) == 0:
                         attribute_markings = event_markings
                 else:
@@ -406,7 +404,7 @@ class Misp:
                         "x_opencti_observable_type": observable_type,
                         "x_opencti_observable_value": observable_value,
                         "x_opencti_pattern_type": pattern_type,
-                        "x_opencti_tags": attribute_tags
+                        "x_opencti_tags": attribute_tags,
                     },
                 )
 
@@ -787,13 +785,17 @@ class Misp:
     def resolve_tags(self, tags):
         opencti_tags = []
         for tag in tags:
-            if tag["name"] != "tlp:white" and tag["name"] != "tlp:green" and tag["name"] != "tlp:amber" and tag["name"] != "tlp:red":
-                opencti_tags.append({
-                    "tag_type": "MISP",
-                    "value": tag["name"],
-                    "color": "#008ac8"
-                })
+            if (
+                tag["name"] != "tlp:white"
+                and tag["name"] != "tlp:green"
+                and tag["name"] != "tlp:amber"
+                and tag["name"] != "tlp:red"
+            ):
+                opencti_tags.append(
+                    {"tag_type": "MISP", "value": tag["name"], "color": "#008ac8"}
+                )
         return opencti_tags
+
 
 if __name__ == "__main__":
     try:
