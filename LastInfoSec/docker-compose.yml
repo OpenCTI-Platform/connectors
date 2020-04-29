@@ -1,11 +1,11 @@
-version: '3'
+version: '3.2'
 services:
-  connector-lastinfosec-cti:
-    image: connector-lastinfosec-cti:0.0.5
+  connector-lastinfosec:
+    image: connector-lastinfosec:0.0.5
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe 
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=LastInfoSec-CTI
       - CONNECTOR_SCOPE=application/json

@@ -10,6 +10,6 @@ connector:
   update_existing_data: True
   log_level: 'info'
 
-config:
-  lastinfosec_url: 'https://api.client.lastinfosec.com/v2/stix2/getlasthour?key='
-  lastinfosec_apikey: 'ChangeMe'
+lastinfosec:
+  api_url: 'https://api.client.lastinfosec.com/v2/stix2/getlasthour?key='
+  api_key: 'ChangeMe'

@@ -1,4 +1,3 @@
-import traceback
 import os
 import yaml
 import time
@@ -20,9 +19,9 @@ class LastInfoSec:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.lastinfosec_url = get_config_variable(
-            "CONFIG_LIS_URL", ["config", "lastinfosec_url"], config)
+            "CONFIG_LIS_URL", ["lastinfosec", "api_url"], config)
         self.lastinfosec_apikey = get_config_variable(
-            "CONFIG_LIS_APIKEY", ["config", "lastinfosec_apikey"], config)
+            "CONFIG_LIS_APIKEY", ["lastinfosec", "api_key"], config)
         self.opencti_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config)
         self.opencti_id = get_config_variable(
@@ -70,7 +69,6 @@ class LastInfoSec:
                 exit(0)
             except Exception as e:
                 self.helper.log_error("run:"+str(e))
-                traceback.print_exc()
                 time.sleep(60)
 
 
@@ -79,6 +77,6 @@ if __name__ == "__main__":
         lastInfoSecConnector = LastInfoSec()
         lastInfoSecConnector.run()
     except Exception as e:
-        traceback.print_exc()
+        print(e)
         time.sleep(10)
         exit(0)

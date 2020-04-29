@@ -1,12 +1,12 @@
-FROM python:3.7.4-alpine3.10
+FROM python:3.7-alpine
 
 # Copy the connector
-COPY src /opt/opencti-connector-lastinfosec-cti
+COPY src /opt/opencti-connector-lastinfosec
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic && \
-    cd /opt/opencti-connector-lastinfosec-cti && \
+    cd /opt/opencti-connector-lastinfosec && \
     pip3 install --no-cache-dir git+https://github.com/OpenCTI-Platform/client-python@master && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
