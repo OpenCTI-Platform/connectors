@@ -7,6 +7,7 @@ import time
 import requests
 import re
 import stix2
+import urllib.parse
 
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -107,10 +108,12 @@ class CyberThreatCoalition:
                         opencti_type = "ipv4-addr"
                     elif collection == "url":
                         opencti_type = "url"
+                        data = urllib.parse.quote(data)
                     elif collection == "hash":
                         opencti_type = self.get_hash_type(data)
 
-                    indicator = stix2.Indicator(
+                    try:
+                        indicator = stix2.Indicator(
                         name=data,
                         pattern=self._OPENCTI_TYPE[opencti_type].format(data),
                         labels=["malicious-activity"],
@@ -121,8 +124,13 @@ class CyberThreatCoalition:
                             CustomProperties.OBSERVABLE_VALUE: data,
                             CustomProperties.PATTERN_TYPE: pattern_type,
                             CustomProperties.TAG_TYPE: tags,
-                        },
-                    )
+                            },
+                        )
+                    except Exception as ex:
+                        self.helper.log_error("an exception occurred while converting data to STIX indicator "
+                                              "for data.value: {}   , skipping IOC, exception: {}".format(data, ex))
+                        continue
+
                     # add indicator in bundle and report_refs
                     bundle_objects.append(indicator)
                     report_object_refs.append(indicator["id"])
