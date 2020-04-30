@@ -34,7 +34,7 @@ class LastInfoSec:
         self.api = OpenCTIApiClient(self.opencti_url, self.opencti_id)
 
     def run(self):
-        self.helper.log_info("Fetching LastInfoSec datasets...")
+        self.helper.log_info("Fetching lastinfosec datasets...")
         while True:
             try:
                 # Get the current timestamp and check

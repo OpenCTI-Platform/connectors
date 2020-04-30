@@ -97,6 +97,10 @@ jobs:
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:latest . && docker tag opencti/connector-virustotal:latest opencti/connector-virustotal:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/lastinfosec
+          name: Build Docker image opencti/connector-lastinfosec
+          command: docker build -t opencti/connector-lastinfosec:latest . && docker tag opencti/connector-lastinfosec:latest opencti/connector-lastinfosec:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -132,6 +136,8 @@ jobs:
             docker push opencti/connector-ipinfo:${CIRCLE_TAG}
             docker push opencti/connector-virustotal:latest
             docker push opencti/connector-virustotal:${CIRCLE_TAG}
+            docker push opencti/connector-lastinfosec:latest
+            docker push opencti/connector-lastinfosec:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -204,6 +210,10 @@ jobs:
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:rolling .
       - run:
+          working_directory: ~/opencti/lastinfosec
+          name: Build Docker image opencti/connector-lastinfosec
+          command: docker build -t opencti/connector-lastinfosec:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -223,6 +233,7 @@ jobs:
             docker push opencti/connector-amitt:rolling
             docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-virustotal:rolling
+            docker push opencti/connector-lastinfosec:rolling
 workflows:
   version: 2
   check-code:
