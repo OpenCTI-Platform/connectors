@@ -65,6 +65,7 @@ OPENCTISTIX2 = {
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
+
 class Misp:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -246,7 +247,11 @@ class Misp:
                 object_attributes = []
                 for attribute in object["Attribute"]:
                     indicator = self.process_attribute(
-                        author, event_elements, event_markings, attribute_external_references, attribute
+                        author,
+                        event_elements,
+                        event_markings,
+                        attribute_external_references,
+                        attribute,
                     )
                     if indicator is not None:
                         indicators.append(indicator)
@@ -341,7 +346,14 @@ class Misp:
                 bundle, None, self.update_existing_data, False
             )
 
-    def process_attribute(self, author, event_elements, event_markings, attribute_external_references, attribute):
+    def process_attribute(
+        self,
+        author,
+        event_elements,
+        event_markings,
+        attribute_external_references,
+        attribute,
+    ):
         try:
             resolved_attributes = self.resolve_type(
                 attribute["type"], attribute["value"]
@@ -819,8 +831,8 @@ class Misp:
                 and not tag["name"].startswith("misp-galaxy:malpedia")
             ):
                 tag_value = tag["name"]
-                if "=\"" in tag["name"]:
-                    tag_value_split = tag["name"].split("=\"")
+                if '="' in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
                     tag_value = tag_value_split[1][:-1].strip()
                 elif ":" in tag["name"]:
                     tag_value_split = tag["name"].split(":")
