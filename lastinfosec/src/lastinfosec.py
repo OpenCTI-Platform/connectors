@@ -2,9 +2,7 @@ import os
 import yaml
 import time
 import requests
-import json
 
-from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIApiClient
 
 
@@ -39,29 +37,17 @@ class LastInfoSec:
             try:
                 # Get the current timestamp and check
                 timestamp = int(time.time())
-                current_state = self.helper.get_state()
-                if current_state is not None and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    self.helper.log_info(
-                        "Connector last run: {0}".format(
-                            datetime.utcfromtimestamp(last_run).strftime(
-                                "%Y-%m-%d %H:%M:%S"
-                            )
-                        )
-                    )
-                else:
-                    last_run = None
-                    self.helper.log_info("Connector has never run")
-
                 lastinfosec_data = requests.get(
                     self.lastinfosec_url + self.lastinfosec_apikey
                 ).json()
                 if "message" in lastinfosec_data.keys():
                     for data in lastinfosec_data["message"]:
-                        sdata = json.dumps(data)
-                        self.helper.log_info(type(sdata))
-                        self.helper.log_info(sdata)
-                        list = self.api.stix2.import_bundle_from_json(sdata)
+                        self.helper.send_stix2_bundle(
+                            data,
+                            self.helper.connect_scope,
+                            self.update_existing_data,
+                            False,
+                        )
                     # Store the current timestamp as a last run
                     self.helper.log_info(
                         "Connector successfully run, storing last_run as {0}".format(
@@ -71,6 +57,7 @@ class LastInfoSec:
                     self.helper.set_state({"last_run": timestamp})
                     time.sleep(3500)
                 else:
+                    self.helper.set_state({"last_run": timestamp})
                     self.helper.log_info(
                         "Connector successfully run, storing last_run as {0}".format(
                             timestamp
