@@ -65,7 +65,6 @@ OPENCTISTIX2 = {
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
-
 class Misp:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -214,21 +213,40 @@ class Misp:
             )
 
             ### Get indicators
+            event_external_references = [event_external_reference]
             indicators = []
             # Get attributes
             for attribute in event["Event"]["Attribute"]:
                 indicator = self.process_attribute(
-                    author, event_elements, event_markings, attribute
+                    author, event_elements, event_markings, [], attribute
                 )
+                if attribute["type"] == "link":
+                    event_external_references.append(
+                        ExternalReference(
+                            source_name=attribute["category"],
+                            external_id=attribute["uuid"],
+                            url=attribute["value"],
+                        )
+                    )
                 if indicator is not None:
                     indicators.append(indicator)
             # Get attributes of objects
             objects_relationships = []
             for object in event["Event"]["Object"]:
+                attribute_external_references = []
+                for attribute in object["Attribute"]:
+                    if attribute["type"] == "link":
+                        attribute_external_references.append(
+                            ExternalReference(
+                                source_name=attribute["category"],
+                                external_id=attribute["uuid"],
+                                url=attribute["value"],
+                            )
+                        )
                 object_attributes = []
                 for attribute in object["Attribute"]:
                     indicator = self.process_attribute(
-                        author, event_elements, event_markings, attribute
+                        author, event_elements, event_markings, attribute_external_references, attribute
                     )
                     if indicator is not None:
                         indicators.append(indicator)
@@ -309,7 +327,7 @@ class Misp:
                     object_marking_refs=event_markings,
                     labels=["threat-report"],
                     object_refs=object_refs,
-                    external_references=[event_external_reference],
+                    external_references=event_external_references,
                     custom_properties={
                         "x_opencti_report_class": self.misp_report_class,
                         "x_opencti_object_status": 2,
@@ -323,7 +341,7 @@ class Misp:
                 bundle, None, self.update_existing_data, False
             )
 
-    def process_attribute(self, author, event_elements, event_markings, attribute):
+    def process_attribute(self, author, event_elements, event_markings, attribute_external_references, attribute):
         try:
             resolved_attributes = self.resolve_type(
                 attribute["type"], attribute["value"]
@@ -399,6 +417,7 @@ class Misp:
                     labels=["malicious-activity"],
                     created_by_ref=author,
                     object_marking_refs=attribute_markings,
+                    external_references=attribute_external_references,
                     custom_properties={
                         "x_opencti_indicator_pattern": pattern,
                         "x_opencti_observable_type": observable_type,
@@ -790,9 +809,30 @@ class Misp:
                 and tag["name"] != "tlp:green"
                 and tag["name"] != "tlp:amber"
                 and tag["name"] != "tlp:red"
+                and not tag["name"].startswith("misp-galaxy:mitre-threat-actor")
+                and not tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
+                and not tag["name"].startswith("misp-galaxy:mitre-malware")
+                and not tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
+                and not tag["name"].startswith("misp-galaxy:mitre-tool")
+                and not tag["name"].startswith("misp-galaxy:tool")
+                and not tag["name"].startswith("misp-galaxy:ransomware")
+                and not tag["name"].startswith("misp-galaxy:malpedia")
             ):
+                tag_value = tag["name"]
+                if "=\"" in tag["name"]:
+                    tag_value_split = tag["name"].split("=\"")
+                    tag_value = tag_value_split[1][:-1].strip()
+                elif ":" in tag["name"]:
+                    tag_value_split = tag["name"].split(":")
+                    tag_value = tag_value_split[1].strip()
+                if tag_value.isdigit():
+                    if ":" in tag["name"]:
+                        tag_value_split = tag["name"].split(":")
+                        tag_value = tag_value_split[1].strip()
+                    else:
+                        tag_value = tag["name"]
                 opencti_tags.append(
-                    {"tag_type": "MISP", "value": tag["name"], "color": "#008ac8"}
+                    {"tag_type": "MISP", "value": tag_value, "color": "#008ac8"}
                 )
         return opencti_tags
 
