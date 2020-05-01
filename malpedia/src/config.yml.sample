@@ -15,3 +15,4 @@ malpedia:
   BASE_URL: 'https://malpedia.caad.fkie.fraunhofer.de/'
   AUTH_KEY: 'ChangeMe'
   INTERVAL_SEC: 86400
+  IMPORT_ACTORS: false

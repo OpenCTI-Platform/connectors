@@ -15,4 +15,5 @@ services:
       - MALPEDIA_BASE_URL=https://malpedia.caad.fkie.fraunhofer.de/
       - MALPEDIA_AUTH_KEY=ChangeMe
       - MALPEDIA_INTERVAL_SEC=86400 # Run once every day
+      - MALPEDIA_IMPORT_ACTORS=false
     restart: always

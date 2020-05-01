@@ -45,6 +45,9 @@ class Malpedia:
         self.INTERVAL_SEC = get_config_variable(
             "MALPEDIA_INTERVAL_SEC", ["malpedia", "INTERVAL_SEC"], config
         )
+        self.import_actors = get_config_variable(
+            "MALPEDIA_IMPORT_ACTORS", ["malpedia", "IMPORT_ACTORS"], config
+        )
         self.helper = OpenCTIConnectorHelper(config)
         self.helper.log_info(f"loaded malpedia config: {config}")
 
@@ -54,7 +57,11 @@ class Malpedia:
             self.helper.log_error("error in malpedia API health check")
 
         self.knowledge_importer = KnowledgeImporter(
-            self.helper, self.client, self.confidence_level, self.update_existing_data
+            self.helper,
+            self.client,
+            self.confidence_level,
+            self.update_existing_data,
+            self.import_actors,
         )
 
     def get_interval(self) -> int:

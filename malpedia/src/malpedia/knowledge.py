@@ -33,6 +33,7 @@ class KnowledgeImporter:
         api_client: MalpediaClient,
         confidence_level: int,
         update_data: bool,
+        import_actors: bool,
     ) -> None:
         """Initialize Malpedia indicator importer."""
         self.helper = helper
@@ -41,7 +42,7 @@ class KnowledgeImporter:
         self.guess_actor = True
         self.confidence_level = confidence_level
         self.update_data = update_data
-        self.create_actors = True
+        self.import_actors = import_actors
         self.malware_guess_cache: Dict[str, str] = {}
         self.actor_guess_cache: Dict[str, str] = {}
 
@@ -223,10 +224,10 @@ class KnowledgeImporter:
                 ######################################################
                 # Actors
                 ######################################################
-                if not self.create_actors:
-                    continue
                 for actor in fam.attribution:
-                    actor_json = self.api_client.query("get/actor/" + actor.lower().replace(" ", "_"))
+                    actor_json = self.api_client.query(
+                        "get/actor/" + actor.lower().replace(" ", "_")
+                    )
                     try:
                         act = Actor.parse_obj(actor_json)
                     except ValidationError as e:
@@ -238,9 +239,13 @@ class KnowledgeImporter:
                     self.helper.log_info("Processing actor: " + act.value)
 
                     # Use all names we have to guess an existing actor name
-                    guessed_actor = self._guess_actor_from_tags([actor])
+                    guessed_actor = self._guess_actor_from_tags(
+                        [actor] + act.meta.synonyms
+                    )
 
-                    if guessed_actor == {} and self.create_actors:
+                    # If we cannot guess an actor AND we are allowed to do so we
+                    # create the Threat Actor. Only update_data can override.
+                    if (guessed_actor == {} and self.import_actors) or self.update_data:
                         threat_actor = self.helper.api.threat_actor.create(
                             name=act.value,
                             description=act.description,
