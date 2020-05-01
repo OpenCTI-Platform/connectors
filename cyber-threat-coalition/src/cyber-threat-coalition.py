@@ -108,7 +108,7 @@ class CyberThreatCoalition:
                         opencti_type = "ipv4-addr"
                     elif collection == "url":
                         opencti_type = "url"
-                        data = urllib.parse.quote(data)
+                        data = urllib.parse.quote(data, "/:")
                     elif collection == "hash":
                         opencti_type = self.get_hash_type(data)
 
