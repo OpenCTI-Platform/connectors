@@ -45,13 +45,7 @@ class KnowledgeImporter:
         self.import_actors = import_actors
         self.malware_guess_cache: Dict[str, str] = {}
         self.actor_guess_cache: Dict[str, str] = {}
-
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
-        """Run importer."""
-        self.helper.log_info("Running Knowledge importer with state: " + str(state))
-
-        # create an identity for the coalition team
-        organization = self.helper.api.identity.create(
+        self.organization = helper.api.identity.create(
             name="Malpedia",
             type="Organization",
             description=" The primary goal of Malpedia is to provide a resource"
@@ -60,6 +54,10 @@ class KnowledgeImporter:
             " accountable level of quality in order to foster meaningful and"
             " reproducible research.",
         )
+
+    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+        """Run importer."""
+        self.helper.log_info("Running Knowledge importer with state: " + str(state))
 
         ######################################################
         # Malware Families
@@ -85,230 +83,238 @@ class KnowledgeImporter:
 
             self.helper.log_info("Processing malware family: " + fam.malpedia_name)
 
-            # Use all names we have to guess an existing malware name
-            guessed_malwares = self._guess_malwares_from_tags(fam.all_names)
+            malware = self._add_malware_family(fam)
 
-            # If we cannot guess a malware in our data base we assum it is new
-            # and create it. We also upsert data if the config allows us to do so:
-            if guessed_malwares == {} or self.update_data:
+            ######################################################
+            # Yara Rules
+            ######################################################
 
-                malware = self.helper.api.malware.create(
-                    name=fam.main_name,
-                    createdByRef=organization["id"],
-                    description=fam.description,
-                    alias=fam.alt_names,
-                )
+            yara_rules = self.api_client.query("get/yara/" + family_id)
 
-                for ref_url in fam.urls:
-                    reference = self.helper.api.external_reference.create(
-                        source_name="Malpedia",
-                        url=ref_url,
-                        description="Reference found in the Malpedia library",
-                    )
+            self.helper.log_info("importing yara rules for: " + family_id)
 
-                    self.helper.api.stix_entity.add_external_reference(
-                        id=malware["id"], external_reference_id=reference["id"],
-                    )
+            self._add_yara_rules_for_malware_id(malware, fam, yara_rules)
 
-                self.helper.log_info("Done with references for: " + family_id)
+            ######################################################
+            # Samples
+            ######################################################
 
-                ######################################################
-                # Yara Rules
-                ######################################################
+            samples = self.api_client.query("list/samples/" + family_id)
 
-                yara_rules = self.api_client.query("get/yara/" + family_id)
+            self.helper.log_info(
+                f"creating hash indicators for {fam.malpedia_name} samples"
+            )
 
-                self.helper.log_info("importing yara rules for: " + family_id)
+            self._add_samples_for_malware_id(malware, fam, samples)
 
-                for tlp_level in yara_rules:
-                    for yara_rule in yara_rules[tlp_level]:
-                        try:
-                            yr = YaraRule(
-                                tlp_level=tlp_level,
-                                rule_name=yara_rule,
-                                raw_rule=yara_rules[tlp_level][yara_rule],
-                            )
-                            self.helper.log_info(
-                                f"processing yara_rule ({yr.rule_name})"
-                            )
-
-                            indicator = self.helper.api.indicator.create(
-                                name=yr.rule_name,
-                                description="Yara rule from Malpedia library",
-                                pattern_type="yara",
-                                indicator_pattern=yr.raw_rule,
-                                markingDefinitions=[yr.cti_tlp],
-                                main_observable_type="file-sha256",
-                                createdByRef=organization["id"],
-                                valid_from=yr.date,
-                            )
-                        except Exception as e:
-                            self.helper.log_error(
-                                f"error creating yara indicator {yr.rule_name}: {e}"
-                            )
-                            continue
-
-                        self.helper.api.stix_relation.create(
-                            fromType="Indicator",
-                            fromId=indicator["id"],
-                            toType="Malware",
-                            toId=malware["id"],
-                            relationship_type="indicates",
-                            description="Yara rule for " + fam.main_name,
-                            weight=self.confidence_level,
-                            role_played="Unknown",
-                            createdByRef=organization["id"],
-                            ignore_dates=True,
-                            update=True,
-                        )
-
-                ######################################################
-                # Samples
-                ######################################################
-
-                samples = self.api_client.query("list/samples/" + family_id)
-
-                self.helper.log_info(
-                    f"creating hash indicators for {fam.malpedia_name} samples"
-                )
-
-                for sample in samples:
-                    try:
-                        sam = Sample.parse_obj(sample)
-                    except ValidationError as e:
-                        self.helper.log_error(
-                            f"error marshaling sample data for {sample}: {e}"
-                        )
-                        continue
-                    self.helper.log_info("Processing sample: " + sam.sha256)
-
-                    observable = self.helper.api.stix_observable.create(
-                        type="File-SHA256",
-                        observable_value=sam.sha256,
-                        description=f"Malpedia packer status: {sam.status}\nMalpedia version: {sam.version}",
-                        createdByRef=organization["id"],
-                        createIndicator=True,
-                    )
-                    if observable == None:
-                        self.helper.log_error(
-                            f"error storing observable ({sam.sha256})"
-                        )
-                        continue
-
-                    indicator = self.helper.api.indicator.read(
-                        filters=[
-                            {
-                                "key": "indicator_pattern",
-                                "values": [f"[file:hashes.SHA256 = '{sam.sha256}']"],
-                                "operator": "match" if len(sam.sha256) > 500 else "eq",
-                            }
-                        ]
-                    )
-                    if indicator == None:
-                        self.helper.log_error(f"error getting indicator ({sam.sha256})")
-                        continue
-
-                    self.helper.api.stix_relation.create(
-                        fromType="Indicator",
-                        fromId=indicator["id"],
-                        toType="Malware",
-                        toId=malware["id"],
-                        relationship_type="indicates",
-                        description="Sample in Malpedia database",
-                        weight=self.confidence_level,
-                        createdByRef=organization["id"],
-                        ignore_dates=True,
-                        update=True,
-                    )
-
-                ######################################################
-                # Actors
-                ######################################################
-                for actor in fam.attribution:
-                    actor_json = self.api_client.query(
-                        "get/actor/" + actor.lower().replace(" ", "_")
-                    )
-                    try:
-                        act = Actor.parse_obj(actor_json)
-                    except ValidationError as e:
-                        self.helper.log_error(
-                            f"error marshaling actor data for {actor}: {e}"
-                        )
-                        continue
-
-                    self.helper.log_info("Processing actor: " + act.value)
-
-                    # Use all names we have to guess an existing actor name
-                    guessed_actor = self._guess_actor_from_tags(
-                        [actor] + act.meta.synonyms
-                    )
-
-                    # If we cannot guess an actor AND we are allowed to do so we
-                    # create the Threat Actor. Only update_data can override.
-                    if (guessed_actor == {} and self.import_actors) or self.update_data:
-                        threat_actor = self.helper.api.threat_actor.create(
-                            name=act.value,
-                            description=act.description,
-                            alias=act.meta.synonyms,
-                            primary_motivation=act.meta.cfr_type_of_incident,
-                        )
-
-                        self.helper.api.stix_relation.create(
-                            fromType="Threat-Actor",
-                            fromId=threat_actor["id"],
-                            toType="Malware",
-                            toId=malware["id"],
-                            relationship_type="uses",
-                            description="Malpedia indicates usage",
-                            weight=self.confidence_level,
-                            createdByRef=organization["id"],
-                            ignore_dates=True,
-                            update=True,
-                        )
-
-                        for ref_url in act.meta.refs:
-                            reference = self.helper.api.external_reference.create(
-                                source_name="Malpedia",
-                                url=ref_url,
-                                description="Reference found in the Malpedia library",
-                            )
-                            self.helper.api.stix_entity.add_external_reference(
-                                id=threat_actor["id"],
-                                external_reference_id=reference["id"],
-                            )
-                    else:
-                        # If we don't create the actor we attach every knowledge
-                        # we have to the guessed existing one.
-                        if guessed_actor != {} and self.guess_actor:
-                            self.helper.api.stix_relation.create(
-                                fromType="Threat-Actor",
-                                fromId=guessed_actor[act.value],
-                                toType="Malware",
-                                toId=malware["id"],
-                                relationship_type="uses",
-                                description="Malpedia indicates usage",
-                                weight=self.confidence_level,
-                                createdByRef=organization["id"],
-                                ignore_dates=True,
-                                update=True,
-                            )
-                            for ref_url in act.meta.refs:
-                                reference = self.helper.api.external_reference.create(
-                                    source_name="Malpedia",
-                                    url=ref_url,
-                                    description="Reference found in the Malpedia library",
-                                )
-                                self.helper.api.stix_entity.add_external_reference(
-                                    id=guessed_actor[act.value],
-                                    external_reference_id=reference["id"],
-                                )
-                        self.helper.log_info(
-                            "not creating actor {act.value} based on config"
-                        )
+            ######################################################
+            # Actors
+            ######################################################
+            self.helper.log_info(f"creating actors for {fam.malpedia_name}")
+            self._add_actors_for_malware_id(malware, fam)
 
         state_timestamp = datetime_to_timestamp(datetime.utcnow())
         self.helper.log_info("Knowldge importer completed")
         return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
+
+    def _add_actors_for_malware_id(self, malware_id: str, fam: Family) -> None:
+        for actor in fam.attribution:
+            actor_json = self.api_client.query(
+                "get/actor/" + actor.lower().replace(" ", "_")
+            )
+            try:
+                act = Actor.parse_obj(actor_json)
+            except ValidationError as e:
+                self.helper.log_error(f"error marshaling actor data for {actor}: {e}")
+                continue
+
+            self.helper.log_info("Processing actor: " + act.value)
+
+            # Use all names we have to guess an existing actor name
+            guessed_actor = self._guess_actor_from_tags([actor] + act.meta.synonyms)
+
+            # If we cannot guess an actor AND we are allowed to do so we
+            # create the Threat Actor. Only update_data can override.
+            if (guessed_actor == {} and self.import_actors) or self.update_data:
+                threat_actor = self.helper.api.threat_actor.create(
+                    name=act.value,
+                    description=act.description,
+                    alias=act.meta.synonyms,
+                    primary_motivation=act.meta.cfr_type_of_incident,
+                )
+
+                self.helper.api.stix_relation.create(
+                    fromType="Threat-Actor",
+                    fromId=threat_actor["id"],
+                    toType="Malware",
+                    toId=malware_id,
+                    relationship_type="uses",
+                    description="Malpedia indicates usage",
+                    weight=self.confidence_level,
+                    createdByRef=self.organization["id"],
+                    ignore_dates=True,
+                    update=True,
+                )
+
+                for act_ref_url in act.meta.refs:
+                    reference = self.helper.api.external_reference.create(
+                        source_name="Malpedia",
+                        url=act_ref_url,
+                        description="Reference found in the Malpedia library",
+                    )
+                    self.helper.api.stix_entity.add_external_reference(
+                        id=threat_actor["id"], external_reference_id=reference["id"],
+                    )
+            else:
+                # If we don't create the actor we attach every knowledge
+                # we have to the guessed existing one.
+                if guessed_actor != {} and self.guess_actor:
+                    self.helper.api.stix_relation.create(
+                        fromType="Threat-Actor",
+                        fromId=guessed_actor[act.value],
+                        toType="Malware",
+                        toId=malware_id,
+                        relationship_type="uses",
+                        description="Malpedia indicates usage",
+                        weight=self.confidence_level,
+                        createdByRef=self.organization["id"],
+                        ignore_dates=True,
+                        update=True,
+                    )
+                    for act_ref_url in act.meta.refs:
+                        reference = self.helper.api.external_reference.create(
+                            source_name="Malpedia",
+                            url=act_ref_url,
+                            description="Reference found in the Malpedia library",
+                        )
+                        self.helper.api.stix_entity.add_external_reference(
+                            id=guessed_actor[act.value],
+                            external_reference_id=reference["id"],
+                        )
+                self.helper.log_info("not creating actor ({act.value}) based on config")
+
+    def _add_samples_for_malware_id(
+        self, malware_id: str, fam: Family, samples: Any
+    ) -> None:
+        for sample in samples:
+            try:
+                sam = Sample.parse_obj(sample)
+            except ValidationError as e:
+                self.helper.log_error(f"error marshaling sample data for {sample}: {e}")
+                continue
+            self.helper.log_info("Processing sample: " + sam.sha256)
+
+            observable = self.helper.api.stix_observable.create(
+                type="File-SHA256",
+                observable_value=sam.sha256,
+                description=f"Malpedia packer status: {sam.status}\nMalpedia version: {sam.version}",
+                createdByRef=self.organization["id"],
+                createIndicator=True,
+            )
+            if observable == None:
+                self.helper.log_error(f"error storing observable ({sam.sha256})")
+                continue
+
+            indicator = self.helper.api.indicator.read(
+                filters=[
+                    {
+                        "key": "indicator_pattern",
+                        "values": [f"[file:hashes.SHA256 = '{sam.sha256}']"],
+                        "operator": "match" if len(sam.sha256) > 500 else "eq",
+                    }
+                ]
+            )
+            if indicator == None:
+                self.helper.log_error(f"error getting indicator ({sam.sha256})")
+                continue
+
+            self.helper.api.stix_relation.create(
+                fromType="Indicator",
+                fromId=indicator["id"],
+                toType="Malware",
+                toId=malware_id,
+                relationship_type="indicates",
+                description="Sample in Malpedia database",
+                weight=self.confidence_level,
+                createdByRef=self.organization["id"],
+                ignore_dates=True,
+                update=True,
+            )
+
+    def _add_yara_rules_for_malware_id(
+        self, malware_id: str, fam: Family, rules: Any
+    ) -> None:
+        for tlp_level in rules:
+            for yara_rule in rules[tlp_level]:
+                try:
+                    yr = YaraRule(
+                        tlp_level=tlp_level,
+                        rule_name=yara_rule,
+                        raw_rule=rules[tlp_level][yara_rule],
+                    )
+                    self.helper.log_info(f"processing yara_rule ({yr.rule_name})")
+
+                    indicator = self.helper.api.indicator.create(
+                        name=yr.rule_name,
+                        description="Yara rule from Malpedia library",
+                        pattern_type="yara",
+                        indicator_pattern=yr.raw_rule,
+                        markingDefinitions=[yr.cti_tlp],
+                        main_observable_type="file-sha256",
+                        createdByRef=self.organization["id"],
+                        valid_from=yr.date,
+                    )
+                except Exception as e:
+                    self.helper.log_error(
+                        f"error creating yara indicator {yr.rule_name}: {e}"
+                    )
+                    continue
+
+                self.helper.api.stix_relation.create(
+                    fromType="Indicator",
+                    fromId=indicator["id"],
+                    toType="Malware",
+                    toId=malware_id,
+                    relationship_type="indicates",
+                    description="Yara rule for " + fam.main_name,
+                    weight=self.confidence_level,
+                    role_played="Unknown",
+                    createdByRef=self.organization["id"],
+                    ignore_dates=True,
+                    update=True,
+                )
+
+    def _add_malware_family(self, fam: Family) -> str:
+        self.helper.log_info("Processing malware family: " + fam.malpedia_name)
+
+        # Use all names we have to guess an existing malware name
+        guessed_malwares = self._guess_malwares_from_tags(fam.all_names)
+
+        # If we cannot guess a malware in our data base we assum it is new
+        # and create it. We also upsert data if the config allows us to do so:
+        if guessed_malwares == {} or self.update_data:
+            malware = self.helper.api.malware.create(
+                name=fam.main_name,
+                createdByRef=self.organization["id"],
+                description=fam.description,
+                alias=fam.alt_names,
+            )
+            self._add_refs_for_id(fam.urls, malware["id"])
+        return malware["id"]
+
+    def _add_refs_for_id(self, refs: list, obj_id: str) -> None:
+        if refs == {}:
+            return None
+
+        for ref in refs:
+            reference = self.helper.api.external_reference.create(
+                source_name="Malpedia",
+                url=ref,
+                description="Reference found in the Malpedia library",
+            )
+            self.helper.api.stix_entity.add_external_reference(
+                id=obj_id, external_reference_id=reference["id"],
+            )
 
     def _parse_timestamp(self, ts: str) -> str:
         try:
