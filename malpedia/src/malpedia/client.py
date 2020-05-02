@@ -21,11 +21,15 @@ class MalpediaClient:
 
     def query(self, url_path: str) -> Any:
         try:
-            r = requests.get(
-                self.api_url + url_path,
-                headers={"Authorization": "apitoken " + self.api_key},
-            )
-            data = r.json()
+            if self.api_key == None or self.api_key == "":
+                r = requests.get(self.api_url + url_path,)
+                data = r.json()
+            else:
+                r = requests.get(
+                    self.api_url + url_path,
+                    headers={"Authorization": "apitoken " + self.api_key},
+                )
+                data = r.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"error in malpedia query: {e}")
             return None
