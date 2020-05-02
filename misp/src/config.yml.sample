@@ -19,4 +19,5 @@ misp:
   report_class: 'MISP event' # Optional, report_class if creating report for event
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: 'opencti:import,type:osint' # Optional, list of tags used for import events
+  import_threat_levels: '1,2,3,4'
   interval: 1 # Required, in minutes
