@@ -37,6 +37,10 @@ default = 'https://malpedia.caad.fkie.fraunhofer.de/'
 API authentication key. Can be retreived with a valid account from:
 https://malpedia.caad.fkie.fraunhofer.de/settings
 
+If you leave this variable undefined or as empty string (`""`) only public,
+TLP:WHITE entities are imported. So this connector can also be used without an
+account.
+
 default = 'ChangeMe'
 
 #### MALPEDIA_INTERVAL_SEC
@@ -70,3 +74,4 @@ default = False
 #### CONNECTOR_CONFIDENCE_LEVEL
 
 The confidence level you give to the connector.
+
