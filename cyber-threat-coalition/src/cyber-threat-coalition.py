@@ -114,21 +114,25 @@ class CyberThreatCoalition:
 
                     try:
                         indicator = stix2.Indicator(
-                        name=data,
-                        pattern=self._OPENCTI_TYPE[opencti_type].format(data),
-                        labels=["malicious-activity"],
-                        created_by_ref=organization,
-                        object_marking_refs=[stix2.TLP_WHITE],
-                        custom_properties={
-                            CustomProperties.OBSERVABLE_TYPE: opencti_type,
-                            CustomProperties.OBSERVABLE_VALUE: data,
-                            CustomProperties.PATTERN_TYPE: pattern_type,
-                            CustomProperties.TAG_TYPE: tags,
+                            name=data,
+                            pattern=self._OPENCTI_TYPE[opencti_type].format(data),
+                            labels=["malicious-activity"],
+                            created_by_ref=organization,
+                            object_marking_refs=[stix2.TLP_WHITE],
+                            custom_properties={
+                                CustomProperties.OBSERVABLE_TYPE: opencti_type,
+                                CustomProperties.OBSERVABLE_VALUE: data,
+                                CustomProperties.PATTERN_TYPE: pattern_type,
+                                CustomProperties.TAG_TYPE: tags,
                             },
                         )
                     except Exception as ex:
-                        self.helper.log_error("an exception occurred while converting data to STIX indicator "
-                                              "for data.value: {}   , skipping IOC, exception: {}".format(data, ex))
+                        self.helper.log_error(
+                            "an exception occurred while converting data to STIX indicator "
+                            "for data.value: {}   , skipping IOC, exception: {}".format(
+                                data, ex
+                            )
+                        )
                         continue
 
                     # add indicator in bundle and report_refs
