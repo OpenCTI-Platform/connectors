@@ -79,7 +79,7 @@ class Sample(BaseModel):
     """Malpedia Sample model."""
 
     status: str
-    sha256: constr(regex="^[A-Fa-f0-9]{64}$")
+    sha256: constr(regex="^[A-Fa-f0-9]{64}$")  # noqa: F722
     version: str
 
 
