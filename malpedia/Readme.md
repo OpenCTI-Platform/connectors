@@ -27,51 +27,30 @@ file of OpenCTI.
 
 The connector can be configured with the following variables:
 
-#### MALPEDIA_BASE_URL
+| Config Parameter       | Docker env var                   | Default                                     | Description                                                 |
+| -----------------------| -------------------------------- | ------------------------------------------- | ----------------------------------------------------------- |
+| `base_url`             | `MALPEDIA_BASE_URL`              | `https://malpedia.caad.fkie.fraunhofer.de/` | Base url for the malpedia website. Must end in a "/".       |
+| `auth_key`             | `MALPEDIA_AUTH_KEY`              | `""`                                        | API authentication key                                      |
+| `interval_sec`         | `MALPEDIA_INTERVAL_SEC`          | `86400`                                     | Interval in seconds before a new import is considered       |
+| `import_actors`        | `MALPEDIA_IMPORT_ACTORS`         | `false`                                     | Choose if you want to import Threat Actors from Malpedia    |
+| `import_yara`          | `MALPEDIA_IMPORT_YARA`           | `false`                                     | Choose if you want to import Yara rules from Malpedia       |
+| `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | `false`                                     | This will allow the connector to overwrite existing extries |
+| `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | `3`                                         | The confidence level you give to the connector              |
 
-Base url for the malpedia website. Must end in a "/".
-default = 'https://malpedia.caad.fkie.fraunhofer.de/'
+## Notes
 
-#### MALPEDIA_AUTH_KEY
-
-API authentication key. Can be retreived with a valid account from:
+The API authentication key. Can be retreived with a valid account from:
 https://malpedia.caad.fkie.fraunhofer.de/settings
 
 If you leave this variable undefined or as empty string (`""`) only public,
 TLP:WHITE entities are imported. So this connector can also be used without an
 account.
 
-default = 'ChangeMe'
-
-#### MALPEDIA_INTERVAL_SEC
-
-Interval in seconds before a new import is considered.
-
-default = 86400 (== 1 day)
-
-#### MALPEDIA_IMPORT_ACTORS
-
-Choose if you want to import Threat Actors from Malpedia.
-If you choose `False` only references for existing Threat Actors are imported.
-
-default = False
-
-#### MALPEDIA_IMPORT_YARA
-
-Choose if you want to import Yara rules from Malpedia.
-
-default = False
-
-#### CONNECTOR_UPDATE_EXISTING_DATA
-
-This will allow the connector to overwrite existing extries.
+If you choose `false` for `import_actors` only references for existing Threat
+Actors are imported.
 
 **Caution** 
-You should only enable this for connectors that you consider a knowledge priority for the specific entities.
 
-default = False
-
-#### CONNECTOR_CONFIDENCE_LEVEL
-
-The confidence level you give to the connector.
-
+You should only enable `update_existing_data` for connectors that you consider
+a knowledge priority for the specific entities. Entities created by other
+connectors could be overwritten by this.
