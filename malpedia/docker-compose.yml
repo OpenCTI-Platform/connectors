@@ -16,4 +16,5 @@ services:
       - MALPEDIA_AUTH_KEY=ChangeMe
       - MALPEDIA_INTERVAL_SEC=86400 # Run once every day
       - MALPEDIA_IMPORT_ACTORS=false
+      - MALPEDIA_IMPORT_YARA=false
     restart: always

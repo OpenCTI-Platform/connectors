@@ -34,6 +34,7 @@ class KnowledgeImporter:
         confidence_level: int,
         update_data: bool,
         import_actors: bool,
+        import_yara: bool,
     ) -> None:
         """Initialize Malpedia indicator importer."""
         self.helper = helper
@@ -43,6 +44,7 @@ class KnowledgeImporter:
         self.confidence_level = confidence_level
         self.update_data = update_data
         self.import_actors = import_actors
+        self.import_yara = import_yara
         self.malware_guess_cache: Dict[str, str] = {}
         self.actor_guess_cache: Dict[str, str] = {}
         self.organization = helper.api.identity.create(
@@ -59,10 +61,13 @@ class KnowledgeImporter:
         """Run importer."""
         self.helper.log_info("Running Knowledge importer with state: " + str(state))
 
-        ######################################################
-        # Malware Families
-        ######################################################
+        self._process_families()
 
+        state_timestamp = datetime_to_timestamp(datetime.utcnow())
+        self.helper.log_info("Knowldge importer completed")
+        return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
+
+    def _process_families(self) -> None:
         # Download the newest knowledge as json from the API
         families_json = self.api_client.query("get/families")
 
@@ -113,10 +118,6 @@ class KnowledgeImporter:
             self.helper.log_info(f"creating actors for {fam.malpedia_name}")
             self._add_actors_for_malware_id(malware, fam)
 
-        state_timestamp = datetime_to_timestamp(datetime.utcnow())
-        self.helper.log_info("Knowldge importer completed")
-        return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
-
     def _add_actors_for_malware_id(self, malware_id: str, fam: Family) -> None:
         for actor in fam.attribution:
             actor_json = self.api_client.query(
@@ -135,7 +136,9 @@ class KnowledgeImporter:
 
             # If we cannot guess an actor AND we are allowed to do so we
             # create the Threat Actor. Only update_data can override.
-            if (guessed_actor == {} and self.import_actors) or self.update_data:
+            if (guessed_actor == {} and self.import_actors) or (
+                self.update_data and self.import_actors
+            ):
                 threat_actor = self.helper.api.threat_actor.create(
                     name=act.value,
                     description=act.description,
@@ -244,6 +247,8 @@ class KnowledgeImporter:
     def _add_yara_rules_for_malware_id(
         self, malware_id: str, fam: Family, rules: Any
     ) -> None:
+        if not self.import_yara:
+            return
         for tlp_level in rules:
             for yara_rule in rules[tlp_level]:
                 try:

@@ -104,6 +104,6 @@ class Actor(BaseModel):
     value: str
     meta: ActorMeta
     # families: List[Family]
-    description: str = None
+    description: str = ""
     # related: list
     uuid: UUID4

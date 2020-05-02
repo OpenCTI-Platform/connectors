@@ -27,28 +27,34 @@ file of OpenCTI.
 
 The connector can be configured with the following variables:
 
-#### BASE_URL
+#### MALPEDIA_BASE_URL
 
 Base url for the malpedia website. Must end in a "/".
 default = 'https://malpedia.caad.fkie.fraunhofer.de/'
 
-#### AUTH_KEY
+#### MALPEDIA_AUTH_KEY
 
 API authentication key. Can be retreived with a valid account from:
 https://malpedia.caad.fkie.fraunhofer.de/settings
 
 default = 'ChangeMe'
 
-#### INTERVAL_SEC
+#### MALPEDIA_INTERVAL_SEC
 
 Interval in seconds before a new import is considered.
 
 default = 86400 (== 1 day)
 
-#### IMPORT_ACTORS
+#### MALPEDIA_IMPORT_ACTORS
 
 Choose if you want to import Threat Actors from Malpedia.
 If you choose `False` only references for existing Threat Actors are imported.
+
+default = False
+
+#### MALPEDIA_IMPORT_YARA
+
+Choose if you want to import Yara rules from Malpedia.
 
 default = False
 

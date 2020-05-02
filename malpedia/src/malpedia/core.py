@@ -37,16 +37,19 @@ class Malpedia:
             config,
         )
         self.BASE_URL = get_config_variable(
-            "MALPEDIA_BASE_URL", ["malpedia", "BASE_URL"], config
+            "MALPEDIA_BASE_URL", ["malpedia", "base_url"], config
         )
         self.AUTH_KEY = get_config_variable(
-            "MALPEDIA_AUTH_KEY", ["malpedia", "AUTH_KEY"], config
+            "MALPEDIA_AUTH_KEY", ["malpedia", "auth_key"], config
         )
         self.INTERVAL_SEC = get_config_variable(
-            "MALPEDIA_INTERVAL_SEC", ["malpedia", "INTERVAL_SEC"], config
+            "MALPEDIA_INTERVAL_SEC", ["malpedia", "interval_sec"], config
         )
         self.import_actors = get_config_variable(
-            "MALPEDIA_IMPORT_ACTORS", ["malpedia", "IMPORT_ACTORS"], config
+            "MALPEDIA_IMPORT_ACTORS", ["malpedia", "import_actors"], config
+        )
+        self.import_yara = get_config_variable(
+            "MALPEDIA_IMPORT_YARA", ["malpedia", "import_yara"], config
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.helper.log_info(f"loaded malpedia config: {config}")
@@ -62,6 +65,7 @@ class Malpedia:
             self.confidence_level,
             self.update_existing_data,
             self.import_actors,
+            self.import_yara,
         )
 
     def get_interval(self) -> int:
