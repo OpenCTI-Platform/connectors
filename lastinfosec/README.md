@@ -9,3 +9,5 @@ LastInfoSec's Threat Feed is a data feed that makes it easier to detect threats 
 LastInfoSec description : 
 LastInfosec offers innovative and automated solutions to collect data, refine it and turn it into useful and actionable information, quickly available to improve the protection, detection and investigation capabilities of companies and government organizations.
 https://www.lastinfosec.com/en/
+
+https://www.lastinfosec.com/img/logolastinfosec.png
