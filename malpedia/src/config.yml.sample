@@ -8,8 +8,12 @@ connector:
   name: 'Malpedia'
   scope: 'malpedia'
   confidence_level: 3
+  update_existing_data: false
   log_level: 'info'
 
 malpedia:
-  MALPEDIA_API: 'https://malpedia.caad.fkie.fraunhofer.de/api/'
-  AUTH_KEY: 'ChangeMe'
+  base_url: 'https://malpedia.caad.fkie.fraunhofer.de/'
+  auth_key: 'ChangeMe'
+  interval_sec: 86400
+  import_actors: false
+  import_yara: false
