@@ -100,6 +100,20 @@ class HygieneConnector:
                     % (hit.type, hit.name, hit.version, hit.description)
                 )
 
+                # We set the score based on the number of warning list entries
+                if len(result) >= 5:
+                    score = "5"
+                elif len(result) >= 3:
+                    score = "10"
+                elif len(result) == 1:
+                    score = "15"
+                else:
+                    score = "20"
+
+                self.helper.log_info(
+                    f"number of hits ({len(result)}) setting score to {score}"
+                )
+
                 self.helper.api.stix_entity.add_tag(
                     id=observable["id"], tag_id=self.tag_hygiene["id"]
                 )
@@ -108,10 +122,9 @@ class HygieneConnector:
                     self.helper.api.stix_entity.add_tag(
                         id=indicator_id, tag_id=self.tag_hygiene["id"]
                     )
-
-                self.helper.api.stix_observable.update_field(
-                    id=observable["id"], key="score", value=10,
-                )
+                    self.helper.api.stix_domain_entity.update_field(
+                        id=indicator_id, key="score", value=score,
+                    )
 
                 # Create external references
                 external_reference_id = self.helper.api.external_reference.create(
