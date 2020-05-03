@@ -34,3 +34,4 @@ No special configuration is needed.
 
 1. Adds a `Hygiene` tag on items that correspond to a warning list entry.
 2. Adds an external reference for every matching warning list.
+3. Sets the observable score to `10`.

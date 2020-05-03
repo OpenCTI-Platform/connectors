@@ -81,7 +81,7 @@ class HygieneConnector:
             tag_type="Hygiene", value="Hygiene", color="#fc0341",
         )
 
-    def _process_observable(self, observable):
+    def _process_observable(self, observable) -> list:
         # Extract IPv4, IPv6 and Domain from entity data
         observable_value = observable["observable_value"]
 
@@ -104,6 +104,15 @@ class HygieneConnector:
                     id=observable["id"], tag_id=self.tag_hygiene["id"]
                 )
 
+                for indicator_id in observable["indicatorsIds"]:
+                    self.helper.api.stix_entity.add_tag(
+                        id=indicator_id, tag_id=self.tag_hygiene["id"]
+                    )
+
+                self.helper.api.stix_observable.update_field(
+                    id=observable["id"], key="score", value=10,
+                )
+
                 # Create external references
                 external_reference_id = self.helper.api.external_reference.create(
                     source_name="misp-warninglist",
@@ -120,7 +129,7 @@ class HygieneConnector:
 
             return ["observable value found on warninglist and tagged accordingly"]
 
-    def _process_message(self, data):
+    def _process_message(self, data) -> list:
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_observable.read(id=entity_id)
         return self._process_observable(observable)
