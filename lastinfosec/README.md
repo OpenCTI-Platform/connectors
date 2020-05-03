@@ -4,6 +4,8 @@ OpenCTI LastInfoSec connector will use the `/v2/stix2/getlasthour` API.
 
 This LastInfosec's Threat Feed contains STIXv2 reports update hourly with URLs, Hashs, Domains Indicators.  
 
+Requirement : if you want to use our intelligence, you need an API key. You could contact us at contact@lastinfosec.com
+
 LastInfoSec's Threat Feed is a data feed that makes it easier to detect threats within the information system. It contains enriched compromised evidences in order to reduce the time of threat analysis once detected.
 
 LastInfoSec description : 
