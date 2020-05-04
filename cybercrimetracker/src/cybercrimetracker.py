@@ -92,11 +92,14 @@ class Cybercrimetracker:
             parsed_entry["type"] = entry_summary["type"]
             parsed_entry["ext_link"] = entry["link"]
             parsed_entry["url"] = "http://{}".format(quote(entry["title"]))
-            if entry_summary["ip"] is None:
-                parsed_entry["ip"] = urlparse(
+            hostname = urlparse(
                     parsed_entry["url"]).hostname
+
+            if entry_summary["ip"] is None:
+                parsed_entry["ip"] = hostname
             else:
                 parsed_entry["ip"] = entry_summary["ip"]
+                parsed_entry["domain"] = hostname
 
             self.helper.log_info("Parsed entry: {}".format(entry["title"]))
 
@@ -105,12 +108,38 @@ class Cybercrimetracker:
             self.helper.log_error("Could not parse: {}".format(entry["title"]))
             return False
 
+    def gen_indicator_pattern(self, parsed_entry):
+
+        if "domain" in parsed_entry.keys():
+            indicator_pattern = (
+                "[ipv4-addr:value = '{}' ".format(
+                    parsed_entry["ip"]
+                ) +
+                "AND url:value = '{}' ".format(
+                    parsed_entry["url"]
+                ) +
+                "AND domain:value '{}']".format(
+                    parsed_entry["domain"]
+                )
+            )
+        else:
+            indicator_pattern = (
+                "[ipv4-addr:value = '{}' ".format(
+                    parsed_entry["ip"]
+                ) +
+                "AND url:value = '{}']".format(
+                    parsed_entry["url"]
+                )
+            )
+
+        return indicator_pattern
+
     def run(self):
 
         self.helper.log_info("Fetching data CYBERCRiME-TRACKER.NET...")
 
         tag = self.helper.api.tag.create(
-            tag_type="C2-Type", value="C2", color="#fc236b",
+            tag_type="C2-Type", value="C2 Server", color="#fc236b",
         )
         tlp = self.helper.api.marking_definition.read(
             filters=[
@@ -163,7 +192,7 @@ class Cybercrimetracker:
                     organization = self.helper.api.identity.create(
                         type="Organization",
                         name="CYBERCRiME-TRACKER.NET",
-                        description="Team of Experts collecting and sharing \
+                        description="Tracker collecting and sharing \
                             daily updates of C2 IPs/Urls. \
                             http://cybercrime-tracker.net",
                     )
@@ -184,14 +213,9 @@ class Cybercrimetracker:
                             )
                         )
 
-                        indicator_pattern = (
-                            "[ipv4-addr:value = '{}'".format(
-                                    parsed_entry["ip"]
-                                ) +
-                            "AND url:value = '{}']".format(
-                                    parsed_entry["url"]
-                                )
-                            )
+                        indicator_pattern = self.gen_indicator_pattern(
+                            parsed_entry
+                        )
 
                         # Add malware related to indicator
                         malware = self.helper.api.malware.create(
@@ -224,6 +248,11 @@ class Cybercrimetracker:
                             tag_id=tag["id"],
                         )
 
+                        self.helper.api.stix_entity.add_external_reference(
+                            id=indicator["id"],
+                            external_reference_id=ext_reference["id"],
+                        )
+
                         # Add relationship with malware
                         relation = self.helper.api.stix_relation.create(
                             fromType="Indicator",
@@ -253,25 +282,26 @@ class Cybercrimetracker:
                         )
 
                         # Create Observables and link them to Indicator
-                        observable = self.helper.api.stix_observable.create(
-                            type="URL",
-                            observable_value=parsed_entry["url"],
-                            createdByRef=organization["id"],
-                            markingDefinitions=[tlp["id"]],
-                            update=self.update_data,
-                        )
+                        observable_url = self.helper.api.stix_observable \
+                            .create(
+                                type="URL",
+                                observable_value=parsed_entry["url"],
+                                createdByRef=organization["id"],
+                                markingDefinitions=[tlp["id"]],
+                                update=self.update_data,
+                            )
 
                         self.helper.api.stix_entity.add_external_reference(
-                            id=observable["id"],
+                            id=observable_url["id"],
                             external_reference_id=ext_reference["id"],
                         )
 
                         self.helper.api.indicator.add_stix_observable(
                             id=indicator["id"],
-                            stix_observable_id=observable["id"],
+                            stix_observable_id=observable_url["id"],
                         )
 
-                        observable = self.helper.api.stix_observable.create(
+                        observable_ip = self.helper.api.stix_observable.create(
                             type="IPv4-Addr",
                             observable_value=parsed_entry["ip"],
                             createdByRef=organization["id"],
@@ -280,19 +310,49 @@ class Cybercrimetracker:
                         )
 
                         self.helper.api.stix_entity.add_external_reference(
-                            id=observable["id"],
+                            id=observable_ip["id"],
                             external_reference_id=ext_reference["id"],
                         )
 
                         self.helper.api.indicator.add_stix_observable(
                             id=indicator["id"],
-                            stix_observable_id=observable["id"],
+                            stix_observable_id=observable_ip["id"],
                         )
 
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=indicator["id"],
-                            external_reference_id=ext_reference["id"],
-                        )
+                        if "domain" in parsed_entry.keys():
+                            observable_domain = self.helper.api \
+                                .stix_observable.create(
+                                    type="Domain",
+                                    observable_value=parsed_entry["domain"],
+                                    createdByRef=organization["id"],
+                                    markingDefinitions=[tlp["id"]],
+                                    update=self.update_data,
+                                )
+
+                            self.helper.api.stix_entity.add_external_reference(
+                                id=observable_domain["id"],
+                                external_reference_id=ext_reference["id"],
+                            )
+
+                            self.helper.api.indicator.add_stix_observable(
+                                id=indicator["id"],
+                                stix_observable_id=observable_domain["id"],
+                            )
+                            self.helper.api.stix_relation.create(
+                                fromType="Domain",
+                                fromId=observable_domain["id"],
+                                toType="IPv4-Addr",
+                                toId=observable_ip["id"],
+                                relationship_type="resolves",
+                                last_seen=self._time_to_datetime(
+                                        entry["published_parsed"]
+                                    ),
+                                weight=self.confidence_level,
+                                createdByRef=organization["id"],
+                                created=parsed_entry["date"],
+                                modified=parsed_entry["date"],
+                                update=self.update_data,
+                            )
 
                     # Store the current timestamp as a last run
                     self.helper.log_info(
