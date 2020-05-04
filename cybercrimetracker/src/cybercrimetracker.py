@@ -90,7 +90,7 @@ class Cybercrimetracker:
             parsed_entry["date"] = self._time_to_datetime(
                 entry["published_parsed"])
             parsed_entry["type"] = entry_summary["type"]
-            parsed_entry["ext_link"] = quote(entry["link"], "/:")
+            parsed_entry["ext_link"] = entry["link"]
             parsed_entry["url"] = "http://{}".format(quote(entry["title"]))
             if entry_summary["ip"] is None:
                 parsed_entry["ip"] = urlparse(
