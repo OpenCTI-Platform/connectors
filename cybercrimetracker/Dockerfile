@@ -1,18 +1,15 @@
 FROM python:3.7-alpine
 
+WORKDIR  /opt/opencti-connector-cybercrimetracker
 
+COPY src/requirements.txt  ./
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add build-base libmagic libxml2 libxml2-dev libxslt libxslt-dev
-
-# Copy the connector
-COPY src /opt/opencti-connector-cybercrimetracker
-
-RUN cd /opt/opencti-connector-cybercrimetracker && \
+RUN apk --no-cache add build-base libmagic libxml2 libxml2-dev libxslt libxslt-dev && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# Copy the connector
+COPY src entrypoint.sh ./
+
+ENTRYPOINT ["/bin/sh", "-c", "/opt/opencti-connector-cybercrimetracker/entrypoint.sh"]
