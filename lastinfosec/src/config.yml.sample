@@ -11,5 +11,5 @@ connector:
   log_level: 'info'
 
 lastinfosec:
-  api_url: 'https://api.client.lastinfosec.com/v2/stix2/getlasthour?key='
+  api_url: 'https://api.client.lastinfosec.com/v2/stix2/getlasthour?api_key='
   api_key: 'ChangeMe'
