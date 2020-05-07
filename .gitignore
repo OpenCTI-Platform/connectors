@@ -7,3 +7,4 @@ __pycache__
 test
 config.yml
 docker-compose-test.yml
+Pipfile*

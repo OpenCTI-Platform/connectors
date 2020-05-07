@@ -13,7 +13,7 @@ services:
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - MALPEDIA_BASE_URL=https://malpedia.caad.fkie.fraunhofer.de/
-      #- MALPEDIA_AUTH_KEY=""
+      - MALPEDIA_AUTH_KEY="" # Empty key only fetches TLP:WHITE information
       - MALPEDIA_INTERVAL_SEC=86400 # Run once every day
       - MALPEDIA_IMPORT_ACTORS=false
       - MALPEDIA_IMPORT_YARA=false

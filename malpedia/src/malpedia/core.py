@@ -11,6 +11,7 @@ from .knowledge import KnowledgeImporter
 from .client import MalpediaClient
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2 import TLP_WHITE, TLP_AMBER
 
 
 class Malpedia:
@@ -51,13 +52,25 @@ class Malpedia:
         self.import_yara = get_config_variable(
             "MALPEDIA_IMPORT_YARA", ["malpedia", "import_yara"], config
         )
+
         self.helper = OpenCTIConnectorHelper(config)
         self.helper.log_info(f"loaded malpedia config: {config}")
 
-        # Create Mapedia client and importers
+        # Create Malpedia client and importers
         self.client = MalpediaClient(self.BASE_URL, self.AUTH_KEY)
         if not self.client.health_check():
             self.helper.log_error("error in malpedia API health check")
+
+        # If we run without API key we can assume all data is TLP:WHITE else we
+        # default to TLP:AMBER to be safe.
+        if self.AUTH_KEY == "" or self.AUTH_KEY is None:
+            self.default_marking = self.helper.api.marking_definition.read(
+                id=TLP_WHITE["id"]
+            )
+        else:
+            self.default_marking = self.helper.api.marking_definition.read(
+                id=TLP_AMBER["id"]
+            )
 
         self.knowledge_importer = KnowledgeImporter(
             self.helper,
@@ -66,6 +79,7 @@ class Malpedia:
             self.update_existing_data,
             self.import_actors,
             self.import_yara,
+            self.default_marking,
         )
 
     def get_interval(self) -> int:

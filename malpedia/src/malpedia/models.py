@@ -6,7 +6,7 @@ import dateutil.parser as dp
 from datetime import datetime, date
 from typing import Optional, List
 
-from pydantic import BaseModel, UUID4, constr, AnyUrl, Field
+from pydantic import BaseModel, UUID4, Field
 
 
 class Family(BaseModel):
@@ -20,7 +20,7 @@ class Family(BaseModel):
     notes: Optional[list]
     alt_names: Optional[list]
     sources: Optional[list]
-    urls: List[AnyUrl]
+    urls: List[str]
     common_name: Optional[str]
     uuid: UUID4
 
@@ -46,32 +46,20 @@ class Family(BaseModel):
 class YaraRule(BaseModel):
     """Malpedia Yara Rules model."""
 
-    _TLP_MAPPING = {
-        "tlp_white": "TLP:WHITE",
-        "tlp_green": "TLP:GREEN",
-        "tlp_amber": "TLP:AMBER",
-        "tlp_red": "TLP:RED",
-    }
-
     tlp_level: str
     rule_name: str
     raw_rule: str
 
     @property
-    def cti_tlp(self) -> str:
-        """Malpedia TLP mapped to OpenCTI."""
-        return self._TLP_MAPPING[self.tlp_level]
-
-    @property
     def date(self) -> str:
         """Malpedia yara date."""
-        extract = re.search("([0-9]{4}\-[0-9]{2}\-[0-9]{2})", self.raw_rule)
+        extract = re.search(r"([0-9]{4}\-[0-9]{2}\-[0-9]{2})", self.raw_rule)
         if extract is None:
-            return date.today()
+            return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
         else:
             try:
                 return dp.isoparse(extract.group(1)).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-            except:
+            except Exception:
                 return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
@@ -79,7 +67,7 @@ class Sample(BaseModel):
     """Malpedia Sample model."""
 
     status: str
-    sha256: constr(regex="^[A-Fa-f0-9]{64}$")  # noqa: F722
+    sha256: str
     version: str
 
 
