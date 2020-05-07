@@ -39,7 +39,7 @@ The connector can be configured with the following variables:
 
 ## Notes
 
-The API authentication key. Can be retreived with a valid account from:
+The API authentication key. Can be retrieved with a valid account from:
 https://malpedia.caad.fkie.fraunhofer.de/settings
 
 If you leave this variable undefined or as empty string (`""`) only public,
@@ -49,7 +49,7 @@ account.
 If you choose `false` for `import_actors` only references for existing Threat
 Actors are imported.
 
-**Caution** 
+**Caution**
 
 You should only enable `update_existing_data` for connectors that you consider
 a knowledge priority for the specific entities. Entities created by other
