@@ -2,6 +2,8 @@
 """OpenCTI Malpedia client module."""
 import logging
 import requests
+
+from urllib.parse import urljoin
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -14,14 +16,14 @@ class MalpediaClient:
     def __init__(self, api_url: str, api_key: str) -> None:
         """Initialize Malpedia api client."""
         if api_url == "":
-            self.api_url = self._DEFAULT_BASE_URL + "api/"
+            self.api_url = urljoin(self._DEFAULT_BASE_URL, "api/")
         else:
-            self.api_url = api_url + "api/"
+            self.api_url = urljoin(api_url, "api/")
         self.api_key = api_key
 
     def query(self, url_path: str) -> Any:
         try:
-            if self.api_key == None or self.api_key == "":
+            if self.api_key == "" or self.api_key is None:
                 r = requests.get(self.api_url + url_path,)
                 data = r.json()
             else:
