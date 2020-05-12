@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Mapping, Optional
 from urllib.parse import urlparse
 
-from .models import ApiResponse, YaraRule
+from .models import ApiResponse
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED

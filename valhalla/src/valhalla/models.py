@@ -36,10 +36,6 @@ class YaraRule(BaseModel):
         d = datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
         return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
-    @property
-    def cti_tags(self) -> list:
-        return self.tags.strip().split(", ")
-
 
 class ApiResponse(BaseModel):
     """Valhalla API Respose model"""
