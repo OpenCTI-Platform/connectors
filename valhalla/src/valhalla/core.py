@@ -59,26 +59,26 @@ class Valhalla:
             self.default_marking = self.helper.api.marking_definition.read(
                 id=TLP_WHITE["id"]
             )
-            self.API_KEY = self._DEMO_API_KEY
+            self.valhalla_client = ValhallaAPI()
         else:
             self.default_marking = self.helper.api.marking_definition.read(
                 id=TLP_AMBER["id"]
             )
+            self.valhalla_client = ValhallaAPI(api_key=self.API_KEY)
 
         self.knowledge_importer = KnowledgeImporter(
             self.helper,
             self.confidence_level,
             self.update_existing_data,
             self.default_marking,
-            self.API_KEY,
+            self.valhalla_client,
         )
 
     def run(self):
         self.helper.log_info("starting valhalla connector...")
         while True:
             try:
-                client = ValhallaAPI(api_key=self.API_KEY)
-                status_data = client.get_status()
+                status_data = self.valhalla_client.get_status()
                 api_status = Status.parse_obj(status_data)
                 self.helper.log_info(f"current valhalla status: {api_status}")
 

@@ -10,7 +10,6 @@ from .models import ApiResponse
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
-from valhallaAPI.valhalla import ValhallaAPI
 
 
 class KnowledgeImporter:
@@ -32,7 +31,7 @@ class KnowledgeImporter:
         confidence_level: int,
         update_data: bool,
         default_marking,
-        api_key: str,
+        valhalla_client: str,
     ) -> None:
         """Initialize Valhalla indicator importer."""
         self.helper = helper
@@ -41,7 +40,7 @@ class KnowledgeImporter:
         self.confidence_level = confidence_level
         self.update_data = update_data
         self.default_marking = default_marking
-        self.api_key = api_key
+        self.valhalla_client = valhalla_client
         self.malware_guess_cache: Dict[str, str] = {}
         self.actor_guess_cache: Dict[str, str] = {}
         self.date_utc = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
@@ -64,8 +63,7 @@ class KnowledgeImporter:
 
     def _process_rules(self) -> None:
         try:
-            client = ValhallaAPI(api_key=self.api_key)
-            rules_json = client.get_rules_json()
+            rules_json = self.valhalla_client.get_rules_json()
             response = ApiResponse.parse_obj(rules_json)
         except Exception as err:
             self.helper.log_error(f"error downloading rules: {err}")
