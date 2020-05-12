@@ -5,11 +5,7 @@
 this connector imports knowledge from the [Valhalla API](https://valhalla.nextron-systems.com/).
 The connector adds data for the following Valhalla observable/indicator types:
 
-* yara
-
-The connectors adds the following Entities:
-
-* Yara Rule
+* stix2 indicator pattern: yara
 
 ## Subscription
 
@@ -17,7 +13,7 @@ The demo rule set (also known as [signature-base](https://github.com/Neo23x0/sig
 contains free rules licensed under [CC-BY-NC](https://creativecommons.org/licenses/by-nc/4.0/)
 
 Full access to the rule database requires an active subscription.
-Subscriptions can be requested from https://www.nextron-systems.com/get-started/
+Subscriptions can be requested from https://www.nextron-systems.com/valhalla/
 
 ## Installation
 
@@ -46,4 +42,4 @@ The connector can be configured with the following variables:
 If you leave the `api_key` variable undefined or as empty string (`""`) only
 demo rules are imported. Those are around 2000 rules from the [signature-base](https://github.com/Neo23x0/signature-base))
 repository with additional information. So this connector can also be used
-without an account.
+without an account to get an idea of the data.
