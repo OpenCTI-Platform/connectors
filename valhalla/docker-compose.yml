@@ -1,0 +1,17 @@
+version: "3"
+services:
+  connector-valhalla:
+    image: opencti/connector-valhalla:3.2.1
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Valhalla
+      - CONNECTOR_SCOPE=valhalla
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_LOG_LEVEL=info
+      - VALHALLA_API_KEY="" # Empty key only fetches TLP:WHITE information
+      - VALHALLA_INTERVAL_SEC=86400 # Run once every day
+    restart: always

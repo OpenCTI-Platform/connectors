@@ -105,6 +105,10 @@ jobs:
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:latest . && docker tag opencti/connector-malpedia:latest opencti/connector-malpedia:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/valhalla
+          name: Build Docker image opencti/connector-valhalla
+          command: docker build -t opencti/connector-valhalla:latest . && docker tag opencti/connector-valhalla:latest opencti/connector-valhalla:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -144,6 +148,8 @@ jobs:
             docker push opencti/connector-lastinfosec:${CIRCLE_TAG}
             docker push opencti/connector-malpedia:latest
             docker push opencti/connector-malpedia:${CIRCLE_TAG}
+            docker push opencti/connector-valhalla:latest
+            docker push opencti/connector-valhalla:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -224,6 +230,10 @@ jobs:
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:rolling .
       - run:
+          working_directory: ~/opencti/valhalla
+          name: Build Docker image opencti/connector-valhalla
+          command: docker build -t opencti/connector-valhalla:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -245,6 +255,7 @@ jobs:
             docker push opencti/connector-virustotal:rolling
             docker push opencti/connector-lastinfosec:rolling
             docker push opencti/connector-malpedia:rolling
+            docker push opencti/connector-valhalla:rolling
 workflows:
   version: 2
   check-code:
