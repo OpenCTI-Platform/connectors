@@ -132,7 +132,26 @@ class ImportFilePdfObservables:
         if type in types:
             resolved_types = types[type]
             if resolved_types[0] == "IPv4-Addr":
+                #Demilitarized IP
+                if '[.]' in value:
+                    value = value.replace('[.]', '.')
                 type_0 = self.detect_ip_version(value)
+            elif resolved_types[0] == 'URL':
+                #Demilitarized URL
+                if 'hxxp://' in value:
+                    value = value.replace('hxxp://', 'http://')
+                if 'hxxps://' in value:
+                    value = value.replace('hxxps://', 'https://')
+                if 'hxxxs://' in value:
+                    value = value.replace('hxxxs://', 'https://')
+                if '[.]' in value:
+                    value = value.replace('[.]', '.')
+                type_0 = resolved_types[0]
+            elif resolved_types[0] == 'Domain':
+                #Demilitarized Host
+                if '[.]' in value:
+                    value = value.replace('[.]', '.')
+                type_0 = resolved_types[0]
             else:
                 type_0 = resolved_types[0]
             return {"type": type_0, "value": value}
