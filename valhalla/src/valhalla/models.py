@@ -36,6 +36,18 @@ class YaraRule(BaseModel):
         d = datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
         return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
+    @property
+    def cti_description(self) -> str:
+        return (
+            self.description
+            + "\n\n"
+            + "Minimum Yara version: "
+            + self.minimum_yara
+            + "\n\n"
+            + "Required Yara modules: "
+            + ", ".join(self.required_modules)
+        )
+
 
 class ApiResponse(BaseModel):
     """Valhalla API Respose model"""

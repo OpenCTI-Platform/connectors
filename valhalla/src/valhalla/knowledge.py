@@ -72,11 +72,10 @@ class KnowledgeImporter:
             return None
 
         for yr in response.rules:
-            print(yr.tags)
             try:
                 indicator = self.helper.api.indicator.create(
                     name=yr.name,
-                    description=yr.description,
+                    description=yr.cti_description,
                     pattern_type="yara",
                     indicator_pattern=yr.content,
                     markingDefinitions=[self.default_marking["id"]],
@@ -85,10 +84,10 @@ class KnowledgeImporter:
                     valid_from=yr.cti_date,
                     score=yr.score,
                     update=self.update_data,
+                    detection=True,
                 )
             except Exception as err:
                 self.helper.log_error(f"error creating indicator: {err}")
-                exit(0)
 
             self._add_refs_for_id([yr.reference], indicator["id"])
             self._add_tags_for_indicator(yr.tags, indicator["id"])
@@ -111,6 +110,8 @@ class KnowledgeImporter:
             return None
 
         for ref in refs:
+            if ref == "-":
+                continue
             try:
                 san_url = urlparse(ref)
             except Exception:
