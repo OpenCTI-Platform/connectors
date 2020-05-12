@@ -140,6 +140,10 @@ class ImportFilePdfObservables:
                 #Demilitarized URL
                 if 'hxxp://' in value:
                     value = value.replace('hxxp://', 'http://')
+                if 'hxxps://' in value:
+                    value = value.replace('hxxps://', 'https://')
+                if 'hxxxs://' in value:
+                    value = value.replace('hxxxs://', 'https://')
                 if '[.]' in value:
                     value = value.replace('[.]', '.')
                 type_0 = resolved_types[0]
