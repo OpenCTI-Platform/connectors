@@ -1,5 +1,7 @@
 # OpenCTI Valhalla Connector
 
+![Valhalla Logo](https://valhalla.nextron-systems.com/static/valhalla-logo.png)
+
 this connector imports knowledge from the [Valhalla API](https://valhalla.nextron-systems.com/).
 The connector adds data for the following Valhalla observable/indicator types:
 
