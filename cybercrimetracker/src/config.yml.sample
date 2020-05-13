@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'CYBERCRiME-TRACKER.NET''
+  name: 'CYBERCRiME-TRACKER.NET'
   scope: 'cybercrimetracker'
   confidence_level: 3
   update_existing_data: false
