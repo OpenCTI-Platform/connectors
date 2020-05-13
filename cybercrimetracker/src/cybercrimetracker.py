@@ -112,22 +112,22 @@ class Cybercrimetracker:
 
         if "domain" in parsed_entry.keys():
             indicator_pattern = (
-                "[ipv4-addr:value = '{}' ".format(
+                "[ipv4-addr:value='{}'] ".format(
                     parsed_entry["ip"]
                 ) +
-                "AND url:value = '{}' ".format(
+                "AND [url:value='{}'] ".format(
                     parsed_entry["url"]
                 ) +
-                "AND domain:value '{}']".format(
+                "AND [domain:value='{}']".format(
                     parsed_entry["domain"]
                 )
             )
         else:
             indicator_pattern = (
-                "[ipv4-addr:value = '{}' ".format(
+                "[ipv4-addr:value='{}'] ".format(
                     parsed_entry["ip"]
                 ) +
-                "AND url:value = '{}']".format(
+                "AND [url:value='{}']".format(
                     parsed_entry["url"]
                 )
             )
