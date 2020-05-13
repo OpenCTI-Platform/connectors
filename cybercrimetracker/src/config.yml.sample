@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'CYBERCRiME-TRACKER.NET'
-  scope: 'cybercrimetracker'
+  scope: 'cybercrimetracker,ipv4-addr,domain,url,malware,indicator'
   confidence_level: 3
   update_existing_data: false
   log_level: 'info'
