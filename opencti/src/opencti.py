@@ -66,7 +66,7 @@ class OpenCTI:
                         sectors_data.decode("utf-8"),
                         self.helper.connect_scope,
                         self.update_existing_data,
-                        False
+                        False,
                     )
                     geography_data = urllib.request.urlopen(
                         self.opencti_geography_file_url
@@ -75,7 +75,7 @@ class OpenCTI:
                         geography_data.decode("utf-8"),
                         self.helper.connect_scope,
                         self.update_existing_data,
-                        False
+                        False,
                     )
                     # Store the current timestamp as a last run
                     self.helper.log_info(

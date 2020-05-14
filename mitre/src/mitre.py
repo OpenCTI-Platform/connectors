@@ -72,7 +72,7 @@ class Mitre:
                         enterprise_data,
                         self.helper.connect_scope,
                         self.update_existing_data,
-                        False
+                        False,
                     )
                     pre_attack_data = (
                         urllib.request.urlopen(self.mitre_pre_attack_file_url)
@@ -83,7 +83,7 @@ class Mitre:
                         pre_attack_data,
                         self.helper.connect_scope,
                         self.update_existing_data,
-                        False
+                        False,
                     )
                     # Store the current timestamp as a last run
                     self.helper.log_info(
