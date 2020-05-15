@@ -1,4 +1,4 @@
 -e git+https://github.com/certeu/crowdstrike-client#egg=crowdstrike-client
-pycti==3.2.5
+pycti==3.2.6
 PyYAML==5.3.1
 lxml==4.5.0
