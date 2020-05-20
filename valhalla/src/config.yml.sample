@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Valhalla'
+  scope: 'valhalla'
+  confidence_level: 3
+  update_existing_data: false
+  log_level: 'info'
+
+valhalla:
+  api_key: ''
+  interval_sec: 86400
