@@ -6,7 +6,7 @@ import dateutil.parser as dp
 from datetime import datetime, date
 from typing import Optional, List
 
-from pydantic import BaseModel, UUID4, Field
+from pydantic import BaseModel
 
 
 class Family(BaseModel):
@@ -22,7 +22,7 @@ class Family(BaseModel):
     sources: Optional[list]
     urls: List[str]
     common_name: Optional[str]
-    uuid: UUID4
+    uuid: str
 
     @property
     def malpedia_url(self) -> str:
@@ -72,26 +72,13 @@ class Sample(BaseModel):
 
 
 class ActorMeta(BaseModel):
-    cfr_suspected_victims: list = Field(None, alias="cfr-suspected-victims")
     country: str = ""
     refs: list = []
-    cfr_target_category: list = Field(None, alias="cfr-target-category")
-    cfr_type_of_incident: str = Field(None, alias="cfr-type-of-incident")
     synonyms: list = []
-    cfr_suspected_state_sponsor: str = Field(None, alias="cfr-suspected-state-sponsor")
-    attribution_confidence: int = Field(None, alias="attribution-confidence")
-
-
-class ActorRelated(BaseModel):
-    dest_uuid: str = Field(alias="dest-uuid")
-    ref_type: str = Field(alias="type")
-    tags: str
 
 
 class Actor(BaseModel):
     value: str
     meta: ActorMeta
-    # families: List[Family]
     description: str = ""
-    # related: list
-    uuid: UUID4
+    uuid: str
