@@ -15,7 +15,7 @@ services:
       - CROWDSTRIKE_BASE_URL=https://api.crowdstrike.com
       - CROWDSTRIKE_CLIENT_ID=ChangeMe
       - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
-      - CROWDSTRIKE_TLP=amber
+      - CROWDSTRIKE_TLP=Amber
       - CROWDSTRIKE_SCOPES=actor,report,indicator,yara_master
       - CROWDSTRIKE_ACTOR_START_TIMESTAMP=0
       - CROWDSTRIKE_REPORT_START_TIMESTAMP=0 # BEWARE! A lot of reports!
