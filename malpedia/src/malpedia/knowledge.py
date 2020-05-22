@@ -158,9 +158,7 @@ class KnowledgeImporter:
                     name=act.value,
                     description=act.description,
                     alias=act.meta.synonyms if act.meta.synonyms else None,
-                    primary_motivation=act.meta.cfr_type_of_incident
-                    if act.meta.cfr_type_of_incident
-                    else None,
+                    update=self.update_data,
                 )
 
                 self.helper.api.stix_relation.create(
@@ -173,7 +171,7 @@ class KnowledgeImporter:
                     weight=self.confidence_level,
                     createdByRef=self.organization["id"],
                     ignore_dates=True,
-                    update=True,
+                    update=self.update_data,
                 )
 
                 for act_ref_url in act.meta.refs:
@@ -201,7 +199,7 @@ class KnowledgeImporter:
                         weight=self.confidence_level,
                         createdByRef=self.organization["id"],
                         ignore_dates=True,
-                        update=True,
+                        update=self.update_data,
                     )
 
                     for act_ref_url in act.meta.refs:
@@ -229,6 +227,7 @@ class KnowledgeImporter:
                 sam.status or "", sam.version or ""
             )
 
+            # Sanity check the hash value
             if sam.sha256 == "" or sam.sha256 is None or len(sam.sha256) != 64:
                 continue
 
@@ -242,6 +241,7 @@ class KnowledgeImporter:
                     description=desc,
                     createdByRef=self.organization["id"],
                     markingDefinitions=[self.default_marking["id"]],
+                    update=self.update_data,
                 )
             except Exception as e:
                 print(obs)
@@ -274,7 +274,7 @@ class KnowledgeImporter:
                     weight=self.confidence_level,
                     createdByRef=self.organization["id"],
                     ignore_dates=True,
-                    update=True,
+                    update=self.update_data,
                 )
             except Exception as e:
                 self.helper.log_error(f"error storing indicator relation: {e}")
@@ -308,11 +308,10 @@ class KnowledgeImporter:
                         main_observable_type="File-SHA256",
                         createdByRef=self.organization["id"],
                         valid_from=yr.date,
+                        update=self.update_data,
                     )
                 except Exception as e:
-                    self.helper.log_error(
-                        f"error creating yara indicator {yr.rule_name}: {e}"
-                    )
+                    self.helper.log_error(f"error creating yara indicator: {e}")
                     continue
 
                 self.helper.api.stix_relation.create(
@@ -326,7 +325,7 @@ class KnowledgeImporter:
                     role_played="Unknown",
                     createdByRef=self.organization["id"],
                     ignore_dates=True,
-                    update=True,
+                    update=self.update_data,
                 )
 
     def _add_malware_family(self, fam: Family) -> str:
@@ -351,7 +350,7 @@ class KnowledgeImporter:
                     description=fam.description,
                     alias=fam.alt_names if fam.alt_names != [] else None,
                     markingDefinitions=[marking_tlp_white["id"]],
-                    update=True,
+                    update=self.update_data,
                 )
             except Exception as e:
                 self.helper.log_error(f"error creating malware entity: {e}")
