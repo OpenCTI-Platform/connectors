@@ -12,7 +12,7 @@ connector:
   log_level: 'info'
 
 crowdstrike:
-  base_url: 'ChangeMe'
+  base_url: 'https://api.crowdstrike.com'
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
   tlp: 'Amber'
@@ -25,4 +25,4 @@ crowdstrike:
   report_guess_malware: false                                       # Use report tags to guess malware
   indicator_start_timestamp: 0                                      # BEWARE! All the indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'
-  interval_sec: 43200                                               # Seconds
+  interval_sec: 1800                                                # Seconds

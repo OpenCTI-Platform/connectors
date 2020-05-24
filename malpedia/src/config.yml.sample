@@ -12,7 +12,6 @@ connector:
   log_level: 'info'
 
 malpedia:
-  base_url: 'https://malpedia.caad.fkie.fraunhofer.de/'
   auth_key: ''
   interval_sec: 86400
   import_actors: false

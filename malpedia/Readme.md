@@ -11,6 +11,7 @@ The connectors adds the following Entities:
 
 * Malware
 * Threat Actor
+* References
 
 ## Installation
 
@@ -27,19 +28,19 @@ file of OpenCTI.
 
 The connector can be configured with the following variables:
 
-| Config Parameter       | Docker env var                   | Default                                     | Description                                                 |
-| -----------------------| -------------------------------- | ------------------------------------------- | ----------------------------------------------------------- |
-| `base_url`             | `MALPEDIA_BASE_URL`              | `https://malpedia.caad.fkie.fraunhofer.de/` | Base url for the malpedia website. Must end in a "/".       |
-| `auth_key`             | `MALPEDIA_AUTH_KEY`              | `""`                                        | API authentication key                                      |
-| `interval_sec`         | `MALPEDIA_INTERVAL_SEC`          | `86400`                                     | Interval in seconds before a new import is considered       |
-| `import_actors`        | `MALPEDIA_IMPORT_ACTORS`         | `false`                                     | Choose if you want to import Threat Actors from Malpedia    |
-| `import_yara`          | `MALPEDIA_IMPORT_YARA`           | `false`                                     | Choose if you want to import Yara rules from Malpedia       |
-| `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | `false`                                     | This will allow the connector to overwrite existing extries |
-| `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | `3`                                         | The confidence level you give to the connector              |
+| Config Parameter       | Docker env var                   | Default  | Description                                                 |
+| -----------------------| -------------------------------- | -------- | ----------------------------------------------------------- |
+| `auth_key`             | `MALPEDIA_AUTH_KEY`              | `""`     | API authentication key                                      |
+| `interval_sec`         | `MALPEDIA_INTERVAL_SEC`          | `86400`  | Interval in seconds before a new import is considered       |
+| `import_actors`        | `MALPEDIA_IMPORT_ACTORS`         | `false`  | Choose if you want to import Threat Actors from Malpedia    |
+| `import_yara`          | `MALPEDIA_IMPORT_YARA`           | `false`  | Choose if you want to import Yara rules from Malpedia       |
+| `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | `false`  | This will allow the connector to overwrite existing extries |
+| `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | `3`      | The confidence level you give to the connector              |
 
 ## Notes
 
 The API authentication key. Can be retrieved with a valid account from:
+
 https://malpedia.caad.fkie.fraunhofer.de/settings
 
 If you leave this variable undefined or as empty string (`""`) only public,
