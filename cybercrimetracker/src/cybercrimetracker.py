@@ -25,32 +25,29 @@ class Cybercrimetracker:
 
         # Connector Config
         self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"],
-            config, isNumber=True
+            "CONNECTOR_CONFIDENCE_LEVEL",
+            ["connector", "confidence_level"],
+            config,
+            isNumber=True,
         )
-        self.update_data = (get_config_variable(
-                "CONNECTOR_UPDATE_EXISTING_DATA",
-                ["connector", "update_existing_data"],
-                config,
-            )
+        self.update_data = get_config_variable(
+            "CONNECTOR_UPDATE_EXISTING_DATA",
+            ["connector", "update_existing_data"],
+            config,
         )
 
         # CYBERCRiME-TRACKER.NET Config
         self.feed_url = get_config_variable(
-            "CYBERCRIMETRACKER_FEED_URL",
-            ["cybercrimetracker", "feed_url"],
-            config,
+            "CYBERCRIMETRACKER_FEED_URL", ["cybercrimetracker", "feed_url"], config,
         )
         self.connector_tlp = get_config_variable(
-            "CYBERCRIMETRACKER_TLP",
-            ["cybercrimetracker", "tlp"],
-            config,
+            "CYBERCRIMETRACKER_TLP", ["cybercrimetracker", "tlp"], config,
         )
         self.interval = get_config_variable(
             "CYBERCRIMETRACKER_INTERVAL",
             ["cybercrimetracker", "interval"],
             config,
-            isNumber=True
+            isNumber=True,
         )
 
     @staticmethod
@@ -62,7 +59,7 @@ class Cybercrimetracker:
             input_date.tm_hour,
             input_date.tm_min,
             input_date.tm_sec,
-            tzinfo=timezone.utc
+            tzinfo=timezone.utc,
         ).isoformat()
 
     def parse_feed_entry(self, entry):
@@ -80,20 +77,20 @@ class Cybercrimetracker:
         """
         parsed_entry = {}
 
-        pattern = r'(?:\[%{GREEDYDATA:cwhqid}\]\s+Type:\s+%{GREEDYDATA:type}' \
-            + r'\s+-%{GREEDYDATA}:\s+%{IP:ip}|' \
-            + r'\[%{GREEDYDATA:cwhqid}\]\s+Type:\s+%{GREEDYDATA:type})'
+        pattern = (
+            r"(?:\[%{GREEDYDATA:cwhqid}\]\s+Type:\s+%{GREEDYDATA:type}"
+            + r"\s+-%{GREEDYDATA}:\s+%{IP:ip}|"
+            + r"\[%{GREEDYDATA:cwhqid}\]\s+Type:\s+%{GREEDYDATA:type})"
+        )
 
         entry_summary = Grok(pattern).match(entry["summary"])
 
         if entry_summary:
-            parsed_entry["date"] = self._time_to_datetime(
-                entry["published_parsed"])
+            parsed_entry["date"] = self._time_to_datetime(entry["published_parsed"])
             parsed_entry["type"] = entry_summary["type"]
             parsed_entry["ext_link"] = entry["link"]
             parsed_entry["url"] = "http://{}".format(quote(entry["title"]))
-            hostname = urlparse(
-                    parsed_entry["url"]).hostname
+            hostname = urlparse(parsed_entry["url"]).hostname
 
             if entry_summary["ip"] is None:
                 parsed_entry["ip"] = hostname
@@ -112,25 +109,14 @@ class Cybercrimetracker:
 
         if "domain" in parsed_entry.keys():
             indicator_pattern = (
-                "[ipv4-addr:value='{}'] ".format(
-                    parsed_entry["ip"]
-                ) +
-                "AND [url:value='{}'] ".format(
-                    parsed_entry["url"]
-                ) +
-                "AND [domain:value='{}']".format(
-                    parsed_entry["domain"]
-                )
+                "[ipv4-addr:value='{}'] ".format(parsed_entry["ip"])
+                + "AND [url:value='{}'] ".format(parsed_entry["url"])
+                + "AND [domain:value='{}']".format(parsed_entry["domain"])
             )
         else:
-            indicator_pattern = (
-                "[ipv4-addr:value='{}'] ".format(
-                    parsed_entry["ip"]
-                ) +
-                "AND [url:value='{}']".format(
-                    parsed_entry["url"]
-                )
-            )
+            indicator_pattern = "[ipv4-addr:value='{}'] ".format(
+                parsed_entry["ip"]
+            ) + "AND [url:value='{}']".format(parsed_entry["url"])
 
         return indicator_pattern
 
@@ -143,10 +129,9 @@ class Cybercrimetracker:
         )
         tlp = self.helper.api.marking_definition.read(
             filters=[
-                {'key': 'definition',
-                    'values': 'TLP:{}'.format(self.connector_tlp)}
-                ]
-            )
+                {"key": "definition", "values": "TLP:{}".format(self.connector_tlp)}
+            ]
+        )
 
         while True:
             try:
@@ -169,21 +154,21 @@ class Cybercrimetracker:
 
                 # Run if it is the first time or we are past the interval
 
-                if last_run is None or (
-                    (timestamp - last_run) > self.interval
-                ):
+                if last_run is None or ((timestamp - last_run) > self.interval):
                     self.helper.log_info("Connector will run!")
 
                     # Get Feed Content
                     feed = feedparser.parse(self.feed_url)
 
                     self.helper.log_info(
-                        "Found: {} entries.".format(len(feed["entries"])))
+                        "Found: {} entries.".format(len(feed["entries"]))
+                    )
 
                     self.feed_summary = {
                         "Source": feed["feed"]["title"],
                         "Date": self._time_to_datetime(
-                            feed["feed"]["published_parsed"]),
+                            feed["feed"]["published_parsed"]
+                        ),
                         "Details": feed["feed"]["subtitle"],
                         "Link": feed["feed"]["link"],
                     }
@@ -201,36 +186,23 @@ class Cybercrimetracker:
 
                         parsed_entry = self.parse_feed_entry(entry)
 
-                        ext_reference = (
-                            self.helper
-                            .api
-                            .external_reference
-                            .create(
-                                source_name="{}".format(
-                                    self.feed_summary["Source"],
-                                ),
-                                url=parsed_entry['ext_link'],
-                            )
+                        ext_reference = self.helper.api.external_reference.create(
+                            source_name="{}".format(self.feed_summary["Source"],),
+                            url=parsed_entry["ext_link"],
                         )
 
-                        indicator_pattern = self.gen_indicator_pattern(
-                            parsed_entry
-                        )
+                        indicator_pattern = self.gen_indicator_pattern(parsed_entry)
 
                         # Add malware related to indicator
                         malware = self.helper.api.malware.create(
                             name=parsed_entry["type"],
-                            description="{} malware.".format(
-                                    parsed_entry["type"]
-                                ),
+                            description="{} malware.".format(parsed_entry["type"]),
                         )
 
                         # Add indicator
                         indicator = self.helper.api.indicator.create(
                             name=parsed_entry["url"],
-                            description="C2 URL for: {}".format(
-                                    parsed_entry["type"]
-                                ),
+                            description="C2 URL for: {}".format(parsed_entry["type"]),
                             pattern_type="stix",
                             indicator_pattern=indicator_pattern,
                             main_observable_type="URL",
@@ -244,8 +216,7 @@ class Cybercrimetracker:
 
                         # Add tag
                         self.helper.api.stix_entity.add_tag(
-                            id=indicator["id"],
-                            tag_id=tag["id"],
+                            id=indicator["id"], tag_id=tag["id"],
                         )
 
                         self.helper.api.stix_entity.add_external_reference(
@@ -261,13 +232,10 @@ class Cybercrimetracker:
                             toId=malware["id"],
                             relationship_type="indicates",
                             first_seen=self._time_to_datetime(
-                                    entry["published_parsed"]
-                                ),
-                            last_seen=self._time_to_datetime(
-                                    entry["published_parsed"]
-                                ),
-                            description="URLs associated to: "
-                                        + parsed_entry["type"],
+                                entry["published_parsed"]
+                            ),
+                            last_seen=self._time_to_datetime(entry["published_parsed"]),
+                            description="URLs associated to: " + parsed_entry["type"],
                             weight=self.confidence_level,
                             role_played="C2 Server",
                             createdByRef=organization["id"],
@@ -282,14 +250,13 @@ class Cybercrimetracker:
                         )
 
                         # Create Observables and link them to Indicator
-                        observable_url = self.helper.api.stix_observable \
-                            .create(
-                                type="URL",
-                                observable_value=parsed_entry["url"],
-                                createdByRef=organization["id"],
-                                markingDefinitions=[tlp["id"]],
-                                update=self.update_data,
-                            )
+                        observable_url = self.helper.api.stix_observable.create(
+                            type="URL",
+                            observable_value=parsed_entry["url"],
+                            createdByRef=organization["id"],
+                            markingDefinitions=[tlp["id"]],
+                            update=self.update_data,
+                        )
 
                         self.helper.api.stix_entity.add_external_reference(
                             id=observable_url["id"],
@@ -297,8 +264,7 @@ class Cybercrimetracker:
                         )
 
                         self.helper.api.indicator.add_stix_observable(
-                            id=indicator["id"],
-                            stix_observable_id=observable_url["id"],
+                            id=indicator["id"], stix_observable_id=observable_url["id"],
                         )
 
                         observable_ip = self.helper.api.stix_observable.create(
@@ -315,19 +281,17 @@ class Cybercrimetracker:
                         )
 
                         self.helper.api.indicator.add_stix_observable(
-                            id=indicator["id"],
-                            stix_observable_id=observable_ip["id"],
+                            id=indicator["id"], stix_observable_id=observable_ip["id"],
                         )
 
                         if "domain" in parsed_entry.keys():
-                            observable_domain = self.helper.api \
-                                .stix_observable.create(
-                                    type="Domain",
-                                    observable_value=parsed_entry["domain"],
-                                    createdByRef=organization["id"],
-                                    markingDefinitions=[tlp["id"]],
-                                    update=self.update_data,
-                                )
+                            observable_domain = self.helper.api.stix_observable.create(
+                                type="Domain",
+                                observable_value=parsed_entry["domain"],
+                                createdByRef=organization["id"],
+                                markingDefinitions=[tlp["id"]],
+                                update=self.update_data,
+                            )
 
                             self.helper.api.stix_entity.add_external_reference(
                                 id=observable_domain["id"],
@@ -345,8 +309,8 @@ class Cybercrimetracker:
                                 toId=observable_ip["id"],
                                 relationship_type="resolves",
                                 last_seen=self._time_to_datetime(
-                                        entry["published_parsed"]
-                                    ),
+                                    entry["published_parsed"]
+                                ),
                                 weight=self.confidence_level,
                                 createdByRef=organization["id"],
                                 created=parsed_entry["date"],
@@ -357,7 +321,9 @@ class Cybercrimetracker:
                     # Store the current timestamp as a last run
                     self.helper.log_info(
                         "Connector successfully run, \
-                            storing last_run as: {}".format(str(timestamp))
+                            storing last_run as: {}".format(
+                            str(timestamp)
+                        )
                     )
                     self.helper.set_state({"last_run": timestamp})
                     self.helper.log_info(
@@ -374,8 +340,8 @@ class Cybercrimetracker:
                     self.helper.log_info(
                         "Connector will not run. \
                             Next run in: {} seconds.".format(
-                                str(round(new_interval, 2))
-                            )
+                            str(round(new_interval, 2))
+                        )
                     )
                     time.sleep(60)
 
