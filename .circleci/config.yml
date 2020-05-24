@@ -258,19 +258,23 @@ jobs:
             docker push opencti/connector-valhalla:rolling
 workflows:
   version: 2
-  check-code:
+  opencti:
     jobs:
       - ensure_formatting
       - linter
-  opencti:
-    jobs:
       - build:
+          requires:
+            - ensure_formatting
+            - linter
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
               ignore: /.*/
       - build_rolling:
+          requires:
+            - ensure_formatting
+            - linter
           filters:
             branches:
               only:
