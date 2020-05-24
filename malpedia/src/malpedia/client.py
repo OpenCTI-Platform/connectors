@@ -15,7 +15,7 @@ class MalpediaClient:
 
     def __init__(self, api_url: str, api_key: str) -> None:
         """Initialize Malpedia api client."""
-        if api_url == "":
+        if api_url == "" or api_url == None:
             self.api_url = urljoin(self._DEFAULT_BASE_URL, "api/")
         else:
             self.api_url = urljoin(api_url, "api/")
