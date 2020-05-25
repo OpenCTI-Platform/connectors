@@ -6,7 +6,7 @@ import csv
 import time
 
 from pycti import OpenCTIConnectorHelper
-from pycti.utils.constants import IdentityTypes, ObservableTypes
+from pycti.utils.constants import IdentityTypes
 
 
 class ExportFileCsv:
