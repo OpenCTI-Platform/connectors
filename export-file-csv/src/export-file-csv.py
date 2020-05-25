@@ -6,7 +6,7 @@ import csv
 import time
 
 from pycti import OpenCTIConnectorHelper
-from pycti.utils.constants import IdentityTypes
+from pycti.utils.constants import IdentityTypes, ObservableTypes
 
 
 class ExportFileCsv:
@@ -139,6 +139,7 @@ class ExportFileCsv:
                 "course-of-action": self.helper.api.course_of_action.list,
                 "report": self.helper.api.report.list,
                 "indicator": self.helper.api.indicator.list,
+                "stix-observable": self.helper.api.stix_observable.list,
             }
             do_list = lister.get(
                 entity_type.lower(),
@@ -151,8 +152,10 @@ class ExportFileCsv:
                 filters=list_args["filters"],
                 orderBy=list_args["orderBy"],
                 orderMode=list_args["orderMode"],
+                types=list_args["types"] if "types" in list_args else None,
                 getAll=True,
             )
+
             csv_data = self.export_dict_list_to_csv(entities_list)
             self.helper.log_info(
                 "Uploading: " + entity_type + "/" + export_type + " to " + file_name
