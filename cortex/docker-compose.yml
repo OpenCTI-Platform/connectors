@@ -1,0 +1,17 @@
+version: "3"
+services:
+  connector-cortex:
+    image: opencti/connector-cortex:3.2.2
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=Cortex
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain,file-md5,file-sha1,file-sha256
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_LOG_LEVEL=info
+      - CORTEX_URL=ChangeMe
+      - CORTEX_API_KEY=ChangeMe
+      - CORTEX_VERIFY_SSL=true
+    restart: always
