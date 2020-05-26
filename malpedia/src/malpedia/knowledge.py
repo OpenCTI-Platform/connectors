@@ -20,7 +20,7 @@ class KnowledgeImporter:
     """Malpedia Knowledge importer."""
 
     _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
-    _GUESS_NOT_A_ACTOR = "GUESS_NOT_A_ACTOR"
+    _GUESS_NOT_A_INTRUSION_SET = "GUESS_NOT_A_INTRUSION_SET"
     _KNOWLEDGE_IMPORTER_STATE = "knowledge_importer_state"
     _TLP_MAPPING = {
         "tlp_white": "TLP_WHITE",
@@ -35,7 +35,7 @@ class KnowledgeImporter:
         api_client: MalpediaClient,
         confidence_level: int,
         update_data: bool,
-        import_actors: bool,
+        import_intrusion_sets: bool,
         import_yara: bool,
         default_marking,
     ) -> None:
@@ -43,14 +43,14 @@ class KnowledgeImporter:
         self.helper = helper
         self.api_client = api_client
         self.guess_malware = True
-        self.guess_actor = True
+        self.guess_intrusion_set = True
         self.confidence_level = confidence_level
         self.update_data = update_data
-        self.import_actors = import_actors
+        self.import_intrusion_sets = import_intrusion_sets
         self.import_yara = import_yara
         self.default_marking = default_marking
         self.malware_guess_cache: Dict[str, str] = {}
-        self.actor_guess_cache: Dict[str, str] = {}
+        self.intrusion_set_guess_cache: Dict[str, str] = {}
         self.date_utc = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
         self.organization = helper.api.identity.create(
             name="Malpedia",
@@ -122,12 +122,12 @@ class KnowledgeImporter:
             self._add_samples_for_malware_id(malware_id, samples)
 
             ######################################################
-            # Actors
+            # Intrusion Sets
             ######################################################
-            self.helper.log_info(f"creating actors for {fam.malpedia_name}")
-            self._add_actors_for_malware_id(malware_id, fam)
+            self.helper.log_info(f"creating intrusion sets for {fam.malpedia_name}")
+            self._add_intrusion_sets_for_malware_id(malware_id, fam)
 
-    def _add_actors_for_malware_id(self, malware_id: str, fam: Family) -> None:
+    def _add_intrusion_sets_for_malware_id(self, malware_id: str, fam: Family) -> None:
         for actor in fam.attribution:
             actor_json = self.api_client.query(
                 "get/actor/" + actor.lower().replace(" ", "_")
@@ -140,8 +140,8 @@ class KnowledgeImporter:
 
             self.helper.log_info("Processing actor: " + act.value)
 
-            # Use all names we have to guess an existing actor name
-            guessed_actor = self._guess_actor_from_tags([actor] + act.meta.synonyms)
+            # Use all names we have to guess an existing intrusion set name
+            guessed_intrusion_set = self._guess_intrusion_set_from_tags([actor] + act.meta.synonyms)
 
             if act.value == "" or act.value is None:
                 continue
@@ -149,12 +149,12 @@ class KnowledgeImporter:
             if act.description == "":
                 act.description = "Malpedia library entry for " + act.value
 
-            # If we cannot guess an actor AND we are allowed to do so we
-            # create the Threat Actor. Only update_data can override.
-            if (guessed_actor == {} and self.import_actors) or (
-                self.update_data and self.import_actors
+            # If we cannot guess an intrusion set AND we are allowed to do so we
+            # create the Intrusion Set. Only update_data can override.
+            if (guessed_intrusion_set == {} and self.import_intrusion_sets) or (
+                self.update_data and self.import_intrusion_sets
             ):
-                threat_actor = self.helper.api.threat_actor.create(
+                intrusion_set = self.helper.api.intrusion_set.create(
                     name=act.value,
                     description=act.description,
                     alias=act.meta.synonyms if act.meta.synonyms else None,
@@ -162,8 +162,8 @@ class KnowledgeImporter:
                 )
 
                 self.helper.api.stix_relation.create(
-                    fromType="Threat-Actor",
-                    fromId=threat_actor["id"],
+                    fromType="Intrusion-Set",
+                    fromId=intrusion_set["id"],
                     toType="Malware",
                     toId=malware_id,
                     relationship_type="uses",
@@ -181,17 +181,17 @@ class KnowledgeImporter:
                         description="Reference found in the Malpedia library",
                     )
                     self.helper.api.stix_entity.add_external_reference(
-                        id=threat_actor["id"], external_reference_id=reference["id"],
+                        id=intrusion_set["id"], external_reference_id=reference["id"],
                     )
             else:
-                # If we don't create the actor we attach every knowledge
+                # If we don't create the intrusion set we attach every knowledge
                 # we have to the guessed existing one.
-                self.helper.log_info("not creating actor ({act.value}) based on config")
+                self.helper.log_info("not creating intrusion set ({act.value}) based on config")
 
-                if guessed_actor != {} and self.guess_actor:
+                if guessed_intrusion_set != {} and self.guess_intrusion_set:
                     self.helper.api.stix_relation.create(
-                        fromType="Threat-Actor",
-                        fromId=guessed_actor[act.value],
+                        fromType="Intrusion-Set",
+                        fromId=guessed_intrusion_set[act.value],
                         toType="Malware",
                         toId=malware_id,
                         relationship_type="uses",
@@ -209,7 +209,7 @@ class KnowledgeImporter:
                             description="Reference found in the Malpedia library",
                         )
                         self.helper.api.stix_entity.add_external_reference(
-                            id=guessed_actor[act.value],
+                            id=guessed_intrusion_set[act.value],
                             external_reference_id=reference["id"],
                         )
 
@@ -424,31 +424,30 @@ class KnowledgeImporter:
                 malwares[tag] = guess
         return malwares
 
-    def _guess_actor_from_tags(self, tags: List[str]) -> Mapping[str, str]:
-        if not self.guess_actor:
+    def _guess_intrusion_set_from_tags(self, tags: List[str]) -> Mapping[str, str]:
+        if not self.guess_intrusion_set:
             return {}
 
-        actors = {}
-
+        intrusion_sets = {}
         for tag in tags:
             if not tag:
                 continue
-            guess = self.actor_guess_cache.get(tag)
+            guess = self.intrusion_set_guess_cache.get(tag)
             if guess is None:
-                guess = self._GUESS_NOT_A_ACTOR
+                guess = self._GUESS_NOT_A_INTRUSION_SET
 
-                id = self._fetch_actor_id_by_name(tag)
+                id = self._fetch_intrusion_set_id_by_name(tag)
                 if id is not None:
                     guess = id
 
-                self.actor_guess_cache[tag] = guess
+                self.intrusion_set_guess_cache[tag] = guess
 
-            if guess == self._GUESS_NOT_A_ACTOR:
-                self._info("Tag '{0}' does not reference actor", tag)
+            if guess == self._GUESS_NOT_A_INTRUSION_SET:
+                self._info("Tag '{0}' does not reference intrusion set", tag)
             else:
                 self._info("Tag '{0}' references actor '{1}'", tag, guess)
-                actors[tag] = guess
-        return actors
+                intrusion_sets[tag] = guess
+        return intrusion_sets
 
     def _fetch_malware_id_by_name(self, name: str) -> Optional[str]:
         if name == "":
@@ -466,7 +465,7 @@ class KnowledgeImporter:
                 return malware["id"]
         return None
 
-    def _fetch_actor_id_by_name(self, name: str) -> Optional[str]:
+    def _fetch_intrusion_set_id_by_name(self, name: str) -> Optional[str]:
         if name == "":
             return None
         filters = [
@@ -474,12 +473,12 @@ class KnowledgeImporter:
             self._create_filter("alias", name),
         ]
         for fil in filters:
-            actors = self.helper.api.threat_actor.list(filter=fil)
-            if actors:
-                if len(actors) > 1:
-                    self._info("More then one actor for '{0}'", name)
-                actor = actors[0]
-                return actor["id"]
+            intrusion_sets = self.helper.api.intrusion_set.list(filters=fil)
+            if intrusion_sets:
+                if len(intrusion_sets) > 1:
+                    self._info("More then one intrusion set for '{0}'", name)
+                intrusion_set = intrusion_sets[0]
+                return intrusion_set["id"]
         return None
 
     @staticmethod

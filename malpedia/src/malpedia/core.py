@@ -46,8 +46,8 @@ class Malpedia:
         self.INTERVAL_SEC = get_config_variable(
             "MALPEDIA_INTERVAL_SEC", ["malpedia", "interval_sec"], config
         )
-        self.import_actors = get_config_variable(
-            "MALPEDIA_IMPORT_ACTORS", ["malpedia", "import_actors"], config
+        self.import_intrusion_sets = get_config_variable(
+            "MALPEDIA_IMPORT_INTRUSION_SETS", ["malpedia", "import_intrusion_sets"], config
         )
         self.import_yara = get_config_variable(
             "MALPEDIA_IMPORT_YARA", ["malpedia", "import_yara"], config
@@ -77,7 +77,7 @@ class Malpedia:
             self.client,
             self.confidence_level,
             self.update_existing_data,
-            self.import_actors,
+            self.import_intrusion_sets,
             self.import_yara,
             self.default_marking,
         )

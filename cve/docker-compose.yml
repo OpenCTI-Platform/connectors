@@ -12,7 +12,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       - CONNECTOR_LOG_LEVEL=info
-      - CVE_IMPORT_HISTORY=true
+      - CVE_IMPORT_HISTORY=true # Import all history at each run (false = just at the first run of the connector)
       - CVE_NVD_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz
       - CVE_HISTORY_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.1/
       - CVE_INTERVAL=7 # Days
