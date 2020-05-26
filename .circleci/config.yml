@@ -113,6 +113,10 @@ jobs:
           name: Build Docker image opencti/connector-cybercrimetracker
           command: docker build -t opencti/connector-cybercrimetracker:latest . && docker tag opencti/connector-cybercrimetracker:latest opencti/connector-cybercrimetracker:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/cortex
+          name: Build Docker image opencti/connector-cortex
+          command: docker build -t opencti/connector-cortex:latest . && docker tag opencti/connector-cortex:latest opencti/connector-cortex:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -156,6 +160,8 @@ jobs:
             docker push opencti/connector-valhalla:${CIRCLE_TAG}
             docker push opencti/connector-cybercrimetracker:latest
             docker push opencti/connector-cybercrimetracker:${CIRCLE_TAG}
+            docker push opencti/connector-cortex:latest
+            docker push opencti/connector-cortex:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -244,6 +250,10 @@ jobs:
           name: Build Docker image opencti/connector-cybercrimetracker
           command: docker build -t opencti/connector-cybercrimetracker:rolling .
       - run:
+          working_directory: ~/opencti/cortex
+          name: Build Docker image opencti/connector-cortex
+          command: docker build -t opencti/connector-cortex:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -267,6 +277,7 @@ jobs:
             docker push opencti/connector-malpedia:rolling
             docker push opencti/connector-valhalla:rolling
             docker push opencti/connector-cybercrimetracker:rolling
+            docker push opencti/connector-cortex:rolling
 workflows:
   version: 2
   opencti:

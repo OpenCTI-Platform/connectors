@@ -22,7 +22,9 @@ class Cortex:
         self.confidence_level = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config,
         )
-        self.URL = get_config_variable("CORTEX_BASE_URL", ["cortex", "url"], config)
+        self.SERVER_URL = get_config_variable(
+            "CORTEX_SERVER_URL", ["cortex", "server_url"], config
+        )
         self.API_KEY = get_config_variable(
             "CORTEX_API_KEY", ["cortex", "auth_key"], config
         )
@@ -34,7 +36,7 @@ class Cortex:
         self.helper.log_info(f"loaded cortex config: {config}")
 
         self.cortex_client = CortexClient(
-            api_url=self.URL, api_key=self.API_KEY, verify_ssl=self.VERIFY_SSL
+            api_url=self.SERVER_URL, api_key=self.API_KEY, verify_ssl=self.VERIFY_SSL
         )
 
     def run(self):

@@ -8,9 +8,6 @@ The connector works for the following OpenCTI observable types:
 * ipv4-addr
 * ipv6-addr
 * domain
-* file-md5
-* file-sha1
-* file-sha256
 
 ## Installation
 
@@ -24,7 +21,14 @@ file of OpenCTI.
 
 ## Configuration
 
-TODO: TABLE
+The connector can be configured with the following variables:
+
+| Config Parameter       | Docker env var                   | Default | Description                                    |
+| -----------------------| -------------------------------- | ------- | ---------------------------------------------- |
+| `api_key `             | `CORTEX_API_KEY`                 | `""`    | API authentication key                         |
+| `server_url`           | `CORTEX_SERVER_URL`              | `""`    | Url for the cortex server including port       |
+| `verify_ssl`           | `CORTEX_VERIFY_SSL`              | `false` | Turns SSL/TLS verification on or off           |
+| `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | `3`     | The confidence level you give to the connector |
 
 ## Behavior
 

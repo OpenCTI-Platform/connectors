@@ -11,6 +11,6 @@ connector:
   log_level: 'info'
 
 cortex:
-  url: ''
+  server_url: ''
   api_key: ''
   verify_ssl: false
