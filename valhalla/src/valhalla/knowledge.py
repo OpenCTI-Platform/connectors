@@ -2,28 +2,23 @@
 """OpenCTI Valhalla Knowledge importer module."""
 
 import re
+import requests
+
 from datetime import datetime
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping
 from urllib.parse import urlparse
 
-from .models import ApiResponse
+from .models import ApiResponse, StixEnterpriseAttack
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
 
 
 class KnowledgeImporter:
     """Valhalla Knowledge importer."""
 
-    _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
-    _GUESS_NOT_A_ACTOR = "GUESS_NOT_A_ACTOR"
+    _ENTERPRISE_ATTACK_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
+    _ATTACK_MAPPING = {}
     _KNOWLEDGE_IMPORTER_STATE = "knowledge_importer_state"
-    _TLP_MAPPING = {
-        "tlp_white": "TLP_WHITE",
-        "tlp_green": "TLP_GREEN",
-        "tlp_amber": "TLP_AMBER",
-        "tlp_red": "TLP_RED",
-    }
 
     def __init__(
         self,
@@ -54,7 +49,7 @@ class KnowledgeImporter:
         """Run importer."""
         self.helper.log_info("running Knowledge importer with state: " + str(state))
 
-        self._load_opencti_tlp()
+        self._build_attack_group_mapping()
         self._process_rules()
 
         state_timestamp = datetime.utcnow().timestamp()
@@ -92,9 +87,13 @@ class KnowledgeImporter:
 
     def _add_tags_for_indicator(self, tags: list, indicator_id: str) -> None:
         for tag in tags:
-            # We skip on tags with MITRE ids for now
-            if re.search(r"^\D\d{4}$", tag):
-                continue
+            # handle Mitre ATT&CK relation indicator <-> attack-pattern
+            if re.search(r"^T\d{4}$", tag):
+                self._add_attack_pattern_indicator_by_external_id(tag, indicator_id)
+            # handle Mitre ATT&CK group relation indicator <-> intrusion-set
+            if re.search(r"^G\d{4}$", tag):
+                self._add_intrusion_set_indicator_by_external_id(tag, indicator_id)
+
             # Create Hygiene Tag
             tag_valhalla = self.helper.api.tag.create(
                 tag_type="Valhalla", value=tag, color="#46beda",
@@ -125,104 +124,72 @@ class KnowledgeImporter:
                 id=obj_id, external_reference_id=reference["id"],
             )
 
-    def _guess_malwares_from_tags(self, tags: List[str]) -> Mapping[str, str]:
-        if not self.guess_malware:
-            return {}
-
-        malwares = {}
-
-        for tag in tags:
-            if not tag:
-                continue
-            guess = self.malware_guess_cache.get(tag)
-            if guess is None:
-                guess = self._GUESS_NOT_A_MALWARE
-
-                id = self._fetch_malware_id_by_name(tag)
-                if id is not None:
-                    guess = id
-
-                self.malware_guess_cache[tag] = guess
-
-            if guess == self._GUESS_NOT_A_MALWARE:
-                self.helper.log_info(f"Tag '{tag}'' does not reference malware")
-            else:
-                self.helper.log_info(f"Tag '{tag}' references malware '{guess}'")
-                malwares[tag] = guess
-        return malwares
-
-    def _guess_actor_from_tags(self, tags: List[str]) -> Mapping[str, str]:
-        if not self.guess_actor:
-            return {}
-
-        actors = {}
-
-        for tag in tags:
-            if not tag:
-                continue
-            guess = self.actor_guess_cache.get(tag)
-            if guess is None:
-                guess = self._GUESS_NOT_A_ACTOR
-
-                id = self._fetch_actor_id_by_name(tag)
-                if id is not None:
-                    guess = id
-
-                self.actor_guess_cache[tag] = guess
-
-            if guess == self._GUESS_NOT_A_ACTOR:
-                self.helper.log_info(f"Tag '{tag}' does not reference actor")
-            else:
-                self.helper.log_info(f"Tag '{tag}' references actor '{guess}'")
-                actors[tag] = guess
-        return actors
-
-    def _fetch_malware_id_by_name(self, name: str) -> Optional[str]:
-        if name == "":
+    def _add_intrusion_set_indicator_by_external_id(
+        self, external_id: str, indicator_id: str
+    ) -> None:
+        intrusion_set_id = self._ATTACK_MAPPING.get(external_id)
+        if intrusion_set_id == "" or intrusion_set_id is None:
+            self.helper.log_info(f"no intrusion_set found for {external_id}")
             return None
-        filters = [
-            self._create_filter("name", name),
-            self._create_filter("alias", name),
-        ]
-        for fil in filters:
-            malwares = self.helper.api.malware.list(filters=fil)
-            if malwares:
-                if len(malwares) > 1:
-                    self.helper.log_info(f"More then one malware for '{name}'")
-                malware = malwares[0]
-                return malware["id"]
-        return None
 
-    def _fetch_actor_id_by_name(self, name: str) -> Optional[str]:
-        if name == "":
+        # Check if the IS is already in OpenCTI
+        cti_intrusion_set = self.helper.api.intrusion_set.read(id=intrusion_set_id)
+
+        if cti_intrusion_set:
+            self.helper.api.stix_relation.create(
+                fromType="Indicator",
+                fromId=indicator_id,
+                toType="Intrusion-Set",
+                toId=intrusion_set_id,
+                relationship_type="indicates",
+                description="Yara Rule from Valhalla API",
+            )
+        else:
+            self.helper.log_info(
+                f"intrusion set {intrusion_set_id} not found in OpenCTI. "
+                + "Is the mitre connector configured and running?"
+            )
+
+    def _add_attack_pattern_indicator_by_external_id(
+        self, external_id: str, indicator_id: str
+    ) -> None:
+        attack_pattern_id = self._ATTACK_MAPPING.get(external_id)
+        if attack_pattern_id is None or attack_pattern_id == "":
+            self.helper.log_info(f"no attack_pattern found for {external_id}")
             return None
-        filters = [
-            self._create_filter("name", name),
-            self._create_filter("alias", name),
-        ]
-        for fil in filters:
-            actors = self.helper.api.threat_actor.list(filter=fil)
-            if actors:
-                if len(actors) > 1:
-                    self.helper.log_info(f"More then one actor for '{name}'")
-                actor = actors[0]
-                return actor["id"]
-        return None
+
+        cti_attack_pattern = self.helper.api.attack_pattern.read(id=attack_pattern_id)
+
+        if cti_attack_pattern:
+            self.helper.api.stix_relation.create(
+                fromType="Indicator",
+                fromId=indicator_id,
+                toType="Attack-Pattern",
+                toId=attack_pattern_id,
+                relationship_type="indicates",
+                description="Yara Rule from Valhalla API",
+            )
+        else:
+            self.helper.log_info(
+                f"attack pattern {attack_pattern_id} not found in OpenCTI. "
+                + "Is the mitre connector configured and running?"
+            )
 
     @staticmethod
     def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
         return [{"key": key, "values": [value]}]
 
-    def _load_opencti_tlp(self):
-        self._TLP_MAPPING["tlp_white"] = self.helper.api.marking_definition.read(
-            id=TLP_WHITE["id"]
-        )
-        self._TLP_MAPPING["tlp_green"] = self.helper.api.marking_definition.read(
-            id=TLP_GREEN["id"]
-        )
-        self._TLP_MAPPING["tlp_amber"] = self.helper.api.marking_definition.read(
-            id=TLP_AMBER["id"]
-        )
-        self._TLP_MAPPING["tlp_red"] = self.helper.api.marking_definition.read(
-            id=TLP_RED["id"]
-        )
+    def _build_attack_group_mapping(self) -> None:
+        try:
+            attack_data = requests.get(self._ENTERPRISE_ATTACK_URL)
+            response = StixEnterpriseAttack.parse_obj(attack_data.json())
+        except Exception as err:
+            self.helper.log_error(f"error downloading attack data: {err}")
+            return None
+
+        for obj in response.objects:
+            if obj.type == "attack-pattern" or obj.type == "intrusion-set":
+                if obj.external_references[0].external_id and obj.id:
+                    self._ATTACK_MAPPING[
+                        obj.external_references[0].external_id
+                    ] = obj.id
