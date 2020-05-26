@@ -1,3 +1,5 @@
 pycti==3.2.7
 PyYAML==5.3.1
 pydantic==1.5.1
+aiohttp==3.6.2
+asyncio==3.4.3

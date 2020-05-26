@@ -10,14 +10,6 @@ from .client import CortexClient
 
 
 class Cortex:
-
-    TYPE_CORTEX_2_OPENCTI = {
-        "domain": "Domain",
-        "fqdn": "Domain",
-        "ip": "IPv4-Addr",
-        "url": "URL"
-    }
-
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
@@ -54,4 +46,14 @@ class Cortex:
         self._process_observable(observable)
 
     def _process_observable(self, observable):
-        pass
+        o_type = observable["entity_type"].lower()
+
+        if o_type == "ipv4-addr" or o_type == "ipv6-addr":
+            for ana in self.cortex_client.IP_ANALYZERS:
+                self.cortex_client.launch_job(ana, "ip", observable["observable_value"])
+
+        if o_type == "domain":
+            for ana in self.cortex_client.DOMAIN_ANALYZERS:
+                self.cortex_client.launch_job(
+                    ana, "domain", observable["observable_value"]
+                )
