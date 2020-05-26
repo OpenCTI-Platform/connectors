@@ -141,7 +141,9 @@ class KnowledgeImporter:
             self.helper.log_info("Processing actor: " + act.value)
 
             # Use all names we have to guess an existing intrusion set name
-            guessed_intrusion_set = self._guess_intrusion_set_from_tags([actor] + act.meta.synonyms)
+            guessed_intrusion_set = self._guess_intrusion_set_from_tags(
+                [actor] + act.meta.synonyms
+            )
 
             if act.value == "" or act.value is None:
                 continue
@@ -186,7 +188,9 @@ class KnowledgeImporter:
             else:
                 # If we don't create the intrusion set we attach every knowledge
                 # we have to the guessed existing one.
-                self.helper.log_info("not creating intrusion set ({act.value}) based on config")
+                self.helper.log_info(
+                    "not creating intrusion set ({act.value}) based on config"
+                )
 
                 if guessed_intrusion_set != {} and self.guess_intrusion_set:
                     self.helper.api.stix_relation.create(
