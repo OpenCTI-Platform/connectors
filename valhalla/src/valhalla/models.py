@@ -65,3 +65,19 @@ class ApiResponse(BaseModel):
         # Valhalla date format: 2020-04-27 13:28:41
         d = datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
         return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+
+
+class ExternalReference(BaseModel):
+    external_id: str = None
+
+
+class StixObjects(BaseModel):
+    type: str
+    id: str
+    external_references: List[ExternalReference] = None
+
+
+class StixEnterpriseAttack(BaseModel):
+    type: str
+    id: str
+    objects: List[StixObjects]
