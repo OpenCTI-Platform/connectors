@@ -42,12 +42,14 @@ class Cortex:
     def run(self):
         self.helper.listen(self._process_message)
 
-    def _process_message(self, data):
+    def _process_message(self, data) -> list:
+        print(data)
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_observable.read(id=entity_id)
-        self._process_observable(observable)
+        return self._process_observable(observable)
 
-    def _process_observable(self, observable):
+    def _process_observable(self, observable) -> list:
+        print(observable)
         o_type = observable["entity_type"].lower()
 
         if o_type == "ipv4-addr" or o_type == "ipv6-addr":
@@ -59,3 +61,4 @@ class Cortex:
                 self.cortex_client.launch_job(
                     ana, "domain", observable["observable_value"]
                 )
+        return ["observable has been processed by Cortex"]

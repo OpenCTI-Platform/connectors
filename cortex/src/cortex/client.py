@@ -115,10 +115,14 @@ class CortexClient:
             except ValidationError as e:
                 self.helper.log_error(f"error marshaling sample data for {ana}: {e}")
                 continue
+
             if "ip" in analyzer.data_type_list:
                 self.IP_ANALYZERS += analyzer.analyzer_definition_id
+
+            # Ref: https://github.com/TheHive-Project/Cortex-Analyzers/issues/350
             if any(t in analyzer.data_type_list for t in ("domain", "fqdn")):
                 self.DOMAIN_ANALYZERS += analyzer.analyzer_definition_id
+
         self.LAST_REFRESH = datetime.now()
         logger.info(f"got {len(self.IP_ANALYZERS)} IP Analyzers")
         logger.info(f"got {len(self.DOMAIN_ANALYZERS)} Domain Analyzers")

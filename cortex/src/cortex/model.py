@@ -29,7 +29,7 @@ class CortexJob(BaseModel):
 class CortexAnalyzer(BaseModel):
     name: str
     description: str
-    data_type_list = list = Field(alias="dataTypeList")
+    data_type_list: list = Field(alias="dataTypeList")
     analyzer_definition_id: str = Field(alias="analyzerDefinitionId")
     job_timeout: int = Field(alias="jobTimeout")
     rate: int
