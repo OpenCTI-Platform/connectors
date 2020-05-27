@@ -13,4 +13,4 @@ connector:
 
 cyber-threat-coalition:
   base_url: 'https://blacklist.cyberthreatcoalition.org/vetted'
-  interval_sec: 21600 # Seconds (6 hours)
+  interval_sec: 604800 # Seconds (1 week)
