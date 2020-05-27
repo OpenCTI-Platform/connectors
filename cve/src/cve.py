@@ -44,13 +44,20 @@ class Cve:
     def get_interval(self):
         return int(self.cve_interval) * 60 * 60 * 24
 
+    def delete_files(self):
+        if os.path.exists("data.json"):
+            os.remove("data.json")
+        if os.path.exists("data.json.gz"):
+            os.remove("data.json.gz")
+        if os.path.exists("data-stix2.json"):
+            os.remove("data-stix2.json")
+
     def convert_and_send(self, url):
         try:
             # Downloading json.gz file
             self.helper.log_info("Requesting the file " + url)
             urllib.request.urlretrieve(
-                self.cve_nvd_data_feed,
-                os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz",
+                url, os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz"
             )
             # Unzipping the file
             self.helper.log_info("Unzipping the file")
@@ -66,10 +73,9 @@ class Cve:
                     contents, self.helper.connect_scope, self.update_existing_data
                 )
             # Remove files
-            os.remove("data.json")
-            os.remove("data.json.gz")
-            os.remove("data-stix2.json")
+            self.delete_files()
         except Exception as e:
+            self.delete_files()
             self.helper.log_error(str(e))
             time.sleep(60)
 
