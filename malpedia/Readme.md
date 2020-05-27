@@ -1,5 +1,7 @@
 # OpenCTI Malpedia Connector
 
+![Malpedia Logo](https://malpedia.caad.fkie.fraunhofer.de/static/malpediasite/logo.png)
+
 this connector imports knowledge from the [Malpedia Library](https://malpedia.caad.fkie.fraunhofer.de/).
 
 The connector adds data for the following OpenCTI observable/indicator types:
@@ -10,7 +12,7 @@ The connector adds data for the following OpenCTI observable/indicator types:
 The connectors adds the following Entities:
 
 * Malware
-* Threat Actor
+* Intrusion-Set
 * References
 
 ## Installation
@@ -32,7 +34,7 @@ The connector can be configured with the following variables:
 | -----------------------| -------------------------------- | -------- | ----------------------------------------------------------- |
 | `auth_key`             | `MALPEDIA_AUTH_KEY`              | `""`     | API authentication key                                      |
 | `interval_sec`         | `MALPEDIA_INTERVAL_SEC`          | `86400`  | Interval in seconds before a new import is considered       |
-| `import_actors`        | `MALPEDIA_IMPORT_ACTORS`         | `false`  | Choose if you want to import Threat Actors from Malpedia    |
+| `import_intrusion_sets`        | `MALPEDIA_IMPORT_INTRUSION_SETS`         | `false`  | Choose if you want to import Intrusion-Sets from Malpedia    |
 | `import_yara`          | `MALPEDIA_IMPORT_YARA`           | `false`  | Choose if you want to import Yara rules from Malpedia       |
 | `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | `false`  | This will allow the connector to overwrite existing extries |
 | `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | `3`      | The confidence level you give to the connector              |
@@ -47,8 +49,8 @@ If you leave this variable undefined or as empty string (`""`) only public,
 TLP:WHITE entities are imported. So this connector can also be used without an
 account.
 
-If you choose `false` for `import_actors` only references for existing Threat
-Actors are imported.
+If you choose `false` for `import_intrusion_sets` only references for existing 
+Intrusion-Sets are imported.
 
 **Caution**
 
