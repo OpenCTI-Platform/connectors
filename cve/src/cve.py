@@ -103,8 +103,8 @@ class Cve:
                     > ((int(self.cve_interval) - 1) * 60 * 60 * 24)
                 ):
                     self.convert_and_send(self.cve_nvd_data_feed)
-                    # If import history or never run
-                    if last_run is None or self.cve_import_history:
+                    # If import history and never run
+                    if last_run is None and self.cve_import_history:
                         now = datetime.now()
                         years = list(range(2002, now.year + 1))
                         for year in years:
