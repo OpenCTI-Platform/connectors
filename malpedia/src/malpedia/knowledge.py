@@ -192,10 +192,19 @@ class KnowledgeImporter:
                     "not creating intrusion set ({act.value}) based on config"
                 )
 
+                try:
+                    guessed_id = list(guessed_intrusion_set.values())[0]
+                except Exception as err:
+                    self.helper.log_error(f"error guessing intrusion-set id: {err}")
+                    continue
+
+                if guessed_id is None or guessed_id == "":
+                    continue
+
                 if guessed_intrusion_set != {} and self.guess_intrusion_set:
                     self.helper.api.stix_relation.create(
                         fromType="Intrusion-Set",
-                        fromId=guessed_intrusion_set[act.value],
+                        fromId=guessed_id,
                         toType="Malware",
                         toId=malware_id,
                         relationship_type="uses",
@@ -213,8 +222,7 @@ class KnowledgeImporter:
                             description="Reference found in the Malpedia library",
                         )
                         self.helper.api.stix_entity.add_external_reference(
-                            id=guessed_intrusion_set[act.value],
-                            external_reference_id=reference["id"],
+                            id=guessed_id, external_reference_id=reference["id"],
                         )
 
     def _add_samples_for_malware_id(self, malware_id: str, samples: Any) -> None:
