@@ -21,7 +21,10 @@ class Cryptolaemus:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config,
+            "CONNECTOR_CONFIDENCE_LEVEL",
+            ["connector", "confidence_level"],
+            config,
+            isNumber=True,
         )
         self.data = {}
 

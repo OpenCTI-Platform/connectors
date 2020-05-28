@@ -33,7 +33,10 @@ class Valhalla:
         )
         # Extra config
         self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config,
+            "CONNECTOR_CONFIDENCE_LEVEL",
+            ["connector", "confidence_level"],
+            config,
+            isNumber=True,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
