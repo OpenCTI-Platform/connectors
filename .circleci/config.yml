@@ -274,9 +274,6 @@ workflows:
       - ensure_formatting
       - linter
       - build:
-          requires:
-            - ensure_formatting
-            - linter
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
