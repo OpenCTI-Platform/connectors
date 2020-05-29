@@ -108,9 +108,12 @@ class Cve:
                         now = datetime.now()
                         years = list(range(2002, now.year + 1))
                         for year in years:
-                            self.convert_and_send(
-                                f"{self.cve_history_data_feed}nvdcve-1.1-{year}.json.gz"
-                            )
+                            try:
+                                self.convert_and_send(
+                                    f"{self.cve_history_data_feed}nvdcve-1.1-{year}.json.gz"
+                                )
+                            except:
+                                continue
 
                     # Store the current timestamp as a last run
                     self.helper.log_info(
