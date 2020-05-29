@@ -106,7 +106,7 @@ class Cve:
                     # If import history and never run
                     if last_run is None and self.cve_import_history:
                         now = datetime.now()
-                        years = list(range(2002, now.year))
+                        years = list(range(2002, now.year + 1))
                         for year in years:
                             try:
                                 self.convert_and_send(
