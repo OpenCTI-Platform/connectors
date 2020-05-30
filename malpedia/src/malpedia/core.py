@@ -40,9 +40,6 @@ class Malpedia:
             ["connector", "update_existing_data"],
             config,
         )
-        self.BASE_URL = get_config_variable(
-            "MALPEDIA_BASE_URL", ["malpedia", "base_url"], config
-        )
         self.AUTH_KEY = get_config_variable(
             "MALPEDIA_AUTH_KEY", ["malpedia", "auth_key"], config
         )
@@ -62,7 +59,7 @@ class Malpedia:
         self.helper.log_info(f"loaded malpedia config: {config}")
 
         # Create Malpedia client and importers
-        self.client = MalpediaClient(self.BASE_URL, self.AUTH_KEY)
+        self.client = MalpediaClient(self.AUTH_KEY)
         if not self.client.health_check():
             self.helper.log_error("error in malpedia API health check")
 
