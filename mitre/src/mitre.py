@@ -24,6 +24,9 @@ class Mitre:
         self.mitre_pre_attack_file_url = get_config_variable(
             "MITRE_PRE_ATTACK_FILE_URL", ["mitre", "pre_attack_file_url"], config
         )
+        self.mitre_mobile_attack_file_url = get_config_variable(
+            "MITRE_MOBILE_ATTACK_FILE_URL", ["mitre", "mobile_attack_file_url"], config
+        )
         self.mitre_interval = get_config_variable(
             "MITRE_INTERVAL", ["mitre", "interval"], config, True
         )
@@ -63,26 +66,45 @@ class Mitre:
                     > ((int(self.mitre_interval) - 1) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
-                    enterprise_data = (
-                        urllib.request.urlopen(self.mitre_enterprise_file_url)
-                        .read()
-                        .decode("utf-8")
-                    )
-                    self.helper.send_stix2_bundle(
-                        enterprise_data,
-                        self.helper.connect_scope,
-                        self.update_existing_data,
-                    )
-                    pre_attack_data = (
-                        urllib.request.urlopen(self.mitre_pre_attack_file_url)
-                        .read()
-                        .decode("utf-8")
-                    )
-                    self.helper.send_stix2_bundle(
-                        pre_attack_data,
-                        self.helper.connect_scope,
-                        self.update_existing_data,
-                    )
+                    try:
+                        enterprise_data = (
+                            urllib.request.urlopen(self.mitre_enterprise_file_url)
+                            .read()
+                            .decode("utf-8")
+                        )
+                        self.helper.send_stix2_bundle(
+                            enterprise_data,
+                            self.helper.connect_scope,
+                            self.update_existing_data,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+                    try:
+                        pre_attack_data = (
+                            urllib.request.urlopen(self.mitre_pre_attack_file_url)
+                            .read()
+                            .decode("utf-8")
+                        )
+                        self.helper.send_stix2_bundle(
+                            pre_attack_data,
+                            self.helper.connect_scope,
+                            self.update_existing_data,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+                    try:
+                        mobile_attack_data = (
+                            urllib.request.urlopen(self.mitre_mobile_attack_file_url)
+                            .read()
+                            .decode("utf-8")
+                        )
+                        self.helper.send_stix2_bundle(
+                            mobile_attack_data,
+                            self.helper.connect_scope,
+                            self.update_existing_data,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
                     self.helper.log_info(
                         "Connector successfully run, storing last_run as "
