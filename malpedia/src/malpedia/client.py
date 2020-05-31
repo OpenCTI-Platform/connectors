@@ -11,25 +11,22 @@ logger = logging.getLogger(__name__)
 
 class MalpediaClient:
 
-    _DEFAULT_BASE_URL = "https://malpedia.caad.fkie.fraunhofer.de/"
+    _DEFAULT_API_URL = "https://malpedia.caad.fkie.fraunhofer.de/api/"
 
-    def __init__(self, api_url: str, api_key: str) -> None:
+    def __init__(self, api_key: str) -> None:
         """Initialize Malpedia api client."""
-        if api_url == "" or api_url is None:
-            self.api_url = urljoin(self._DEFAULT_BASE_URL, "api/")
-        else:
-            self.api_url = urljoin(api_url, "api/")
+        self.api_url = self._DEFAULT_API_URL
         self.api_key = api_key
 
     def query(self, url_path: str) -> Any:
+        url = urljoin(self._DEFAULT_API_URL, url_path)
         try:
             if self.api_key == "" or self.api_key is None:
-                r = requests.get(self.api_url + url_path,)
+                r = requests.get(url)
                 data = r.json()
             else:
                 r = requests.get(
-                    self.api_url + url_path,
-                    headers={"Authorization": "apitoken " + self.api_key},
+                    url, headers={"Authorization": "apitoken " + self.api_key},
                 )
                 data = r.json()
         except requests.exceptions.RequestException as e:
