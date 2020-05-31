@@ -6,7 +6,6 @@ import sys
 import json
 
 # Importing the different stix2 modules
-from stix2 import MemoryStore
 from stix2 import Vulnerability
 from stix2 import Bundle
 from stix2 import Identity
