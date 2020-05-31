@@ -59,22 +59,28 @@ class OpenCTI:
                     (timestamp - last_run)
                     > ((int(self.opencti_interval) - 1) * 60 * 60 * 24)
                 ):
-                    sectors_data = urllib.request.urlopen(
-                        self.opencti_sectors_file_url
-                    ).read()
-                    self.helper.send_stix2_bundle(
-                        sectors_data.decode("utf-8"),
-                        self.helper.connect_scope,
-                        self.update_existing_data,
-                    )
-                    geography_data = urllib.request.urlopen(
-                        self.opencti_geography_file_url
-                    ).read()
-                    self.helper.send_stix2_bundle(
-                        geography_data.decode("utf-8"),
-                        self.helper.connect_scope,
-                        self.update_existing_data,
-                    )
+                    try:
+                        sectors_data = urllib.request.urlopen(
+                            self.opencti_sectors_file_url
+                        ).read()
+                        self.helper.send_stix2_bundle(
+                            sectors_data.decode("utf-8"),
+                            self.helper.connect_scope,
+                            self.update_existing_data,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+                    try:
+                        geography_data = urllib.request.urlopen(
+                            self.opencti_geography_file_url
+                        ).read()
+                        self.helper.send_stix2_bundle(
+                            geography_data.decode("utf-8"),
+                            self.helper.connect_scope,
+                            self.update_existing_data,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
                     self.helper.log_info(
                         "Connector successfully run, storing last_run as "
