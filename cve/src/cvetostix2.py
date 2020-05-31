@@ -86,10 +86,11 @@ def convert(filename, output="output.json"):
             vulnerabilities_bundle.append(vuln)
     # Creating the bundle from the list of vulnerabilities
     bundle = Bundle(vulnerabilities_bundle)
-    # Creating a MemoryStore object from the bundle
-    memorystore = MemoryStore(bundle)
-    # Dumping this object to a file
-    memorystore.save_to_file(output)
+    bundle_json = bundle.serialize()
+
+    # Write to file
+    with open(output, "w") as f:
+        f.write(bundle_json)
 
 
 if __name__ == "__main__":
