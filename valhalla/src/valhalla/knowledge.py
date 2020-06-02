@@ -140,7 +140,7 @@ class KnowledgeImporter:
                 fromType="Indicator",
                 fromId=indicator_id,
                 toType="Intrusion-Set",
-                toId=intrusion_set_id,
+                toId=cti_intrusion_set["id"],
                 relationship_type="indicates",
                 description="Yara Rule from Valhalla API",
             )
@@ -165,7 +165,7 @@ class KnowledgeImporter:
                 fromType="Indicator",
                 fromId=indicator_id,
                 toType="Attack-Pattern",
-                toId=attack_pattern_id,
+                toId=cti_attack_pattern["id"],
                 relationship_type="indicates",
                 description="Yara Rule from Valhalla API",
             )
