@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-malpedia:
-    image: opencti/connector-malpedia:3.3.0
+    image: opencti/connector-malpedia:3.3.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

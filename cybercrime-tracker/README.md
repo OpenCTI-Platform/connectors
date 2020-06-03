@@ -1,4 +1,4 @@
-# Connector: CYBERCRiME-TRACKER.NET for OpenCTI
+# Connector: CYBERCRIME-TRACKER.NET for OpenCTI
 
 The connector uses the RSS feed of the tracker under: http://cybercrime-tracker.net/rss.xml
 

@@ -1,6 +1,6 @@
 FROM python:3.8-alpine
 
-WORKDIR  /opt/opencti-connector-cybercrimetracker
+WORKDIR  /opt/opencti-connector-cybercrime-tracker
 
 COPY src/requirements.txt  ./
 # Install Python modules
@@ -12,4 +12,4 @@ RUN apk --no-cache add build-base libmagic libxml2 libxml2-dev libxslt libxslt-d
 # Copy the connector
 COPY src entrypoint.sh ./
 
-ENTRYPOINT ["/bin/sh", "-c", "/opt/opencti-connector-cybercrimetracker/entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "-c", "/opt/opencti-connector-cybercrime-tracker/entrypoint.sh"]

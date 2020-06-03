@@ -109,9 +109,9 @@ jobs:
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:latest . && docker tag opencti/connector-valhalla:latest opencti/connector-valhalla:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/cybercrimetracker
-          name: Build Docker image opencti/connector-cybercrimetracker
-          command: docker build -t opencti/connector-cybercrimetracker:latest . && docker tag opencti/connector-cybercrimetracker:latest opencti/connector-cybercrimetracker:${CIRCLE_TAG}
+          working_directory: ~/opencti/cybercrime-tracker
+          name: Build Docker image opencti/connector-cybercrime-tracker
+          command: docker build -t opencti/connector-cybercrime-tracker:latest . && docker tag opencti/connector-cybercrime-tracker:latest opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -154,8 +154,8 @@ jobs:
             docker push opencti/connector-malpedia:${CIRCLE_TAG}
             docker push opencti/connector-valhalla:latest
             docker push opencti/connector-valhalla:${CIRCLE_TAG}
-            docker push opencti/connector-cybercrimetracker:latest
-            docker push opencti/connector-cybercrimetracker:${CIRCLE_TAG}
+            docker push opencti/connector-cybercrime-tracker:latest
+            docker push opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -240,9 +240,9 @@ jobs:
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:rolling .
       - run:
-          working_directory: ~/opencti/cybercrimetracker
-          name: Build Docker image opencti/connector-cybercrimetracker
-          command: docker build -t opencti/connector-cybercrimetracker:rolling .
+          working_directory: ~/opencti/cybercrime-tracker
+          name: Build Docker image opencti/connector-cybercrime-tracker
+          command: docker build -t opencti/connector-cybercrime-tracker:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -266,7 +266,7 @@ jobs:
             docker push opencti/connector-lastinfosec:rolling
             docker push opencti/connector-malpedia:rolling
             docker push opencti/connector-valhalla:rolling
-            docker push opencti/connector-cybercrimetracker:rolling
+            docker push opencti/connector-cybercrime-tracker:rolling
 workflows:
   version: 2
   opencti:

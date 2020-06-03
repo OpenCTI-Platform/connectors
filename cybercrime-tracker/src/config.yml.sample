@@ -5,13 +5,13 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'CYBERCRiME-TRACKER.NET'
-  scope: 'cybercrimetracker,ipv4-addr,domain,url,malware,indicator'
+  name: 'Cybercrime-Tracker'
+  scope: 'cybercrime-tracker'
   confidence_level: 3
   update_existing_data: false
   log_level: 'info'
 
-cybercrimetracker:
+cybercrime-tracker:
   feed_url: 'http://cybercrime-tracker.net/rss.xml'
   tlp: 'WHITE'
   interval: 86400                           # seconds

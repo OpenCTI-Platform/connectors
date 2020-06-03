@@ -1,2 +1,2 @@
-pycti==3.3.0
+pycti==3.3.1
 PyYAML==5.3.1
