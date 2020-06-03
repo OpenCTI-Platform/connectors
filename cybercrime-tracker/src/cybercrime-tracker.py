@@ -36,16 +36,16 @@ class Cybercrimetracker:
             config,
         )
 
-        # CYBERCRiME-TRACKER.NET Config
+        # CYBERCRIME-TRACKER.NET Config
         self.feed_url = get_config_variable(
-            "CYBERCRIMETRACKER_FEED_URL", ["cybercrimetracker", "feed_url"], config,
+            "CYBERCRIMET_RACKER_FEED_URL", ["cybercrime-tracker", "feed_url"], config,
         )
         self.connector_tlp = get_config_variable(
-            "CYBERCRIMETRACKER_TLP", ["cybercrimetracker", "tlp"], config,
+            "CYBERCRIME_TRACKER_TLP", ["cybercrime-tracker", "tlp"], config,
         )
         self.interval = get_config_variable(
             "CYBERCRIMETRACKER_INTERVAL",
-            ["cybercrimetracker", "interval"],
+            ["cybercrime-tracker", "interval"],
             config,
             isNumber=True,
         )
@@ -70,9 +70,9 @@ class Cybercrimetracker:
         type: name of the malware associated with the C2 server
         url: the url of the C2
         ip: the IP address of the C2
-        ext_link: An external link to CYBERCRiME-TRACKER.NET with details
+        ext_link: An external link to CYBERCRIME-TRACKER.NET with details
 
-        Note: CYBERCRiME-TRACKER.NET does not provide the protocol in the url
+        Note: CYBERCRIME-TRACKER.NET does not provide the protocol in the url
         as such we always assume 'http'.
         """
         parsed_entry = {}
@@ -122,7 +122,7 @@ class Cybercrimetracker:
 
     def run(self):
 
-        self.helper.log_info("Fetching data CYBERCRiME-TRACKER.NET...")
+        self.helper.log_info("Fetching data CYBERCRIME-TRACKER.NET...")
 
         tag = self.helper.api.tag.create(
             tag_type="C2-Type", value="C2 Server", color="#fc236b",
@@ -176,7 +176,7 @@ class Cybercrimetracker:
                     # Create entity for the feed.
                     organization = self.helper.api.identity.create(
                         type="Organization",
-                        name="CYBERCRiME-TRACKER.NET",
+                        name="CYBERCRIME-TRACKER.NET",
                         description="Tracker collecting and sharing \
                             daily updates of C2 IPs/Urls. \
                             http://cybercrime-tracker.net",
