@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia connector utilities module."""
 
-import calendar
 from datetime import datetime, timezone
 
 
