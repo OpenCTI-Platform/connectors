@@ -28,7 +28,7 @@ The connector can be configured with the following variables:
 
 | Config Parameter               | Docker env var                   | Default  | Description                                                 |
 | -------------------------------| -------------------------------- | -------- | ----------------------------------------------------------- |
-| `auth_key`                     | `MALPEDIA_AUTH_KEY`              | `""`     | API authentication key                                      |
+| `auth_key`                     | `MALPEDIA_AUTH_KEY`              |          | API authentication key                                      |
 | `interval_sec`                 | `MALPEDIA_INTERVAL_SEC`          | `86400`  | Interval in seconds before a new import is considered       |
 | `import_intrusion_sets`        | `MALPEDIA_IMPORT_INTRUSION_SETS` | `false`  | Choose if you want to import Intrusion-Sets from Malpedia   |
 | `import_yara`                  | `MALPEDIA_IMPORT_YARA`           | `false`  | Choose if you want to import Yara rules from Malpedia       |
