@@ -9,7 +9,6 @@ from pydantic import ValidationError
 from urllib.parse import urlparse
 
 from .client import MalpediaClient
-from .utils import datetime_to_timestamp
 from .models import Family, YaraRule, Sample, Actor
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
@@ -69,7 +68,7 @@ class KnowledgeImporter:
         self._load_opencti_tlp()
         self._process_families()
 
-        state_timestamp = datetime_to_timestamp(datetime.utcnow())
+        state_timestamp = int(datetime.utcnow().timestamp())
         self.helper.log_info("knowledge importer completed")
         return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
 
@@ -189,7 +188,7 @@ class KnowledgeImporter:
                 # If we don't create the intrusion set we attach every knowledge
                 # we have to the guessed existing one.
                 self.helper.log_info(
-                    "not creating intrusion set ({act.value}) based on config"
+                    f"not creating intrusion set ({act.value}) based on config"
                 )
 
                 try:
