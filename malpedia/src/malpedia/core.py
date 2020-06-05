@@ -5,6 +5,7 @@ import os
 import yaml
 import time
 
+from datetime import datetime
 from typing import Any, Dict, Mapping, Optional
 
 from .knowledge import KnowledgeImporter
@@ -17,8 +18,8 @@ from stix2 import TLP_WHITE, TLP_AMBER
 class Malpedia:
     """OpenCTI Malpedia main class"""
 
-    _STATE_LAST_RUN = 1583020800
-    _MALPEDIA_LAST_VERSION = 0
+    _STATE_LAST_RUN = "state_last_run"
+    _MALPEDIA_LAST_VERSION = "malpedia_last_version"
 
     def __init__(self):
         # Instantiate the connector helper from config
@@ -84,9 +85,6 @@ class Malpedia:
             self.default_marking,
         )
 
-    def get_interval(self) -> int:
-        return int(self.INTERVAL_SEC)
-
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
         if not current_state:
@@ -105,7 +103,7 @@ class Malpedia:
         if last_run is None:
             return True
         time_diff = current_time - last_run
-        return time_diff >= self.get_interval()
+        return time_diff >= int(self.INTERVAL_SEC)
 
     def _check_version(self, last_version: Optional[int], current_version: int) -> bool:
         if last_version is None:
@@ -114,7 +112,7 @@ class Malpedia:
 
     @staticmethod
     def _current_unix_timestamp() -> int:
-        return int(time.time())
+        return int(datetime.utcnow().timestamp())
 
     def run(self):
         self.helper.log_info("starting Malpedia connector...")
