@@ -12,9 +12,9 @@ class PulseIndicator(BaseModel):
 
     id: int
     type: str
-    title: str
+    title: Optional[str]
     indicator: str
-    description: str
+    description: Optional[str]
     created: datetime
     is_active: Union[bool, int]
     content: Optional[str]
