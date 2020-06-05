@@ -287,15 +287,20 @@ class PulseBundleBuilder:
 
     @staticmethod
     def _create_indicator_description(pulse_indicator: PulseIndicator) -> str:
-        indicator_description = f"{pulse_indicator.title}"
-        if pulse_indicator.description:
-            if indicator_description:
-                indicator_description = (
-                    f"{indicator_description}\n{pulse_indicator.description}"
-                )
+        final_description = ""
+
+        indicator_title = pulse_indicator.title
+        if indicator_title is not None and indicator_title:
+            final_description = f"{indicator_title}"
+
+        indicator_description = pulse_indicator.description
+        if indicator_description is not None and indicator_description:
+            if final_description:
+                final_description = f"{final_description}\n{indicator_description}"
             else:
-                indicator_description = f"{pulse_indicator.description}"
-        return indicator_description
+                final_description = f"{indicator_description}"
+
+        return final_description
 
     def _create_yara_indicators(self) -> List[Indicator]:
         yara_indicators = []
@@ -308,7 +313,7 @@ class PulseBundleBuilder:
                 continue
 
             name = yara_pulse_indicator.title
-            if not name:
+            if name is None or not name:
                 name = yara_pulse_indicator.indicator
 
             observable_type = self._PATTERN_TYPE_YARA_OBSERVABLE_TYPE
