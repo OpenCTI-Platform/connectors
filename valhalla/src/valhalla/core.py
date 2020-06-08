@@ -43,14 +43,11 @@ class Valhalla:
             ["connector", "update_existing_data"],
             config,
         )
-        self.BASE_URL = get_config_variable(
-            "valhalla_BASE_URL", ["valhalla", "base_url"], config
-        )
         self.API_KEY = get_config_variable(
-            "valhalla_API_KEY", ["valhalla", "auth_key"], config
+            "VALHALLA_API_KEY", ["valhalla", "api_key"], config
         )
         self.INTERVAL_SEC = get_config_variable(
-            "valhalla_INTERVAL_SEC", ["valhalla", "interval_sec"], config
+            "VALHALLA_INTERVAL_SEC", ["valhalla", "interval_sec"], config
         )
 
         self.helper = OpenCTIConnectorHelper(config)
