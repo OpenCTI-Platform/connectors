@@ -112,13 +112,12 @@ class KnowledgeImporter:
             # Samples
             ######################################################
 
-            samples = self.api_client.query("list/samples/" + family_id)
-
-            self.helper.log_info(
-                f"creating hash indicators for {fam.malpedia_name} samples"
-            )
-
-            self._add_samples_for_malware_id(malware_id, samples)
+            if not self.api_client.unauthenticated:
+                samples = self.api_client.query("list/samples/" + family_id)
+                self.helper.log_info(
+                    f"creating hash indicators for {fam.malpedia_name} samples"
+                )
+                self._add_samples_for_malware_id(malware_id, samples)
 
             ######################################################
             # Intrusion Sets

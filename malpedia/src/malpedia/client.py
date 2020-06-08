@@ -18,10 +18,17 @@ class MalpediaClient:
         self.api_url = self._DEFAULT_API_URL
         self.api_key = api_key
 
+        if self.api_key == "" or self.api_key is None:
+            self.unauthenticated = True
+        else:
+            self.unauthenticated = False
+            if not self.token_check():
+                logger.fatal("error verifying Malpedia token")
+
     def query(self, url_path: str) -> Any:
         url = urljoin(self._DEFAULT_API_URL, url_path)
         try:
-            if self.api_key == "" or self.api_key is None:
+            if self.unauthenticated:
                 r = requests.get(url)
                 data = r.json()
             else:
@@ -34,7 +41,7 @@ class MalpediaClient:
             return None
         return data
 
-    def health_check(self) -> bool:
+    def token_check(self) -> bool:
         response_json = self.query("check/apikey")
         if "Valid token" in response_json["detail"]:
             return True
