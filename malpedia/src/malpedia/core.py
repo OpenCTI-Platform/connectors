@@ -61,12 +61,10 @@ class Malpedia:
 
         # Create Malpedia client and importers
         self.client = MalpediaClient(self.AUTH_KEY)
-        if not self.client.health_check():
-            self.helper.log_info("Malpedia API Key is not set")
 
         # If we run without API key we can assume all data is TLP:WHITE else we
         # default to TLP:AMBER to be safe.
-        if self.AUTH_KEY == "" or self.AUTH_KEY is None:
+        if self.client.unauthenticated:
             self.default_marking = self.helper.api.marking_definition.read(
                 id=TLP_WHITE["id"]
             )
