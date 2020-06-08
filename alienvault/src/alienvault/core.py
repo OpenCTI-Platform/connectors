@@ -35,6 +35,7 @@ class AlienVault:
     _CONFIG_REPORT_STATUS = f"{_CONFIG_NAMESPACE}.report_status"
     _CONFIG_REPORT_TYPE = f"{_CONFIG_NAMESPACE}.report_type"
     _CONFIG_GUESS_MALWARE = f"{_CONFIG_NAMESPACE}.guess_malware"
+    _CONFIG_GUESS_CVE = f"{_CONFIG_NAMESPACE}.guess_cve"
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
@@ -75,6 +76,8 @@ class AlienVault:
             self._get_configuration(config, self._CONFIG_GUESS_MALWARE)
         )
 
+        guess_cve = bool(self._get_configuration(config, self._CONFIG_GUESS_CVE))
+
         self.interval_sec = self._get_configuration(
             config, self._CONFIG_INTERVAL_SEC, is_number=True
         )
@@ -103,6 +106,7 @@ class AlienVault:
             report_status,
             report_type,
             guess_malware,
+            guess_cve,
         )
 
     @staticmethod

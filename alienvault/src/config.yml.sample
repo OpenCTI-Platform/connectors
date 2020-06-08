@@ -19,4 +19,5 @@ alienvault:
   report_type: 'Threat Report'
   report_status: 'New'                          # New, In progress, Analyzed and Closed
   guess_malware: false                          # Use tags to guess malware
+  guess_cve: false                              # Use tags to guess CVE
   interval_sec: 1800                            # Seconds
