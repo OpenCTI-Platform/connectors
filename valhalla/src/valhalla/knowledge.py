@@ -5,7 +5,7 @@ import re
 import requests
 
 from datetime import datetime
-from typing import Any, Dict, List, Mapping
+from typing import Any, List, Mapping
 from urllib.parse import urlparse
 
 from .models import ApiResponse, StixEnterpriseAttack
