@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """OpenCTI AlienVault importer module."""
 
-from typing import Any, Dict, List, Mapping, Optional
+import re
+from typing import Any, Dict, List, Mapping, Optional, Set
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore # noqa: E501
 
@@ -21,6 +22,8 @@ class PulseImporter:
 
     _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
 
+    _GUESS_CVE_PATTERN = r"(CVE-\d{4}-\d{4,7})"
+
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -32,6 +35,7 @@ class PulseImporter:
         report_status: int,
         report_type: str,
         guess_malware: bool,
+        guess_cve: bool,
     ) -> None:
         """Initialize AlienVault indicator importer."""
         self.helper = helper
@@ -43,15 +47,18 @@ class PulseImporter:
         self.report_status = report_status
         self.report_type = report_type
         self.guess_malware = guess_malware
+        self.guess_cve = guess_cve
 
         self.malware_guess_cache: Dict[str, str] = {}
+        self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
         self._info(
-            "Running pulse importer (update data: {0}, guess malware: {1})...",
+            "Running pulse importer (update data: {0}, guess malware: {1}, guess cve: {2})...",  # noqa: E501
             self.update_existing_data,
             self.guess_malware,
+            self.guess_cve,
         )
 
         self._clear_malware_guess_cache()
@@ -121,6 +128,7 @@ class PulseImporter:
         report_status = self.report_status
         report_type = self.report_type
         guessed_malwares = self._guess_malwares_from_tags(pulse.tags)
+        guessed_cves = self._guess_cves_from_tags(pulse.tags)
 
         bundle_builder = PulseBundleBuilder(
             pulse,
@@ -131,6 +139,7 @@ class PulseImporter:
             report_status,
             report_type,
             guessed_malwares,
+            guessed_cves,
         )
 
         try:
@@ -143,6 +152,28 @@ class PulseImporter:
                 e,
             )
             return None
+
+    def _guess_cves_from_tags(self, tags: List[str]) -> Set[str]:
+        cves: Set[str] = set()
+
+        if not self.guess_cve:
+            return cves
+
+        for tag in tags:
+            if not tag:
+                continue
+
+            match = self.guess_cve_pattern.search(tag)
+            if not match:
+                continue
+
+            cve = match.group(1)
+
+            cve = cve.upper()
+
+            cves.add(cve)
+
+        return cves
 
     def _guess_malwares_from_tags(self, tags: List[str]) -> Mapping[str, str]:
         if not self.guess_malware:
