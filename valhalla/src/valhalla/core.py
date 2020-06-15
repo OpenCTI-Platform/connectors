@@ -47,7 +47,10 @@ class Valhalla:
             "VALHALLA_API_KEY", ["valhalla", "api_key"], config
         )
         self.INTERVAL_SEC = get_config_variable(
-            "VALHALLA_INTERVAL_SEC", ["valhalla", "interval_sec"], config
+            "VALHALLA_INTERVAL_SEC",
+            ["valhalla", "interval_sec"],
+            config,
+            isNumber=True,
         )
 
         self.helper = OpenCTIConnectorHelper(config)
@@ -82,7 +85,7 @@ class Valhalla:
                 api_status = Status.parse_obj(status_data)
                 self.helper.log_info(f"current valhalla status: {api_status}")
 
-                timestamp = datetime.utcnow().timestamp()
+                current_time = int(datetime.utcnow().timestamp())
                 current_state = self._load_state()
 
                 self.helper.log_info(f"loaded state: {current_state}")
@@ -93,7 +96,7 @@ class Valhalla:
                     current_state, self._VALHALLA_LAST_VERSION
                 )
 
-                if self._is_scheduled(last_run, timestamp) and self._check_version(
+                if self._is_scheduled(last_run, current_time) and self._check_version(
                     last_valhalla_version, api_status.version
                 ):
                     self.helper.log_info("running importers")
@@ -105,7 +108,7 @@ class Valhalla:
 
                     new_state = current_state.copy()
                     new_state.update(knowledge_importer_state)
-                    new_state[self._STATE_LAST_RUN] = datetime.utcnow().timestamp()
+                    new_state[self._STATE_LAST_RUN] = int(datetime.utcnow().timestamp())
                     new_state[self._VALHALLA_LAST_VERSION] = api_status.version
 
                     self.helper.log_info(f"storing new state: {new_state}")
@@ -113,10 +116,10 @@ class Valhalla:
                     self.helper.set_state(new_state)
 
                     self.helper.log_info(
-                        f"state stored, next run in: {self.get_interval()} seconds"
+                        f"state stored, next run in: {self._get_interval()} seconds"
                     )
                 else:
-                    new_interval = self.get_interval() - (timestamp - last_run)
+                    new_interval = self._get_interval() - (current_time - last_run)
                     self.helper.log_info(
                         f"connector will not run, next run in: {new_interval} seconds"
                     )
@@ -135,7 +138,7 @@ class Valhalla:
     ) -> Mapping[str, Any]:
         return self.knowledge_importer.run(current_state)
 
-    def get_interval(self) -> int:
+    def _get_interval(self) -> int:
         return int(self.INTERVAL_SEC)
 
     def _load_state(self) -> Dict[str, Any]:
@@ -156,7 +159,7 @@ class Valhalla:
         if last_run is None:
             return True
         time_diff = current_time - last_run
-        return time_diff >= self.get_interval()
+        return time_diff >= self._get_interval()
 
     def _check_version(self, last_version: Optional[int], current_version: int) -> bool:
         if last_version is None:

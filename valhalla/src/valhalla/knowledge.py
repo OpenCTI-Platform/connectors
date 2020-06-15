@@ -5,7 +5,7 @@ import re
 import requests
 
 from datetime import datetime
-from typing import Any, Dict, List, Mapping
+from typing import Any, List, Mapping
 from urllib.parse import urlparse
 
 from .models import ApiResponse, StixEnterpriseAttack
@@ -36,9 +36,6 @@ class KnowledgeImporter:
         self.update_data = update_data
         self.default_marking = default_marking
         self.valhalla_client = valhalla_client
-        self.malware_guess_cache: Dict[str, str] = {}
-        self.actor_guess_cache: Dict[str, str] = {}
-        self.date_utc = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
         self.organization = helper.api.identity.create(
             name="Nextron Systems GmbH",
             type="Organization",
@@ -52,7 +49,7 @@ class KnowledgeImporter:
         self._build_attack_group_mapping()
         self._process_rules()
 
-        state_timestamp = datetime.utcnow().timestamp()
+        state_timestamp = int(datetime.utcnow().timestamp())
         self.helper.log_info("knowledge importer completed")
         return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
 
@@ -143,6 +140,7 @@ class KnowledgeImporter:
                 toId=cti_intrusion_set["id"],
                 relationship_type="indicates",
                 description="Yara Rule from Valhalla API",
+                weight=self.confidence_level,
             )
         else:
             self.helper.log_info(
@@ -168,6 +166,7 @@ class KnowledgeImporter:
                 toId=cti_attack_pattern["id"],
                 relationship_type="indicates",
                 description="Yara Rule from Valhalla API",
+                weight=self.confidence_level,
             )
         else:
             self.helper.log_info(
