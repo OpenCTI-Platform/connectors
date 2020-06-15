@@ -3,7 +3,7 @@
 
 import logging
 from datetime import datetime
-from typing import List, Mapping
+from typing import List, Mapping, Set
 
 from pycti.utils.constants import CustomProperties, ObservableTypes  # type: ignore
 
@@ -113,6 +113,7 @@ class PulseBundleBuilder:
         report_status: int,
         report_type: str,
         guessed_malwares: Mapping[str, str],
+        guessed_cves: Set[str],
     ) -> None:
         """Initialize pulse bundle builder."""
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -126,6 +127,7 @@ class PulseBundleBuilder:
         self.report_status = report_status
         self.report_type = report_type
         self.guessed_malwares = guessed_malwares
+        self.guessed_cves = guessed_cves
 
         self.first_seen = self.pulse.created
         self.last_seen = self.pulse.modified
@@ -253,12 +255,22 @@ class PulseBundleBuilder:
 
     def _create_vulnerabilities(self) -> List[Vulnerability]:
         vulnerabilities = []
+
+        for guessed_cve in self.guessed_cves:
+            vulnerability = self._create_vulnerability(guessed_cve)
+            vulnerabilities.append(vulnerability)
+
         cve_pulse_indicators = list(
             filter(lambda x: x.type == self._INDICATOR_TYPE_CVE, self.pulse.indicators)
         )
         for cve_pulse_indicator in cve_pulse_indicators:
-            vulnerability = self._create_vulnerability(cve_pulse_indicator.indicator)
+            cve = cve_pulse_indicator.indicator
+            if cve in self.guessed_cves:
+                continue
+
+            vulnerability = self._create_vulnerability(cve)
             vulnerabilities.append(vulnerability)
+
         return vulnerabilities
 
     def _create_indicator(

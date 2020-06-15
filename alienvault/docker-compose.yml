@@ -19,5 +19,6 @@ services:
       - ALIENVAULT_REPORT_TYPE=Threat Report
       - ALIENVAULT_REPORT_STATUS=New
       - ALIENVAULT_GUESS_MALWARE=false                       # Use tags to guess malware.
+      - ALIENVAULT_GUESS_CVE=false                           # Use tags to guess CVE.
       - ALIENVAULT_INTERVAL_SEC=1800
     restart: always
