@@ -140,7 +140,7 @@ class Misp:
             import_from_date = None
             if self.misp_import_from_date is not None:
                 import_from_date = parse(self.misp_import_from_date).strftime(
-                    "%Y-%m-%d %H:%M:%S"
+                    "%Y-%m-%d"
                 )
 
             # Prepare the query
