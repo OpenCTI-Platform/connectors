@@ -137,13 +137,16 @@ class Misp:
                 or_parameters = []
                 not_parameters = []
 
-                for tag in self.misp_import_tags.split(","):
-                    or_parameters.append(tag.strip())
-                for ntag in self.misp_import_tags_not.split(","):
-                    not_parameters.append(ntag.strip())
+                if self.misp_import_tags:
+                    for tag in self.misp_import_tags.split(","):
+                        or_parameters.append(tag.strip())
+                if self.misp_import_tags_not:
+                    for ntag in self.misp_import_tags_not.split(","):
+                        not_parameters.append(ntag.strip())
 
                 complex_query_tag = self.misp.build_complex_query(
-                    or_parameters=or_parameters, not_parameters=not_parameters
+                    or_parameters=or_parameters if len(or_parameters) > 0 else None,
+                    not_parameters=not_parameters if len(not_parameters) > 0 else None,
                 )
 
             # If import from a specific date
