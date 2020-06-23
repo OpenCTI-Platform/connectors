@@ -17,6 +17,7 @@ from stix2 import (
     Indicator,
     Relationship,
     ExternalReference,
+    Sighting,
     TLP_WHITE,
     TLP_GREEN,
     TLP_AMBER,
@@ -94,6 +95,20 @@ class Misp:
         )
         self.misp_import_tags = get_config_variable(
             "MISP_IMPORT_TAGS", ["misp", "import_tags"], config
+        )
+        self.import_creator_orgs = get_config_variable(
+            "MISP_IMPORT_CREATOR_ORGS", ["misp", "import_creator_orgs"], config
+        )
+        self.import_owner_orgs = get_config_variable(
+            "MISP_IMPORT_OWNER_ORGS", ["misp", "import_owner_orgs"], config
+        )
+        self.import_distribution_levels = get_config_variable(
+            "MISP_IMPORT_DISTRIBUTION_LEVELS",
+            ["misp", "import_distribution_levels"],
+            config,
+        )
+        self.import_threat_levels = get_config_variable(
+            "MISP_IMPORT_THREAT_LEVELS", ["misp", "import_threat_levels"], config
         )
         self.misp_interval = get_config_variable(
             "MISP_INTERVAL", ["misp", "interval"], config, True
@@ -183,25 +198,85 @@ class Misp:
             time.sleep(self.get_interval())
 
     def process_events(self, events):
+        # Prepare filters
+        import_creator_orgs = None
+        import_owner_orgs = None
+        import_distribution_levels = None
+        import_threat_levels = None
+        if self.import_creator_orgs is not None:
+            import_creator_orgs = self.import_creator_orgs.split(",")
+        if self.import_owner_orgs is not None:
+            import_owner_orgs = self.import_owner_orgs.split(",")
+        if self.import_distribution_levels is not None:
+            import_distribution_levels = self.import_distribution_levels.split(",")
+        if self.import_threat_levels is not None:
+            import_threat_levels = self.import_threat_levels.split(",")
+
         for event in events:
             self.helper.log_info("Processing event " + event["Event"]["uuid"])
+
+            # Check against filter
+            if (
+                import_creator_orgs is not None
+                and event["Event"]["Orgc"]["name"] not in import_creator_orgs
+            ):
+                self.helper.log_info(
+                    "Event creator organization "
+                    + event["Event"]["Orgc"]["name"]
+                    + " not in import_creator_orgs, do not import"
+                )
+                continue
+            if (
+                import_owner_orgs is not None
+                and event["Event"]["Org"]["name"] not in import_owner_orgs
+            ):
+                self.helper.log_info(
+                    "Event owner organization "
+                    + event["Event"]["Org"]["name"]
+                    + " not in import_owner_orgs, do not import"
+                )
+                continue
+            if (
+                import_distribution_levels is not None
+                and event["Event"]["distribution"] not in import_distribution_levels
+            ):
+                self.helper.log_info(
+                    "Event distribution level "
+                    + event["Event"]["distribution"]
+                    + " not in import_distribution_levels, do not import"
+                )
+                continue
+            if (
+                import_threat_levels is not None
+                and event["Event"]["threat_level_id"] not in import_threat_levels
+            ):
+                self.helper.log_info(
+                    "Event threat level "
+                    + event["Event"]["threat_level_id"]
+                    + " not in import_threat_levels, do not import"
+                )
+                continue
+
             ### Default variables
             added_markings = []
             added_entities = []
             added_object_refs = []
+            added_sightings = []
 
             ### Pre-process
             # Author
             author = Identity(
                 name=event["Event"]["Orgc"]["name"], identity_class="organization"
             )
-            # Elements
-            event_elements = self.prepare_elements(event["Event"]["Galaxy"], author)
             # Markings
             if "Tag" in event["Event"]:
                 event_markings = self.resolve_markings(event["Event"]["Tag"])
             else:
                 event_markings = [TLP_WHITE]
+            # Elements
+            event_elements = self.prepare_elements(
+                event["Event"]["Galaxy"], event["Event"]["Tag"], author, event_markings
+            )
             # Tags
             event_tags = []
             if "Tag" in event["Event"]:
@@ -209,6 +284,7 @@ class Misp:
             # ExternalReference
             event_external_reference = ExternalReference(
                 source_name=self.helper.connect_name,
+                description=event["Event"]["info"],
                 external_id=event["Event"]["uuid"],
                 url=self.misp_url + "/events/view/" + event["Event"]["uuid"],
             )
@@ -219,7 +295,12 @@ class Misp:
             # Get attributes
             for attribute in event["Event"]["Attribute"]:
                 indicator = self.process_attribute(
-                    author, event_elements, event_markings, [], attribute
+                    author,
+                    event_elements,
+                    event_markings,
+                    [],
+                    attribute,
+                    event["Event"]["threat_level_id"],
                 )
                 if attribute["type"] == "link":
                     event_external_references.append(
@@ -252,6 +333,7 @@ class Misp:
                         event_markings,
                         attribute_external_references,
                         attribute,
+                        event["Event"]["threat_level_id"],
                     )
                     if indicator is not None:
                         indicators.append(indicator)
@@ -300,6 +382,16 @@ class Misp:
                     if attribute_marking["id"] not in added_markings:
                         bundle_objects.append(attribute_marking)
                         added_markings.append(attribute_marking["id"])
+                # Add attribute sightings identities
+                for attribute_identity in indicator["identities"]:
+                    if attribute_identity["id"] not in added_entities:
+                        bundle_objects.append(attribute_identity)
+                        added_entities.append(attribute_identity["id"])
+                # Add attribute sightings
+                for attribute_sighting in indicator["sightings"]:
+                    if attribute_sighting["id"] not in added_sightings:
+                        bundle_objects.append(attribute_sighting)
+                        added_sightings.append(attribute_sighting["id"])
                 # Add attribute elements
                 all_attribute_elements = (
                     indicator["attribute_elements"]["intrusion_sets"]
@@ -353,6 +445,7 @@ class Misp:
         event_markings,
         attribute_external_references,
         attribute,
+        event_threat_level,
     ):
         try:
             resolved_attributes = self.resolve_type(
@@ -363,8 +456,6 @@ class Misp:
 
             for resolved_attribute in resolved_attributes:
                 ### Pre-process
-                # Elements
-                attribute_elements = self.prepare_elements(attribute["Galaxy"], author)
                 # Markings & Tags
                 attribute_tags = []
                 if "Tag" in attribute:
@@ -376,6 +467,17 @@ class Misp:
                         attribute_markings = event_markings
                 else:
                     attribute_markings = event_markings
+
+                # Elements
+                tags = []
+                galaxies = []
+                if "Tag" in attribute:
+                    tags = attribute["Tag"]
+                if "Galaxy" in attribute:
+                    galaxies = attribute["Galaxy"]
+                attribute_elements = self.prepare_elements(
+                    galaxies, tags, author, attribute_markings
+                )
 
                 ### Create the indicator
                 observable_type = resolved_attribute["type"]
@@ -419,6 +521,14 @@ class Misp:
                     )
                     pattern = genuine_pattern
 
+                if event_threat_level == "1":
+                    score = 90
+                elif event_threat_level == "2":
+                    score = 60
+                elif event_threat_level == "3":
+                    score = 30
+                else:
+                    score = 50
                 indicator = Indicator(
                     name=name,
                     description=attribute["comment"],
@@ -430,14 +540,49 @@ class Misp:
                     created_by_ref=author,
                     object_marking_refs=attribute_markings,
                     external_references=attribute_external_references,
+                    created=datetime.utcfromtimestamp(
+                        int(attribute["timestamp"])
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    modified=datetime.utcfromtimestamp(
+                        int(attribute["timestamp"])
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     custom_properties={
                         "x_opencti_indicator_pattern": pattern,
                         "x_opencti_observable_type": observable_type,
                         "x_opencti_observable_value": observable_value,
                         "x_opencti_pattern_type": pattern_type,
                         "x_opencti_tags": attribute_tags,
+                        "x_opencti_detection": attribute["to_ids"],
+                        "x_opencti_score": score,
                     },
                 )
+
+                sightings = []
+                identities = []
+                if "Sighting" in attribute:
+                    for misp_sighting in attribute["Sighting"]:
+                        if "Organisation" in misp_sighting:
+                            sighted_by = Identity(
+                                id="identity--" + misp_sighting["Organisation"]["uuid"],
+                                name=misp_sighting["Organisation"]["name"],
+                                identity_class="organization",
+                            )
+                            identities.append(sighted_by)
+                        else:
+                            sighted_by = None
+                        sighting = Sighting(
+                            sighting_of_ref=indicator["id"],
+                            first_seen=datetime.utcfromtimestamp(
+                                int(misp_sighting["date_sighting"])
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            last_seen=datetime.utcfromtimestamp(
+                                int(misp_sighting["date_sighting"])
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            where_sighted_refs=[sighted_by]
+                            if sighted_by is not None
+                            else None,
+                        )
+                        sightings.append(sighting)
 
                 ### Create the relationships
                 relationships = []
@@ -594,6 +739,8 @@ class Misp:
                     "relationships": relationships,
                     "attribute_elements": attribute_elements,
                     "markings": attribute_markings,
+                    "identities": identities,
+                    "sightings": sightings,
                 }
         except:
             return None
@@ -623,7 +770,7 @@ class Misp:
         else:
             return result_table
 
-    def prepare_elements(self, galaxies, author):
+    def prepare_elements(self, galaxies, tags, author, markings):
         elements = {
             "intrusion_sets": [],
             "malwares": [],
@@ -662,6 +809,30 @@ class Misp:
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
+                                object_marking_refs=markings,
+                                custom_properties={"x_opencti_aliases": aliases},
+                            )
+                        )
+                        added_names.append(name)
+            # Get the linked tools
+            if galaxy["namespace"] == "mitre-attack" and galaxy["name"] == "Tool":
+                for galaxy_entity in galaxy["GalaxyCluster"]:
+                    if " - S" in galaxy_entity["value"]:
+                        name = galaxy_entity["value"].split(" - S")[0]
+                    else:
+                        name = galaxy_entity["value"]
+                    if "meta" in galaxy_entity and "synonyms" in galaxy_entity["meta"]:
+                        aliases = galaxy_entity["meta"]["synonyms"]
+                    else:
+                        aliases = [name]
+                    if name not in added_names:
+                        elements["tools"].append(
+                            Tool(
+                                name=name,
+                                labels=["tool"],
+                                description=galaxy_entity["description"],
+                                created_by_ref=author,
+                                object_marking_refs=markings,
                                 custom_properties={"x_opencti_aliases": aliases},
                             )
                         )
@@ -690,28 +861,7 @@ class Misp:
                                 labels=["malware"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
-                                custom_properties={"x_opencti_aliases": aliases},
-                            )
-                        )
-                        added_names.append(name)
-            # Get the linked tools
-            if galaxy["namespace"] == "mitre-attack" and galaxy["name"] == "Tool":
-                for galaxy_entity in galaxy["GalaxyCluster"]:
-                    if " - S" in galaxy_entity["value"]:
-                        name = galaxy_entity["value"].split(" - S")[0]
-                    else:
-                        name = galaxy_entity["value"]
-                    if "meta" in galaxy_entity and "synonyms" in galaxy_entity["meta"]:
-                        aliases = galaxy_entity["meta"]["synonyms"]
-                    else:
-                        aliases = [name]
-                    if name not in added_names:
-                        elements["tools"].append(
-                            Tool(
-                                name=name,
-                                labels=["tool"],
-                                description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                object_marking_refs=markings,
                                 custom_properties={"x_opencti_aliases": aliases},
                             )
                         )
@@ -737,6 +887,7 @@ class Misp:
                                 labels=["attack-pattern"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
+                                object_marking_refs=markings,
                                 custom_properties={
                                     "x_opencti_external_id": galaxy_entity["meta"][
                                         "external_id"
@@ -746,6 +897,108 @@ class Misp:
                             )
                         )
                         added_names.append(name)
+        for tag in tags:
+            # Get the linked intrusion sets
+            if (
+                tag["name"].startswith("misp-galaxy:threat-actor")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-mobile-attack-intrusion-set"
+                )
+                or tag["name"].startswith("misp-galaxy:microsoft-activity-group")
+                or tag["name"].startswith("misp-galaxy:mitre-threat-actor")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-threat-actor"
+                )
+                or tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-intrusion-set"
+                )
+            ):
+                tag_value_split = tag["name"].split('="')
+                tag_value = tag_value_split[1][:-1].strip()
+                if " - G" in tag_value:
+                    name = tag_value.split(" - G")[0]
+                elif "APT " in tag_value:
+                    name = tag_value.replace("APT ", "APT")
+                else:
+                    name = tag_value
+                if name not in added_names:
+                    elements["intrusion_sets"].append(
+                        IntrusionSet(
+                            name=name,
+                            labels=["intrusion-set"],
+                            description="Imported from MISP tag",
+                            created_by_ref=author,
+                            object_marking_refs=markings,
+                        )
+                    )
+                    added_names.append(name)
+            # Get the linked tools
+            if tag["name"].startswith("misp-galaxy:mitre-tool") or tag[
+                "name"
+            ].startswith("misp-galaxy:mitre-enterprise-attack-tool"):
+                tag_value_split = tag["name"].split('="')
+                tag_value = tag_value_split[1][:-1].strip()
+                if " - S" in tag_value:
+                    name = tag_value.split(" - S")[0]
+                else:
+                    name = tag_value
+                if name not in added_names:
+                    elements["tools"].append(
+                        Tool(
+                            name=name,
+                            labels=["tool"],
+                            description="Imported from MISP tag",
+                            created_by_ref=author,
+                            object_marking_refs=markings,
+                        )
+                    )
+                    added_names.append(name)
+            # Get the linked malwares
+            if (
+                tag["name"].startswith("misp-galaxy:mitre-malware")
+                or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-malware")
+                or tag["name"].startswith("misp-galaxy:misp-ransomware")
+                or tag["name"].startswith("misp-galaxy:misp-tool")
+                or tag["name"].startswith("misp-galaxy:misp-android")
+                or tag["name"].startswith("misp-galaxy:misp-malpedia")
+            ):
+                tag_value_split = tag["name"].split('="')
+                tag_value = tag_value_split[1][:-1].strip()
+                if " - S" in tag_value:
+                    name = tag_value.split(" - S")[0]
+                else:
+                    name = tag_value
+                if name not in added_names:
+                    elements["malwares"].append(
+                        Malware(
+                            name=name,
+                            labels=["malware"],
+                            description="Imported from MISP tag",
+                            created_by_ref=author,
+                            object_marking_refs=markings,
+                        )
+                    )
+                    added_names.append(name)
+            # Get the linked attack_patterns
+            if tag["name"].startswith("mitre-attack:attack-pattern"):
+                tag_value_split = tag["name"].split('="')
+                tag_value = tag_value_split[1][:-1].strip()
+                if " - T" in tag_value:
+                    name = tag_value.split(" - T")[0]
+                else:
+                    name = tag_value
+                if name not in added_names:
+                    elements["attack_patterns"].append(
+                        AttackPattern(
+                            name=name,
+                            labels=["attack-pattern"],
+                            description="Imported from MISP tag",
+                            created_by_ref=author,
+                            object_marking_refs=markings,
+                        )
+                    )
+                    added_names.append(name)
         return elements
 
     def resolve_type(self, type, value):
@@ -761,9 +1014,12 @@ class Misp:
             "filename|sha256": ["file-name", "file-sha256"],
             "ip-src": ["ipv4-addr"],
             "ip-dst": ["ipv4-addr"],
-            "hostname": ["domain"],
+            "hostname": ["hostname"],
             "domain": ["domain"],
             "domain|ip": ["domain", "ipv4-addr"],
+            "email-subject": ["email-subject"],
+            "email-src": ["email-address"],
+            "email-dst": ["email-address"],
             "url": ["url"],
             "windows-service-name": ["windows-service-name"],
             "windows-service-displayname": ["windows-service-display-name"],
@@ -821,30 +1077,51 @@ class Misp:
                 and tag["name"] != "tlp:green"
                 and tag["name"] != "tlp:amber"
                 and tag["name"] != "tlp:red"
+                and not tag["name"].startswith("misp-galaxy:threat-actor")
                 and not tag["name"].startswith("misp-galaxy:mitre-threat-actor")
+                and not tag["name"].startswith("misp-galaxy:microsoft-activity-group")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-threat-actor"
+                )
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-mobile-attack-intrusion-set"
+                )
                 and not tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-intrusion-set"
+                )
                 and not tag["name"].startswith("misp-galaxy:mitre-malware")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-malware"
+                )
                 and not tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-attack-pattern"
+                )
                 and not tag["name"].startswith("misp-galaxy:mitre-tool")
                 and not tag["name"].startswith("misp-galaxy:tool")
                 and not tag["name"].startswith("misp-galaxy:ransomware")
                 and not tag["name"].startswith("misp-galaxy:malpedia")
             ):
+                tag_type = "MISP"
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
                     tag_value_split = tag["name"].split('="')
+                    tag_type = tag_value_split[0].strip()
                     tag_value = tag_value_split[1][:-1].strip()
                 elif ":" in tag["name"]:
                     tag_value_split = tag["name"].split(":")
+                    tag_type = tag_value_split[0].strip()
                     tag_value = tag_value_split[1].strip()
                 if tag_value.isdigit():
                     if ":" in tag["name"]:
                         tag_value_split = tag["name"].split(":")
+                        tag_type = tag_value_split[0].strip()
                         tag_value = tag_value_split[1].strip()
                     else:
                         tag_value = tag["name"]
                 opencti_tags.append(
-                    {"tag_type": "MISP", "value": tag_value, "color": "#008ac8"}
+                    {"tag_type": tag_type, "value": tag_value, "color": "#008ac8"}
                 )
         return opencti_tags
 
