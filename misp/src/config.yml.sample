@@ -20,5 +20,4 @@ misp:
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: 'opencti:import,type:osint' # Optional, list of tags used for import events
   import_tags_not: '' # Optional, list of tags to not include
-  import_threat_levels: '1,2,3,4'
   interval: 1 # Required, in minutes
