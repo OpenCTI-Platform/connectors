@@ -176,7 +176,7 @@ class Misp:
             if last_run is not None:
                 kwargs["timestamp"] = int(last_run.timestamp())
             elif import_from_date is not None:
-                kwargs["date_from"] = int(import_from_date.timestamp())
+                kwargs["date_from"] = import_from_date.strftime("%Y-%m-%d")
 
             # Query with pagination of 100
             current_page = 1
