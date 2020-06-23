@@ -98,6 +98,7 @@ class Misp:
         )
         self.misp_import_tags_not = get_config_variable(
             "MISP_IMPORT_TAGS_NOT", ["misp", "import_tags_not"], config
+        )
         self.import_creator_orgs = get_config_variable(
             "MISP_IMPORT_CREATOR_ORGS", ["misp", "import_creator_orgs"], config
         )
