@@ -20,4 +20,8 @@ misp:
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: 'opencti:import,type:osint' # Optional, list of tags used for import events
   import_tags_not: '' # Optional, list of tags to not include
+  import_creator_orgs: 'CIRCL,Luatix' # Optional, only import events created by this ORG (put the identifier here)
+  import_owner_orgs: 'CIRCL' # Optional, only import events owned by this ORG (put the identifier here)
+  import_distribution_levels: '0,1,2,3' # Optional, only import events with the given distribution levels
+  import_threat_levels: '1,2,3,4' # Optional only import events with the given threat levels
   interval: 1 # Required, in minutes
