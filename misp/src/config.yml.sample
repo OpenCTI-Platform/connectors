@@ -12,13 +12,14 @@ connector:
   log_level: 'info'
 
 misp:
-  url: 'http://localhost' # Requireda
+  url: 'http://localhost' # Required
   key: 'ChangeMe' # Required
   ssl_verify: False # Required
   create_reports: True # Required, create report for MISP event
-  report_class: 'MISP event' # Optional, report_class if creating report for event
+  report_class: 'MISP Event' # Optional, report_class if creating report for event
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: 'opencti:import,type:osint' # Optional, list of tags used for import events
+  import_tags_not: '' # Optional, list of tags to not include
   import_creator_orgs: 'CIRCL,Luatix' # Optional, only import events created by this ORG (put the identifier here)
   import_owner_orgs: 'CIRCL' # Optional, only import events owned by this ORG (put the identifier here)
   import_distribution_levels: '0,1,2,3' # Optional, only import events with the given distribution levels

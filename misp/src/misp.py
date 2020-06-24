@@ -96,6 +96,9 @@ class Misp:
         self.misp_import_tags = get_config_variable(
             "MISP_IMPORT_TAGS", ["misp", "import_tags"], config
         )
+        self.misp_import_tags_not = get_config_variable(
+            "MISP_IMPORT_TAGS_NOT", ["misp", "import_tags_not"], config
+        )
         self.import_creator_orgs = get_config_variable(
             "MISP_IMPORT_CREATOR_ORGS", ["misp", "import_creator_orgs"], config
         )
@@ -133,39 +136,47 @@ class Misp:
             # Get the last_run datetime
             current_state = self.helper.get_state()
             if current_state is not None and "last_run" in current_state:
-                last_run = datetime.utcfromtimestamp(
-                    current_state["last_run"]
-                ).strftime("%Y-%m-%d %H:%M:%S")
-                self.helper.log_info("Connector last run: " + last_run)
+                last_run = datetime.utcfromtimestamp(current_state["last_run"])
+                self.helper.log_info(
+                    "Connector last run: " + last_run.strftime("%Y-%m-%d %H:%M:%S")
+                )
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
 
             # If import with tags
             complex_query_tag = None
-            if self.misp_import_tags is not None:
+            if (self.misp_import_tags is not None) or (
+                self.misp_import_tags_not is not None
+            ):
                 or_parameters = []
-                for tag in self.misp_import_tags.split(","):
-                    or_parameters.append(tag.strip())
-                    complex_query_tag = self.misp.build_complex_query(
-                        or_parameters=or_parameters
-                    )
+                not_parameters = []
+
+                if self.misp_import_tags:
+                    for tag in self.misp_import_tags.split(","):
+                        or_parameters.append(tag.strip())
+                if self.misp_import_tags_not:
+                    for ntag in self.misp_import_tags_not.split(","):
+                        not_parameters.append(ntag.strip())
+
+                complex_query_tag = self.misp.build_complex_query(
+                    or_parameters=or_parameters if len(or_parameters) > 0 else None,
+                    not_parameters=not_parameters if len(not_parameters) > 0 else None,
+                )
 
             # If import from a specific date
             import_from_date = None
             if self.misp_import_from_date is not None:
-                import_from_date = parse(self.misp_import_from_date).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                import_from_date = datetime.fromisoformat(self.misp_import_from_date)
 
             # Prepare the query
             kwargs = dict()
             if complex_query_tag is not None:
                 kwargs["tags"] = complex_query_tag
             if last_run is not None:
-                kwargs["timestamp"] = last_run
+                kwargs["timestamp"] = int(last_run.timestamp())
             elif import_from_date is not None:
-                kwargs["date_from"] = import_from_date
+                kwargs["date_from"] = import_from_date.strftime("%Y-%m-%d")
 
             # Query with pagination of 100
             current_page = 1
