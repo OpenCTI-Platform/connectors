@@ -1,3 +1,4 @@
+from time import sleep
 import yaml
 import os
 import requests
@@ -45,6 +46,7 @@ class VirusTotalConnector:
         )
         json_data = json.loads(response.text)
         if json_data["error"]["message"] ==  "Quota exceeded":
+            self.helper.log_info("Quota Reach, waiting 24 hours.")
             sleep(_CONNECTOR_RUN_INTERVAL_SEC)
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
