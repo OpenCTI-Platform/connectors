@@ -84,7 +84,7 @@ class Malpedia:
         )
 
         self.malpedia_interval = get_config_variable(
-            "MALPEDIA_INTERVAL", ["amitt", "interval"], config, True
+            "MALPEDIA_INTERVAL_SEC", ["amitt", "interval"], config, True
         )
 
     def _load_state(self) -> Dict[str, Any]:
