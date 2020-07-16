@@ -46,10 +46,11 @@ class VirusTotalConnector:
         )
         json_data = json.loads(response.text)
         if "error" in json_data:
-            raise ValueError(json_data["error"]["message"])
             if json_data["error"]["message"] ==  "Quota exceeded":
                 self.helper.log_info("Quota Reach, waiting 24 hours.")
                 sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
+            else: 
+                raise ValueError(json_data["error"]["message"])
         if "data" in json_data:
             data = json_data["data"]
             attributes = data["attributes"]
