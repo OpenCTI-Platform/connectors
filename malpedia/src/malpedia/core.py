@@ -83,6 +83,10 @@ class Malpedia:
             self.default_marking,
         )
 
+        self.malpedia_interval = get_config_variable(
+            "MALPEDIA_INTERVAL_SEC", ["amitt", "interval"], config, True
+        )
+
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
         if not current_state:
@@ -111,6 +115,9 @@ class Malpedia:
     @staticmethod
     def _current_unix_timestamp() -> int:
         return int(datetime.utcnow().timestamp())
+
+    def get_interval(self):
+        return int(self.malpedia_interval)
 
     def run(self):
         self.helper.log_info("starting Malpedia connector...")
