@@ -8,7 +8,6 @@ import ssl
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
-
 class Mitre:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -37,13 +36,10 @@ class Mitre:
             ["connector", "update_existing_data"],
             config,
         )
-
     def get_interval(self):
         return int(self.mitre_interval) * 60 * 60 * 24
-
     def next_run(self, seconds):
         return
-
     def run(self):
         self.helper.log_info("Fetching MITRE datasets...")
         while True:
@@ -70,7 +66,12 @@ class Mitre:
                     self.helper.log_info("Connector will run!")
                     try:
                         enterprise_data = (
-                            urllib.request.urlopen(self.mitre_enterprise_file_url, context=ssl.create_default_context(cafile=certifi.where()))
+                            urllib.request.urlopen(
+                                self.mitre_enterprise_file_url,
+                                context=ssl.create_default_context(
+                                    cafile=certifi.where()
+                                ),
+                            )
                             .read()
                             .decode("utf-8")
                         )
@@ -83,7 +84,12 @@ class Mitre:
                         self.helper.log_error(str(e))
                     try:
                         pre_attack_data = (
-                            urllib.request.urlopen(self.mitre_pre_attack_file_url, context=ssl.create_default_context(cafile=certifi.where()))
+                            urllib.request.urlopen(
+                                self.mitre_pre_attack_file_url,
+                                context=ssl.create_default_context(
+                                    cafile=certifi.where()
+                                ),
+                            )
                             .read()
                             .decode("utf-8")
                         )
@@ -96,7 +102,12 @@ class Mitre:
                         self.helper.log_error(str(e))
                     try:
                         mobile_attack_data = (
-                            urllib.request.urlopen(self.mitre_mobile_attack_file_url, context=ssl.create_default_context(cafile=certifi.where()))
+                            urllib.request.urlopen(
+                                self.mitre_mobile_attack_file_url,
+                                context=ssl.create_default_context(
+                                    cafile=certifi.where()
+                                ),
+                            )
                             .read()
                             .decode("utf-8")
                         )
@@ -133,7 +144,6 @@ class Mitre:
             except Exception as e:
                 self.helper.log_error(str(e))
                 time.sleep(60)
-
 
 if __name__ == "__main__":
     try:
