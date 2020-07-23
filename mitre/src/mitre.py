@@ -8,6 +8,7 @@ import ssl
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+
 class Mitre:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -36,10 +37,13 @@ class Mitre:
             ["connector", "update_existing_data"],
             config,
         )
+
     def get_interval(self):
         return int(self.mitre_interval) * 60 * 60 * 24
+
     def next_run(self, seconds):
         return
+
     def run(self):
         self.helper.log_info("Fetching MITRE datasets...")
         while True:
@@ -144,6 +148,7 @@ class Mitre:
             except Exception as e:
                 self.helper.log_error(str(e))
                 time.sleep(60)
+
 
 if __name__ == "__main__":
     try:
