@@ -121,7 +121,7 @@ class ReportBundleBuilder:
                 actor_external_references.append(actor_external_reference)
 
             intrusion_set = create_intrusion_set_from_actor(
-                actor, self.author, actor_external_references, self.object_marking_refs,
+                actor, self.author, actor_external_references, self.object_marking_refs
             )
 
             intrusion_sets.append(intrusion_set)

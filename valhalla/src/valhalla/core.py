@@ -47,10 +47,7 @@ class Valhalla:
             "VALHALLA_API_KEY", ["valhalla", "api_key"], config
         )
         self.INTERVAL_SEC = get_config_variable(
-            "VALHALLA_INTERVAL_SEC",
-            ["valhalla", "interval_sec"],
-            config,
-            isNumber=True,
+            "VALHALLA_INTERVAL_SEC", ["valhalla", "interval_sec"], config, isNumber=True
         )
 
         self.helper = OpenCTIConnectorHelper(config)

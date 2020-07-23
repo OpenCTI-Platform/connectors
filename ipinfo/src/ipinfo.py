@@ -87,7 +87,7 @@ class IpInfoConnector:
         response = requests.request(
             "GET",
             api_url,
-            headers={"accept": "application/json", "content-type": "application/json",},
+            headers={"accept": "application/json", "content-type": "application/json"},
         )
         json_data = json.loads(response.text)
         country = pycountry.countries.get(alpha_2=json_data["country"])

@@ -33,7 +33,7 @@ class MalpediaClient:
                 data = r.json()
             else:
                 r = requests.get(
-                    url, headers={"Authorization": "apitoken " + self.api_key},
+                    url, headers={"Authorization": "apitoken " + self.api_key}
                 )
                 data = r.json()
         except requests.exceptions.RequestException as e:
