@@ -1,3 +1,4 @@
+from time import sleep
 import yaml
 import os
 import requests
@@ -28,6 +29,7 @@ class VirusTotalConnector:
             "accept": "application/json",
             "content-type": "application/json",
         }
+        self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60 * 24
 
     def _process_file(self, observable):
         marking_definitions = observable["markingDefinitionsIds"]
@@ -45,6 +47,9 @@ class VirusTotalConnector:
         json_data = json.loads(response.text)
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
+            if json_data["error"]["message"] == "Quota exceeded":
+                self.helper.log_info("Quota Reach, waiting 24 hours.")
+                sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
         if "data" in json_data:
             data = json_data["data"]
             attributes = data["attributes"]
@@ -144,7 +149,7 @@ class VirusTotalConnector:
             # Create tags
             for tag in attributes["tags"]:
                 tag_vt = self.helper.api.tag.create(
-                    tag_type="VirusTotal", value=tag, color="#0059f7",
+                    tag_type="VirusTotal", value=tag, color="#0059f7"
                 )
                 for created_observable in created_observables:
                     self.helper.api.stix_entity.add_tag(

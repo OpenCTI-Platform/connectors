@@ -93,7 +93,7 @@ class KnowledgeImporter:
 
             # Create Hygiene Tag
             tag_valhalla = self.helper.api.tag.create(
-                tag_type="Valhalla", value=tag, color="#46beda",
+                tag_type="Valhalla", value=tag, color="#46beda"
             )
             self.helper.api.stix_entity.add_tag(
                 id=indicator_id, tag_id=tag_valhalla["id"]
@@ -118,7 +118,7 @@ class KnowledgeImporter:
                 description="Rule Reference: " + san_url.geturl(),
             )
             self.helper.api.stix_entity.add_external_reference(
-                id=obj_id, external_reference_id=reference["id"],
+                id=obj_id, external_reference_id=reference["id"]
             )
 
     def _add_intrusion_set_indicator_by_external_id(

@@ -38,10 +38,10 @@ class Cybercrimetracker:
 
         # CYBERCRIME-TRACKER.NET Config
         self.feed_url = get_config_variable(
-            "CYBERCRIMET_RACKER_FEED_URL", ["cybercrime-tracker", "feed_url"], config,
+            "CYBERCRIMET_RACKER_FEED_URL", ["cybercrime-tracker", "feed_url"], config
         )
         self.connector_tlp = get_config_variable(
-            "CYBERCRIME_TRACKER_TLP", ["cybercrime-tracker", "tlp"], config,
+            "CYBERCRIME_TRACKER_TLP", ["cybercrime-tracker", "tlp"], config
         )
         self.interval = get_config_variable(
             "CYBERCRIMETRACKER_INTERVAL",
@@ -125,7 +125,7 @@ class Cybercrimetracker:
         self.helper.log_info("Fetching data CYBERCRIME-TRACKER.NET...")
 
         tag = self.helper.api.tag.create(
-            tag_type="C2-Type", value="C2 Server", color="#fc236b",
+            tag_type="C2-Type", value="C2 Server", color="#fc236b"
         )
         tlp = self.helper.api.marking_definition.read(
             filters=[
@@ -187,7 +187,7 @@ class Cybercrimetracker:
                         parsed_entry = self.parse_feed_entry(entry)
 
                         ext_reference = self.helper.api.external_reference.create(
-                            source_name="{}".format(self.feed_summary["Source"],),
+                            source_name="{}".format(self.feed_summary["Source"]),
                             url=parsed_entry["ext_link"],
                         )
 
@@ -216,7 +216,7 @@ class Cybercrimetracker:
 
                         # Add tag
                         self.helper.api.stix_entity.add_tag(
-                            id=indicator["id"], tag_id=tag["id"],
+                            id=indicator["id"], tag_id=tag["id"]
                         )
 
                         self.helper.api.stix_entity.add_external_reference(
@@ -245,8 +245,7 @@ class Cybercrimetracker:
                         )
 
                         self.helper.api.stix_entity.add_external_reference(
-                            id=relation["id"],
-                            external_reference_id=ext_reference["id"],
+                            id=relation["id"], external_reference_id=ext_reference["id"]
                         )
 
                         # Create Observables and link them to Indicator
@@ -264,7 +263,7 @@ class Cybercrimetracker:
                         )
 
                         self.helper.api.indicator.add_stix_observable(
-                            id=indicator["id"], stix_observable_id=observable_url["id"],
+                            id=indicator["id"], stix_observable_id=observable_url["id"]
                         )
 
                         observable_ip = self.helper.api.stix_observable.create(
@@ -281,7 +280,7 @@ class Cybercrimetracker:
                         )
 
                         self.helper.api.indicator.add_stix_observable(
-                            id=indicator["id"], stix_observable_id=observable_ip["id"],
+                            id=indicator["id"], stix_observable_id=observable_ip["id"]
                         )
 
                         if "domain" in parsed_entry.keys():

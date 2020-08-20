@@ -116,7 +116,7 @@ def create_indicator(
 
 
 def create_intrusion_set(
-    name: str, author: Identity, object_marking_refs: List[MarkingDefinition],
+    name: str, author: Identity, object_marking_refs: List[MarkingDefinition]
 ) -> IntrusionSet:
     """Create an intrusion set."""
     return IntrusionSet(
@@ -184,7 +184,7 @@ def create_vulnerability_external_reference(name: str) -> List[ExternalReference
     external_references = []
     if name.startswith("CVE-"):
         external_reference = create_external_reference(
-            "NIST NVD", f"https://nvd.nist.gov/vuln/detail/{name}", name,
+            "NIST NVD", f"https://nvd.nist.gov/vuln/detail/{name}", name
         )
         external_references.append(external_reference)
     return external_references
@@ -212,7 +212,7 @@ def create_attack_pattern_external_reference(name: str) -> List[ExternalReferenc
     external_references = []
     if name.startswith("T"):
         external_reference = create_external_reference(
-            "mitre-attack", f"https://attack.mitre.org/techniques/{name}", name,
+            "mitre-attack", f"https://attack.mitre.org/techniques/{name}", name
         )
         external_references.append(external_reference)
     return external_references
