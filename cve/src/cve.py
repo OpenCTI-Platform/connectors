@@ -6,6 +6,8 @@ import time
 import urllib.request
 import gzip
 import shutil
+import certifi
+import ssl
 
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -56,9 +58,14 @@ class Cve:
         try:
             # Downloading json.gz file
             self.helper.log_info("Requesting the file " + url)
-            urllib.request.urlretrieve(
-                url, os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz"
+            response = urllib.request.urlopen(
+                url, context=ssl.create_default_context(cafile=certifi.where())
             )
+            image = response.read()
+            with open(
+                os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz", "wb"
+            ) as file:
+                file.write(image)
             # Unzipping the file
             self.helper.log_info("Unzipping the file")
             with gzip.open("data.json.gz", "rb") as f_in:
