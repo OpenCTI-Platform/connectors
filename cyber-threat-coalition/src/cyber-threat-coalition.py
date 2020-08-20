@@ -158,7 +158,7 @@ class CyberThreatCoalition:
             labels=["threat-report"],
             external_references=[report_external_reference],
             object_refs=report_object_refs,
-            custom_properties={CustomProperties.TAG_TYPE: tags,},
+            custom_properties={CustomProperties.TAG_TYPE: tags},
         )
 
         # add report in bundle

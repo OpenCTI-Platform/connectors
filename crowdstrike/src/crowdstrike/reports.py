@@ -178,7 +178,7 @@ class ReportImporter:
         return create_file_from_download(download)
 
     def _create_report_bundle(
-        self, report: Report, report_file: Optional[Mapping[str, str]] = None,
+        self, report: Report, report_file: Optional[Mapping[str, str]] = None
     ) -> Bundle:
         author = self.author
         source_name = self._source_name()

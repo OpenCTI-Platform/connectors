@@ -78,7 +78,7 @@ class HygieneConnector:
 
         # Create Hygiene Tag
         self.tag_hygiene = self.helper.api.tag.create(
-            tag_type="Hygiene", value="Hygiene", color="#fc0341",
+            tag_type="Hygiene", value="Hygiene", color="#fc0341"
         )
 
     def _process_observable(self, observable) -> list:
@@ -123,7 +123,7 @@ class HygieneConnector:
                         id=indicator_id, tag_id=self.tag_hygiene["id"]
                     )
                     self.helper.api.stix_domain_entity.update_field(
-                        id=indicator_id, key="score", value=score,
+                        id=indicator_id, key="score", value=score
                     )
 
                 # Create external references

@@ -486,11 +486,7 @@ def create_tag(entity: Entity, source_name: str, color: str) -> Mapping[str, str
     if value is None:
         value = f"NO_VALUE_{entity.id}"
 
-    return {
-        "tag_type": source_name,
-        "value": value,
-        "color": color,
-    }
+    return {"tag_type": source_name, "value": value, "color": color}
 
 
 def create_tags(entities: List[Entity], source_name: str) -> List[Mapping[str, str]]:

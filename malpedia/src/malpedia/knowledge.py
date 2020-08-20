@@ -181,7 +181,7 @@ class KnowledgeImporter:
                         description="Reference found in the Malpedia library",
                     )
                     self.helper.api.stix_entity.add_external_reference(
-                        id=intrusion_set["id"], external_reference_id=reference["id"],
+                        id=intrusion_set["id"], external_reference_id=reference["id"]
                     )
             else:
                 # If we don't create the intrusion set we attach every knowledge
@@ -220,7 +220,7 @@ class KnowledgeImporter:
                             description="Reference found in the Malpedia library",
                         )
                         self.helper.api.stix_entity.add_external_reference(
-                            id=guessed_id, external_reference_id=reference["id"],
+                            id=guessed_id, external_reference_id=reference["id"]
                         )
 
     def _add_samples_for_malware_id(self, malware_id: str, samples: Any) -> None:
@@ -390,7 +390,7 @@ class KnowledgeImporter:
                 description="Reference found in the Malpedia library",
             )
             self.helper.api.stix_entity.add_external_reference(
-                id=obj_id, external_reference_id=reference["id"],
+                id=obj_id, external_reference_id=reference["id"]
             )
 
     def _parse_timestamp(self, ts: str) -> str:
