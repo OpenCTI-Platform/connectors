@@ -504,7 +504,7 @@ def create_report(
     report_status: int,
     report_type: str,
     confidence_level: int,
-    tags: List[Mapping[str, str]],
+    labels: List[str],
     files: List[Mapping[str, str]],
 ) -> STIXReport:
     """Create a report."""
@@ -514,15 +514,14 @@ def create_report(
         description=description,
         published=published,
         object_refs=object_refs,
-        labels=["threat-report"],
+        labels=labels,
         external_references=external_references,
         object_marking_refs=object_marking_refs,
+        confidence=confidence_level,
+        report_types=[report_type],
         custom_properties={
-            CustomProperties.REPORT_CLASS: report_type,
-            CustomProperties.OBJECT_STATUS: report_status,
-            CustomProperties.SRC_CONF_LEVEL: confidence_level,
-            CustomProperties.FILES: files,
-            CustomProperties.TAG_TYPE: tags,
+            "x_opencti_report_status": report_status,
+            "x_opencti_files": files,
         },
     )
 
@@ -672,10 +671,6 @@ def create_indicator(
         kill_chain_phases=kill_chain_phases,
         labels=["malicious-activity"],
         object_marking_refs=object_marking_refs,
-        custom_properties={
-            CustomProperties.OBSERVABLE_TYPE: observable_type,
-            CustomProperties.OBSERVABLE_VALUE: observable_value,
-            CustomProperties.PATTERN_TYPE: pattern_type,
-            CustomProperties.INDICATOR_PATTERN: indicator_pattern,
-        },
+        pattern_type=pattern_type,
+        custom_properties={"x_opencti_main_observable_type": observable_type,},
     )
