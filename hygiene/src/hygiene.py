@@ -120,7 +120,7 @@ class HygieneConnector:
 
                 for indicator_id in observable["indicatorsIds"]:
                     self.helper.api.stix_domain_object.add_label(
-                        id=indicator_id, tag_id=self.label_hygiene["id"]
+                        id=indicator_id, label_id=self.label_hygiene["id"]
                     )
                     self.helper.api.stix_domain_object.update_field(
                         id=indicator_id, key="x_opencti_score", value=score

@@ -204,13 +204,13 @@ class Cybercrimetracker:
                             name=parsed_entry["url"],
                             description="C2 URL for: {}".format(parsed_entry["type"]),
                             pattern_type="stix",
-                            indicator_pattern=indicator_pattern,
-                            main_observable_type="URL",
+                            pattern=indicator_pattern,
+                            main_observable_type="Url",
                             valid_from=parsed_entry["date"],
                             created=parsed_entry["date"],
                             modified=parsed_entry["date"],
-                            createdByRef=organization["id"],
-                            markingDefinitions=[tlp["id"]],
+                            createdBy=organization["id"],
+                            objectMarking=[tlp["id"]],
                             update=self.update_data,
                         )
 
@@ -226,19 +226,17 @@ class Cybercrimetracker:
 
                         # Add relationship with malware
                         relation = self.helper.api.stix_relation.create(
-                            fromType="Indicator",
                             fromId=indicator["id"],
-                            toType="Malware",
                             toId=malware["id"],
                             relationship_type="indicates",
-                            first_seen=self._time_to_datetime(
+                            start_time=self._time_to_datetime(
                                 entry["published_parsed"]
                             ),
-                            last_seen=self._time_to_datetime(entry["published_parsed"]),
+                            stop_time=self._time_to_datetime(entry["published_parsed"]),
                             description="URLs associated to: " + parsed_entry["type"],
-                            weight=self.confidence_level,
-                            role_played="C2 Server",
-                            createdByRef=organization["id"],
+                            confidence=self.confidence_level,
+                            createdBy=organization["id"],
+                            objectMarking=[tlp["id"]],
                             created=parsed_entry["date"],
                             modified=parsed_entry["date"],
                             update=self.update_data,
@@ -249,52 +247,44 @@ class Cybercrimetracker:
                         )
 
                         # Create Observables and link them to Indicator
-                        observable_url = self.helper.api.stix_observable.create(
+                        observable_url = self.helper.api.stix_cyber_observable.create(
                             type="URL",
                             observable_value=parsed_entry["url"],
                             createdByRef=organization["id"],
                             markingDefinitions=[tlp["id"]],
+                            externalReferences=[ext_reference["id"]],
                             update=self.update_data,
                         )
-
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=observable_url["id"],
-                            external_reference_id=ext_reference["id"],
-                        )
-
                         self.helper.api.indicator.add_stix_observable(
-                            id=indicator["id"], stix_observable_id=observable_url["id"]
+                            id=indicator["id"],
+                            stix_cyber_observable_id=observable_url["id"],
                         )
 
-                        observable_ip = self.helper.api.stix_observable.create(
-                            type="IPv4-Addr",
-                            observable_value=parsed_entry["ip"],
-                            createdByRef=organization["id"],
-                            markingDefinitions=[tlp["id"]],
+                        observable_ip = self.helper.api.stix_cyber_observable.create(
+                            observableData={
+                                "type": "ipv4-addr",
+                                "value": parsed_entry["ip"],
+                            },
+                            createdBy=organization["id"],
+                            objectMarking=[tlp["id"]],
+                            externalReferences=[ext_reference["id"]],
                             update=self.update_data,
                         )
-
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=observable_ip["id"],
-                            external_reference_id=ext_reference["id"],
-                        )
-
                         self.helper.api.indicator.add_stix_observable(
-                            id=indicator["id"], stix_observable_id=observable_ip["id"]
+                            id=indicator["id"],
+                            stix_cyber_observable_id=observable_ip["id"],
                         )
 
                         if "domain" in parsed_entry.keys():
-                            observable_domain = self.helper.api.stix_observable.create(
-                                type="Domain",
-                                observable_value=parsed_entry["domain"],
-                                createdByRef=organization["id"],
-                                markingDefinitions=[tlp["id"]],
+                            observable_domain = self.helper.api.stix_cyber_observable.create(
+                                observableData={
+                                    "type": "domain-name",
+                                    "value": parsed_entry["ip"],
+                                },
+                                createdBy=organization["id"],
+                                objectMarking=[tlp["id"]],
+                                externalReferences=[ext_reference["id"]],
                                 update=self.update_data,
-                            )
-
-                            self.helper.api.stix_entity.add_external_reference(
-                                id=observable_domain["id"],
-                                external_reference_id=ext_reference["id"],
                             )
 
                             self.helper.api.indicator.add_stix_observable(
@@ -302,9 +292,7 @@ class Cybercrimetracker:
                                 stix_observable_id=observable_domain["id"],
                             )
                             self.helper.api.stix_relation.create(
-                                fromType="Domain",
                                 fromId=observable_domain["id"],
-                                toType="IPv4-Addr",
                                 toId=observable_ip["id"],
                                 relationship_type="resolves",
                                 last_seen=self._time_to_datetime(
