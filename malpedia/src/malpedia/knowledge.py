@@ -157,20 +157,18 @@ class KnowledgeImporter:
                 intrusion_set = self.helper.api.intrusion_set.create(
                     name=act.value,
                     description=act.description,
-                    alias=act.meta.synonyms if act.meta.synonyms else None,
+                    aliases=act.meta.synonyms if act.meta.synonyms else None,
+                    createdBy=self.organization["id"],
                     update=self.update_data,
                 )
 
-                self.helper.api.stix_relation.create(
-                    fromType="Intrusion-Set",
+                self.helper.api.stix_core_relationship.create(
                     fromId=intrusion_set["id"],
-                    toType="Malware",
                     toId=malware_id,
                     relationship_type="uses",
                     description="Malpedia indicates usage",
-                    weight=self.confidence_level,
-                    createdByRef=self.organization["id"],
-                    ignore_dates=True,
+                    confidence=self.confidence_level,
+                    createdBy=self.organization["id"],
                     update=self.update_data,
                 )
 
@@ -180,7 +178,7 @@ class KnowledgeImporter:
                         url=act_ref_url,
                         description="Reference found in the Malpedia library",
                     )
-                    self.helper.api.stix_entity.add_external_reference(
+                    self.helper.api.stix_domain_object.add_external_reference(
                         id=intrusion_set["id"], external_reference_id=reference["id"]
                     )
             else:
@@ -200,14 +198,12 @@ class KnowledgeImporter:
                     continue
 
                 if guessed_intrusion_set != {} and self.guess_intrusion_set:
-                    self.helper.api.stix_relation.create(
-                        fromType="Intrusion-Set",
+                    self.helper.api.stix_core_relationship.create(
                         fromId=guessed_id,
-                        toType="Malware",
                         toId=malware_id,
                         relationship_type="uses",
                         description="Malpedia indicates usage",
-                        weight=self.confidence_level,
+                        confidence=self.confidence_level,
                         createdByRef=self.organization["id"],
                         ignore_dates=True,
                         update=self.update_data,
@@ -233,10 +229,6 @@ class KnowledgeImporter:
 
             self.helper.log_info("Processing sample: " + sam.sha256)
 
-            desc = "Malpedia packer status: {}\n\nMalpedia version: {}".format(
-                sam.status or "", sam.version or ""
-            )
-
             # Sanity check the hash value
             if sam.sha256 == "" or sam.sha256 is None or len(sam.sha256) != 64:
                 continue
@@ -245,12 +237,10 @@ class KnowledgeImporter:
             pattern = "[file:hashes.'SHA-256' = '" + san_hash + "']"
 
             try:
-                obs = self.helper.api.stix_observable.create(
-                    type="File-SHA256",
-                    observable_value=san_hash,
-                    description=desc,
-                    createdByRef=self.organization["id"],
-                    markingDefinitions=[self.default_marking["id"]],
+                obs = self.helper.api.stix_cyber_observable.create(
+                    observable_data={"type": "file", "hashes": {"SHA-256": san_hash,}},
+                    createdBy=self.organization["id"],
+                    objectMarking=[self.default_marking["id"]],
                     update=self.update_data,
                 )
             except Exception as e:
@@ -263,10 +253,10 @@ class KnowledgeImporter:
                     name=san_hash,
                     description="Sample hash pattern from Malpedia",
                     pattern_type="stix",
-                    indicator_pattern=pattern,
-                    main_observable_type="File-SHA256",
-                    createdByRef=self.organization["id"],
-                    markingDefinitions=[self.default_marking["id"]],
+                    pattern=pattern,
+                    x_opencti_main_observable_type="File",
+                    createdBy=self.organization["id"],
+                    objectMarking=[self.default_marking["id"]],
                     update=self.update_data,
                 )
             except Exception as e:
@@ -274,16 +264,14 @@ class KnowledgeImporter:
                 continue
 
             try:
-                self.helper.api.stix_relation.create(
-                    fromType="Indicator",
+                self.helper.api.stix_core_relationship.create(
                     fromId=indicator["id"],
-                    toType="Malware",
                     toId=malware_id,
                     relationship_type="indicates",
                     description="Sample in Malpedia database",
-                    weight=self.confidence_level,
-                    createdByRef=self.organization["id"],
-                    ignore_dates=True,
+                    confidence=self.confidence_level,
+                    createdBy=self.organization["id"],
+                    objectMarking=[self.default_marking["id"]],
                     update=self.update_data,
                 )
             except Exception as e:
@@ -313,10 +301,10 @@ class KnowledgeImporter:
                         name=yr.rule_name,
                         description="Yara rule from Malpedia library",
                         pattern_type="yara",
-                        indicator_pattern=yr.raw_rule,
-                        markingDefinitions=[mapped_marking["id"]],
-                        main_observable_type="File-SHA256",
-                        createdByRef=self.organization["id"],
+                        pattern=yr.raw_rule,
+                        objetMarking=[mapped_marking["id"]],
+                        x_opencti_main_observable_type="StixFile",
+                        createdBy=self.organization["id"],
                         valid_from=yr.date,
                         update=self.update_data,
                     )
@@ -324,17 +312,13 @@ class KnowledgeImporter:
                     self.helper.log_error(f"error creating yara indicator: {e}")
                     continue
 
-                self.helper.api.stix_relation.create(
-                    fromType="Indicator",
+                self.helper.api.stix_core_relationship.create(
                     fromId=indicator["id"],
-                    toType="Malware",
                     toId=malware_id,
                     relationship_type="indicates",
                     description="Yara rule for " + fam.main_name,
-                    weight=self.confidence_level,
-                    role_played="Unknown",
-                    createdByRef=self.organization["id"],
-                    ignore_dates=True,
+                    confidence=self.confidence_level,
+                    createdBy=self.organization["id"],
                     update=self.update_data,
                 )
 
@@ -356,10 +340,10 @@ class KnowledgeImporter:
                 malware = self.helper.api.malware.create(
                     name=fam.main_name,
                     is_family=True,
-                    createdByRef=self.organization["id"],
+                    createdBy=self.organization["id"],
                     description=fam.description,
-                    alias=fam.alt_names if fam.alt_names != [] else None,
-                    markingDefinitions=[marking_tlp_white["id"]],
+                    aliases=fam.alt_names if fam.alt_names != [] else None,
+                    objectMarking=[marking_tlp_white["id"]],
                     update=self.update_data,
                 )
             except Exception as e:
