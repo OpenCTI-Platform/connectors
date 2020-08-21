@@ -67,36 +67,34 @@ class KnowledgeImporter:
                     name=yr.name,
                     description=yr.cti_description,
                     pattern_type="yara",
-                    indicator_pattern=yr.content,
-                    markingDefinitions=[self.default_marking["id"]],
-                    main_observable_type="File-SHA256",
-                    createdByRef=self.organization["id"],
+                    pattern=yr.content,
+                    objectMarking=[self.default_marking["id"]],
+                    main_observable_type="StixFile",
+                    created_by=self.organization["id"],
                     valid_from=yr.cti_date,
-                    score=yr.score,
+                    x_opencti_score=yr.score,
+                    x_opencti_detection=True,
                     update=self.update_data,
-                    detection=True,
                 )
             except Exception as err:
                 self.helper.log_error(f"error creating indicator: {err}")
 
             self._add_refs_for_id([yr.reference], indicator["id"])
-            self._add_tags_for_indicator(yr.tags, indicator["id"])
+            self._add_labels_for_indicator(yr.labels, indicator["id"])
 
-    def _add_tags_for_indicator(self, tags: list, indicator_id: str) -> None:
-        for tag in tags:
+    def _add_labels_for_indicator(self, labels: list, indicator_id: str) -> None:
+        for label in labels:
             # handle Mitre ATT&CK relation indicator <-> attack-pattern
-            if re.search(r"^T\d{4}$", tag):
-                self._add_attack_pattern_indicator_by_external_id(tag, indicator_id)
+            if re.search(r"^T\d{4}$", label):
+                self._add_attack_pattern_indicator_by_external_id(label, indicator_id)
             # handle Mitre ATT&CK group relation indicator <-> intrusion-set
-            if re.search(r"^G\d{4}$", tag):
-                self._add_intrusion_set_indicator_by_external_id(tag, indicator_id)
+            if re.search(r"^G\d{4}$", label):
+                self._add_intrusion_set_indicator_by_external_id(label, indicator_id)
 
-            # Create Hygiene Tag
-            tag_valhalla = self.helper.api.tag.create(
-                tag_type="Valhalla", value=tag, color="#46beda"
-            )
-            self.helper.api.stix_entity.add_tag(
-                id=indicator_id, tag_id=tag_valhalla["id"]
+            # Create Hygiene Label
+            label_valhalla = self.helper.api.label.create(value=label, color="#46beda")
+            self.helper.api.stix_entity.add_label(
+                id=indicator_id, label_id=label_valhalla["id"]
             )
 
     def _add_refs_for_id(self, refs: list, obj_id: str) -> None:
@@ -117,7 +115,7 @@ class KnowledgeImporter:
                 url=san_url.geturl(),
                 description="Rule Reference: " + san_url.geturl(),
             )
-            self.helper.api.stix_entity.add_external_reference(
+            self.helper.api.stix_domain_object.add_external_reference(
                 id=obj_id, external_reference_id=reference["id"]
             )
 
@@ -134,13 +132,11 @@ class KnowledgeImporter:
 
         if cti_intrusion_set:
             self.helper.api.stix_relation.create(
-                fromType="Indicator",
                 fromId=indicator_id,
-                toType="Intrusion-Set",
                 toId=cti_intrusion_set["id"],
                 relationship_type="indicates",
                 description="Yara Rule from Valhalla API",
-                weight=self.confidence_level,
+                confidence=self.confidence_level,
             )
         else:
             self.helper.log_info(
@@ -160,13 +156,11 @@ class KnowledgeImporter:
 
         if cti_attack_pattern:
             self.helper.api.stix_relation.create(
-                fromType="Indicator",
                 fromId=indicator_id,
-                toType="Attack-Pattern",
                 toId=cti_attack_pattern["id"],
                 relationship_type="indicates",
                 description="Yara Rule from Valhalla API",
-                weight=self.confidence_level,
+                confidence=self.confidence_level,
             )
         else:
             self.helper.log_info(
