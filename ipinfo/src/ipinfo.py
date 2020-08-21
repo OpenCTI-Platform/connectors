@@ -4,7 +4,7 @@ import requests
 import json
 import pycountry
 
-from stix2 import Relationship, Identity, Bundle
+from stix2 import Relationship, Location, Bundle
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -25,36 +25,30 @@ class IpInfoConnector:
 
     def _generate_stix_bundle(self, country, city, observable_id):
         # Generate stix bundle
-        country_identity = Identity(
+        country_identity = Location(
             name=country.name,
-            identity_class="group",
             custom_properties={
-                "x_opencti_identity_type": "country",
-                "x_opencti_alias": [
+                "x_opencti_location_type": "Country",
+                "x_opencti_aliases": [
                     country.official_name
                     if hasattr(country, "official_name")
                     else country.name
                 ],
             },
         )
-        city_identity = Identity(
-            name=city,
-            identity_class="group",
-            custom_properties={"x_opencti_identity_type": "city"},
+        city_identity = Location(
+            name=city, custom_properties={"x_opencti_location_type": "city"},
         )
         city_to_country = Relationship(
-            relationship_type="localization",
+            relationship_type="located-at",
             source_ref=city_identity.id,
             target_ref=country_identity.id,
         )
         observable_to_city = Relationship(
-            relationship_type="localization",
+            relationship_type="located-at",
             source_ref=observable_id,
             target_ref=city_identity.id,
-            custom_properties={
-                "x_opencti_weight": self.helper.connect_confidence_level,
-                "x_opencti_ignore_dates": True,
-            },
+            confidence=self.helper.connect_confidence_level,
         )
         return Bundle(
             objects=[

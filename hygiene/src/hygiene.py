@@ -77,8 +77,8 @@ class HygieneConnector:
         self.warninglists = WarningLists()
 
         # Create Hygiene Tag
-        self.tag_hygiene = self.helper.api.tag.create(
-            tag_type="Hygiene", value="Hygiene", color="#fc0341"
+        self.label_hygiene = self.helper.api.label.create(
+            value="Hygiene", color="#fc0341"
         )
 
     def _process_observable(self, observable) -> list:
@@ -114,16 +114,16 @@ class HygieneConnector:
                     f"number of hits ({len(result)}) setting score to {score}"
                 )
 
-                self.helper.api.stix_entity.add_tag(
-                    id=observable["id"], tag_id=self.tag_hygiene["id"]
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable["id"], label_id=self.label_hygiene["id"]
                 )
 
                 for indicator_id in observable["indicatorsIds"]:
-                    self.helper.api.stix_entity.add_tag(
-                        id=indicator_id, tag_id=self.tag_hygiene["id"]
+                    self.helper.api.stix_domain_object.add_label(
+                        id=indicator_id, tag_id=self.label_hygiene["id"]
                     )
-                    self.helper.api.stix_domain_entity.update_field(
-                        id=indicator_id, key="score", value=score
+                    self.helper.api.stix_domain_object.update_field(
+                        id=indicator_id, key="x_opencti_score", value=score
                     )
 
                 # Create external references
@@ -134,8 +134,7 @@ class HygieneConnector:
                     external_id=hit.name,
                     description=hit.description,
                 )
-
-                self.helper.api.stix_entity.add_external_reference(
+                self.helper.api.stix_cyber_observable.add_external_reference(
                     id=observable["id"],
                     external_reference_id=external_reference_id["id"],
                 )

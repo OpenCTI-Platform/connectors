@@ -6,7 +6,7 @@ import csv
 import time
 
 from pycti import OpenCTIConnectorHelper
-from pycti.utils.constants import IdentityTypes
+from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 
 class ExportFileCsv:
@@ -76,8 +76,8 @@ class ExportFileCsv:
             )
             entity_data = self.helper.api.stix_domain_entity.read(id=entity_id)
             entities_list = [entity_data]
-            if "objectRefsIds" in entity_data:
-                for id in entity_data["objectRefsIds"]:
+            if "objectsIds" in entity_data:
+                for id in entity_data["objectsIds"]:
                     entity = self.helper.api.stix_domain_entity.read(id=id)
                     entities_list.append(entity)
             csv_data = self.export_dict_list_to_csv(entities_list)
@@ -123,23 +123,50 @@ class ExportFileCsv:
                     list_args["filters"] = [
                         {"key": "entity_type", "values": [entity_type]}
                     ]
-                entity_type = "identity"
+                entity_type = "Identity"
+
+            if LocationTypes.has_value(entity_type):
+                if list_args["filters"] is not None:
+                    list_args["filters"].append(
+                        {"key": "entity_type", "values": [entity_type]}
+                    )
+                else:
+                    list_args["filters"] = [
+                        {"key": "entity_type", "values": [entity_type]}
+                    ]
+                entity_type = "Location"
+
+            if StixCyberObservableTypes.has_value(entity_type):
+                if list_args["filters"] is not None:
+                    list_args["filters"].append(
+                        {"key": "entity_type", "values": [entity_type]}
+                    )
+                else:
+                    list_args["filters"] = [
+                        {"key": "entity_type", "values": [entity_type]}
+                    ]
+                entity_type = "Stix-Cyber-Observable"
 
             # List
             lister = {
-                "identity": self.helper.api.identity.list,
-                "threat-actor": self.helper.api.threat_actor.list,
-                "intrusion-set": self.helper.api.intrusion_set.list,
-                "campaign": self.helper.api.campaign.list,
-                "incident": self.helper.api.incident.list,
-                "malware": self.helper.api.malware.list,
-                "tool": self.helper.api.tool.list,
-                "vulnerability": self.helper.api.vulnerability.list,
-                "attack-pattern": self.helper.api.attack_pattern.list,
-                "course-of-action": self.helper.api.course_of_action.list,
-                "report": self.helper.api.report.list,
-                "indicator": self.helper.api.indicator.list,
-                "stix-observable": self.helper.api.stix_observable.list,
+                "Attack-Pattern": self.helper.api.attack_pattern.list,
+                "Campaign": self.helper.api.campaign.list,
+                "Note": self.helper.api.note.list,
+                "Observed-Data": self.helper.api.observed_data.list,
+                "Opinion": self.helper.api.opinion.list,
+                "Report": self.helper.api.report.list,
+                "Course-Of-Action": self.helper.api.course_of_action.list,
+                "Identity": self.helper.api.identity.list,
+                "Indicator": self.helper.api.indicator.list,
+                "Infrastructure": self.helper.api.infrastructure.list,
+                "Intrusion-Set": self.helper.api.intrusion_set.list,
+                "Location": self.helper.api.location.list,
+                "Malware": self.helper.api.malware.list,
+                "Threat-Actor": self.helper.api.threat_actor.list,
+                "Tool": self.helper.api.tool.list,
+                "Vulnerability": self.helper.api.vulnerability.list,
+                "X-OpenCTI-Incident": self.helper.api.x_opencti_incident.list,
+                "Stix-Cyber-Observable": self.helper.api.stix_cyber_observable.list,
             }
             do_list = lister.get(
                 entity_type.lower(),
