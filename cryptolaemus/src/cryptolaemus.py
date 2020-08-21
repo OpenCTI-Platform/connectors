@@ -134,9 +134,7 @@ class Cryptolaemus:
                             external_reference_id=external_reference["id"],
                         )
                         relation = self.helper.api.stix_relation.create(
-                            fromType="Indicator",
                             fromId=indicator["id"],
-                            toType="Malware",
                             toId=malware["id"],
                             relationship_type="indicates",
                             first_seen=self.data["Date"],
