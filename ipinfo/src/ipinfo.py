@@ -27,6 +27,9 @@ class IpInfoConnector:
         # Generate stix bundle
         country_identity = Location(
             name=country.name,
+            country=country.official_name
+            if hasattr(country, "official_name")
+            else country.name,
             custom_properties={
                 "x_opencti_location_type": "Country",
                 "x_opencti_aliases": [
@@ -37,7 +40,11 @@ class IpInfoConnector:
             },
         )
         city_identity = Location(
-            name=city, custom_properties={"x_opencti_location_type": "city"},
+            name=city,
+            country=country.official_name
+            if hasattr(country, "official_name")
+            else country.name,
+            custom_properties={"x_opencti_location_type": "city"},
         )
         city_to_country = Relationship(
             relationship_type="located-at",
