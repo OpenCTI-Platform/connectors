@@ -276,20 +276,12 @@ def create_intrusion_set_from_name(
 
 def create_organization(name: str, author: Optional[Identity] = None) -> Identity:
     """Create an organization."""
-    return Identity(
-        created_by_ref=author,
-        name=name,
-        identity_class="organization",
-    )
+    return Identity(created_by_ref=author, name=name, identity_class="organization",)
 
 
 def create_sector(name: str, author: Identity) -> Identity:
     """Create a sector."""
-    return Identity(
-        created_by_ref=author,
-        name=name,
-        identity_class="class",
-    )
+    return Identity(created_by_ref=author, name=name, identity_class="class",)
 
 
 def create_sector_from_entity(entity: Entity, author: Identity) -> Optional[Identity]:
