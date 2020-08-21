@@ -25,12 +25,11 @@ from crowdstrike_client.api.models.report import Actor, Entity, Report
 
 from lxml.html import fromstring
 
-from pycti.utils.constants import CustomProperties
-
 from stix2 import (
     EqualityComparisonExpression,
     ExternalReference,
     Identity,
+    Location,
     Indicator as STIXIndicator,
     IntrusionSet,
     KillChainPhase,
@@ -178,11 +177,11 @@ def create_malware(
         id=malware_id,
         created_by_ref=author,
         name=name,
+        aliases=aliases,
         kill_chain_phases=kill_chain_phases,
         labels=["malware"],
         external_references=external_references,
         object_marking_refs=object_marking_refs,
-        custom_properties={CustomProperties.ALIASES: aliases},
     )
 
 
@@ -281,7 +280,6 @@ def create_organization(name: str, author: Optional[Identity] = None) -> Identit
         created_by_ref=author,
         name=name,
         identity_class="organization",
-        custom_properties={CustomProperties.IDENTITY_TYPE: "organization"},
     )
 
 
@@ -291,7 +289,6 @@ def create_sector(name: str, author: Identity) -> Identity:
         created_by_ref=author,
         name=name,
         identity_class="class",
-        custom_properties={CustomProperties.IDENTITY_TYPE: "sector"},
     )
 
 
@@ -318,27 +315,27 @@ def create_sectors_from_entities(
 
 def create_region(entity: Entity, author: Identity) -> Identity:
     """Create a region"""
-    custom_properties: Dict[str, Any] = {CustomProperties.IDENTITY_TYPE: "region"}
+    custom_properties: Dict[str, Any] = {"x_opencti_location_type": "Region"}
 
-    return Identity(
+    return Location(
         created_by_ref=author,
         name=entity.value,
-        identity_class="group",
+        region=entity.value,
         custom_properties=custom_properties,
     )
 
 
 def create_country(entity: Entity, author: Identity) -> Identity:
     """Create a country"""
-    custom_properties: Dict[str, Any] = {CustomProperties.IDENTITY_TYPE: "country"}
+    custom_properties: Dict[str, Any] = {"x_opencti_location_type": "Country"}
 
     if entity.slug is not None:
-        custom_properties[CustomProperties.ALIASES] = [entity.slug.upper()]
+        custom_properties["x_opencti_aliases"] = [entity.slug.upper()]
 
     return Identity(
         created_by_ref=author,
         name=entity.value,
-        identity_class="group",
+        country=entity.slug.upper(),
         custom_properties=custom_properties,
     )
 
@@ -349,8 +346,8 @@ def create_relationship(
     source: _DomainObject,
     target: _DomainObject,
     object_marking_refs: List[MarkingDefinition],
-    first_seen: datetime,
-    last_seen: datetime,
+    start_time: datetime,
+    stop_time: datetime,
     confidence_level: int,
 ) -> Relationship:
     """Create a relationship."""
@@ -360,11 +357,9 @@ def create_relationship(
         source_ref=source.id,
         target_ref=target.id,
         object_marking_refs=object_marking_refs,
-        custom_properties={
-            CustomProperties.FIRST_SEEN: first_seen,
-            CustomProperties.LAST_SEEN: last_seen,
-            CustomProperties.WEIGHT: confidence_level,
-        },
+        start_time=start_time,
+        stop_time=stop_time,
+        confidence=confidence_level,
     )
 
 
@@ -374,8 +369,8 @@ def create_relationships(
     sources: List[_DomainObject],
     targets: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
-    first_seen: datetime,
-    last_seen: datetime,
+    start_time: datetime,
+    stop_time: datetime,
     confidence_level: int,
 ) -> List[Relationship]:
     """Create relationships."""
@@ -388,8 +383,8 @@ def create_relationships(
                 source,
                 target,
                 object_marking_refs,
-                first_seen,
-                last_seen,
+                start_time,
+                stop_time,
                 confidence_level,
             )
             relationships.append(relationship)
@@ -401,8 +396,8 @@ def create_targets_relationships(
     sources: List[_DomainObject],
     targets: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
-    first_seen: datetime,
-    last_seen: datetime,
+    start_time: datetime,
+    stop_time: datetime,
     confidence_level: int,
 ) -> List[Relationship]:
     """Create 'targets' relationships."""
@@ -412,8 +407,8 @@ def create_targets_relationships(
         sources,
         targets,
         object_marking_refs,
-        first_seen,
-        last_seen,
+        start_time,
+        stop_time,
         confidence_level,
     )
 
@@ -423,8 +418,8 @@ def create_uses_relationships(
     sources: List[_DomainObject],
     targets: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
-    first_seen: datetime,
-    last_seen: datetime,
+    start_time: datetime,
+    stop_time: datetime,
     confidence_level: int,
 ) -> List[Relationship]:
     """Create 'uses' relationships."""
@@ -434,8 +429,8 @@ def create_uses_relationships(
         sources,
         targets,
         object_marking_refs,
-        first_seen,
-        last_seen,
+        start_time,
+        stop_time,
         confidence_level,
     )
 
@@ -445,8 +440,8 @@ def create_indicates_relationships(
     sources: List[_DomainObject],
     targets: List[_DomainObject],
     object_marking_refs: List[MarkingDefinition],
-    first_seen: datetime,
-    last_seen: datetime,
+    start_time: datetime,
+    stop_time: datetime,
     confidence_level: int,
 ) -> List[Relationship]:
     """Create 'indicates' relationships."""
@@ -456,8 +451,8 @@ def create_indicates_relationships(
         sources,
         targets,
         object_marking_refs,
-        first_seen,
-        last_seen,
+        start_time,
+        stop_time,
         confidence_level,
     )
 
