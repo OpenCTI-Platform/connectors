@@ -32,8 +32,6 @@ class VirusTotalConnector:
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60 * 24
 
     def _process_file(self, observable):
-        marking_definitions = observable["objectMarkingIds"]
-        created_by_ref_id = observable["createdById"]
         response = requests.request(
             "GET",
             self.api_url + "/files/" + observable["observable_value"],

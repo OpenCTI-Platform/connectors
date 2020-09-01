@@ -25,7 +25,6 @@ from stix2 import (
     ObjectPath,
     EqualityComparisonExpression,
     ObservationExpression,
-    CustomObject,
 )
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
