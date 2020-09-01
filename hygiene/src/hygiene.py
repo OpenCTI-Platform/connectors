@@ -113,11 +113,12 @@ class HygieneConnector:
                 self.helper.log_info(
                     f"number of hits ({len(result)}) setting score to {score}"
                 )
-
                 self.helper.api.stix_cyber_observable.add_label(
                     id=observable["id"], label_id=self.label_hygiene["id"]
                 )
-
+                self.helper.api.stix_cyber_observable.update_field(
+                    id=observable["id"], key="x_opencti_score", value=score
+                )
                 for indicator_id in observable["indicatorsIds"]:
                     self.helper.api.stix_domain_object.add_label(
                         id=indicator_id, label_id=self.label_hygiene["id"]
@@ -143,7 +144,7 @@ class HygieneConnector:
 
     def _process_message(self, data) -> list:
         entity_id = data["entity_id"]
-        observable = self.helper.api.stix_observable.read(id=entity_id)
+        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         return self._process_observable(observable)
 
     # Start the main loop

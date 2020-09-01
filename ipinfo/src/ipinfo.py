@@ -44,7 +44,7 @@ class IpInfoConnector:
             country=country.official_name
             if hasattr(country, "official_name")
             else country.name,
-            custom_properties={"x_opencti_location_type": "city"},
+            custom_properties={"x_opencti_location_type": "City"},
         )
         city_to_country = Relationship(
             relationship_type="located-at",
@@ -68,10 +68,10 @@ class IpInfoConnector:
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
-        observable = self.helper.api.stix_observable.read(id=entity_id)
+        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         # Extract TLP
         tlp = "TLP:WHITE"
-        for marking_definition in observable["markingDefinitions"]:
+        for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
@@ -81,8 +81,8 @@ class IpInfoConnector:
             )
 
         # Extract IP from entity data
-        observable_id = observable["stix_id_key"]
-        observable_value = observable["observable_value"]
+        observable_id = observable["standard_id"]
+        observable_value = observable["value"]
         # Get the geo loc from the API
         api_url = "https://ipinfo.io/" + observable_value + "?token=" + self.token
         response = requests.request(

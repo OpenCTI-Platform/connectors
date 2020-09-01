@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'IpInfo'
-  scope: 'ipv4-addr'
+  scope: 'IPv4-Addr'
   confidence_level: 3
   log_level: 'info'
 

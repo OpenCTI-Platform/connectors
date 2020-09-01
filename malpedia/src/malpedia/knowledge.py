@@ -238,7 +238,12 @@ class KnowledgeImporter:
 
             try:
                 obs = self.helper.api.stix_cyber_observable.create(
-                    observable_data={"type": "file", "hashes": {"SHA-256": san_hash,}},
+                    observable_data={
+                        "type": "file",
+                        "hashes": {
+                            "SHA-256": san_hash,
+                        },
+                    },
                     createdBy=self.organization["id"],
                     objectMarking=[self.default_marking["id"]],
                     update=self.update_data,

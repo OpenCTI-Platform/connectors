@@ -276,15 +276,17 @@ class Cybercrimetracker:
                         )
 
                         if "domain" in parsed_entry.keys():
-                            observable_domain = self.helper.api.stix_cyber_observable.create(
-                                observableData={
-                                    "type": "domain-name",
-                                    "value": parsed_entry["ip"],
-                                },
-                                createdBy=organization["id"],
-                                objectMarking=[tlp["id"]],
-                                externalReferences=[ext_reference["id"]],
-                                update=self.update_data,
+                            observable_domain = (
+                                self.helper.api.stix_cyber_observable.create(
+                                    observableData={
+                                        "type": "domain-name",
+                                        "value": parsed_entry["ip"],
+                                    },
+                                    createdBy=organization["id"],
+                                    objectMarking=[tlp["id"]],
+                                    externalReferences=[ext_reference["id"]],
+                                    update=self.update_data,
+                                )
                             )
 
                             self.helper.api.indicator.add_stix_observable(
