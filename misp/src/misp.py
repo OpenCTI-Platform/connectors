@@ -25,6 +25,7 @@ from stix2 import (
     ObjectPath,
     EqualityComparisonExpression,
     ObservationExpression,
+    CustomObject,
 )
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -663,16 +664,13 @@ class Misp:
                             target_ref=attack_pattern.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            custom_properties={
-                                "x_opencti_first_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_last_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_weight": self.helper.connect_confidence_level,
-                                "x_opencti_ignore_dates": True,
-                            },
+                            start_time=datetime.utcfromtimestamp(
+                                int(attribute["timestamp"])
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            stop_time=datetime.utcfromtimestamp(
+                                int(attribute["timestamp"])
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            confidence=self.helper.connect_confidence_level,
                         )
                         relationships.append(relationship_uses)
                         relationship_indicates = Relationship(

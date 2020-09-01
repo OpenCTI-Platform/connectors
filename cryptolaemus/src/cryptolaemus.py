@@ -111,115 +111,117 @@ class Cryptolaemus:
                         name="Emotet",
                         description="Emotet is a modular malware variant which is primarily used as a downloader for other malware variants such as TrickBot and IcedID. Emotet first emerged in June 2014 and has been primarily used to target the banking sector. (Citation: Trend Micro Banking Malware Jan 2019)",
                     )
-
                     # Capitalize Epoch1 C2
                     for ip in self.data["Epoch1C2"]:
-                        indicator = self.helper.api.indicator.create(
-                            name=ip[0],
-                            description="Botnet Epoch1 C2 IP Adress. Port: " + ip[1],
-                            pattern_type="stix",
-                            indicator_pattern="[ipv4-addr:value = '" + ip[0] + "']",
-                            main_observable_type="IPv4-Addr",
-                            valid_from=self.data["Date"],
-                        )
-                        if "observableRefsIds" in indicator:
-                            for observable_id in indicator["observableRefsIds"]:
-                                self.helper.api.stix_entity.add_external_reference(
-                                    id=observable_id,
-                                    external_reference_id=external_reference["id"],
-                                )
-
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=indicator["id"],
-                            external_reference_id=external_reference["id"],
-                        )
-                        relation = self.helper.api.stix_relation.create(
-                            fromId=indicator["id"],
-                            toId=malware["id"],
-                            relationship_type="indicates",
-                            first_seen=self.data["Date"],
-                            last_seen=self.data["Date"],
-                            description="IP Adress associated to Emotet Epoch1 botnet",
-                            weight=self.confidence_level,
-                            role_played="C2 Server",
-                            createdByRef=organization["id"],
-                            ignore_dates=True,
-                            update=True,
-                        )
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=relation["id"],
-                            external_reference_id=external_reference["id"],
-                        )
+                        if len(ip) >= 2 and ip[0][0].isdigit():
+                            indicator = self.helper.api.indicator.create(
+                                name=ip[0],
+                                description="Botnet Epoch1 C2 IP Adress. Port: "
+                                + ip[1],
+                                pattern_type="stix",
+                                pattern="[ipv4-addr:value = '" + ip[0] + "']",
+                                x_opencti_main_observable_type="IPv4-Addr",
+                                valid_from=self.data["Date"],
+                                externalReferences=[external_reference["id"]],
+                                createdBy=organization["id"],
+                            )
+                            observable = self.helper.api.stix_cyber_observable.create(
+                                simple_observable_key="IPv4-Addr.value",
+                                simple_observable_value=ip[0],
+                                simple_observable_description="Botnet Epoch1 C2 IP Adress. Port: "
+                                + ip[1],
+                                externalReferences=[external_reference["id"]],
+                                createdBy=organization["id"],
+                            )
+                            self.helper.api.stix_core_relationship.create(
+                                fromId=indicator["id"],
+                                toId=observable["id"],
+                                relationship_type="based-on",
+                                createdBy=organization["id"],
+                            )
+                            self.helper.api.stix_core_relationship.create(
+                                fromId=indicator["id"],
+                                toId=malware["id"],
+                                relationship_type="indicates",
+                                description="IP Adress associated to Emotet Epoch1 botnet",
+                                confidence=self.confidence_level,
+                                createdBy=organization["id"],
+                                externalReferences=[external_reference["id"]],
+                            )
 
                     # Capitalize Epoch2 C2
                     for ip in self.data["Epoch2C2"]:
-                        indicator = self.helper.api.indicator.create(
-                            name=ip[0],
-                            description="Botnet Epoch2 C2 IP Adress. Port: " + ip[1],
-                            pattern_type="stix",
-                            indicator_pattern="[ipv4-addr:value = '" + ip[0] + "']",
-                            main_observable_type="IPv4-Addr",
-                            valid_from=self.data["Date"],
-                            createdByRef=organization["id"],
-                        )
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=indicator["id"],
-                            external_reference_id=external_reference["id"],
-                        )
-                        relation = self.helper.api.stix_relation.create(
-                            fromType="Indicator",
-                            fromId=indicator["id"],
-                            toType="Malware",
-                            toId=malware["id"],
-                            relationship_type="indicates",
-                            first_seen=self.data["Date"],
-                            last_seen=self.data["Date"],
-                            description="IP Adress associated to Emotet Epoch2 botnet.",
-                            weight=self.confidence_level,
-                            role_played="C2 Server",
-                            createdByRef=organization["id"],
-                            ignore_dates=True,
-                            update=True,
-                        )
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=relation["id"],
-                            external_reference_id=external_reference["id"],
-                        )
+                        if len(ip) >= 2 and ip[0][0].isdigit():
+                            indicator = self.helper.api.indicator.create(
+                                name=ip[0],
+                                description="Botnet Epoch2 C2 IP Adress. Port: "
+                                + ip[1],
+                                pattern_type="stix",
+                                pattern="[ipv4-addr:value = '" + ip[0] + "']",
+                                x_opencti_main_observable_type="IPv4-Addr",
+                                valid_from=self.data["Date"],
+                                createdBy=organization["id"],
+                            )
+                            observable = self.helper.api.stix_cyber_observable.create(
+                                simple_observable_key="IPv4-Addr.value",
+                                simple_observable_value=ip[0],
+                                simple_observable_description="Botnet Epoch2 C2 IP Adress. Port: "
+                                + ip[1],
+                                externalReferences=[external_reference["id"]],
+                                createdBy=organization["id"],
+                            )
+                            self.helper.api.stix_core_relationship.create(
+                                fromId=indicator["id"],
+                                toId=observable["id"],
+                                relationship_type="based-on",
+                                createdBy=organization["id"],
+                            )
+                            self.helper.api.stix_core_relationship.create(
+                                fromId=indicator["id"],
+                                toId=malware["id"],
+                                relationship_type="indicates",
+                                description="IP Adress associated to Emotet Epoch2 botnet.",
+                                confidence=self.confidence_level,
+                                createdBy=organization["id"],
+                                externalReferences=[external_reference["id"]],
+                            )
 
                     # Capitalize Epoch3 C2
                     for ip in self.data["Epoch3C2"]:
-                        indicator = self.helper.api.indicator.create(
-                            name=ip[0],
-                            description="Botnet Epoch3 C2 IP Adress. Port: " + ip[1],
-                            pattern_type="stix",
-                            indicator_pattern="[ipv4-addr:value = '" + ip[0] + "']",
-                            main_observable_type="IPv4-Addr",
-                            valid_from=self.data["Date"],
-                            createdByRef=organization["id"],
-                        )
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=indicator["id"],
-                            external_reference_id=external_reference["id"],
-                        )
-                        relation = self.helper.api.stix_relation.create(
-                            fromType="Indicator",
-                            fromId=indicator["id"],
-                            toType="Malware",
-                            toId=malware["id"],
-                            relationship_type="indicates",
-                            first_seen=self.data["Date"],
-                            last_seen=self.data["Date"],
-                            description="IP Adress associated to Emotet Epoch3 botnet.",
-                            weight=self.confidence_level,
-                            role_played="C2 Server",
-                            createdByRef=organization["id"],
-                            ignore_dates=True,
-                            update=True,
-                        )
-                        self.helper.api.stix_entity.add_external_reference(
-                            id=indicator["id"],
-                            external_reference_id=external_reference["id"],
-                        )
+                        if len(ip) >= 2 and ip[0][0].isdigit():
+                            indicator = self.helper.api.indicator.create(
+                                name=ip[0],
+                                description="Botnet Epoch3 C2 IP Adress. Port: "
+                                + ip[1],
+                                pattern_type="stix",
+                                pattern="[ipv4-addr:value = '" + ip[0] + "']",
+                                x_opencti_main_observable_type="IPv4-Addr",
+                                valid_from=self.data["Date"],
+                                createdBy=organization["id"],
+                                externalReferences=[external_reference["id"]],
+                            )
+                            observable = self.helper.api.stix_cyber_observable.create(
+                                simple_observable_key="IPv4-Addr.value",
+                                simple_observable_value=ip[0],
+                                simple_observable_description="Botnet Epoch3 C2 IP Adress. Port: "
+                                + ip[1],
+                                externalReferences=[external_reference["id"]],
+                            )
+                            self.helper.api.stix_core_relationship.create(
+                                fromId=indicator["id"],
+                                toId=observable["id"],
+                                relationship_type="based-on",
+                                createdBy=organization["id"],
+                            )
+                            self.helper.api.stix_core_relationship.create(
+                                fromId=indicator["id"],
+                                toId=malware["id"],
+                                relationship_type="indicates",
+                                description="IP Adress associated to Emotet Epoch3 botnet.",
+                                confidence=self.confidence_level,
+                                createdBy=organization["id"],
+                                externalReferences=[external_reference["id"]],
+                            )
 
                     # Store the current timestamp as a last run
                     self.helper.log_info(
