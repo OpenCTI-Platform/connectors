@@ -7,5 +7,5 @@ connector:
   type: 'INTERNAL_IMPORT_FILE'
   name: 'ImportFileStix2'
   scope: 'application/json'
-  confidence_level: 3
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'

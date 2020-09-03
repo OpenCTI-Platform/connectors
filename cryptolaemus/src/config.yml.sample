@@ -7,5 +7,5 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Cryptolaemus'
   scope: 'cryptolaemus'
-  confidence_level: 3
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
