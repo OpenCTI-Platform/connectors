@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'MISP' # Required
   scope: 'misp'
-  confidence_level: 3
+  confidence_level: 15 # 0 (Unknown) or from 1 to 100
   update_existing_data: False
   log_level: 'info'
 
@@ -16,6 +16,8 @@ misp:
   key: 'ChangeMe' # Required
   ssl_verify: False # Required
   create_reports: True # Required, create report for MISP event
+  create_indicators: True # Required, create indicators for attributes
+  create_observables: True # Required, create observables for attributes
   report_class: 'MISP Event' # Optional, report_class if creating report for event
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: 'opencti:import,type:osint' # Optional, list of tags used for import events

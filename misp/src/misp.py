@@ -27,7 +27,12 @@ from stix2 import (
     ObservationExpression,
 )
 
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+    SimpleObservable,
+    OpenCTIStix2Utils,
+)
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -86,8 +91,14 @@ class Misp:
         self.misp_create_report = get_config_variable(
             "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
         )
-        self.misp_report_class = (
-            get_config_variable("MISP_REPORT_CLASS", ["misp", "report_class"], config)
+        self.misp_create_indicators = get_config_variable(
+            "MISP_CREATE_INDICATORS", ["misp", "create_indicators"], config
+        )
+        self.misp_create_observables = get_config_variable(
+            "MISP_CREATE_OBSERVABLES", ["misp", "create_observables"], config
+        )
+        self.misp_report_type = (
+            get_config_variable("MISP_REPORT_TYPE", ["misp", "report_type"], config)
             or "MISP Event"
         )
         self.misp_import_from_date = get_config_variable(
@@ -200,10 +211,8 @@ class Misp:
                 # Break if no more result
                 if len(events) == 0:
                     break
-                try:
-                    self.process_events(events)
-                except Exception as e:
-                    self.helper.log_error(str(e))
+
+                self.process_events(events)
                 current_page += 1
             self.helper.set_state({"last_run": timestamp})
             time.sleep(self.get_interval())
@@ -350,13 +359,11 @@ class Misp:
                         indicators.append(indicator)
                         if (
                             object["meta-category"] == "file"
-                            and indicator["indicator"].x_opencti_observable_type
+                            and indicator["indicator"].x_opencti_main_observable_type
                             in FILETYPES
                         ):
                             object_attributes.append(indicator)
-                objects_relationships.extend(
-                    self.process_observable_relations(object_attributes, [])
-                )
+                # TODO Extend observable
 
             ### Prepare the bundle
             bundle_objects = [author]
@@ -382,12 +389,21 @@ class Misp:
                     added_entities.append(event_element["name"])
             # Add indicators
             for indicator in indicators:
-                if indicator["indicator"]["id"] not in added_object_refs:
-                    object_refs.append(indicator["indicator"])
-                    added_object_refs.append(indicator["indicator"]["id"])
-                if indicator["indicator"]["id"] not in added_entities:
-                    bundle_objects.append(indicator["indicator"])
-                    added_entities.append(indicator["indicator"]["id"])
+                if indicator["indicator"] is not None:
+                    if indicator["indicator"]["id"] not in added_object_refs:
+                        object_refs.append(indicator["indicator"])
+                        added_object_refs.append(indicator["indicator"]["id"])
+                    if indicator["indicator"]["id"] not in added_entities:
+                        bundle_objects.append(indicator["indicator"])
+                        added_entities.append(indicator["indicator"]["id"])
+                if indicator["observable"] is not None:
+                    if indicator["observable"]["id"] not in added_object_refs:
+                        object_refs.append(indicator["observable"])
+                        added_object_refs.append(indicator["observable"]["id"])
+                    if indicator["observable"]["id"] not in added_entities:
+                        bundle_objects.append(indicator["observable"])
+                        added_entities.append(indicator["observable"]["id"])
+
                 # Add attribute markings
                 for attribute_marking in indicator["markings"]:
                     if attribute_marking["id"] not in added_markings:
@@ -428,26 +444,24 @@ class Misp:
             ### Create the report if needed
             if self.misp_create_report and len(object_refs) > 0:
                 report = Report(
+                    id=OpenCTIStix2Utils.generate_special_uuid("report"),
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
                     published=parse(event["Event"]["date"]),
+                    report_types=[self.misp_report_type],
                     created_by_ref=author,
                     object_marking_refs=event_markings,
-                    labels=["threat-report"],
+                    labels=event_tags,
                     object_refs=object_refs,
                     external_references=event_external_references,
                     custom_properties={
-                        "x_opencti_report_class": self.misp_report_class,
-                        "x_opencti_object_status": 2,
-                        "x_opencti_tags": event_tags,
+                        "x_opencti_report_status": 2,
                     },
                 )
                 bundle_objects.append(report)
             bundle = Bundle(objects=bundle_objects).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
-            self.helper.send_stix2_bundle(
-                bundle, None, self.update_existing_data, False
-            )
+            self.helper.send_stix2_bundle(bundle, None, self.update_existing_data, True)
 
     def process_attribute(
         self,
@@ -491,17 +505,14 @@ class Misp:
                 )
 
                 ### Create the indicator
+                observable_resolver = resolved_attribute["resolver"]
                 observable_type = resolved_attribute["type"]
                 observable_value = resolved_attribute["value"]
                 name = resolved_attribute["value"]
                 pattern_type = "stix"
                 # observable type is yara for instance
-                if observable_type in PATTERNTYPES:
-                    pattern_type = observable_type
-                    observable_type = "Unknown"
-                    genuine_pattern = (
-                        "[file:hashes.md5 = 'd41d8cd98f00b204e9800998ecf8427e']"
-                    )
+                if observable_resolver in PATTERNTYPES:
+                    pattern_type = observable_resolver
                     pattern = observable_value
                     name = (
                         attribute["comment"]
@@ -509,21 +520,22 @@ class Misp:
                         else observable_type
                     )
                 # observable type is not in stix 2
-                elif observable_type not in OPENCTISTIX2:
+                elif observable_resolver not in OPENCTISTIX2:
                     return None
                 # observable type is in stix
                 else:
-                    if "transform" in OPENCTISTIX2[observable_type]:
+                    if "transform" in OPENCTISTIX2[observable_resolver]:
                         if (
-                            OPENCTISTIX2[observable_type]["transform"]["operation"]
+                            OPENCTISTIX2[observable_resolver]["transform"]["operation"]
                             == "remove_string"
                         ):
                             observable_value = observable_value.replace(
-                                OPENCTISTIX2[observable_type]["transform"]["value"], ""
+                                OPENCTISTIX2[observable_resolver]["transform"]["value"],
+                                "",
                             )
                     lhs = ObjectPath(
-                        OPENCTISTIX2[observable_type]["type"],
-                        OPENCTISTIX2[observable_type]["path"],
+                        OPENCTISTIX2[observable_resolver]["type"],
+                        OPENCTISTIX2[observable_resolver]["path"],
                     )
                     genuine_pattern = str(
                         ObservationExpression(
@@ -540,34 +552,51 @@ class Misp:
                     score = 30
                 else:
                     score = 50
-                indicator = Indicator(
-                    name=name,
-                    description=attribute["comment"],
-                    pattern=genuine_pattern,
-                    valid_from=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    labels=["malicious-activity"],
-                    created_by_ref=author,
-                    object_marking_refs=attribute_markings,
-                    external_references=attribute_external_references,
-                    created=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    modified=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    custom_properties={
-                        "x_opencti_indicator_pattern": pattern,
-                        "x_opencti_observable_type": observable_type,
-                        "x_opencti_observable_value": observable_value,
-                        "x_opencti_pattern_type": pattern_type,
-                        "x_opencti_tags": attribute_tags,
-                        "x_opencti_detection": attribute["to_ids"],
-                        "x_opencti_score": score,
-                    },
-                )
 
+                indicator = None
+                if self.misp_create_indicators:
+                    indicator = Indicator(
+                        id=OpenCTIStix2Utils.generate_special_uuid("indicator"),
+                        name=name,
+                        description=attribute["comment"],
+                        pattern_type=pattern_type,
+                        pattern=pattern,
+                        valid_from=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        labels=attribute_tags,
+                        created_by_ref=author,
+                        object_marking_refs=attribute_markings,
+                        external_references=attribute_external_references,
+                        created=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        modified=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        custom_properties={
+                            "x_opencti_main_observable_type": observable_type,
+                            "x_opencti_detection": attribute["to_ids"],
+                            "x_opencti_score": score,
+                        },
+                    )
+                    print(indicator.id)
+                observable = None
+                if self.misp_create_observables:
+                    observable = SimpleObservable(
+                        id=OpenCTIStix2Utils.generate_special_uuid(
+                            "x-opencti-simple-observable"
+                        ),
+                        key=observable_type
+                        + "."
+                        + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
+                        value=observable_value,
+                        description=attribute["comment"],
+                        labels=attribute_tags,
+                        created_by_ref=author,
+                        object_marking_refs=attribute_markings,
+                        external_references=attribute_external_references,
+                    )
                 sightings = []
                 identities = []
                 if "Sighting" in attribute:
@@ -581,72 +610,123 @@ class Misp:
                             identities.append(sighted_by)
                         else:
                             sighted_by = None
-                        sighting = Sighting(
-                            sighting_of_ref=indicator["id"],
-                            first_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            last_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            where_sighted_refs=[sighted_by]
-                            if sighted_by is not None
-                            else None,
-                        )
-                        sightings.append(sighting)
+
+                        if indicator is not None:
+                            sighting = Sighting(
+                                id=OpenCTIStix2Utils.generate_special_uuid("sighting"),
+                                sighting_of_ref=indicator["id"],
+                                first_seen=datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"])
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                last_seen=datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"])
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                where_sighted_refs=[sighted_by]
+                                if sighted_by is not None
+                                else None,
+                            )
+                            sightings.append(sighting)
+                        if observable is not None:
+                            sighting = Sighting(
+                                id=OpenCTIStix2Utils.generate_special_uuid("sighting"),
+                                sighting_of_ref=observable["id"],
+                                first_seen=datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"])
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                last_seen=datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"])
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                where_sighted_refs=[sighted_by]
+                                if sighted_by is not None
+                                else None,
+                            )
+                            sightings.append(sighting)
 
                 ### Create the relationships
                 relationships = []
+                if indicator is not None and observable is not None:
+                    relationships.append(
+                        Relationship(
+                            id=OpenCTIStix2Utils.generate_special_uuid("relationship"),
+                            relationship_type="based-on",
+                            created_by_ref=author,
+                            source_ref=indicator.id,
+                            target_ref=observable.id,
+                        )
+                    )
                 # Event threats
                 for threat in (
                     event_elements["intrusion_sets"]
                     + event_elements["malwares"]
                     + event_elements["tools"]
                 ):
-                    relationships.append(
-                        Relationship(
-                            relationship_type="indicates",
-                            created_by_ref=author,
-                            source_ref=indicator.id,
-                            target_ref=threat.id,
-                            description=attribute["comment"],
-                            object_marking_refs=attribute_markings,
-                            custom_properties={
-                                "x_opencti_first_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_last_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_weight": self.helper.connect_confidence_level,
-                            },
+                    if indicator is not None:
+                        relationships.append(
+                            Relationship(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "relationship"
+                                ),
+                                relationship_type="indicates",
+                                created_by_ref=author,
+                                source_ref=indicator.id,
+                                target_ref=threat.id,
+                                description=attribute["comment"],
+                                object_marking_refs=attribute_markings,
+                                confidence=self.helper.connect_confidence_level,
+                            )
                         )
-                    )
+                    if observable is not None:
+                        relationships.append(
+                            Relationship(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "relationship"
+                                ),
+                                relationship_type="related-to",
+                                created_by_ref=author,
+                                source_ref=observable.id,
+                                target_ref=threat.id,
+                                description=attribute["comment"],
+                                object_marking_refs=attribute_markings,
+                                confidence=self.helper.connect_confidence_level,
+                            )
+                        )
+
                 # Attribute threats
                 for threat in (
                     attribute_elements["intrusion_sets"]
                     + attribute_elements["malwares"]
                     + attribute_elements["tools"]
                 ):
-                    relationships.append(
-                        Relationship(
-                            relationship_type="indicates",
-                            created_by_ref=author,
-                            source_ref=indicator.id,
-                            target_ref=threat.id,
-                            description=attribute["comment"],
-                            object_marking_refs=attribute_markings,
-                            custom_properties={
-                                "x_opencti_first_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_last_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_weight": self.helper.connect_confidence_level,
-                            },
+                    if indicator is not None:
+                        relationships.append(
+                            Relationship(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "relationship"
+                                ),
+                                relationship_type="indicates",
+                                created_by_ref=author,
+                                source_ref=indicator.id,
+                                target_ref=threat.id,
+                                description=attribute["comment"],
+                                object_marking_refs=attribute_markings,
+                                confidence=self.helper.connect_confidence_level,
+                            )
                         )
-                    )
+                    if observable is not None:
+                        relationships.append(
+                            Relationship(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "relationship"
+                                ),
+                                relationship_type="related-to",
+                                created_by_ref=author,
+                                source_ref=observable.id,
+                                target_ref=threat.id,
+                                description=attribute["comment"],
+                                object_marking_refs=attribute_markings,
+                                confidence=self.helper.connect_confidence_level,
+                            )
+                        )
                 # Event Attack Patterns
                 for attack_pattern in event_elements["attack_patterns"]:
                     if len(event_elements["malwares"]) > 0:
@@ -657,41 +737,45 @@ class Misp:
                         threats = []
                     for threat in threats:
                         relationship_uses = Relationship(
+                            id=OpenCTIStix2Utils.generate_special_uuid("relationship"),
                             relationship_type="uses",
                             created_by_ref=author,
                             source_ref=threat.id,
                             target_ref=attack_pattern.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            start_time=datetime.utcfromtimestamp(
-                                int(attribute["timestamp"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            stop_time=datetime.utcfromtimestamp(
-                                int(attribute["timestamp"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             confidence=self.helper.connect_confidence_level,
                         )
                         relationships.append(relationship_uses)
-                        relationship_indicates = Relationship(
-                            relationship_type="indicates",
-                            created_by_ref=author,
-                            source_ref=indicator.id,
-                            target_ref="malware--fa42a846-8d90-4e51-bc29-71d5b4802168",  # Fake
-                            description=attribute["comment"],
-                            object_marking_refs=attribute_markings,
-                            custom_properties={
-                                "x_opencti_first_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_last_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_weight": self.helper.connect_confidence_level,
-                                "x_opencti_source_ref": indicator.id,
-                                "x_opencti_target_ref": relationship_uses.id,
-                            },
-                        )
-                        relationships.append(relationship_indicates)
+                        if indicator is not None:
+                            relationship_indicates = Relationship(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "relationship"
+                                ),
+                                relationship_type="indicates",
+                                created_by_ref=author,
+                                source_ref=indicator.id,
+                                target_ref=relationship_uses.id,
+                                description=attribute["comment"],
+                                confidence=self.helper.connect_confidence_level,
+                                object_marking_refs=attribute_markings,
+                            )
+                            relationships.append(relationship_indicates)
+                        if observable is not None:
+                            relationship_indicates = Relationship(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "relationship"
+                                ),
+                                relationship_type="related-to",
+                                created_by_ref=author,
+                                source_ref=observable.id,
+                                target_ref=relationship_uses.id,
+                                description=attribute["comment"],
+                                confidence=self.helper.connect_confidence_level,
+                                object_marking_refs=attribute_markings,
+                            )
+                            relationships.append(relationship_indicates)
+
                 # Attribute Attack Patterns
                 for attack_pattern in attribute_elements["attack_patterns"]:
                     if len(attribute_elements["malwares"]) > 0:
@@ -702,48 +786,47 @@ class Misp:
                         threats = []
                     for threat in threats:
                         relationship_uses = Relationship(
+                            id=OpenCTIStix2Utils.generate_special_uuid("relationship"),
                             relationship_type="uses",
+                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=author,
                             source_ref=threat.id,
                             target_ref=attack_pattern.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            custom_properties={
-                                "x_opencti_first_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_last_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_weight": self.helper.connect_confidence_level,
-                                "x_opencti_ignore_dates": True,
-                            },
                         )
                         relationships.append(relationship_uses)
-                        relationship_indicates = Relationship(
-                            relationship_type="indicates",
-                            created_by_ref=author,
-                            source_ref=indicator.id,
-                            target_ref="malware--fa42a846-8d90-4e51-bc29-71d5b4802168",  # Fake
-                            description=attribute["comment"],
-                            object_marking_refs=attribute_markings,
-                            custom_properties={
-                                "x_opencti_first_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_last_seen": datetime.utcfromtimestamp(
-                                    int(attribute["timestamp"])
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "x_opencti_weight": self.helper.connect_confidence_level,
-                                "x_opencti_source_ref": indicator.id,
-                                "x_opencti_target_ref": relationship_uses.id,
-                                "x_opencti_ignore_dates": True,
-                            },
-                        )
-                        relationships.append(relationship_indicates)
-
+                        if indicator is not None:
+                            relationship_indicates = Relationship(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "relationship"
+                                ),
+                                relationship_type="indicates",
+                                created_by_ref=author,
+                                source_ref=indicator.id,
+                                target_ref=relationship_uses.id,
+                                description=attribute["comment"],
+                                confidence=self.helper.connect_confidence_level,
+                                object_marking_refs=attribute_markings,
+                            )
+                            relationships.append(relationship_indicates)
+                        if observable is not None:
+                            relationship_indicates = Relationship(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "relationship"
+                                ),
+                                relationship_type="indicates",
+                                created_by_ref=author,
+                                source_ref=observable.id,
+                                target_ref=relationship_uses.id,
+                                description=attribute["comment"],
+                                confidence=self.helper.connect_confidence_level,
+                                object_marking_refs=attribute_markings,
+                            )
+                            relationships.append(relationship_indicates)
                 return {
                     "indicator": indicator,
+                    "observable": observable,
                     "relationships": relationships,
                     "attribute_elements": attribute_elements,
                     "markings": attribute_markings,
@@ -752,31 +835,6 @@ class Misp:
                 }
         except:
             return None
-
-    def process_observable_relations(
-        self, object_attributes, result_table, start_element=0
-    ):
-        if start_element == 0:
-            result_table = []
-        if len(object_attributes) == 1:
-            return []
-
-        for x in range(start_element + 1, len(object_attributes)):
-            result_table.append(
-                Relationship(
-                    relationship_type="corresponds",
-                    source_ref=object_attributes[start_element]["indicator"]["id"],
-                    target_ref=object_attributes[x]["indicator"]["id"],
-                    description="Same file",
-                    custom_properties={"x_opencti_ignore_dates": True},
-                )
-            )
-        if start_element != len(object_attributes):
-            return self.process_observable_relations(
-                object_attributes, result_table, start_element + 1
-            )
-        else:
-            return result_table
 
     def prepare_elements(self, galaxies, tags, author, markings):
         elements = {
@@ -865,12 +923,14 @@ class Misp:
                     if name not in added_names:
                         elements["malwares"].append(
                             Malware(
+                                id=OpenCTIStix2Utils.generate_special_uuid("malware"),
                                 name=name,
-                                labels=["malware"],
+                                is_family=True,
+                                aliases=aliases,
+                                labels=[galaxy["name"]],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
                                 object_marking_refs=markings,
-                                custom_properties={"x_opencti_aliases": aliases},
                             )
                         )
                         added_names.append(name)
@@ -891,15 +951,17 @@ class Misp:
                     if name not in added_names:
                         elements["attack_patterns"].append(
                             AttackPattern(
+                                id=OpenCTIStix2Utils.generate_special_uuid(
+                                    "attack-pattern"
+                                ),
                                 name=name,
-                                labels=["attack-pattern"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
                                 object_marking_refs=markings,
                                 custom_properties={
-                                    "x_opencti_external_id": galaxy_entity["meta"][
-                                        "external_id"
-                                    ][0],
+                                    "x_mitre_id": galaxy_entity["meta"]["external_id"][
+                                        0
+                                    ],
                                     "x_opencti_aliases": aliases,
                                 },
                             )
@@ -933,8 +995,8 @@ class Misp:
                 if name not in added_names:
                     elements["intrusion_sets"].append(
                         IntrusionSet(
+                            id=OpenCTIStix2Utils.generate_special_uuid("intrusion-set"),
                             name=name,
-                            labels=["intrusion-set"],
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
@@ -954,8 +1016,8 @@ class Misp:
                 if name not in added_names:
                     elements["tools"].append(
                         Tool(
+                            id=OpenCTIStix2Utils.generate_special_uuid("tool"),
                             name=name,
-                            labels=["tool"],
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
@@ -980,8 +1042,8 @@ class Misp:
                 if name not in added_names:
                     elements["malwares"].append(
                         Malware(
+                            id=OpenCTIStix2Utils.generate_special_uuid("malware"),
                             name=name,
-                            labels=["malware"],
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
@@ -999,8 +1061,10 @@ class Misp:
                 if name not in added_names:
                     elements["attack_patterns"].append(
                         AttackPattern(
+                            id=OpenCTIStix2Utils.generate_special_uuid(
+                                "attack-pattern"
+                            ),
                             name=name,
-                            labels=["attack-pattern"],
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
@@ -1011,55 +1075,83 @@ class Misp:
 
     def resolve_type(self, type, value):
         types = {
-            "yara": ["yara"],
-            "md5": ["file-md5"],
-            "sha1": ["file-sha1"],
-            "sha256": ["file-sha256"],
-            "filename": ["file-name"],
-            "pdb": ["pdb-path"],
-            "filename|md5": ["file-name", "file-md5"],
-            "filename|sha1": ["file-name", "file-sha1"],
-            "filename|sha256": ["file-name", "file-sha256"],
-            "ip-src": ["ipv4-addr"],
-            "ip-dst": ["ipv4-addr"],
-            "hostname": ["hostname"],
-            "domain": ["domain"],
-            "domain|ip": ["domain", "ipv4-addr"],
-            "email-subject": ["email-subject"],
-            "email-src": ["email-address"],
-            "email-dst": ["email-address"],
-            "url": ["url"],
-            "windows-service-name": ["windows-service-name"],
-            "windows-service-displayname": ["windows-service-display-name"],
-            "windows-scheduled-task": ["windows-scheduled-task"],
+            "yara": [{"resolver": "yara"}],
+            "md5": [{"resolver": "file-md5", "type": "StixFile"}],
+            "sha1": [{"resolver": "file-sha1", "type": "StixFile"}],
+            "sha256": [{"resolver": "file-sha256", "type": "StixFile"}],
+            "filename": [{"resolver": "file-name", "type": "StixFile"}],
+            "pdb": [{"resolver": "pdb-path", "type": "StixFile"}],
+            "filename|md5": [
+                {"resolver": "file-name", "type": "StixFile"},
+                {"resolver": "file-md5", "type": "StixFile"},
+            ],
+            "filename|sha1": [
+                {"resolver": "file-name", "type": "StixFile"},
+                {"resolver": "file-sha1", "type": "StixFile"},
+            ],
+            "filename|sha256": [
+                {"resolver": "file-name", "type": "StixFile"},
+                {"resolver": "file-sha256", "type": "StixFile"},
+            ],
+            "ip-src": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
+            "ip-dst": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
+            "hostname": [{"resolver": "hostname", "type": "X-OpenCTI-Hostname"}],
+            "domain": [{"resolver": "domain", "type": "Domain-Name"}],
+            "domain|ip": [
+                {"resolver": "domain", "type": "Domain-Name"},
+                {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
+            ],
+            "email-subject": [{"resolver": "email-subject", "type": "Email-Message"}],
+            "email-src": [{"resolver": "email-address", "type": "Email-Message"}],
+            "email-dst": [{"resolver": "email-address", "type": "Email-Message"}],
+            "url": [{"resolver": "url", "type": "Url"}],
+            "windows-service-name": [
+                {"resolver": "windows-service-name", "type": "Process"}
+            ],
+            "windows-service-displayname": [
+                {"resolver": "windows-service-display-name", "type": "Process"}
+            ],
+            "windows-scheduled-task": [
+                {"resolver": "windows-scheduled-task", "type": "X-OpenCTI-Text"}
+            ],
         }
         if type in types:
             resolved_types = types[type]
             if len(resolved_types) == 2:
                 values = value.split("|")
-                if resolved_types[0] == "ipv4-addr":
-                    type_0 = self.detect_ip_version(values[0])
+                if resolved_types[0]["resolver"] == "ipv4-addr":
+                    resolver_0 = self.detect_ip_version(values[0])
+                    type_0 = self.detect_ip_version(values[0], True)
                 else:
-                    type_0 = resolved_types[0]
-                if resolved_types[1] == "ipv4-addr":
-                    type_1 = self.detect_ip_version(values[1])
+                    resolver_0 = resolved_types[0]["resolver"]
+                    type_0 = resolved_types[0]["type"]
+                if resolved_types[1]["resolver"] == "ipv4-addr":
+                    resolver_1 = self.detect_ip_version(values[1])
+                    type_1 = self.detect_ip_version(values[1], True)
                 else:
-                    type_1 = resolved_types[1]
+                    resolver_1 = resolved_types[1]["resolver"]
+                    type_1 = resolved_types[1]["type"]
                 return [
-                    {"type": type_0, "value": values[0]},
-                    {"type": type_1, "value": values[1]},
+                    {"resolver": resolver_0, "type": type_0, "value": values[0]},
+                    {"resolver": resolver_1, "type": type_1, "value": values[1]},
                 ]
             else:
                 if resolved_types[0] == "ipv4-addr":
-                    type_0 = self.detect_ip_version(value)
+                    resolver_0 = self.detect_ip_version(value)
+                    type_0 = self.detect_ip_version(value, True)
                 else:
-                    type_0 = resolved_types[0]
-                return [{"type": type_0, "value": value}]
+                    resolver_0 = resolved_types[0]["resolver"]
+                    type_0 = resolved_types[0]["type"]
+                return [{"resolver": resolver_0, "type": type_0, "value": value}]
 
-    def detect_ip_version(self, value):
+    def detect_ip_version(self, value, type=False):
         if len(value) > 16:
+            if type:
+                return "IPv6-Addr"
             return "ipv6-addr"
         else:
+            if type:
+                return "IPv4-Addr"
             return "ipv4-addr"
 
     def resolve_markings(self, tags, with_default=True):
@@ -1128,17 +1220,10 @@ class Misp:
                         tag_value = tag_value_split[1].strip()
                     else:
                         tag_value = tag["name"]
-                opencti_tags.append(
-                    {"tag_type": tag_type, "value": tag_value, "color": "#008ac8"}
-                )
+                opencti_tags.append(tag_value)
         return opencti_tags
 
 
 if __name__ == "__main__":
-    try:
-        mispConnector = Misp()
-        mispConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        exit(0)
+    mispConnector = Misp()
+    mispConnector.run()
