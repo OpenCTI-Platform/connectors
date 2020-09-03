@@ -1203,20 +1203,16 @@ class Misp:
                 and not tag["name"].startswith("misp-galaxy:ransomware")
                 and not tag["name"].startswith("misp-galaxy:malpedia")
             ):
-                tag_type = "MISP"
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
                     tag_value_split = tag["name"].split('="')
-                    tag_type = tag_value_split[0].strip()
                     tag_value = tag_value_split[1][:-1].strip()
                 elif ":" in tag["name"]:
                     tag_value_split = tag["name"].split(":")
-                    tag_type = tag_value_split[0].strip()
                     tag_value = tag_value_split[1].strip()
                 if tag_value.isdigit():
                     if ":" in tag["name"]:
                         tag_value_split = tag["name"].split(":")
-                        tag_type = tag_value_split[0].strip()
                         tag_value = tag_value_split[1].strip()
                     else:
                         tag_value = tag["name"]
