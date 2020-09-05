@@ -11,18 +11,27 @@ import urllib.parse
 
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from pycti.utils.constants import CustomProperties
+from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils, SimpleObservable
 
 
 class CyberThreatCoalition:
 
-    _OPENCTI_TYPE = {
-        "domain": "[domain-name:value = '{}']",
-        "ipv4-addr": "[ipv4-addr:value = '{}']",
-        "file-sha256": "[file:hashes.SHA256 = '{}']",
-        "file-sha1": "[file:hashes.SHA1 = '{}']",
-        "file-md5": "[file:hashes.MD5 = '{}']",
-        "url": "[url:value = '{}']",
+    _OBSERVABLE_PATH = {
+        "Domain-Name": ["value"],
+        "IPv4-Addr": ["value"],
+        "StixFile_sha256": ["hashes", "SHA-256"],
+        "StixFile_sha1": ["hashes", "SHA-1"],
+        "StixFile_md5": ["hashes", "MD5"],
+        "Url": ["value"],
+    }
+
+    _INDICATOR_PATTERN = {
+        "Domain-Name": "[domain-name:value = '{}']",
+        "IPv4-Addr": "[ipv4-addr:value = '{}']",
+        "StixFile_sha256": "[file:hashes.SHA-256 = '{}']",
+        "StixFile_sha1": "[file:hashes.SHA-1 = '{}']",
+        "StixFile_md5": "[file:hashes.MD5 = '{}']",
+        "Url": "[url:value = '{}']",
     }
 
     _STATE_LAST_RUN = "last_run"
@@ -49,6 +58,16 @@ class CyberThreatCoalition:
             config,
             False,
         )
+        self.cyber_threat_coalition_create_indicators = get_config_variable(
+            "CYBER_THREAT_COALITION_CREATE_INDICATORS",
+            ["cyber-threat-coalition", "create_indicators"],
+            config,
+        )
+        self.cyber_threat_coalition_create_observables = get_config_variable(
+            "CYBER_THREAT_COALITION_CREATE_OBSERVABLES",
+            ["cyber-threat-coalition", "create_observables"],
+            config,
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -61,18 +80,18 @@ class CyberThreatCoalition:
     @staticmethod
     def get_hash_type(hash_value):
         if re.match(r"^[0-9a-fA-F]{32}$", hash_value):
-            return "file-md5"
+            return "StixFile_md5"
         elif re.match(r"^[0-9a-fA-F]{40}$", hash_value):
-            return "file-sha1"
+            return "StixFile_sha1"
         elif re.match(r"^[0-9a-fA-F]{64}$", hash_value):
-            return "file-sha256"
+            return "StixFile_sha256"
 
     def fetch_and_send(self):
-
         bundle_objects = list()
 
         # create an identity for the coalition team
         organization = stix2.Identity(
+            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
             name="Cyber Threat Coalition Team",
             identity_class="organization",
             description="Team of Experts collecting and sharing pandemic related "
@@ -81,7 +100,6 @@ class CyberThreatCoalition:
 
         # add organization in bundle
         bundle_objects.append(organization)
-
         report_object_refs = list()
 
         for collection in ["domain", "ip", "url", "hash"]:
@@ -97,35 +115,67 @@ class CyberThreatCoalition:
 
             opencti_type = None
             pattern_type = "stix"
-            tags = [{"tag_type": "Event", "value": "COVID-19", "color": "#fc036b"}]
+            labels = ["COVID-19", "malicious-activity"]
 
             # parse content
             for data in response.iter_lines(decode_unicode=True):
+                observable_type = None
                 if data and not data.startswith("#"):
                     if collection == "domain":
-                        opencti_type = "domain"
+                        observable_type = "Domain-Name"
                     elif collection == "ip":
-                        opencti_type = "ipv4-addr"
+                        observable_type = "IPv4-Addr"
                     elif collection == "url":
-                        opencti_type = "url"
+                        observable_type = "Url"
                         data = urllib.parse.quote(data, "/:")
                     elif collection == "hash":
-                        opencti_type = self.get_hash_type(data)
-
+                        observable_type = self.get_hash_type()
+                    indicator = None
+                    observable = None
+                    relationship = None
+                    if observable_type is None:
+                        return
                     try:
-                        indicator = stix2.Indicator(
-                            name=data,
-                            pattern=self._OPENCTI_TYPE[opencti_type].format(data),
-                            labels=["malicious-activity"],
-                            created_by_ref=organization,
-                            object_marking_refs=[stix2.TLP_WHITE],
-                            custom_properties={
-                                CustomProperties.OBSERVABLE_TYPE: opencti_type,
-                                CustomProperties.OBSERVABLE_VALUE: data,
-                                CustomProperties.PATTERN_TYPE: pattern_type,
-                                CustomProperties.TAG_TYPE: tags,
-                            },
-                        )
+                        if self.cyber_threat_coalition_create_indicators:
+                            indicator = stix2.Indicator(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "indicator"
+                                ),
+                                name=data,
+                                pattern_type=pattern_type,
+                                pattern=self._INDICATOR_PATTERN[observable_type].format(
+                                    data
+                                ),
+                                labels=labels,
+                                created_by_ref=organization,
+                                object_marking_refs=[stix2.TLP_WHITE],
+                                custom_properties={
+                                    "x_opencti_main_observable_type": observable_type,
+                                },
+                            )
+                        if self.cyber_threat_coalition_create_observables:
+                            observable = SimpleObservable(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "x-opencti-simple-observable"
+                                ),
+                                key=opencti_type
+                                + "."
+                                + ".".join(self._OBSERVABLE_PATH[observable_type]),
+                                value=data,
+                                labels=labels,
+                                created_by_ref=organization,
+                                object_marking_refs=[stix2.TLP_WHITE],
+                            )
+                        if indicator is not None and observable is not None:
+                            relationship = stix2.Relationship(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "relationship"
+                                ),
+                                relationship_type="based-on",
+                                created_by_ref=organization,
+                                source_ref=indicator.id,
+                                target_ref=observable.id,
+                            )
                     except Exception as ex:
                         self.helper.log_error(
                             "an exception occurred while converting data to STIX indicator "
@@ -134,9 +184,13 @@ class CyberThreatCoalition:
                             )
                         )
                         continue
-
                     # add indicator in bundle and report_refs
-                    bundle_objects.append(indicator)
+                    if indicator is not None:
+                        bundle_objects.append(indicator)
+                    if observable is not None:
+                        bundle_objects.append(observable)
+                    if relationship is not None:
+                        bundle_objects.append(relationship)
                     report_object_refs.append(indicator["id"])
 
         # create a global threat report
@@ -155,10 +209,9 @@ class CyberThreatCoalition:
             published=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
             created_by_ref=organization,
             object_marking_refs=[stix2.TLP_WHITE],
-            labels=["threat-report"],
+            labels=labels,
             external_references=[report_external_reference],
             object_refs=report_object_refs,
-            custom_properties={CustomProperties.TAG_TYPE: tags},
         )
 
         # add report in bundle

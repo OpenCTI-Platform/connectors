@@ -26,7 +26,7 @@ class IpInfoConnector:
     def _generate_stix_bundle(self, country, city, observable_id):
         # Generate stix bundle
         country_identity = Location(
-            id=OpenCTIStix2Utils.generate_special_uuid("identity"),
+            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
             name=country.name,
             country=country.official_name
             if hasattr(country, "official_name")
@@ -41,7 +41,7 @@ class IpInfoConnector:
             },
         )
         city_identity = Location(
-            id=OpenCTIStix2Utils.generate_special_uuid("location"),
+            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
             name=city,
             country=country.official_name
             if hasattr(country, "official_name")
@@ -49,13 +49,13 @@ class IpInfoConnector:
             custom_properties={"x_opencti_location_type": "City"},
         )
         city_to_country = Relationship(
-            id=OpenCTIStix2Utils.generate_special_uuid("relationship"),
+            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
             relationship_type="located-at",
             source_ref=city_identity.id,
             target_ref=country_identity.id,
         )
         observable_to_city = Relationship(
-            id=OpenCTIStix2Utils.generate_special_uuid("relationship"),
+            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
             relationship_type="located-at",
             source_ref=observable_id,
             target_ref=city_identity.id,
