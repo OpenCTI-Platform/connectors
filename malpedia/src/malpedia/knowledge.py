@@ -205,7 +205,6 @@ class KnowledgeImporter:
                         description="Malpedia indicates usage",
                         confidence=self.confidence_level,
                         createdByRef=self.organization["id"],
-                        ignore_dates=True,
                         update=self.update_data,
                     )
 
