@@ -26,7 +26,7 @@ class IpInfoConnector:
     def _generate_stix_bundle(self, country, city, observable_id):
         # Generate stix bundle
         country_identity = Location(
-            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
+            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
             name=country.name,
             country=country.official_name
             if hasattr(country, "official_name")
