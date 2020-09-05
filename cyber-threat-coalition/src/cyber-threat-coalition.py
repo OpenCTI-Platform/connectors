@@ -134,7 +134,7 @@ class CyberThreatCoalition:
                         data = urllib.parse.quote(data, "/:")
                     elif collection == "hash":
                         observable_resolver = self.get_hash_type()
-                        observable_type = 'File'
+                        observable_type = "File"
                     indicator = None
                     observable = None
                     relationship = None
@@ -148,9 +148,9 @@ class CyberThreatCoalition:
                                 ),
                                 name=data,
                                 pattern_type=pattern_type,
-                                pattern=self._INDICATOR_PATTERN[observable_resolver].format(
-                                    data
-                                ),
+                                pattern=self._INDICATOR_PATTERN[
+                                    observable_resolver
+                                ].format(data),
                                 labels=labels,
                                 created_by_ref=organization,
                                 object_marking_refs=[stix2.TLP_WHITE],
