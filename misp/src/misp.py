@@ -52,8 +52,8 @@ OPENCTISTIX2 = {
     "file-name": {"type": "file", "path": ["name"]},
     "file-path": {"type": "file", "path": ["name"]},
     "file-md5": {"type": "file", "path": ["hashes", "MD5"]},
-    "file-sha1": {"type": "file", "path": ["hashes", "SHA1"]},
-    "file-sha256": {"type": "file", "path": ["hashes", "SHA256"]},
+    "file-sha1": {"type": "file", "path": ["hashes", "SHA-1"]},
+    "file-sha256": {"type": "file", "path": ["hashes", "SHA-256"]},
     "directory": {"type": "directory", "path": ["path"]},
     "registry-key": {"type": "windows-registry-key", "path": ["key"]},
     "registry-key-value": {"type": "windows-registry-value-type", "path": ["data"]},
@@ -322,6 +322,7 @@ class Misp:
                         author,
                         event_elements,
                         event_markings,
+                        event_tags,
                         [],
                         attribute,
                         event["Event"]["threat_level_id"],
@@ -355,6 +356,7 @@ class Misp:
                             author,
                             event_elements,
                             event_markings,
+                            event_tags,
                             attribute_external_references,
                             attribute,
                             event["Event"]["threat_level_id"],
@@ -478,6 +480,7 @@ class Misp:
         author,
         event_elements,
         event_markings,
+        event_labels,
         attribute_external_references,
         attribute,
         event_threat_level,
@@ -489,7 +492,7 @@ class Misp:
         for resolved_attribute in resolved_attributes:
             ### Pre-process
             # Markings & Tags
-            attribute_tags = []
+            attribute_tags = event_labels
             if "Tag" in attribute:
                 attribute_markings = self.resolve_markings(
                     attribute["Tag"], with_default=False
@@ -1082,22 +1085,22 @@ class Misp:
     def resolve_type(self, type, value):
         types = {
             "yara": [{"resolver": "yara"}],
-            "md5": [{"resolver": "file-md5", "type": "StixFile"}],
-            "sha1": [{"resolver": "file-sha1", "type": "StixFile"}],
-            "sha256": [{"resolver": "file-sha256", "type": "StixFile"}],
-            "filename": [{"resolver": "file-name", "type": "StixFile"}],
-            "pdb": [{"resolver": "pdb-path", "type": "StixFile"}],
+            "md5": [{"resolver": "file-md5", "type": "File"}],
+            "sha1": [{"resolver": "file-sha1", "type": "File"}],
+            "sha256": [{"resolver": "file-sha256", "type": "File"}],
+            "filename": [{"resolver": "file-name", "type": "File"}],
+            "pdb": [{"resolver": "pdb-path", "type": "File"}],
             "filename|md5": [
-                {"resolver": "file-name", "type": "StixFile"},
-                {"resolver": "file-md5", "type": "StixFile"},
+                {"resolver": "file-name", "type": "File"},
+                {"resolver": "file-md5", "type": "File"},
             ],
             "filename|sha1": [
-                {"resolver": "file-name", "type": "StixFile"},
-                {"resolver": "file-sha1", "type": "StixFile"},
+                {"resolver": "file-name", "type": "File"},
+                {"resolver": "file-sha1", "type": "File"},
             ],
             "filename|sha256": [
-                {"resolver": "file-name", "type": "StixFile"},
-                {"resolver": "file-sha256", "type": "StixFile"},
+                {"resolver": "file-name", "type": "File"},
+                {"resolver": "file-sha256", "type": "File"},
             ],
             "ip-src": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
             "ip-dst": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
@@ -1225,7 +1228,8 @@ class Misp:
                 if '="' in tag_value:
                     tag_value = tag_value.replace('="', "-")[:-1]
                 opencti_tags.append(tag_value)
-        return opencti_tags
+        res = []
+        return [res.append(x) for x in opencti_tags if x not in res]
 
 
 if __name__ == "__main__":

@@ -19,18 +19,18 @@ class CyberThreatCoalition:
     _OBSERVABLE_PATH = {
         "Domain-Name": ["value"],
         "IPv4-Addr": ["value"],
-        "StixFile_sha256": ["hashes", "SHA-256"],
-        "StixFile_sha1": ["hashes", "SHA-1"],
-        "StixFile_md5": ["hashes", "MD5"],
+        "File_sha256": ["hashes", "SHA-256"],
+        "File_sha1": ["hashes", "SHA-1"],
+        "File_md5": ["hashes", "MD5"],
         "Url": ["value"],
     }
 
     _INDICATOR_PATTERN = {
         "Domain-Name": "[domain-name:value = '{}']",
         "IPv4-Addr": "[ipv4-addr:value = '{}']",
-        "StixFile_sha256": "[file:hashes.SHA-256 = '{}']",
-        "StixFile_sha1": "[file:hashes.SHA-1 = '{}']",
-        "StixFile_md5": "[file:hashes.MD5 = '{}']",
+        "File_sha256": "[file:hashes.SHA-256 = '{}']",
+        "File_sha1": "[file:hashes.SHA-1 = '{}']",
+        "File_md5": "[file:hashes.MD5 = '{}']",
         "Url": "[url:value = '{}']",
     }
 
@@ -80,11 +80,11 @@ class CyberThreatCoalition:
     @staticmethod
     def get_hash_type(hash_value):
         if re.match(r"^[0-9a-fA-F]{32}$", hash_value):
-            return "StixFile_md5"
+            return "File_md5"
         elif re.match(r"^[0-9a-fA-F]{40}$", hash_value):
-            return "StixFile_sha1"
+            return "File_sha1"
         elif re.match(r"^[0-9a-fA-F]{64}$", hash_value):
-            return "StixFile_sha256"
+            return "File_sha256"
 
     def fetch_and_send(self):
         bundle_objects = list()
@@ -120,20 +120,25 @@ class CyberThreatCoalition:
             # parse content
             for data in response.iter_lines(decode_unicode=True):
                 observable_type = None
+                observable_resolver = None
                 if data and not data.startswith("#"):
                     if collection == "domain":
+                        observable_resolver = "Domain-Name"
                         observable_type = "Domain-Name"
                     elif collection == "ip":
+                        observable_resolver = "IPv4-Addr"
                         observable_type = "IPv4-Addr"
                     elif collection == "url":
+                        observable_resolver = "Url"
                         observable_type = "Url"
                         data = urllib.parse.quote(data, "/:")
                     elif collection == "hash":
-                        observable_type = self.get_hash_type()
+                        observable_resolver = self.get_hash_type()
+                        observable_type = 'File'
                     indicator = None
                     observable = None
                     relationship = None
-                    if observable_type is None:
+                    if observable_resolver is None or observable_type is None:
                         return
                     try:
                         if self.cyber_threat_coalition_create_indicators:
@@ -143,7 +148,7 @@ class CyberThreatCoalition:
                                 ),
                                 name=data,
                                 pattern_type=pattern_type,
-                                pattern=self._INDICATOR_PATTERN[observable_type].format(
+                                pattern=self._INDICATOR_PATTERN[observable_resolver].format(
                                     data
                                 ),
                                 labels=labels,
@@ -160,7 +165,7 @@ class CyberThreatCoalition:
                                 ),
                                 key=opencti_type
                                 + "."
-                                + ".".join(self._OBSERVABLE_PATH[observable_type]),
+                                + ".".join(self._OBSERVABLE_PATH[observable_resolver]),
                                 value=data,
                                 labels=labels,
                                 created_by_ref=organization,
