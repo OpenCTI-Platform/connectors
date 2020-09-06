@@ -23,9 +23,9 @@ class IpInfoConnector:
             "IPINFO_MAX_TLP", ["ipinfo", "max_tlp"], config
         )
 
-    def _generate_stix_bundle(self, country, city, observable_id):
+    def _generate_stix_bundle(self, country, city, loc, observable_id):
         # Generate stix bundle
-        country_identity = Location(
+        country_location = Location(
             id=OpenCTIStix2Utils.generate_random_stix_id("location"),
             name=country.name,
             country=country.official_name
@@ -40,31 +40,34 @@ class IpInfoConnector:
                 ],
             },
         )
-        city_identity = Location(
+        loc_split = loc.split(",")
+        city_location = Location(
             id=OpenCTIStix2Utils.generate_random_stix_id("location"),
             name=city,
             country=country.official_name
             if hasattr(country, "official_name")
             else country.name,
+            latitude=loc_split[0],
+            longitude=loc_split[1],
             custom_properties={"x_opencti_location_type": "City"},
         )
         city_to_country = Relationship(
             id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
             relationship_type="located-at",
-            source_ref=city_identity.id,
-            target_ref=country_identity.id,
+            source_ref=city_location.id,
+            target_ref=country_location.id,
         )
         observable_to_city = Relationship(
             id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
             relationship_type="located-at",
             source_ref=observable_id,
-            target_ref=city_identity.id,
+            target_ref=city_location.id,
             confidence=self.helper.connect_confidence_level,
         )
         return Bundle(
             objects=[
-                country_identity,
-                city_identity,
+                country_location,
+                city_location,
                 city_to_country,
                 observable_to_city,
             ]
@@ -100,7 +103,9 @@ class IpInfoConnector:
             raise ValueError(
                 "IpInfo was not able to find a country for this IP address"
             )
-        bundle = self._generate_stix_bundle(country, json_data["city"], observable_id)
+        bundle = self._generate_stix_bundle(
+            country, json_data["city"], json_data["loc"], observable_id
+        )
         bundles_sent = self.helper.send_stix2_bundle(bundle)
         return ["Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"]
 
