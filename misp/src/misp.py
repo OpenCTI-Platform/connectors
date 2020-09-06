@@ -905,9 +905,7 @@ class Misp:
                     if name not in added_names:
                         elements["tools"].append(
                             Tool(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "tool"
-                                ),
+                                id=OpenCTIStix2Utils.generate_random_stix_id("tool"),
                                 name=name,
                                 labels=["tool"],
                                 description=galaxy_entity["description"],
@@ -937,9 +935,7 @@ class Misp:
                     if name not in added_names:
                         elements["malwares"].append(
                             Malware(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "malware"
-                                ),
+                                id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
                                 name=name,
                                 is_family=True,
                                 aliases=aliases,
