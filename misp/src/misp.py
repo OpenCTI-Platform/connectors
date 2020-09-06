@@ -879,6 +879,9 @@ class Misp:
                     if name not in added_names:
                         elements["intrusion_sets"].append(
                             IntrusionSet(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "intrusion-set"
+                                ),
                                 name=name,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
@@ -902,6 +905,9 @@ class Misp:
                     if name not in added_names:
                         elements["tools"].append(
                             Tool(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "tool"
+                                ),
                                 name=name,
                                 labels=["tool"],
                                 description=galaxy_entity["description"],
@@ -931,7 +937,9 @@ class Misp:
                     if name not in added_names:
                         elements["malwares"].append(
                             Malware(
-                                id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "malware"
+                                ),
                                 name=name,
                                 is_family=True,
                                 aliases=aliases,
@@ -1112,8 +1120,8 @@ class Misp:
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
             ],
             "email-subject": [{"resolver": "email-subject", "type": "Email-Message"}],
-            "email-src": [{"resolver": "email-address", "type": "Email-Message"}],
-            "email-dst": [{"resolver": "email-address", "type": "Email-Message"}],
+            "email-src": [{"resolver": "email-address", "type": "Email-Addr"}],
+            "email-dst": [{"resolver": "email-address", "type": "Email-Addr"}],
             "url": [{"resolver": "url", "type": "Url"}],
             "windows-service-name": [
                 {"resolver": "windows-service-name", "type": "Process"}
