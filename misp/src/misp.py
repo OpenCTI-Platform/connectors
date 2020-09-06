@@ -601,6 +601,7 @@ class Misp:
                     + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
                     value=observable_value,
                     description=attribute["comment"],
+                    x_opencti_score=score,
                     labels=attribute_tags,
                     created_by_ref=author,
                     object_marking_refs=attribute_markings,
