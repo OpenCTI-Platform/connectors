@@ -1228,8 +1228,7 @@ class Misp:
                 if '="' in tag_value:
                     tag_value = tag_value.replace('="', "-")[:-1]
                 opencti_tags.append(tag_value)
-        res = []
-        return [res.append(x) for x in opencti_tags if x not in res]
+        return opencti_tags
 
 
 if __name__ == "__main__":
