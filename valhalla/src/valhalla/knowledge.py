@@ -80,20 +80,20 @@ class KnowledgeImporter:
                 self.helper.log_error(f"error creating indicator: {err}")
 
             self._add_refs_for_id([yr.reference], indicator["id"])
-            self._add_labels_for_indicator(yr.labels, indicator["id"])
+            self._add_labels_for_indicator(yr.tags, indicator["id"])
 
-    def _add_labels_for_indicator(self, labels: list, indicator_id: str) -> None:
-        for label in labels:
+    def _add_labels_for_indicator(self, tags: list, indicator_id: str) -> None:
+        for tag in tags:
             # handle Mitre ATT&CK relation indicator <-> attack-pattern
-            if re.search(r"^T\d{4}$", label):
-                self._add_attack_pattern_indicator_by_external_id(label, indicator_id)
+            if re.search(r"^T\d{4}$", tag):
+                self._add_attack_pattern_indicator_by_external_id(tag, indicator_id)
             # handle Mitre ATT&CK group relation indicator <-> intrusion-set
-            if re.search(r"^G\d{4}$", label):
-                self._add_intrusion_set_indicator_by_external_id(label, indicator_id)
+            if re.search(r"^G\d{4}$", tag):
+                self._add_intrusion_set_indicator_by_external_id(tag, indicator_id)
 
             # Create Hygiene Label
-            label_valhalla = self.helper.api.label.create(value=label, color="#46beda")
-            self.helper.api.stix_entity.add_label(
+            label_valhalla = self.helper.api.label.create(value=tag, color="#46beda")
+            self.helper.api.stix_domain_object.add_label(
                 id=indicator_id, label_id=label_valhalla["id"]
             )
 
@@ -131,11 +131,12 @@ class KnowledgeImporter:
         cti_intrusion_set = self.helper.api.intrusion_set.read(id=intrusion_set_id)
 
         if cti_intrusion_set:
-            self.helper.api.stix_relation.create(
+            self.helper.api.stix_core_relationship.create(
                 fromId=indicator_id,
                 toId=cti_intrusion_set["id"],
                 relationship_type="indicates",
                 description="Yara Rule from Valhalla API",
+                created_by=self.organization["id"],
                 confidence=self.confidence_level,
             )
         else:
@@ -155,10 +156,11 @@ class KnowledgeImporter:
         cti_attack_pattern = self.helper.api.attack_pattern.read(id=attack_pattern_id)
 
         if cti_attack_pattern:
-            self.helper.api.stix_relation.create(
+            self.helper.api.stix_core_relationship.create(
                 fromId=indicator_id,
                 toId=cti_attack_pattern["id"],
                 relationship_type="indicates",
+                created_by=self.organization["id"],
                 description="Yara Rule from Valhalla API",
                 confidence=self.confidence_level,
             )
