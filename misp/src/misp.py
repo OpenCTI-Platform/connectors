@@ -569,6 +569,7 @@ class Misp:
                     id=OpenCTIStix2Utils.generate_random_stix_id("indicator"),
                     name=name,
                     description=attribute["comment"],
+                    confidence=self.helper.connect_confidence_level,
                     pattern_type=pattern_type,
                     pattern=pattern,
                     valid_from=datetime.utcfromtimestamp(
