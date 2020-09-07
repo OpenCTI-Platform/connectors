@@ -287,7 +287,9 @@ class Misp:
                 ### Pre-process
                 # Author
                 author = Identity(
-                    name=event["Event"]["Orgc"]["name"], identity_class="organization"
+                    id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
+                    name=event["Event"]["Orgc"]["name"],
+                    identity_class="organization",
                 )
                 # Markings
                 if "Tag" in event["Event"]:
