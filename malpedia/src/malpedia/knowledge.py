@@ -36,6 +36,8 @@ class KnowledgeImporter:
         update_data: bool,
         import_intrusion_sets: bool,
         import_yara: bool,
+        create_indicators: bool,
+        create_observables: bool,
         default_marking,
     ) -> None:
         """Initialize Malpedia indicator importer."""
@@ -47,6 +49,8 @@ class KnowledgeImporter:
         self.update_data = update_data
         self.import_intrusion_sets = import_intrusion_sets
         self.import_yara = import_yara
+        self.create_indicators = create_indicators
+        self.create_observables = create_observables
         self.default_marking = default_marking
         self.malware_guess_cache: Dict[str, str] = {}
         self.intrusion_set_guess_cache: Dict[str, str] = {}
@@ -214,13 +218,14 @@ class KnowledgeImporter:
                             url=act_ref_url,
                             description="Reference found in the Malpedia library",
                         )
-                        self.helper.api.stix_entity.add_external_reference(
+                        self.helper.api.stix_domain_object.add_external_reference(
                             id=guessed_id, external_reference_id=reference["id"]
                         )
 
     def _add_samples_for_malware_id(self, malware_id: str, samples: Any) -> None:
         for sample in samples:
             try:
+                sam = Sample.parse_obj(sample)
                 sam = Sample.parse_obj(sample)
             except ValidationError as e:
                 self.helper.log_error(f"error marshaling sample data for {sample}: {e}")
@@ -235,52 +240,86 @@ class KnowledgeImporter:
             san_hash = sam.sha256.lower()
             pattern = "[file:hashes.'SHA-256' = '" + san_hash + "']"
 
-            try:
-                obs = self.helper.api.stix_cyber_observable.create(
-                    observable_data={
-                        "type": "file",
-                        "hashes": {
-                            "SHA-256": san_hash,
+            obs = None
+            if self.create_observables:
+                try:
+                    obs = self.helper.api.stix_cyber_observable.create(
+                        observable_data={
+                            "type": "file",
+                            "hashes": {
+                                "SHA-256": san_hash,
+                            },
                         },
-                    },
-                    createdBy=self.organization["id"],
-                    objectMarking=[self.default_marking["id"]],
-                    update=self.update_data,
-                )
-            except Exception as e:
-                print(obs)
-                self.helper.log_error(f"error storing observable ({sam.sha256}): {e}")
-                continue
+                        createdBy=self.organization["id"],
+                        objectMarking=[self.default_marking["id"]],
+                        update=self.update_data,
+                    )
+                except Exception as e:
+                    print(obs)
+                    self.helper.log_error(
+                        f"error storing observable ({sam.sha256}): {e}"
+                    )
+                    continue
+            indicator = None
+            if self.create_indicators:
+                try:
+                    indicator = self.helper.api.indicator.create(
+                        name=san_hash,
+                        description="Sample hash pattern from Malpedia",
+                        pattern_type="stix",
+                        pattern=pattern,
+                        x_opencti_main_observable_type="File",
+                        createdBy=self.organization["id"],
+                        objectMarking=[self.default_marking["id"]],
+                        update=self.update_data,
+                    )
+                except Exception as e:
+                    self.helper.log_error(f"error storing indicator: {e}")
+                    continue
 
-            try:
-                indicator = self.helper.api.indicator.create(
-                    name=san_hash,
-                    description="Sample hash pattern from Malpedia",
-                    pattern_type="stix",
-                    pattern=pattern,
-                    x_opencti_main_observable_type="File",
-                    createdBy=self.organization["id"],
-                    objectMarking=[self.default_marking["id"]],
-                    update=self.update_data,
-                )
-            except Exception as e:
-                self.helper.log_error(f"error storing indicator: {e}")
-                continue
+            if indicator is not None:
+                try:
+                    self.helper.api.stix_core_relationship.create(
+                        fromId=indicator["id"],
+                        toId=malware_id,
+                        relationship_type="indicates",
+                        description="Sample in Malpedia database",
+                        confidence=self.confidence_level,
+                        createdBy=self.organization["id"],
+                        objectMarking=[self.default_marking["id"]],
+                        update=self.update_data,
+                    )
+                except Exception as e:
+                    self.helper.log_error(f"error storing indicator relation: {e}")
+                    continue
+            if obs is not None:
+                try:
+                    self.helper.api.stix_core_relationship.create(
+                        fromId=obs["id"],
+                        toId=malware_id,
+                        relationship_type="related-to",
+                        description="Sample in Malpedia database",
+                        confidence=self.confidence_level,
+                        createdBy=self.organization["id"],
+                        objectMarking=[self.default_marking["id"]],
+                        update=self.update_data,
+                    )
+                except Exception as e:
+                    self.helper.log_error(f"error storing indicator relation: {e}")
+                    continue
 
-            try:
-                self.helper.api.stix_core_relationship.create(
-                    fromId=indicator["id"],
-                    toId=malware_id,
-                    relationship_type="indicates",
-                    description="Sample in Malpedia database",
-                    confidence=self.confidence_level,
-                    createdBy=self.organization["id"],
-                    objectMarking=[self.default_marking["id"]],
-                    update=self.update_data,
-                )
-            except Exception as e:
-                self.helper.log_error(f"error storing indicator relation: {e}")
-                continue
+            if indicator is not None and obs is not None:
+                try:
+                    self.helper.api.stix_core_relationship.create(
+                        fromId=indicator["id"],
+                        toId=obs["id"],
+                        relationship_type="based-on",
+                        createdBy=self.organization["id"],
+                        update=self.update_data,
+                    )
+                except Exception as e:
+                    self.helper.log_error(f"error storing indicator relation: {e}")
+                    continue
 
     def _add_yara_rules_for_malware_id(
         self, malware_id: str, fam: Family, rules: Any
@@ -377,7 +416,7 @@ class KnowledgeImporter:
                 url=san_url.geturl(),
                 description="Reference found in the Malpedia library",
             )
-            self.helper.api.stix_entity.add_external_reference(
+            self.helper.api.stix_domain_object.add_external_reference(
                 id=obj_id, external_reference_id=reference["id"]
             )
 
@@ -452,7 +491,7 @@ class KnowledgeImporter:
             return None
         filters = [
             self._create_filter("name", name),
-            self._create_filter("alias", name),
+            self._create_filter("aliases", name),
         ]
         for fil in filters:
             malwares = self.helper.api.malware.list(filters=fil)
@@ -468,7 +507,7 @@ class KnowledgeImporter:
             return None
         filters = [
             self._create_filter("name", name),
-            self._create_filter("alias", name),
+            self._create_filter("aliases", name),
         ]
         for fil in filters:
             intrusion_sets = self.helper.api.intrusion_set.list(filters=fil)

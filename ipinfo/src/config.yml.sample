@@ -7,7 +7,7 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   name: 'IpInfo'
   scope: 'IPv4-Addr'
-  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 ipinfo:

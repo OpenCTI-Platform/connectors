@@ -15,4 +15,6 @@ malpedia:
   auth_key: ''
   interval_sec: 86400
   import_intrusion_sets: false
-  import_yara: false
+  import_yara: true
+  create_indicators: true # Required, create indicators for hashes
+  create_observables: true # Required, create observables for hashes
