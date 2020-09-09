@@ -115,7 +115,6 @@ class KnowledgeImporter:
             ######################################################
             # Samples
             ######################################################
-
             if not self.api_client.unauthenticated:
                 samples = self.api_client.query("list/samples/" + family_id)
                 self.helper.log_info(
@@ -226,7 +225,6 @@ class KnowledgeImporter:
         for sample in samples:
             try:
                 sam = Sample.parse_obj(sample)
-                sam = Sample.parse_obj(sample)
             except ValidationError as e:
                 self.helper.log_error(f"error marshaling sample data for {sample}: {e}")
                 continue
@@ -244,7 +242,7 @@ class KnowledgeImporter:
             if self.create_observables:
                 try:
                     obs = self.helper.api.stix_cyber_observable.create(
-                        observable_data={
+                        observableData={
                             "type": "file",
                             "hashes": {
                                 "SHA-256": san_hash,
@@ -339,7 +337,6 @@ class KnowledgeImporter:
                     mapped_marking = self._TLP_MAPPING[tlp_level]
                     if mapped_marking == "":
                         continue
-
                     indicator = self.helper.api.indicator.create(
                         name=yr.rule_name,
                         description="Yara rule from Malpedia library",
