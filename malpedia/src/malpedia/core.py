@@ -55,6 +55,12 @@ class Malpedia:
         self.import_yara = get_config_variable(
             "MALPEDIA_IMPORT_YARA", ["malpedia", "import_yara"], config
         )
+        self.create_indicators = get_config_variable(
+            "MALPEDIA_CREATE_INDICATORS", ["malpedia", "create_indicators"], config
+        )
+        self.create_observables = get_config_variable(
+            "MALPEDIA_CREATE_OBSERVABLES", ["malpedia", "create_observables"], config
+        )
 
         self.helper = OpenCTIConnectorHelper(config)
         self.helper.log_info(f"loaded malpedia config: {config}")
@@ -80,6 +86,8 @@ class Malpedia:
             self.update_existing_data,
             self.import_intrusion_sets,
             self.import_yara,
+            self.create_indicators,
+            self.create_observables,
             self.default_marking,
         )
 

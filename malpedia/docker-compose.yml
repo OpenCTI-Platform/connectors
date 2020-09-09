@@ -15,5 +15,7 @@ services:
       - MALPEDIA_AUTH_KEY= # Empty key only fetches TLP:WHITE information
       - MALPEDIA_INTERVAL_SEC=86400 # Run once every day
       - MALPEDIA_IMPORT_INTRUSION_SETS=false
-      - MALPEDIA_IMPORT_YARA=false
+      - MALPEDIA_IMPORT_YARA=true
+      - MALPEDIA_CREATE_INDICATORS=true
+      - MALPEDIA_CREATE_OBSERVABLES=true
     restart: always

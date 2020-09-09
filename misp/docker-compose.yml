@@ -16,6 +16,8 @@ services:
       - MISP_KEY=ChangeMe # Required
       - MISP_SSL_VERIFY=False # Required
       - MISP_CREATE_REPORTS=True # Required, create report for MISP event
+      - MISP_CREATE_INDICATORS=True # Required, create indicators from attributes
+      - MISP_CREATE_OBSERVABLES=True # Required, create observables from attributes
       - MISP_REPORT_CLASS=MISP Event # Optional, report_class if creating report for event
       - MISP_IMPORT_FROM_DATE=2000-01-01 # Optional, import all event from this date
       - MISP_IMPORT_TAGS=opencti:import,type:osint # Optional, list of tags used for import events
