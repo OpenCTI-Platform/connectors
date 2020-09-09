@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import sys
+import datetime
 
 # Importing the JSON module
 import json
@@ -10,6 +11,8 @@ from stix2 import Vulnerability
 from stix2 import Bundle
 from stix2 import Identity
 from stix2 import ExternalReference
+
+from pycti import OpenCTIStix2Utils
 
 
 def convert(filename, output="output.json"):
@@ -62,11 +65,12 @@ def convert(filename, output="output.json"):
                 if "baseMetricV3" in cves["impact"]
                 else None
             )
-            cdate = cves["publishedDate"]
-            mdate = cves["lastModifiedDate"]
+            cdate = datetime.datetime.strptime(cves["publishedDate"], '%Y-%m-%dT%H:%MZ')
+            mdate = datetime.datetime.strptime(cves["lastModifiedDate"], '%Y-%m-%dT%H:%MZ')
 
             # Creating the vulnerability with the extracted fields
             vuln = Vulnerability(
+                id=OpenCTIStix2Utils.generate_random_stix_id("vulnerability"),
                 name=name,
                 created=cdate,
                 modified=mdate,
