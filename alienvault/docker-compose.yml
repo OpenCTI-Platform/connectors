@@ -16,7 +16,7 @@ services:
       - ALIENVAULT_API_KEY=ChangeMe
       - ALIENVAULT_TLP=White
       - ALIENVAULT_PULSE_START_TIMESTAMP=2020-05-01T00:00:00 # BEWARE! Could be a lot of pulses!
-      - ALIENVAULT_REPORT_TYPE=Threat Report
+      - ALIENVAULT_REPORT_TYPE=threat-report
       - ALIENVAULT_REPORT_STATUS=New
       - ALIENVAULT_GUESS_MALWARE=false                       # Use tags to guess malware.
       - ALIENVAULT_GUESS_CVE=false                           # Use tags to guess CVE.

@@ -47,6 +47,8 @@ class AlienVault:
         "closed": 3,
     }
 
+    _DEFAULT_REPORT_TYPE = "threat-report"
+
     _CONNECTOR_RUN_INTERVAL_SEC = 60
 
     _STATE_LAST_RUN = "last_run"
@@ -67,10 +69,13 @@ class AlienVault:
         )
 
         report_status_str = self._get_configuration(config, self._CONFIG_REPORT_STATUS)
-        report_type = self._get_configuration(config, self._CONFIG_REPORT_TYPE)
         report_status = self._convert_report_status_str_to_report_status_int(
             report_status_str
         )
+
+        report_type = self._get_configuration(config, self._CONFIG_REPORT_TYPE)
+        if not report_type:
+            report_type = self._DEFAULT_REPORT_TYPE
 
         guess_malware = bool(
             self._get_configuration(config, self._CONFIG_GUESS_MALWARE)
@@ -188,7 +193,7 @@ class AlienVault:
                 self._info("Connector stop")
                 exit(0)
             except Exception as e:
-                self._error(str(e))
+                self._error("Internal error: {0}", str(e))
                 self._sleep()
 
     @classmethod

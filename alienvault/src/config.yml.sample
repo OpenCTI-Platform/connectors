@@ -16,7 +16,7 @@ alienvault:
   api_key: 'ChangeMe'
   tlp: 'White'
   pulse_start_timestamp: '2020-05-01T00:00:00'  # ISO 8601
-  report_type: 'Threat Report'
+  report_type: 'threat-report'
   report_status: 'New'                          # New, In progress, Analyzed and Closed
   guess_malware: false                          # Use tags to guess malware
   guess_cve: false                              # Use tags to guess CVE

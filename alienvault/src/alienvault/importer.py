@@ -4,9 +4,9 @@
 import re
 from typing import Any, Dict, List, Mapping, Optional, Set
 
-from pycti.connector.opencti_connector_helper import (
+from pycti.connector.opencti_connector_helper import (  # type: ignore
     OpenCTIConnectorHelper,
-)  # type: ignore # noqa: E501
+)
 
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore
@@ -118,6 +118,9 @@ class PulseImporter:
         if pulse_bundle is None:
             return False
 
+        with open(f"bundle_{pulse.id}.json", "w") as f:
+            f.write(pulse_bundle.serialize(pretty=True))
+
         self._send_bundle(pulse_bundle)
 
         return True
@@ -206,7 +209,7 @@ class PulseImporter:
     def _fetch_malware_stix_id_by_name(self, name: str) -> Optional[str]:
         filters = [
             self._create_filter("name", name),
-            self._create_filter("alias", name),
+            self._create_filter("aliases", name),
         ]
         for _filter in filters:
             malwares = self.helper.api.malware.list(filters=_filter)
@@ -214,7 +217,7 @@ class PulseImporter:
                 if len(malwares) > 1:
                     self._info("More then one malware for '{0}'", name)
                 malware = malwares[0]
-                return malware["stix_id_key"]
+                return malware["standard_id"]
         return None
 
     @staticmethod
