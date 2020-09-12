@@ -7,6 +7,7 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   name: 'VirusTotal'
   scope: 'file-md5,file-sha1,file-sha256'
+  auto: true # Enable/disable auto-enrichment of observables
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
