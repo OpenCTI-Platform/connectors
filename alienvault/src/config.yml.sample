@@ -15,6 +15,8 @@ alienvault:
   base_url: 'https://otx.alienvault.com'
   api_key: 'ChangeMe'
   tlp: 'White'
+  create_observables: true
+  create_indicators: true
   pulse_start_timestamp: '2020-05-01T00:00:00'  # ISO 8601
   report_type: 'threat-report'
   report_status: 'New'                          # New, In progress, Analyzed and Closed

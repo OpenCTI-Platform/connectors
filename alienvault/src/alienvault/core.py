@@ -17,10 +17,10 @@ from stix2 import Identity, MarkingDefinition  # type: ignore
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter
 from alienvault.utils import (
-    DEFAULT_TLP_MARKING_DEFINITION,
     create_organization,
     get_tlp_string_marking_definition,
 )
+from alienvault.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 
 
 class AlienVault:
@@ -31,6 +31,8 @@ class AlienVault:
     _CONFIG_BASE_URL = f"{_CONFIG_NAMESPACE}.base_url"
     _CONFIG_API_KEY = f"{_CONFIG_NAMESPACE}.api_key"
     _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
+    _CONFIG_CREATE_OBSERVABLES = f"{_CONFIG_NAMESPACE}.create_observables"
+    _CONFIG_CREATE_INDICATORS = f"{_CONFIG_NAMESPACE}.create_indicators"
     _CONFIG_PULSE_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.pulse_start_timestamp"
     _CONFIG_REPORT_STATUS = f"{_CONFIG_NAMESPACE}.report_status"
     _CONFIG_REPORT_TYPE = f"{_CONFIG_NAMESPACE}.report_type"
@@ -47,6 +49,8 @@ class AlienVault:
         "closed": 3,
     }
 
+    _DEFAULT_CREATE_OBSERVABLES = True
+    _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
 
     _CONNECTOR_RUN_INTERVAL_SEC = 60
@@ -63,6 +67,22 @@ class AlienVault:
 
         tlp = self._get_configuration(config, self._CONFIG_TLP)
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
+
+        create_observables = self._get_configuration(
+            config, self._CONFIG_CREATE_OBSERVABLES
+        )
+        if create_observables is None:
+            create_observables = self._DEFAULT_CREATE_OBSERVABLES
+        else:
+            create_observables = bool(create_observables)
+
+        create_indicators = self._get_configuration(
+            config, self._CONFIG_CREATE_INDICATORS
+        )
+        if create_indicators is None:
+            create_indicators = self._DEFAULT_CREATE_INDICATORS
+        else:
+            create_indicators = bool(create_indicators)
 
         default_latest_pulse_timestamp = self._get_configuration(
             config, self._CONFIG_PULSE_START_TIMESTAMP
@@ -106,6 +126,8 @@ class AlienVault:
             client,
             author,
             tlp_marking,
+            create_observables,
+            create_indicators,
             update_existing_data,
             default_latest_pulse_timestamp,
             report_status,

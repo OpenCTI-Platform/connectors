@@ -19,14 +19,18 @@ from stix2 import (  # type: ignore
     ObservedData,
     Relationship,
     Report,
-    TLP_AMBER,
-    TLP_GREEN,
-    TLP_RED,
-    TLP_WHITE,
     Vulnerability,
 )
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
+from alienvault.utils.constants import (
+    DEFAULT_X_OPENCTI_SCORE,
+    TLP_MARKING_DEFINITION_MAPPING,
+    X_MITRE_ID,
+    X_OPENCTI_LOCATION_TYPE,
+    X_OPENCTI_REPORT_STATUS,
+    X_OPENCTI_SCORE,
+)
 from alienvault.utils.indicators import (
     create_indicator_pattern_cryptocurrency_wallet,
     create_indicator_pattern_domain_name,
@@ -55,23 +59,6 @@ from alienvault.utils.observables import (
     create_observable_mutex,
     create_observable_url,
 )
-
-_TLP_MARKING_DEFINITION_MAPPING = {
-    "white": TLP_WHITE,
-    "green": TLP_GREEN,
-    "amber": TLP_AMBER,
-    "red": TLP_RED,
-}
-
-DEFAULT_TLP_MARKING_DEFINITION = TLP_WHITE
-
-
-X_OPENCTI_ALIASES = "x_opencti_aliases"
-X_OPENCTI_ORGANIZATION_TYPE = "x_opencti_organization_type"
-X_OPENCTI_RELIABILITY = "x_opencti_reliability"
-X_OPENCTI_LOCATION_TYPE = "x_opencti_location_type"
-X_MITRE_ID = "x_mitre_id"
-X_OPENCTI_REPORT_STATUS = "x_opencti_report_status"
 
 
 class ObservationFactory(NamedTuple):
@@ -122,7 +109,7 @@ OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET = ObservationFactory(
 
 def get_tlp_string_marking_definition(tlp: str) -> MarkingDefinition:
     """Get marking definition for given TLP."""
-    marking_definition = _TLP_MARKING_DEFINITION_MAPPING.get(tlp.lower())
+    marking_definition = TLP_MARKING_DEFINITION_MAPPING.get(tlp.lower())
     if marking_definition is None:
         raise ValueError(f"Invalid TLP value '{tlp}'")
     return marking_definition
@@ -200,6 +187,7 @@ def create_indicator(
         valid_from=valid_from,
         confidence=confidence,
         object_marking_refs=object_markings,
+        custom_properties={X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE},
     )
 
 

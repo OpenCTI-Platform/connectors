@@ -14,6 +14,7 @@ from stix2 import (  # type: ignore
     IntrusionSet,
     Malware,
     MarkingDefinition,
+    ObservedData,
     Relationship,
     Report,
     Vulnerability,
@@ -116,6 +117,8 @@ class PulseBundleBuilder:
         provider: Identity,
         source_name: str,
         object_markings: List[MarkingDefinition],
+        create_observables: bool,
+        create_indicators: bool,
         confidence_level: int,
         report_status: int,
         report_type: str,
@@ -129,8 +132,8 @@ class PulseBundleBuilder:
         self.source_name = source_name
         self.object_markings = self._determine_pulse_tlp(pulse, object_markings)
         self.confidence_level = confidence_level
-        self.create_observables = True  # TODO: Make configurable!
-        self.create_indicators = True  # TODO: Make configurable!
+        self.create_observables = create_observables
+        self.create_indicators = create_indicators
         self.report_status = report_status
         self.report_type = report_type
         self.guessed_malwares = guessed_malwares
@@ -183,8 +186,8 @@ class PulseBundleBuilder:
         malware_list = []
 
         # Create malwares based on guessed malwares.
-        for name, stix_id in self.guessed_malwares.items():
-            malware = self._create_malware(name, malware_id=stix_id)
+        for name, standard_id in self.guessed_malwares.items():
+            malware = self._create_malware(name, malware_id=standard_id)
             malware_list.append(malware)
 
         # Create malwares based on malware families in the Pulse.
@@ -490,7 +493,8 @@ class PulseBundleBuilder:
         external_references = [self._create_pulse_external_reference()]
 
         for reference in self.pulse.references:
-            if not reference:
+            # Exclude empty strings and not URLs.
+            if not reference or not reference.startswith("http"):
                 continue
 
             external_reference = self._create_external_reference(reference)
@@ -518,6 +522,18 @@ class PulseBundleBuilder:
 
     def _create_reports(self, objects: List[_DomainObject]) -> List[Report]:
         return [self._create_report(objects)]
+
+    def _create_observed_data(self, observables: List[_Observable]) -> ObservedData:
+        return create_observed_data(
+            self.pulse_author,
+            self.first_seen,
+            self.last_seen,
+            1,
+            observables,
+            [],
+            self.confidence_level,
+            self.object_markings,
+        )
 
     def build(self) -> Bundle:
         """Build pulse bundle."""
@@ -625,16 +641,7 @@ class PulseBundleBuilder:
         # Create observed data and add to bundle
         observed_data = None
         if observables:
-            observed_data = create_observed_data(
-                self.pulse_author,
-                self.first_seen,
-                self.last_seen,
-                1,
-                observables,
-                [],
-                self.confidence_level,
-                self.object_markings,
-            )
+            observed_data = self._create_observed_data(observables)
             bundle_objects.append(observed_data)
 
         # Get indicators, create YARA indicators and to bundle.
@@ -686,7 +693,7 @@ class PulseBundleBuilder:
         # Hack, the report must have at least on object reference.
         if not object_refs:
             log.warning(
-                "Report has no objects, inserting a dummy object: %s (%s)",
+                "Pulse has no objects, inserting a dummy object: %s (%s)",
                 self.pulse.name,
                 self.pulse.id,
             )

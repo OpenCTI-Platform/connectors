@@ -16,10 +16,12 @@ from stix2 import (  # type: ignore
 )
 from stix2.properties import ListProperty, ReferenceProperty, StringProperty  # type: ignore # noqa: E501
 
+from alienvault.utils.constants import DEFAULT_X_OPENCTI_SCORE, X_OPENCTI_SCORE
+
 
 # XXX: Causes an unexpected property (x_opencti_score) error
 # when creating a Bundle without allow_custom=True flag.
-_DEFAULT_CUSTOM_PROPERTIES = {"x_opencti_score": 50}
+_DEFAULT_CUSTOM_PROPERTIES = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
 
 
 def create_observable_ipv4_address(
