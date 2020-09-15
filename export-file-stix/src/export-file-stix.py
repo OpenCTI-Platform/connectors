@@ -50,7 +50,7 @@ class ExportFileStix:
                 + ") to "
                 + file_name
             )
-            self.helper.api.stix_domain_entity.push_entity_export(
+            self.helper.api.stix_domain_object.push_entity_export(
                 entity_id, file_name, json_bundle
             )
             self.helper.log_info(
