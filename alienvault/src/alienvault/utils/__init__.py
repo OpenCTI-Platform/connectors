@@ -16,7 +16,6 @@ from stix2 import (  # type: ignore
     Location,
     Malware,
     MarkingDefinition,
-    ObservedData,
     Relationship,
     Report,
     Vulnerability,
@@ -464,30 +463,6 @@ def create_object_refs(
         else:
             object_refs.extend(obj)
     return object_refs
-
-
-def create_observed_data(
-    created_by: Identity,
-    first_observed: datetime,
-    last_observed: datetime,
-    number_observed: int,
-    objects: List[_Observable],
-    labels: List[str],
-    confidence: int,
-    object_markings: List[MarkingDefinition],
-) -> ObservedData:
-    """Create an observed data."""
-    return ObservedData(
-        id=_create_random_identifier("observed-data"),
-        created_by_ref=created_by,
-        first_observed=first_observed,
-        last_observed=last_observed,
-        number_observed=number_observed,
-        object_refs=objects,
-        labels=labels,
-        confidence=confidence,
-        object_marking_refs=object_markings,
-    )
 
 
 def create_report(

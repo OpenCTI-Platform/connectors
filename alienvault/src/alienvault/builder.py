@@ -14,7 +14,6 @@ from stix2 import (  # type: ignore
     IntrusionSet,
     Malware,
     MarkingDefinition,
-    ObservedData,
     Relationship,
     Report,
     Vulnerability,
@@ -46,7 +45,6 @@ from alienvault.utils import (
     create_intrusion_set,
     create_malware,
     create_object_refs,
-    create_observed_data,
     create_organization,
     create_report,
     create_sector,
@@ -523,18 +521,6 @@ class PulseBundleBuilder:
     def _create_reports(self, objects: List[_DomainObject]) -> List[Report]:
         return [self._create_report(objects)]
 
-    def _create_observed_data(self, observables: List[_Observable]) -> ObservedData:
-        return create_observed_data(
-            self.pulse_author,
-            self.first_seen,
-            self.last_seen,
-            1,
-            observables,
-            [],
-            self.confidence_level,
-            self.object_markings,
-        )
-
     def build(self) -> Bundle:
         """Build pulse bundle."""
         # Prepare STIX2 bundle.
@@ -638,12 +624,6 @@ class PulseBundleBuilder:
         observables = [o.observable for o in observations if o.observable is not None]
         bundle_objects.extend(observables)
 
-        # Create observed data and add to bundle
-        observed_data = None
-        if observables:
-            observed_data = self._create_observed_data(observables)
-            bundle_objects.append(observed_data)
-
         # Get indicators, create YARA indicators and to bundle.
         indicators = [o.indicator for o in observations if o.indicator is not None]
         indicators.extend(self._create_yara_indicators())
@@ -686,9 +666,6 @@ class PulseBundleBuilder:
             indicators_based_on_observables,
             indicator_indicates_entities,
         )
-
-        if observed_data is not None:
-            object_refs.append(observed_data)
 
         # Hack, the report must have at least on object reference.
         if not object_refs:
