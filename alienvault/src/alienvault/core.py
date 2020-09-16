@@ -198,6 +198,8 @@ class AlienVault:
         self._info("Starting AlienVault connector...")
         while True:
             self._info("Running AlienVault connector...")
+            run_interval = self._CONNECTOR_RUN_INTERVAL_SEC
+
             try:
                 timestamp = self._current_unix_timestamp()
                 current_state = self._load_state()
@@ -221,11 +223,13 @@ class AlienVault:
                     )
                 else:
                     next_run = self._get_interval() - (timestamp - last_run)
+                    run_interval = min(run_interval, next_run)
+
                     self._info(
                         "Connector will not run, next run in: {0} seconds", next_run
                     )
 
-                self._sleep()
+                self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
                 self._info("Connector stop")
                 exit(0)
@@ -234,8 +238,11 @@ class AlienVault:
                 self._sleep()
 
     @classmethod
-    def _sleep(cls) -> None:
-        time.sleep(cls._CONNECTOR_RUN_INTERVAL_SEC)
+    def _sleep(cls, delay_sec: Optional[int] = None) -> None:
+        sleep_delay = (
+            delay_sec if delay_sec is not None else cls._CONNECTOR_RUN_INTERVAL_SEC
+        )
+        time.sleep(sleep_delay)
 
     @staticmethod
     def _current_unix_timestamp() -> int:
