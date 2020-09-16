@@ -40,6 +40,7 @@ class PulseImporter:
         report_type: str,
         guess_malware: bool,
         guess_cve: bool,
+        excluded_pulse_indicator_types: Set[str],
     ) -> None:
         """Initialize AlienVault indicator importer."""
         self.helper = helper
@@ -54,6 +55,7 @@ class PulseImporter:
         self.report_type = report_type
         self.guess_malware = guess_malware
         self.guess_cve = guess_cve
+        self.excluded_pulse_indicator_types = excluded_pulse_indicator_types
 
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
@@ -122,8 +124,8 @@ class PulseImporter:
         if pulse_bundle is None:
             return False
 
-        with open(f"bundle_{pulse.id}.json", "w") as f:
-            f.write(pulse_bundle.serialize(pretty=True))
+        # with open(f"bundle_{pulse.id}.json", "w") as f:
+        #     f.write(pulse_bundle.serialize(pretty=True))
 
         self._send_bundle(pulse_bundle)
 
@@ -140,6 +142,7 @@ class PulseImporter:
         report_type = self.report_type
         guessed_malwares = self._guess_malwares_from_tags(pulse.tags)
         guessed_cves = self._guess_cves_from_tags(pulse.tags)
+        excluded_pulse_indicator_types = self.excluded_pulse_indicator_types
 
         bundle_builder = PulseBundleBuilder(
             pulse,
@@ -153,6 +156,7 @@ class PulseImporter:
             report_type,
             guessed_malwares,
             guessed_cves,
+            excluded_pulse_indicator_types,
         )
 
         try:

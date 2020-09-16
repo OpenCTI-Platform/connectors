@@ -122,6 +122,23 @@ def iso_datetime_str_to_datetime(string):
         return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S")
 
 
+def convert_comma_separated_str_to_list(input_str: str, trim: bool = True) -> List[str]:
+    """Convert comma separated string to list of strings."""
+    comma_separated_str = input_str.strip() if trim else input_str
+    if not comma_separated_str:
+        return []
+
+    result = []
+    for part_str in comma_separated_str.split(","):
+        value = part_str
+        if trim:
+            value = value.strip()
+        if not value:
+            continue
+        result.append(value)
+    return result
+
+
 def _create_random_identifier(identifier_type: str) -> str:
     return OpenCTIStix2Utils.generate_random_stix_id(identifier_type)
 

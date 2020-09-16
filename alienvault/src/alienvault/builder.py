@@ -3,7 +3,7 @@
 
 import logging
 from datetime import datetime
-from typing import List, Mapping, NamedTuple, Optional, Set
+from typing import Callable, List, Mapping, NamedTuple, Optional, Set
 
 from stix2 import (  # type: ignore
     AttackPattern,
@@ -122,6 +122,7 @@ class PulseBundleBuilder:
         report_type: str,
         guessed_malwares: Mapping[str, str],
         guessed_cves: Set[str],
+        excluded_pulse_indicator_types: Set[str],
     ) -> None:
         """Initialize pulse bundle builder."""
         self.pulse = pulse
@@ -136,9 +137,7 @@ class PulseBundleBuilder:
         self.report_type = report_type
         self.guessed_malwares = guessed_malwares
         self.guessed_cves = guessed_cves
-
-        self.first_seen = self.pulse.created
-        self.last_seen = self.pulse.modified
+        self.excluded_pulse_indicator_types = excluded_pulse_indicator_types
 
     @staticmethod
     def _determine_pulse_author(pulse: Pulse, provider: Identity) -> Identity:
@@ -280,12 +279,13 @@ class PulseBundleBuilder:
             vulnerability = self._create_vulnerability(guessed_cve)
             vulnerabilities.append(vulnerability)
 
-        cve_pulse_indicators = list(
-            filter(
-                lambda x: x.type == self._PULSE_INDICATOR_TYPE_CVE,
-                self.pulse.indicators,
-            )
+        cve_pulse_indicators = self._get_pulse_indicators(
+            lambda x: x.type == self._PULSE_INDICATOR_TYPE_CVE
         )
+        cve_pulse_indicators = self._filter_pulse_indicators_excluded_types(
+            cve_pulse_indicators
+        )
+
         for cve_pulse_indicator in cve_pulse_indicators:
             cve = cve_pulse_indicator.indicator
             if cve in self.guessed_cves:
@@ -295,6 +295,18 @@ class PulseBundleBuilder:
             vulnerabilities.append(vulnerability)
 
         return vulnerabilities
+
+    def _get_pulse_indicators(
+        self, filter_func: Callable[[PulseIndicator], bool]
+    ) -> List[PulseIndicator]:
+        return self._filter_pulse_indicators(filter_func, self.pulse.indicators)
+
+    @staticmethod
+    def _filter_pulse_indicators(
+        filter_func: Callable[[PulseIndicator], bool],
+        pulse_indicators: List[PulseIndicator],
+    ) -> List[PulseIndicator]:
+        return list(filter(filter_func, pulse_indicators))
 
     def _create_vulnerability(self, name) -> Vulnerability:
         external_references = create_vulnerability_external_reference(name)
@@ -315,12 +327,11 @@ class PulseBundleBuilder:
 
         observations = []
 
-        pulse_indicators = list(
-            filter(
-                lambda x: x.type
-                not in self._PULSE_INDICATOR_TYPES_WITH_SPECIAL_HANDLING,
-                self.pulse.indicators,
-            )
+        pulse_indicators = self._get_pulse_indicators(
+            lambda x: x.type not in self._PULSE_INDICATOR_TYPES_WITH_SPECIAL_HANDLING
+        )
+        pulse_indicators = self._filter_pulse_indicators_excluded_types(
+            pulse_indicators
         )
 
         for pulse_indicator in pulse_indicators:
@@ -374,6 +385,29 @@ class PulseBundleBuilder:
 
         return observations
 
+    def _filter_pulse_indicators_excluded_types(
+        self, pulse_indicators: List[PulseIndicator]
+    ) -> List[PulseIndicator]:
+        excluded_types = self.excluded_pulse_indicator_types
+
+        def _exclude_pulse_indicator_types_filter(
+            pulse_indicator: PulseIndicator,
+        ) -> bool:
+            indicator_type = pulse_indicator.type
+            if indicator_type in excluded_types:
+                log.info(
+                    "Excluding pulse indicator '%s' (%s)",
+                    pulse_indicator.indicator,
+                    indicator_type,
+                )
+                return False
+            else:
+                return True
+
+        return self._filter_pulse_indicators(
+            _exclude_pulse_indicator_types_filter, pulse_indicators
+        )
+
     def _create_indicator(
         self,
         name: str,
@@ -416,11 +450,11 @@ class PulseBundleBuilder:
 
         yara_indicators = []
 
-        yara_pulse_indicators = list(
-            filter(
-                lambda x: x.type == self._PULSE_INDICATOR_TYPE_YARA,
-                self.pulse.indicators,
-            )
+        yara_pulse_indicators = self._get_pulse_indicators(
+            lambda x: x.type == self._PULSE_INDICATOR_TYPE_YARA
+        )
+        yara_pulse_indicators = self._filter_pulse_indicators_excluded_types(
+            yara_pulse_indicators
         )
 
         for yara_pulse_indicator in yara_pulse_indicators:

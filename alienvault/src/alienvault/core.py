@@ -17,6 +17,7 @@ from stix2 import Identity, MarkingDefinition  # type: ignore
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter
 from alienvault.utils import (
+    convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
 )
@@ -38,6 +39,9 @@ class AlienVault:
     _CONFIG_REPORT_TYPE = f"{_CONFIG_NAMESPACE}.report_type"
     _CONFIG_GUESS_MALWARE = f"{_CONFIG_NAMESPACE}.guess_malware"
     _CONFIG_GUESS_CVE = f"{_CONFIG_NAMESPACE}.guess_cve"
+    _CONFIG_EXCLUDED_PULSE_INDICATOR_TYPES = (
+        f"{_CONFIG_NAMESPACE}.excluded_pulse_indicator_types"
+    )
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
@@ -103,6 +107,16 @@ class AlienVault:
 
         guess_cve = bool(self._get_configuration(config, self._CONFIG_GUESS_CVE))
 
+        excluded_pulse_indicator_types_str = self._get_configuration(
+            config, self._CONFIG_EXCLUDED_PULSE_INDICATOR_TYPES
+        )
+        excluded_pulse_indicator_types = set()
+        if excluded_pulse_indicator_types_str is not None:
+            excluded_pulse_indicator_types_list = convert_comma_separated_str_to_list(
+                excluded_pulse_indicator_types_str
+            )
+            excluded_pulse_indicator_types = set(excluded_pulse_indicator_types_list)
+
         self.interval_sec = self._get_configuration(
             config, self._CONFIG_INTERVAL_SEC, is_number=True
         )
@@ -134,6 +148,7 @@ class AlienVault:
             report_type,
             guess_malware,
             guess_cve,
+            excluded_pulse_indicator_types,
         )
 
     @staticmethod
