@@ -127,9 +127,12 @@ class ActorImporter:
         self._info("Processing actors completed (imported: {0})", actor_count)
 
     def _process_actor(self, actor: Actor) -> None:
-        self._info("Processing actor {0}...", actor.id)
+        self._info("Processing actor {0} ({1})...", actor.name, actor.id)
 
         actor_bundle = self._create_actor_bundle(actor)
+
+        with open(f"actor_bundle_{actor.id}.json", "w") as f:
+            f.write(actor_bundle.serialize(pretty=True))
 
         self._send_bundle(actor_bundle)
 

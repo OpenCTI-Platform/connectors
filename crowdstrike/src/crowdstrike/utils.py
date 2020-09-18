@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from typing import (
     Any,
     Callable,
-    Dict,
     Generator,
     List,
     Mapping,
@@ -23,16 +22,19 @@ from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.download import Download
 from crowdstrike_client.api.models.report import Actor, Entity, Report
 
-from lxml.html import fromstring
+from lxml.html import fromstring  # type: ignore
 
-from stix2 import (
+from pycti import OpenCTIStix2Utils
+from pycti.utils.constants import LocationTypes
+
+from stix2 import (  # type: ignore
     EqualityComparisonExpression,
     ExternalReference,
     Identity,
-    Location,
     Indicator as STIXIndicator,
     IntrusionSet,
     KillChainPhase,
+    Location,
     Malware,
     MarkingDefinition,
     ObjectPath,
@@ -42,7 +44,11 @@ from stix2 import (
     StringConstant,
     Vulnerability,
 )
-from stix2.v20 import _DomainObject, _RelationshipObject
+from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
+
+
+_X_OPENCTI_LOCATION_TYPE = "x_opencti_location_type"
+_X_OPENCTI_ALIASES = "x_opencti_aliases"
 
 
 logger = logging.getLogger(__name__)
@@ -140,11 +146,34 @@ def datetime_utc_epoch_start() -> datetime:
     return timestamp_to_datetime(0)
 
 
+def _create_random_identifier(identifier_type: str) -> str:
+    return OpenCTIStix2Utils.generate_random_stix_id(identifier_type)
+
+
 def create_external_reference(
     source_name: str, external_id: str, url: str
 ) -> ExternalReference:
     """Create an external reference."""
     return ExternalReference(source_name=source_name, external_id=external_id, url=url)
+
+
+def create_identity(
+    name: str,
+    created_by: Optional[Identity] = None,
+    identity_class: Optional[str] = None,
+    custom_properties: Optional[Mapping[str, Any]] = None,
+) -> Identity:
+    """Create an identity."""
+    if custom_properties is None:
+        custom_properties = {}
+
+    return Identity(
+        id=_create_random_identifier("identity"),
+        created_by_ref=created_by,
+        name=name,
+        identity_class=identity_class,
+        custom_properties=custom_properties,
+    )
 
 
 def create_vulnerability(
@@ -192,23 +221,41 @@ def create_kill_chain_phase(kill_chain_name: str, phase_name: str) -> KillChainP
 
 def create_intrusion_set(
     name: str,
-    aliases: List[str],
-    author: Identity,
-    primary_motivation: Optional[str],
-    secondary_motivations: List[str],
-    external_references: List[ExternalReference],
-    object_marking_refs: List[MarkingDefinition],
+    created_by: Optional[Identity] = None,
+    created: Optional[datetime] = None,
+    modified: Optional[datetime] = None,
+    description: Optional[str] = None,
+    aliases: Optional[List[str]] = None,
+    first_seen: Optional[datetime] = None,
+    last_seen: Optional[datetime] = None,
+    goals: Optional[List[str]] = None,
+    resource_level: Optional[str] = None,
+    primary_motivation: Optional[str] = None,
+    secondary_motivations: Optional[List[str]] = None,
+    labels: Optional[List[str]] = None,
+    confidence: Optional[int] = None,
+    external_references: Optional[List[ExternalReference]] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> IntrusionSet:
     """Create an intrusion set."""
     return IntrusionSet(
-        created_by_ref=author,
+        id=_create_random_identifier("intrusion-set"),
+        created_by_ref=created_by,
+        created=created,
+        modified=modified,
         name=name,
+        description=description,
         aliases=aliases,
+        first_seen=first_seen,
+        last_seen=last_seen,
+        goals=goals,
+        resource_level=resource_level,
         primary_motivation=primary_motivation,
         secondary_motivations=secondary_motivations,
-        labels=["intrusion-set"],
+        labels=labels,
+        confidence=confidence,
         external_references=external_references,
-        object_marking_refs=object_marking_refs,
+        object_marking_refs=object_markings,
     )
 
 
@@ -274,104 +321,151 @@ def create_intrusion_set_from_name(
     )
 
 
-def create_organization(name: str, author: Optional[Identity] = None) -> Identity:
+def create_organization(name: str, created_by: Optional[Identity] = None) -> Identity:
     """Create an organization."""
-    return Identity(
-        created_by_ref=author,
-        name=name,
+    return create_identity(
+        name,
+        created_by=created_by,
         identity_class="organization",
     )
 
 
-def create_sector(name: str, author: Identity) -> Identity:
+def create_sector(name: str, created_by: Identity) -> Identity:
     """Create a sector."""
-    return Identity(
-        created_by_ref=author,
-        name=name,
+    return create_identity(
+        name,
+        created_by=created_by,
         identity_class="class",
     )
 
 
-def create_sector_from_entity(entity: Entity, author: Identity) -> Optional[Identity]:
-    """Create a sector from entity."""
-    sector_name = entity.value
-    if sector_name is None or not sector_name:
+def create_sector_from_entity(
+    entity: Entity, created_by: Identity
+) -> Optional[Identity]:
+    """Create a sector from an entity."""
+    name = entity.value
+    if name is None or not name:
         return None
-    return create_sector(sector_name, author)
+
+    return create_sector(name, created_by)
 
 
 def create_sectors_from_entities(
-    entities: List[Entity], author: Identity
+    entities: List[Entity], created_by: Identity
 ) -> List[Identity]:
     """Create sectors from entities."""
     sectors = []
+
     for entity in entities:
-        sector = create_sector_from_entity(entity, author)
+        sector = create_sector_from_entity(entity, created_by)
         if sector is None:
             continue
+
         sectors.append(sector)
+
     return sectors
 
 
-def create_region(entity: Entity, author: Identity) -> Identity:
-    """Create a region"""
-    custom_properties: Dict[str, Any] = {"x_opencti_location_type": "Region"}
+def create_location(
+    name: str,
+    created_by: Optional[Identity] = None,
+    region: Optional[str] = None,
+    country: Optional[str] = None,
+    custom_properties: Optional[Mapping[str, Any]] = None,
+) -> Location:
+    """Create a location."""
+    if custom_properties is None:
+        custom_properties = {}
 
     return Location(
-        created_by_ref=author,
-        name=entity.value,
-        region=entity.value,
+        id=_create_random_identifier("location"),
+        created_by_ref=created_by,
+        name=name,
+        region=region,
+        country=country,
         custom_properties=custom_properties,
     )
 
 
-def create_country(entity: Entity, author: Identity) -> Identity:
-    """Create a country"""
-    custom_properties: Dict[str, Any] = {"x_opencti_location_type": "Country"}
-
-    if entity.slug is not None:
-        custom_properties["x_opencti_aliases"] = [entity.slug.upper()]
-
-    return Identity(
-        created_by_ref=author,
-        name=entity.value,
-        country=entity.slug.upper(),
-        custom_properties=custom_properties,
+def create_region(name: str, created_by: Identity) -> Location:
+    """Create a region."""
+    return create_location(
+        name,
+        created_by=created_by,
+        region=name,
+        custom_properties={_X_OPENCTI_LOCATION_TYPE: LocationTypes.REGION.value},
     )
+
+
+def create_region_from_entity(entity: Entity, created_by: Identity) -> Location:
+    """Create a region from an entity."""
+    name = entity.value
+    if name is None:
+        raise TypeError("Entity value is None")
+
+    return create_region(name, created_by=created_by)
+
+
+def create_country(name: str, code: str, created_by: Identity) -> Location:
+    """Create a country."""
+    code = code.upper()
+
+    return create_location(
+        name,
+        created_by=created_by,
+        country=code,
+        custom_properties={
+            _X_OPENCTI_ALIASES: [code],
+            _X_OPENCTI_LOCATION_TYPE: LocationTypes.COUNTRY.value,
+        },
+    )
+
+
+def create_country_from_entity(entity: Entity, created_by: Identity) -> Location:
+    """Create a country from an entity."""
+    name = entity.value
+    if name is None:
+        raise TypeError("Entity value is None")
+
+    code = entity.slug
+    if code is None:
+        raise TypeError("Entity slug is None")
+
+    return create_country(name, code, created_by)
 
 
 def create_relationship(
     relationship_type: str,
-    author: Identity,
+    created_by: Identity,
     source: _DomainObject,
     target: _DomainObject,
-    object_marking_refs: List[MarkingDefinition],
-    start_time: datetime,
-    stop_time: datetime,
-    confidence_level: int,
+    confidence: int,
+    object_markings: List[MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
 ) -> Relationship:
     """Create a relationship."""
     return Relationship(
-        created_by_ref=author,
+        created_by_ref=created_by,
         relationship_type=relationship_type,
-        source_ref=source.id,
-        target_ref=target.id,
-        object_marking_refs=object_marking_refs,
+        source_ref=source,
+        target_ref=target,
         start_time=start_time,
         stop_time=stop_time,
-        confidence=confidence_level,
+        confidence=confidence,
+        object_marking_refs=object_markings,
     )
 
 
 def create_relationships(
     relationship_type: str,
-    author: Identity,
+    created_by: Identity,
     sources: List[_DomainObject],
     targets: List[_DomainObject],
-    object_marking_refs: List[MarkingDefinition],
-    start_time: datetime,
-    stop_time: datetime,
-    confidence_level: int,
+    confidence: int,
+    object_markings: List[MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
 ) -> List[Relationship]:
     """Create relationships."""
     relationships = []
@@ -379,81 +473,103 @@ def create_relationships(
         for target in targets:
             relationship = create_relationship(
                 relationship_type,
-                author,
+                created_by,
                 source,
                 target,
-                object_marking_refs,
-                start_time,
-                stop_time,
-                confidence_level,
+                confidence,
+                object_markings,
+                start_time=start_time,
+                stop_time=stop_time,
             )
             relationships.append(relationship)
     return relationships
 
 
 def create_targets_relationships(
-    author: Identity,
+    created_by: Identity,
     sources: List[_DomainObject],
     targets: List[_DomainObject],
-    object_marking_refs: List[MarkingDefinition],
-    start_time: datetime,
-    stop_time: datetime,
-    confidence_level: int,
+    confidence: int,
+    object_markings: List[MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
 ) -> List[Relationship]:
     """Create 'targets' relationships."""
     return create_relationships(
         "targets",
-        author,
+        created_by,
         sources,
         targets,
-        object_marking_refs,
-        start_time,
-        stop_time,
-        confidence_level,
+        confidence,
+        object_markings,
+        start_time=start_time,
+        stop_time=stop_time,
     )
 
 
 def create_uses_relationships(
-    author: Identity,
+    created_by: Identity,
     sources: List[_DomainObject],
     targets: List[_DomainObject],
-    object_marking_refs: List[MarkingDefinition],
-    start_time: datetime,
-    stop_time: datetime,
-    confidence_level: int,
+    confidence: int,
+    object_markings: List[MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
 ) -> List[Relationship]:
     """Create 'uses' relationships."""
     return create_relationships(
         "uses",
-        author,
+        created_by,
         sources,
         targets,
-        object_marking_refs,
-        start_time,
-        stop_time,
-        confidence_level,
+        confidence,
+        object_markings,
+        start_time=start_time,
+        stop_time=stop_time,
     )
 
 
 def create_indicates_relationships(
-    author: Identity,
+    created_by: Identity,
     sources: List[_DomainObject],
     targets: List[_DomainObject],
-    object_marking_refs: List[MarkingDefinition],
-    start_time: datetime,
-    stop_time: datetime,
-    confidence_level: int,
+    confidence: int,
+    object_markings: List[MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
 ) -> List[Relationship]:
     """Create 'indicates' relationships."""
     return create_relationships(
         "indicates",
-        author,
+        created_by,
         sources,
         targets,
-        object_marking_refs,
-        start_time,
-        stop_time,
-        confidence_level,
+        confidence,
+        object_markings,
+        start_time=start_time,
+        stop_time=stop_time,
+    )
+
+
+def create_originates_from_relationships(
+    created_by: Identity,
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
+    confidence: int,
+    object_markings: List[MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
+) -> List[Relationship]:
+    """Create 'originates-from' relationships."""
+    return create_relationships(
+        "originates-from",
+        created_by,
+        sources,
+        targets,
+        confidence,
+        object_markings,
+        start_time=start_time,
+        stop_time=stop_time,
     )
 
 
@@ -587,26 +703,32 @@ def create_stix2_report_from_report(
     )
 
 
-def split_countries_and_regions(
+def create_regions_and_countries_from_entities(
     entities: List[Entity], author: Identity
-) -> Tuple[List[Identity], List[Identity]]:
-    target_regions = []
-    target_countries = []
+) -> Tuple[List[Location], List[Location]]:
+    regions = []
+    countries = []
 
     for entity in entities:
         if entity.slug is None or entity.value is None:
             continue
 
+        # Do not create region/country for unknown.
+        if entity.slug == "unknown":
+            continue
+
         # Target countries may also contain regions.
         # Use hack to differentiate between countries and regions.
         if len(entity.slug) > 2:
-            target_region = create_region(entity, author)
-            target_regions.append(target_region)
-        else:
-            target_country = create_country(entity, author)
-            target_countries.append(target_country)
+            target_region = create_region_from_entity(entity, author)
 
-    return target_regions, target_countries
+            regions.append(target_region)
+        else:
+            target_country = create_country_from_entity(entity, author)
+
+            countries.append(target_country)
+
+    return regions, countries
 
 
 def create_file_from_download(download: Download) -> Mapping[str, str]:

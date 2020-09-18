@@ -21,7 +21,7 @@ crowdstrike:
   report_start_timestamp: 0                                         # BEWARE! All the reports!
   report_status: 'New'
   report_include_types: 'notice,tipper,intelligence report,periodic report'
-  report_type: 'Threat Report'
+  report_type: 'threat-report'
   report_guess_malware: false                                       # Use report tags to guess malware
   indicator_start_timestamp: 0                                      # BEWARE! All the indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'

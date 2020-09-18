@@ -15,9 +15,6 @@ from pycti.connector.opencti_connector_helper import get_config_variable
 from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 from crowdstrike.actors import ActorImporter
-from crowdstrike.indicators import IndicatorImporter
-from crowdstrike.reports import ReportImporter
-from crowdstrike.rules_yara_master import RulesYaraMasterImporter
 from crowdstrike.utils import convert_comma_separated_str_to_list, create_organization
 
 
@@ -62,7 +59,7 @@ class CrowdStrike:
         "closed": 3,
     }
 
-    _DEFAULT_REPORT_TYPE = "Threat Report"
+    _DEFAULT_REPORT_TYPE = "threat-report"
 
     _STATE_LAST_RUN = "last_run"
 
@@ -151,42 +148,42 @@ class CrowdStrike:
             tlp_marking,
         )
 
-        self.report_importer = ReportImporter(
-            self.helper,
-            client.intel_api.reports,
-            update_existing_data,
-            author,
-            report_start_timestamp,
-            tlp_marking,
-            report_include_types,
-            report_status,
-            report_type,
-            report_guess_malware,
-        )
-
-        self.indicator_importer = IndicatorImporter(
-            self.helper,
-            client.intel_api.indicators,
-            client.intel_api.reports,
-            update_existing_data,
-            author,
-            indicator_start_timestamp,
-            tlp_marking,
-            indicator_exclude_types,
-            report_status,
-            report_type,
-        )
-
-        self.rules_yara_master_importer = RulesYaraMasterImporter(
-            self.helper,
-            client.intel_api.rules,
-            client.intel_api.reports,
-            author,
-            tlp_marking,
-            update_existing_data,
-            report_status,
-            report_type,
-        )
+        # self.report_importer = ReportImporter(
+        #     self.helper,
+        #     client.intel_api.reports,
+        #     update_existing_data,
+        #     author,
+        #     report_start_timestamp,
+        #     tlp_marking,
+        #     report_include_types,
+        #     report_status,
+        #     report_type,
+        #     report_guess_malware,
+        # )
+        #
+        # self.indicator_importer = IndicatorImporter(
+        #     self.helper,
+        #     client.intel_api.indicators,
+        #     client.intel_api.reports,
+        #     update_existing_data,
+        #     author,
+        #     indicator_start_timestamp,
+        #     tlp_marking,
+        #     indicator_exclude_types,
+        #     report_status,
+        #     report_type,
+        # )
+        #
+        # self.rules_yara_master_importer = RulesYaraMasterImporter(
+        #     self.helper,
+        #     client.intel_api.rules,
+        #     client.intel_api.reports,
+        #     author,
+        #     tlp_marking,
+        #     update_existing_data,
+        #     report_status,
+        #     report_type,
+        # )
 
     @staticmethod
     def _read_configuration() -> Dict[str, str]:

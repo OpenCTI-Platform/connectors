@@ -31,7 +31,7 @@ from crowdstrike.utils import (
     create_uses_relationships,
     datetime_utc_epoch_start,
     datetime_utc_now,
-    split_countries_and_regions,
+    create_regions_and_countries_from_entities,
 )
 
 logger = logging.getLogger(__name__)
@@ -167,7 +167,10 @@ class ReportBundleBuilder:
 
         report_target_countries = self.report.target_countries
         if report_target_countries:
-            target_regions, target_countries = split_countries_and_regions(
+            (
+                target_regions,
+                target_countries,
+            ) = create_regions_and_countries_from_entities(
                 report_target_countries, self.author
             )
 
