@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""OpenCTI CrowdStrike actor bundle builder module."""
+"""OpenCTI CrowdStrike actor builder module."""
 
 import logging
 from typing import List, Optional, Tuple

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""OpenCTI CrowdStrike actors importer module."""
+"""OpenCTI CrowdStrike actor importer module."""
 
 from typing import Any, Generator, List, Mapping, Optional
 
@@ -11,7 +11,7 @@ from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 from stix2 import Bundle, Identity, MarkingDefinition
 
-from crowdstrike.actor_bundle_builder import ActorBundleBuilder
+from crowdstrike.actor.builder import ActorBundleBuilder
 from crowdstrike.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 
 
@@ -131,8 +131,8 @@ class ActorImporter:
 
         actor_bundle = self._create_actor_bundle(actor)
 
-        with open(f"actor_bundle_{actor.id}.json", "w") as f:
-            f.write(actor_bundle.serialize(pretty=True))
+        # with open(f"actor_bundle_{actor.id}.json", "w") as f:
+        #     f.write(actor_bundle.serialize(pretty=True))
 
         self._send_bundle(actor_bundle)
 

@@ -14,7 +14,7 @@ from pycti.connector.opencti_connector_helper import get_config_variable
 
 from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
-from crowdstrike.actors import ActorImporter
+from crowdstrike.actor.importer import ActorImporter
 from crowdstrike.utils import convert_comma_separated_str_to_list, create_organization
 
 
