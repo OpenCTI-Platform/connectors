@@ -4,9 +4,9 @@
 import re
 from typing import Any, Dict, List, Mapping, Optional, Set
 
-from pycti.connector.opencti_connector_helper import (
+from pycti.connector.opencti_connector_helper import (  # type: ignore
     OpenCTIConnectorHelper,
-)  # type: ignore # noqa: E501
+)
 
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore
@@ -32,24 +32,30 @@ class PulseImporter:
         client: AlienVaultClient,
         author: Identity,
         tlp_marking: MarkingDefinition,
+        create_observables: bool,
+        create_indicators: bool,
         update_existing_data: bool,
         default_latest_timestamp: str,
         report_status: int,
         report_type: str,
         guess_malware: bool,
         guess_cve: bool,
+        excluded_pulse_indicator_types: Set[str],
     ) -> None:
         """Initialize AlienVault indicator importer."""
         self.helper = helper
         self.client = client
         self.author = author
         self.tlp_marking = tlp_marking
+        self.create_observables = create_observables
+        self.create_indicators = create_indicators
         self.update_existing_data = update_existing_data
         self.default_latest_timestamp = default_latest_timestamp
         self.report_status = report_status
         self.report_type = report_type
         self.guess_malware = guess_malware
         self.guess_cve = guess_cve
+        self.excluded_pulse_indicator_types = excluded_pulse_indicator_types
 
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
@@ -118,6 +124,9 @@ class PulseImporter:
         if pulse_bundle is None:
             return False
 
+        # with open(f"bundle_{pulse.id}.json", "w") as f:
+        #     f.write(pulse_bundle.serialize(pretty=True))
+
         self._send_bundle(pulse_bundle)
 
         return True
@@ -126,22 +135,28 @@ class PulseImporter:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]
+        create_observables = self.create_observables
+        create_indicators = self.create_indicators
         confidence_level = self._confidence_level()
         report_status = self.report_status
         report_type = self.report_type
         guessed_malwares = self._guess_malwares_from_tags(pulse.tags)
         guessed_cves = self._guess_cves_from_tags(pulse.tags)
+        excluded_pulse_indicator_types = self.excluded_pulse_indicator_types
 
         bundle_builder = PulseBundleBuilder(
             pulse,
             author,
             source_name,
             object_marking_refs,
+            create_observables,
+            create_indicators,
             confidence_level,
             report_status,
             report_type,
             guessed_malwares,
             guessed_cves,
+            excluded_pulse_indicator_types,
         )
 
         try:
@@ -190,9 +205,9 @@ class PulseImporter:
             if guess is None:
                 guess = self._GUESS_NOT_A_MALWARE
 
-                stix_id = self._fetch_malware_stix_id_by_name(tag)
-                if stix_id is not None:
-                    guess = stix_id
+                standard_id = self._fetch_malware_standard_id_by_name(tag)
+                if standard_id is not None:
+                    guess = standard_id
 
                 self.malware_guess_cache[tag] = guess
 
@@ -203,10 +218,10 @@ class PulseImporter:
                 malwares[tag] = guess
         return malwares
 
-    def _fetch_malware_stix_id_by_name(self, name: str) -> Optional[str]:
+    def _fetch_malware_standard_id_by_name(self, name: str) -> Optional[str]:
         filters = [
             self._create_filter("name", name),
-            self._create_filter("alias", name),
+            self._create_filter("aliases", name),
         ]
         for _filter in filters:
             malwares = self.helper.api.malware.list(filters=_filter)
@@ -214,7 +229,7 @@ class PulseImporter:
                 if len(malwares) > 1:
                     self._info("More then one malware for '{0}'", name)
                 malware = malwares[0]
-                return malware["stix_id_key"]
+                return malware["standard_id"]
         return None
 
     @staticmethod

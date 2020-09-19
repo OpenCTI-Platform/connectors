@@ -25,5 +25,9 @@ class AlienVaultClient:
     ) -> List[Pulse]:
         """Return subscribed pulses."""
         pulse_data = self.otx.getsince(modified_since, limit=limit)
+
+        # with open("pulses.json", "w") as f:
+        #     f.write(json.dumps(pulse_data))
+
         pulses = parse_obj_as(List[Pulse], pulse_data)
         return pulses
