@@ -20,12 +20,12 @@ from typing import (
 
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.download import Download
-from crowdstrike_client.api.models.report import Actor, Entity, Report
+from crowdstrike_client.api.models.report import Entity, Report
 
 from lxml.html import fromstring  # type: ignore
 
-from pycti import OpenCTIStix2Utils
-from pycti.utils.constants import LocationTypes
+from pycti import OpenCTIStix2Utils  # type: ignore
+from pycti.utils.constants import LocationTypes  # type: ignore
 
 from stix2 import (  # type: ignore
     EqualityComparisonExpression,
@@ -49,6 +49,8 @@ from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
 
 _X_OPENCTI_LOCATION_TYPE = "x_opencti_location_type"
 _X_OPENCTI_ALIASES = "x_opencti_aliases"
+_X_OPENCTI_REPORT_STATUS = "x_opencti_report_status"
+_X_OPENCTI_FILES = "x_opencti_files"
 
 
 logger = logging.getLogger(__name__)
@@ -154,7 +156,7 @@ def create_external_reference(
     source_name: str, external_id: str, url: str
 ) -> ExternalReference:
     """Create an external reference."""
-    return ExternalReference(source_name=source_name, external_id=external_id, url=url)
+    return ExternalReference(source_name=source_name, url=url, external_id=external_id)
 
 
 def create_identity(
@@ -194,23 +196,25 @@ def create_vulnerability(
 
 def create_malware(
     name: str,
-    aliases: List[str],
-    author: Identity,
-    kill_chain_phases: List[KillChainPhase],
-    external_references: List[ExternalReference],
-    object_marking_refs: List[MarkingDefinition],
     malware_id: Optional[str] = None,
+    created_by: Optional[Identity] = None,
+    is_family: bool = False,
+    kill_chain_phases: Optional[List[KillChainPhase]] = None,
+    confidence: Optional[int] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> Malware:
     """Create a malware."""
+    if malware_id is None:
+        malware_id = _create_random_identifier("malware")
+
     return Malware(
         id=malware_id,
-        created_by_ref=author,
+        created_by_ref=created_by,
         name=name,
-        aliases=aliases,
+        is_family=is_family,
         kill_chain_phases=kill_chain_phases,
-        labels=["malware"],
-        external_references=external_references,
-        object_marking_refs=object_marking_refs,
+        confidence=confidence,
+        object_marking_refs=object_markings,
     )
 
 
@@ -259,29 +263,13 @@ def create_intrusion_set(
     )
 
 
-def create_intrusion_set_from_actor(
-    actor: Actor,
-    author: Identity,
-    external_references: List[ExternalReference],
-    object_marking_refs: List[MarkingDefinition],
-) -> IntrusionSet:
-    """Create an intrusion set from actor model."""
-    name = actor.name
-    if name is None:
-        name = f"NO_NAME_{actor.id}"
-
-    return create_intrusion_set_from_name(
-        name, author, external_references, object_marking_refs
-    )
-
-
 def create_intrusion_sets_from_names(
     names: List[str],
     author: Identity,
     external_references: List[ExternalReference],
     object_marking_refs: List[MarkingDefinition],
 ) -> List[IntrusionSet]:
-    """Create intrusion sets with given names."""
+    """Create intrusion sets from given names."""
     intrusion_sets = []
 
     for name in names:
@@ -296,28 +284,25 @@ def create_intrusion_sets_from_names(
 
 def create_intrusion_set_from_name(
     name: str,
-    author: Identity,
+    created_by: Identity,
+    confidence: int,
     external_references: List[ExternalReference],
-    object_marking_refs: List[MarkingDefinition],
+    object_markings: List[MarkingDefinition],
 ) -> IntrusionSet:
-    """Create intrusion set with given name."""
+    """Create intrusion set from given name."""
     aliases: List[str] = []
 
     alias = name.replace(" ", "")
     if alias != name:
         aliases.append(alias)
 
-    primary_motivation = None
-    secondary_motivations: List[str] = []
-
     return create_intrusion_set(
         name,
-        aliases,
-        author,
-        primary_motivation,
-        secondary_motivations,
-        external_references,
-        object_marking_refs,
+        created_by=created_by,
+        aliases=aliases,
+        confidence=confidence,
+        external_references=external_references,
+        object_markings=object_markings,
     )
 
 
@@ -619,48 +604,86 @@ def remove_html_tags(html_text: str) -> str:
 
 def create_report(
     name: str,
-    description: str,
     published: datetime,
-    author: Identity,
-    object_refs: List[_DomainObject],
-    external_references: List[ExternalReference],
-    object_marking_refs: List[MarkingDefinition],
-    report_status: int,
-    report_type: str,
-    confidence_level: int,
-    labels: List[str],
-    files: List[Mapping[str, str]],
+    objects: List[Union[_DomainObject, _RelationshipObject]],
+    created_by: Optional[Identity] = None,
+    created: Optional[datetime] = None,
+    modified: Optional[datetime] = None,
+    description: Optional[str] = None,
+    report_types: Optional[List[str]] = None,
+    labels: Optional[List[str]] = None,
+    confidence: Optional[int] = None,
+    external_references: Optional[List[ExternalReference]] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
+    x_opencti_report_status: Optional[int] = None,
+    x_opencti_files: Optional[List[Mapping[str, str]]] = None,
 ) -> STIXReport:
     """Create a report."""
     return STIXReport(
-        created_by_ref=author,
+        id=_create_random_identifier("report"),
+        created_by_ref=created_by,
+        created=created,
+        modified=modified,
         name=name,
         description=description,
+        report_types=report_types,
         published=published,
-        object_refs=object_refs,
+        object_refs=objects,
         labels=labels,
+        confidence=confidence,
         external_references=external_references,
-        object_marking_refs=object_marking_refs,
-        confidence=confidence_level,
-        report_types=[report_type],
+        object_marking_refs=object_markings,
         custom_properties={
-            "x_opencti_report_status": report_status,
-            "x_opencti_files": files,
+            _X_OPENCTI_REPORT_STATUS: x_opencti_report_status,
+            _X_OPENCTI_FILES: x_opencti_files,
         },
     )
 
 
 def create_stix2_report_from_report(
     report: Report,
-    author: Identity,
     source_name: str,
-    object_refs: List[_DomainObject],
-    object_marking_refs: List[MarkingDefinition],
-    report_status: int,
-    report_type: str,
-    confidence_level: int,
-    files: List[Mapping[str, str]],
+    created_by: Identity,
+    objects: List[Union[_DomainObject, _RelationshipObject]],
+    report_types: List[str],
+    confidence: int,
+    object_markings: List[MarkingDefinition],
+    x_opencti_report_status: int,
+    x_opencti_files: Optional[List[Mapping[str, str]]] = None,
 ) -> STIXReport:
+    """Create a STIX2 report from Report."""
+    report_name = report.name
+
+    report_created_date = report.created_date
+    if report_created_date is None:
+        report_created_date = datetime_utc_now()
+
+    report_last_modified_date = report.last_modified_date
+    if report_last_modified_date is None:
+        report_last_modified_date = report_created_date
+
+    report_description = report.description
+    report_rich_text_description = report.rich_text_description
+    report_short_description = report.short_description
+
+    description = None
+    if report_rich_text_description is not None and report_rich_text_description:
+        description = remove_html_tags(report_rich_text_description)
+    elif report_description is not None and report_description:
+        description = report_description
+    elif report_short_description:
+        description = report_short_description
+
+    labels = []
+    report_tags = report.tags
+    if report_tags is not None:
+        for tag in report_tags:
+            value = tag.value
+            if value is None or not value:
+                continue
+
+            labels.append(value)
+
     external_references = []
     report_url = report.url
     if report_url is not None and report_url:
@@ -669,37 +692,21 @@ def create_stix2_report_from_report(
         )
         external_references.append(external_reference)
 
-    tags = []
-    report_tags = report.tags
-    if report_tags is not None:
-        tags = create_tags(report_tags, source_name)
-
-    if report.rich_text_description is not None:
-        description = remove_html_tags(report.rich_text_description)
-    elif report.description is not None:
-        description = report.description
-    elif report.short_description is not None:
-        description = report.short_description
-    else:
-        description = "N/A"
-
-    report_created_date = report.created_date
-    if report_created_date is None:
-        report_created_date = datetime_utc_now()
-
     return create_report(
-        report.name,
-        description,
+        report_name,
         report_created_date,
-        author,
-        object_refs,
-        external_references,
-        object_marking_refs,
-        report_status,
-        report_type,
-        confidence_level,
-        tags,
-        files,
+        objects,
+        created_by=created_by,
+        created=report_created_date,
+        modified=report_last_modified_date,
+        description=description,
+        report_types=report_types,
+        labels=labels,
+        confidence=confidence,
+        external_references=external_references,
+        object_markings=object_markings,
+        x_opencti_report_status=x_opencti_report_status,
+        x_opencti_files=x_opencti_files,
     )
 
 

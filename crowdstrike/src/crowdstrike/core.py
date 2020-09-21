@@ -15,6 +15,7 @@ from pycti.connector.opencti_connector_helper import get_config_variable
 from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 from crowdstrike.actor.importer import ActorImporter
+from crowdstrike.reports import ReportImporter
 from crowdstrike.utils import convert_comma_separated_str_to_list, create_organization
 
 
@@ -148,19 +149,19 @@ class CrowdStrike:
             tlp_marking,
         )
 
-        # self.report_importer = ReportImporter(
-        #     self.helper,
-        #     client.intel_api.reports,
-        #     update_existing_data,
-        #     author,
-        #     report_start_timestamp,
-        #     tlp_marking,
-        #     report_include_types,
-        #     report_status,
-        #     report_type,
-        #     report_guess_malware,
-        # )
-        #
+        self.report_importer = ReportImporter(
+            self.helper,
+            client.intel_api.reports,
+            update_existing_data,
+            author,
+            report_start_timestamp,
+            tlp_marking,
+            report_include_types,
+            report_status,
+            report_type,
+            report_guess_malware,
+        )
+
         # self.indicator_importer = IndicatorImporter(
         #     self.helper,
         #     client.intel_api.indicators,
