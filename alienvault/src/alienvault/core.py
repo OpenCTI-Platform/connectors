@@ -17,10 +17,11 @@ from stix2 import Identity, MarkingDefinition  # type: ignore
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter
 from alienvault.utils import (
-    DEFAULT_TLP_MARKING_DEFINITION,
+    convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
 )
+from alienvault.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 
 
 class AlienVault:
@@ -31,11 +32,16 @@ class AlienVault:
     _CONFIG_BASE_URL = f"{_CONFIG_NAMESPACE}.base_url"
     _CONFIG_API_KEY = f"{_CONFIG_NAMESPACE}.api_key"
     _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
+    _CONFIG_CREATE_OBSERVABLES = f"{_CONFIG_NAMESPACE}.create_observables"
+    _CONFIG_CREATE_INDICATORS = f"{_CONFIG_NAMESPACE}.create_indicators"
     _CONFIG_PULSE_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.pulse_start_timestamp"
     _CONFIG_REPORT_STATUS = f"{_CONFIG_NAMESPACE}.report_status"
     _CONFIG_REPORT_TYPE = f"{_CONFIG_NAMESPACE}.report_type"
     _CONFIG_GUESS_MALWARE = f"{_CONFIG_NAMESPACE}.guess_malware"
     _CONFIG_GUESS_CVE = f"{_CONFIG_NAMESPACE}.guess_cve"
+    _CONFIG_EXCLUDED_PULSE_INDICATOR_TYPES = (
+        f"{_CONFIG_NAMESPACE}.excluded_pulse_indicator_types"
+    )
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
@@ -46,6 +52,10 @@ class AlienVault:
         "analyzed": 2,
         "closed": 3,
     }
+
+    _DEFAULT_CREATE_OBSERVABLES = True
+    _DEFAULT_CREATE_INDICATORS = True
+    _DEFAULT_REPORT_TYPE = "threat-report"
 
     _CONNECTOR_RUN_INTERVAL_SEC = 60
 
@@ -62,21 +72,50 @@ class AlienVault:
         tlp = self._get_configuration(config, self._CONFIG_TLP)
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
 
+        create_observables = self._get_configuration(
+            config, self._CONFIG_CREATE_OBSERVABLES
+        )
+        if create_observables is None:
+            create_observables = self._DEFAULT_CREATE_OBSERVABLES
+        else:
+            create_observables = bool(create_observables)
+
+        create_indicators = self._get_configuration(
+            config, self._CONFIG_CREATE_INDICATORS
+        )
+        if create_indicators is None:
+            create_indicators = self._DEFAULT_CREATE_INDICATORS
+        else:
+            create_indicators = bool(create_indicators)
+
         default_latest_pulse_timestamp = self._get_configuration(
             config, self._CONFIG_PULSE_START_TIMESTAMP
         )
 
         report_status_str = self._get_configuration(config, self._CONFIG_REPORT_STATUS)
-        report_type = self._get_configuration(config, self._CONFIG_REPORT_TYPE)
         report_status = self._convert_report_status_str_to_report_status_int(
             report_status_str
         )
+
+        report_type = self._get_configuration(config, self._CONFIG_REPORT_TYPE)
+        if not report_type:
+            report_type = self._DEFAULT_REPORT_TYPE
 
         guess_malware = bool(
             self._get_configuration(config, self._CONFIG_GUESS_MALWARE)
         )
 
         guess_cve = bool(self._get_configuration(config, self._CONFIG_GUESS_CVE))
+
+        excluded_pulse_indicator_types_str = self._get_configuration(
+            config, self._CONFIG_EXCLUDED_PULSE_INDICATOR_TYPES
+        )
+        excluded_pulse_indicator_types = set()
+        if excluded_pulse_indicator_types_str is not None:
+            excluded_pulse_indicator_types_list = convert_comma_separated_str_to_list(
+                excluded_pulse_indicator_types_str
+            )
+            excluded_pulse_indicator_types = set(excluded_pulse_indicator_types_list)
 
         self.interval_sec = self._get_configuration(
             config, self._CONFIG_INTERVAL_SEC, is_number=True
@@ -101,12 +140,15 @@ class AlienVault:
             client,
             author,
             tlp_marking,
+            create_observables,
+            create_indicators,
             update_existing_data,
             default_latest_pulse_timestamp,
             report_status,
             report_type,
             guess_malware,
             guess_cve,
+            excluded_pulse_indicator_types,
         )
 
     @staticmethod
@@ -156,6 +198,8 @@ class AlienVault:
         self._info("Starting AlienVault connector...")
         while True:
             self._info("Running AlienVault connector...")
+            run_interval = self._CONNECTOR_RUN_INTERVAL_SEC
+
             try:
                 timestamp = self._current_unix_timestamp()
                 current_state = self._load_state()
@@ -179,21 +223,26 @@ class AlienVault:
                     )
                 else:
                     next_run = self._get_interval() - (timestamp - last_run)
+                    run_interval = min(run_interval, next_run)
+
                     self._info(
                         "Connector will not run, next run in: {0} seconds", next_run
                     )
 
-                self._sleep()
+                self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
                 self._info("Connector stop")
                 exit(0)
             except Exception as e:
-                self._error(str(e))
+                self._error("Internal error: {0}", str(e))
                 self._sleep()
 
     @classmethod
-    def _sleep(cls) -> None:
-        time.sleep(cls._CONNECTOR_RUN_INTERVAL_SEC)
+    def _sleep(cls, delay_sec: Optional[int] = None) -> None:
+        sleep_delay = (
+            delay_sec if delay_sec is not None else cls._CONNECTOR_RUN_INTERVAL_SEC
+        )
+        time.sleep(sleep_delay)
 
     @staticmethod
     def _current_unix_timestamp() -> int:
