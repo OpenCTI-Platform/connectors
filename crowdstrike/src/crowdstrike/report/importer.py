@@ -12,7 +12,7 @@ from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # t
 
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
-from crowdstrike.report_bundle_builder import ReportBundleBuilder
+from crowdstrike.report.builder import ReportBundleBuilder
 from crowdstrike.utils import (
     create_file_from_download,
     datetime_to_timestamp,
@@ -166,8 +166,8 @@ class ReportImporter:
         report_file = self._get_report_pdf(report.id)
         report_bundle = self._create_report_bundle(report, report_file)
 
-        with open(f"report_bundle_{report.id}.json", "w") as f:
-            f.write(report_bundle.serialize(pretty=True))
+        # with open(f"report_bundle_{report.id}.json", "w") as f:
+        #     f.write(report_bundle.serialize(pretty=True))
 
         self._send_bundle(report_bundle)
 
