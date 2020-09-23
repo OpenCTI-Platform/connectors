@@ -29,7 +29,7 @@ class VirusTotalConnector:
             "accept": "application/json",
             "content-type": "application/json",
         }
-        self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60 * 24
+        self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
 
     def _process_file(self, observable):
         response = requests.request(
@@ -39,10 +39,11 @@ class VirusTotalConnector:
         )
         json_data = json.loads(response.text)
         if "error" in json_data:
-            raise ValueError(json_data["error"]["message"])
             if json_data["error"]["message"] == "Quota exceeded":
-                self.helper.log_info("Quota Reach, waiting 24 hours.")
+                self.helper.log_info("Quota reached, waiting 1 hour.")
                 sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
+            else:
+                raise ValueError(json_data["error"]["message"])
         if "data" in json_data:
             data = json_data["data"]
             attributes = data["attributes"]
