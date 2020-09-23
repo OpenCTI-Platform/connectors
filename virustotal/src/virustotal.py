@@ -49,18 +49,18 @@ class VirusTotalConnector:
             attributes = data["attributes"]
 
             # Update the current observable
-            self.helper.api.stix_cyber_observable.update_field(
+            final_observabke = self.helper.api.stix_cyber_observable.update_field(
                 id=observable["id"], key="hashes.MD5", value=attributes["md5"]
             )
-            self.helper.api.stix_cyber_observable.update_field(
-                id=observable["id"], key="hashes.SHA-1", value=attributes["sha1"]
+            final_observabke = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observabke["id"], key="hashes.SHA-1", value=attributes["sha1"]
             )
-            self.helper.api.stix_cyber_observable.update_field(
-                id=observable["id"], key="hashes.SHA-256", value=attributes["sha256"]
+            final_observabke = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observabke["id"], key="hashes.SHA-256", value=attributes["sha256"]
             )
             if observable["name"] is None and len(attributes["names"]) > 0:
                 self.helper.api.stix_cyber_observable.update_field(
-                    id=observable["id"], key="name", value=attributes["names"][0]
+                    id=final_observabke["id"], key="name", value=attributes["names"][0]
                 )
 
             # Create external reference
@@ -74,11 +74,11 @@ class VirusTotalConnector:
             for tag in attributes["tags"]:
                 tag_vt = self.helper.api.label.create(value=tag, color="#0059f7")
                 self.helper.api.stix_cyber_observable.add_label(
-                    id=observable["id"], label_id=tag_vt["id"]
+                    id=final_observabke["id"], label_id=tag_vt["id"]
                 )
 
             self.helper.api.stix_cyber_observable.add_external_reference(
-                id=observable["id"],
+                id=final_observabke["id"],
                 external_reference_id=external_reference["id"],
             )
 
