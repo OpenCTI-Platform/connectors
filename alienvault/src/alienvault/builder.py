@@ -325,6 +325,8 @@ class PulseBundleBuilder:
         if not (self.create_observables or self.create_indicators):
             return []
 
+        labels = self._get_labels()
+
         observations = []
 
         pulse_indicators = self._get_pulse_indicators(
@@ -353,7 +355,7 @@ class PulseBundleBuilder:
 
             if self.create_observables:
                 observable = factory.create_observable(
-                    pulse_indicator_value, self.object_markings
+                    pulse_indicator_value, labels, self.object_markings
                 )
 
             # Create an indicator.
@@ -370,6 +372,7 @@ class PulseBundleBuilder:
                     pattern,
                     pattern_type,
                     pulse_indicator.created,
+                    labels,
                 )
 
                 if observable is not None:
@@ -415,16 +418,18 @@ class PulseBundleBuilder:
         pattern: str,
         pattern_type: str,
         valid_from: datetime,
+        labels: List[str],
     ) -> Indicator:
         return create_indicator(
-            name,
-            self.pulse_author,
-            description,
             pattern,
             pattern_type,
-            valid_from,
-            self.confidence_level,
-            self.object_markings,
+            created_by=self.pulse_author,
+            name=name,
+            description=description,
+            valid_from=valid_from,
+            labels=labels,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
         )
 
     @staticmethod
@@ -447,6 +452,8 @@ class PulseBundleBuilder:
     def _create_yara_indicators(self) -> List[Indicator]:
         if not self.create_indicators:
             return []
+
+        labels = self._get_labels()
 
         yara_indicators = []
 
@@ -475,6 +482,7 @@ class PulseBundleBuilder:
                 pattern,
                 pattern_type,
                 yara_pulse_indicator.created,
+                labels,
             )
             yara_indicators.append(yara_indicator)
         return yara_indicators
@@ -503,7 +511,7 @@ class PulseBundleBuilder:
 
     def _create_report(self, objects: List[_DomainObject]) -> Report:
         external_references = self._create_report_external_references()
-        labels = self._create_report_labels()
+        labels = self._get_labels()
 
         return create_report(
             self.pulse.name,
@@ -544,7 +552,7 @@ class PulseBundleBuilder:
     ) -> ExternalReference:
         return create_external_reference(self.source_name, url, external_id=external_id)
 
-    def _create_report_labels(self) -> List[str]:
+    def _get_labels(self) -> List[str]:
         labels = []
         for tag in self.pulse.tags:
             if not tag:

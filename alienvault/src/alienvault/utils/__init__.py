@@ -63,7 +63,7 @@ from alienvault.utils.observables import (
 class ObservationFactory(NamedTuple):
     """Observation factory."""
 
-    create_observable: Callable[[str, List[MarkingDefinition]], _Observable]
+    create_observable: Callable[[str, List[str], List[MarkingDefinition]], _Observable]
     create_indicator_pattern: Callable[[str], str]
 
 
@@ -183,14 +183,15 @@ def create_external_reference(
 
 
 def create_indicator(
-    name: str,
-    created_by: Identity,
-    description: str,
     pattern: str,
     pattern_type: str,
-    valid_from: datetime,
-    confidence: int,
-    object_markings: List[MarkingDefinition],
+    created_by: Optional[Identity] = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    valid_from: Optional[datetime] = None,
+    labels: Optional[List[str]] = None,
+    confidence: Optional[int] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> Indicator:
     """Create an indicator."""
     return Indicator(
@@ -201,6 +202,7 @@ def create_indicator(
         pattern=pattern,
         pattern_type=pattern_type,
         valid_from=valid_from,
+        labels=labels,
         confidence=confidence,
         object_marking_refs=object_markings,
         custom_properties={X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE},
