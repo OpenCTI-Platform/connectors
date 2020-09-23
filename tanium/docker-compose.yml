@@ -1,14 +1,14 @@
 version: "3"
 services:
   connector-hygiene:
-    image: opencti/connector-history:3.3.1
+    image: opencti/connector-tanium:3.3.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=STREAM
-      - CONNECTOR_NAME=History
-      - CONNECTOR_SCOPE=history
+      - CONNECTOR_NAME=Tanium
+      - CONNECTOR_SCOPE=tanium
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
     restart: always

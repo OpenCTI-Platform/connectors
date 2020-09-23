@@ -18,7 +18,7 @@ misp:
   create_reports: True # Required, create report for MISP event
   create_indicators: True # Required, create indicators for attributes
   create_observables: True # Required, create observables for attributes
-  report_class: 'MISP Event' # Optional, report_class if creating report for event
+  report_class: 'misp-event' # Optional, report_class if creating report for event
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: 'opencti:import,type:osint' # Optional, list of tags used for import events
   import_tags_not: '' # Optional, list of tags to not include

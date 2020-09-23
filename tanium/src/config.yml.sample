@@ -5,7 +5,15 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'STREAM'
-  name: 'History'
-  scope: 'history'
+  name: 'Tanium'
+  scope: 'tanium'
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
+
+tanium:
+  url: 'https://console.changeme.com'
+  login: 'ChangeMe'
+  password: 'ChangeMe'
+  indicator_types: 'yara,tanium-signal'
+  observable_types: 'ipv4-addr,ipv6-addr,domain-name,x-opencti-hostname,file,process'
+  import_label: 'tanium'
