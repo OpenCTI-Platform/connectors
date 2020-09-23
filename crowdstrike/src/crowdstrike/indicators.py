@@ -144,16 +144,25 @@ class IndicatorImporter:
         )
 
     def _process_indicator(self, indicator: Indicator) -> bool:
-        self._info("Processing indicator {0}...", indicator.id)
+        self._info(
+            "Processing indicator {0} ({1})...", indicator.indicator, indicator.id
+        )
 
         indicator_reports = self._get_reports_by_code(indicator.reports)
 
         indicator_bundle = self._create_indicator_bundle(indicator, indicator_reports)
         if indicator_bundle is None:
-            self._error("Discarding {0} indicator bundle", indicator.id)
+            self._error(
+                "Discarding indicator {0} ({1}) bundle",
+                indicator.indicator,
+                indicator.id,
+            )
             return False
 
-        self._send_bundle(indicator_bundle)
+        with open(f"indicator_bundle_{indicator_bundle['id']}.json", "w") as f:
+            f.write(indicator_bundle.serialize(pretty=True))
+
+        # self._send_bundle(indicator_bundle)
 
         return True
 

@@ -2,16 +2,13 @@
 """OpenCTI CrowdStrike indicator bundle builder module."""
 
 import logging
-from typing import List, Mapping, Optional
+from typing import List, Mapping, NamedTuple, Optional
 
 from crowdstrike_client.api.models import Indicator
 from crowdstrike_client.api.models.report import Report
 
-from pycti.utils.constants import ObservableTypes
-
 from stix2 import (
     Bundle,
-    ExternalReference,
     Identity,
     Indicator as STIXIndicator,
     IntrusionSet,
@@ -22,112 +19,105 @@ from stix2 import (
     Report as STIXReport,
     Vulnerability,
 )
-from stix2.v20 import _DomainObject
+from stix2.v21 import _DomainObject, _Observable
 
 from crowdstrike.report_fetcher import FetchedReport
 from crowdstrike.utils import (
-    create_equality_observation_expression_str,
-    create_external_reference,
+    OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
+    OBSERVATION_FACTORY_DOMAIN_NAME,
+    OBSERVATION_FACTORY_EMAIL_ADDRESS,
+    OBSERVATION_FACTORY_FILE_MD5,
+    OBSERVATION_FACTORY_FILE_NAME,
+    OBSERVATION_FACTORY_FILE_SHA1,
+    OBSERVATION_FACTORY_FILE_SHA256,
+    OBSERVATION_FACTORY_IPV4_ADDRESS,
+    OBSERVATION_FACTORY_MUTEX,
+    OBSERVATION_FACTORY_URL,
+    OBSERVATION_FACTORY_WINDOWS_SERVICE_NAME,
+    ObservationFactory,
+    create_based_on_relationships,
     create_indicates_relationships,
     create_indicator,
     create_intrusion_sets_from_names,
     create_kill_chain_phase,
     create_malware,
-    create_object_path,
     create_object_refs,
     create_sector,
     create_stix2_report_from_report,
     create_targets_relationships,
     create_uses_relationships,
     create_vulnerability,
+    create_vulnerability_external_references,
 )
 
+
 logger = logging.getLogger(__name__)
+
+
+class Observation(NamedTuple):
+    """Observation."""
+
+    observable: Optional[_Observable]
+    indicator: Optional[STIXIndicator]
+    relationship: Optional[Relationship]
 
 
 class IndicatorBundleBuilder:
     """Indicator bundle builder."""
 
-    _OPENCTI_TYPE_FILE_MD5 = ObservableTypes.FILE_HASH_MD5
-    _OPENCTI_TYPE_FILE_SHA1 = ObservableTypes.FILE_HASH_SHA1
-    _OPENCTI_TYPE_FILE_SHA256 = ObservableTypes.FILE_HASH_SHA256
-    _OPENCTI_TYPE_FILE_NAME = ObservableTypes.FILE_NAME
-    _OPENCTI_TYPE_FILE_PATH = ObservableTypes.FILE_PATH
-    _OPENCTI_TYPE_EMAIL_ADDRESS = ObservableTypes.EMAIL_ADDR
-    _OPENCTI_TYPE_EMAIL_SUBJECT = ObservableTypes.EMAIL_SUBJECT
-    _OPENCTI_TYPE_URL = ObservableTypes.URL
-    _OPENCTI_TYPE_DOMAIN = ObservableTypes.DOMAIN
-    _OPENCTI_TYPE_IPV4_ADDR = ObservableTypes.IPV4_ADDR
-    _OPENCTI_TYPE_MUTEX = ObservableTypes.MUTEX
-    _OPENCTI_TYPE_REGISTRY_KEY = ObservableTypes.REGISTRY_KEY
-    _OPENCTI_TYPE_WINDOWS_SERVICE_NAME = ObservableTypes.WIN_SERVICE_NAME
-    _OPENCTI_TYPE_X509_CERTIFICATE_SERIAL_NUMBER = ObservableTypes.X509_CERT_SN
-    _OPENCTI_TYPE_X509_CERTIFICATE_ISSUER = ObservableTypes.X509_CERT_ISSUER
-
+    # TODO: Rename variable
     _INDICATOR_TYPE_TO_OPENCTI_TYPE = {
-        # "binary_string": "",  # NOT SUPPORTED
-        # "compile_time": "",  # NOT SUPPORTED
-        # "device_name": "",  # NOT SUPPORTED
-        "domain": _OPENCTI_TYPE_DOMAIN,
-        "email_address": _OPENCTI_TYPE_EMAIL_ADDRESS,
-        "email_subject": _OPENCTI_TYPE_EMAIL_SUBJECT,
-        # "event_name": "",  # NOT SUPPORTED
-        # "file_mapping": "",  # NOT SUPPORTED
-        "file_name": _OPENCTI_TYPE_FILE_NAME,
-        "file_path": _OPENCTI_TYPE_FILE_PATH,
-        # "hash_ion": "",  # NOT SUPPORTED
-        "hash_md5": _OPENCTI_TYPE_FILE_MD5,
-        "hash_sha1": _OPENCTI_TYPE_FILE_SHA1,
-        "hash_sha256": _OPENCTI_TYPE_FILE_SHA256,
-        "ip_address": _OPENCTI_TYPE_IPV4_ADDR,
-        # "ip_address_block": "",  # NOT SUPPORTED
-        "mutex_name": _OPENCTI_TYPE_MUTEX,
-        # "password": "",  # NOT SUPPORTED
-        # "persona_name": "",  # NOT SUPPORTED
-        # "phone_number": "",  # NOT SUPPORTED
-        # "port": "",  # NOT SUPPORTED
-        "registry": _OPENCTI_TYPE_REGISTRY_KEY,
-        "semaphore_name": _OPENCTI_TYPE_MUTEX,
-        "service_name": _OPENCTI_TYPE_WINDOWS_SERVICE_NAME,
-        "url": _OPENCTI_TYPE_URL,
-        # "user_agent": "",  # NOT SUPPORTED
-        # "username": "",  # NOT SUPPORTED
-        "x509_serial": _OPENCTI_TYPE_X509_CERTIFICATE_SERIAL_NUMBER,
-        "x509_subject": _OPENCTI_TYPE_X509_CERTIFICATE_ISSUER,
+        # "binary_string": "",  # Ignore.
+        # "compile_time": "",  # Ignore.
+        # "device_name": "",  # Ignore.
+        "domain": OBSERVATION_FACTORY_DOMAIN_NAME,
+        "email_address": OBSERVATION_FACTORY_EMAIL_ADDRESS,
+        # "email_subject": "",  # Ignore.
+        # "event_name": "",  # Ignore.
+        # "file_mapping": "",  # Ignore.
+        "file_name": OBSERVATION_FACTORY_FILE_NAME,
+        # "file_path": "",  # Ignore.
+        # "hash_ion": "",  # Ignore.
+        "hash_md5": OBSERVATION_FACTORY_FILE_MD5,
+        "hash_sha1": OBSERVATION_FACTORY_FILE_SHA1,
+        "hash_sha256": OBSERVATION_FACTORY_FILE_SHA256,
+        "ip_address": OBSERVATION_FACTORY_IPV4_ADDRESS,
+        "ip_address_block": OBSERVATION_FACTORY_IPV4_ADDRESS,
+        "mutex_name": OBSERVATION_FACTORY_MUTEX,
+        # "password": "",  # Ignore.
+        # "persona_name": "",  # Ignore.
+        # "phone_number": "",  # Ignore.
+        # "port": "",  # Ignore.
+        # "registry": "",  # TODO
+        # "semaphore_name": "",  # Ignore.
+        "service_name": OBSERVATION_FACTORY_WINDOWS_SERVICE_NAME,
+        "url": OBSERVATION_FACTORY_URL,
+        # "user_agent": "",  # Ignore.
+        # "username": "",  # Ignore.
+        # "x509_serial": "",  # TODO
+        # "x509_subject": "",  # TODO
+        "bitcoin_address": OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
+        "coin_address": OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     }
 
-    _OPENCTI_TO_STIX2 = {
-        _OPENCTI_TYPE_DOMAIN: create_object_path("domain-name", ["value"]),
-        _OPENCTI_TYPE_IPV4_ADDR: create_object_path("ipv4-addr", ["value"]),
-        _OPENCTI_TYPE_URL: create_object_path("url", ["value"]),
-        _OPENCTI_TYPE_EMAIL_ADDRESS: create_object_path("email-addr", ["value"]),
-        _OPENCTI_TYPE_EMAIL_SUBJECT: create_object_path("email-message", ["subject"]),
-        _OPENCTI_TYPE_MUTEX: create_object_path("mutex", ["name"]),
-        _OPENCTI_TYPE_FILE_NAME: create_object_path("file", ["name"]),
-        _OPENCTI_TYPE_FILE_PATH: create_object_path("file", ["name"]),
-        _OPENCTI_TYPE_FILE_MD5: create_object_path("file", ["hashes", "MD5"]),
-        _OPENCTI_TYPE_FILE_SHA1: create_object_path("file", ["hashes", "SHA1"]),
-        _OPENCTI_TYPE_FILE_SHA256: create_object_path("file", ["hashes", "SHA256"]),
-        _OPENCTI_TYPE_REGISTRY_KEY: create_object_path("windows-registry-key", ["key"]),
-        _OPENCTI_TYPE_WINDOWS_SERVICE_NAME: create_object_path(
-            "windows-service-ext", ["service_name"]
-        ),
-        _OPENCTI_TYPE_X509_CERTIFICATE_ISSUER: create_object_path(
-            "x509-certificate", ["issuer"]
-        ),
-        _OPENCTI_TYPE_X509_CERTIFICATE_SERIAL_NUMBER: create_object_path(
-            "x509-certificate", ["serial_number"]
-        ),
-    }
+    _INDICATOR_PATTERN_TYPE_STIX = "stix"
 
-    _PATTERN_TYPE_STIX = "stix"
+    _CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN = {
+        "Reconnaissance": "reconnaissance",
+        "Weaponization": "weaponization",
+        "Delivery": "delivery",
+        "Exploitation": "exploitation",
+        "Installation": "installation",
+        "C2": "command-and-control",
+        "ActionOnObjectives": "action-on-objectives",
+    }
 
     def __init__(
         self,
         indicator: Indicator,
         author: Identity,
         source_name: str,
-        object_marking_refs: List[MarkingDefinition],
+        object_markings: List[MarkingDefinition],
         confidence_level: int,
         indicator_report_status: int,
         indicator_report_type: str,
@@ -137,49 +127,70 @@ class IndicatorBundleBuilder:
         self.indicator = indicator
         self.author = author
         self.source_name = source_name
-        self.object_marking_refs = object_marking_refs
+        self.object_markings = object_markings
         self.confidence_level = confidence_level
+
+        # TODO: Both False?
+        self.create_observables = True  # TODO: Make configurable!!!
+        self.create_indicators = True  # TODO: Make configurable!!!
         self.indicator_reports = indicator_reports
         self.indicator_report_status = indicator_report_status
         self.indicator_report_type = indicator_report_type
 
-        self.opencti_type = self._get_opencti_type(indicator.type)
+        # self.opencti_type = self._get_opencti_type(indicator.type)
+        self.observation_factory = self._get_observation_factory(indicator.type)
 
-        first_seen = self.indicator.published_date
-        last_seen = self.indicator.last_updated
-
-        if first_seen > last_seen:
-            logger.warning(
-                "First seen is greater than last seen for indicator: %s",
-                self.indicator.indicator,
-            )
-            first_seen, last_seen = last_seen, first_seen
-
-        self.first_seen = first_seen
-        self.last_seen = last_seen
+        # first_seen = self.indicator.published_date
+        # last_seen = self.indicator.last_updated
+        #
+        # if first_seen > last_seen:
+        #     logger.warning(
+        #         "First seen is greater than last seen for indicator: %s",
+        #         self.indicator.indicator,
+        #     )
+        #     first_seen, last_seen = last_seen, first_seen
+        #
+        # self.first_seen = first_seen
+        # self.last_seen = last_seen
 
     @classmethod
-    def _get_opencti_type(cls, indicator_type: str) -> ObservableTypes:
-        opencti_type = cls._INDICATOR_TYPE_TO_OPENCTI_TYPE.get(indicator_type)
-        if opencti_type is None:
-            raise TypeError(f"Indicator type not allowed: '{indicator_type}'")
-        return opencti_type
+    def _get_observation_factory(cls, indicator_type: str) -> ObservationFactory:
+        factory = cls._INDICATOR_TYPE_TO_OPENCTI_TYPE.get(indicator_type)
+        if factory is None:
+            raise TypeError(f"Unsupported pulse indicator type: {indicator_type}")
+        return factory
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        external_references: List[ExternalReference] = []
+        indicator_actors = self.indicator.actors
+        if not indicator_actors:
+            return []
+
         return create_intrusion_sets_from_names(
-            self.indicator.actors,
-            self.author,
-            external_references,
-            self.object_marking_refs,
+            indicator_actors,
+            created_by=self.author,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
         )
 
     def _create_kill_chain_phases(self) -> List[KillChainPhase]:
         kill_chain_phases = []
+
         for kill_chain in self.indicator.kill_chains:
-            kill_chain_phase = create_kill_chain_phase(self.source_name, kill_chain)
+            lh_kill_chain = self._CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN.get(
+                kill_chain
+            )
+            if lh_kill_chain is None:
+                logger.warning("Unknown kill chain: %s", kill_chain)
+                continue
+
+            kill_chain_phase = self._create_kill_chain_phase(lh_kill_chain)
             kill_chain_phases.append(kill_chain_phase)
+
         return kill_chain_phases
+
+    @staticmethod
+    def _create_kill_chain_phase(phase_name: str) -> KillChainPhase:
+        return create_kill_chain_phase("lockheed-martin-cyber-kill-chain", phase_name)
 
     def _create_malwares(
         self, kill_chain_phases: List[KillChainPhase]
@@ -190,18 +201,23 @@ class IndicatorBundleBuilder:
 
         name = indicator_malware_families[0]
         aliases = indicator_malware_families[1:]
-        external_references: List[ExternalReference] = []
 
-        malware = create_malware(
-            name,
-            aliases,
-            self.author,
-            kill_chain_phases,
-            external_references,
-            self.object_marking_refs,
-        )
+        malware = self._create_malware(name, aliases, kill_chain_phases)
 
         return [malware]
+
+    def _create_malware(
+        self, name: str, aliases: List[str], kill_chain_phases: List[KillChainPhase]
+    ) -> Malware:
+        return create_malware(
+            name,
+            created_by=self.author,
+            is_family=True,
+            aliases=aliases,
+            kill_chain_phases=kill_chain_phases,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
+        )
 
     def _create_uses_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
@@ -210,10 +226,10 @@ class IndicatorBundleBuilder:
             self.author,
             sources,
             targets,
-            self.object_marking_refs,
-            self.first_seen,
-            self.last_seen,
             self.confidence_level,
+            self.object_markings,
+            # start_time=self.first_seen,
+            # stop_time=self.last_seen,
         )
 
     def _create_targeted_sectors(self) -> List[Identity]:
@@ -230,73 +246,102 @@ class IndicatorBundleBuilder:
             self.author,
             sources,
             targets,
-            self.object_marking_refs,
-            self.first_seen,
-            self.last_seen,
             self.confidence_level,
+            self.object_markings,
+            # start_time=self.first_seen,
+            # stop_time=self.last_seen,
         )
 
-    @staticmethod
-    def _create_vulnerability(
-        vulnerability_name: str,
-        author: Identity,
-        object_marking_refs: List[MarkingDefinition],
-    ):
-        external_references = []
-        if vulnerability_name.startswith("CVE-"):
-            external_reference = create_external_reference(
-                "NIST NVD",
-                vulnerability_name,
-                f"https://nvd.nist.gov/vuln/detail/{vulnerability_name}",
-            )
-            external_references.append(external_reference)
+    def _create_vulnerability(self, name: str):
+        external_references = create_vulnerability_external_references(name)
+
         return create_vulnerability(
-            vulnerability_name, author, external_references, object_marking_refs
+            name,
+            created_by=self.author,
+            confidence=self.confidence_level,
+            external_references=external_references,
+            object_markings=self.object_markings,
         )
 
     def _create_vulnerabilities(self) -> List[Vulnerability]:
         vulnerabilities = []
+
         for vulnerability_name in self.indicator.vulnerabilities:
-            vulnerability = self._create_vulnerability(
-                vulnerability_name, self.author, self.object_marking_refs
-            )
+            vulnerability = self._create_vulnerability(vulnerability_name)
             vulnerabilities.append(vulnerability)
+
         return vulnerabilities
+
+    def _create_observation(
+        self, kill_chain_phases: List[KillChainPhase]
+    ) -> Optional[Observation]:
+        if not (self.create_observables or self.create_indicators):
+            return None
+
+        # Create an observable.
+        observable = self._create_observable()
+
+        # Create an indicator.
+        indicator = self._create_indicator(kill_chain_phases)
+
+        # Create a based on relationship.
+        indicator_based_on_observable = None
+        if indicator is not None and observable is not None:
+            based_on_relationship = self._create_based_on_relationships(
+                [indicator], [observable]
+            )
+            indicator_based_on_observable = based_on_relationship[0]
+
+        return Observation(observable, indicator, indicator_based_on_observable)
+
+    def _create_observable(self) -> Optional[_Observable]:
+        if not self.create_observables:
+            return None
+
+        indicator_value = self.indicator.indicator
+
+        observable = self.observation_factory.create_observable(
+            indicator_value, self.object_markings
+        )
+
+        return observable
 
     def _create_indicator(
         self, kill_chain_phases: List[KillChainPhase]
-    ) -> STIXIndicator:
-        indicator = self.indicator
+    ) -> Optional[STIXIndicator]:
+        if not self.create_indicators:
+            return None
 
-        name = indicator.indicator
-        description = ""
-        valid_from = indicator.published_date
-        observable_type = str(self.opencti_type.value)
-        observable_value = indicator.indicator
-        pattern_type = self._PATTERN_TYPE_STIX
-        pattern_value = create_equality_observation_expression_str(
-            self._OPENCTI_TO_STIX2[self.opencti_type], self.indicator.indicator
+        indicator_value = self.indicator.indicator
+        indicator_pattern = self.observation_factory.create_indicator_pattern(
+            indicator_value
         )
-        indicator_pattern = pattern_value
+        indicator_pattern_type = self._INDICATOR_PATTERN_TYPE_STIX
+        indicator_published = self.indicator.published_date
 
         return create_indicator(
-            name,
-            description,
-            self.author,
-            valid_from,
-            kill_chain_phases,
-            observable_type,
-            observable_value,
-            pattern_type,
-            pattern_value,
             indicator_pattern,
-            self.object_marking_refs,
+            indicator_pattern_type,
+            created_by=self.author,
+            name=indicator_value,
+            valid_from=indicator_published,
+            kill_chain_phases=kill_chain_phases,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
         )
 
-    def _create_indicators(
-        self, kill_chain_phases: List[KillChainPhase]
-    ) -> List[STIXIndicator]:
-        return [self._create_indicator(kill_chain_phases)]
+    def _create_based_on_relationships(
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
+    ) -> List[Relationship]:
+        return create_based_on_relationships(
+            self.author,
+            sources,
+            targets,
+            self.confidence_level,
+            self.object_markings,
+            # start_time=self.first_seen,
+            # stop_time=self.last_seen,
+        )
 
     def _create_indicates_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
@@ -305,43 +350,39 @@ class IndicatorBundleBuilder:
             self.author,
             sources,
             targets,
-            self.object_marking_refs,
-            self.first_seen,
-            self.last_seen,
             self.confidence_level,
+            self.object_markings,
+            # start_time=self.first_seen,
+            # stop_time=self.last_seen,
         )
 
     def _create_report(
         self,
         report: Report,
-        author: Identity,
-        object_refs: List[_DomainObject],
-        object_marking_refs: List[MarkingDefinition],
-        files: List[Mapping[str, str]],
+        report_files: List[Mapping[str, str]],
+        objects: List[_DomainObject],
     ) -> STIXReport:
         return create_stix2_report_from_report(
             report,
-            author,
             self.source_name,
-            object_refs,
-            object_marking_refs,
-            self.indicator_report_status,
-            self.indicator_report_type,
+            self.author,
+            objects,
+            [self.indicator_report_type],
             self.confidence_level,
-            files,
+            self.object_markings,
+            self.indicator_report_status,
+            report_files,
         )
 
-    def _create_reports(self, object_refs: List[_DomainObject]) -> List[STIXReport]:
+    def _create_reports(self, objects: List[_DomainObject]) -> List[STIXReport]:
         reports = []
+
         for indicator_report in self.indicator_reports:
-            stix2_report = self._create_report(
-                indicator_report.report,
-                self.author,
-                object_refs,
-                self.object_marking_refs,
-                indicator_report.files,
+            report = self._create_report(
+                indicator_report.report, indicator_report.files, objects
             )
-            reports.append(stix2_report)
+            reports.append(report)
+
         return reports
 
     def build(self) -> Optional[Bundle]:
@@ -350,7 +391,7 @@ class IndicatorBundleBuilder:
         bundle_objects = [self.author]
 
         # Add object marking definitions to bundle.
-        bundle_objects.extend(self.object_marking_refs)
+        bundle_objects.extend(self.object_markings)
 
         # Create intrusion sets and add to bundle.
         intrusion_sets = self._create_intrusion_sets()
@@ -363,7 +404,7 @@ class IndicatorBundleBuilder:
         malwares = self._create_malwares(kill_chain_phases)
         bundle_objects.extend(malwares)
 
-        # Intrusion sets use malwares, add to bundle.
+        # Intrusion sets use malwares and add to bundle.
         intrusion_sets_use_malwares = self._create_uses_relationships(
             intrusion_sets, malwares
         )
@@ -373,13 +414,13 @@ class IndicatorBundleBuilder:
         target_sectors = self._create_targeted_sectors()
         bundle_objects.extend(target_sectors)
 
-        # Intrusion sets target sectors, add to bundle.
+        # Intrusion sets target sectors and add to bundle.
         intrusion_sets_target_sectors = self._create_targets_relationships(
             intrusion_sets, target_sectors
         )
         bundle_objects.extend(intrusion_sets_target_sectors)
 
-        # Malwares target sectors, add to bundle.
+        # Malwares target sectors and add to bundle.
         malwares_target_sectors = self._create_targets_relationships(
             malwares, target_sectors
         )
@@ -389,27 +430,47 @@ class IndicatorBundleBuilder:
         vulnerabilities = self._create_vulnerabilities()
         bundle_objects.extend(vulnerabilities)
 
-        # Intrusion sets target vulnerabilities, add to bundle.
+        # Intrusion sets target vulnerabilities and add to bundle.
         intrusion_sets_target_vulnerabilities = self._create_targets_relationships(
             intrusion_sets, vulnerabilities
         )
         bundle_objects.extend(intrusion_sets_target_vulnerabilities)
 
-        # Malwares target vulnerabilities, add to bundle.
+        # Malwares target vulnerabilities and add to bundle.
         malwares_target_vulnerabilities = self._create_targets_relationships(
             malwares, vulnerabilities
         )
         bundle_objects.extend(malwares_target_vulnerabilities)
 
-        # Create an indicators and add to bundle.
-        indicators = self._create_indicators(kill_chain_phases)
+        # Create observations.
+        observation = self._create_observation(kill_chain_phases)
+        if observation is None:
+            # TODO: Is this OK?
+            return None
+
+        # Get observables and add to bundle.
+        observables = []
+        if observation.observable is not None:
+            observables.append(observation.observable)
+        bundle_objects.extend(observables)
+
+        # Get indicators and to bundle.
+        indicators = []
+        if observation.indicator is not None:
+            indicators.append(observation.indicator)
         bundle_objects.extend(indicators)
 
-        # Indicator(s) indicate entities, add to bundle.
-        entities = intrusion_sets + malwares
+        # Get observation relationships and add to bundle.
+        indicators_based_on_observables = []
+        if observation.relationship is not None:
+            indicators_based_on_observables.append(observation.relationship)
+        bundle_objects.extend(indicators_based_on_observables)
+
+        # Indicator(s) indicate entities and add to bundle.
+        indicator_indicates = intrusion_sets + malwares
 
         indicator_indicates_entities = self._create_indicates_relationships(
-            indicators, entities
+            indicators, indicator_indicates
         )
         bundle_objects.extend(indicator_indicates_entities)
 
@@ -424,7 +485,9 @@ class IndicatorBundleBuilder:
             vulnerabilities,
             intrusion_sets_target_vulnerabilities,
             malwares_target_vulnerabilities,
+            observables,
             indicators,
+            indicators_based_on_observables,
             indicator_indicates_entities,
         )
 
@@ -432,4 +495,6 @@ class IndicatorBundleBuilder:
         reports = self._create_reports(object_refs)
         bundle_objects.extend(reports)
 
-        return Bundle(objects=bundle_objects)
+        # XXX: Without allow_custom=True the observable with the custom property
+        # will cause an unexpected property (x_opencti_score) error.
+        return Bundle(objects=bundle_objects, allow_custom=True)

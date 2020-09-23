@@ -12,11 +12,17 @@ from crowdstrike_client.client import CrowdStrikeClient
 from pycti import OpenCTIConnectorHelper
 from pycti.connector.opencti_connector_helper import get_config_variable
 
-from stix2 import Identity, MarkingDefinition, TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+from stix2 import Identity, MarkingDefinition
 
 from crowdstrike.actor.importer import ActorImporter
+from crowdstrike.indicators import IndicatorImporter
 from crowdstrike.report.importer import ReportImporter
-from crowdstrike.utils import convert_comma_separated_str_to_list, create_organization
+from crowdstrike.utils import (
+    convert_comma_separated_str_to_list,
+    create_organization,
+    get_tlp_string_marking_definition,
+)
+from crowdstrike.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 
 
 class CrowdStrike:
@@ -45,13 +51,6 @@ class CrowdStrike:
     _CONFIG_SCOPE_REPORT = "report"
     _CONFIG_SCOPE_INDICATOR = "indicator"
     _CONFIG_SCOPE_YARA_MASTER = "yara_master"
-
-    _CONFIG_TLP_MAPPING = {
-        "white": TLP_WHITE,
-        "green": TLP_GREEN,
-        "amber": TLP_AMBER,
-        "red": TLP_RED,
-    }
 
     _CONFIG_REPORT_STATUS_MAPPING = {
         "new": 0,
@@ -162,19 +161,19 @@ class CrowdStrike:
             report_guess_malware,
         )
 
-        # self.indicator_importer = IndicatorImporter(
-        #     self.helper,
-        #     client.intel_api.indicators,
-        #     client.intel_api.reports,
-        #     update_existing_data,
-        #     author,
-        #     indicator_start_timestamp,
-        #     tlp_marking,
-        #     indicator_exclude_types,
-        #     report_status,
-        #     report_type,
-        # )
-        #
+        self.indicator_importer = IndicatorImporter(
+            self.helper,
+            client.intel_api.indicators,
+            client.intel_api.reports,
+            update_existing_data,
+            author,
+            indicator_start_timestamp,
+            tlp_marking,
+            indicator_exclude_types,
+            report_status,
+            report_type,
+        )
+
         # self.rules_yara_master_importer = RulesYaraMasterImporter(
         #     self.helper,
         #     client.intel_api.rules,
@@ -217,8 +216,12 @@ class CrowdStrike:
         return config_value
 
     @classmethod
-    def _convert_tlp_to_marking_definition(cls, tlp_value: str) -> MarkingDefinition:
-        return cls._CONFIG_TLP_MAPPING[tlp_value.lower()]
+    def _convert_tlp_to_marking_definition(
+        cls, tlp_value: Optional[str]
+    ) -> MarkingDefinition:
+        if tlp_value is None:
+            return DEFAULT_TLP_MARKING_DEFINITION
+        return get_tlp_string_marking_definition(tlp_value)
 
     @classmethod
     def _convert_report_status_str_to_report_status_int(cls, report_status: str) -> int:

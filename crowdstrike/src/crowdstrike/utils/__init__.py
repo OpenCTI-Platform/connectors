@@ -12,9 +12,9 @@ from typing import (
     Generator,
     List,
     Mapping,
+    NamedTuple,
     Optional,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -28,7 +28,6 @@ from pycti import OpenCTIStix2Utils  # type: ignore
 from pycti.utils.constants import LocationTypes  # type: ignore
 
 from stix2 import (  # type: ignore
-    EqualityComparisonExpression,
     ExternalReference,
     Identity,
     Indicator as STIXIndicator,
@@ -37,26 +36,105 @@ from stix2 import (  # type: ignore
     Location,
     Malware,
     MarkingDefinition,
-    ObjectPath,
-    ObservationExpression,
     Relationship,
     Report as STIXReport,
-    StringConstant,
     Vulnerability,
 )
-from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
-
-_X_OPENCTI_LOCATION_TYPE = "x_opencti_location_type"
-_X_OPENCTI_ALIASES = "x_opencti_aliases"
-_X_OPENCTI_REPORT_STATUS = "x_opencti_report_status"
-_X_OPENCTI_FILES = "x_opencti_files"
+from crowdstrike.utils.constants import (
+    DEFAULT_X_OPENCTI_SCORE,
+    T,
+    TLP_MARKING_DEFINITION_MAPPING,
+    X_OPENCTI_ALIASES,
+    X_OPENCTI_FILES,
+    X_OPENCTI_LOCATION_TYPE,
+    X_OPENCTI_REPORT_STATUS,
+    X_OPENCTI_SCORE,
+)
+from crowdstrike.utils.indicators import (
+    create_indicator_pattern_cryptocurrency_wallet,
+    create_indicator_pattern_domain_name,
+    create_indicator_pattern_email_address,
+    create_indicator_pattern_file_md5,
+    create_indicator_pattern_file_name,
+    create_indicator_pattern_file_sha1,
+    create_indicator_pattern_file_sha256,
+    create_indicator_pattern_hostname,
+    create_indicator_pattern_ipv4_address,
+    create_indicator_pattern_ipv6_address,
+    create_indicator_pattern_mutex,
+    create_indicator_pattern_url,
+    create_indicator_pattern_windows_service_name,
+)
+from crowdstrike.utils.observables import (
+    create_observable_cryptocurrency_wallet,
+    create_observable_domain_name,
+    create_observable_email_address,
+    create_observable_file_md5,
+    create_observable_file_name,
+    create_observable_file_sha1,
+    create_observable_file_sha256,
+    create_observable_hostname,
+    create_observable_ipv4_address,
+    create_observable_ipv6_address,
+    create_observable_mutex,
+    create_observable_url,
+    create_observable_windows_service_name,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-T = TypeVar("T")
+class ObservationFactory(NamedTuple):
+    """Observation factory."""
+
+    create_observable: Callable[[str, List[MarkingDefinition]], _Observable]
+    create_indicator_pattern: Callable[[str], str]
+
+
+OBSERVATION_FACTORY_IPV4_ADDRESS = ObservationFactory(
+    create_observable_ipv4_address, create_indicator_pattern_ipv4_address
+)
+OBSERVATION_FACTORY_IPV6_ADDRESS = ObservationFactory(
+    create_observable_ipv6_address, create_indicator_pattern_ipv6_address
+)
+OBSERVATION_FACTORY_DOMAIN_NAME = ObservationFactory(
+    create_observable_domain_name, create_indicator_pattern_domain_name
+)
+OBSERVATION_FACTORY_HOSTNAME = ObservationFactory(
+    create_observable_hostname, create_indicator_pattern_hostname
+)
+OBSERVATION_FACTORY_EMAIL_ADDRESS = ObservationFactory(
+    create_observable_email_address, create_indicator_pattern_email_address
+)
+OBSERVATION_FACTORY_URL = ObservationFactory(
+    create_observable_url, create_indicator_pattern_url
+)
+OBSERVATION_FACTORY_FILE_MD5 = ObservationFactory(
+    create_observable_file_md5, create_indicator_pattern_file_md5
+)
+OBSERVATION_FACTORY_FILE_SHA1 = ObservationFactory(
+    create_observable_file_sha1, create_indicator_pattern_file_sha1
+)
+OBSERVATION_FACTORY_FILE_SHA256 = ObservationFactory(
+    create_observable_file_sha256, create_indicator_pattern_file_sha256
+)
+OBSERVATION_FACTORY_FILE_NAME = ObservationFactory(
+    create_observable_file_name, create_indicator_pattern_file_name
+)
+OBSERVATION_FACTORY_MUTEX = ObservationFactory(
+    create_observable_mutex, create_indicator_pattern_mutex
+)
+OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET = ObservationFactory(
+    create_observable_cryptocurrency_wallet,
+    create_indicator_pattern_cryptocurrency_wallet,
+)
+OBSERVATION_FACTORY_WINDOWS_SERVICE_NAME = ObservationFactory(
+    create_observable_windows_service_name,
+    create_indicator_pattern_windows_service_name,
+)
 
 
 def paginate(
@@ -130,6 +208,14 @@ def next_batch(limit: int, offset: int, total: Optional[int]) -> bool:
     return (total - offset) > 0
 
 
+def get_tlp_string_marking_definition(tlp: str) -> MarkingDefinition:
+    """Get marking definition for given TLP."""
+    marking_definition = TLP_MARKING_DEFINITION_MAPPING.get(tlp.lower())
+    if marking_definition is None:
+        raise ValueError(f"Invalid TLP value '{tlp}'")
+    return marking_definition
+
+
 def datetime_to_timestamp(datetime_value: datetime) -> int:
     # Use calendar.timegm because the time.mktime assumes that the input is in your
     # local timezone.
@@ -159,6 +245,19 @@ def create_external_reference(
     return ExternalReference(source_name=source_name, url=url, external_id=external_id)
 
 
+def create_vulnerability_external_references(name: str) -> List[ExternalReference]:
+    """Create an external references for vulnerability."""
+    external_references = []
+
+    if name.startswith("CVE-"):
+        external_reference = create_external_reference(
+            "NIST NVD", f"https://nvd.nist.gov/vuln/detail/{name}", name
+        )
+        external_references.append(external_reference)
+
+    return external_references
+
+
 def create_identity(
     name: str,
     created_by: Optional[Identity] = None,
@@ -180,17 +279,19 @@ def create_identity(
 
 def create_vulnerability(
     name: str,
-    author: Identity,
-    external_references: List[ExternalReference],
-    object_marking_refs: List[MarkingDefinition],
+    created_by: Optional[Identity] = None,
+    confidence: Optional[int] = None,
+    external_references: Optional[List[ExternalReference]] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> Vulnerability:
     """Create a vulnerability."""
     return Vulnerability(
-        created_by_ref=author,
+        id=_create_random_identifier("vulnerability"),
+        created_by_ref=created_by,
         name=name,
-        labels=["vulnerability"],
+        confidence=confidence,
         external_references=external_references,
-        object_marking_refs=object_marking_refs,
+        object_marking_refs=object_markings,
     )
 
 
@@ -199,6 +300,7 @@ def create_malware(
     malware_id: Optional[str] = None,
     created_by: Optional[Identity] = None,
     is_family: bool = False,
+    aliases: Optional[List[str]] = None,
     kill_chain_phases: Optional[List[KillChainPhase]] = None,
     confidence: Optional[int] = None,
     object_markings: Optional[List[MarkingDefinition]] = None,
@@ -212,6 +314,7 @@ def create_malware(
         created_by_ref=created_by,
         name=name,
         is_family=is_family,
+        aliases=aliases,
         kill_chain_phases=kill_chain_phases,
         confidence=confidence,
         object_marking_refs=object_markings,
@@ -265,16 +368,19 @@ def create_intrusion_set(
 
 def create_intrusion_sets_from_names(
     names: List[str],
-    author: Identity,
-    external_references: List[ExternalReference],
-    object_marking_refs: List[MarkingDefinition],
+    created_by: Optional[Identity] = None,
+    confidence: Optional[int] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> List[IntrusionSet]:
     """Create intrusion sets from given names."""
     intrusion_sets = []
 
     for name in names:
         intrusion_set = create_intrusion_set_from_name(
-            name, author, external_references, object_marking_refs
+            name,
+            created_by=created_by,
+            confidence=confidence,
+            object_markings=object_markings,
         )
 
         intrusion_sets.append(intrusion_set)
@@ -284,10 +390,10 @@ def create_intrusion_sets_from_names(
 
 def create_intrusion_set_from_name(
     name: str,
-    created_by: Identity,
-    confidence: int,
-    external_references: List[ExternalReference],
-    object_markings: List[MarkingDefinition],
+    created_by: Optional[Identity] = None,
+    confidence: Optional[int] = None,
+    external_references: Optional[List[ExternalReference]] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> IntrusionSet:
     """Create intrusion set from given name."""
     aliases: List[str] = []
@@ -378,7 +484,7 @@ def create_region(name: str, created_by: Identity) -> Location:
         name,
         created_by=created_by,
         region=name,
-        custom_properties={_X_OPENCTI_LOCATION_TYPE: LocationTypes.REGION.value},
+        custom_properties={X_OPENCTI_LOCATION_TYPE: LocationTypes.REGION.value},
     )
 
 
@@ -400,8 +506,8 @@ def create_country(name: str, code: str, created_by: Identity) -> Location:
         created_by=created_by,
         country=code,
         custom_properties={
-            _X_OPENCTI_ALIASES: [code],
-            _X_OPENCTI_LOCATION_TYPE: LocationTypes.COUNTRY.value,
+            X_OPENCTI_ALIASES: [code],
+            X_OPENCTI_LOCATION_TYPE: LocationTypes.COUNTRY.value,
         },
     )
 
@@ -558,6 +664,28 @@ def create_originates_from_relationships(
     )
 
 
+def create_based_on_relationships(
+    created_by: Identity,
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
+    confidence: int,
+    object_markings: List[MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
+) -> List[Relationship]:
+    """Create 'based-on' relationships."""
+    return create_relationships(
+        "based-on",
+        created_by,
+        sources,
+        targets,
+        confidence,
+        object_markings,
+        start_time=start_time,
+        stop_time=stop_time,
+    )
+
+
 def create_object_refs(
     *objects: Union[
         _DomainObject,
@@ -634,8 +762,8 @@ def create_report(
         external_references=external_references,
         object_marking_refs=object_markings,
         custom_properties={
-            _X_OPENCTI_REPORT_STATUS: x_opencti_report_status,
-            _X_OPENCTI_FILES: x_opencti_files,
+            X_OPENCTI_REPORT_STATUS: x_opencti_report_status,
+            X_OPENCTI_FILES: x_opencti_files,
         },
     )
 
@@ -771,45 +899,30 @@ def convert_comma_separated_str_to_list(input_str: str, trim: bool = True) -> Li
     return result
 
 
-def create_object_path(object_type: str, property_path: List[str]) -> ObjectPath:
-    """Create pattern operand object (property) path."""
-    return ObjectPath(object_type, property_path)
-
-
-def create_equality_observation_expression_str(
-    object_path: ObjectPath, value: str
-) -> str:
-    """Create observation expression string with pattern equality comparison expression."""  # noqa: E501
-    operand = EqualityComparisonExpression(object_path, StringConstant(value))
-    observation_expression = ObservationExpression(str(operand))
-    return str(observation_expression)
-
-
 def create_indicator(
-    name: str,
-    description: str,
-    author: Identity,
-    valid_from: datetime,
-    kill_chain_phases: List[KillChainPhase],
-    observable_type: str,
-    observable_value: str,
+    pattern: str,
     pattern_type: str,
-    pattern_value: str,
-    indicator_pattern: str,
-    object_marking_refs: List[MarkingDefinition],
+    created_by: Optional[Identity] = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    valid_from: Optional[datetime] = None,
+    kill_chain_phases: Optional[List[KillChainPhase]] = None,
+    labels: Optional[List[str]] = None,
+    confidence: Optional[int] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> STIXIndicator:
     """Create an indicator."""
     return STIXIndicator(
-        created_by_ref=author,
+        id=_create_random_identifier("indicator"),
+        created_by_ref=created_by,
         name=name,
         description=description,
-        pattern=pattern_value,
+        pattern=pattern,
+        pattern_type=pattern_type,
         valid_from=valid_from,
         kill_chain_phases=kill_chain_phases,
-        labels=["malicious-activity"],
-        object_marking_refs=object_marking_refs,
-        pattern_type=pattern_type,
-        custom_properties={
-            "x_opencti_main_observable_type": observable_type,
-        },
+        labels=labels,
+        confidence=confidence,
+        object_marking_refs=object_markings,
+        custom_properties={X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE},
     )
