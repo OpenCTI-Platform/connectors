@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike observable utilities module."""
 
-from typing import List, Mapping, Optional
+from typing import Any, List, Mapping, NamedTuple, Optional
 
 from stix2 import (  # type: ignore
     CustomObservable,
     DomainName,
     EmailAddress,
+    EmailMessage,
     File,
     IPv4Address,
     IPv6Address,
@@ -14,50 +15,57 @@ from stix2 import (  # type: ignore
     Mutex,
     Process,
     URL,
+    X509Certificate,
 )
 from stix2.properties import ListProperty, ReferenceProperty, StringProperty  # type: ignore # noqa: E501
 
-from crowdstrike.utils.constants import DEFAULT_X_OPENCTI_SCORE, X_OPENCTI_SCORE
+from crowdstrike.utils.constants import (
+    DEFAULT_X_OPENCTI_SCORE,
+    X_OPENCTI_LABELS,
+    X_OPENCTI_SCORE,
+)
 
 
-# XXX: Causes an unexpected property (x_opencti_score) error
-# when creating a Bundle without allow_custom=True flag.
-_DEFAULT_CUSTOM_PROPERTIES = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
+def _get_default_custom_properties(
+    labels: Optional[List[str]] = None,
+) -> Mapping[str, Any]:
+    # XXX: Causes an unexpected property (x_opencti_score) error
+    # when creating a Bundle without allow_custom=True flag.
+    return {X_OPENCTI_LABELS: labels, X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
 
 
-def create_observable_ipv4_address(
-    value: str,
-    object_markings: List[MarkingDefinition],
-) -> IPv4Address:
+class ObservableProperties(NamedTuple):
+    """Observable properties."""
+
+    value: str
+    labels: List[str]
+    object_markings: List[MarkingDefinition]
+
+
+def create_observable_ipv4_address(properties: ObservableProperties) -> IPv4Address:
     """Create an observable representing an IPv4 address."""
     return IPv4Address(
-        value=value,
-        object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        value=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )
 
 
-def create_observable_ipv6_address(
-    value: str,
-    object_markings: List[MarkingDefinition],
-) -> IPv6Address:
+def create_observable_ipv6_address(properties: ObservableProperties) -> IPv6Address:
     """Create an observable representing an IPv6 address."""
     return IPv6Address(
-        value=value,
-        object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        value=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )
 
 
-def create_observable_domain_name(
-    value: str,
-    object_markings: List[MarkingDefinition],
-) -> DomainName:
+def create_observable_domain_name(properties: ObservableProperties) -> DomainName:
     """Create an observable representing a domain name."""
     return DomainName(
-        value=value,
-        object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        value=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )
 
 
@@ -81,94 +89,89 @@ class Hostname:
     pass
 
 
-def create_observable_hostname(
-    value: str,
-    object_markings: List[MarkingDefinition],
-) -> Hostname:
+def create_observable_hostname(properties: ObservableProperties) -> Hostname:
     """Create an observable representing a hostname."""
     return Hostname(
-        value=value,
-        object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        value=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )  # type: ignore
 
 
-def create_observable_email_address(
-    value: str,
-    object_markings: List[MarkingDefinition],
-) -> EmailAddress:
+def create_observable_email_address(properties: ObservableProperties) -> EmailAddress:
     """Create an observable representing an email address."""
     return EmailAddress(
-        value=value,
-        object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        value=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )
 
 
-def create_observable_url(value: str, object_markings: List[MarkingDefinition]) -> URL:
+def create_observable_url(properties: ObservableProperties) -> URL:
     """Create an observable representing an URL."""
     return URL(
-        value=value,
-        object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        value=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )
 
 
 def _create_observable_file(
     hashes: Optional[Mapping[str, str]] = None,
     name: Optional[str] = None,
+    labels: Optional[List[str]] = None,
     object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> File:
     return File(
         hashes=hashes,
         name=name,
         object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        custom_properties=_get_default_custom_properties(labels),
     )
 
 
-def create_observable_file_md5(
-    value: str, object_markings: List[MarkingDefinition]
-) -> File:
+def create_observable_file_md5(properties: ObservableProperties) -> File:
     """Create an observable representing a MD5 hash of a file."""
     return _create_observable_file(
-        hashes={"MD5": value}, object_markings=object_markings
+        hashes={"MD5": properties.value},
+        labels=properties.labels,
+        object_markings=properties.object_markings,
     )
 
 
-def create_observable_file_sha1(
-    value: str, object_markings: List[MarkingDefinition]
-) -> File:
+def create_observable_file_sha1(properties: ObservableProperties) -> File:
     """Create an observable representing a SHA-1 hash of a file."""
     return _create_observable_file(
-        hashes={"SHA-1": value}, object_markings=object_markings
+        hashes={"SHA-1": properties.value},
+        labels=properties.labels,
+        object_markings=properties.object_markings,
     )
 
 
-def create_observable_file_sha256(
-    value: str, object_markings: List[MarkingDefinition]
-) -> File:
+def create_observable_file_sha256(properties: ObservableProperties) -> File:
     """Create an observable representing a SHA-256 hash of a file."""
     return _create_observable_file(
-        hashes={"SHA-256": value}, object_markings=object_markings
+        hashes={"SHA-256": properties.value},
+        labels=properties.labels,
+        object_markings=properties.object_markings,
     )
 
 
-def create_observable_file_name(
-    name: str, object_markings: List[MarkingDefinition]
-) -> File:
+def create_observable_file_name(properties: ObservableProperties) -> File:
     """Create an observable representing a file name."""
-    return _create_observable_file(name=name, object_markings=object_markings)
+    return _create_observable_file(
+        name=properties.value,
+        labels=properties.labels,
+        object_markings=properties.object_markings,
+    )
 
 
-def create_observable_mutex(
-    name: str, object_markings: List[MarkingDefinition]
-) -> Mutex:
+def create_observable_mutex(properties: ObservableProperties) -> Mutex:
     """Create an observable representing a mutex."""
     return Mutex(
-        name=name,
-        object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        name=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )
 
 
@@ -193,21 +196,97 @@ class CryptocurrencyWallet:
 
 
 def create_observable_cryptocurrency_wallet(
-    value: str, object_markings: List[MarkingDefinition]
+    properties: ObservableProperties,
 ) -> CryptocurrencyWallet:
     """Create an observable representing a cryptocurrency wallet."""
     return CryptocurrencyWallet(
-        value=value,
-        object_marking_refs=object_markings,
-        custom_properties=_DEFAULT_CUSTOM_PROPERTIES,
+        value=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )  # type: ignore
 
 
-def create_observable_windows_service_name(
-    name: str, object_markings: List[MarkingDefinition]
-) -> Process:
+def create_observable_windows_service_name(properties: ObservableProperties) -> Process:
     """Create an observable representing a Windows service name."""
     return Process(
+        object_marking_refs=properties.object_markings,
+        extensions={"windows-service-ext": {"service_name": properties.value}},
+        custom_properties=_get_default_custom_properties(properties.labels),
+    )
+
+
+def _create_observable_x509_certificate(
+    serial_number: Optional[str] = None,
+    subject: Optional[str] = None,
+    labels: Optional[List[str]] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None,
+) -> X509Certificate:
+    return X509Certificate(
+        serial_number=serial_number,
+        subject=subject,
         object_marking_refs=object_markings,
-        extensions={"windows-service-ext": {"service_name": name}},
+        custom_properties=_get_default_custom_properties(labels),
+    )
+
+
+def create_observable_x509_certificate_serial_number(
+    properties: ObservableProperties,
+) -> X509Certificate:
+    """Create an observable representing a X509 certificate serial number."""
+    return _create_observable_x509_certificate(
+        serial_number=properties.value,
+        labels=properties.labels,
+        object_markings=properties.object_markings,
+    )
+
+
+def create_observable_x509_certificate_subject(
+    properties: ObservableProperties,
+) -> X509Certificate:
+    """Create an observable representing a X509 certificate subject."""
+    return _create_observable_x509_certificate(
+        subject=properties.value,
+        labels=properties.labels,
+        object_markings=properties.object_markings,
+    )
+
+
+@CustomObservable(
+    "x-opencti-user-agent",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class UserAgent:
+    """User-Agent observable."""
+
+    pass
+
+
+def create_observable_user_agent(properties: ObservableProperties) -> UserAgent:
+    """Create an observable representing an user-agent."""
+    return UserAgent(
+        value=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
+    )  # type: ignore
+
+
+def create_observable_email_message_subject(
+    properties: ObservableProperties,
+) -> EmailMessage:
+    """Create an observable representing an email message subject."""
+    return EmailMessage(
+        is_multipart=False,
+        subject=properties.value,
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_default_custom_properties(properties.labels),
     )

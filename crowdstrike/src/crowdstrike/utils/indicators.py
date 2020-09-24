@@ -111,3 +111,27 @@ def create_indicator_pattern_windows_service_name(name: str) -> str:
     return _create_indicator_pattern(
         "process", ["extensions", "windows-process-ext", "service_name"], name
     )
+
+
+def _create_indicator_pattern_x509_certificate(prop: str, value: str) -> str:
+    return _create_indicator_pattern("x509-certificate", [prop], value)
+
+
+def create_indicator_pattern_x509_certificate_serial_number(value: str) -> str:
+    """Create an indicator pattern for a X509 certificate serial number."""
+    return _create_indicator_pattern_x509_certificate("serial_number", value)
+
+
+def create_indicator_pattern_x509_certificate_subject(value: str) -> str:
+    """Create an indicator pattern for a X509 certificate subject."""
+    return _create_indicator_pattern_x509_certificate("subject", value)
+
+
+def create_indicator_pattern_user_agent(value: str) -> str:
+    """Create an indicator pattern for an user-agent."""
+    return _create_indicator_pattern_with_value("x-opencti-user-agent", value)
+
+
+def create_indicator_pattern_email_message_subject(value: str) -> str:
+    """Create an indicator pattern for an email message subject."""
+    return _create_indicator_pattern("email-message", ["subject"], value)

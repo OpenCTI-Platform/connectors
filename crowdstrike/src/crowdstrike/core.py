@@ -36,6 +36,8 @@ class CrowdStrike:
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
     _CONFIG_SCOPES = f"{_CONFIG_NAMESPACE}.scopes"
     _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
+    _CONFIG_CREATE_OBSERVABLES = f"{_CONFIG_NAMESPACE}.create_observables"
+    _CONFIG_CREATE_INDICATORS = f"{_CONFIG_NAMESPACE}.create_indicators"
     _CONFIG_ACTOR_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.actor_start_timestamp"
     _CONFIG_REPORT_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.report_start_timestamp"
     _CONFIG_REPORT_INCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.report_include_types"
@@ -59,7 +61,11 @@ class CrowdStrike:
         "closed": 3,
     }
 
+    _DEFAULT_CREATE_OBSERVABLES = True
+    _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
+
+    _CONNECTOR_RUN_INTERVAL_SEC = 60
 
     _STATE_LAST_RUN = "last_run"
 
@@ -82,10 +88,25 @@ class CrowdStrike:
         scopes = set()
         if scopes_str is not None:
             scopes = set(convert_comma_separated_str_to_list(scopes_str))
-        self.scopes = scopes
 
         tlp = self._get_configuration(config, self._CONFIG_TLP)
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
+
+        create_observables = self._get_configuration(
+            config, self._CONFIG_CREATE_OBSERVABLES
+        )
+        if create_observables is None:
+            create_observables = self._DEFAULT_CREATE_OBSERVABLES
+        else:
+            create_observables = bool(create_observables)
+
+        create_indicators = self._get_configuration(
+            config, self._CONFIG_CREATE_INDICATORS
+        )
+        if create_indicators is None:
+            create_indicators = self._DEFAULT_CREATE_INDICATORS
+        else:
+            create_indicators = bool(create_indicators)
 
         actor_start_timestamp = self._get_configuration(
             config, self._CONFIG_ACTOR_START_TIMESTAMP, is_number=True
@@ -139,40 +160,54 @@ class CrowdStrike:
         # Create CrowdStrike client and importers
         client = CrowdStrikeClient(base_url, client_id, client_secret)
 
-        self.actor_importer = ActorImporter(
-            self.helper,
-            client.intel_api.actors,
-            update_existing_data,
-            author,
-            actor_start_timestamp,
-            tlp_marking,
-        )
+        # Create importers.
+        importers = []
 
-        self.report_importer = ReportImporter(
-            self.helper,
-            client.intel_api.reports,
-            update_existing_data,
-            author,
-            report_start_timestamp,
-            tlp_marking,
-            report_include_types,
-            report_status,
-            report_type,
-            report_guess_malware,
-        )
+        if self._CONFIG_SCOPE_ACTOR in scopes:
+            actor_importer = ActorImporter(
+                self.helper,
+                client.intel_api.actors,
+                update_existing_data,
+                author,
+                actor_start_timestamp,
+                tlp_marking,
+            )
 
-        self.indicator_importer = IndicatorImporter(
-            self.helper,
-            client.intel_api.indicators,
-            client.intel_api.reports,
-            update_existing_data,
-            author,
-            indicator_start_timestamp,
-            tlp_marking,
-            indicator_exclude_types,
-            report_status,
-            report_type,
-        )
+            importers.append(actor_importer)
+
+        if self._CONFIG_SCOPE_REPORT in scopes:
+            report_importer = ReportImporter(
+                self.helper,
+                client.intel_api.reports,
+                update_existing_data,
+                author,
+                report_start_timestamp,
+                tlp_marking,
+                report_include_types,
+                report_status,
+                report_type,
+                report_guess_malware,
+            )
+
+            importers.append(report_importer)
+
+        if self._CONFIG_SCOPE_INDICATOR in scopes:
+            indicator_importer = IndicatorImporter(
+                self.helper,
+                client.intel_api.indicators,
+                client.intel_api.reports,
+                update_existing_data,
+                author,
+                indicator_start_timestamp,
+                tlp_marking,
+                create_observables,
+                create_indicators,
+                indicator_exclude_types,
+                report_status,
+                report_type,
+            )
+
+            importers.append(indicator_importer)
 
         # self.rules_yara_master_importer = RulesYaraMasterImporter(
         #     self.helper,
@@ -184,6 +219,8 @@ class CrowdStrike:
         #     report_status,
         #     report_type,
         # )
+
+        self.importers = importers
 
     @staticmethod
     def _read_configuration() -> Dict[str, str]:
@@ -227,9 +264,6 @@ class CrowdStrike:
     def _convert_report_status_str_to_report_status_int(cls, report_status: str) -> int:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
-    def get_interval(self) -> int:
-        return int(self.interval_sec)
-
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
         if not current_state:
@@ -244,19 +278,36 @@ class CrowdStrike:
             return state.get(key, default)
         return default
 
+    @classmethod
+    def _sleep(cls, delay_sec: Optional[int] = None) -> None:
+        sleep_delay = (
+            delay_sec if delay_sec is not None else cls._CONNECTOR_RUN_INTERVAL_SEC
+        )
+        time.sleep(sleep_delay)
+
     def _is_scheduled(self, last_run: Optional[int], current_time: int) -> bool:
         if last_run is None:
+            self._info("CrowdStrike connector clean run")
             return True
+
         time_diff = current_time - last_run
-        return time_diff >= self.get_interval()
+        return time_diff >= self._get_interval()
 
     @staticmethod
     def _current_unix_timestamp() -> int:
         return int(time.time())
 
     def run(self):
-        self.helper.log_info("Starting CrowdStrike connector...")
+        self._info("Starting CrowdStrike connector...")
+
+        if not self.importers:
+            self._error("Scope(s) not configured.")
+            return
+
         while True:
+            self._info("Running CrowdStrike connector...")
+            run_interval = self._CONNECTOR_RUN_INTERVAL_SEC
+
             try:
                 timestamp = self._current_unix_timestamp()
                 current_state = self._load_state()
@@ -265,73 +316,44 @@ class CrowdStrike:
 
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
                 if self._is_scheduled(last_run, timestamp):
-                    actor_importer_state = self._run_actor_importer(current_state)
-                    report_importer_state = self._run_report_importer(current_state)
-                    indicator_importer_state = self._run_indicator_importer(
-                        current_state
-                    )
-                    yara_master_importer_state = self._run_rules_yara_master_importer(
-                        current_state
-                    )
-
                     new_state = current_state.copy()
-                    new_state.update(actor_importer_state)
-                    new_state.update(report_importer_state)
-                    new_state.update(indicator_importer_state)
-                    new_state.update(yara_master_importer_state)
+
+                    for importer in self.importers:
+                        importer_state = importer.run(current_state)
+                        new_state.update(importer_state)
+
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
-                    self.helper.log_info(f"Storing new state: {new_state}")
+                    self._info("Storing new state: {0}", new_state)
 
                     self.helper.set_state(new_state)
 
-                    self.helper.log_info(
-                        f"State stored, next run in: {self.get_interval()} seconds"
+                    self._info(
+                        "State stored, next run in: {0} seconds", self._get_interval()
                     )
                 else:
-                    new_interval = self.get_interval() - (timestamp - last_run)
-                    self.helper.log_info(
-                        f"Connector will not run, next run in: {new_interval} seconds"
+                    next_run = self._get_interval() - (timestamp - last_run)
+                    run_interval = min(run_interval, next_run)
+
+                    self._info(
+                        "Connector will not run, next run in: {0} seconds", next_run
                     )
 
-                time.sleep(60)
+                self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
+                self._info("CrowdStrike connector stopping...")
                 exit(0)
             except Exception as e:
-                self.helper.log_error(str(e))
-                time.sleep(60)
+                self._error("CrowdStrike connector internal error: {0}", str(e))
+                self._sleep()
 
-    def _run_actor_importer(
-        self, current_state: Mapping[str, Any]
-    ) -> Mapping[str, Any]:
-        if self._is_scope_enabled(self._CONFIG_SCOPE_ACTOR):
-            return self.actor_importer.run(current_state)
-        return {}
+    def _get_interval(self) -> int:
+        return int(self.interval_sec)
 
-    def _run_report_importer(
-        self, current_state: Mapping[str, Any]
-    ) -> Mapping[str, Any]:
-        if self._is_scope_enabled(self._CONFIG_SCOPE_REPORT):
-            return self.report_importer.run(current_state)
-        return {}
+    def _info(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_info(fmt_msg)
 
-    def _run_indicator_importer(
-        self, current_state: Mapping[str, Any]
-    ) -> Mapping[str, Any]:
-        if self._is_scope_enabled(self._CONFIG_SCOPE_INDICATOR):
-            return self.indicator_importer.run(current_state)
-        return {}
-
-    def _run_rules_yara_master_importer(
-        self, current_state: Mapping[str, Any]
-    ) -> Mapping[str, Any]:
-        if self._is_scope_enabled(self._CONFIG_SCOPE_YARA_MASTER):
-            return self.rules_yara_master_importer.run(current_state)
-        return {}
-
-    def _is_scope_enabled(self, scope: str) -> bool:
-        result = scope in self.scopes
-        if not result:
-            self.helper.log_info(f"Scope '{scope}' is not enabled")
-        return result
+    def _error(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_error(fmt_msg)

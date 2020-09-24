@@ -29,6 +29,8 @@ class IndicatorImporter:
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
+        create_observables: bool,
+        create_indicators: bool,
         exclude_types: List[str],
         report_status: int,
         report_type: str,
@@ -36,14 +38,21 @@ class IndicatorImporter:
         """Initialize CrowdStrike indicator importer."""
         self.helper = helper
         self.indicators_api = indicators_api
-        self.report_fetcher = ReportFetcher(reports_api)
-        self.update_existing_data = update_existing_data
         self.author = author
-        self.default_latest_timestamp = default_latest_timestamp
         self.tlp_marking = tlp_marking
+        self.create_observables = create_observables
+        self.create_indicators = create_indicators
+        self.update_existing_data = update_existing_data
+        self.default_latest_timestamp = default_latest_timestamp
         self.exclude_types = exclude_types
         self.report_status = report_status
         self.report_type = report_type
+
+        if not (self.create_observables or self.create_indicators):
+            msg = "'create_observables' and 'create_indicators' false at the same time"
+            raise ValueError(msg)
+
+        self.report_fetcher = ReportFetcher(reports_api)
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
@@ -144,25 +153,19 @@ class IndicatorImporter:
         )
 
     def _process_indicator(self, indicator: Indicator) -> bool:
-        self._info(
-            "Processing indicator {0} ({1})...", indicator.indicator, indicator.id
-        )
+        self._info("Processing indicator {0}...", indicator.id)
 
         indicator_reports = self._get_reports_by_code(indicator.reports)
 
         indicator_bundle = self._create_indicator_bundle(indicator, indicator_reports)
         if indicator_bundle is None:
-            self._error(
-                "Discarding indicator {0} ({1}) bundle",
-                indicator.indicator,
-                indicator.id,
-            )
+            self._error("Discarding indicator {0} bundle", indicator.id)
             return False
 
-        with open(f"indicator_bundle_{indicator_bundle['id']}.json", "w") as f:
-            f.write(indicator_bundle.serialize(pretty=True))
+        # with open(f"indicator_bundle_{indicator_bundle['id']}.json", "w") as f:
+        #     f.write(indicator_bundle.serialize(pretty=True))
 
-        # self._send_bundle(indicator_bundle)
+        self._send_bundle(indicator_bundle)
 
         return True
 
@@ -174,8 +177,10 @@ class IndicatorImporter:
     ) -> Optional[Bundle]:
         author = self.author
         source_name = self._source_name()
-        object_marking_refs = [self.tlp_marking]
+        object_markings = [self.tlp_marking]
         confidence_level = self._confidence_level()
+        create_observables = self.create_observables
+        create_indicators = self.create_indicators
         report_status = self.report_status
         report_type = self.report_type
 
@@ -184,8 +189,10 @@ class IndicatorImporter:
                 indicator,
                 author,
                 source_name,
-                object_marking_refs,
+                object_markings,
                 confidence_level,
+                create_observables,
+                create_indicators,
                 report_status,
                 report_type,
                 indicator_reports,

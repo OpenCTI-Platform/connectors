@@ -26,6 +26,7 @@ from crowdstrike.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,
     OBSERVATION_FACTORY_EMAIL_ADDRESS,
+    OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT,
     OBSERVATION_FACTORY_FILE_MD5,
     OBSERVATION_FACTORY_FILE_NAME,
     OBSERVATION_FACTORY_FILE_SHA1,
@@ -33,7 +34,8 @@ from crowdstrike.utils import (
     OBSERVATION_FACTORY_IPV4_ADDRESS,
     OBSERVATION_FACTORY_MUTEX,
     OBSERVATION_FACTORY_URL,
-    OBSERVATION_FACTORY_WINDOWS_SERVICE_NAME,
+    OBSERVATION_FACTORY_USER_AGENT,
+    ObservableProperties,
     ObservationFactory,
     create_based_on_relationships,
     create_indicates_relationships,
@@ -65,18 +67,17 @@ class Observation(NamedTuple):
 class IndicatorBundleBuilder:
     """Indicator bundle builder."""
 
-    # TODO: Rename variable
-    _INDICATOR_TYPE_TO_OPENCTI_TYPE = {
+    _INDICATOR_TYPE_TO_OBSERVATION_FACTORY = {
         # "binary_string": "",  # Ignore.
         # "compile_time": "",  # Ignore.
         # "device_name": "",  # Ignore.
         "domain": OBSERVATION_FACTORY_DOMAIN_NAME,
         "email_address": OBSERVATION_FACTORY_EMAIL_ADDRESS,
-        # "email_subject": "",  # Ignore.
+        "email_subject": OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT,
         # "event_name": "",  # Ignore.
         # "file_mapping": "",  # Ignore.
         "file_name": OBSERVATION_FACTORY_FILE_NAME,
-        # "file_path": "",  # Ignore.
+        "file_path": OBSERVATION_FACTORY_FILE_NAME,
         # "hash_ion": "",  # Ignore.
         "hash_md5": OBSERVATION_FACTORY_FILE_MD5,
         "hash_sha1": OBSERVATION_FACTORY_FILE_SHA1,
@@ -88,14 +89,16 @@ class IndicatorBundleBuilder:
         # "persona_name": "",  # Ignore.
         # "phone_number": "",  # Ignore.
         # "port": "",  # Ignore.
-        # "registry": "",  # TODO
+        # "registry": "",  # Ignore.
         # "semaphore_name": "",  # Ignore.
-        "service_name": OBSERVATION_FACTORY_WINDOWS_SERVICE_NAME,
+        # XXX: service_name currently not supported by pycti/OpenCTI.
+        # "service_name": OBSERVATION_FACTORY_WINDOWS_SERVICE_NAME,
         "url": OBSERVATION_FACTORY_URL,
-        # "user_agent": "",  # Ignore.
+        "user_agent": OBSERVATION_FACTORY_USER_AGENT,
         # "username": "",  # Ignore.
-        # "x509_serial": "",  # TODO
-        # "x509_subject": "",  # TODO
+        # XXX: x509_serial and x509_subject currently not supported by pycti/OpenCTI.
+        # "x509_serial": OBSERVATION_FACTORY_X509_CERTIFICATE_SERIAL_NUMBER,
+        # "x509_subject": OBSERVATION_FACTORY_X509_CERTIFICATE_SUBJECT,
         "bitcoin_address": OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
         "coin_address": OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     }
@@ -119,6 +122,8 @@ class IndicatorBundleBuilder:
         source_name: str,
         object_markings: List[MarkingDefinition],
         confidence_level: int,
+        create_observables: bool,
+        create_indicators: bool,
         indicator_report_status: int,
         indicator_report_type: str,
         indicator_reports: List[FetchedReport],
@@ -129,15 +134,12 @@ class IndicatorBundleBuilder:
         self.source_name = source_name
         self.object_markings = object_markings
         self.confidence_level = confidence_level
-
-        # TODO: Both False?
-        self.create_observables = True  # TODO: Make configurable!!!
-        self.create_indicators = True  # TODO: Make configurable!!!
+        self.create_observables = create_observables
+        self.create_indicators = create_indicators
         self.indicator_reports = indicator_reports
         self.indicator_report_status = indicator_report_status
         self.indicator_report_type = indicator_report_type
 
-        # self.opencti_type = self._get_opencti_type(indicator.type)
         self.observation_factory = self._get_observation_factory(indicator.type)
 
         # first_seen = self.indicator.published_date
@@ -155,7 +157,7 @@ class IndicatorBundleBuilder:
 
     @classmethod
     def _get_observation_factory(cls, indicator_type: str) -> ObservationFactory:
-        factory = cls._INDICATOR_TYPE_TO_OPENCTI_TYPE.get(indicator_type)
+        factory = cls._INDICATOR_TYPE_TO_OBSERVATION_FACTORY.get(indicator_type)
         if factory is None:
             raise TypeError(f"Unsupported pulse indicator type: {indicator_type}")
         return factory
@@ -278,11 +280,14 @@ class IndicatorBundleBuilder:
         if not (self.create_observables or self.create_indicators):
             return None
 
+        # Get labels.
+        labels = self._get_labels()
+
         # Create an observable.
-        observable = self._create_observable()
+        observable = self._create_observable(labels)
 
         # Create an indicator.
-        indicator = self._create_indicator(kill_chain_phases)
+        indicator = self._create_indicator(kill_chain_phases, labels)
 
         # Create a based on relationship.
         indicator_based_on_observable = None
@@ -294,20 +299,39 @@ class IndicatorBundleBuilder:
 
         return Observation(observable, indicator, indicator_based_on_observable)
 
-    def _create_observable(self) -> Optional[_Observable]:
+    def _get_labels(self) -> List[str]:
+        labels = []
+
+        indicator_labels = self.indicator.labels
+        for indicator_label in indicator_labels:
+            label = indicator_label.name
+            if not label:
+                continue
+
+            labels.append(label)
+
+        return labels
+
+    def _create_observable(self, labels: List[str]) -> Optional[_Observable]:
         if not self.create_observables:
             return None
 
         indicator_value = self.indicator.indicator
 
-        observable = self.observation_factory.create_observable(
-            indicator_value, self.object_markings
+        observable_properties = self._create_observable_properties(
+            indicator_value, labels
         )
+        observable = self.observation_factory.create_observable(observable_properties)
 
         return observable
 
+    def _create_observable_properties(
+        self, value: str, labels: List[str]
+    ) -> ObservableProperties:
+        return ObservableProperties(value, labels, self.object_markings)
+
     def _create_indicator(
-        self, kill_chain_phases: List[KillChainPhase]
+        self, kill_chain_phases: List[KillChainPhase], labels: List[str]
     ) -> Optional[STIXIndicator]:
         if not self.create_indicators:
             return None
@@ -326,6 +350,7 @@ class IndicatorBundleBuilder:
             name=indicator_value,
             valid_from=indicator_published,
             kill_chain_phases=kill_chain_phases,
+            labels=labels,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
         )
@@ -445,7 +470,7 @@ class IndicatorBundleBuilder:
         # Create observations.
         observation = self._create_observation(kill_chain_phases)
         if observation is None:
-            # TODO: Is this OK?
+            logger.error("No indicator nor observable for %s", self.indicator.id)
             return None
 
         # Get observables and add to bundle.

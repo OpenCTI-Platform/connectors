@@ -24,5 +24,6 @@ X_OPENCTI_ALIASES = "x_opencti_aliases"
 X_OPENCTI_REPORT_STATUS = "x_opencti_report_status"
 X_OPENCTI_FILES = "x_opencti_files"
 X_OPENCTI_SCORE = "x_opencti_score"
+X_OPENCTI_LABELS = "x_opencti_labels"
 
 DEFAULT_X_OPENCTI_SCORE = 50

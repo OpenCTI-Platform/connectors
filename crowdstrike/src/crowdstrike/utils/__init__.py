@@ -56,6 +56,7 @@ from crowdstrike.utils.indicators import (
     create_indicator_pattern_cryptocurrency_wallet,
     create_indicator_pattern_domain_name,
     create_indicator_pattern_email_address,
+    create_indicator_pattern_email_message_subject,
     create_indicator_pattern_file_md5,
     create_indicator_pattern_file_name,
     create_indicator_pattern_file_sha1,
@@ -65,12 +66,17 @@ from crowdstrike.utils.indicators import (
     create_indicator_pattern_ipv6_address,
     create_indicator_pattern_mutex,
     create_indicator_pattern_url,
+    create_indicator_pattern_user_agent,
     create_indicator_pattern_windows_service_name,
+    create_indicator_pattern_x509_certificate_serial_number,
+    create_indicator_pattern_x509_certificate_subject,
 )
 from crowdstrike.utils.observables import (
+    ObservableProperties,
     create_observable_cryptocurrency_wallet,
     create_observable_domain_name,
     create_observable_email_address,
+    create_observable_email_message_subject,
     create_observable_file_md5,
     create_observable_file_name,
     create_observable_file_sha1,
@@ -80,7 +86,10 @@ from crowdstrike.utils.observables import (
     create_observable_ipv6_address,
     create_observable_mutex,
     create_observable_url,
+    create_observable_user_agent,
     create_observable_windows_service_name,
+    create_observable_x509_certificate_serial_number,
+    create_observable_x509_certificate_subject,
 )
 
 
@@ -90,7 +99,7 @@ logger = logging.getLogger(__name__)
 class ObservationFactory(NamedTuple):
     """Observation factory."""
 
-    create_observable: Callable[[str, List[MarkingDefinition]], _Observable]
+    create_observable: Callable[[ObservableProperties], _Observable]
     create_indicator_pattern: Callable[[str], str]
 
 
@@ -134,6 +143,22 @@ OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET = ObservationFactory(
 OBSERVATION_FACTORY_WINDOWS_SERVICE_NAME = ObservationFactory(
     create_observable_windows_service_name,
     create_indicator_pattern_windows_service_name,
+)
+OBSERVATION_FACTORY_X509_CERTIFICATE_SERIAL_NUMBER = ObservationFactory(
+    create_observable_x509_certificate_serial_number,
+    create_indicator_pattern_x509_certificate_serial_number,
+)
+OBSERVATION_FACTORY_X509_CERTIFICATE_SUBJECT = ObservationFactory(
+    create_observable_x509_certificate_subject,
+    create_indicator_pattern_x509_certificate_subject,
+)
+OBSERVATION_FACTORY_USER_AGENT = ObservationFactory(
+    create_observable_user_agent,
+    create_indicator_pattern_user_agent,
+)
+OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT = ObservationFactory(
+    create_observable_email_message_subject,
+    create_indicator_pattern_email_message_subject,
 )
 
 
