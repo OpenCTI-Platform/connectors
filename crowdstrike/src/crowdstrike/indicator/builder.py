@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""OpenCTI CrowdStrike indicator bundle builder module."""
+"""OpenCTI CrowdStrike indicator builder module."""
 
 import logging
 from typing import List, Mapping, NamedTuple, Optional
@@ -142,18 +142,7 @@ class IndicatorBundleBuilder:
 
         self.observation_factory = self._get_observation_factory(indicator.type)
 
-        # first_seen = self.indicator.published_date
-        # last_seen = self.indicator.last_updated
-        #
-        # if first_seen > last_seen:
-        #     logger.warning(
-        #         "First seen is greater than last seen for indicator: %s",
-        #         self.indicator.indicator,
-        #     )
-        #     first_seen, last_seen = last_seen, first_seen
-        #
-        # self.first_seen = first_seen
-        # self.last_seen = last_seen
+        self.first_seen = self.indicator.published_date
 
     @classmethod
     def _get_observation_factory(cls, indicator_type: str) -> ObservationFactory:
@@ -201,21 +190,21 @@ class IndicatorBundleBuilder:
         if not indicator_malware_families:
             return []
 
-        name = indicator_malware_families[0]
-        aliases = indicator_malware_families[1:]
+        malwares = []
 
-        malware = self._create_malware(name, aliases, kill_chain_phases)
+        for indicator_malware_family in indicator_malware_families:
+            malware = self._create_malware(indicator_malware_family, kill_chain_phases)
+            malwares.append(malware)
 
-        return [malware]
+        return malwares
 
     def _create_malware(
-        self, name: str, aliases: List[str], kill_chain_phases: List[KillChainPhase]
+        self, name: str, kill_chain_phases: List[KillChainPhase]
     ) -> Malware:
         return create_malware(
             name,
             created_by=self.author,
             is_family=True,
-            aliases=aliases,
             kill_chain_phases=kill_chain_phases,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
@@ -230,8 +219,7 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            # start_time=self.first_seen,
-            # stop_time=self.last_seen,
+            start_time=self.first_seen,
         )
 
     def _create_targeted_sectors(self) -> List[Identity]:
@@ -250,8 +238,7 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            # start_time=self.first_seen,
-            # stop_time=self.last_seen,
+            start_time=self.first_seen,
         )
 
     def _create_vulnerability(self, name: str):
@@ -364,8 +351,7 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            # start_time=self.first_seen,
-            # stop_time=self.last_seen,
+            start_time=self.first_seen,
         )
 
     def _create_indicates_relationships(
@@ -377,8 +363,7 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            # start_time=self.first_seen,
-            # stop_time=self.last_seen,
+            start_time=self.first_seen,
         )
 
     def _create_report(

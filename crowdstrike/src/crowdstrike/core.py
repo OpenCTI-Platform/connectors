@@ -15,7 +15,7 @@ from pycti.connector.opencti_connector_helper import get_config_variable
 from stix2 import Identity, MarkingDefinition
 
 from crowdstrike.actor.importer import ActorImporter
-from crowdstrike.indicators import IndicatorImporter
+from crowdstrike.indicator.importer import IndicatorImporter
 from crowdstrike.report.importer import ReportImporter
 from crowdstrike.utils import (
     convert_comma_separated_str_to_list,

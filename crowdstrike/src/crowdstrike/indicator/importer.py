@@ -10,7 +10,7 @@ from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 from stix2 import Bundle, Identity, MarkingDefinition
 
-from crowdstrike.indicator_bundle_builder import IndicatorBundleBuilder
+from crowdstrike.indicator.builder import IndicatorBundleBuilder
 from crowdstrike.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 

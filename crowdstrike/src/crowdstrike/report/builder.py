@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""OpenCTI CrowdStrike report bundle builder module."""
+"""OpenCTI CrowdStrike report builder module."""
 
 import logging
 from typing import List, Mapping, Optional, Tuple, Union
