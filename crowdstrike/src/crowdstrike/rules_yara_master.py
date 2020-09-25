@@ -42,12 +42,13 @@ class RulesYaraMasterImporter:
         """Initialize CrowdStrike rules YARA master importer."""
         self.helper = helper
         self.rules_api = rules_api
-        self.report_fetcher = ReportFetcher(reports_api)
         self.author = author
         self.tlp_marking = tlp_marking
         self.update_existing_data = update_existing_data
         self.report_status = report_status
         self.report_type = report_type
+
+        self.report_fetcher = ReportFetcher(reports_api)
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""

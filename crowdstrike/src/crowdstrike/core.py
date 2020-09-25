@@ -17,6 +17,7 @@ from stix2 import Identity, MarkingDefinition
 from crowdstrike.actor.importer import ActorImporter
 from crowdstrike.indicator.importer import IndicatorImporter
 from crowdstrike.report.importer import ReportImporter
+from crowdstrike.rules_yara_master import RulesYaraMasterImporter
 from crowdstrike.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
@@ -209,16 +210,19 @@ class CrowdStrike:
 
             importers.append(indicator_importer)
 
-        # self.rules_yara_master_importer = RulesYaraMasterImporter(
-        #     self.helper,
-        #     client.intel_api.rules,
-        #     client.intel_api.reports,
-        #     author,
-        #     tlp_marking,
-        #     update_existing_data,
-        #     report_status,
-        #     report_type,
-        # )
+        if self._CONFIG_SCOPE_YARA_MASTER in scopes:
+            rules_yara_master_importer = RulesYaraMasterImporter(
+                self.helper,
+                client.intel_api.rules,
+                client.intel_api.reports,
+                author,
+                tlp_marking,
+                update_existing_data,
+                report_status,
+                report_type,
+            )
+
+            importers.append(rules_yara_master_importer)
 
         self.importers = importers
 
