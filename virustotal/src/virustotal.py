@@ -56,7 +56,9 @@ class VirusTotalConnector:
                 id=final_observabke["id"], key="hashes.SHA-1", value=attributes["sha1"]
             )
             final_observabke = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observabke["id"], key="hashes.SHA-256", value=attributes["sha256"]
+                id=final_observabke["id"],
+                key="hashes.SHA-256",
+                value=attributes["sha256"],
             )
             if observable["name"] is None and len(attributes["names"]) > 0:
                 self.helper.api.stix_cyber_observable.update_field(

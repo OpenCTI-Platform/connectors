@@ -2,3 +2,4 @@ git+https://github.com/OpenCTI-Platform/client-python@master
 PyYAML==5.3.1
 requests==2.24.0
 ioc_writer==0.3.3
+stix2-slider==3.0.0
