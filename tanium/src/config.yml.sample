@@ -14,6 +14,7 @@ tanium:
   url: 'https://console.changeme.com'
   login: 'ChangeMe'
   password: 'ChangeMe'
-  indicator_types: 'yara,tanium-signal'
+  indicator_types: 'stix,yara,tanium-signal'
   observable_types: 'ipv4-addr,ipv6-addr,domain-name,x-opencti-hostname,file,process'
+  trigger_quickscan: False
   import_label: 'tanium'

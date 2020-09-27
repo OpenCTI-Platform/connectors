@@ -140,14 +140,12 @@ class CyberThreatCoalition:
                         return
                     if self.cyber_threat_coalition_create_indicators:
                         indicator = stix2.Indicator(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "indicator"
-                            ),
+                            id=OpenCTIStix2Utils.generate_random_stix_id("indicator"),
                             name=data,
                             pattern_type=pattern_type,
-                            pattern=self._INDICATOR_PATTERN[
-                                observable_resolver
-                            ].format(data),
+                            pattern=self._INDICATOR_PATTERN[observable_resolver].format(
+                                data
+                            ),
                             labels=labels,
                             created_by_ref=organization,
                             object_marking_refs=[stix2.TLP_WHITE],
@@ -160,7 +158,9 @@ class CyberThreatCoalition:
                             id=OpenCTIStix2Utils.generate_random_stix_id(
                                 "x-opencti-simple-observable"
                             ),
-                            key=observable_type + "." + ".".join(self._OBSERVABLE_PATH[observable_resolver]),
+                            key=observable_type
+                            + "."
+                            + ".".join(self._OBSERVABLE_PATH[observable_resolver]),
                             value=data,
                             labels=labels,
                             created_by_ref=organization,
