@@ -8,11 +8,12 @@ from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.base import Entity
 from crowdstrike_client.api.models.report import Report
 
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 
-from stix2 import Bundle, Identity, MarkingDefinition
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
-from crowdstrike.report_bundle_builder import ReportBundleBuilder
+from crowdstrike.importer import BaseImporter
+from crowdstrike.report.builder import ReportBundleBuilder
 from crowdstrike.utils import (
     create_file_from_download,
     datetime_to_timestamp,
@@ -21,7 +22,7 @@ from crowdstrike.utils import (
 )
 
 
-class ReportImporter:
+class ReportImporter(BaseImporter):
     """CrowdStrike report importer."""
 
     _LATEST_REPORT_TIMESTAMP = "latest_report_timestamp"
@@ -42,12 +43,10 @@ class ReportImporter:
         guess_malware: bool,
     ) -> None:
         """Initialize CrowdStrike report importer."""
-        self.helper = helper
+        super().__init__(helper, author, tlp_marking, update_existing_data)
+
         self.reports_api = reports_api
-        self.update_existing_data = update_existing_data
-        self.author = author
         self.default_latest_timestamp = default_latest_timestamp
-        self.tlp_marking = tlp_marking
         self.include_types = include_types
         self.report_status = report_status
         self.report_type = report_type
@@ -104,14 +103,6 @@ class ReportImporter:
     def _clear_malware_guess_cache(self):
         self.malware_guess_cache.clear()
 
-    def _info(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_info(fmt_msg)
-
-    def _error(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_error(fmt_msg)
-
     def _fetch_reports(
         self, start_timestamp: int
     ) -> Generator[List[Report], None, None]:
@@ -161,18 +152,22 @@ class ReportImporter:
         self._info("Processing reports completed (imported: {0})", report_count)
 
     def _process_report(self, report: Report) -> None:
-        self._info("Processing report {0}...", report.id)
+        self._info("Processing report {0} ({1})...", report.name, report.id)
 
         report_file = self._get_report_pdf(report.id)
-
         report_bundle = self._create_report_bundle(report, report_file)
+
+        # with open(f"report_bundle_{report.id}.json", "w") as f:
+        #     f.write(report_bundle.serialize(pretty=True))
 
         self._send_bundle(report_bundle)
 
     def _get_report_pdf(self, report_id: int) -> Optional[Mapping[str, str]]:
-        download = self.reports_api.get_pdf(str(report_id))
+        self._info("Fetching report PDF for {0}...", report_id)
 
+        download = self.reports_api.get_pdf(str(report_id))
         if download is None:
+            self._info("No report PDF for {0}q", report_id)
             return None
 
         return create_file_from_download(download)
@@ -219,9 +214,9 @@ class ReportImporter:
             if guess is None:
                 guess = self._GUESS_NOT_A_MALWARE
 
-                stix_id = self._fetch_malware_stix_id_by_name(name)
-                if stix_id is not None:
-                    guess = stix_id
+                standard_id = self._fetch_malware_standard_id_by_name(name)
+                if standard_id is not None:
+                    guess = standard_id
 
                 self.malware_guess_cache[name] = guess
 
@@ -232,10 +227,10 @@ class ReportImporter:
                 malwares[name] = guess
         return malwares
 
-    def _fetch_malware_stix_id_by_name(self, name: str) -> Optional[str]:
+    def _fetch_malware_standard_id_by_name(self, name: str) -> Optional[str]:
         filters = [
             self._create_filter("name", name),
-            self._create_filter("alias", name),
+            self._create_filter("aliases", name),
         ]
         for _filter in filters:
             malwares = self.helper.api.malware.list(filters=_filter)
@@ -243,21 +238,9 @@ class ReportImporter:
                 if len(malwares) > 1:
                     self._info("More then one malware for '{0}'", name)
                 malware = malwares[0]
-                return malware["stix_id_key"]
+                return malware["standard_id"]
         return None
 
     @staticmethod
     def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
         return [{"key": key, "values": [value]}]
-
-    def _source_name(self) -> str:
-        return self.helper.connect_name
-
-    def _confidence_level(self) -> int:
-        return self.helper.connect_confidence_level
-
-    def _send_bundle(self, bundle: Bundle) -> None:
-        serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, None, self.update_existing_data, False
-        )
