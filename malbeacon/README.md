@@ -1,7 +1,10 @@
 # OpenCTI Malbeacon Connector
 
+![Malbeacon Logo](https://malbeacon.com/static/assets/images/pharos1.png)
+
 this is an observable enrichment connector that uses the
-[Malbeacon](https://malbeacon.com/) API to
+[Malbeacon](https://malbeacon.com/) API to add information about origin
+networks of attackers.
 
 The connector works for the following OpenCTI observable types:
 
@@ -26,7 +29,7 @@ file of OpenCTI.
 
 ## Configuration
 
-Please add your API key to the configuration file.
+Please add your Malbeacon API key to the configuration file (replace `ChangeMe`).
 
 ## Behavior
 
