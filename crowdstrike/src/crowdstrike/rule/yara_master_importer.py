@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""OpenCTI CrowdStrike rules YARA master importer module."""
+"""OpenCTI CrowdStrike YARA master importer module."""
 
 import zipfile
 from datetime import datetime
@@ -9,24 +9,25 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 from crowdstrike_client.api.intel import Reports, Rules
 from crowdstrike_client.api.models.download import Download
 
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 
-from stix2 import Bundle, Identity, MarkingDefinition
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
-from crowdstrike.report_fetcher import FetchedReport, ReportFetcher
+from crowdstrike.importer import BaseImporter
+from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike.utils import datetime_to_timestamp, timestamp_to_datetime
-from crowdstrike.yara_rule_bundle_builder import YaraRuleBundleBuilder
-from crowdstrike.yara_rules_parser import YaraParser, YaraRule
+from crowdstrike.rule.yara_master_builder import YaraRuleBundleBuilder
+from crowdstrike.utils.yara_parser import YaraParser, YaraRule
 
 
-class RulesYaraMasterImporter:
-    """CrowdStrike rules YARA master importer."""
+class YaraMasterImporter(BaseImporter):
+    """CrowdStrike YARA master importer."""
 
     _E_TAG = "yara_master_e_tag"
     _LAST_MODIFIED = "yara_master_last_modified"
 
     _KEY_ID = "id"
-    _KEY_INDICATOR_PATTERN = "indicator_pattern"
+    _KEY_INDICATOR_PATTERN = "pattern"
 
     def __init__(
         self,
@@ -39,15 +40,14 @@ class RulesYaraMasterImporter:
         report_status: int,
         report_type: str,
     ) -> None:
-        """Initialize CrowdStrike rules YARA master importer."""
-        self.helper = helper
+        """Initialize CrowdStrike YARA master importer."""
+        super().__init__(helper, author, tlp_marking, update_existing_data)
+
         self.rules_api = rules_api
-        self.report_fetcher = ReportFetcher(reports_api)
-        self.author = author
-        self.tlp_marking = tlp_marking
-        self.update_existing_data = update_existing_data
         self.report_status = report_status
         self.report_type = report_type
+
+        self.report_fetcher = ReportFetcher(reports_api)
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
@@ -97,14 +97,6 @@ class RulesYaraMasterImporter:
     def _clear_report_fetcher_cache(self) -> None:
         self._info("Clearing report fetcher cache...")
         self.report_fetcher.clear_cache()
-
-    def _info(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_info(fmt_msg)
-
-    def _error(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_error(fmt_msg)
 
     def _download_yara_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
@@ -250,7 +242,7 @@ class RulesYaraMasterImporter:
     def _update_indicator_pattern(
         self, indicator_id: str, new_indicator_pattern: str
     ) -> bool:
-        updated = self.helper.api.stix_domain_entity.update_field(
+        updated = self.helper.api.stix_domain_object.update_field(
             id=indicator_id,
             key=self._KEY_INDICATOR_PATTERN,
             value=new_indicator_pattern,
@@ -283,15 +275,3 @@ class RulesYaraMasterImporter:
             reports,
         )
         return bundle_builder.build()
-
-    def _source_name(self) -> str:
-        return self.helper.connect_name
-
-    def _confidence_level(self) -> int:
-        return self.helper.connect_confidence_level
-
-    def _send_bundle(self, bundle: Bundle) -> None:
-        serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, None, self.update_existing_data, False
-        )

@@ -6,16 +6,17 @@ from typing import Any, Generator, List, Mapping, Optional
 from crowdstrike_client.api.intel import Indicators, Reports
 from crowdstrike_client.api.models import Indicator, Response
 
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 
-from stix2 import Bundle, Identity, MarkingDefinition
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
-from crowdstrike.indicator_bundle_builder import IndicatorBundleBuilder
-from crowdstrike.report_fetcher import FetchedReport, ReportFetcher
+from crowdstrike.importer import BaseImporter
+from crowdstrike.indicator.builder import IndicatorBundleBuilder
+from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 
 
-class IndicatorImporter:
+class IndicatorImporter(BaseImporter):
     """CrowdStrike indicator importer."""
 
     _LATEST_INDICATOR_TIMESTAMP = "latest_indicator_timestamp"
@@ -29,21 +30,28 @@ class IndicatorImporter:
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
+        create_observables: bool,
+        create_indicators: bool,
         exclude_types: List[str],
         report_status: int,
         report_type: str,
     ) -> None:
         """Initialize CrowdStrike indicator importer."""
-        self.helper = helper
+        super().__init__(helper, author, tlp_marking, update_existing_data)
+
         self.indicators_api = indicators_api
-        self.report_fetcher = ReportFetcher(reports_api)
-        self.update_existing_data = update_existing_data
-        self.author = author
+        self.create_observables = create_observables
+        self.create_indicators = create_indicators
         self.default_latest_timestamp = default_latest_timestamp
-        self.tlp_marking = tlp_marking
         self.exclude_types = exclude_types
         self.report_status = report_status
         self.report_type = report_type
+
+        if not (self.create_observables or self.create_indicators):
+            msg = "'create_observables' and 'create_indicators' false at the same time"
+            raise ValueError(msg)
+
+        self.report_fetcher = ReportFetcher(reports_api)
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
@@ -81,14 +89,6 @@ class IndicatorImporter:
 
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
-
-    def _info(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_info(fmt_msg)
-
-    def _error(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_error(fmt_msg)
 
     def _fetch_indicators(
         self, fetch_timestamp: int
@@ -150,8 +150,11 @@ class IndicatorImporter:
 
         indicator_bundle = self._create_indicator_bundle(indicator, indicator_reports)
         if indicator_bundle is None:
-            self._error("Discarding {0} indicator bundle", indicator.id)
+            self._error("Discarding indicator {0} bundle", indicator.id)
             return False
+
+        # with open(f"indicator_bundle_{indicator_bundle['id']}.json", "w") as f:
+        #     f.write(indicator_bundle.serialize(pretty=True))
 
         self._send_bundle(indicator_bundle)
 
@@ -165,8 +168,10 @@ class IndicatorImporter:
     ) -> Optional[Bundle]:
         author = self.author
         source_name = self._source_name()
-        object_marking_refs = [self.tlp_marking]
+        object_markings = [self.tlp_marking]
         confidence_level = self._confidence_level()
+        create_observables = self.create_observables
+        create_indicators = self.create_indicators
         report_status = self.report_status
         report_type = self.report_type
 
@@ -175,8 +180,10 @@ class IndicatorImporter:
                 indicator,
                 author,
                 source_name,
-                object_marking_refs,
+                object_markings,
                 confidence_level,
+                create_observables,
+                create_indicators,
                 report_status,
                 report_type,
                 indicator_reports,
@@ -185,15 +192,3 @@ class IndicatorImporter:
         except TypeError as te:
             self._error(str(te))
             return None
-
-    def _source_name(self) -> str:
-        return self.helper.connect_name
-
-    def _confidence_level(self) -> int:
-        return self.helper.connect_confidence_level
-
-    def _send_bundle(self, bundle: Bundle) -> None:
-        serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, None, self.update_existing_data, False
-        )
