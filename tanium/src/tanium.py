@@ -1,11 +1,16 @@
+################################
+# Tanium Connector for OpenCTI #
+################################
+
 import os
 import yaml
 import json
+import re
 import requests
 
 from stix2slider import slide_string
 from stix2slider.options import initialize_options
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable, StixCyberObservableTypes
 
 
 class TaniumConnector:
@@ -36,6 +41,12 @@ class TaniumConnector:
             ["tanium", "import_label"],
             config,
         )
+        self.tanium_auto_quickscan = get_config_variable(
+            "TANIUM_AUTO_QUICKSCAN", ["tanium", "auto_quickscan"], config, False, False
+        )
+        self.tanium_computer_groups = get_config_variable(
+            "TANIUM_COMPUTER_GROUPS", ["tanium", "computer_groups"], config, False, ""
+        ).split(",")
 
         # Variables
         self.session = None
@@ -59,16 +70,28 @@ class TaniumConnector:
         self,
         method,
         uri,
-        payload,
+        payload=None,
         content_type="application/json",
         type=None,
         retry=False,
     ):
         headers = {"session": self.session, "content-type": content_type, "type": type}
+        if content_type == "application/octet-stream":
+            headers["content-disposition"] = (
+                "attachment; filename=" + payload["filename"]
+            )
+            headers["name"] = payload["name"]
+            headers["description"] = payload["description"]
         if method == "get":
             r = requests.get(self.tanium_url + uri, headers=headers, params=payload)
         elif method == "post":
-            if type is not None:
+            if content_type == "application/octet-stream":
+                r = requests.post(
+                    self.tanium_url + uri,
+                    headers=headers,
+                    data=payload["document"],
+                )
+            elif type is not None:
                 r = requests.post(
                     self.tanium_url + uri, headers=headers, data=payload["intelDoc"]
                 )
@@ -78,10 +101,15 @@ class TaniumConnector:
             r = requests.put(self.tanium_url + uri, headers=headers, json=payload)
         elif method == "patch":
             r = requests.patch(self.tanium_url + uri, headers=headers, json=payload)
+        elif method == "delete":
+            r = requests.delete(self.tanium_url + uri, headers=headers)
         else:
             raise ValueError("Unspported method")
         if r.status_code == 200:
-            return r.json()
+            try:
+                return r.json()
+            except:
+                return r.text
         elif r.status_code == 401 and not retry:
             self._get_session()
             self._query(method, uri, payload, content_type, type, True)
@@ -116,65 +144,172 @@ class TaniumConnector:
                 final_labels.append(created_label)
         return final_labels
 
-    def _check_exists(self, standard_id):
+    def _get_by_id(self, standard_id):
         response = self._query(
             "get",
             "/plugin/products/detect3/api/v1/intels",
             {"description": standard_id},
         )
-        print(response)
-        if response and response["intelDocs"] and len(response["intelDocs"]) > 0:
-            return response["intelDocs"][0]
+        if response and len(response) > 0:
+            return response[0]
         else:
+            response = self._query(
+                "get",
+                "/plugin/products/detect3/api/v1/intels",
+                {"name": standard_id + ".yara"},
+            )
+            if response and len(response) > 0:
+                return response[0]
+            else:
+                return None
+
+    def _create_indicator_stix(self, entity):
+        intel_document = self._get_by_id(entity["standard_id"])
+        if intel_document:
+            return intel_document
+        stix2_bundle = self.helper.api.stix2.export_entity(
+            entity["entity_type"],
+            entity["id"],
+            "simple",
+            None,
+            True,
+            True,
+        )
+        initialize_options()
+        stix_indicator = slide_string(stix2_bundle)
+        stix_indicator = re.sub(
+            r"<indicator:Description>(.*?)<\/indicator:Description>",
+            r"<indicator:Description>"
+            + entity["standard_id"]
+            + "</indicator:Description>",
+            stix_indicator,
+        )
+        payload = {"intelDoc": stix_indicator}
+        intel_document = self._query(
+            "post",
+            "/plugin/products/detect3/api/v1/intels",
+            payload,
+            "application/xml",
+            "stix",
+        )
+        return intel_document
+
+    def _create_indicator_yara(self, entity):
+        intel_document = self._get_by_id(entity["standard_id"])
+        if intel_document:
+            return intel_document
+
+        filename = entity["standard_id"] + ".yara"
+        intel_document = self._query(
+            "post",
+            "/plugin/products/detect3/api/v1/intels",
+            {
+                "filename": filename,
+                "document": entity["pattern"],
+                "name": entity["name"],
+                "description": entity["standard_id"],
+            },
+            "application/octet-stream",
+            "yara",
+        )
+        return intel_document
+
+    def _create_tanium_signal(self, entity):
+        intel_document = self._get_by_id(entity["standard_id"])
+        if intel_document:
+            return intel_document
+        platforms = []
+        if "x_mitre_platforms" in entity and len(entity["x_mitre_platforms"]) > 0:
+            for x_mitre_platform in entity["x_mitre_platforms"]:
+                if x_mitre_platform in ["Linux", "Windows", "macOS"]:
+                    platforms.append(
+                        x_mitre_platform.lower()
+                        if x_mitre_platform != "macOS"
+                        else "mac"
+                    )
+        intel_document = self._query(
+            "post",
+            "/plugin/products/detect3/api/v1/intels",
+            {
+                "name": entity["name"],
+                "description": entity["standard_id"],
+                "platforms": platforms,
+                "contents": entity["pattern"],
+            },
+        )
+        return intel_document
+
+    def _create_observable(self, entity):
+        intel_document = self._get_by_id(entity["standard_id"])
+        if intel_document:
+            return intel_document
+
+        intel_type = None
+        value = None
+        name = None
+        if entity["entity_type"] == "StixFile":
+            intel_type = "file_hash"
+            if "hashes" in entity:
+                for hash in entity["hashes"]:
+                    value = (
+                        value + hash["hash"] + "\n"
+                        if value is not None
+                        else hash["hash"] + "\n"
+                    )
+                    name = hash["hash"]
+
+        elif entity["entity_type"] in [
+            "IPv4-Addr",
+            "IPv6-Addr",
+            "Domain",
+            "X-OpenCTI-Hostname",
+        ]:
+            intel_type = "ip_or_host"
+            value = entity["value"]
+            name = entity["value"]
+        if intel_type is None or value is None:
             return None
 
-    def _process_message(self, msg):
-        data = json.loads(msg.data)
-        entity_type = data["data"]["type"]
-        if (
-            entity_type != "indicator"
-            and entity_type not in self.tanium_observable_types
-        ):
-            return
+        openioc = self._query(
+            "post",
+            "/plugin/products/detect3/api/v1/intels/quick-add",
+            {
+                "exact": True,
+                "name": name,
+                "description": entity["standard_id"],
+                "type": intel_type,
+                "text": value,
+            },
+        )
+        openioc = re.sub(
+            r"<description>(.*?)<\/description>",
+            r"<description>" + entity["standard_id"] + "</description>",
+            openioc,
+        )
+        payload = {"intelDoc": openioc}
+        intel_document = self._query(
+            "post",
+            "/plugin/products/detect3/api/v1/intels",
+            payload,
+            "application/xml",
+            "openioc",
+        )
 
-        # Handle creation
-        intel_document = None
-        entity = None
-        if msg.event == "create":
-            if (
-                "labels" not in data["data"]
-                or self.tanium_import_label not in data["data"]["labels"]
-            ):
-                return
-            if entity_type == "indicator":
-                if data["data"]["pattern_type"] == "stix":
-                    entity = self.helper.api.indicator.read(id=data["data"]["id"])
-                    if entity is None:
-                        return
-                    intel_document = self._check_exists(entity["standard_id"])
-                    if not intel_document:
-                        entity["description"] = entity["standard_id"]
-                        stix2_bundle = self.helper.api.stix2.export_entity(
-                            entity["entity_type"], entity["id"], "simple", None, True
-                        )
-                        initialize_options()
-                        try:
-                            stix_indicator = slide_string(stix2_bundle)
-                        except:
-                            self.helper.log_error(
-                                "Cannot convert the indicator to STIX 1"
-                            )
-                            return
-                        payload = {"intelDoc": stix_indicator}
-                        intel_document = self._query(
-                            "post",
-                            "/plugin/products/detect3/api/v1/intels",
-                            payload,
-                            "application/xml",
-                            "stix",
-                        )
+        return intel_document
 
+    def _post_operations(self, entity, intel_document):
         if intel_document is not None and entity is not None:
+            if self.tanium_auto_quickscan:
+                for computer_group in self.tanium_computer_groups:
+                    self._query(
+                        "post",
+                        "/plugin/products/detect3/api/v1/quick-scans",
+                        {
+                            "computerGroupId": int(computer_group),
+                            "intelDocId": intel_document["id"],
+                        },
+                    )
+
             external_reference = self.helper.api.external_reference.create(
                 source_name="Tanium",
                 url=self.tanium_url
@@ -183,9 +318,14 @@ class TaniumConnector:
                 external_id=str(intel_document["id"]),
                 description="Intel document within the Tanium platform.",
             )
-            self.helper.api.stix_domain_object.add_external_reference(
-                id=entity["id"], external_reference_id=external_reference["id"]
-            )
+            if entity["entity_type"] == "Indicator":
+                self.helper.api.stix_domain_object.add_external_reference(
+                    id=entity["id"], external_reference_id=external_reference["id"]
+                )
+            else:
+                self.helper.api.stix_cyber_observable.add_external_reference(
+                    id=entity["id"], external_reference_id=external_reference["id"]
+                )
             if len(entity["objectLabel"]) > 0:
                 labels = self._get_labels(entity["objectLabel"])
                 for label in labels:
@@ -196,6 +336,140 @@ class TaniumConnector:
                         + "/labels",
                         {"id": label["id"]},
                     )
+
+    def _process_intel(self, entity_type, data):
+        entity = None
+        intel_document = None
+        if entity_type == "indicator":
+            entity = self.helper.api.indicator.read(id=data["data"]["id"])
+            if entity is None:
+                return {"entity": entity, "intel_document": intel_document}
+            if entity["pattern_type"] == "stix":
+                intel_document = self._create_indicator_stix(entity)
+            elif entity["pattern_type"] == "yara":
+                intel_document = self._create_indicator_yara(entity)
+            elif entity["pattern_type"] == "tanium-signal":
+                intel_document = self._create_tanium_signal(entity)
+        elif (
+            StixCyberObservableTypes.has_value(entity_type)
+            and entity_type.lower() in self.tanium_observable_types
+        ):
+            entity = self.helper.api.stix_cyber_observable.read(id=data["data"]["id"])
+            intel_document = self._create_observable(entity)
+        return {"entity": entity, "intel_document": intel_document}
+
+    def _process_message(self, msg):
+        data = json.loads(msg.data)
+        entity_type = data["data"]["type"]
+        if (
+            entity_type != "indicator"
+            and entity_type not in self.tanium_observable_types
+        ):
+            return
+        # Handle creation
+        if msg.event == "create":
+            if (
+                self.tanium_import_label == "*"
+                or "labels" not in data["data"]
+                or not self.tanium_import_label
+                or self.tanium_import_label not in data["data"]["labels"]
+            ):
+                return
+            # Process intel
+            intel_document = self._process_intel(entity_type, data)["intel_document"]
+            entity = self._process_intel(entity_type, data)["entity"]
+            # Create external reference and add object labels
+            self._post_operations(entity, intel_document)
+
+        elif msg.event == "update":
+            if (
+                "x_data_update" in data["data"]
+                and "remove" in data["data"]["x_data_update"]
+                and "labels" in data["data"]["x_data_update"]["remove"]
+            ):
+                if (
+                    self.tanium_import_label
+                    in data["data"]["x_data_update"]["remove"]["labels"]
+                ):
+                    # Import label has been removed
+                    intel_document = self._get_by_id(data["data"]["id"])
+                    if intel_document is not None:
+                        self._query(
+                            "delete",
+                            "/plugin/products/detect3/api/v1/intels/"
+                            + str(intel_document["id"]),
+                        )
+                    # Remove external references
+                    if entity_type == "indicator":
+                        entity = self.helper.api.indicator.read(id=data["data"]["id"])
+                    else:
+                        entity = self.helper.api.stix_cyber_observable.read(
+                            id=data["data"]["id"]
+                        )
+                    if (
+                        entity
+                        and "externalReferences" in entity
+                        and len(entity["externalReferences"]) > 0
+                    ):
+                        for external_reference in entity["externalReferences"]:
+                            if external_reference["source_name"] == "Tanium":
+                                self.helper.api.external_reference.delete(
+                                    external_reference["id"]
+                                )
+                else:
+                    intel_document = self._get_by_id(data["data"]["id"])
+                    if intel_document:
+                        new_labels = []
+                        for label in data["data"]["x_data_update"]["remove"]["labels"]:
+                            new_labels.append({"value": label})
+                        labels = self._get_labels(new_labels)
+                        for label in labels:
+                            self._query(
+                                "delete",
+                                "/plugin/products/detect3/api/v1/intels/"
+                                + str(intel_document["id"])
+                                + "/labels/"
+                                + str(label["id"]),
+                            )
+            elif (
+                "x_data_update" in data["data"]
+                and "add" in data["data"]["x_data_update"]
+                and "labels" in data["data"]["x_data_update"]["add"]
+            ):
+                if (
+                    self.tanium_import_label
+                    in data["data"]["x_data_update"]["add"]["labels"]
+                ):
+                    # Process intel
+                    intel_document = self._process_intel(entity_type, data)[
+                        "intel_document"
+                    ]
+                    entity = self._process_intel(entity_type, data)["entity"]
+                    # Create external reference and add object labels
+                    self._post_operations(entity, intel_document)
+                else:
+                    intel_document = self._get_by_id(data["data"]["id"])
+                    if intel_document:
+                        new_labels = []
+                        for label in data["data"]["x_data_update"]["add"]["labels"]:
+                            new_labels.append({"value": label})
+                        labels = self._get_labels(new_labels)
+                        for label in labels:
+                            self._query(
+                                "put",
+                                "/plugin/products/detect3/api/v1/intels/"
+                                + str(intel_document["id"])
+                                + "/labels",
+                                {"id": label["id"]},
+                            )
+        elif msg.event == "delete":
+            intel_document = self._get_by_id(data["data"]["id"])
+            if intel_document is not None:
+                self._query(
+                    "delete",
+                    "/plugin/products/detect3/api/v1/intels/"
+                    + str(intel_document["id"]),
+                )
 
     def start(self):
         self.helper.listen_stream(self._process_message)
