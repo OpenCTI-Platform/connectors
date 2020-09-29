@@ -9,15 +9,16 @@ import yaml
 
 from crowdstrike_client.client import CrowdStrikeClient
 
-from pycti import OpenCTIConnectorHelper
-from pycti.connector.opencti_connector_helper import get_config_variable
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
 
-from stix2 import Identity, MarkingDefinition
+from stix2 import Identity, MarkingDefinition  # type: ignore
 
 from crowdstrike.actor.importer import ActorImporter
+from crowdstrike.importer import BaseImporter
 from crowdstrike.indicator.importer import IndicatorImporter
 from crowdstrike.report.importer import ReportImporter
-from crowdstrike.rules_yara_master import RulesYaraMasterImporter
+from crowdstrike.rule.yara_master_importer import YaraMasterImporter
 from crowdstrike.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
@@ -162,7 +163,7 @@ class CrowdStrike:
         client = CrowdStrikeClient(base_url, client_id, client_secret)
 
         # Create importers.
-        importers = []
+        importers: List[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
             actor_importer = ActorImporter(
@@ -211,7 +212,7 @@ class CrowdStrike:
             importers.append(indicator_importer)
 
         if self._CONFIG_SCOPE_YARA_MASTER in scopes:
-            rules_yara_master_importer = RulesYaraMasterImporter(
+            rules_yara_master_importer = YaraMasterImporter(
                 self.helper,
                 client.intel_api.rules,
                 client.intel_api.reports,
@@ -302,6 +303,7 @@ class CrowdStrike:
         return int(time.time())
 
     def run(self):
+        """Run CrowdStrike connector."""
         self._info("Starting CrowdStrike connector...")
 
         if not self.importers:

@@ -7,15 +7,16 @@ from crowdstrike_client.api.intel.actors import Actors
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.actor import Actor
 
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 
-from stix2 import Bundle, Identity, MarkingDefinition
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from crowdstrike.actor.builder import ActorBundleBuilder
+from crowdstrike.importer import BaseImporter
 from crowdstrike.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 
 
-class ActorImporter:
+class ActorImporter(BaseImporter):
     """CrowdStrike actor importer."""
 
     _LATEST_ACTOR_TIMESTAMP = "latest_actor_timestamp"
@@ -30,11 +31,10 @@ class ActorImporter:
         tlp_marking: MarkingDefinition,
     ) -> None:
         """Initialize CrowdStrike actor importer."""
-        self.helper = helper
+        super().__init__(helper, author, tlp_marking, update_existing_data)
+
         self.actors_api = actors_api
-        self.update_existing_data = update_existing_data
-        self.author = author
-        self.tlp_marking = tlp_marking
+
         self.default_latest_timestamp = default_latest_timestamp
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -75,14 +75,6 @@ class ActorImporter:
         )
 
         return {self._LATEST_ACTOR_TIMESTAMP: state_timestamp}
-
-    def _info(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_info(fmt_msg)
-
-    def _error(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_error(fmt_msg)
 
     def _fetch_actors(self, start_timestamp: int) -> Generator[List[Actor], None, None]:
         limit = 50
@@ -146,15 +138,3 @@ class ActorImporter:
             actor, author, source_name, object_marking_refs, confidence_level
         )
         return bundle_builder.build()
-
-    def _source_name(self) -> str:
-        return self.helper.connect_name
-
-    def _confidence_level(self) -> int:
-        return self.helper.connect_confidence_level
-
-    def _send_bundle(self, bundle: Bundle) -> None:
-        serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, None, self.update_existing_data, False
-        )

@@ -7,7 +7,7 @@ from typing import List, Mapping, NamedTuple, Optional
 from crowdstrike_client.api.models import Indicator
 from crowdstrike_client.api.models.report import Report
 
-from stix2 import (
+from stix2 import (  # type: ignore
     Bundle,
     Identity,
     Indicator as STIXIndicator,
@@ -19,9 +19,9 @@ from stix2 import (
     Report as STIXReport,
     Vulnerability,
 )
-from stix2.v21 import _DomainObject, _Observable
+from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
-from crowdstrike.report_fetcher import FetchedReport
+from crowdstrike.utils.report_fetcher import FetchedReport
 from crowdstrike.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,

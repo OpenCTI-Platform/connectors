@@ -12,6 +12,7 @@ from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # t
 
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
+from crowdstrike.importer import BaseImporter
 from crowdstrike.report.builder import ReportBundleBuilder
 from crowdstrike.utils import (
     create_file_from_download,
@@ -21,7 +22,7 @@ from crowdstrike.utils import (
 )
 
 
-class ReportImporter:
+class ReportImporter(BaseImporter):
     """CrowdStrike report importer."""
 
     _LATEST_REPORT_TIMESTAMP = "latest_report_timestamp"
@@ -42,12 +43,10 @@ class ReportImporter:
         guess_malware: bool,
     ) -> None:
         """Initialize CrowdStrike report importer."""
-        self.helper = helper
+        super().__init__(helper, author, tlp_marking, update_existing_data)
+
         self.reports_api = reports_api
-        self.update_existing_data = update_existing_data
-        self.author = author
         self.default_latest_timestamp = default_latest_timestamp
-        self.tlp_marking = tlp_marking
         self.include_types = include_types
         self.report_status = report_status
         self.report_type = report_type
@@ -103,14 +102,6 @@ class ReportImporter:
 
     def _clear_malware_guess_cache(self):
         self.malware_guess_cache.clear()
-
-    def _info(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_info(fmt_msg)
-
-    def _error(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_error(fmt_msg)
 
     def _fetch_reports(
         self, start_timestamp: int
@@ -253,15 +244,3 @@ class ReportImporter:
     @staticmethod
     def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
         return [{"key": key, "values": [value]}]
-
-    def _source_name(self) -> str:
-        return self.helper.connect_name
-
-    def _confidence_level(self) -> int:
-        return self.helper.connect_confidence_level
-
-    def _send_bundle(self, bundle: Bundle) -> None:
-        serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, None, self.update_existing_data, False
-        )

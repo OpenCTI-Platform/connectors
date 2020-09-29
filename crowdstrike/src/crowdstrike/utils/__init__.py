@@ -185,7 +185,7 @@ def paginate(
         _offset = 0
         _total = None
 
-        while next_batch(_limit, _offset, _total):
+        while _next_batch(_limit, _offset, _total):
             response = func(*args, limit=_limit, offset=_offset, **kwargs)
 
             errors = response.errors
@@ -226,8 +226,8 @@ def paginate(
     return wrapper_paginate
 
 
-def next_batch(limit: int, offset: int, total: Optional[int]) -> bool:
-    """Is there a next batch of resources?"""
+def _next_batch(limit: int, offset: int, total: Optional[int]) -> bool:
+    """Determine if there is next batch to fetch."""
     if total is None:
         return True
     return (total - offset) > 0
@@ -242,20 +242,24 @@ def get_tlp_string_marking_definition(tlp: str) -> MarkingDefinition:
 
 
 def datetime_to_timestamp(datetime_value: datetime) -> int:
+    """Convert datetime to Unix timestamp."""
     # Use calendar.timegm because the time.mktime assumes that the input is in your
     # local timezone.
     return calendar.timegm(datetime_value.timetuple())
 
 
 def timestamp_to_datetime(timestamp: int) -> datetime:
+    """Convert Unix timestamp to datetime (UTC)."""
     return datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
 
 def datetime_utc_now() -> datetime:
+    """Get current UTC datetime."""
     return datetime.now(timezone.utc)
 
 
 def datetime_utc_epoch_start() -> datetime:
+    """Get Unix epoch start as UTC datetime."""
     return timestamp_to_datetime(0)
 
 
@@ -750,6 +754,7 @@ def create_tags(entities: List[Entity], source_name: str) -> List[Mapping[str, s
 
 
 def remove_html_tags(html_text: str) -> str:
+    """Remove HTML tags from given string."""
     document = fromstring(html_text)
     text = document.text_content()
     return text.strip()
@@ -866,6 +871,7 @@ def create_stix2_report_from_report(
 def create_regions_and_countries_from_entities(
     entities: List[Entity], author: Identity
 ) -> Tuple[List[Location], List[Location]]:
+    """Create regions and countries from given entities."""
     regions = []
     countries = []
 

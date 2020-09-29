@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""OpenCTI CrowdStrike YARA rule bundle builder module."""
+"""OpenCTI CrowdStrike YARA master builder module."""
 
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
 from crowdstrike_client.api.models.report import Report
 
-from stix2 import (
+from stix2 import (  # type: ignore
     Bundle,
     Identity,
     Indicator,
@@ -16,9 +16,9 @@ from stix2 import (
     Relationship,
     Report as STIXReport,
 )
-from stix2.v21 import _DomainObject
+from stix2.v21 import _DomainObject  # type: ignore
 
-from crowdstrike.report_fetcher import FetchedReport
+from crowdstrike.utils.report_fetcher import FetchedReport
 from crowdstrike.utils import (
     create_indicates_relationships,
     create_indicator,
@@ -28,17 +28,13 @@ from crowdstrike.utils import (
     create_stix2_report_from_report,
     create_uses_relationships,
 )
-from crowdstrike.yara_rules_parser import YaraRule
+from crowdstrike.utils.yara_parser import YaraRule
 
 
 class YaraRuleBundleBuilder:
-    """YARA rule bundle builder."""
-
-    _OBSERVABLE_TYPE_UNKNOWN = "Unknown"
+    """YARA master builder."""
 
     _PATTERN_TYPE_YARA = "yara"
-
-    _PATTERN_VALUE_DUMMY = "[file:hashes.md5 = 'd41d8cd98f00b204e9800998ecf8427e']"
 
     def __init__(
         self,
@@ -51,7 +47,7 @@ class YaraRuleBundleBuilder:
         report_type: str,
         reports: List[FetchedReport],
     ) -> None:
-        """Initialize YARA rule bundle builder."""
+        """Initialize YARA master builder."""
         self.rule = rule
         self.author = author
         self.source_name = source_name

@@ -6,16 +6,17 @@ from typing import Any, Generator, List, Mapping, Optional
 from crowdstrike_client.api.intel import Indicators, Reports
 from crowdstrike_client.api.models import Indicator, Response
 
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 
-from stix2 import Bundle, Identity, MarkingDefinition
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
+from crowdstrike.importer import BaseImporter
 from crowdstrike.indicator.builder import IndicatorBundleBuilder
-from crowdstrike.report_fetcher import FetchedReport, ReportFetcher
+from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 
 
-class IndicatorImporter:
+class IndicatorImporter(BaseImporter):
     """CrowdStrike indicator importer."""
 
     _LATEST_INDICATOR_TIMESTAMP = "latest_indicator_timestamp"
@@ -36,13 +37,11 @@ class IndicatorImporter:
         report_type: str,
     ) -> None:
         """Initialize CrowdStrike indicator importer."""
-        self.helper = helper
+        super().__init__(helper, author, tlp_marking, update_existing_data)
+
         self.indicators_api = indicators_api
-        self.author = author
-        self.tlp_marking = tlp_marking
         self.create_observables = create_observables
         self.create_indicators = create_indicators
-        self.update_existing_data = update_existing_data
         self.default_latest_timestamp = default_latest_timestamp
         self.exclude_types = exclude_types
         self.report_status = report_status
@@ -90,14 +89,6 @@ class IndicatorImporter:
 
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
-
-    def _info(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_info(fmt_msg)
-
-    def _error(self, msg: str, *args: Any) -> None:
-        fmt_msg = msg.format(*args)
-        self.helper.log_error(fmt_msg)
 
     def _fetch_indicators(
         self, fetch_timestamp: int
@@ -201,15 +192,3 @@ class IndicatorImporter:
         except TypeError as te:
             self._error(str(te))
             return None
-
-    def _source_name(self) -> str:
-        return self.helper.connect_name
-
-    def _confidence_level(self) -> int:
-        return self.helper.connect_confidence_level
-
-    def _send_bundle(self, bundle: Bundle) -> None:
-        serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, None, self.update_existing_data, False
-        )

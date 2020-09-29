@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple
 from crowdstrike_client.api.models.actor import Actor
 from crowdstrike_client.api.models.base import Entity
 
-from stix2 import (
+from stix2 import (  # type: ignore
     Bundle,
     ExternalReference,
     Identity,
@@ -16,7 +16,7 @@ from stix2 import (
     MarkingDefinition,
     Relationship,
 )
-from stix2.v21 import _DomainObject
+from stix2.v21 import _DomainObject  # type: ignore
 
 from crowdstrike.utils import (
     create_external_reference,
