@@ -2,7 +2,7 @@ import os
 import yaml
 
 
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class MalBeaconConnector:
@@ -15,10 +15,15 @@ class MalBeaconConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+        self.api_key = get_config_variable(
+            "MALBEACON_API_KEY", ["malbeacon", "api_key"], config
+        )
 
     def _process_observable(self, observable) -> list:
-        # Extract IPv4, IPv6 and Domain from entity data
+        # Extract IPv4, IPv6, Hostname and Domain from entity data
         observable_value = observable["observable_value"]
+
+        print(observable)
 
         return ["observable value found on malbeacon API and knowledge added"]
 
@@ -30,6 +35,9 @@ class MalBeaconConnector:
     # Start the main loop
     def start(self):
         self.helper.listen(self._process_message)
+
+    def _api_call(self):
+        pass
 
 
 if __name__ == "__main__":
