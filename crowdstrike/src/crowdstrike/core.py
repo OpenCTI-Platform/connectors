@@ -212,7 +212,7 @@ class CrowdStrike:
             importers.append(indicator_importer)
 
         if self._CONFIG_SCOPE_YARA_MASTER in scopes:
-            rules_yara_master_importer = YaraMasterImporter(
+            yara_master_importer = YaraMasterImporter(
                 self.helper,
                 client.intel_api.rules,
                 client.intel_api.reports,
@@ -223,7 +223,7 @@ class CrowdStrike:
                 report_type,
             )
 
-            importers.append(rules_yara_master_importer)
+            importers.append(yara_master_importer)
 
         self.importers = importers
 
