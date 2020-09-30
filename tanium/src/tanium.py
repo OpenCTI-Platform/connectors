@@ -488,13 +488,14 @@ class TaniumConnector:
             if len(entity["objectLabel"]) > 0:
                 labels = self._get_labels(entity["objectLabel"])
                 for label in labels:
-                    self._query(
-                        "put",
-                        "/plugin/products/detect3/api/v1/intels/"
-                        + str(intel_document["id"])
-                        + "/labels",
-                        {"id": label["id"]},
-                    )
+                    if label is not None:
+                        self._query(
+                            "put",
+                            "/plugin/products/detect3/api/v1/intels/"
+                            + str(intel_document["id"])
+                            + "/labels",
+                            {"id": label["id"]},
+                        )
 
     def _process_intel(self, entity_type, data):
         entity = None
