@@ -132,7 +132,10 @@ class TaniumConnectorAlertsGatherer(threading.Thread):
                     external_reference = self.helper.api.external_reference.read(
                         filters=[
                             {"key": "source_name", "values": ["Tanium"]},
-                            {"key": "external_id", "values": [str(alert["intelDocId"])]},
+                            {
+                                "key": "external_id",
+                                "values": [str(alert["intelDocId"])],
+                            },
                         ]
                     )
                     if external_reference is not None:
@@ -164,7 +167,7 @@ class TaniumConnectorAlertsGatherer(threading.Thread):
                                     "%Y-%m-%dT%H:%M:%SZ"
                                 ),
                                 count=1,
-                                confidence=90
+                                confidence=90,
                             )
             time.sleep(5)
 
