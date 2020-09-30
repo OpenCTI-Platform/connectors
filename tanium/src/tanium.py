@@ -7,10 +7,166 @@ import yaml
 import json
 import re
 import requests
+import threading
+import time
 
+from dateutil.parser import parse
 from stix2slider import slide_string
 from stix2slider.options import initialize_options
 from pycti import OpenCTIConnectorHelper, get_config_variable, StixCyberObservableTypes
+
+
+class TaniumConnectorAlertsGatherer(threading.Thread):
+    def __init__(self, helper, tanium_url, tanium_login, tanium_password):
+        threading.Thread.__init__(self)
+        self.helper = helper
+        self.tanium_url = tanium_url
+        self.tanium_login = tanium_login
+        self.tanium_password = tanium_password
+
+        # Variables
+        self.session = None
+        # Open a session
+        self._get_session()
+
+        # Identity
+        self.identity = self.helper.api.identity.create(
+            type="Organization",
+            name=self.helper.get_name(),
+            description=self.helper.get_name(),
+        )
+
+    def _get_session(self):
+        payload = {
+            "username": self.tanium_login,
+            "password": self.tanium_password,
+        }
+        r = requests.post(self.tanium_url + "/api/v2/session/login", json=payload)
+        if r.status_code == 200:
+            result = r.json()
+            self.session = result["data"]["session"]
+        else:
+            raise ValueError("Cannot login to the Tanium API")
+
+    def _query(
+        self,
+        method,
+        uri,
+        payload=None,
+        content_type="application/json",
+        type=None,
+        retry=False,
+    ):
+        headers = {"session": self.session, "content-type": content_type, "type": type}
+        if content_type == "application/octet-stream":
+            headers["content-disposition"] = (
+                "attachment; filename=" + payload["filename"]
+            )
+            headers["name"] = payload["name"]
+            headers["description"] = payload["description"]
+        if method == "get":
+            r = requests.get(self.tanium_url + uri, headers=headers, params=payload)
+        elif method == "post":
+            if content_type == "application/octet-stream":
+                r = requests.post(
+                    self.tanium_url + uri,
+                    headers=headers,
+                    data=payload["document"],
+                )
+            elif type is not None:
+                r = requests.post(
+                    self.tanium_url + uri, headers=headers, data=payload["intelDoc"]
+                )
+            else:
+                r = requests.post(self.tanium_url + uri, headers=headers, json=payload)
+        elif method == "put":
+            r = requests.put(self.tanium_url + uri, headers=headers, json=payload)
+        elif method == "patch":
+            r = requests.patch(self.tanium_url + uri, headers=headers, json=payload)
+        elif method == "delete":
+            r = requests.delete(self.tanium_url + uri, headers=headers)
+        else:
+            raise ValueError("Unspported method")
+        if r.status_code == 200:
+            try:
+                return r.json()
+            except:
+                return r.text
+        elif r.status_code == 401 and not retry:
+            self._get_session()
+            self._query(method, uri, payload, content_type, type, True)
+        elif r.status_code == 401:
+            raise ValueError("Query failed, permission denied")
+        else:
+            print(r.text)
+
+    def run(self):
+        while True:
+            alerts = self._query(
+                "get", "/plugin/products/detect3/api/v1/alerts", {"sort": "-createdAt"}
+            )
+            state = self.helper.get_state()
+            if "lastAlertTimestamp" in state:
+                last_timestamp = state["lastAlertTimestamp"]
+            else:
+                last_timestamp = 0
+            alerts = reversed(alerts)
+            for alert in alerts:
+                alert_timestamp = parse(alert["createdAt"]).timestamp()
+                if int(alert_timestamp) > int(last_timestamp):
+                    # Mark as processed
+                    if state is not None:
+                        state["lastAlertTimestamp"] = parse(
+                            alert["createdAt"]
+                        ).timestamp()
+                        self.helper.set_state(state)
+                    else:
+                        self.helper.set_state(
+                            {
+                                "lastAlertTimestamp": parse(
+                                    alert["createdAt"]
+                                ).timestamp()
+                            }
+                        )
+                    # Check if the intel is in OpenCTI
+                    external_reference = self.helper.api.external_reference.read(
+                        filters=[
+                            {"key": "source_name", "values": ["Tanium"]},
+                            {"key": "external_id", "values": [str(alert["intelDocId"])]},
+                        ]
+                    )
+                    if external_reference is not None:
+                        entity = self.helper.api.stix_domain_object.read(
+                            filters=[
+                                {
+                                    "key": "hasExternalReference",
+                                    "values": [external_reference["id"]],
+                                }
+                            ]
+                        )
+                        if entity is None:
+                            entity = self.helper.api.stix_cyber_observable.read(
+                                filters=[
+                                    {
+                                        "key": "hasExternalReference",
+                                        "values": [external_reference["id"]],
+                                    }
+                                ]
+                            )
+                        if entity is not None:
+                            self.helper.api.stix_sighting_relationship.create(
+                                fromId=entity["id"],
+                                toId=self.identity["id"],
+                                first_seen=parse(alert["createdAt"]).strftime(
+                                    "%Y-%m-%dT%H:%M:%SZ"
+                                ),
+                                last_seen=parse(alert["createdAt"]).strftime(
+                                    "%Y-%m-%dT%H:%M:%SZ"
+                                ),
+                                count=1,
+                                confidence=90
+                            )
+            time.sleep(5)
 
 
 class TaniumConnector:
@@ -472,6 +628,10 @@ class TaniumConnector:
                 )
 
     def start(self):
+        self.alerts_gatherer = TaniumConnectorAlertsGatherer(
+            self.helper, self.tanium_url, self.tanium_login, self.tanium_password
+        )
+        self.alerts_gatherer.start()
         self.helper.listen_stream(self._process_message)
 
 
