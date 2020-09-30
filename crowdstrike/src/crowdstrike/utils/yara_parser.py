@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""OpenCTI CrowdStrike YARA rules parser module."""
+"""OpenCTI CrowdStrike YARA parser module."""
 
 import logging
 import re
