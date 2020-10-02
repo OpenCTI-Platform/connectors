@@ -271,7 +271,7 @@ class TaniumConnector:
                 return r.text
         elif r.status_code == 401 and not retry:
             self._get_session()
-            self._query(method, uri, payload, content_type, type, True)
+            return self._query(method, uri, payload, content_type, type, True)
         elif r.status_code == 401:
             raise ValueError("Query failed, permission denied")
         else:
