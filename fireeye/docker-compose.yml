@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-fireeye:
+    image: opencti/connector-fireeye:3.3.1
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=MITRE ATT&CK
+      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_LOG_LEVEL=info
+      - FIREEYE_API_URL=https://api.intelligence.fireeye.com
+      - FIREEYE_API_V3_PUBLIC=ChangeMe
+      - FIREEYE_API_V3_SECRET=ChangeMe
+      - FIREEYE_ORGANIZATION=ChangeMe
+      - FIREEYE_COLLECTION=reports,indicators
+      - FIREEYE_IMPORT_STAT_DATE=2020-01-01
+    restart: always

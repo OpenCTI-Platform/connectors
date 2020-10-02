@@ -1,6 +1,6 @@
 version: "3"
 services:
-  connector-hygiene:
+  connector-tanium:
     image: opencti/connector-tanium:3.3.1
     environment:
       - OPENCTI_URL=http://localhost
@@ -11,4 +11,12 @@ services:
       - CONNECTOR_SCOPE=tanium
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
+      - TANIUM_URL=https://console.changeme.com
+      - TANIUM_LOGIN=ChangeMe
+      - TANIUM_PASSWORD=ChangeMe
+      - TANIUM_INDICATOR_TYPES=stix,yara,tanium-signal
+      - TANIUM_OBSERVABLE_TYPES=ipv4-addr,ipv6-addr,domain-name,x-opencti-hostname,file,process
+      - TANIUM_IMPORT_LABEL=tanium
+      - TANIUM_AUTO_QUICKSCAN=False
+      - TANIUM_COMPUTER_GROUPS=1,2,3
     restart: always
