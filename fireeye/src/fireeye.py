@@ -145,7 +145,6 @@ class Mitre:
                             }
                         }
                     )
-
                 if "reports" in self.fireeye_collections:
                     self.helper.log_info(
                         "Get reports created after "
