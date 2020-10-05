@@ -2,13 +2,15 @@ import os
 import yaml
 import time
 import requests
+import json
 
+from urllib.parse import urlparse, parse_qs
 from dateutil.parser import parse
 from requests.auth import HTTPBasicAuth
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
-class Mitre:
+class FireEye:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -44,6 +46,13 @@ class Mitre:
             ["connector", "update_existing_data"],
             config,
         )
+        self.added_after = parse(self.fireeye_import_start_date).timestamp()
+
+        self.identity = self.helper.api.identity.create(
+            type="Organization",
+            name="FireEye",
+            description="FireEye is a publicly traded cybersecurity company headquartered in Milpitas, California. It has been involved in the detection and prevention of major cyber attacks. It provides hardware, software, and services to investigate cybersecurity attacks, protect against malicious software, and analyze IT security risks. FireEye was founded in 2004.",
+        )
 
         # Init variables
         self.auth_token = None
@@ -75,96 +84,153 @@ class Mitre:
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
         else:
+            print(r.text)
             raise ValueError("An unknown error occurred")
 
-    def _import_collection(self, collection, added_after):
+    def _import_collection(
+        self, collection, last_id_modified_timestamp=None, last_id=None
+    ):
         have_next_page = True
         url = None
+        last_object = None
         while have_next_page:
             if url is None:
-                url = (
-                    self.fireeye_api_url
-                    + "/collections/"
-                    + collection
-                    + "/objects"
-                    + "?added_after="
-                    + str(added_after)
-                )
+                if last_id_modified_timestamp is not None:
+                    url = (
+                        self.fireeye_api_url
+                        + "/collections/"
+                        + collection
+                        + "/objects"
+                        + "?added_after="
+                        + str(self.added_after)
+                        + "&length=500"
+                        + "&last_id_modified_timestamp="
+                        + str(last_id_modified_timestamp)
+                    )
+                else:
+                    url = (
+                        self.fireeye_api_url
+                        + "/collections/"
+                        + collection
+                        + "/objects"
+                        + "?added_after="
+                        + str(self.added_after)
+                        + "&length=500"
+                    )
             result = self._query(url)
-            print(result.text)
-            # self.helper.send_stix2_bundle(
-            #    result.text,
-            #    None,
-            #    self.update_existing_data,
-            # )
-            headers = result.headers
-            if "Link" in headers:
-                have_next_page = True
-                url = headers
-            else:
-                have_next_page = False
+            parsed_result = json.loads(result.text)
+            if "objects" in parsed_result and len(parsed_result) > 0:
+                last_object = parsed_result["objects"][-1]
+                if last_object["id"] != last_id:
+                    final_objects = []
+                    for stix_object in parsed_result["objects"]:
+                        if "created_by_ref" not in stix_object:
+                            stix_object["created_by_ref"] = self.identity["standard_id"]
+                        if stix_object["type"] != "marking-definition":
+                            stix_object["object_marking_refs"] = [
+                                "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+                            ]
+                        final_objects.append(stix_object)
+                    final_bundle = {"type": "bundle", "objects": final_objects}
+                    self.helper.send_stix2_bundle(
+                        json.dumps(final_bundle),
+                        None,
+                        self.update_existing_data,
+                    )
+                    headers = result.headers
+                    if "Link" in headers:
+                        have_next_page = True
+                        link = headers["Link"].split(";")
+                        url = link[0][1:-1]
+                        last_id_modified_timestamp = parse_qs(urlparse(url).query)[
+                            "last_id_modified_timestamp"
+                        ][0]
+                    else:
+                        have_next_page = False
+                else:
+                    have_next_page = False
+        return {
+            "last_id_modified_timestamp": last_id_modified_timestamp,
+            "last_id": last_object["id"] if "id" in last_object else None,
+        }
 
     def run(self):
-        self.helper.log_info("Fetching FireEye API...")
         while True:
             try:
+                self.helper.log_info("Synchronizing with FireEye API...")
                 current_state = self.helper.get_state()
                 if (
                     current_state is None
-                    or "last_element_timestamp" not in current_state
+                    or "last_id_modified_timestamp" not in current_state
                 ):
-                    import_start_date = int(
-                        parse(self.fireeye_import_start_date).timestamp()
-                    )
                     self.helper.set_state(
                         {
-                            "last_element_timestamp": {
-                                "indicators": import_start_date,
-                                "reports": import_start_date,
-                            }
+                            "last_id_modified_timestamp": {
+                                "indicators": None,
+                                "reports": None,
+                            },
+                            "last_id": {
+                                "indicators": None,
+                                "reports": None,
+                            },
                         }
                     )
                     current_state = self.helper.get_state()
-                last_element_timestamp = current_state["last_element_timestamp"]
+                last_id_modified_timestamp = current_state["last_id_modified_timestamp"]
+                last_id = current_state["last_id"]
                 if "indicators" in self.fireeye_collections:
                     self.helper.log_info(
                         "Get indicators created after "
-                        + str(last_element_timestamp["indicators"])
+                        + str(last_id_modified_timestamp["indicators"])
                     )
-                    indicators_timestamp = self._import_collection(
-                        "indicators", last_element_timestamp["indicators"]
+                    indicators_last = self._import_collection(
+                        "indicators",
+                        last_id_modified_timestamp["indicators"],
+                        last_id["indicators"],
                     )
                     current_state = self.helper.get_state()
                     self.helper.set_state(
                         {
-                            "last_element_timestamp": {
-                                "indicators": indicators_timestamp,
-                                "reports": current_state["last_element_timestamp"][
+                            "last_id_modified_timestamp": {
+                                "indicators": indicators_last[
+                                    "last_id_modified_timestamp"
+                                ],
+                                "reports": current_state["last_id_modified_timestamp"][
                                     "reports"
                                 ],
-                            }
+                            },
+                            "last_id": {
+                                "indicators": indicators_last["last_id"],
+                                "reports": current_state["last_id"]["reports"],
+                            },
                         }
                     )
                 if "reports" in self.fireeye_collections:
                     self.helper.log_info(
                         "Get reports created after "
-                        + str(last_element_timestamp["reports"])
+                        + str(last_id_modified_timestamp["reports"])
                     )
-                    reports_timestamp = self._import_collection(
-                        "reports", last_element_timestamp["reports"]
+                    reports_last = self._import_collection(
+                        "reports",
+                        last_id_modified_timestamp["reports"],
+                        last_id["reports"],
                     )
                     current_state = self.helper.get_state()
                     self.helper.set_state(
                         {
-                            "last_element_timestamp": {
-                                "indicators": current_state["last_element_timestamp"][
-                                    "indicators"
-                                ],
-                                "reports": reports_timestamp,
-                            }
+                            "last_id_modified_timestamp": {
+                                "indicators": current_state[
+                                    "last_id_modified_timestamp"
+                                ]["indicators"],
+                                "reports": reports_last["last_id_modified_timestamp"],
+                            },
+                            "last_id": {
+                                "indicators": current_state["last_id"]["indicators"],
+                                "reports": reports_last["last_id"],
+                            },
                         }
                     )
-                print("Sleep")
+                self.helper.log_info("End of synchronization")
                 time.sleep(60)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
@@ -176,8 +242,8 @@ class Mitre:
 
 if __name__ == "__main__":
     try:
-        mitreConnector = Mitre()
-        mitreConnector.run()
+        fireeyeConnector = FireEye()
+        fireeyeConnector.run()
     except Exception as e:
         print(e)
         time.sleep(10)
