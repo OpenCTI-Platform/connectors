@@ -62,7 +62,6 @@ class Mitre:
         self.auth_token = data.get("access_token")
 
     def _query(self, url, retry=False):
-        print(url)
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
@@ -71,11 +70,13 @@ class Mitre:
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
             return r
-        elif r.status_code == 401 and not retry:
+        elif (r.status_code == 401 or r.status_code == 403) and not retry:
             self._get_token()
             return self._query(url, True)
-        elif r.status_code == 401:
+        elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
+        else:
+            raise ValueError("An unknown error occurred")
 
     def _import_collection(self, collection, added_after):
         have_next_page = True
