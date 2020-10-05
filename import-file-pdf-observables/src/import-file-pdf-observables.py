@@ -3,7 +3,6 @@
 import os
 import yaml
 import time
-import json
 
 import iocp
 from stix2 import (
