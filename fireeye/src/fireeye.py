@@ -47,7 +47,7 @@ class FireEye:
 
         self.identity = self.helper.api.identity.create(
             type="Organization",
-            name="FireEye",
+            name="FireEye, Inc.",
             description="FireEye is a publicly traded cybersecurity company headquartered in Milpitas, California. It has been involved in the detection and prevention of major cyber attacks. It provides hardware, software, and services to investigate cybersecurity attacks, protect against malicious software, and analyze IT security risks. FireEye was founded in 2004.",
         )
 
@@ -121,6 +121,18 @@ class FireEye:
                 if last_object["id"] != last_id:
                     final_objects = []
                     for stix_object in parsed_result["objects"]:
+                        if stix_object["type"] == "threat-actor":
+                            stix_object["type"] = "intrusion-set"
+                            stix_object["id"] = stix_object["id"].replace(
+                                "threat-actor", "intrusion-set"
+                            )
+                        if stix_object["type"] == "relationship":
+                            stix_object["source_ref"] = stix_object[
+                                "source_ref"
+                            ].replace("threat-actor", "intrusion-set")
+                            stix_object["target_ref"] = stix_object[
+                                "target_ref"
+                            ].replace("threat-actor", "intrusion-set")
                         if "created_by_ref" not in stix_object:
                             stix_object["created_by_ref"] = self.identity["standard_id"]
                         if stix_object["type"] != "marking-definition":
