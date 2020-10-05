@@ -15,6 +15,5 @@ fireeye:
   api_url: 'https://api.intelligence.fireeye.com'
   api_v3_public: 'ChangeMe'
   api_v3_secret: 'ChangeMe'
-  organization: 'ChangeMe'
   collections: 'reports,indicators'
   import_start_date: '2020-01-01'

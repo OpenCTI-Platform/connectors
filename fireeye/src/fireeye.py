@@ -30,9 +30,6 @@ class FireEye:
         self.fireeye_api_v3_secret = get_config_variable(
             "FIREEYE_API_V3_SECRET", ["fireeye", "api_v3_secret"], config
         )
-        self.fireeye_organization = get_config_variable(
-            "FIREEYE_ORGANIZATION", ["fireeye", "organization"], config
-        )
         self.fireeye_collections = get_config_variable(
             "FIREEYE_COLLECTIONS", ["fireeye", "collections"], config
         ).split(",")
