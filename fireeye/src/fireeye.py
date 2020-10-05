@@ -4,7 +4,6 @@ import time
 import requests
 
 from dateutil.parser import parse
-from datetime import datetime
 from requests.auth import HTTPBasicAuth
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
