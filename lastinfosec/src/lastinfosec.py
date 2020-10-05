@@ -44,7 +44,7 @@ class LastInfoSec:
                 if "message" in lastinfosec_data.keys():
                     for data in lastinfosec_data["message"]:
                         sdata = json.dumps(data)
-                        self.api.stix2.import_bundle_from_json(sdata)
+                        self.helper.send_stix2_bundle(sdata)
                     # Store the current timestamp as a last run
                     self.helper.log_info(
                         "Connector successfully run, storing last_run as {0}".format(
