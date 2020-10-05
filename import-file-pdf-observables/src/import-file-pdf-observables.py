@@ -91,7 +91,7 @@ class ImportFilePdfObservables:
                             report["published"]
                         ),
                         report_types=report["report_types"],
-                        objectRefs=[bundle_objects],
+                        object_refs=[bundle_objects],
                     )
                     bundle_objects.append(report)
             if token:
