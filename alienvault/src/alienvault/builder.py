@@ -34,6 +34,7 @@ from alienvault.utils import (
     OBSERVATION_FACTORY_IPV6_ADDRESS,
     OBSERVATION_FACTORY_MUTEX,
     OBSERVATION_FACTORY_URL,
+    ObservableProperties,
     ObservationFactory,
     create_attack_pattern,
     create_attack_pattern_external_reference,
@@ -354,9 +355,10 @@ class PulseBundleBuilder:
             observable = None
 
             if self.create_observables:
-                observable = factory.create_observable(
-                    pulse_indicator_value, labels, self.object_markings
+                observable_properties = self._create_observable_properties(
+                    pulse_indicator_value, labels
                 )
+                observable = factory.create_observable(observable_properties)
 
             # Create an indicator.
             indicator = None
@@ -409,6 +411,13 @@ class PulseBundleBuilder:
 
         return self._filter_pulse_indicators(
             _exclude_pulse_indicator_types_filter, pulse_indicators
+        )
+
+    def _create_observable_properties(
+        self, value: str, labels: List[str]
+    ) -> ObservableProperties:
+        return ObservableProperties(
+            value, self.pulse_author, labels, self.object_markings
         )
 
     def _create_indicator(
