@@ -4,7 +4,6 @@ FROM python:3.8-alpine
 COPY src /opt/opencti-connector-synchronizer
 
 # Install Python modules
-# hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic
 
 RUN cd /opt/opencti-connector-synchronizer && \
