@@ -5,8 +5,8 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'STREAM'
-  name: 'Tanium'
-  scope: 'tanium'
+  name: 'Synchronizer'
+  scope: 'synchronizer'
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
