@@ -315,7 +315,7 @@ class IndicatorBundleBuilder:
     def _create_observable_properties(
         self, value: str, labels: List[str]
     ) -> ObservableProperties:
-        return ObservableProperties(value, labels, self.object_markings)
+        return ObservableProperties(value, self.author, labels, self.object_markings)
 
     def _create_indicator(
         self, kill_chain_phases: List[KillChainPhase], labels: List[str]

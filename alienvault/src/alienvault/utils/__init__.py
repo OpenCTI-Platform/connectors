@@ -45,6 +45,7 @@ from alienvault.utils.indicators import (
     create_indicator_pattern_url,
 )
 from alienvault.utils.observables import (
+    ObservableProperties,
     create_observable_cryptocurrency_wallet,
     create_observable_domain_name,
     create_observable_email_address,
@@ -63,7 +64,7 @@ from alienvault.utils.observables import (
 class ObservationFactory(NamedTuple):
     """Observation factory."""
 
-    create_observable: Callable[[str, List[str], List[MarkingDefinition]], _Observable]
+    create_observable: Callable[[ObservableProperties], _Observable]
     create_indicator_pattern: Callable[[str], str]
 
 
