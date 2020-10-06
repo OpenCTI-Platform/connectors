@@ -7,7 +7,7 @@ COPY src /opt/opencti-connector-synchronizer
 # hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic
 
-RUN cd /opt/opencti-connector-tanium && \
+RUN cd /opt/opencti-connector-synchronizer && \
     pip3 install --no-cache-dir git+https://github.com/OpenCTI-Platform/client-python@master && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
