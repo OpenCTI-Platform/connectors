@@ -668,7 +668,6 @@ class TaniumConnector:
                 else:
                     self._process_intel(entity_type, data, True)
 
-
         elif msg.event == "delete":
             intel_document = self._get_by_id(data["data"]["id"])
             if intel_document is not None:
