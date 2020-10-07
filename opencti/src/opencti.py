@@ -72,7 +72,7 @@ class OpenCTI:
                             sectors_data.decode("utf-8"),
                             entities_types=self.helper.connect_scope,
                             update=self.update_existing_data,
-                            work_id=work_id
+                            work_id=work_id,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
@@ -84,12 +84,14 @@ class OpenCTI:
                             geography_data.decode("utf-8"),
                             entities_types=self.helper.connect_scope,
                             update=self.update_existing_data,
-                            work_id=work_id
+                            work_id=work_id,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
-                    message = "Connector successfully run, storing last_run as " + str(timestamp)
+                    message = "Connector successfully run, storing last_run as " + str(
+                        timestamp
+                    )
                     self.helper.log_info(message)
                     self.helper.set_state({"last_run": timestamp})
                     self.helper.api.work.to_processed(work_id, message)
