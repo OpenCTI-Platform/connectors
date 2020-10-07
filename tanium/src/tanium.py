@@ -278,8 +278,6 @@ class TaniumConnector:
                 r = requests.post(self.tanium_url + uri, headers=headers, json=payload)
         elif method == "put":
             if content_type == "application/xml":
-                print(headers)
-                print(payload)
                 r = requests.put(self.tanium_url + uri, headers=headers, data=payload)
             else:
                 r = requests.put(self.tanium_url + uri, headers=headers, json=payload)
@@ -347,7 +345,6 @@ class TaniumConnector:
             return None
 
     def _create_indicator_stix(self, entity, original_intel_document=None):
-        print(original_intel_document)
         if original_intel_document is None:
             intel_document = self._get_by_id(entity["id"])
             if intel_document is not None:
