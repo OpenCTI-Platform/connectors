@@ -98,7 +98,7 @@ class TaniumConnectorAlertsGatherer(threading.Thread):
         elif r.status_code == 401:
             raise ValueError("Query failed, permission denied")
         else:
-            print(r.text)
+            pass
 
     def run(self):
         while True:
@@ -213,6 +213,25 @@ class TaniumConnector:
         # Open a session
         self._get_session()
 
+        # Create the source if not exist
+        self.source_id = None
+        sources = self._query("get", "/plugin/products/detect3/api/v1/sources")
+        for source in sources:
+            if source["name"] == "OpenCTI":
+                self.source_id = source["id"]
+        if self.source_id is None:
+            source = self._query(
+                "post",
+                "/plugin/products/detect3/api/v1/sources",
+                {
+                    "type": "api-client",
+                    "name": "OpenCTI",
+                    "description": "Cyber Threat Intelligence knowledge imported from OpenCTI.",
+                    "canAutoQuickScan": True,
+                },
+            )
+            self.source_id = source["id"]
+
     def _get_session(self):
         payload = {
             "username": self.tanium_login,
@@ -275,7 +294,7 @@ class TaniumConnector:
         elif r.status_code == 401:
             raise ValueError("Query failed, permission denied")
         else:
-            print(r.text)
+            pass
 
     def _get_labels(self, labels):
         # List labels
@@ -284,7 +303,7 @@ class TaniumConnector:
         )
         tanium_labels_dict = {}
         for tanium_label in tanium_labels:
-            tanium_labels_dict[tanium_label["name"]] = tanium_label
+            tanium_labels_dict[tanium_label["name"].lower()] = tanium_label
         final_labels = []
         for label in labels:
             # Label already exists
@@ -303,29 +322,33 @@ class TaniumConnector:
                 final_labels.append(created_label)
         return final_labels
 
-    def _get_by_id(self, standard_id):
-        response = self._query(
-            "get",
-            "/plugin/products/detect3/api/v1/intels",
-            {"description": standard_id},
-        )
-        if response and len(response) > 0:
-            return response[0]
+    def _get_by_id(self, standard_id, yara=False):
+        if yara:
+            response = self._query(
+                "get",
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels",
+                {"name": standard_id + ".yara"},
+            )
         else:
             response = self._query(
                 "get",
-                "/plugin/products/detect3/api/v1/intels",
-                {"name": standard_id + ".yara"},
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels",
+                {"description": standard_id},
             )
-            if response and len(response) > 0:
-                return response[0]
-            else:
-                return None
+        if response and len(response) > 0:
+            return response[0]
+        else:
+            return None
 
-    def _create_indicator_stix(self, entity, update=False):
-        intel_document = self._get_by_id(entity["standard_id"])
-        if intel_document is not None and not update:
-            return intel_document
+    def _create_indicator_stix(self, entity, original_intel_document=None):
+        if original_intel_document is None:
+            intel_document = self._get_by_id(entity["standard_id"])
+            if intel_document is not None:
+                return intel_document
 
         stix2_bundle = self.helper.api.stix2.export_entity(
             entity["entity_type"],
@@ -345,10 +368,13 @@ class TaniumConnector:
             stix_indicator,
         )
         payload = {"intelDoc": stix_indicator}
-        if update and intel_document is not None:
+        if original_intel_document is not None:
             intel_document = self._query(
                 "put",
-                "/plugin/products/detect3/api/v1/intels/" + intel_document["id"],
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels/"
+                + str(original_intel_document["id"]),
                 payload,
                 "application/xml",
                 "stix",
@@ -356,23 +382,29 @@ class TaniumConnector:
         else:
             intel_document = self._query(
                 "post",
-                "/plugin/products/detect3/api/v1/intels",
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels",
                 payload,
                 "application/xml",
                 "stix",
             )
         return intel_document
 
-    def _create_indicator_yara(self, entity, update=False):
-        intel_document = self._get_by_id(entity["standard_id"])
-        if intel_document is not None and not update:
-            return intel_document
+    def _create_indicator_yara(self, entity, original_intel_document=None):
+        if original_intel_document is None:
+            intel_document = self._get_by_id(entity["standard_id"], True)
+            if intel_document is not None:
+                return intel_document
 
         filename = entity["standard_id"] + ".yara"
-        if update and intel_document is not None:
+        if original_intel_document is not None:
             intel_document = self._query(
                 "put",
-                "/plugin/products/detect3/api/v1/intels/" + intel_document["id"],
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels/"
+                + str(original_intel_document["id"]),
                 {
                     "filename": filename,
                     "document": entity["pattern"],
@@ -385,7 +417,9 @@ class TaniumConnector:
         else:
             intel_document = self._query(
                 "post",
-                "/plugin/products/detect3/api/v1/intels",
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels",
                 {
                     "filename": filename,
                     "document": entity["pattern"],
@@ -397,10 +431,12 @@ class TaniumConnector:
             )
         return intel_document
 
-    def _create_tanium_signal(self, entity, update=False):
-        intel_document = self._get_by_id(entity["standard_id"])
-        if intel_document is not None and not update:
-            return intel_document
+    def _create_tanium_signal(self, entity, original_intel_document=None):
+        if original_intel_document is None:
+            intel_document = self._get_by_id(entity["standard_id"])
+            if intel_document is not None:
+                return intel_document
+
         platforms = []
         if "x_mitre_platforms" in entity and len(entity["x_mitre_platforms"]) > 0:
             for x_mitre_platform in entity["x_mitre_platforms"]:
@@ -410,10 +446,13 @@ class TaniumConnector:
                         if x_mitre_platform != "macOS"
                         else "mac"
                     )
-        if update and intel_document is not None:
+        if original_intel_document is not None:
             intel_document = self._query(
                 "put",
-                "/plugin/products/detect3/api/v1/intels/" + intel_document["id"],
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels/"
+                + str(original_intel_document["id"]),
                 {
                     "name": entity["name"],
                     "description": entity["standard_id"],
@@ -424,7 +463,9 @@ class TaniumConnector:
         else:
             intel_document = self._query(
                 "post",
-                "/plugin/products/detect3/api/v1/intels",
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels",
                 {
                     "name": entity["name"],
                     "description": entity["standard_id"],
@@ -434,10 +475,11 @@ class TaniumConnector:
             )
         return intel_document
 
-    def _create_observable(self, entity, update=False):
-        intel_document = self._get_by_id(entity["standard_id"])
-        if intel_document:
-            return intel_document
+    def _create_observable(self, entity, original_intel_document=None):
+        if original_intel_document is None:
+            intel_document = self._get_by_id(entity["standard_id"])
+            if intel_document is not None:
+                return intel_document
 
         intel_type = None
         value = None
@@ -482,13 +524,27 @@ class TaniumConnector:
             openioc,
         )
         payload = {"intelDoc": openioc}
-        intel_document = self._query(
-            "post",
-            "/plugin/products/detect3/api/v1/intels",
-            payload,
-            "application/xml",
-            "openioc",
-        )
+        if original_intel_document is not None:
+            intel_document = self._query(
+                "put",
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels/"
+                + str(original_intel_document["id"]),
+                payload,
+                "application/xml",
+                "openioc",
+            )
+        else:
+            intel_document = self._query(
+                "post",
+                "/plugin/products/detect3/api/v1/sources/"
+                + str(self.source_id)
+                + "/intels",
+                payload,
+                "application/xml",
+                "openioc",
+            )
 
         return intel_document
 
@@ -527,13 +583,15 @@ class TaniumConnector:
                     if label is not None:
                         self._query(
                             "put",
-                            "/plugin/products/detect3/api/v1/intels/"
+                            "/plugin/products/detect3/api/v1/sources/"
+                            + str(self.source_id)
+                            + "/intels/"
                             + str(intel_document["id"])
                             + "/labels",
                             {"id": label["id"]},
                         )
 
-    def _process_intel(self, entity_type, data, update=False):
+    def _process_intel(self, entity_type, data, original_intel_document=None):
         entity = None
         intel_document = None
         if entity_type == "indicator":
@@ -541,17 +599,23 @@ class TaniumConnector:
             if entity is None:
                 return {"entity": entity, "intel_document": intel_document}
             if entity["pattern_type"] == "stix":
-                intel_document = self._create_indicator_stix(entity, update)
+                intel_document = self._create_indicator_stix(
+                    entity, original_intel_document
+                )
             elif entity["pattern_type"] == "yara":
-                intel_document = self._create_indicator_yara(entity, update)
+                intel_document = self._create_indicator_yara(
+                    entity, original_intel_document
+                )
             elif entity["pattern_type"] == "tanium-signal":
-                intel_document = self._create_tanium_signal(entity, update)
+                intel_document = self._create_tanium_signal(
+                    entity, original_intel_document
+                )
         elif (
             StixCyberObservableTypes.has_value(entity_type)
             and entity_type.lower() in self.tanium_observable_types
         ):
             entity = self.helper.api.stix_cyber_observable.read(id=data["data"]["id"])
-            intel_document = self._create_observable(entity, update)
+            intel_document = self._create_observable(entity, original_intel_document)
         return {"entity": entity, "intel_document": intel_document}
 
     def _process_message(self, msg):
@@ -580,6 +644,50 @@ class TaniumConnector:
         elif msg.event == "update":
             if (
                 "x_data_update" in data["data"]
+                and "add" in data["data"]["x_data_update"]
+                and "labels" in data["data"]["x_data_update"]["add"]
+            ):
+                if (
+                    self.tanium_import_label
+                    in data["data"]["x_data_update"]["add"]["labels"]
+                ):
+                    # Process intel
+                    intel_document = self._process_intel(entity_type, data)[
+                        "intel_document"
+                    ]
+                    entity = self._process_intel(entity_type, data)["entity"]
+                    # Create external reference and add object labels
+                    self._post_operations(entity, intel_document)
+                else:
+                    entity = self.helper.api.indicator.read(
+                        id=data["data"]["id"],
+                        customAttributes="""
+                        pattern_type
+                    """,
+                    )
+                    intel_document = self._get_by_id(
+                        data["data"]["id"],
+                        yara=True
+                        if entity is not None and entity["pattern_type"] == "yara"
+                        else False,
+                    )
+                    if intel_document:
+                        new_labels = []
+                        for label in data["data"]["x_data_update"]["add"]["labels"]:
+                            new_labels.append({"value": label})
+                        labels = self._get_labels(new_labels)
+                        for label in labels:
+                            self._query(
+                                "put",
+                                "/plugin/products/detect3/api/v1/sources"
+                                + str(self.source_id)
+                                + "/intels/"
+                                + str(intel_document["id"])
+                                + "/labels",
+                                {"id": label["id"]},
+                            )
+            elif (
+                "x_data_update" in data["data"]
                 and "remove" in data["data"]["x_data_update"]
                 and "labels" in data["data"]["x_data_update"]["remove"]
             ):
@@ -592,7 +700,9 @@ class TaniumConnector:
                     if intel_document is not None:
                         self._query(
                             "delete",
-                            "/plugin/products/detect3/api/v1/intels/"
+                            "/plugin/products/detect3/api/v1/sources"
+                            + str(self.source_id)
+                            + "intels/"
                             + str(intel_document["id"]),
                         )
                     # Remove external references
@@ -622,41 +732,12 @@ class TaniumConnector:
                         for label in labels:
                             self._query(
                                 "delete",
-                                "/plugin/products/detect3/api/v1/intels/"
+                                "/plugin/products/detect3/api/v1/sources/"
+                                + str(self.source_id)
+                                + "intels/"
                                 + str(intel_document["id"])
                                 + "/labels/"
                                 + str(label["id"]),
-                            )
-            elif (
-                "x_data_update" in data["data"]
-                and "add" in data["data"]["x_data_update"]
-                and "labels" in data["data"]["x_data_update"]["add"]
-            ):
-                if (
-                    self.tanium_import_label
-                    in data["data"]["x_data_update"]["add"]["labels"]
-                ):
-                    # Process intel
-                    intel_document = self._process_intel(entity_type, data)[
-                        "intel_document"
-                    ]
-                    entity = self._process_intel(entity_type, data)["entity"]
-                    # Create external reference and add object labels
-                    self._post_operations(entity, intel_document)
-                else:
-                    intel_document = self._get_by_id(data["data"]["id"])
-                    if intel_document:
-                        new_labels = []
-                        for label in data["data"]["x_data_update"]["add"]["labels"]:
-                            new_labels.append({"value": label})
-                        labels = self._get_labels(new_labels)
-                        for label in labels:
-                            self._query(
-                                "put",
-                                "/plugin/products/detect3/api/v1/intels/"
-                                + str(intel_document["id"])
-                                + "/labels",
-                                {"id": label["id"]},
                             )
             elif (
                 "x_data_update" in data["data"]
@@ -664,16 +745,25 @@ class TaniumConnector:
             ):
                 if entity_type == "indicator":
                     if "pattern" in data["data"]["x_data_update"]["replace"]:
-                        self._process_intel(entity_type, data, True)
-                else:
-                    self._process_intel(entity_type, data, True)
+                        intel_document = self._get_by_id(data["data"]["id"])
+                        if intel_document is not None:
+                            self._process_intel(entity_type, data, intel_document)
+                    elif (
+                        "value" in data["data"]["x_data_update"]["replace"]
+                        or "hashes" in data["data"]["x_data_update"]["replace"]
+                    ):
+                        intel_document = self._get_by_id(data["data"]["id"])
+                        if intel_document is not None:
+                            self._process_intel(entity_type, data, intel_document)
 
         elif msg.event == "delete":
             intel_document = self._get_by_id(data["data"]["id"])
             if intel_document is not None:
                 self._query(
                     "delete",
-                    "/plugin/products/detect3/api/v1/intels/"
+                    "/plugin/products/detect3/api/v1/sources/"
+                    + str(self.source_id)
+                    + "/intels/"
                     + str(intel_document["id"]),
                 )
 
