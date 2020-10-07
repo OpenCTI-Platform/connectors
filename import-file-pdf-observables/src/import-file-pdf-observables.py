@@ -38,13 +38,12 @@ class ImportFilePdfObservables:
         token = None
         if "token" in data:
             token = data["token"]
-        file_path = data["file_path"]
-        file_name = os.path.basename(file_path)
-        work_context = data["work_context"]
-        file_uri = self.helper.opencti_url + file_path
-        self.helper.log_info("Importing the file " + file_uri)
+        file_fetch = data["file_fetch"]
+        file_name = os.path.basename(file_fetch)
+        container_id = data["container_id"]
+        self.helper.log_info("Importing the file " + file_fetch)
         # Get the file
-        file_content = self.helper.api.fetch_opencti_file(file_uri, True)
+        file_content = self.helper.api.fetch_opencti_file(file_fetch, True)
         # Write the file
         path = "/tmp/" + file_name
         f = open(path, "wb")
@@ -79,8 +78,8 @@ class ImportFilePdfObservables:
 
         # Get context
         if len(bundle_objects) > 0:
-            if work_context is not None and len(work_context) > 0:
-                report = self.helper.api.report.read(id=work_context)
+            if container_id is not None and len(container_id) > 0:
+                report = self.helper.api.report.read(id=container_id)
                 if report is not None:
                     report = Report(
                         id=report["standard_id"],

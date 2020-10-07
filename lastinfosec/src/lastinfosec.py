@@ -28,7 +28,6 @@ class LastInfoSec:
         self.opencti_id = get_config_variable(
             "OPENCTI_TOKEN", ["opencti", "token"], config
         )
-
         self.update_existing_data = True
         self.api = OpenCTIApiClient(self.opencti_url, self.opencti_id)
 
