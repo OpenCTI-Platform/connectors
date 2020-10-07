@@ -145,6 +145,11 @@ class Misp:
         while True:
             timestamp = int(time.time())
             # Get the last_run datetime
+            now = datetime.utcfromtimestamp(timestamp)
+            friendly_name = "Misp run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            action_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
             current_state = self.helper.get_state()
             if current_state is not None and "last_run" in current_state:
                 last_run = datetime.utcfromtimestamp(current_state["last_run"])
@@ -212,12 +217,13 @@ class Misp:
                 if len(events) == 0:
                     break
 
-                self.process_events(events)
+                self.process_events(action_id, events)
                 current_page += 1
             self.helper.set_state({"last_run": timestamp})
+            self.helper.api.work.to_processed(action_id, "")
             time.sleep(self.get_interval())
 
-    def process_events(self, events):
+    def process_events(self, action_id, events):
         try:
             # Prepare filters
             import_creator_orgs = None
@@ -451,7 +457,7 @@ class Misp:
                 for object_relationship in objects_relationships:
                     bundle_objects.append(object_relationship)
 
-                ### Create the report if needed
+                # Create the report if needed
                 if self.misp_create_report and len(object_refs) > 0:
                     report = Report(
                         id=OpenCTIStix2Utils.generate_random_stix_id("report"),
@@ -472,7 +478,7 @@ class Misp:
                 bundle = Bundle(objects=bundle_objects).serialize()
                 self.helper.log_info("Sending event STIX2 bundle")
                 self.helper.send_stix2_bundle(
-                    bundle, None, self.update_existing_data, True
+                    bundle, action_id=action_id, update=self.update_existing_data
                 )
         except:
             return None

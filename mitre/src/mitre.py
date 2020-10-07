@@ -68,6 +68,11 @@ class Mitre:
                     > ((int(self.mitre_interval) - 1) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
+                    now = datetime.utcfromtimestamp(timestamp)
+                    friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    action_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
+                    )
                     try:
                         enterprise_data = (
                             urllib.request.urlopen(
@@ -81,8 +86,9 @@ class Mitre:
                         )
                         self.helper.send_stix2_bundle(
                             enterprise_data,
-                            self.helper.connect_scope,
-                            self.update_existing_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
+                            action_id=action_id,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
@@ -99,8 +105,8 @@ class Mitre:
                         )
                         self.helper.send_stix2_bundle(
                             pre_attack_data,
-                            self.helper.connect_scope,
-                            self.update_existing_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
@@ -117,8 +123,8 @@ class Mitre:
                         )
                         self.helper.send_stix2_bundle(
                             mobile_attack_data,
-                            self.helper.connect_scope,
-                            self.update_existing_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))

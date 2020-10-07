@@ -65,8 +65,8 @@ class OpenCTI:
                         ).read()
                         self.helper.send_stix2_bundle(
                             sectors_data.decode("utf-8"),
-                            self.helper.connect_scope,
-                            self.update_existing_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
@@ -76,8 +76,8 @@ class OpenCTI:
                         ).read()
                         self.helper.send_stix2_bundle(
                             geography_data.decode("utf-8"),
-                            self.helper.connect_scope,
-                            self.update_existing_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))

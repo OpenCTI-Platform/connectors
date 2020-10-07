@@ -18,37 +18,29 @@ class ExportFileStix:
         self.helper = OpenCTIConnectorHelper(config)
 
     def _process_message(self, data):
-        entity_id = data["entity_id"]
-        entity_type = data["entity_type"]
+        # export_scope: 'single', // Single or List
+        # entity_id: entity.id, // Exported element
+        # export_type: type, // Simple or full
+        # file_name: fileName, // Export expected file name
+        # max_marking: maxMarkingId, // Max marking id
+
         file_name = data["file_name"]
-        file_context = data["file_context"]
-        export_type = data["export_type"]
-        list_args = data["list_args"]
-        max_marking_definition = data["max_marking_definition"]
-        if entity_id is not None:
+        export_scope = data["export_scope"]  # single or list
+        export_type = data["export_type"]  # Simple or Full
+        max_marking = data["max_marking"]
+        entity_type = data["entity_type"]
+
+        if export_scope == "single":
+            entity_id = data["entity_id"]
             self.helper.log_info(
-                "Exporting: "
-                + entity_type
-                + "/"
-                + export_type
-                + "("
-                + entity_id
-                + ") to "
-                + file_name
+                "Exporting: " + entity_id + "(" + export_type + ") to " + file_name
             )
             bundle = self.helper.api.stix2.export_entity(
-                entity_type, entity_id, export_type, max_marking_definition
+                entity_type, entity_id, export_type, max_marking
             )
             json_bundle = json.dumps(bundle, indent=4)
             self.helper.log_info(
-                "Uploading: "
-                + entity_type
-                + "/"
-                + export_type
-                + "("
-                + entity_id
-                + ") to "
-                + file_name
+                "Uploading: " + entity_id + "(" + export_type + ") to " + file_name
             )
             self.helper.api.stix_domain_object.push_entity_export(
                 entity_id, file_name, json_bundle
@@ -64,6 +56,7 @@ class ExportFileStix:
                 + file_name
             )
         else:
+            list_params = data["list_params"]
             self.helper.log_info(
                 "Exporting list: "
                 + entity_type
@@ -74,24 +67,23 @@ class ExportFileStix:
             )
             bundle = self.helper.api.stix2.export_list(
                 entity_type.lower(),
-                list_args["search"],
-                list_args["filters"],
-                list_args["orderBy"],
-                list_args["orderMode"],
-                max_marking_definition,
-                list_args["types"] if "types" in list_args else None,
+                list_params["search"],
+                list_params["filters"],
+                list_params["orderBy"],
+                list_params["orderMode"],
+                max_marking,
             )
             json_bundle = json.dumps(bundle, indent=4)
             self.helper.log_info(
                 "Uploading: " + entity_type + "/" + export_type + " to " + file_name
             )
-            self.helper.api.stix_domain_entity.push_list_export(
-                entity_type, file_name, json_bundle, file_context, json.dumps(list_args)
+            self.helper.api.stix_domain_object.push_list_export(
+                entity_type, file_name, json_bundle, json.dumps(list_params)
             )
             self.helper.log_info(
                 "Export done: " + entity_type + "/" + export_type + " to " + file_name
             )
-        return ["Export done"]
+        return "Export done"
 
     # Start the main loop
     def start(self):

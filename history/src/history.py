@@ -1,4 +1,7 @@
+import datetime
 import os
+
+import elasticsearch
 import yaml
 import json
 
@@ -21,30 +24,42 @@ class HistoryConnector:
 
     def _process_message(self, msg):
         try:
-            data = json.loads(msg.data)
+            event_json = json.loads(msg.data)
+            unix_time = round(int(msg.id.split("-")[0]) / 1000)
+            event_date = datetime.datetime.fromtimestamp(
+                unix_time, datetime.timezone.utc
+            )
+            timestamp = event_date.isoformat().replace("+00:00", "Z")
+            origin = event_json["origin"]
             history_data = {
                 "internal_id": msg.id,
                 "event_type": msg.event,
-                "timestamp": data["timestamp"],
-                "user_id": data["user"],
+                "timestamp": timestamp,
+                "entity_type": "history",
+                "user_id": origin["user_id"],
+                "applicant_id": origin["applicant_id"]
+                if "applicant_id" in origin
+                else None,
                 "context_data": {
-                    "id": data["data"]["x_opencti_internal_id"]
-                    if "x_opencti_internal_id" in data["data"]
-                    else data["data"]["x_opencti_id"],
-                    "entity_type": data["data"]["type"],
-                    "from_id": data["data"]["x_opencti_source_ref"]
-                    if "x_opencti_source_ref" in data["data"]
+                    "id": event_json["data"]["x_opencti_internal_id"]
+                    if "x_opencti_internal_id" in event_json["data"]
+                    else event_json["data"]["x_opencti_id"],
+                    "entity_type": event_json["data"]["type"],
+                    "from_id": event_json["data"]["x_opencti_source_ref"]
+                    if "x_opencti_source_ref" in event_json["data"]
                     else None,
-                    "to_id": data["data"]["x_opencti_target_ref"]
-                    if "x_opencti_target_ref" in data["data"]
+                    "to_id": event_json["data"]["x_opencti_target_ref"]
+                    if "x_opencti_target_ref" in event_json["data"]
                     else None,
-                    "message": data["message"],
+                    "message": event_json["message"],
                 },
             }
             self.elasticsearch.index(
                 index=self.elasticsearch_index, id=msg.id, body=history_data
             )
-        except:
+
+        except elasticsearch.RequestError as err:
+            print("Unexpected error:", err, msg)
             pass
 
     def start(self):
