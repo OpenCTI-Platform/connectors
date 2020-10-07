@@ -14,4 +14,6 @@ connector:
 cybercrime-tracker:
   feed_url: 'http://cybercrime-tracker.net/rss.xml'
   tlp: 'WHITE'
-  interval: 86400                           # seconds
+  interval: 86400  # seconds
+  create_indicators: True # Required, create indicators for attributes
+  create_observables: True # Required, create observables for attributes

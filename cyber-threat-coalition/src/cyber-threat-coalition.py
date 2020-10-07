@@ -134,8 +134,6 @@ class CyberThreatCoalition:
                         observable_resolver = self.get_hash_type()
                         observable_type = "File"
                     indicator = None
-                    observable = None
-                    relationship = None
                     if observable_resolver is None or observable_type is None:
                         return
                     if self.cyber_threat_coalition_create_indicators:
@@ -153,6 +151,8 @@ class CyberThreatCoalition:
                                 "x_opencti_main_observable_type": observable_type,
                             },
                         )
+                        bundle_objects.append(indicator)
+                        report_object_refs.append(indicator["id"])
                     if self.cyber_threat_coalition_create_observables:
                         observable = SimpleObservable(
                             id=OpenCTIStix2Utils.generate_random_stix_id(
@@ -166,26 +166,20 @@ class CyberThreatCoalition:
                             created_by_ref=organization,
                             object_marking_refs=[stix2.TLP_WHITE],
                         )
-                    if indicator is not None and observable is not None:
-                        relationship = stix2.Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
-                            relationship_type="based-on",
-                            created_by_ref=organization,
-                            source_ref=indicator.id,
-                            target_ref=observable.id,
-                        )
-                    # add indicator in bundle and report_refs
-                    if indicator is not None:
-                        bundle_objects.append(indicator)
-                        report_object_refs.append(indicator["id"])
-                    if observable is not None:
                         bundle_objects.append(observable)
                         report_object_refs.append(observable["id"])
-                    if relationship is not None:
-                        bundle_objects.append(relationship)
-                        report_object_refs.append(relationship["id"])
+                        if indicator is not None:
+                            relationship = stix2.Relationship(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "relationship"
+                                ),
+                                relationship_type="based-on",
+                                created_by_ref=organization,
+                                source_ref=indicator.id,
+                                target_ref=observable.id,
+                            )
+                            bundle_objects.append(relationship)
+                            report_object_refs.append(relationship["id"])
 
         # create a global threat report
         report_uuid = "report--552b3ae6-8522-409d-8b72-a739bc1926aa"

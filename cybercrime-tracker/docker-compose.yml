@@ -15,4 +15,6 @@ services:
       - CYBERCRIME_TRACKER_FEED_URL=http://cybercrime-tracker.net/rss.xml
       - CYBERCRIME_TRACKER_TLP=WHITE
       - CYBERCRIME_TRACKER_INTERVAL=86400
+      - CYBERCRIME_TRACKER_CREATE_INDICATORS=true
+      - CYBERCRIME_TRACKER_CREATE_OBSERVABLES=true
     restart: always
