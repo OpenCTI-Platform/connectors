@@ -322,10 +322,11 @@ class TaniumConnector:
             else:
                 return None
 
-    def _create_indicator_stix(self, entity):
+    def _create_indicator_stix(self, entity, update=False):
         intel_document = self._get_by_id(entity["standard_id"])
-        if intel_document:
+        if intel_document is not None and not update:
             return intel_document
+
         stix2_bundle = self.helper.api.stix2.export_entity(
             entity["entity_type"],
             entity["id"],
@@ -344,38 +345,61 @@ class TaniumConnector:
             stix_indicator,
         )
         payload = {"intelDoc": stix_indicator}
-        intel_document = self._query(
-            "post",
-            "/plugin/products/detect3/api/v1/intels",
-            payload,
-            "application/xml",
-            "stix",
-        )
+        if update and intel_document is not None:
+            intel_document = self._query(
+                "put",
+                "/plugin/products/detect3/api/v1/intels/" + intel_document["id"],
+                payload,
+                "application/xml",
+                "stix",
+            )
+        else:
+            intel_document = self._query(
+                "post",
+                "/plugin/products/detect3/api/v1/intels",
+                payload,
+                "application/xml",
+                "stix",
+            )
         return intel_document
 
-    def _create_indicator_yara(self, entity):
+    def _create_indicator_yara(self, entity, update=False):
         intel_document = self._get_by_id(entity["standard_id"])
-        if intel_document:
+        if intel_document is not None and not update:
             return intel_document
 
         filename = entity["standard_id"] + ".yara"
-        intel_document = self._query(
-            "post",
-            "/plugin/products/detect3/api/v1/intels",
-            {
-                "filename": filename,
-                "document": entity["pattern"],
-                "name": entity["name"],
-                "description": entity["standard_id"],
-            },
-            "application/octet-stream",
-            "yara",
-        )
+        if update and intel_document is not None:
+            intel_document = self._query(
+                "put",
+                "/plugin/products/detect3/api/v1/intels/" + intel_document["id"],
+                {
+                    "filename": filename,
+                    "document": entity["pattern"],
+                    "name": entity["name"],
+                    "description": entity["standard_id"],
+                },
+                "application/octet-stream",
+                "yara",
+            )
+        else:
+            intel_document = self._query(
+                "post",
+                "/plugin/products/detect3/api/v1/intels",
+                {
+                    "filename": filename,
+                    "document": entity["pattern"],
+                    "name": entity["name"],
+                    "description": entity["standard_id"],
+                },
+                "application/octet-stream",
+                "yara",
+            )
         return intel_document
 
-    def _create_tanium_signal(self, entity):
+    def _create_tanium_signal(self, entity, update=False):
         intel_document = self._get_by_id(entity["standard_id"])
-        if intel_document:
+        if intel_document is not None and not update:
             return intel_document
         platforms = []
         if "x_mitre_platforms" in entity and len(entity["x_mitre_platforms"]) > 0:
@@ -386,19 +410,31 @@ class TaniumConnector:
                         if x_mitre_platform != "macOS"
                         else "mac"
                     )
-        intel_document = self._query(
-            "post",
-            "/plugin/products/detect3/api/v1/intels",
-            {
-                "name": entity["name"],
-                "description": entity["standard_id"],
-                "platforms": platforms,
-                "contents": entity["pattern"],
-            },
-        )
+        if update and intel_document is not None:
+            intel_document = self._query(
+                "put",
+                "/plugin/products/detect3/api/v1/intels/" + intel_document["id"],
+                {
+                    "name": entity["name"],
+                    "description": entity["standard_id"],
+                    "platforms": platforms,
+                    "contents": entity["pattern"],
+                },
+            )
+        else:
+            intel_document = self._query(
+                "post",
+                "/plugin/products/detect3/api/v1/intels",
+                {
+                    "name": entity["name"],
+                    "description": entity["standard_id"],
+                    "platforms": platforms,
+                    "contents": entity["pattern"],
+                },
+            )
         return intel_document
 
-    def _create_observable(self, entity):
+    def _create_observable(self, entity, update=False):
         intel_document = self._get_by_id(entity["standard_id"])
         if intel_document:
             return intel_document
@@ -497,7 +533,7 @@ class TaniumConnector:
                             {"id": label["id"]},
                         )
 
-    def _process_intel(self, entity_type, data):
+    def _process_intel(self, entity_type, data, update=False):
         entity = None
         intel_document = None
         if entity_type == "indicator":
@@ -505,17 +541,17 @@ class TaniumConnector:
             if entity is None:
                 return {"entity": entity, "intel_document": intel_document}
             if entity["pattern_type"] == "stix":
-                intel_document = self._create_indicator_stix(entity)
+                intel_document = self._create_indicator_stix(entity, update)
             elif entity["pattern_type"] == "yara":
-                intel_document = self._create_indicator_yara(entity)
+                intel_document = self._create_indicator_yara(entity, update)
             elif entity["pattern_type"] == "tanium-signal":
-                intel_document = self._create_tanium_signal(entity)
+                intel_document = self._create_tanium_signal(entity, update)
         elif (
             StixCyberObservableTypes.has_value(entity_type)
             and entity_type.lower() in self.tanium_observable_types
         ):
             entity = self.helper.api.stix_cyber_observable.read(id=data["data"]["id"])
-            intel_document = self._create_observable(entity)
+            intel_document = self._create_observable(entity, update)
         return {"entity": entity, "intel_document": intel_document}
 
     def _process_message(self, msg):
@@ -622,6 +658,17 @@ class TaniumConnector:
                                 + "/labels",
                                 {"id": label["id"]},
                             )
+            elif (
+                "x_data_update" in data["data"]
+                and "replace" in data["data"]["x_data_update"]
+            ):
+                if entity_type == "indicator":
+                    if "pattern" in data["data"]["x_data_update"]["replace"]:
+                        self._process_intel(entity_type, data, True)
+                else:
+                    self._process_intel(entity_type, data, True)
+
+
         elif msg.event == "delete":
             intel_document = self._get_by_id(data["data"]["id"])
             if intel_document is not None:
