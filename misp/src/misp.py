@@ -147,7 +147,7 @@ class Misp:
             # Get the last_run datetime
             now = datetime.utcfromtimestamp(timestamp)
             friendly_name = "Misp run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-            action_id = self.helper.api.work.initiate_work(
+            work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
             current_state = self.helper.get_state()
@@ -217,13 +217,17 @@ class Misp:
                 if len(events) == 0:
                     break
 
-                self.process_events(action_id, events)
+                self.process_events(work_id, events)
                 current_page += 1
+            message = "Connector successfully run, storing last_run as " + str(
+                timestamp
+            )
+            self.helper.log_info(message)
             self.helper.set_state({"last_run": timestamp})
-            self.helper.api.work.to_processed(action_id, "")
+            self.helper.api.work.to_processed(work_id, message)
             time.sleep(self.get_interval())
 
-    def process_events(self, action_id, events):
+    def process_events(self, work_id, events):
         try:
             # Prepare filters
             import_creator_orgs = None
@@ -478,7 +482,7 @@ class Misp:
                 bundle = Bundle(objects=bundle_objects).serialize()
                 self.helper.log_info("Sending event STIX2 bundle")
                 self.helper.send_stix2_bundle(
-                    bundle, action_id=action_id, update=self.update_existing_data
+                    bundle, work_id=work_id, update=self.update_existing_data
                 )
         except:
             return None
