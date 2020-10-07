@@ -14,4 +14,6 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - CYBER_THREAT_COALITION_INTERVAL=21600 # Seconds (6 hours)
       - CYBER_THREAT_COALITION_BASE_URL=https://blacklist.cyberthreatcoalition.org/vetted
+      - CYBER_THREAT_COALITION_CREATE_INDICATORS=true
+      - CYBER_THREAT_COALITION_CREATE_OBSERVABLES=true
     restart: always
