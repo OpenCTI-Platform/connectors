@@ -70,7 +70,7 @@ class Mitre:
                     self.helper.log_info("Connector will run!")
                     now = datetime.utcfromtimestamp(timestamp)
                     friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-                    action_id = self.helper.api.work.initiate_work(
+                    work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
                     try:
@@ -88,7 +88,7 @@ class Mitre:
                             enterprise_data,
                             entities_types=self.helper.connect_scope,
                             update=self.update_existing_data,
-                            action_id=action_id,
+                            work_id=work_id,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
@@ -107,6 +107,7 @@ class Mitre:
                             pre_attack_data,
                             entities_types=self.helper.connect_scope,
                             update=self.update_existing_data,
+                            work_id=work_id,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
@@ -125,15 +126,15 @@ class Mitre:
                             mobile_attack_data,
                             entities_types=self.helper.connect_scope,
                             update=self.update_existing_data,
+                            work_id=work_id,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
-                    self.helper.log_info(
-                        "Connector successfully run, storing last_run as "
-                        + str(timestamp)
-                    )
+                    message = "Connector successfully run, storing last_run as " + str(timestamp)
+                    self.helper.log_info(message)
                     self.helper.set_state({"last_run": timestamp})
+                    self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))
