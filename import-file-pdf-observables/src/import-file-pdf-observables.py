@@ -90,9 +90,7 @@ class ImportFilePdfObservables:
                     bundle_objects.append(report)
             bundle = Bundle(objects=bundle_objects).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
-            return [
-                "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
-            ]
+            return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
 
     # Start the main loop
     def start(self):
