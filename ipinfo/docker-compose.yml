@@ -9,6 +9,7 @@ services:
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=IpInfo
       - CONNECTOR_SCOPE=ipv4-addr
+      - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
       - IPINFO_TOKEN=ChangeMe
