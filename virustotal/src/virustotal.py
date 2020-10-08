@@ -84,7 +84,7 @@ class VirusTotalConnector:
                 external_reference_id=external_reference["id"],
             )
 
-            return ["File found on VirusTotal, knowledge attached."]
+            return "File found on VirusTotal, knowledge attached."
 
     def _process_message(self, data):
         entity_id = data["entity_id"]

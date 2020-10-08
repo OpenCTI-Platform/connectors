@@ -81,7 +81,7 @@ class HygieneConnector:
             value="Hygiene", color="#fc0341"
         )
 
-    def _process_observable(self, observable) -> list:
+    def _process_observable(self, observable) -> str:
         # Extract IPv4, IPv6 and Domain from entity data
         observable_value = observable["observable_value"]
 
@@ -140,9 +140,9 @@ class HygieneConnector:
                     external_reference_id=external_reference_id["id"],
                 )
 
-            return ["observable value found on warninglist and tagged accordingly"]
+            return "Observable value found on warninglist and tagged accordingly"
 
-    def _process_message(self, data) -> list:
+    def _process_message(self, data) -> str:
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         return self._process_observable(observable)
