@@ -116,6 +116,7 @@ class ExportFileCsv:
                 + file_name
             )
 
+            final_entity_type = entity_type
             if IdentityTypes.has_value(entity_type):
                 if list_params["filters"] is not None:
                     list_params["filters"].append(
@@ -125,7 +126,7 @@ class ExportFileCsv:
                     list_params["filters"] = [
                         {"key": "entity_type", "values": [entity_type]}
                     ]
-                entity_type = "Identity"
+                final_entity_type = "Identity"
 
             if LocationTypes.has_value(entity_type):
                 if list_params["filters"] is not None:
@@ -136,7 +137,7 @@ class ExportFileCsv:
                     list_params["filters"] = [
                         {"key": "entity_type", "values": [entity_type]}
                     ]
-                entity_type = "Location"
+                final_entity_type = "Location"
 
             if StixCyberObservableTypes.has_value(entity_type):
                 if list_params["filters"] is not None:
@@ -147,7 +148,7 @@ class ExportFileCsv:
                     list_params["filters"] = [
                         {"key": "entity_type", "values": [entity_type]}
                     ]
-                entity_type = "Stix-Cyber-Observable"
+                final_entity_type = "Stix-Cyber-Observable"
 
             # List
             lister = {
@@ -171,9 +172,9 @@ class ExportFileCsv:
                 "Stix-Cyber-Observable": self.helper.api.stix_cyber_observable.list,
             }
             do_list = lister.get(
-                entity_type.lower(),
+                final_entity_type,
                 lambda **kwargs: self.helper.log_error(
-                    'Unknown object type "' + entity_type + '", doing nothing...'
+                    'Unknown object type "' + final_entity_type + '", doing nothing...'
                 ),
             )
             entities_list = do_list(
@@ -189,9 +190,14 @@ class ExportFileCsv:
             self.helper.log_info(
                 "Uploading: " + entity_type + "/" + export_type + " to " + file_name
             )
-            self.helper.api.stix_domain_entity.push_list_export(
-                entity_type, file_name, csv_data, json.dumps(list_params)
-            )
+            if entity_type != "Stix-Cyber-Observable":
+                self.helper.api.stix_domain_object.push_list_export(
+                    entity_type, file_name, csv_data, json.dumps(list_params)
+                )
+            else:
+                self.helper.api.stix_cyber_observable.push_list_export(
+                    file_name, csv_data, json.dumps(list_params)
+                )
             self.helper.log_info(
                 "Export done: " + entity_type + "/" + export_type + " to " + file_name
             )
