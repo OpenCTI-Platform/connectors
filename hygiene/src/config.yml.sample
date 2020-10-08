@@ -7,6 +7,6 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   name: 'Hygiene'
   scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,StixFile'
-  auto: true
+  auto: true # Enable/disable auto-enrichment of observables
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
