@@ -162,6 +162,11 @@ class Cybercrimetracker:
 
                 if last_run is None or ((timestamp - last_run) > self.interval):
                     self.helper.log_info("Connector will run!")
+                    now = datetime.datetime.utcfromtimestamp(timestamp)
+                    friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
+                    )
 
                     # Get Feed Content
                     feed = feedparser.parse(self.feed_url)
@@ -326,26 +331,27 @@ class Cybercrimetracker:
 
                     # create stix bundle
                     bundle = stix2.Bundle(objects=bundle_objects)
-                    print(bundle)
                     # send data
                     self.helper.send_stix2_bundle(
-                        bundle=bundle.serialize(), update=self.update_existing_data
+                        bundle=bundle.serialize(),
+                        update=self.update_existing_data,
+                        work_id=work_id,
                     )
 
                     # Store the current timestamp as a last run
-                    self.helper.log_info(
-                        "Connector successfully run, \
-                            storing last_run as: {}".format(
+                    message = (
+                        "Connector successfully run,  storing last_run as: {}".format(
                             str(timestamp)
                         )
                     )
+                    self.helper.log_info(message)
                     self.helper.set_state({"last_run": timestamp})
+                    self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: {} seconds.".format(
                             str(round(self.interval, 2))
                         )
                     )
-
                     new_state = {"last_run": int(time.time())}
                     self.helper.set_state(new_state)
                     time.sleep(60)

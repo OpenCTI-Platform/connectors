@@ -87,6 +87,13 @@ class CyberThreatCoalition:
             return "File_sha256"
 
     def fetch_and_send(self):
+        timestamp = int(time.time())
+        now = datetime.utcfromtimestamp(timestamp)
+        friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+
         bundle_objects = list()
 
         # create an identity for the coalition team
@@ -210,8 +217,10 @@ class CyberThreatCoalition:
 
         # send data
         self.helper.send_stix2_bundle(
-            bundle=bundle.serialize(), update=self.update_existing_data
+            bundle=bundle.serialize(), update=self.update_existing_data, work_id=work_id
         )
+
+        return work_id
 
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
@@ -251,12 +260,14 @@ class CyberThreatCoalition:
                 if self._is_scheduled(last_run, timestamp):
 
                     # fetch data and send as stix bundle
-                    self.fetch_and_send()
+                    work_id = self.fetch_and_send()
 
                     new_state = current_state.copy()
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
-                    self.helper.log_info(f"Storing new state: {new_state}")
+                    message = f"Run done. Storing new state: {new_state}"
+                    self.helper.log_info(message)
+                    self.helper.api.work.to_processed(work_id, message)
 
                     self.helper.set_state(new_state)
 
