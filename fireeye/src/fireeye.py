@@ -142,9 +142,7 @@ class FireEye:
                         final_objects.append(stix_object)
                     final_bundle = {"type": "bundle", "objects": final_objects}
                     self.helper.send_stix2_bundle(
-                        json.dumps(final_bundle),
-                        None,
-                        self.update_existing_data,
+                        json.dumps(final_bundle), update=self.update_existing_data
                     )
                     headers = result.headers
                     if "Link" in headers:
