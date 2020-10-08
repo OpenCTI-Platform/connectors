@@ -57,13 +57,14 @@ class ExportFileCsv:
         return output.getvalue()
 
     def _process_message(self, data):
-        entity_id = data["entity_id"]
-        entity_type = data["entity_type"]
         file_name = data["file_name"]
-        file_context = data["file_context"]
-        export_type = data["export_type"]
-        list_args = data["list_args"]
-        if entity_id is not None:
+        export_scope = data["export_scope"]  # single or list
+        export_type = data["export_type"]  # Simple or Full
+        # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        entity_type = data["entity_type"]
+
+        if export_scope == "single":
+            entity_id = data["entity_id"]
             self.helper.log_info(
                 "Exporting: "
                 + entity_type
@@ -105,6 +106,7 @@ class ExportFileCsv:
                 + file_name
             )
         else:
+            list_params = data["list_params"]
             self.helper.log_info(
                 "Exporting list: "
                 + entity_type
@@ -115,34 +117,34 @@ class ExportFileCsv:
             )
 
             if IdentityTypes.has_value(entity_type):
-                if list_args["filters"] is not None:
-                    list_args["filters"].append(
+                if list_params["filters"] is not None:
+                    list_params["filters"].append(
                         {"key": "entity_type", "values": [entity_type]}
                     )
                 else:
-                    list_args["filters"] = [
+                    list_params["filters"] = [
                         {"key": "entity_type", "values": [entity_type]}
                     ]
                 entity_type = "Identity"
 
             if LocationTypes.has_value(entity_type):
-                if list_args["filters"] is not None:
-                    list_args["filters"].append(
+                if list_params["filters"] is not None:
+                    list_params["filters"].append(
                         {"key": "entity_type", "values": [entity_type]}
                     )
                 else:
-                    list_args["filters"] = [
+                    list_params["filters"] = [
                         {"key": "entity_type", "values": [entity_type]}
                     ]
                 entity_type = "Location"
 
             if StixCyberObservableTypes.has_value(entity_type):
-                if list_args["filters"] is not None:
-                    list_args["filters"].append(
+                if list_params["filters"] is not None:
+                    list_params["filters"].append(
                         {"key": "entity_type", "values": [entity_type]}
                     )
                 else:
-                    list_args["filters"] = [
+                    list_params["filters"] = [
                         {"key": "entity_type", "values": [entity_type]}
                     ]
                 entity_type = "Stix-Cyber-Observable"
@@ -175,11 +177,11 @@ class ExportFileCsv:
                 ),
             )
             entities_list = do_list(
-                search=list_args["search"],
-                filters=list_args["filters"],
-                orderBy=list_args["orderBy"],
-                orderMode=list_args["orderMode"],
-                types=list_args["types"] if "types" in list_args else None,
+                search=list_params["search"],
+                filters=list_params["filters"],
+                orderBy=list_params["orderBy"],
+                orderMode=list_params["orderMode"],
+                types=list_params["types"] if "types" in list_params else None,
                 getAll=True,
             )
 
@@ -188,12 +190,12 @@ class ExportFileCsv:
                 "Uploading: " + entity_type + "/" + export_type + " to " + file_name
             )
             self.helper.api.stix_domain_entity.push_list_export(
-                entity_type, file_name, csv_data, file_context, json.dumps(list_args)
+                entity_type, file_name, csv_data, json.dumps(list_params)
             )
             self.helper.log_info(
                 "Export done: " + entity_type + "/" + export_type + " to " + file_name
             )
-        return ["Export done"]
+        return "Export done"
 
     # Start the main loop
     def start(self):

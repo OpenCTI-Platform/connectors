@@ -18,12 +18,6 @@ class ExportFileStix:
         self.helper = OpenCTIConnectorHelper(config)
 
     def _process_message(self, data):
-        # export_scope: 'single', // Single or List
-        # entity_id: entity.id, // Exported element
-        # export_type: type, // Simple or full
-        # file_name: fileName, // Export expected file name
-        # max_marking: maxMarkingId, // Max marking id
-
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # single or list
         export_type = data["export_type"]  # Simple or Full
