@@ -34,10 +34,6 @@ class ImportFilePdfObservables:
         )
 
     def _process_message(self, data):
-        old_token = self.helper.api.get_token()
-        token = None
-        if "token" in data:
-            token = data["token"]
         file_fetch = data["file_fetch"]
         file_name = os.path.basename(file_fetch)
         container_id = data["container_id"]
@@ -92,12 +88,8 @@ class ImportFilePdfObservables:
                         object_refs=[bundle_objects],
                     )
                     bundle_objects.append(report)
-            if token:
-                self.helper.api.set_token(token)
-
             bundle = Bundle(objects=bundle_objects).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
-            self.helper.api.set_token(old_token)
             return [
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
             ]
