@@ -75,11 +75,11 @@ class ExportFileCsv:
                 + ") to "
                 + file_name
             )
-            entity_data = self.helper.api.stix_domain_entity.read(id=entity_id)
+            entity_data = self.helper.api.stix_domain_object.read(id=entity_id)
             entities_list = [entity_data]
             if "objectsIds" in entity_data:
                 for id in entity_data["objectsIds"]:
-                    entity = self.helper.api.stix_domain_entity.read(id=id)
+                    entity = self.helper.api.stix_domain_object.read(id=id)
                     entities_list.append(entity)
             csv_data = self.export_dict_list_to_csv(entities_list)
             self.helper.log_info(
@@ -92,7 +92,7 @@ class ExportFileCsv:
                 + ") to "
                 + file_name
             )
-            self.helper.api.stix_domain_entity.push_entity_export(
+            self.helper.api.stix_domain_object.push_entity_export(
                 entity_id, file_name, csv_data
             )
             self.helper.log_info(
