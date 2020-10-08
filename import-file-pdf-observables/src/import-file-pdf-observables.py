@@ -35,11 +35,12 @@ class ImportFilePdfObservables:
 
     def _process_message(self, data):
         file_fetch = data["file_fetch"]
+        file_uri = self.helper.opencti_url + file_fetch
         file_name = os.path.basename(file_fetch)
         container_id = data["container_id"]
-        self.helper.log_info("Importing the file " + file_fetch)
+        self.helper.log_info("Importing the file " + file_uri)
         # Get the file
-        file_content = self.helper.api.fetch_opencti_file(file_fetch, True)
+        file_content = self.helper.api.fetch_opencti_file(file_uri, True)
         # Write the file
         path = "/tmp/" + file_name
         f = open(path, "wb")
@@ -85,7 +86,7 @@ class ImportFilePdfObservables:
                             report["published"]
                         ),
                         report_types=report["report_types"],
-                        object_refs=[bundle_objects],
+                        object_refs=bundle_objects,
                     )
                     bundle_objects.append(report)
             bundle = Bundle(objects=bundle_objects).serialize()

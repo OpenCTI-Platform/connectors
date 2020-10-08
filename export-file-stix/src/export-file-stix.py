@@ -60,7 +60,7 @@ class ExportFileStix:
                 + file_name
             )
             bundle = self.helper.api.stix2.export_list(
-                entity_type.lower(),
+                entity_type,
                 list_params["search"],
                 list_params["filters"],
                 list_params["orderBy"],
