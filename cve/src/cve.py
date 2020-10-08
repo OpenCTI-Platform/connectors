@@ -77,7 +77,9 @@ class Cve:
             with open("data-stix2.json") as stix_json:
                 contents = stix_json.read()
                 self.helper.send_stix2_bundle(
-                    contents, self.helper.connect_scope, self.update_existing_data
+                    contents,
+                    entities_types=self.helper.connect_scope,
+                    update=self.update_existing_data,
                 )
             # Remove files
             self.delete_files()
