@@ -61,9 +61,11 @@ class LastInfoSec:
                     self.helper.log_info(message)
                     time.sleep(3500)
                 else:
-                    message = "Connector successfully run, storing last_run as {0}".format(
+                    message = (
+                        "Connector successfully run, storing last_run as {0}".format(
                             timestamp
                         )
+                    )
                     self.helper.set_state({"last_run": timestamp})
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(message)
