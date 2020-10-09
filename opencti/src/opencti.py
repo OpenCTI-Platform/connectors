@@ -60,7 +60,9 @@ class OpenCTI:
                     > ((int(self.opencti_interval) - 1) * 60 * 60 * 24)
                 ):
                     now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    friendly_name = "OpenCTI datasets run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )

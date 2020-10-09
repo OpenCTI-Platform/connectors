@@ -24,18 +24,21 @@ class BaseImporter(ABC):
         self.author = author
         self.tlp_marking = tlp_marking
         self.update_existing_data = update_existing_data
+        self.work_id = None
 
     @abstractmethod
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def run(self, state: Mapping[str, Any], work_id: str) -> Mapping[str, Any]:
         """
         Run import.
 
         :param state: Current state of the importer.
         :type state: Mapping[str, Any]
+        :param work_id: Work_id
         :return: State after the import.
         :rtype: Mapping[str, Any]
         """
         ...
+        self.work_id = work_id
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
@@ -54,5 +57,5 @@ class BaseImporter(ABC):
     def _send_bundle(self, bundle: Bundle) -> None:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(
-            serialized_bundle, update=self.update_existing_data
+            serialized_bundle, update=self.update_existing_data, work_id=self.work_id
         )

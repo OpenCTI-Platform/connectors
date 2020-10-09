@@ -3,6 +3,7 @@
 
 import os
 import time
+import datetime
 from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
@@ -208,7 +209,14 @@ class AlienVault:
 
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
                 if self._is_scheduled(last_run, timestamp):
-                    pulse_import_state = self.pulse_importer.run(current_state)
+                    now = datetime.datetime.utcfromtimestamp(timestamp)
+                    friendly_name = "AlienVault run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
+                    )
+                    pulse_import_state = self.pulse_importer.run(current_state, work_id)
 
                     new_state = current_state.copy()
                     new_state.update(pulse_import_state)
@@ -217,10 +225,13 @@ class AlienVault:
                     self._info("Storing new state: {0}", new_state)
 
                     self.helper.set_state(new_state)
-
-                    self._info(
-                        "State stored, next run in: {0} seconds", self._get_interval()
+                    message = (
+                        "State stored, next run in: "
+                        + str(self._get_interval())
+                        + " seconds"
                     )
+                    self.helper.api.work.to_processed(work_id, message)
+                    self._info(message)
                 else:
                     next_run = self._get_interval() - (timestamp - last_run)
                     run_interval = min(run_interval, next_run)
