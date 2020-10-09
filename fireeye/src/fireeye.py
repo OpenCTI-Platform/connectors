@@ -248,7 +248,9 @@ class FireEye:
                             },
                         }
                     )
-                self.helper.log_info("End of synchronization")
+                message = "End of synchronization"
+                self.helper.api.work.to_processed(work_id, message)
+                self.helper.log_info(message)
                 time.sleep(120)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
