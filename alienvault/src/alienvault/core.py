@@ -223,7 +223,6 @@ class AlienVault:
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
                     self._info("Storing new state: {0}", new_state)
-
                     self.helper.set_state(new_state)
                     message = (
                         "State stored, next run in: "
