@@ -59,9 +59,11 @@ class PulseImporter:
 
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
+        self.work_id = None
 
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def run(self, state: Mapping[str, Any], work_id: str) -> Mapping[str, Any]:
         """Run importer."""
+        self.work_id = work_id
         self._info(
             "Running pulse importer (update data: {0}, guess malware: {1}, guess cve: {2})...",  # noqa: E501
             self.update_existing_data,
@@ -245,5 +247,5 @@ class PulseImporter:
     def _send_bundle(self, bundle: Bundle) -> None:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(
-            serialized_bundle, update=self.update_existing_data
+            serialized_bundle, update=self.update_existing_data, work_id=self.work_id
         )

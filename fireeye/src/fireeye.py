@@ -3,6 +3,7 @@ import yaml
 import time
 import requests
 import json
+import datetime
 
 from urllib.parse import urlparse, parse_qs
 from dateutil.parser import parse
@@ -85,7 +86,7 @@ class FireEye:
             raise ValueError("An unknown error occurred")
 
     def _import_collection(
-        self, collection, last_id_modified_timestamp=None, last_id=None
+        self, collection, last_id_modified_timestamp=None, last_id=None, work_id=None
     ):
         have_next_page = True
         url = None
@@ -142,7 +143,9 @@ class FireEye:
                         final_objects.append(stix_object)
                     final_bundle = {"type": "bundle", "objects": final_objects}
                     self.helper.send_stix2_bundle(
-                        json.dumps(final_bundle), update=self.update_existing_data
+                        json.dumps(final_bundle),
+                        update=self.update_existing_data,
+                        work_id=work_id,
                     )
                     headers = result.headers
                     if "Link" in headers:
@@ -165,6 +168,12 @@ class FireEye:
         while True:
             try:
                 self.helper.log_info("Synchronizing with FireEye API...")
+                timestamp = int(time.time())
+                now = datetime.datetime.utcfromtimestamp(timestamp)
+                friendly_name = "FireEye run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
                 current_state = self.helper.get_state()
                 if (
                     current_state is None
@@ -194,6 +203,7 @@ class FireEye:
                         "indicators",
                         last_id_modified_timestamp["indicators"],
                         last_id["indicators"],
+                        work_id,
                     )
                     current_state = self.helper.get_state()
                     self.helper.set_state(
@@ -221,6 +231,7 @@ class FireEye:
                         "reports",
                         last_id_modified_timestamp["reports"],
                         last_id["reports"],
+                        work_id,
                     )
                     current_state = self.helper.get_state()
                     self.helper.set_state(
@@ -238,7 +249,7 @@ class FireEye:
                         }
                     )
                 self.helper.log_info("End of synchronization")
-                time.sleep(60)
+                time.sleep(120)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)

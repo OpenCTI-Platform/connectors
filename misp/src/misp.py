@@ -146,7 +146,7 @@ class Misp:
             timestamp = int(time.time())
             # Get the last_run datetime
             now = datetime.utcfromtimestamp(timestamp)
-            friendly_name = "Misp run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            friendly_name = "MISP run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
