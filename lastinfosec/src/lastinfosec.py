@@ -3,6 +3,7 @@ import yaml
 import time
 import requests
 import json
+import datetime
 
 from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIApiClient
 
@@ -37,19 +38,26 @@ class LastInfoSec:
             try:
                 # Get the current timestamp and check
                 timestamp = int(time.time())
+                now = datetime.datetime.utcfromtimestamp(timestamp)
+                friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
                 lastinfosec_data = requests.get(
                     self.lastinfosec_url + self.lastinfosec_apikey
                 ).json()
                 if "message" in lastinfosec_data.keys():
                     for data in lastinfosec_data["message"]:
                         sdata = json.dumps(data)
-                        self.helper.send_stix2_bundle(sdata)
+                        self.helper.send_stix2_bundle(sdata, work_id=work_id)
                     # Store the current timestamp as a last run
-                    self.helper.log_info(
+                    message = (
                         "Connector successfully run, storing last_run as {0}".format(
                             timestamp
                         )
                     )
+                    self.helper.api.work.to_processed(work_id, message)
+                    self.helper.log_info(message)
                     self.helper.set_state({"last_run": timestamp})
                     time.sleep(3500)
                 else:
