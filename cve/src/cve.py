@@ -111,6 +111,12 @@ class Cve:
                     (timestamp - last_run)
                     > ((int(self.cve_interval) - 1) * 60 * 60 * 24)
                 ):
+                    timestamp = int(time.time())
+                    now = datetime.utcfromtimestamp(timestamp)
+                    friendly_name = "CVE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
+                    )
                     self.convert_and_send(self.cve_nvd_data_feed)
                     # If import history and never run
                     if last_run is None and self.cve_import_history:
@@ -127,11 +133,13 @@ class Cve:
                         + str(timestamp)
                     )
                     self.helper.set_state({"last_run": timestamp})
-                    self.helper.log_info(
+                    message = (
                         "Last_run stored, next run in: "
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))
                         + " days"
                     )
+                    self.helper.api.work.to_processed(work_id, message)
+                    self.helper.log_info(message)
                     time.sleep(60)
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)
