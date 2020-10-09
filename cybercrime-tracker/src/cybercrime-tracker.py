@@ -352,8 +352,6 @@ class Cybercrimetracker:
                             str(round(self.interval, 2))
                         )
                     )
-                    new_state = {"last_run": int(time.time())}
-                    self.helper.set_state(new_state)
                     time.sleep(60)
                 else:
                     new_interval = self.interval - (timestamp - last_run)

@@ -56,17 +56,17 @@ class LastInfoSec:
                             timestamp
                         )
                     )
+                    self.helper.set_state({"last_run": timestamp})
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(message)
-                    self.helper.set_state({"last_run": timestamp})
                     time.sleep(3500)
                 else:
-                    self.helper.set_state({"last_run": timestamp})
-                    self.helper.log_info(
-                        "Connector successfully run, storing last_run as {0}".format(
+                    message = "Connector successfully run, storing last_run as {0}".format(
                             timestamp
                         )
-                    )
+                    self.helper.set_state({"last_run": timestamp})
+                    self.helper.api.work.to_processed(work_id, message)
+                    self.helper.log_info(message)
                     time.sleep(300)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
