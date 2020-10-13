@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'Malbeacon'
-  scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,StixFile'
+  scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,Email-Addr'
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 30 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
