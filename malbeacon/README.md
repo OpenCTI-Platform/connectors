@@ -10,8 +10,7 @@ The connector works for the following OpenCTI observable types:
 
 * ipv4-addr
 * ipv6-addr
-* domain
-* hostname
+* domain-name
 
 **NOTE** - this connector requires an API key that can be requested from
 [here](https://malbeacon.com/apply)

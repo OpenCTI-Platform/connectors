@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=Malbeacon
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
-      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain,hostname
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain-name,email-addr
       - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - MALBEACON_API_KEY=ChangeMe
