@@ -26,7 +26,11 @@ class C2Beacon(BaseModel):
     c2timezone: Optional[str]
     cookie_id: Optional[str]
     useragent: Optional[str]
-    tags: Optional[list]
+    tags: Optional[str]
+
+    @property
+    def cti_tags(self) -> list:
+        return self.tags.split(",")
 
 
 class EmailBeacon(BaseModel):
@@ -36,8 +40,8 @@ class EmailBeacon(BaseModel):
     emailaddress: Optional[str]
     cookie_id: Optional[str]
     useragent: Optional[str]
-    tags: Optional[list]
-    malhashes: Optional[list]
+    tags: Optional[str]
+    malhashes: Optional[str]
     actorip: Optional[str]
     actorcity: Optional[str]
     actorregion: Optional[str]
@@ -56,3 +60,11 @@ class EmailBeacon(BaseModel):
     refasnorg: Optional[str]
     refloc: Optional[str]
     refhostname: Optional[str]
+
+    @property
+    def cti_tags(self) -> list:
+        return self.tags.split(",")
+
+    @property
+    def cti_hashes(self) -> list:
+        return self.malhashes.split(",")
