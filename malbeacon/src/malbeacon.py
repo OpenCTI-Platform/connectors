@@ -3,7 +3,8 @@ import yaml
 import logging
 import requests
 from datetime import datetime, date
-from pydantic import BaseModel, Optional
+from typing import Optional
+from pydantic import BaseModel
 from urllib.parse import urljoin
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
