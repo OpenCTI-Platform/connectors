@@ -95,7 +95,6 @@ class PulseImporter:
                 latest_fetched_indicator_datetime = pulse.modified
 
         state_timestamp = latest_fetched_indicator_datetime
-
         imported = pulse_count - failed
 
         self._info(
