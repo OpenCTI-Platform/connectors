@@ -217,7 +217,6 @@ class AlienVault:
                         self.helper.connect_id, friendly_name
                     )
                     pulse_import_state = self.pulse_importer.run(current_state, work_id)
-
                     new_state = current_state.copy()
                     new_state.update(pulse_import_state)
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
