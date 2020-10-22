@@ -29,6 +29,9 @@ class Mitre:
         self.mitre_mobile_attack_file_url = get_config_variable(
             "MITRE_MOBILE_ATTACK_FILE_URL", ["mitre", "mobile_attack_file_url"], config
         )
+        self.mitre_mbc_file_url = get_config_variable(
+            "MITRE_MBC_FILE_URL", ["mitre", "mbc_file_url"], config
+        )
         self.mitre_interval = get_config_variable(
             "MITRE_INTERVAL", ["mitre", "interval"], config, True
         )
@@ -124,6 +127,25 @@ class Mitre:
                         )
                         self.helper.send_stix2_bundle(
                             mobile_attack_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
+                            work_id=work_id,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+                    try:
+                        mbc_data  = (
+                            urllib.request.urlopen(
+                                self.mitre_mbc_file_url,
+                                context=ssl.create_default_context(
+                                    cafile=certifi.where()
+                                ),
+                            )
+                            .read()
+                            .decode("utf-8")
+                        )
+                        self.helper.send_stix2_bundle(
+                            mbc_data,
                             entities_types=self.helper.connect_scope,
                             update=self.update_existing_data,
                             work_id=work_id,
