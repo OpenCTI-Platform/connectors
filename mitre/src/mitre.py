@@ -134,7 +134,7 @@ class Mitre:
                     except Exception as e:
                         self.helper.log_error(str(e))
                     try:
-                        mbc_data  = (
+                        mbc_data = (
                             urllib.request.urlopen(
                                 self.mitre_mbc_file_url,
                                 context=ssl.create_default_context(
