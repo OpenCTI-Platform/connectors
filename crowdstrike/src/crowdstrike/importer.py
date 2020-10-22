@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike importer module."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
 
@@ -24,10 +24,26 @@ class BaseImporter(ABC):
         self.author = author
         self.tlp_marking = tlp_marking
         self.update_existing_data = update_existing_data
-        self.work_id = None
+
+        self.work_id: Optional[str] = None
+
+    def start(self, work_id: str, state: Mapping[str, Any]) -> Mapping[str, Any]:
+        """
+        Start import.
+
+        :param work_id: Work identifier for current import process.
+        :type work_id: str
+        :param state: Current state of the importer.
+        :type state: Mapping[str, Any]
+        :return: State after the import.
+        :rtype: Mapping[str, Any]
+        """
+        self.work_id = work_id
+
+        return self.run(state)
 
     @abstractmethod
-    def run(self, state: Mapping[str, Any], work_id: str) -> Mapping[str, Any]:
+    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """
         Run import.
 
@@ -38,7 +54,6 @@ class BaseImporter(ABC):
         :rtype: Mapping[str, Any]
         """
         ...
-        self.work_id = work_id
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
@@ -57,5 +72,5 @@ class BaseImporter(ABC):
     def _send_bundle(self, bundle: Bundle) -> None:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(
-            serialized_bundle, update=self.update_existing_data, work_id=self.work_id
+            serialized_bundle, work_id=self.work_id, update=self.update_existing_data
         )
