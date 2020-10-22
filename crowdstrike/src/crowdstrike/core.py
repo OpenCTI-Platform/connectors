@@ -3,7 +3,6 @@
 
 import os
 import time
-import datetime
 from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
@@ -24,6 +23,7 @@ from crowdstrike.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
+    timestamp_to_datetime,
 )
 from crowdstrike.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 
@@ -323,30 +323,27 @@ class CrowdStrike:
 
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
                 if self._is_scheduled(last_run, timestamp):
-                    now = datetime.datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "AlienVault run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
+                    work_id = self._initiate_work(timestamp)
+
                     new_state = current_state.copy()
 
                     for importer in self.importers:
-                        importer_state = importer.run(current_state, work_id)
+                        importer_state = importer.start(work_id, current_state)
                         new_state.update(importer_state)
 
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
                     self._info("Storing new state: {0}", new_state)
+
                     self.helper.set_state(new_state)
+
                     message = (
-                        "State stored, next run in: "
-                        + str(self._get_interval())
-                        + " seconds"
+                        f"State stored, next run in: {self._get_interval()} seconds"
                     )
-                    self.helper.api.work.to_processed(work_id, message)
+
                     self._info(message)
+
+                    self._complete_work(work_id, message)
                 else:
                     next_run = self._get_interval() - (timestamp - last_run)
                     run_interval = min(run_interval, next_run)
@@ -362,6 +359,20 @@ class CrowdStrike:
             except Exception as e:
                 self._error("CrowdStrike connector internal error: {0}", str(e))
                 self._sleep()
+
+    def _initiate_work(self, timestamp: int) -> str:
+        datetime_str = timestamp_to_datetime(timestamp)
+        friendly_name = f"{self.helper.connect_name} @ {datetime_str}"
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+
+        self._info("New work '{0}' initiated", work_id)
+
+        return work_id
+
+    def _complete_work(self, work_id: str, message: str) -> None:
+        self.helper.api.work.to_processed(work_id, message)
 
     def _get_interval(self) -> int:
         return int(self.interval_sec)
