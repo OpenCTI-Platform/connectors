@@ -91,10 +91,6 @@ class Malpedia:
             self.default_marking,
         )
 
-        self.malpedia_interval = get_config_variable(
-            "MALPEDIA_INTERVAL_SEC", ["amitt", "interval"], config, True
-        )
-
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
         if not current_state:
@@ -124,8 +120,8 @@ class Malpedia:
     def _current_unix_timestamp() -> int:
         return int(datetime.utcnow().timestamp())
 
-    def get_interval(self):
-        return int(self.malpedia_interval)
+    def _get_interval(self):
+        return int(self.INTERVAL_SEC)
 
     def run(self):
         self.helper.log_info("starting Malpedia connector...")
@@ -170,10 +166,10 @@ class Malpedia:
                     self.helper.set_state(new_state)
 
                     self.helper.log_info(
-                        f"state stored, next run in: {self.get_interval()} seconds"
+                        f"state stored, next run in: {self._get_interval()} seconds"
                     )
                 else:
-                    new_interval = self.get_interval() - (timestamp - last_run)
+                    new_interval = self._get_interval() - (timestamp - last_run)
                     self.helper.log_info(
                         f"connector will not run, next run in: {new_interval} seconds"
                     )
