@@ -1,5 +1,5 @@
 git+https://github.com/OpenCTI-Platform/client-python@master
 PyYAML==5.3.1
 requests==2.24.0
-pydantic==1.6.1
-urllib3==1.25.8
+pydantic==1.7.2
+urllib3==1.25.11
