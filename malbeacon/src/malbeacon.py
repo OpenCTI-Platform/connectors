@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class MalBeaconConnector:
+    """Malbeacon connector class"""
+
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -31,13 +33,12 @@ class MalBeaconConnector:
         obs_val = observable["observable_value"]
         obs_typ = observable["entity_type"]
 
-        print(observable)
-
         if obs_typ == "Domain-Name":
             self._process_c2(obs_val)
         elif obs_typ in ["IPv4-Addr", "IPv6-Addr"]:
             self._process_c2(obs_val)
         elif obs_typ in "Email-Address":
+            # TODO: not implemented
             pass
         else:
             return "no information found on malbeacon"
@@ -60,6 +61,9 @@ class MalBeaconConnector:
     def _api_call(self, url_path):
         api_base_url = "https://api.malbeacon.com/v1/"
         url = urljoin(api_base_url, url_path)
+
+        print(url)
+
         try:
             r = requests.get(url, headers={"X-Api-Key": self.api_key})
             data = r.json()
@@ -70,9 +74,11 @@ class MalBeaconConnector:
 
     def _process_c2(self, ioc_value):
         try:
-            data = self._api_call("/c2/c2/" + ioc_value)
+            data = self._api_call("c2/c2/" + ioc_value)
             for entry in data:
-                c2_beacon = C2Beacon.parse_obj(entry)
+                c2_beacons = C2Beacon.parse_obj(entry)
+
+                print(c2_beacons)
 
         except Exception as err:
             logger.error(f"error downloading c2 information: {err}")
@@ -82,7 +88,7 @@ class MalBeaconConnector:
 class C2Beacon(BaseModel):
     """MalBeacon C2 Beacon base model"""
 
-    tstamp: Optional[date] = date.today()
+    tstamp: Optional[str]  # format: 2020-10-22 09:04:40
     actorasnorg: Optional[str]
     actorcity: Optional[str]
     actorcountrycode: Optional[str]
@@ -109,11 +115,15 @@ class C2Beacon(BaseModel):
     def cti_tags(self) -> list:
         return self.tags.split(",")
 
+    @property
+    def cti_date(self):
+        return datetime.parser.parse(self.tstamp)
+
 
 class EmailBeacon(BaseModel):
     """Malbeacon Email Beacon base model"""
 
-    tstamp: Optional[date] = date.today()
+    tstamp: Optional[str]  # format: 2020-10-22 09:04:40
     emailaddress: Optional[str]
     cookie_id: Optional[str]
     useragent: Optional[str]
@@ -145,6 +155,10 @@ class EmailBeacon(BaseModel):
     @property
     def cti_hashes(self) -> list:
         return self.malhashes.split(",")
+
+    @property
+    def cti_date(self):
+        return datetime.parser.parse(self.tstamp)
 
 
 if __name__ == "__main__":
