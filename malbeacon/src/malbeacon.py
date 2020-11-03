@@ -2,7 +2,9 @@ import os
 import yaml
 import logging
 import requests
-from datetime import datetime, date
+
+from datetime import datetime
+from dateutil import parser
 from typing import Optional
 from pydantic import BaseModel
 from urllib.parse import urljoin
@@ -24,19 +26,34 @@ class MalBeaconConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+        self.confidence_level = get_config_variable(
+            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config
+        )
         self.api_key = get_config_variable(
             "MALBEACON_API_KEY", ["malbeacon", "api_key"], config
+        )
+
+        self.author = self.helper.api.identity.create(
+            name="Malbeacon",
+            type="Organization",
+            description="""The first system of its kind, MalBeacon implants \
+            beacons via malware bot check-in traffic. Adversaries conducting \
+            campaigns in the wild who are logging in to these malware C2 \
+            panels can now be tracked. MalBeacon is a tool for the good guys \
+            that provides additional intelligence on attack attribution.""",
+            update=True,
         )
 
     def _process_observable(self, observable) -> str:
         # Extract IPv4, IPv6, Hostname and Domain from entity data
         obs_val = observable["observable_value"]
         obs_typ = observable["entity_type"]
+        obs_id = observable["id"]
 
         if obs_typ == "Domain-Name":
-            self._process_c2(obs_val)
+            self._process_c2(obs_val, obs_id)
         elif obs_typ in ["IPv4-Addr", "IPv6-Addr"]:
-            self._process_c2(obs_val)
+            self._process_c2(obs_val, obs_id)
         elif obs_typ in "Email-Address":
             # TODO: not implemented
             pass
@@ -62,27 +79,74 @@ class MalBeaconConnector:
         api_base_url = "https://api.malbeacon.com/v1/"
         url = urljoin(api_base_url, url_path)
 
-        print(url)
-
         try:
             r = requests.get(url, headers={"X-Api-Key": self.api_key})
             data = r.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"error in malbeacon api request: {e}")
             return None
+
         return data
 
-    def _process_c2(self, ioc_value):
-        try:
-            data = self._api_call("c2/c2/" + ioc_value)
-            for entry in data:
-                c2_beacons = C2Beacon.parse_obj(entry)
+    def _process_c2(self, obs_value, obs_id):
+        already_processed = []
 
-                print(c2_beacons)
+        reference = self.helper.api.external_reference.create(
+            source_name="Malbeacon C2 Domains",
+            url="https://malbeacon.com/illuminate",
+            description="Found in Malbeacon C2 Domains",
+        )
+        self.helper.api.stix_domain_object.add_external_reference(
+            id=obs_id, external_reference_id=reference["id"]
+        )
+
+        try:
+            data = self._api_call("c2/c2/" + obs_value)
+            merged_data = []
+            for entry in data:
+                c2_beacon = C2Beacon.parse_obj(entry)
+                print(
+                    f"{c2_beacon.cti_date} {c2_beacon.actorip} {c2_beacon.actorhostname}"
+                )
+
+                ######################################################
+                # Process what we know about the actors infrastructure
+                ######################################################
+
+                if (
+                    c2_beacon.actorip != "NA"
+                    and c2_beacon.actorip not in already_processed
+                ):
+                    c2_ip = self.helper.api.stix_cyber_observable.create(
+                        simple_observable_key="IPv4-Addr.value",
+                        simple_observable_value=c2_beacon.actorip,
+                        simple_observable_description=f"Actor IP Address for C2 {obs_value}",
+                        createdBy=self.author["id"],
+                        x_opencti_score=self.confidence_level,
+                        createIndicator=True,
+                    )
+
+                    if c2_beacon.actorhostname != "NA":
+                        c2_hostname = self.helper.api.stix_cyber_observable.create(
+                            simple_observable_key="Domain-Name.value",
+                            simple_observable_value=c2_beacon.actorhostname,
+                            simple_observable_description=f"Actor Hostname for C2 {obs_value}",
+                            createdBy=self.author["id"],
+                            x_opencti_score=self.confidence_level,
+                            createIndicator=True,
+                        )
+
+                    # Make sure we only process this specific IP once
+                    already_processed.append(c2_beacon.actorip)
 
         except Exception as err:
-            logger.error(f"error downloading c2 information: {err}")
+            logger.error(f"error downloading and storing c2 beacons: {err}")
             return None
+
+
+################################
+# Models
+################################
 
 
 class C2Beacon(BaseModel):
@@ -117,7 +181,7 @@ class C2Beacon(BaseModel):
 
     @property
     def cti_date(self):
-        return datetime.parser.parse(self.tstamp)
+        return parser.parse(self.tstamp).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
 class EmailBeacon(BaseModel):
@@ -158,7 +222,7 @@ class EmailBeacon(BaseModel):
 
     @property
     def cti_date(self):
-        return datetime.parser.parse(self.tstamp)
+        return parser.parse(self.tstamp).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
 if __name__ == "__main__":
