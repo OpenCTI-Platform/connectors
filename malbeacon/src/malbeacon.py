@@ -3,7 +3,6 @@ import yaml
 import logging
 import requests
 
-from datetime import datetime
 from dateutil import parser
 from typing import Optional
 from pydantic import BaseModel
@@ -102,7 +101,6 @@ class MalBeaconConnector:
 
         try:
             data = self._api_call("c2/c2/" + obs_value)
-            merged_data = []
             for entry in data:
                 c2_beacon = C2Beacon.parse_obj(entry)
                 print(
@@ -117,7 +115,7 @@ class MalBeaconConnector:
                     c2_beacon.actorip != "NA"
                     and c2_beacon.actorip not in already_processed
                 ):
-                    c2_ip = self.helper.api.stix_cyber_observable.create(
+                    self.helper.api.stix_cyber_observable.create(
                         simple_observable_key="IPv4-Addr.value",
                         simple_observable_value=c2_beacon.actorip,
                         simple_observable_description=f"Actor IP Address for C2 {obs_value}",
@@ -127,7 +125,7 @@ class MalBeaconConnector:
                     )
 
                     if c2_beacon.actorhostname != "NA":
-                        c2_hostname = self.helper.api.stix_cyber_observable.create(
+                        self.helper.api.stix_cyber_observable.create(
                             simple_observable_key="Domain-Name.value",
                             simple_observable_value=c2_beacon.actorhostname,
                             simple_observable_description=f"Actor Hostname for C2 {obs_value}",
