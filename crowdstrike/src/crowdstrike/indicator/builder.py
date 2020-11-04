@@ -148,7 +148,7 @@ class IndicatorBundleBuilder:
     def _get_observation_factory(cls, indicator_type: str) -> ObservationFactory:
         factory = cls._INDICATOR_TYPE_TO_OBSERVATION_FACTORY.get(indicator_type)
         if factory is None:
-            raise TypeError(f"Unsupported pulse indicator type: {indicator_type}")
+            raise TypeError(f"Unsupported indicator type: {indicator_type}")
         return factory
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:

@@ -3,6 +3,8 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
+from pycti import OpenCTIStix2Utils  # type: ignore
+
 from stix2 import (  # type: ignore
     CustomObservable,
     DomainName,
@@ -26,6 +28,10 @@ from crowdstrike.utils.constants import (
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
 )
+
+
+def _create_random_identifier(identifier_type: str) -> str:
+    return OpenCTIStix2Utils.generate_random_stix_id(identifier_type)
 
 
 def _get_default_custom_properties(
@@ -233,7 +239,10 @@ def create_observable_cryptocurrency_wallet(
 
 def create_observable_windows_service_name(properties: ObservableProperties) -> Process:
     """Create an observable representing a Windows service name."""
+    # The Process does not have ID Contributing Properties.
+    # Specification says to use UUIDv4 but for OpenCTI we will use random identifier.
     return Process(
+        id=_create_random_identifier("process"),
         object_marking_refs=properties.object_markings,
         extensions={"windows-service-ext": {"service_name": properties.value}},
         custom_properties=_get_custom_properties(properties),
