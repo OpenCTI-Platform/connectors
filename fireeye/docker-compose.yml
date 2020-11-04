@@ -15,6 +15,6 @@ services:
       - FIREEYE_API_URL=https://api.intelligence.fireeye.com
       - FIREEYE_API_V3_PUBLIC=ChangeMe
       - FIREEYE_API_V3_SECRET=ChangeMe
-      - FIREEYE_COLLECTION=reports,indicators
+      - FIREEYE_COLLECTIONS=reports,indicators
       - FIREEYE_IMPORT_START_DATE=2020-01-01
     restart: always
