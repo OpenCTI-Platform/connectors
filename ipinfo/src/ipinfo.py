@@ -106,7 +106,7 @@ class IpInfoConnector:
         bundle = self._generate_stix_bundle(
             country, json_data["city"], json_data["loc"], observable_id
         )
-        bundles_sent = self.helper.send_stix2_bundle(bundle)
+        bundles_sent = self.helper.send_stix2_bundle(bundle, remove_orphan=False)
         return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
 
     # Start the main loop
