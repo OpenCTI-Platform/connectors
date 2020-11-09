@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-splunk:
+    build: galonsososa/connector-splunk:1.1
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Splunk
+      - CONNECTOR_SCOPE=splunk
+      - CONNECTOR_CONFIDENCE_LEVEL=15
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_LOG_LEVEL=info
+      - CONFIG_INTERVAL=7 # Days
+      - SPLUNK_HOST=host.docker.internal
+      - SPLUNK_PORT=8089
+      - SPLUNK_USERNAME=admin
+      - SPLUNK_CONNECTOR_PASSWORD=ChangeMe
+      - SPLUNK_INDEXES=ChangeMe
+    restart: always
