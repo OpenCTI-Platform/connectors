@@ -1,0 +1,42 @@
+version: "3.8"
+services:
+  connector-kaspersky:
+    image: opencti/connector-kaspersky:0.1.0
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Kaspersky
+      - CONNECTOR_SCOPE=kaspersky
+      - CONNECTOR_CONFIDENCE_LEVEL=15  # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_LOG_LEVEL=info
+      - KASPERSKY_BASE_URL=https://tip.kaspersky.com
+      - KASPERSKY_USER=ChangeMe
+      - KASPERSKY_PASSWORD=ChangeMe
+      - KASPERSKY_CERTIFICATE_PATH=/run/secrets/kaspersky_certificate
+      - KASPERSKY_TLP=Amber
+      - KASPERSKY_CREATE_OBSERVABLES=true
+      - KASPERSKY_CREATE_INDICATORS=true
+      - KASPERSKY_SCOPES=publication,master_ioc,master_yara
+      - KASPERSKY_PUBLICATION_START_TIMESTAMP=0
+      - KASPERSKY_PUBLICATION_REPORT_TYPE=threat-report
+      - KASPERSKY_PUBLICATION_REPORT_STATUS=New
+      - KASPERSKY_PUBLICATION_REPORT_IGNORE_PREFIXES=Monthly APT activity report
+      - KASPERSKY_PUBLICATION_EXCLUDED_IOC_INDICATOR_TYPES=Md5sum, FileItem/Sha1sum  # OpenIOC search values.
+      - KASPERSKY_MASTER_IOC_FETCH_WEEKDAY=1  # If present then the Master IOC is fetched on given ISO weekday.
+      - KASPERSKY_MASTER_IOC_EXCLUDED_IOC_INDICATOR_TYPES=md5Hash, sha1Hash  # OpenIOC indicator types.
+      - KASPERSKY_MASTER_IOC_REPORT_TYPE=threat-report
+      - KASPERSKY_MASTER_IOC_REPORT_STATUS=New
+      - KASPERSKY_MASTER_YARA_FETCH_WEEKDAY=2  # If present then the Master YARA is fetched on given ISO weekday.
+      - KASPERSKY_MASTER_YARA_REPORT_TYPE=threat-report
+      - KASPERSKY_MASTER_YARA_REPORT_STATUS=New
+      - KASPERSKY_INTERVAL_SEC=43200
+    restart: always
+    secrets:
+      - kaspersky_certificate
+
+secrets:
+  kaspersky_certificate:
+    file: /path/to/certificate.pem  # Change to correct path.
