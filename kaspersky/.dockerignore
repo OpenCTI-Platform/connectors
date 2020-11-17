@@ -1,0 +1,6 @@
+src/config.yml
+src/kaspersky/__pycache__
+src/kaspersky/master_ioc/__pycache__
+src/kaspersky/master_yara/__pycache__
+src/kaspersky/publication/__pycache__
+src/kaspersky/utils/__pycache__
