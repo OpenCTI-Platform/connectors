@@ -127,7 +127,11 @@ jobs:
       - run:
           working_directory: ~/opencti/fireeye
           name: Build Docker image opencti/connector-fireeye
-          command: docker build -t opencti/connector-fireeye:latest . && docker tag opencti/connector-fireeye:latest opencti/connector-fireeye:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-fireeye:latest . && docker tag opencti/connector-fireeye:latest opencti/connector-fireeye:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/kaspersky
+          name: Build Docker image opencti/connector-kaspersky
+          command: docker build -t opencti/connector-kaspersky:latest . && docker tag opencti/connector-kaspersky:latest opencti/connector-kaspersky:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -179,7 +183,9 @@ jobs:
             docker push opencti/connector-synchronizer:latest
             docker push opencti/connector-synchronizer:${CIRCLE_TAG}
             docker push opencti/connector-fireeye:latest
-            docker push opencti/connector-fireeye:${CIRCLE_TAG}                
+            docker push opencti/connector-fireeye:${CIRCLE_TAG}
+            docker push opencti/connector-kaspersky:latest
+            docker push opencti/connector-kaspersky:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -282,7 +288,11 @@ jobs:
       - run:
           working_directory: ~/opencti/fireeye
           name: Build Docker image opencti/connector-fireeye
-          command: docker build -t opencti/connector-fireeye:rolling .             
+          command: docker build -t opencti/connector-fireeye:rolling .
+      - run:
+          working_directory: ~/opencti/kaspersky
+          name: Build Docker image opencti/connector-kaspersky
+          command: docker build -t opencti/connector-kaspersky:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -311,6 +321,7 @@ jobs:
             docker push opencti/connector-tanium:rolling
             docker push opencti/connector-synchronizer:rolling
             docker push opencti/connector-fireeye:rolling
+            docker push opencti/connector-kaspersky:rolling
 workflows:
   version: 2
   opencti:
