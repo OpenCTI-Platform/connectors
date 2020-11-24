@@ -156,7 +156,6 @@ class FireEye:
                         json.dumps(final_bundle),
                         update=self.update_existing_data,
                         work_id=work_id,
-                        remove_orphan=False,
                     )
                     headers = result.headers
                     if "Link" in headers:
