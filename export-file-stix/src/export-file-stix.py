@@ -66,6 +66,7 @@ class ExportFileStix:
                 list_params["orderBy"],
                 list_params["orderMode"],
                 max_marking,
+                list_params.get("types"),
             )
             json_bundle = json.dumps(bundle, indent=4)
             self.helper.log_info(
