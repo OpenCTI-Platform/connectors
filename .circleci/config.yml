@@ -9,7 +9,7 @@ jobs:
       - checkout
       - run:
           name: install dependencies
-          command: sudo python -m pip install black
+          command: python -m pip install black
       - run:
           name: confirm black version
           command: black --version
