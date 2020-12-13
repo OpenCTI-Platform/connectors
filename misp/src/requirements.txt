@@ -1,6 +1,6 @@
 git+https://github.com/OpenCTI-Platform/client-python@master
 PyYAML==5.3.1
-urllib3==1.25.9
-pymisp==2.4.128
+urllib3==1.26.2
+pymisp==2.4.135.3
 python-dateutil==2.8.1
-stix2==2.0.2
+stix2==2.1.0
