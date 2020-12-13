@@ -18,4 +18,4 @@ tanium:
   observable_types: 'ipv4-addr,ipv6-addr,domain-name,x-opencti-hostname,file,process'
   import_label: 'tanium' # can be "*" to import everything
   auto_quickscan: False # trigger a quick scan when an intel document is imported
-  computer_groups: '1,2,3' # # computer groups targeted by the auto quick scan (separated by ,)
+  computer_groups: '1,2,3' # computer groups targeted by the auto quick scan (separated by ,)
