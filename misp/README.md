@@ -10,6 +10,8 @@ If you are using it independently, remember that the connector will try to conne
 
 ## Configuration
 
+**Warning**: This connector is compatiable with MISP >=2.4.135.3.
+
 | Parameter                        | Docker envvar                    | Mandatory    | Description                                                                                         |
 | -------------------------------- | -------------------------------- | ------------ | --------------------------------------------------------------------------------------------------- |
 | `opencti_url`                    | `OPENCTI_URL`                    | Yes          | The URL of the OpenCTI platform.                                                                    |
