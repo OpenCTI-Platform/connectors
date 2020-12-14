@@ -481,6 +481,7 @@ class Misp:
                     bundle_objects.append(report)
                 bundle = Bundle(objects=bundle_objects).serialize()
                 self.helper.log_info("Sending event STIX2 bundle")
+                print(bundle)
                 self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, update=self.update_existing_data
                 )
@@ -678,11 +679,13 @@ class Misp:
                     )
                 )
             # Event threats
+            threat_names = {}
             for threat in (
                 event_elements["intrusion_sets"]
                 + event_elements["malwares"]
                 + event_elements["tools"]
             ):
+                threat_names[threat.name] = threat.id
                 if indicator is not None:
                     relationships.append(
                         Relationship(
@@ -720,6 +723,10 @@ class Misp:
                 + attribute_elements["malwares"]
                 + attribute_elements["tools"]
             ):
+                if threat.name in threat_names:
+                    threat_id = threat_names[threat.name]
+                else:
+                    threat_id = threat.id
                 if indicator is not None:
                     relationships.append(
                         Relationship(
@@ -729,7 +736,7 @@ class Misp:
                             relationship_type="indicates",
                             created_by_ref=author,
                             source_ref=indicator.id,
-                            target_ref=threat.id,
+                            target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
@@ -744,7 +751,7 @@ class Misp:
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
-                            target_ref=threat.id,
+                            target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
@@ -759,11 +766,15 @@ class Misp:
                 else:
                     threats = []
                 for threat in threats:
+                    if threat.name in threat_names:
+                        threat_id = threat_names[threat.name]
+                    else:
+                        threat_id = threat.id
                     relationship_uses = Relationship(
                         id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                         relationship_type="uses",
                         created_by_ref=author,
-                        source_ref=threat.id,
+                        source_ref=threat_id,
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
@@ -808,12 +819,16 @@ class Misp:
                 else:
                     threats = []
                 for threat in threats:
+                    if threat.name in threat_names:
+                        threat_id = threat_names[threat.name]
+                    else:
+                        threat_id = threat.id
                     relationship_uses = Relationship(
                         id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                         relationship_type="uses",
                         confidence=self.helper.connect_confidence_level,
                         created_by_ref=author,
-                        source_ref=threat.id,
+                        source_ref=threat_id,
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
