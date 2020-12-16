@@ -163,7 +163,7 @@ class Cybercrimetracker:
                 if last_run is None or ((timestamp - last_run) > self.interval):
                     self.helper.log_info("Connector will run!")
                     now = datetime.datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    friendly_name = "Cybercrime-Tracker run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
