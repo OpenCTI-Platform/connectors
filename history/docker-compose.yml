@@ -5,6 +5,7 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      - OPENCTI_SSL_VERIFY=true
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=History
