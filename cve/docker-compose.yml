@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cve:
-    image: opencti/connector-cve:4.0.1
+    image: opencti/connector-cve:4.0.2
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
