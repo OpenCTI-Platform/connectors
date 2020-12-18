@@ -642,7 +642,7 @@ class Misp:
                                 int(misp_sighting["date_sighting"])
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             last_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
+                                int(misp_sighting["date_sighting"])+3600
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             where_sighted_refs=[sighted_by]
                             if sighted_by is not None
