@@ -649,21 +649,21 @@ class Misp:
                             else None,
                         )
                         sightings.append(sighting)
-                    if observable is not None:
-                        sighting = Sighting(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("sighting"),
-                            sighting_of_ref=observable["id"],
-                            first_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            last_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            where_sighted_refs=[sighted_by]
-                            if sighted_by is not None
-                            else None,
-                        )
-                        sightings.append(sighting)
+                    # if observable is not None:
+                    #     sighting = Sighting(
+                    #         id=OpenCTIStix2Utils.generate_random_stix_id("sighting"),
+                    #         sighting_of_ref=observable["id"],
+                    #         first_seen=datetime.utcfromtimestamp(
+                    #             int(misp_sighting["date_sighting"])
+                    #         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    #         last_seen=datetime.utcfromtimestamp(
+                    #             int(misp_sighting["date_sighting"])
+                    #         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    #         where_sighted_refs=[sighted_by]
+                    #         if sighted_by is not None
+                    #         else None,
+                    #     )
+                    #     sightings.append(sighting)
 
             ### Create the relationships
             relationships = []
@@ -1085,6 +1085,7 @@ class Misp:
                         Malware(
                             id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
                             name=name,
+                            is_family=True,
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
