@@ -147,9 +147,9 @@ class FireEye:
                             stix_object["object_marking_refs"] = [
                                 "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
                             ]
-                        stix_object["object_marking_refs"].append(
-                            self.marking["standard_id"]
-                        )
+                            stix_object["object_marking_refs"].append(
+                                self.marking["standard_id"]
+                            )
                         final_objects.append(stix_object)
                     final_bundle = {"type": "bundle", "objects": final_objects}
                     self.helper.send_stix2_bundle(

@@ -8,7 +8,7 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=VirusTotal
-      - CONNECTOR_SCOPE=file-md5,file-sha1,file-sha256
+      - CONNECTOR_SCOPE=StixFile
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
