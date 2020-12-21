@@ -1,11 +1,7 @@
 import yaml
 import os
-import requests
-import json
-import pycountry
 
-from stix2 import Relationship, Location, Bundle
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+from pycti import OpenCTIConnectorHelper
 
 
 class SightingConnector:
