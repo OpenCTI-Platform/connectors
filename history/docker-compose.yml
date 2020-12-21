@@ -1,10 +1,11 @@
 version: "3"
 services:
   connector-hygiene:
-    image: opencti/connector-history:3.3.1
+    image: opencti/connector-history:4.0.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      - OPENCTI_SSL_VERIFY=true
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=History

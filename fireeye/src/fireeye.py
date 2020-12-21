@@ -52,6 +52,13 @@ class FireEye:
             description="FireEye is a publicly traded cybersecurity company headquartered in Milpitas, California. It has been involved in the detection and prevention of major cyber attacks. It provides hardware, software, and services to investigate cybersecurity attacks, protect against malicious software, and analyze IT security risks. FireEye was founded in 2004.",
         )
 
+        self.marking = self.helper.api.marking_definition.create(
+            definition_type="COMMERCIAL",
+            definition="FIREEYE",
+            x_opencti_order=99,
+            x_opencti_color="#a01526",
+        )
+
         # Init variables
         self.auth_token = None
         self._get_token()
@@ -71,7 +78,7 @@ class FireEye:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-4.0.0",
+            "x-app-name": "opencti-connector-4.0.3",
         }
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
@@ -101,7 +108,7 @@ class FireEye:
                         + "/objects"
                         + "?added_after="
                         + str(self.added_after)
-                        + "&length=500"
+                        + "&length=100"
                         + "&last_id_modified_timestamp="
                         + str(last_id_modified_timestamp)
                     )
@@ -113,7 +120,7 @@ class FireEye:
                         + "/objects"
                         + "?added_after="
                         + str(self.added_after)
-                        + "&length=500"
+                        + "&length=100"
                     )
             result = self._query(url)
             parsed_result = json.loads(result.text)
@@ -140,6 +147,9 @@ class FireEye:
                             stix_object["object_marking_refs"] = [
                                 "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
                             ]
+                            stix_object["object_marking_refs"].append(
+                                self.marking["standard_id"]
+                            )
                         final_objects.append(stix_object)
                     final_bundle = {"type": "bundle", "objects": final_objects}
                     self.helper.send_stix2_bundle(

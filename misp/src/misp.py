@@ -196,6 +196,7 @@ class Misp:
 
             # Query with pagination of 100
             current_page = 1
+            number_events = 0
             while True:
                 kwargs["limit"] = 50
                 kwargs["page"] = current_page
@@ -213,14 +214,18 @@ class Misp:
                         self.helper.log_error(str(e))
 
                 self.helper.log_info("MISP returned " + str(len(events)) + " events.")
+                number_events = number_events + len(events)
                 # Break if no more result
                 if len(events) == 0:
                     break
 
                 self.process_events(work_id, events)
                 current_page += 1
-            message = "Connector successfully run, storing last_run as " + str(
-                timestamp
+            message = (
+                "Connector successfully run ("
+                + str(number_events)
+                + " events have been processed), storing last_run as "
+                + str(timestamp)
             )
             self.helper.log_info(message)
             self.helper.set_state({"last_run": timestamp})
@@ -228,264 +233,259 @@ class Misp:
             time.sleep(self.get_interval())
 
     def process_events(self, work_id, events):
-        try:
-            # Prepare filters
-            import_creator_orgs = None
-            import_owner_orgs = None
-            import_distribution_levels = None
-            import_threat_levels = None
-            if self.import_creator_orgs is not None:
-                import_creator_orgs = self.import_creator_orgs.split(",")
-            if self.import_owner_orgs is not None:
-                import_owner_orgs = self.import_owner_orgs.split(",")
-            if self.import_distribution_levels is not None:
-                import_distribution_levels = self.import_distribution_levels.split(",")
-            if self.import_threat_levels is not None:
-                import_threat_levels = self.import_threat_levels.split(",")
+        # Prepare filters
+        import_creator_orgs = None
+        import_owner_orgs = None
+        import_distribution_levels = None
+        import_threat_levels = None
+        if self.import_creator_orgs is not None:
+            import_creator_orgs = self.import_creator_orgs.split(",")
+        if self.import_owner_orgs is not None:
+            import_owner_orgs = self.import_owner_orgs.split(",")
+        if self.import_distribution_levels is not None:
+            import_distribution_levels = self.import_distribution_levels.split(",")
+        if self.import_threat_levels is not None:
+            import_threat_levels = self.import_threat_levels.split(",")
 
-            for event in events:
-                self.helper.log_info("Processing event " + event["Event"]["uuid"])
+        for event in events:
+            self.helper.log_info("Processing event " + event["Event"]["uuid"])
 
-                # Check against filter
-                if (
-                    import_creator_orgs is not None
-                    and event["Event"]["Orgc"]["name"] not in import_creator_orgs
-                ):
-                    self.helper.log_info(
-                        "Event creator organization "
-                        + event["Event"]["Orgc"]["name"]
-                        + " not in import_creator_orgs, do not import"
-                    )
-                    continue
-                if (
-                    import_owner_orgs is not None
-                    and event["Event"]["Org"]["name"] not in import_owner_orgs
-                ):
-                    self.helper.log_info(
-                        "Event owner organization "
-                        + event["Event"]["Org"]["name"]
-                        + " not in import_owner_orgs, do not import"
-                    )
-                    continue
-                if (
-                    import_distribution_levels is not None
-                    and event["Event"]["distribution"] not in import_distribution_levels
-                ):
-                    self.helper.log_info(
-                        "Event distribution level "
-                        + event["Event"]["distribution"]
-                        + " not in import_distribution_levels, do not import"
-                    )
-                    continue
-                if (
-                    import_threat_levels is not None
-                    and event["Event"]["threat_level_id"] not in import_threat_levels
-                ):
-                    self.helper.log_info(
-                        "Event threat level "
-                        + event["Event"]["threat_level_id"]
-                        + " not in import_threat_levels, do not import"
-                    )
-                    continue
-
-                ### Default variables
-                added_markings = []
-                added_entities = []
-                added_object_refs = []
-                added_sightings = []
-
-                ### Pre-process
-                # Author
-                author = Identity(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
-                    name=event["Event"]["Orgc"]["name"],
-                    identity_class="organization",
+            # Check against filter
+            if (
+                import_creator_orgs is not None
+                and event["Event"]["Orgc"]["name"] not in import_creator_orgs
+            ):
+                self.helper.log_info(
+                    "Event creator organization "
+                    + event["Event"]["Orgc"]["name"]
+                    + " not in import_creator_orgs, do not import"
                 )
-                # Markings
-                if "Tag" in event["Event"]:
-                    event_markings = self.resolve_markings(event["Event"]["Tag"])
-                else:
-                    event_markings = [TLP_WHITE]
-                # Elements
-                event_elements = self.prepare_elements(
-                    event["Event"]["Galaxy"],
-                    event["Event"]["Tag"],
+                continue
+            if (
+                import_owner_orgs is not None
+                and event["Event"]["Org"]["name"] not in import_owner_orgs
+            ):
+                self.helper.log_info(
+                    "Event owner organization "
+                    + event["Event"]["Org"]["name"]
+                    + " not in import_owner_orgs, do not import"
+                )
+                continue
+            if (
+                import_distribution_levels is not None
+                and event["Event"]["distribution"] not in import_distribution_levels
+            ):
+                self.helper.log_info(
+                    "Event distribution level "
+                    + event["Event"]["distribution"]
+                    + " not in import_distribution_levels, do not import"
+                )
+                continue
+            if (
+                import_threat_levels is not None
+                and event["Event"]["threat_level_id"] not in import_threat_levels
+            ):
+                self.helper.log_info(
+                    "Event threat level "
+                    + event["Event"]["threat_level_id"]
+                    + " not in import_threat_levels, do not import"
+                )
+                continue
+
+            ### Default variables
+            added_markings = []
+            added_entities = []
+            added_object_refs = []
+            added_sightings = []
+
+            ### Pre-process
+            # Author
+            author = Identity(
+                id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
+                name=event["Event"]["Orgc"]["name"],
+                identity_class="organization",
+            )
+            # Markings
+            if "Tag" in event["Event"]:
+                event_markings = self.resolve_markings(event["Event"]["Tag"])
+            else:
+                event_markings = [TLP_WHITE]
+            # Elements
+            event_elements = self.prepare_elements(
+                event["Event"]["Galaxy"],
+                event["Event"]["Tag"],
+                author,
+                event_markings,
+            )
+            # Tags
+            event_tags = []
+            if "Tag" in event["Event"]:
+                event_tags = self.resolve_tags(event["Event"]["Tag"])
+            # ExternalReference
+            event_external_reference = ExternalReference(
+                source_name=self.helper.connect_name,
+                description=event["Event"]["info"],
+                external_id=event["Event"]["uuid"],
+                url=self.misp_url + "/events/view/" + event["Event"]["uuid"],
+            )
+
+            ### Get indicators
+            event_external_references = [event_external_reference]
+            indicators = []
+            # Get attributes
+            for attribute in event["Event"]["Attribute"]:
+                indicator = self.process_attribute(
                     author,
+                    event_elements,
                     event_markings,
+                    event_tags,
+                    [],
+                    attribute,
+                    event["Event"]["threat_level_id"],
                 )
-                # Tags
-                event_tags = []
-                if "Tag" in event["Event"]:
-                    event_tags = self.resolve_tags(event["Event"]["Tag"])
-                # ExternalReference
-                event_external_reference = ExternalReference(
-                    source_name=self.helper.connect_name,
-                    description=event["Event"]["info"],
-                    external_id=event["Event"]["uuid"],
-                    url=self.misp_url + "/events/view/" + event["Event"]["uuid"],
-                )
-
-                ### Get indicators
-                event_external_references = [event_external_reference]
-                indicators = []
-                # Get attributes
-                for attribute in event["Event"]["Attribute"]:
-                    indicator = self.process_attribute(
-                        author,
-                        event_elements,
-                        event_markings,
-                        event_tags,
-                        [],
-                        attribute,
-                        event["Event"]["threat_level_id"],
+                if attribute["type"] == "link":
+                    event_external_references.append(
+                        ExternalReference(
+                            source_name=attribute["category"],
+                            external_id=attribute["uuid"],
+                            url=attribute["value"],
+                        )
                     )
+                if indicator is not None:
+                    indicators.append(indicator)
+            # Get attributes of objects
+            objects_relationships = []
+            for object in event["Event"]["Object"]:
+                attribute_external_references = []
+                for attribute in object["Attribute"]:
                     if attribute["type"] == "link":
-                        event_external_references.append(
+                        attribute_external_references.append(
                             ExternalReference(
                                 source_name=attribute["category"],
                                 external_id=attribute["uuid"],
                                 url=attribute["value"],
                             )
                         )
+                object_attributes = []
+                for attribute in object["Attribute"]:
+                    indicator = self.process_attribute(
+                        author,
+                        event_elements,
+                        event_markings,
+                        event_tags,
+                        attribute_external_references,
+                        attribute,
+                        event["Event"]["threat_level_id"],
+                    )
                     if indicator is not None:
                         indicators.append(indicator)
-                # Get attributes of objects
-                objects_relationships = []
-                for object in event["Event"]["Object"]:
-                    attribute_external_references = []
-                    for attribute in object["Attribute"]:
-                        if attribute["type"] == "link":
-                            attribute_external_references.append(
-                                ExternalReference(
-                                    source_name=attribute["category"],
-                                    external_id=attribute["uuid"],
-                                    url=attribute["value"],
-                                )
-                            )
-                    object_attributes = []
-                    for attribute in object["Attribute"]:
-                        indicator = self.process_attribute(
-                            author,
-                            event_elements,
-                            event_markings,
-                            event_tags,
-                            attribute_external_references,
-                            attribute,
-                            event["Event"]["threat_level_id"],
-                        )
-                        if indicator is not None:
-                            indicators.append(indicator)
-                            if (
-                                object["meta-category"] == "file"
-                                and indicator[
-                                    "indicator"
-                                ].x_opencti_main_observable_type
-                                in FILETYPES
-                            ):
-                                object_attributes.append(indicator)
-                    # TODO Extend observable
+                        if (
+                            object["meta-category"] == "file"
+                            and indicator["indicator"].x_opencti_main_observable_type
+                            in FILETYPES
+                        ):
+                            object_attributes.append(indicator)
+                # TODO Extend observable
 
-                ### Prepare the bundle
-                bundle_objects = [author]
-                object_refs = []
-                # Add event markings
-                for event_marking in event_markings:
-                    if event_marking["id"] not in added_markings:
-                        bundle_objects.append(event_marking)
-                        added_markings.append(event_marking["id"])
-                # Add event elements
-                all_event_elements = (
-                    event_elements["intrusion_sets"]
-                    + event_elements["malwares"]
-                    + event_elements["tools"]
-                    + event_elements["attack_patterns"]
+            ### Prepare the bundle
+            bundle_objects = [author]
+            object_refs = []
+            # Add event markings
+            for event_marking in event_markings:
+                if event_marking["id"] not in added_markings:
+                    bundle_objects.append(event_marking)
+                    added_markings.append(event_marking["id"])
+            # Add event elements
+            all_event_elements = (
+                event_elements["intrusion_sets"]
+                + event_elements["malwares"]
+                + event_elements["tools"]
+                + event_elements["attack_patterns"]
+            )
+            for event_element in all_event_elements:
+                if event_element["name"] not in added_object_refs:
+                    object_refs.append(event_element)
+                    added_object_refs.append(event_element["name"])
+                if event_element["name"] not in added_entities:
+                    bundle_objects.append(event_element)
+                    added_entities.append(event_element["name"])
+            # Add indicators
+            for indicator in indicators:
+                if indicator["indicator"] is not None:
+                    if indicator["indicator"]["id"] not in added_object_refs:
+                        object_refs.append(indicator["indicator"])
+                        added_object_refs.append(indicator["indicator"]["id"])
+                    if indicator["indicator"]["id"] not in added_entities:
+                        bundle_objects.append(indicator["indicator"])
+                        added_entities.append(indicator["indicator"]["id"])
+                if indicator["observable"] is not None:
+                    if indicator["observable"]["id"] not in added_object_refs:
+                        object_refs.append(indicator["observable"])
+                        added_object_refs.append(indicator["observable"]["id"])
+                    if indicator["observable"]["id"] not in added_entities:
+                        bundle_objects.append(indicator["observable"])
+                        added_entities.append(indicator["observable"]["id"])
+
+                # Add attribute markings
+                for attribute_marking in indicator["markings"]:
+                    if attribute_marking["id"] not in added_markings:
+                        bundle_objects.append(attribute_marking)
+                        added_markings.append(attribute_marking["id"])
+                # Add attribute sightings identities
+                for attribute_identity in indicator["identities"]:
+                    if attribute_identity["id"] not in added_entities:
+                        bundle_objects.append(attribute_identity)
+                        added_entities.append(attribute_identity["id"])
+                # Add attribute sightings
+                for attribute_sighting in indicator["sightings"]:
+                    if attribute_sighting["id"] not in added_sightings:
+                        bundle_objects.append(attribute_sighting)
+                        added_sightings.append(attribute_sighting["id"])
+                # Add attribute elements
+                all_attribute_elements = (
+                    indicator["attribute_elements"]["intrusion_sets"]
+                    + indicator["attribute_elements"]["malwares"]
+                    + indicator["attribute_elements"]["tools"]
+                    + indicator["attribute_elements"]["attack_patterns"]
                 )
-                for event_element in all_event_elements:
-                    if event_element["name"] not in added_object_refs:
-                        object_refs.append(event_element)
-                        added_object_refs.append(event_element["name"])
-                    if event_element["name"] not in added_entities:
-                        bundle_objects.append(event_element)
-                        added_entities.append(event_element["name"])
-                # Add indicators
-                for indicator in indicators:
-                    if indicator["indicator"] is not None:
-                        if indicator["indicator"]["id"] not in added_object_refs:
-                            object_refs.append(indicator["indicator"])
-                            added_object_refs.append(indicator["indicator"]["id"])
-                        if indicator["indicator"]["id"] not in added_entities:
-                            bundle_objects.append(indicator["indicator"])
-                            added_entities.append(indicator["indicator"]["id"])
-                    if indicator["observable"] is not None:
-                        if indicator["observable"]["id"] not in added_object_refs:
-                            object_refs.append(indicator["observable"])
-                            added_object_refs.append(indicator["observable"]["id"])
-                        if indicator["observable"]["id"] not in added_entities:
-                            bundle_objects.append(indicator["observable"])
-                            added_entities.append(indicator["observable"]["id"])
+                for attribute_element in all_attribute_elements:
+                    if attribute_element["name"] not in added_object_refs:
+                        object_refs.append(attribute_element)
+                        added_object_refs.append(attribute_element["name"])
+                    if attribute_element["name"] not in added_entities:
+                        bundle_objects.append(attribute_element)
+                        added_entities.append(attribute_element["name"])
+                # Add attribute relationships
+                for relationship in indicator["relationships"]:
+                    object_refs.append(relationship)
+                    bundle_objects.append(relationship)
+            # Add object_relationships
+            for object_relationship in objects_relationships:
+                bundle_objects.append(object_relationship)
 
-                    # Add attribute markings
-                    for attribute_marking in indicator["markings"]:
-                        if attribute_marking["id"] not in added_markings:
-                            bundle_objects.append(attribute_marking)
-                            added_markings.append(attribute_marking["id"])
-                    # Add attribute sightings identities
-                    for attribute_identity in indicator["identities"]:
-                        if attribute_identity["id"] not in added_entities:
-                            bundle_objects.append(attribute_identity)
-                            added_entities.append(attribute_identity["id"])
-                    # Add attribute sightings
-                    for attribute_sighting in indicator["sightings"]:
-                        if attribute_sighting["id"] not in added_sightings:
-                            bundle_objects.append(attribute_sighting)
-                            added_sightings.append(attribute_sighting["id"])
-                    # Add attribute elements
-                    all_attribute_elements = (
-                        indicator["attribute_elements"]["intrusion_sets"]
-                        + indicator["attribute_elements"]["malwares"]
-                        + indicator["attribute_elements"]["tools"]
-                        + indicator["attribute_elements"]["attack_patterns"]
-                    )
-                    for attribute_element in all_attribute_elements:
-                        if attribute_element["name"] not in added_object_refs:
-                            object_refs.append(attribute_element)
-                            added_object_refs.append(attribute_element["name"])
-                        if attribute_element["name"] not in added_entities:
-                            bundle_objects.append(attribute_element)
-                            added_entities.append(attribute_element["name"])
-                    # Add attribute relationships
-                    for relationship in indicator["relationships"]:
-                        object_refs.append(relationship)
-                        bundle_objects.append(relationship)
-                # Add object_relationships
-                for object_relationship in objects_relationships:
-                    bundle_objects.append(object_relationship)
-
-                # Create the report if needed
-                if self.misp_create_report and len(object_refs) > 0:
-                    report = Report(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("report"),
-                        name=event["Event"]["info"],
-                        description=event["Event"]["info"],
-                        published=parse(event["Event"]["date"]),
-                        report_types=[self.misp_report_type],
-                        created_by_ref=author,
-                        object_marking_refs=event_markings,
-                        labels=event_tags,
-                        object_refs=object_refs,
-                        external_references=event_external_references,
-                        custom_properties={
-                            "x_opencti_report_status": 2,
-                        },
-                    )
-                    bundle_objects.append(report)
-                bundle = Bundle(objects=bundle_objects).serialize()
-                self.helper.log_info("Sending event STIX2 bundle")
-                self.helper.send_stix2_bundle(
-                    bundle, work_id=work_id, update=self.update_existing_data
+            # Create the report if needed
+            if self.misp_create_report and len(object_refs) > 0:
+                report = Report(
+                    id=OpenCTIStix2Utils.generate_random_stix_id("report"),
+                    name=event["Event"]["info"],
+                    description=event["Event"]["info"],
+                    published=parse(event["Event"]["date"]),
+                    report_types=[self.misp_report_type],
+                    created_by_ref=author,
+                    object_marking_refs=event_markings,
+                    labels=event_tags,
+                    object_refs=object_refs,
+                    external_references=event_external_references,
+                    custom_properties={
+                        "x_opencti_report_status": 2,
+                    },
                 )
-        except:
-            return None
+                bundle_objects.append(report)
+            bundle = Bundle(objects=bundle_objects).serialize()
+            self.helper.log_info("Sending event STIX2 bundle")
+            self.helper.send_stix2_bundle(
+                bundle, work_id=work_id, update=self.update_existing_data
+            )
 
     def process_attribute(
         self,
@@ -604,7 +604,7 @@ class Misp:
                     },
                 )
             observable = None
-            if self.misp_create_observables:
+            if self.misp_create_observables and observable_type is not None:
                 observable = SimpleObservable(
                     id=OpenCTIStix2Utils.generate_random_stix_id(
                         "x-opencti-simple-observable"
@@ -642,28 +642,28 @@ class Misp:
                                 int(misp_sighting["date_sighting"])
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             last_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
+                                int(misp_sighting["date_sighting"]) + 3600
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             where_sighted_refs=[sighted_by]
                             if sighted_by is not None
                             else None,
                         )
                         sightings.append(sighting)
-                    if observable is not None:
-                        sighting = Sighting(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("sighting"),
-                            sighting_of_ref=observable["id"],
-                            first_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            last_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            where_sighted_refs=[sighted_by]
-                            if sighted_by is not None
-                            else None,
-                        )
-                        sightings.append(sighting)
+                    # if observable is not None:
+                    #     sighting = Sighting(
+                    #         id=OpenCTIStix2Utils.generate_random_stix_id("sighting"),
+                    #         sighting_of_ref=observable["id"],
+                    #         first_seen=datetime.utcfromtimestamp(
+                    #             int(misp_sighting["date_sighting"])
+                    #         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    #         last_seen=datetime.utcfromtimestamp(
+                    #             int(misp_sighting["date_sighting"])
+                    #         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    #         where_sighted_refs=[sighted_by]
+                    #         if sighted_by is not None
+                    #         else None,
+                    #     )
+                    #     sightings.append(sighting)
 
             ### Create the relationships
             relationships = []
@@ -678,11 +678,13 @@ class Misp:
                     )
                 )
             # Event threats
+            threat_names = {}
             for threat in (
                 event_elements["intrusion_sets"]
                 + event_elements["malwares"]
                 + event_elements["tools"]
             ):
+                threat_names[threat.name] = threat.id
                 if indicator is not None:
                     relationships.append(
                         Relationship(
@@ -720,6 +722,10 @@ class Misp:
                 + attribute_elements["malwares"]
                 + attribute_elements["tools"]
             ):
+                if threat.name in threat_names:
+                    threat_id = threat_names[threat.name]
+                else:
+                    threat_id = threat.id
                 if indicator is not None:
                     relationships.append(
                         Relationship(
@@ -729,7 +735,7 @@ class Misp:
                             relationship_type="indicates",
                             created_by_ref=author,
                             source_ref=indicator.id,
-                            target_ref=threat.id,
+                            target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
@@ -744,7 +750,7 @@ class Misp:
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
-                            target_ref=threat.id,
+                            target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
@@ -759,45 +765,49 @@ class Misp:
                 else:
                     threats = []
                 for threat in threats:
+                    if threat.name in threat_names:
+                        threat_id = threat_names[threat.name]
+                    else:
+                        threat_id = threat.id
                     relationship_uses = Relationship(
                         id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                         relationship_type="uses",
                         created_by_ref=author,
-                        source_ref=threat.id,
+                        source_ref=threat_id,
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
                         confidence=self.helper.connect_confidence_level,
                     )
                     relationships.append(relationship_uses)
-                    if indicator is not None:
-                        relationship_indicates = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
-                            relationship_type="indicates",
-                            created_by_ref=author,
-                            source_ref=indicator.id,
-                            target_ref=relationship_uses.id,
-                            description=attribute["comment"],
-                            confidence=self.helper.connect_confidence_level,
-                            object_marking_refs=attribute_markings,
-                        )
-                        relationships.append(relationship_indicates)
-                    if observable is not None:
-                        relationship_indicates = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
-                            relationship_type="related-to",
-                            created_by_ref=author,
-                            source_ref=observable.id,
-                            target_ref=relationship_uses.id,
-                            description=attribute["comment"],
-                            confidence=self.helper.connect_confidence_level,
-                            object_marking_refs=attribute_markings,
-                        )
-                        relationships.append(relationship_indicates)
+                    # if indicator is not None:
+                    #     relationship_indicates = Relationship(
+                    #         id=OpenCTIStix2Utils.generate_random_stix_id(
+                    #             "relationship"
+                    #         ),
+                    #         relationship_type="indicates",
+                    #         created_by_ref=author,
+                    #         source_ref=indicator.id,
+                    #         target_ref=relationship_uses.id,
+                    #         description=attribute["comment"],
+                    #         confidence=self.helper.connect_confidence_level,
+                    #         object_marking_refs=attribute_markings,
+                    #     )
+                    #     relationships.append(relationship_indicates)
+                    # if observable is not None:
+                    #     relationship_indicates = Relationship(
+                    #         id=OpenCTIStix2Utils.generate_random_stix_id(
+                    #             "relationship"
+                    #         ),
+                    #         relationship_type="related-to",
+                    #         created_by_ref=author,
+                    #         source_ref=observable.id,
+                    #         target_ref=relationship_uses.id,
+                    #         description=attribute["comment"],
+                    #         confidence=self.helper.connect_confidence_level,
+                    #         object_marking_refs=attribute_markings,
+                    #     )
+                    #     relationships.append(relationship_indicates)
 
             # Attribute Attack Patterns
             for attack_pattern in attribute_elements["attack_patterns"]:
@@ -808,12 +818,16 @@ class Misp:
                 else:
                     threats = []
                 for threat in threats:
+                    if threat.name in threat_names:
+                        threat_id = threat_names[threat.name]
+                    else:
+                        threat_id = threat.id
                     relationship_uses = Relationship(
                         id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                         relationship_type="uses",
                         confidence=self.helper.connect_confidence_level,
                         created_by_ref=author,
-                        source_ref=threat.id,
+                        source_ref=threat_id,
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
@@ -1071,6 +1085,7 @@ class Misp:
                         Malware(
                             id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
                             name=name,
+                            is_family=True,
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
@@ -1168,7 +1183,11 @@ class Misp:
                     type_0 = self.detect_ip_version(value, True)
                 else:
                     resolver_0 = resolved_types[0]["resolver"]
-                    type_0 = resolved_types[0]["type"]
+                    type_0 = (
+                        resolved_types[0]["type"]
+                        if "type" in resolved_types[0]
+                        else None
+                    )
                 return [{"resolver": resolver_0, "type": type_0, "value": value}]
 
     def detect_ip_version(self, value, type=False):

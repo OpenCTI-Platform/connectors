@@ -54,7 +54,7 @@ class Cve:
         if os.path.exists("data-stix2.json"):
             os.remove("data-stix2.json")
 
-    def convert_and_send(self, url):
+    def convert_and_send(self, url, work_id):
         try:
             # Downloading json.gz file
             self.helper.log_info("Requesting the file " + url)
@@ -80,6 +80,7 @@ class Cve:
                     contents,
                     entities_types=self.helper.connect_scope,
                     update=self.update_existing_data,
+                    work_id=work_id,
                 )
             # Remove files
             self.delete_files()
@@ -117,14 +118,15 @@ class Cve:
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
-                    self.convert_and_send(self.cve_nvd_data_feed)
+                    self.convert_and_send(self.cve_nvd_data_feed, work_id)
                     # If import history and never run
                     if last_run is None and self.cve_import_history:
                         now = datetime.now()
                         years = list(range(2002, now.year + 1))
                         for year in years:
                             self.convert_and_send(
-                                f"{self.cve_history_data_feed}nvdcve-1.1-{year}.json.gz"
+                                f"{self.cve_history_data_feed}nvdcve-1.1-{year}.json.gz",
+                                work_id,
                             )
 
                     # Store the current timestamp as a last run
