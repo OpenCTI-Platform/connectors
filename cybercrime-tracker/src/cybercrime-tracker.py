@@ -56,7 +56,7 @@ class Cybercrimetracker:
             config,
         )
         self.interval = get_config_variable(
-            "CYBERCRIMETRACKER_INTERVAL",
+            "CYBERCRIME_TRACKER_INTERVAL",
             ["cybercrime-tracker", "interval"],
             config,
             isNumber=True,
