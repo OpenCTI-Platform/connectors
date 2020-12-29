@@ -9,12 +9,11 @@ detection:
 
 The connector works for the following OpenCTI observable types:
 
-* ipv4-addr
-* ipv6-addr
-* domain
-* file-md5
-* file-sha1
-* file-sha256
+* IPv4-Addr
+* IPv6-Addr
+* Domain-Name
+* StixFile
+* Artifact
 
 ## Installation
 
