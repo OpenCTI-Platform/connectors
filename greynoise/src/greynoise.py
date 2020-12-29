@@ -1,4 +1,3 @@
-import json
 import os
 from ipaddress import IPv4Network
 from time import sleep
@@ -107,7 +106,7 @@ class GreyNoiseConnector:
 
             if not json_data["seen"]:
                 if self.sighting_not_seen:
-                    sighting = self.helper.api.stix_sighting_relationship.create(
+                    self.helper.api.stix_sighting_relationship.create(
                         fromId=observable["id"],
                         toId=self._get_greynoise_id(),
                         createdBy=self._get_greynoise_id(),
@@ -131,7 +130,7 @@ class GreyNoiseConnector:
                 else self.helper.connect_confidence_level
             )
 
-            sighting = self.helper.api.stix_sighting_relationship.create(
+            self.helper.api.stix_sighting_relationship.create(
                 fromId=observable["id"],
                 toId=self._get_greynoise_id(),
                 createdBy=self._get_greynoise_id(),
