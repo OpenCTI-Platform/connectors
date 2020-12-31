@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-hygiene:
-    image: opencti/connector-hygiene:4.0.3
+    image: opencti/connector-hygiene:4.0.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
