@@ -73,11 +73,11 @@ class VirusTotalConnector:
                     id=final_observable["id"], key="name", value=attributes["names"][0]
                 )
                 del attributes["names"][0]
-                for name in attributes["names"]:
+                if len(attributes["names"]) > 0:
                     self.helper.api.stix_cyber_observable.update_field(
                         id=final_observable["id"],
                         key="x_opencti_additional_names",
-                        value=name,
+                        value=attributes["names"],
                     )
 
             # Create external reference
