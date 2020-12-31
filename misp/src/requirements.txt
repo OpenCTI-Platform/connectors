@@ -1,4 +1,4 @@
-git+https://github.com/OpenCTI-Platform/client-python@master
+git+https://github.com/OpenCTI-Platform/client-python@4.0.4
 PyYAML==5.3.1
 urllib3==1.26.2
 pymisp==2.4.135.3
