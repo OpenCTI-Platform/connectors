@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-ipinfo:
+  connector-sighting:
     image: opencti/connector-sighting:4.0.5
     environment:
       - OPENCTI_URL=http://localhost
