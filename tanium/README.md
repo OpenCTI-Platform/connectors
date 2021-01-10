@@ -8,9 +8,17 @@ This connector leverages the OpenCTI *events stream*, so it consumes knowledge i
 
 OpenCTI data is coming from *import* connectors. Once this data is ingested in OpenCTI, it is pushed to a Redis event stream. This stream is consumed by the Tanium connector to insert intel in the Tanium platform.
 
-![alt text](doc/stream.png "Stream overview")
+![Stream overview](doc/stream.png "Stream overview")
 
-## Configuration
+## Installation
+
+### Requirements
+
+- OpenCTI Platform >= 4.0.6
+- Tanium Threat Response >= 3.X.X
+- Tanium Reputation >= 5.X.X
+
+### Configuration
 
 | Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
 | ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -29,10 +37,14 @@ OpenCTI data is coming from *import* connectors. Once this data is ingested in O
 | `tanium_observable_types`            | `TANIUM_OBSERVABLE_TYPES`           | Yes          | A list of observable types separated by `,`, could be `ipv4-addr`, `ipv6-addr`, `domain-name`, `x-opencti-hostname`, `file` or `process` (can be empty).   |
 | `tanium_import_label`                | `TANIUM_IMPORT_LABEL`               | Yes          | If this label is added or present, the entity will be imported in Tanium, can be '*' to import everything.                                                 |
 | `tanium_import_from_date`            | `TANIUM_IMPORT_FROM_DATE`           | No           | At the very first run, ignore all knowledge event before this date.                                                                                        |
-| `tanium_reputation_blacklist_label`  | `TANIUM_REPUTATION_BLACKLIST_LABEL` | No           | If this label is added or present in an entity containing hashes, these hashes will be imported to Tanium reputation.                                      |
+| `tanium_reputation_blacklist_label`  | `TANIUM_REPUTATION_BLACKLIST_LABEL` | No           | If this label is added or present in an entity containing hashes, these hashes will be imported to Tanium reputation (can be '*' to import everything).    |
 | `tanium_auto_quickscan`              | `TANIUM_AUTO_QUICKSCAN`             | No           | Trigger a quickscan for each inserted intel document in Tanium.                                                                                            |
 | `tanium_computer_groups`             | `TANIUM_COMPUTER_GROUPS  `          | No           | A list of computer groups separated by `,`, which will be the targets of the automatic quickscan the automatic quickscan                                   |
 
-
 ## Launch the connector and test it
 
+After launching the connector, you should be able to see a new Intel source within the Tanium platform:
+
+![New source](doc/source.png "New source")
+
+Then just add the proper label to an indicator (`tanium_import_label`) or to a file observables (`tanium_reputation_blacklist_label`).
