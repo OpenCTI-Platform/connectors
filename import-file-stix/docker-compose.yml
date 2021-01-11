@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-import-file-stix:
-    image: opencti/connector-import-file-stix:4.0.5
+    image: opencti/connector-import-file-stix:4.0.6
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
