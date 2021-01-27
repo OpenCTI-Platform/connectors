@@ -313,7 +313,7 @@ class Misp:
             # Elements
             event_elements = self.prepare_elements(
                 event["Event"]["Galaxy"],
-                event["Event"]["Tag"],
+                event["Event"]["Tag"] if "Tags" in event["Event"] else [],
                 author,
                 event_markings,
             )
