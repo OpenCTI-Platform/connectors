@@ -133,6 +133,10 @@ jobs:
           name: Build Docker image opencti/connector-kaspersky
           command: docker build -t opencti/connector-kaspersky:latest . && docker tag opencti/connector-kaspersky:latest opencti/connector-kaspersky:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/greynoise
+          name: Build Docker image opencti/connector-greynoise
+          command: docker build -t opencti/connector-greynoise:latest . && docker tag opencti/connector-greynoise:latest opencti/connector-greynoise:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -186,6 +190,8 @@ jobs:
             #docker push opencti/connector-fireeye:${CIRCLE_TAG}
             docker push opencti/connector-kaspersky:latest
             docker push opencti/connector-kaspersky:${CIRCLE_TAG}
+            docker push opencti/connector-greynoise:latest
+            docker push opencti/connector-greynoise:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -294,6 +300,10 @@ jobs:
           name: Build Docker image opencti/connector-kaspersky
           command: docker build -t opencti/connector-kaspersky:rolling .
       - run:
+          working_directory: ~/opencti/greynoise
+          name: Build Docker image opencti/connector-greynoise
+          command: docker build -t opencti/connector-greynoise:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -322,6 +332,7 @@ jobs:
             docker push opencti/connector-synchronizer:rolling
             docker push opencti/connector-fireeye:rolling
             docker push opencti/connector-kaspersky:rolling
+            docker push opencti/connector-greynoise:rolling
 workflows:
   version: 2
   opencti:
