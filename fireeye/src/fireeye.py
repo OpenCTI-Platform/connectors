@@ -226,21 +226,26 @@ class FireEye:
                                 "threat-actor", "intrusion-set"
                             )
                         if stix_object["type"] == "relationship":
-                            # Search if the entity is not in bundle
+                            # If the source_ref is not in the current bundle
                             if stix_object["source_ref"] not in object_ids:
+                                # Search entity in OpenCTI
                                 opencti_entity = (
                                     self.helper.api.stix_domain_object.read(
                                         id=stix_object["source_ref"]
                                     )
                                 )
+                                # If the entity is not found
                                 if opencti_entity is None:
+                                    # Search the entity in FireEye
                                     fireeye_entity = self._search(
                                         stix_object["source_ref"]
                                     )
+                                    # If the entity is found
                                     if fireeye_entity is not None:
                                         fireeye_entity_decoded = json.loads(
                                             fireeye_entity.text
                                         )
+                                        # Send the entity before this bundle
                                         self._send_entity(
                                             fireeye_entity_decoded, work_id
                                         )
