@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-tanium:
-    image: opencti/connector-tanium:4.0.5
+    image: opencti/connector-tanium:4.0.7
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -15,8 +15,10 @@ services:
       - TANIUM_LOGIN=ChangeMe
       - TANIUM_PASSWORD=ChangeMe
       - TANIUM_INDICATOR_TYPES=stix,yara,tanium-signal
-      - TANIUM_OBSERVABLE_TYPES=ipv4-addr,ipv6-addr,domain-name,x-opencti-hostname,file,process
+      - TANIUM_OBSERVABLE_TYPES=
       - TANIUM_IMPORT_LABEL=tanium
+      - TANIUM_IMPORT_FROM_DATE=2021-01-01\ 00:00:00
+      - TANIUM_REPUTATION_BLACKLIST_LABEL=blacklist
       - TANIUM_AUTO_QUICKSCAN=False
       - TANIUM_COMPUTER_GROUPS=1,2,3
     restart: always

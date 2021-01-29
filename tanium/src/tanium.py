@@ -106,7 +106,7 @@ class TaniumConnectorAlertsGatherer(threading.Thread):
                 "get", "/plugin/products/detect3/api/v1/alerts", {"sort": "-createdAt"}
             )
             state = self.helper.get_state()
-            if "lastAlertTimestamp" in state:
+            if state and "lastAlertTimestamp" in state:
                 last_timestamp = state["lastAlertTimestamp"]
             else:
                 last_timestamp = 0
@@ -116,16 +116,16 @@ class TaniumConnectorAlertsGatherer(threading.Thread):
                 if int(alert_timestamp) > int(last_timestamp):
                     # Mark as processed
                     if state is not None:
-                        state["lastAlertTimestamp"] = parse(
-                            alert["createdAt"]
-                        ).timestamp()
+                        state["lastAlertTimestamp"] = int(
+                            round(parse(alert["createdAt"]).timestamp())
+                        )
                         self.helper.set_state(state)
                     else:
                         self.helper.set_state(
                             {
-                                "lastAlertTimestamp": parse(
-                                    alert["createdAt"]
-                                ).timestamp()
+                                "lastAlertTimestamp": int(
+                                    round(parse(alert["createdAt"]).timestamp())
+                                )
                             }
                         )
                     # Check if the intel is in OpenCTI
@@ -196,9 +196,17 @@ class TaniumConnector:
             "TANIUM_OBSERVABLE_TYPES", ["tanium", "observable_types"], config
         ).split(",")
         self.tanium_import_label = get_config_variable(
-            "TANIUM_IMPORT_LABEL",
-            ["tanium", "import_label"],
+            "TANIUM_IMPORT_LABEL", ["tanium", "import_label"], config, False, ""
+        )
+        self.tanium_import_from_date = get_config_variable(
+            "TANIUM_IMPORT_FROM_DATE", ["tanium", "import_from_date"], config
+        )
+        self.tanium_reputation_blacklist_label = get_config_variable(
+            "TANIUM_REPUTATION_BLACKLIST_LABEL",
+            ["tanium", "reputation_blacklist_label"],
             config,
+            False,
+            "",
         )
         self.tanium_auto_quickscan = get_config_variable(
             "TANIUM_AUTO_QUICKSCAN", ["tanium", "auto_quickscan"], config, False, False
@@ -212,6 +220,17 @@ class TaniumConnector:
 
         # Open a session
         self._get_session()
+
+        # Create the state
+        if self.tanium_import_from_date:
+            timestamp = (
+                parse(self.tanium_import_from_date).timestamp() * 1000
+                if self.tanium_import_from_date != "now"
+                else int(round(time.time() * 1000)) - 1000
+            )
+            current_state = self.helper.get_state()
+            if current_state is None:
+                self.helper.set_state({"connectorLastEventId": timestamp})
 
         # Create the source if not exist
         self.source_id = None
@@ -254,13 +273,19 @@ class TaniumConnector:
         retry=False,
     ):
         self.helper.log_info("Query " + method + " on " + uri)
-        headers = {"session": self.session, "content-type": content_type, "type": type}
+        headers = {"session": self.session}
+        if method != "upload":
+            headers["content-type"] = content_type
+        if type is not None:
+            headers["type"] = type
         if content_type == "application/octet-stream":
             headers["content-disposition"] = (
                 "attachment; filename=" + payload["filename"]
             )
-            headers["name"] = payload["name"]
-            headers["description"] = payload["description"]
+            if "name" in payload:
+                headers["name"] = payload["name"]
+            if "description" in payload:
+                headers["description"] = payload["description"]
         if method == "get":
             r = requests.get(self.tanium_url + uri, headers=headers, params=payload)
         elif method == "post":
@@ -276,6 +301,12 @@ class TaniumConnector:
                 )
             else:
                 r = requests.post(self.tanium_url + uri, headers=headers, json=payload)
+        elif method == "upload":
+            f = open(payload["filename"], "w")
+            f.write(payload["content"])
+            f.close()
+            files = {"hash": open(payload["filename"], "rb")}
+            r = requests.post(self.tanium_url + uri, headers=headers, files=files)
         elif method == "put":
             if content_type == "application/xml":
                 r = requests.put(self.tanium_url + uri, headers=headers, data=payload)
@@ -341,6 +372,17 @@ class TaniumConnector:
             )
         if response and len(response) > 0:
             return response[0]
+        else:
+            return None
+
+    def _get_reputation_by_hash(self, hash):
+        response = self._query(
+            "get",
+            "/plugin/products/reputation/v3/reputations/custom",
+            {"search": hash},
+        )
+        if response["data"] and len(response["data"]) > 0:
+            return response["data"][0]
         else:
             return None
 
@@ -591,7 +633,7 @@ class TaniumConnector:
         intel_document = None
         if entity_type == "indicator":
             entity = self.helper.api.indicator.read(id=data["data"]["x_opencti_id"])
-            if entity is None:
+            if entity is None or entity["revoked"]:
                 return {"entity": entity, "intel_document": intel_document}
             if entity["pattern_type"] == "stix":
                 intel_document = self._create_indicator_stix(
@@ -612,39 +654,125 @@ class TaniumConnector:
             entity = self.helper.api.stix_cyber_observable.read(
                 id=data["data"]["x_opencti_id"]
             )
+            if entity is None or entity["revoked"]:
+                return {"entity": entity, "intel_document": intel_document}
             intel_document = self._create_observable(entity, original_intel_document)
         return {"entity": entity, "intel_document": intel_document}
 
     def _process_message(self, msg):
         data = json.loads(msg.data)
         entity_type = data["data"]["type"]
+        # If not an indicator, not an observable to import and
         if (
             entity_type != "indicator"
             and entity_type not in self.tanium_observable_types
+            and (
+                "labels" in data["data"]
+                and self.tanium_reputation_blacklist_label not in data["data"]["labels"]
+            )
+            and self.tanium_reputation_blacklist_label != "*"
         ):
+            self.helper.log_info(
+                "Not an indicator and not an observable to import, doing nothing"
+            )
             return
         # Handle creation
         if msg.event == "create":
+            # No label
             if (
-                self.tanium_import_label == "*"
-                or "labels" not in data["data"]
-                or not self.tanium_import_label
-                or self.tanium_import_label not in data["data"]["labels"]
+                "labels" not in data["data"]
+                and self.tanium_import_label != "*"
+                and self.tanium_reputation_blacklist_label != "*"
             ):
+                self.helper.log_info("No label marked as import, doing nothing")
                 return
-            # Process intel
-            processed_intel = self._process_intel(entity_type, data)
-            intel_document = processed_intel["intel_document"]
-            entity = processed_intel["entity"]
-            # Create external reference and add object labels
-            self._post_operations(entity, intel_document)
-
+            # Import or blacklist labels are not in the given labels
+            elif (
+                (
+                    "labels" in data["data"]
+                    and self.tanium_import_label not in data["data"]["labels"]
+                )
+                and self.tanium_import_label != "*"
+                and self.tanium_reputation_blacklist_label not in data["data"]["labels"]
+                and self.tanium_reputation_blacklist_label != "*"
+            ):
+                self.helper.log_info(
+                    "No label marked as import or no global label, doing nothing"
+                )
+                return
+            # Revoked is true
+            elif "revoked" in data["data"] and data["data"]["revoked"]:
+                return
+            if (
+                "labels" in data["data"]
+                and self.tanium_import_label in data["data"]["labels"]
+            ) or self.tanium_import_label == "*":
+                # Process intel
+                processed_intel = self._process_intel(entity_type, data)
+                intel_document = processed_intel["intel_document"]
+                entity = processed_intel["entity"]
+                # Create external reference and add object labels
+                self._post_operations(entity, intel_document)
+            if (
+                "labels" in data["data"]
+                and self.tanium_reputation_blacklist_label in data["data"]["labels"]
+            ) or self.tanium_reputation_blacklist_label == "*":
+                if "hashes" in data["data"]:
+                    entry = {"list": "blacklist"}
+                    if "MD5" in data["data"]["hashes"]:
+                        entry["md5"] = data["data"]["hashes"]["MD5"]
+                        entry["uploadedHash"] = data["data"]["hashes"]["MD5"]
+                    else:
+                        entry["md5"] = ""
+                    if "SHA-1" in data["data"]["hashes"]:
+                        entry["sha1"] = data["data"]["hashes"]["SHA-1"]
+                        entry["uploadedHash"] = data["data"]["hashes"]["SHA-1"]
+                    else:
+                        entry["sha1"] = ""
+                    if "SHA-256" in data["data"]["hashes"]:
+                        entry["sha256"] = data["data"]["hashes"]["SHA-256"]
+                        entry["uploadedHash"] = data["data"]["hashes"]["SHA-256"]
+                    else:
+                        entry["sha256"] = ""
+                    entry["notes"] = ",".join(data["data"]["labels"])
+                    self._query(
+                        "post",
+                        "/plugin/products/reputation/v3/reputations/custom/upload?append=true",
+                        [entry],
+                    )
         elif msg.event == "update":
             if (
                 "x_data_update" in data["data"]
                 and "add" in data["data"]["x_data_update"]
                 and "labels" in data["data"]["x_data_update"]["add"]
             ):
+                if (
+                    self.tanium_reputation_blacklist_label
+                    in data["data"]["x_data_update"]["add"]["labels"]
+                ):
+                    if "hashes" in data["data"]:
+                        entry = {"list": "blacklist"}
+                        if "MD5" in data["data"]["hashes"]:
+                            entry["md5"] = data["data"]["hashes"]["MD5"]
+                            entry["uploadedHash"] = data["data"]["hashes"]["MD5"]
+                        else:
+                            entry["md5"] = ""
+                        if "SHA-1" in data["data"]["hashes"]:
+                            entry["sha1"] = data["data"]["hashes"]["SHA-1"]
+                            entry["uploadedHash"] = data["data"]["hashes"]["SHA-1"]
+                        else:
+                            entry["sha1"] = ""
+                        if "SHA-256" in data["data"]["hashes"]:
+                            entry["sha256"] = data["data"]["hashes"]["SHA-256"]
+                            entry["uploadedHash"] = data["data"]["hashes"]["SHA-256"]
+                        else:
+                            entry["sha256"] = ""
+                        entry["notes"] = ",".join(data["data"]["labels"])
+                        self._query(
+                            "post",
+                            "/plugin/products/reputation/v3/reputations/custom/upload?append=true",
+                            [entry],
+                        )
                 if (
                     self.tanium_import_label
                     in data["data"]["x_data_update"]["add"]["labels"]
@@ -686,6 +814,29 @@ class TaniumConnector:
                 and "remove" in data["data"]["x_data_update"]
                 and "labels" in data["data"]["x_data_update"]["remove"]
             ):
+                if (
+                    self.tanium_reputation_blacklist_label
+                    in data["data"]["x_data_update"]["remove"]["labels"]
+                ):
+                    if "hashes" in data["data"]:
+                        if "SHA-256" in data["data"]["hashes"]:
+                            self._query(
+                                "post",
+                                "/plugin/products/reputation/v3/reputations/custom/delete",
+                                [data["data"]["hashes"]["SHA-256"]],
+                            )
+                        if "SHA-1" in data["data"]["hashes"]:
+                            self._query(
+                                "post",
+                                "/plugin/products/reputation/v3/reputations/custom/delete",
+                                [data["data"]["hashes"]["SHA-1"]],
+                            )
+                        if "MD5" in data["data"]["hashes"]:
+                            self._query(
+                                "post",
+                                "/plugin/products/reputation/v3/reputations/custom/delete",
+                                [data["data"]["hashes"]["MD5"]],
+                            )
                 if (
                     self.tanium_import_label
                     in data["data"]["x_data_update"]["remove"]["labels"]
@@ -748,7 +899,36 @@ class TaniumConnector:
                         intel_document = self._get_by_id(data["data"]["x_opencti_id"])
                         if intel_document is not None:
                             self._process_intel(entity_type, data, intel_document)
-
+                    elif (
+                        "revoked" in data["data"]["x_data_update"]["replace"]
+                        and data["data"]["x_data_update"]["replace"]["revoked"] == True
+                    ):
+                        intel_document = self._get_by_id(data["data"]["x_opencti_id"])
+                        if intel_document is not None:
+                            self._query(
+                                "delete",
+                                "/plugin/products/detect3/api/v1/intels/"
+                                + str(intel_document["id"]),
+                            )
+                            # Remove external references
+                            if entity_type == "indicator":
+                                entity = self.helper.api.indicator.read(
+                                    id=data["data"]["x_opencti_id"]
+                                )
+                            else:
+                                entity = self.helper.api.stix_cyber_observable.read(
+                                    id=data["data"]["x_opencti_id"]
+                                )
+                            if (
+                                entity
+                                and "externalReferences" in entity
+                                and len(entity["externalReferences"]) > 0
+                            ):
+                                for external_reference in entity["externalReferences"]:
+                                    if external_reference["source_name"] == "Tanium":
+                                        self.helper.api.external_reference.delete(
+                                            external_reference["id"]
+                                        )
         elif msg.event == "delete":
             intel_document = self._get_by_id(data["data"]["x_opencti_id"])
             if intel_document is not None:
@@ -757,6 +937,26 @@ class TaniumConnector:
                     "/plugin/products/detect3/api/v1/intels/"
                     + str(intel_document["id"]),
                 )
+            if data["data"]["type"] == "file":
+                if "hashes" in data["data"]:
+                    if "SHA-256" in data["data"]["hashes"]:
+                        self._query(
+                            "post",
+                            "/plugin/products/reputation/v3/reputations/custom/delete",
+                            [data["data"]["hashes"]["SHA-256"]],
+                        )
+                    if "SHA-1" in data["data"]["hashes"]:
+                        self._query(
+                            "post",
+                            "/plugin/products/reputation/v3/reputations/custom/delete",
+                            [data["data"]["hashes"]["SHA-1"]],
+                        )
+                    if "MD5" in data["data"]["hashes"]:
+                        self._query(
+                            "post",
+                            "/plugin/products/reputation/v3/reputations/custom/delete",
+                            [data["data"]["hashes"]["MD5"]],
+                        )
 
     def start(self):
         self.alerts_gatherer = TaniumConnectorAlertsGatherer(

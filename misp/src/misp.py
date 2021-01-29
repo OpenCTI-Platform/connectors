@@ -313,7 +313,7 @@ class Misp:
             # Elements
             event_elements = self.prepare_elements(
                 event["Event"]["Galaxy"],
-                event["Event"]["Tag"],
+                event["Event"]["Tag"] if "Tags" in event["Event"] else [],
                 author,
                 event_markings,
             )
@@ -380,7 +380,8 @@ class Misp:
                     if indicator is not None:
                         indicators.append(indicator)
                         if (
-                            object["meta-category"] == "file"
+                            indicator["indicator"] is not None
+                            and object["meta-category"] == "file"
                             and indicator["indicator"].x_opencti_main_observable_type
                             in FILETYPES
                         ):

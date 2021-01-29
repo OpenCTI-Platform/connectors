@@ -11,6 +11,31 @@ from requests.auth import HTTPBasicAuth
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
+searchable_types = [
+    "threat-actor",
+    "malware",
+    "autonomous-system",
+    "email-message",
+    "x-fireeye-com-cpe",
+    "ipv4-addr",
+    "vulnerability",
+    "indicator",
+    "artifact",
+    "x-fireeye-com-exploit",
+    "domain-name",
+    "url",
+    "email-addr",
+    "windows-registry-key",
+    "x-fireeye-com-weakness",
+    "location",
+    "file",
+    "report",
+    "x-fireeye-com-exploitation",
+    "identity",
+    "all",
+]
+
+
 class FireEye:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -74,11 +99,49 @@ class FireEye:
         data = r.json()
         self.auth_token = data.get("access_token")
 
+    def _search(self, stix_id, retry=False):
+        self.helper.log_info("Searching for " + stix_id)
+        headers = {
+            "authorization": "Bearer " + self.auth_token,
+            "accept": "application/vnd.oasis.stix+json; version=2.1",
+            "x-app-name": "opencti-connector-4.1.0",
+        }
+        body = """
+            {
+                "queries": [
+                    {
+                        "type": "ENTITY_TYPE",
+                        "query": "id = 'ENTITY_ID'"
+                    }
+                ],
+                "include_connected_objects": false
+            }
+        """
+        entity_type = stix_id.split("--")[0]
+        if entity_type not in searchable_types:
+            return None
+        body = body.replace("ENTITY_TYPE", entity_type).replace("ENTITY_ID", stix_id)
+        r = requests.post(
+            self.fireeye_api_url + "/collections/search", data=body, headers=headers
+        )
+        if r.status_code == 200:
+            return r
+        elif (r.status_code == 401 or r.status_code == 403) and not retry:
+            self._get_token()
+            return self._search(stix_id, True)
+        elif r.status_code == 204 or r.status_code == 205:
+            return None
+        elif r.status_code == 401 or r.status_code == 403:
+            raise ValueError("Query failed, permission denied")
+        else:
+            print(r)
+            raise ValueError("An unknown error occurred")
+
     def _query(self, url, retry=False):
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-4.0.5",
+            "x-app-name": "opencti-connector-4.1.0",
         }
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
@@ -89,8 +152,33 @@ class FireEye:
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
         else:
-            print(r.text)
             raise ValueError("An unknown error occurred")
+
+    def _send_entity(self, bundle, work_id):
+        if "objects" in bundle and len(bundle) > 0:
+            final_objects = []
+            for stix_object in bundle["objects"]:
+                if stix_object["type"] == "threat-actor":
+                    stix_object["type"] = "intrusion-set"
+                    stix_object["id"] = stix_object["id"].replace(
+                        "threat-actor", "intrusion-set"
+                    )
+                if "created_by_ref" not in stix_object:
+                    stix_object["created_by_ref"] = self.identity["standard_id"]
+                if stix_object["type"] != "marking-definition":
+                    stix_object["object_marking_refs"] = [
+                        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+                    ]
+                    stix_object["object_marking_refs"].append(
+                        self.marking["standard_id"]
+                    )
+                final_objects.append(stix_object)
+            final_bundle = {"type": "bundle", "objects": final_objects}
+            self.helper.send_stix2_bundle(
+                json.dumps(final_bundle),
+                update=self.update_existing_data,
+                work_id=work_id,
+            )
 
     def _import_collection(
         self, collection, last_id_modified_timestamp=None, last_id=None, work_id=None
@@ -126,6 +214,9 @@ class FireEye:
             parsed_result = json.loads(result.text)
             if "objects" in parsed_result and len(parsed_result) > 0:
                 last_object = parsed_result["objects"][-1]
+                object_ids = [
+                    stix_object["id"] for stix_object in parsed_result["objects"]
+                ]
                 if last_object["id"] != last_id:
                     final_objects = []
                     for stix_object in parsed_result["objects"]:
@@ -135,12 +226,73 @@ class FireEye:
                                 "threat-actor", "intrusion-set"
                             )
                         if stix_object["type"] == "relationship":
+                            # If the source_ref is not in the current bundle
+                            if stix_object["source_ref"] not in object_ids:
+                                # Search entity in OpenCTI
+                                opencti_entity = (
+                                    self.helper.api.stix_domain_object.read(
+                                        id=stix_object["source_ref"]
+                                    )
+                                )
+                                # If the entity is not found
+                                if opencti_entity is None:
+                                    # Search the entity in FireEye
+                                    fireeye_entity = self._search(
+                                        stix_object["source_ref"]
+                                    )
+                                    # If the entity is found
+                                    if fireeye_entity is not None:
+                                        fireeye_entity_decoded = json.loads(
+                                            fireeye_entity.text
+                                        )
+                                        # Send the entity before this bundle
+                                        self._send_entity(
+                                            fireeye_entity_decoded, work_id
+                                        )
                             stix_object["source_ref"] = stix_object[
                                 "source_ref"
                             ].replace("threat-actor", "intrusion-set")
+                            # Search if the entity is not in bundle
+                            if stix_object["target_ref"] not in object_ids:
+                                opencti_entity = (
+                                    self.helper.api.stix_domain_object.read(
+                                        id=stix_object["target_ref"]
+                                    )
+                                )
+                                if opencti_entity is None:
+                                    fireeye_entity = self._search(
+                                        stix_object["target_ref"]
+                                    )
+                                    if fireeye_entity is not None:
+                                        fireeye_entity_decoded = json.loads(
+                                            fireeye_entity.text
+                                        )
+                                        self._send_entity(
+                                            fireeye_entity_decoded, work_id
+                                        )
                             stix_object["target_ref"] = stix_object[
                                 "target_ref"
                             ].replace("threat-actor", "intrusion-set")
+                        if (
+                            "object_refs" in stix_object
+                            and len(stix_object["object_refs"]) > 0
+                        ):
+                            for object_ref in stix_object["object_refs"]:
+                                if object_ref not in object_ids:
+                                    opencti_entity = (
+                                        self.helper.api.stix_domain_object.read(
+                                            id=object_ref
+                                        )
+                                    )
+                                    if opencti_entity is None:
+                                        fireeye_entity = self._search(object_ref)
+                                        if fireeye_entity is not None:
+                                            fireeye_entity_decoded = json.loads(
+                                                fireeye_entity.text
+                                            )
+                                            self._send_entity(
+                                                fireeye_entity_decoded, work_id
+                                            )
                         if "created_by_ref" not in stix_object:
                             stix_object["created_by_ref"] = self.identity["standard_id"]
                         if stix_object["type"] != "marking-definition":
