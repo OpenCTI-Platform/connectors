@@ -380,7 +380,8 @@ class Misp:
                     if indicator is not None:
                         indicators.append(indicator)
                         if (
-                            object["meta-category"] == "file"
+                            indicator["indicator"] is not None
+                            and object["meta-category"] == "file"
                             and indicator["indicator"].x_opencti_main_observable_type
                             in FILETYPES
                         ):
