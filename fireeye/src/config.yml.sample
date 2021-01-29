@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'FireEye'
+  scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report'
+  confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: True
+  log_level: 'info'
+
+fireeye:
+  api_url: 'https://api.intelligence.fireeye.com'
+  api_v3_public: 'ChangeMe'
+  api_v3_secret: 'ChangeMe'
+  collections: 'reports,indicators'
+  import_start_date: '2020-01-01'
