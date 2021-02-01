@@ -80,7 +80,10 @@ class ExportFileCsv:
             if "objectsIds" in entity_data:
                 for id in entity_data["objectsIds"]:
                     entity = self.helper.api.stix_domain_object.read(id=id)
-                    entities_list.append(entity)
+                    if entity is None:
+                        entity = self.helper.api.stix_cyber_observable.read(id=id)
+                    if entity is not None:
+                        entities_list.append(entity)
             csv_data = self.export_dict_list_to_csv(entities_list)
             self.helper.log_info(
                 "Uploading: "
