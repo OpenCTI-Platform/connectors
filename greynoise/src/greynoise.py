@@ -82,7 +82,7 @@ class GreyNoiseConnector:
         json_data = response.json()
 
         if response.status_code == 429:
-            self.helper.log_warning(
+            self.helper.log_info(
                 f"Quota reached, waiting {self._CONNECTOR_RUN_INTERVAL_SEC} seconds."
             )
             sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
