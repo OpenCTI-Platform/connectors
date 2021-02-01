@@ -5,9 +5,9 @@ COPY src /opt/opencti-connector-import-file-pdf-observables
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libxml2-dev libxslt-dev libffi-dev openssl-dev  && \
+RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev libffi-dev openssl-dev  && \
     cd /opt/opencti-connector-import-file-pdf-observables && \
-    pip3 install --no-cache-dir git+https://github.com/OpenCTI-Platform/client-python@4.1.0 && \
+    pip3 install --no-cache-dir git+https://github.com/OpenCTI-Platform/client-python@4.1.1 && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
