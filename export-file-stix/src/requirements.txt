@@ -1,2 +1,2 @@
-git+https://github.com/OpenCTI-Platform/client-python@4.1.0
+git+https://github.com/OpenCTI-Platform/client-python@4.1.1
 PyYAML==5.3.1
