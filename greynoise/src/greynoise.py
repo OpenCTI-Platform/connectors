@@ -60,25 +60,17 @@ class GreyNoiseConnector:
                 name=self.greynoise_ent_name,
                 description=self.greynoise_ent_desc,
             )["id"]
+            return self.greynoise_id
         else:
             self.helper.log_info(f"Cache {self.greynoise_ent_name} id")
             self.greynoise_id = greynoise_entity["id"]
             return self.greynoise_id
 
     def _call_api(self, observable):
-        try:
-            ips = [str(a) for a in IPv4Network(observable["observable_value"]).hosts()]
-        except ValueError:
-            return "IPv4 network search is not yet implemented"
-
-        if len(ips) == 1:
-            response = requests.get(
-                self.api_url + "context/" + observable["observable_value"],
-                headers=self.headers,
-            )
-        else:
-            return "IPv4 network search is not yet implemented"
-
+        response = requests.get(
+            self.api_url + "context/" + observable["value"],
+            headers=self.headers,
+        )
         json_data = response.json()
 
         if response.status_code == 429:
@@ -93,17 +85,14 @@ class GreyNoiseConnector:
                 f'HTTP error: {response.status_code} - error: {json_data["error"]}'
             )
             return json_data["error"]
-
         self.helper.log_info(
             f'Start processing observable {observable["observable_value"]}'
         )
-
         if "ip" in json_data:
             external_reference = self.helper.api.external_reference.create(
                 source_name=self.greynoise_ent_name,
                 url="https://viz.greynoise.io/ip/" + observable["observable_value"],
             )
-
             if not json_data["seen"]:
                 if self.sighting_not_seen:
                     self.helper.api.stix_sighting_relationship.create(
@@ -129,7 +118,6 @@ class GreyNoiseConnector:
                 if json_data["spoofable"]
                 else self.helper.connect_confidence_level
             )
-
             self.helper.api.stix_sighting_relationship.create(
                 fromId=observable["id"],
                 toId=self._get_greynoise_id(),
@@ -142,7 +130,6 @@ class GreyNoiseConnector:
                 externalReferences=[external_reference["id"]],
                 count=1,
             )
-
             return f'IPv4 {observable["observable_value"]} found on GreyNoise, knowledge attached.'
 
     def _process_message(self, data):
