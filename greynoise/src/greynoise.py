@@ -1,5 +1,4 @@
 import os
-from ipaddress import IPv4Network
 from time import sleep
 
 import requests
