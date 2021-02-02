@@ -187,7 +187,7 @@ jobs:
             docker push opencti/connector-synchronizer:latest
             docker push opencti/connector-synchronizer:${CIRCLE_TAG}
             docker push opencti/connector-fireeye:latest
-            #docker push opencti/connector-fireeye:${CIRCLE_TAG}
+            docker push opencti/connector-fireeye:${CIRCLE_TAG}
             docker push opencti/connector-kaspersky:latest
             docker push opencti/connector-kaspersky:${CIRCLE_TAG}
             docker push opencti/connector-greynoise:latest
