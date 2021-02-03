@@ -1,4 +1,4 @@
-git+https://github.com/OpenCTI-Platform/client-python@4.1.1
+git+https://github.com/OpenCTI-Platform/client-python@4.1.2
 PyYAML==5.3.1
 python-dateutil==2.8.1
 feedparser==5.2.1

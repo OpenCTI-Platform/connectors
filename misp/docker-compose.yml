@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-misp:
-    image: opencti/connector-misp:4.1.1
+    image: opencti/connector-misp:4.1.2
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
