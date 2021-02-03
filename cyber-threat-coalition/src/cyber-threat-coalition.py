@@ -89,7 +89,9 @@ class CyberThreatCoalition:
     def fetch_and_send(self):
         timestamp = int(time.time())
         now = datetime.utcfromtimestamp(timestamp)
-        friendly_name = "Cyber Threat Coalition run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+        friendly_name = "Cyber Threat Coalition run @ " + now.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
