@@ -33,7 +33,6 @@ class CyberThreatCoalition:
         "File_md5": "[file:hashes.MD5 = '{}']",
         "Url": "[url:value = '{}']",
     }
-
     _STATE_LAST_RUN = "last_run"
 
     def __init__(self):
@@ -195,21 +194,21 @@ class CyberThreatCoalition:
             url="https://www.cyberthreatcoalition.org",
             external_id="COVID19-CTC",
         )
-        stix_report = stix2.Report(
-            id=report_uuid,
-            name="COVID-19 Cyber Threat Coalition (CTC) BlackList",
-            type="report",
-            description="This report represents the whole COVID-19 CTC blacklist.",
-            published=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-            created_by_ref=organization,
-            object_marking_refs=[stix2.TLP_WHITE],
-            labels=labels,
-            external_references=[report_external_reference],
-            object_refs=report_object_refs,
-        )
-
-        # add report in bundle
-        bundle_objects.append(stix_report)
+        if report_object_refs:
+            stix_report = stix2.Report(
+                id=report_uuid,
+                name="COVID-19 Cyber Threat Coalition (CTC) BlackList",
+                type="report",
+                description="This report represents the whole COVID-19 CTC blacklist.",
+                published=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                created_by_ref=organization,
+                object_marking_refs=[stix2.TLP_WHITE],
+                labels=labels,
+                external_references=[report_external_reference],
+                object_refs=report_object_refs,
+            )
+            # add report in bundle
+            bundle_objects.append(stix_report)
 
         # create stix bundle
         bundle = stix2.Bundle(objects=bundle_objects)
