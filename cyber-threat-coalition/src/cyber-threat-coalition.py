@@ -89,11 +89,10 @@ class CyberThreatCoalition:
     def fetch_and_send(self):
         timestamp = int(time.time())
         now = datetime.utcfromtimestamp(timestamp)
-        friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+        friendly_name = "Cyber Threat Coalition run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
-
         bundle_objects = list()
 
         # create an identity for the coalition team
@@ -119,7 +118,6 @@ class CyberThreatCoalition:
                     collection,
                     response.status_code,
                 )
-
             pattern_type = "stix"
             labels = ["COVID-19", "malicious-activity"]
             # parse content
@@ -195,7 +193,6 @@ class CyberThreatCoalition:
             url="https://www.cyberthreatcoalition.org",
             external_id="COVID19-CTC",
         )
-
         stix_report = stix2.Report(
             id=report_uuid,
             name="COVID-19 Cyber Threat Coalition (CTC) BlackList",
@@ -219,7 +216,6 @@ class CyberThreatCoalition:
         self.helper.send_stix2_bundle(
             bundle=bundle.serialize(), update=self.update_existing_data, work_id=work_id
         )
-
         return work_id
 
     def _load_state(self) -> Dict[str, Any]:
@@ -250,27 +246,20 @@ class CyberThreatCoalition:
         self.helper.log_info("Fetching Cyber Threat Coalition vetted blacklists...")
         while True:
             try:
-
                 timestamp = self._current_unix_timestamp()
                 current_state = self._load_state()
-
                 self.helper.log_info(f"Loaded state: {current_state}")
 
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
                 if self._is_scheduled(last_run, timestamp):
-
                     # fetch data and send as stix bundle
                     work_id = self.fetch_and_send()
-
                     new_state = current_state.copy()
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
-
                     message = f"Run done. Storing new state: {new_state}"
                     self.helper.log_info(message)
                     self.helper.api.work.to_processed(work_id, message)
-
                     self.helper.set_state(new_state)
-
                     self.helper.log_info(
                         f"State stored, next run in: {self.get_interval()} seconds"
                     )
