@@ -8,7 +8,7 @@ COPY src /opt/opencti-connector-tanium
 RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-tanium && \
-    pip3 install --no-cache-dir git+https://github.com/OpenCTI-Platform/client-python@4.1.1 && \
+    pip3 install --no-cache-dir git+https://github.com/OpenCTI-Platform/client-python@4.1.2 && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
