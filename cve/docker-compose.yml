@@ -15,5 +15,5 @@ services:
       - CVE_IMPORT_HISTORY=true # Import history at the first run (after only recent), reset the connector state if you want to re-import
       - CVE_NVD_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz
       - CVE_HISTORY_DATA_FEED=https://nvd.nist.gov/feeds/json/cve/1.1/
-      - CVE_INTERVAL=7 # Days
+      - CVE_INTERVAL=7 # In days, must be strictly greater than 1
     restart: always
