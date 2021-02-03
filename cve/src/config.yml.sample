@@ -15,4 +15,4 @@ cve:
   nvd_data_feed: 'https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz'
   history_data_feed: 'https://nvd.nist.gov/feeds/json/cve/1.1/'
   import_history: True # Import history at the first run (after only recent), reset the connector state if you want to re-import
-  interval: 7 # Days
+  interval: 7 # In days, must be strictly greater than 1
