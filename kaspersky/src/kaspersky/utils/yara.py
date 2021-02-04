@@ -25,7 +25,7 @@ _RULE_ENDS = ("}",)
 _NAME_PATTERN = r"^(?:(?:private|global)\s*)?rule\s+(\w+)(?:\s*\:)?.*$"
 _NAME_REGEX = re.compile(_NAME_PATTERN, re.MULTILINE)
 
-_DESCRIPTION_PATTERN = r"^\s*description\s*=\s*\"(.*)\"\s*$"
+_DESCRIPTION_PATTERN = r"^\s*(?:description|desc)\s*=\s*\"(.*)\"\s*$"
 _DESCRIPTION_REGEX = re.compile(_DESCRIPTION_PATTERN, re.MULTILINE)
 
 _REPORT_PATTERN = r"^\s*report\s*=\s*\"(.*)\"\s*$"
