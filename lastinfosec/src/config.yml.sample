@@ -7,9 +7,10 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'lastinfosec-cti'
   scope: 'cyber threat intelligence'
+  confidence_level: 50
   update_existing_data: True
   log_level: 'info'
 
 lastinfosec:
-  api_url: 'https://api.client.lastinfosec.com/v2/stix2/getlasthour?api_key='
-  api_key: 'ChangeMe'
+  api_url_cti: 'https://api.client.lastinfosec.com/v2/stix21/getlasthour?api_key='
+  api_key_cti: 'ChangeMe'
