@@ -32,7 +32,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: sudo apt-get update -qq && sudo apt install rustc
       - run:
           working_directory: ~/opencti/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
@@ -206,7 +205,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: sudo apt-get update -qq && sudo apt install rustc
       - run:
           working_directory: ~/opencti/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
