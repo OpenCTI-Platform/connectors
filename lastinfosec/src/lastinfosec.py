@@ -45,12 +45,14 @@ class LastInfoSec:
                 sdata = json.dumps(data)
                 self.helper.send_stix2_bundle(sdata, work_id=work_id)
                 # Store the current timestamp as a last run
-                message = ("Connector successfully run, storing last_run as {0}".format(timestamp))
+                message = "Connector successfully run, storing last_run as {0}".format(
+                    timestamp
+                )
                 self.helper.set_state({"last_run": timestamp})
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(message)
         else:
-            message = ("Connector error run, storing last_run as {0}".format(timestamp))
+            message = "Connector error run, storing last_run as {0}".format(timestamp)
             self.helper.set_state({"last_run": timestamp})
             self.helper.api.work.to_processed(work_id, message)
             self.helper.log_info(message)
@@ -63,7 +65,9 @@ class LastInfoSec:
                 # Get the current timestamp and check
                 timestamp = int(time.time())
                 now = datetime.datetime.utcfromtimestamp(timestamp)
-                friendly_name = "LastInfoSec CTI run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                friendly_name = "LastInfoSec CTI run @ " + now.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
@@ -73,10 +77,15 @@ class LastInfoSec:
                     proxy_dic["http"] = self.proxy_http
                 if self.proxy_https is not None:
                     proxy_dic["https"] = self.proxy_https
-                
-                if self.lastinfosec_url is not None and self.lastinfosec_apikey is not None:
-                    lastinfosec_data = requests.get(self.lastinfosec_url + self.lastinfosec_apikey,
-                                                    proxies=proxy_dic).json()
+
+                if (
+                    self.lastinfosec_url is not None
+                    and self.lastinfosec_apikey is not None
+                ):
+                    lastinfosec_data = requests.get(
+                        self.lastinfosec_url + self.lastinfosec_apikey,
+                        proxies=proxy_dic,
+                    ).json()
                     self.push_data(lastinfosec_data, timestamp, work_id)
                 else:
                     self.helper.log_info("CTI Feed not configured")
