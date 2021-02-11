@@ -1,4 +1,4 @@
-pycti==4.2.0
+pycti==4.2.1
 urllib3==1.26.3
 python-dateutil==2.8.1
 feedparser==5.2.1
