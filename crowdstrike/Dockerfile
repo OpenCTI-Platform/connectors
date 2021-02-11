@@ -9,7 +9,7 @@ RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxslt libxslt-dev libxml2 libxml2-dev && \
     cd /opt/opencti-connector-crowdstrike && \
     pip install --no-cache-dir -r requirements.txt && \
-    apk del git build-base libxslt-dev libxml2-dev && \
+    apk del git build-base && \
     rm -rf /var/cache/apk/*
 
 # Expose and entrypoint
