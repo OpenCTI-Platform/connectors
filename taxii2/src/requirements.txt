@@ -1,10 +1,10 @@
+git+https://github.com/OpenCTI-Platform/client-python@4.1.2
 antlr4-python3-runtime
 certifi
 chardet
 datefinder
 idna
 pika
-pycti
 python-dateutil
 python-magic
 pytz
