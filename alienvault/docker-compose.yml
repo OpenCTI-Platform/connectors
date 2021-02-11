@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-alienvault:
-    image: opencti/connector-alienvault:4.2.0
+    image: opencti/connector-alienvault:4.2.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
