@@ -1,4 +1,4 @@
-pycti==4.2.0
+pycti==4.2.1
 antlr4-python3-runtime
 certifi
 chardet
