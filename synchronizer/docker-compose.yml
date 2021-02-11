@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-synchronizer:
-    image: opencti/connector-synchronizer:4.1.2
+    image: opencti/connector-synchronizer:4.2.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
