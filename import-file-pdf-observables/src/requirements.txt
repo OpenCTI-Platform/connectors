@@ -1,9 +1,5 @@
-git+https://github.com/OpenCTI-Platform/client-python@4.1.2
-PyYAML==5.3.1
-urllib3==1.26.2
-python-dateutil==2.8.1
+pycti==4.2.0
+urllib3==1.26.3
 beautifulsoup4==4.9.3
 pdfminer.six==20200726
-requests==2.25.0
-stix2==2.1.0
 stix==1.2.0.11
