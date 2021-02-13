@@ -132,13 +132,13 @@ class TheHive:
                     data_type = "unknown"
             else:
                 data_type = observable["dataType"]
-            observable_type = OBSERVABLES_MAPPING[data_type]
-            if observable_type is not None:
+            observable_key = OBSERVABLES_MAPPING[data_type]
+            if observable_key is not None:
                 stix_observable = SimpleObservable(
                     id=OpenCTIStix2Utils.generate_random_stix_id(
                         "x-opencti-simple-observable"
                     ),
-                    key=observable_type,
+                    key=observable_key,
                     value=observable["data"],
                     description=observable["message"],
                     x_opencti_score=80 if observable["ioc"] else 50,
