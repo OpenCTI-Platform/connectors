@@ -139,7 +139,11 @@ jobs:
       - run:
           working_directory: ~/opencti/taxii2
           name: Build Docker image opencti/connector-taxii2
-          command: docker build -t opencti/connector-taxii2:latest . && docker tag opencti/connector-taxii2:latest opencti/connector-taxii2:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-taxii2:latest . && docker tag opencti/connector-taxii2:latest opencti/connector-taxii2:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/thehive
+          name: Build Docker image opencti/connector-thehive
+          command: docker build -t opencti/connector-thehive:latest . && docker tag opencti/connector-taxii2:latest opencti/connector-thehive:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -197,7 +201,9 @@ jobs:
             docker push opencti/connector-greynoise:latest
             docker push opencti/connector-greynoise:${CIRCLE_TAG}
             docker push opencti/connector-taxii2:latest
-            docker push opencti/connector-taxii2:${CIRCLE_TAG}            
+            docker push opencti/connector-taxii2:${CIRCLE_TAG}
+            docker push opencti/connector-thehive:latest
+            docker push opencti/connector-thehive:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -312,7 +318,11 @@ jobs:
       - run:
           working_directory: ~/opencti/taxii2
           name: Build Docker image opencti/connector-taxii2
-          command: docker build -t opencti/connector-taxii2:rolling .          
+          command: docker build -t opencti/connector-taxii2:rolling .
+      - run:
+          working_directory: ~/opencti/thehive
+          name: Build Docker image opencti/connector-thehive
+          command: docker build -t opencti/connector-thehive:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -344,6 +354,7 @@ jobs:
             docker push opencti/connector-kaspersky:rolling
             docker push opencti/connector-greynoise:rolling
             docker push opencti/connector-taxii2:rolling
+            docker push opencti/connector-thehive:rolling
 workflows:
   version: 2
   opencti:
