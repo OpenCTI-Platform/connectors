@@ -1,7 +1,6 @@
 import yaml
 import os
 import requests
-import json
 import pycountry
 
 from stix2 import Relationship, Location, Bundle
