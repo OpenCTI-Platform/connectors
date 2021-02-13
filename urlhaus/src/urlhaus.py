@@ -134,6 +134,8 @@ class URLhaus:
                             update=self.update_existing_data,
                             work_id=work_id,
                         )
+                        if os.path.exists(os.path.dirname(os.path.abspath(__file__)) + "/data.csv"):
+                            os.remove(os.path.dirname(os.path.abspath(__file__)) + "/data.csv")
                     except Exception as e:
                         self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
