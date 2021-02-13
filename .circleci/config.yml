@@ -143,7 +143,11 @@ jobs:
       - run:
           working_directory: ~/opencti/thehive
           name: Build Docker image opencti/connector-thehive
-          command: docker build -t opencti/connector-thehive:latest . && docker tag opencti/connector-taxii2:latest opencti/connector-thehive:${CIRCLE_TAG}
+          command: docker build -t opencti/connector-thehive:latest . && docker tag opencti/connector-thehive:latest opencti/connector-thehive:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/thehive
+          name: Build Docker image opencti/connector-abuseipdb
+          command: docker build -t opencti/connector-abuseipdb:latest . && docker tag opencti/connector-abuseipdb:latest opencti/connector-abuseipdb:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -204,6 +208,8 @@ jobs:
             docker push opencti/connector-taxii2:${CIRCLE_TAG}
             docker push opencti/connector-thehive:latest
             docker push opencti/connector-thehive:${CIRCLE_TAG}
+            docker push opencti/connector-abuseipdb:latest
+            docker push opencti/connector-abuseipdb:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -324,6 +330,10 @@ jobs:
           name: Build Docker image opencti/connector-thehive
           command: docker build -t opencti/connector-thehive:rolling .
       - run:
+          working_directory: ~/opencti/abuseipdb
+          name: Build Docker image opencti/connector-abuseipdb
+          command: docker build -t opencti/connector-abuseipdb:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -355,6 +365,7 @@ jobs:
             docker push opencti/connector-greynoise:rolling
             docker push opencti/connector-taxii2:rolling
             docker push opencti/connector-thehive:rolling
+            docker push opencti/connector-abuseipdb:rolling
 workflows:
   version: 2
   opencti:

@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'AbuseIPDB'
+  scope: 'IPv4-Addr'
+  auto: true # Enable/disable auto-enrichment of observables
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+abuseipdb:
+  api_key: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'

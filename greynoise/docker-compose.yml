@@ -16,6 +16,6 @@ services:
       - GREYNOISE_MAX_TLP=TLP:AMBER
       - GREYNOISE_NAME=GreyNoise sensors
       - GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.
-      - GREYNOISE_SIGHTING_NOT_SEEN=true
+      - GREYNOISE_SIGHTING_NOT_SEEN=false
       - GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL=30
     restart: always
