@@ -16,5 +16,5 @@ greynoise:
   max_tlp: 'TLP:AMBER'
   name: 'GreyNoise sensors'
   description: 'GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.'
-  sighting_not_seen: true
+  sighting_not_seen: false
   spoofable_confidence_level: 30
