@@ -30,6 +30,15 @@ file of OpenCTI.
 
 Please add your Malbeacon API key to the configuration file (replace `ChangeMe`).
 
+If you wish to make a lookup for every supported observable type automatically
+please set `CONNECTOR_AUTO=true`.
+
 ## Behavior
 
-TODO
+* Adds an external reference to Malbeacon for every observable that is found in the API
+* Adds observable and indicators for every Actor IP and Domain entry in Malbeacon
+
+## Known TODOs:
+
+* Add relationships from the Actor objects to the intitial observables
+* Use STIX2.1 infrastruture compoments to explain the attacker infrastructure

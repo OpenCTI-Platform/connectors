@@ -44,6 +44,7 @@ class MalBeaconConnector:
         )
 
     def _process_observable(self, observable) -> str:
+        logger.info(f"processing observable: {observable}")
         # Extract IPv4, IPv6, Hostname and Domain from entity data
         obs_val = observable["observable_value"]
         obs_typ = observable["entity_type"]
@@ -54,7 +55,7 @@ class MalBeaconConnector:
         elif obs_typ in ["IPv4-Addr", "IPv6-Addr"]:
             self._process_c2(obs_val, obs_id)
         elif obs_typ in "Email-Address":
-            # TODO: not implemented
+            # TODO: not implemented yet
             pass
         else:
             return "no information found on malbeacon"
@@ -80,12 +81,11 @@ class MalBeaconConnector:
 
         try:
             r = requests.get(url, headers={"X-Api-Key": self.api_key})
-            data = r.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"error in malbeacon api request: {e}")
             return None
 
-        return data
+        return r.json()
 
     def _process_c2(self, obs_value, obs_id):
         already_processed = []
@@ -95,16 +95,27 @@ class MalBeaconConnector:
             url="https://malbeacon.com/illuminate",
             description="Found in Malbeacon C2 Domains",
         )
-        self.helper.api.stix_domain_object.add_external_reference(
+        self.helper.api.stix_cyber_observable.add_external_reference(
             id=obs_id, external_reference_id=reference["id"]
         )
 
+        data = self._api_call("c2/c2/" + obs_value)
+
+        # If the API returns a JSON document with a message
+        # there probably has been an error or no information
+        # could be retreived from the Malbeacon database
         try:
-            data = self._api_call("c2/c2/" + obs_value)
+            api_error = data["message"]
+            logger.error(f"Error in API request: {data}")
+            return None
+        except (ValueError, TypeError):
+            pass
+
+        try:
             for entry in data:
                 c2_beacon = C2Beacon.parse_obj(entry)
-                print(
-                    f"{c2_beacon.cti_date} {c2_beacon.actorip} {c2_beacon.actorhostname}"
+                logger.info(
+                    f"Processing: {c2_beacon.cti_date} {c2_beacon.actorip} {c2_beacon.actorhostname}"
                 )
 
                 ######################################################
@@ -115,30 +126,46 @@ class MalBeaconConnector:
                     c2_beacon.actorip != "NA"
                     and c2_beacon.actorip not in already_processed
                 ):
-                    self.helper.api.stix_cyber_observable.create(
+                    actor_ip_obs = self.helper.api.stix_cyber_observable.create(
                         simple_observable_key="IPv4-Addr.value",
                         simple_observable_value=c2_beacon.actorip,
-                        simple_observable_description=f"Actor IP Address for C2 {obs_value}",
+                        simple_observable_description=f"Malbeacon Actor IP Address for C2 {obs_value}",
                         createdBy=self.author["id"],
-                        x_opencti_score=self.confidence_level,
+                        x_opencti_score=int(self.confidence_level),
                         createIndicator=True,
                     )
 
+                    # TODO: find and implement meaningful relationships
+                    # self.helper.api.stix_core_relationship.create(
+                    #    fromId=obs_id,
+                    #    toId=actor_ip_obs["id"],
+                    #    relationship_type="based-on",
+                    #    createdBy=self.author["id"],
+                    # )
+
                     if c2_beacon.actorhostname != "NA":
-                        self.helper.api.stix_cyber_observable.create(
+                        actor_domain_obs = self.helper.api.stix_cyber_observable.create(
                             simple_observable_key="Domain-Name.value",
                             simple_observable_value=c2_beacon.actorhostname,
-                            simple_observable_description=f"Actor Hostname for C2 {obs_value}",
+                            simple_observable_description=f"Malbeacon Actor DomainName for C2 {obs_value}",
                             createdBy=self.author["id"],
-                            x_opencti_score=self.confidence_level,
+                            x_opencti_score=int(self.confidence_level),
                             createIndicator=True,
                         )
+
+                    # TODO: find and implement meaningful relationships
+                    #    self.helper.api.stix_core_relationship.create(
+                    #        fromId=actor_domain_obs["id"],
+                    #        toId=actor_ip_obs["id"],
+                    #        relationship_type="resolves-to",
+                    #        createdBy=self.author["id"],
+                    #    )
 
                     # Make sure we only process this specific IP once
                     already_processed.append(c2_beacon.actorip)
 
         except Exception as err:
-            logger.error(f"error downloading and storing c2 beacons: {err}")
+            logger.error(f"error processing c2 beacons: {err}")
             return None
 
 

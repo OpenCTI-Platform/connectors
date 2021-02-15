@@ -1,15 +1,15 @@
 opencti:
-  url: 'http://localhost:8080'
-  token: 'ChangeMe'
+  url: "http://localhost:8080"
+  token: "ChangeMe"
 
 connector:
-  id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
-  name: 'Malbeacon'
-  scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,Email-Addr'
+  id: "ChangeMe"
+  type: "INTERNAL_ENRICHMENT"
+  name: "Malbeacon"
+  scope: "IPv4-Addr,IPv6-Addr,Domain-Name"
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 30 # From 0 (Unknown) to 100 (Fully trusted)
-  log_level: 'info'
+  log_level: "info"
 
 malbeacon:
-  api_key: 'ChangeMe'
+  api_key: "ChangeMe"
