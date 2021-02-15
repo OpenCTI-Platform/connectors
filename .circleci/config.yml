@@ -216,6 +216,8 @@ jobs:
             docker push opencti/connector-abuseipdb:${CIRCLE_TAG}
             docker push opencti/connector-urlhaus:latest
             docker push opencti/connector-urlhaus:${CIRCLE_TAG}
+            docker push opencti/connector-malbeacon:latest
+            docker push opencti/connector-malbeacon:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -344,6 +346,10 @@ jobs:
           name: Build Docker image opencti/connector-urlhaus
           command: docker build -t opencti/connector-urlhaus:rolling .
       - run:
+          working_directory: ~/opencti/malbeacon
+          name: Build Docker image opencti/connector-malbeacon
+          command: docker build -t opencti/connector-malbeacon:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -377,6 +383,7 @@ jobs:
             docker push opencti/connector-thehive:rolling
             docker push opencti/connector-abuseipdb:rolling
             docker push opencti/connector-urlhaus:rolling
+            docker push opencti/connector-malbeacon:rolling
 workflows:
   version: 2
   opencti:
