@@ -106,7 +106,7 @@ class MalBeaconConnector:
         # could be retreived from the Malbeacon database
         try:
             api_error = data["message"]
-            logger.error(f"Error in API request: {data}")
+            logger.error(f"Error in API request: {api_error}")
             return None
         except (ValueError, TypeError):
             pass
@@ -126,7 +126,7 @@ class MalBeaconConnector:
                     c2_beacon.actorip != "NA"
                     and c2_beacon.actorip not in already_processed
                 ):
-                    actor_ip_obs = self.helper.api.stix_cyber_observable.create(
+                    self.helper.api.stix_cyber_observable.create(
                         simple_observable_key="IPv4-Addr.value",
                         simple_observable_value=c2_beacon.actorip,
                         simple_observable_description=f"Malbeacon Actor IP Address for C2 {obs_value}",
@@ -144,7 +144,7 @@ class MalBeaconConnector:
                     # )
 
                     if c2_beacon.actorhostname != "NA":
-                        actor_domain_obs = self.helper.api.stix_cyber_observable.create(
+                        self.helper.api.stix_cyber_observable.create(
                             simple_observable_key="Domain-Name.value",
                             simple_observable_value=c2_beacon.actorhostname,
                             simple_observable_description=f"Malbeacon Actor DomainName for C2 {obs_value}",
