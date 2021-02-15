@@ -17,7 +17,6 @@ class Cybercrimetracker:
         config_file_path = "{}/config.yml".format(
             os.path.dirname(os.path.abspath(__file__))
         )
-
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
@@ -37,7 +36,6 @@ class Cybercrimetracker:
             ["connector", "update_existing_data"],
             config,
         )
-
         # CYBERCRIME-TRACKER.NET Config
         self.feed_url = get_config_variable(
             "CYBERCRIMET_RACKER_FEED_URL", ["cybercrime-tracker", "feed_url"], config

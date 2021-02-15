@@ -1,2 +1,2 @@
-pycti==4.2.1
+pycti==4.2.2
 pymispwarninglists==1.0
