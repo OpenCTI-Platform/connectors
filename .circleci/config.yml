@@ -153,6 +153,10 @@ jobs:
           name: Build Docker image opencti/connector-urlhaus
           command: docker build -t opencti/connector-urlhaus:latest . && docker tag opencti/connector-urlhaus:latest opencti/connector-urlhaus:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/malbeacon
+          name: Build Docker image opencti/connector-malbeacon
+          command: docker build -t opencti/connector-malbeacon:latest . && docker tag opencti/connector-malbeacon:latest opencti/connector-malbeacon:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
