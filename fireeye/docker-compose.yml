@@ -17,4 +17,5 @@ services:
       - FIREEYE_API_V3_SECRET=ChangeMe
       - FIREEYE_COLLECTIONS=reports,indicators
       - FIREEYE_IMPORT_START_DATE=2020-01-01
+      - FIREEYE_INTERVAL=5 # Required, in minutes
     restart: always

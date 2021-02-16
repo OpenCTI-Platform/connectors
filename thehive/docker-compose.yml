@@ -16,5 +16,5 @@ services:
       - THEHIVE_API_KEY=ChangeMe
       - THEHIVE_CHECK_SSL=true
       - THEHIVE_ORGANIZATION_NAME=MyCompany
-      - THEHIVE_IMPORT_FROM_DATE=2021-01-01\ 00:00:00 # Optional
+      - THEHIVE_IMPORT_FROM_DATE=2021-01-01T00:00:00 # Optional
     restart: always

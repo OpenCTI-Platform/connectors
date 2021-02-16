@@ -64,6 +64,9 @@ class FireEye:
             ["fireeye", "import_start_date"],
             config,
         )
+        self.fireeye_interval = get_config_variable(
+            "FIREEYE_INTERVAL", ["fireeye", "interval"], config, True
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -87,6 +90,9 @@ class FireEye:
         # Init variables
         self.auth_token = None
         self._get_token()
+
+    def get_interval(self):
+        return int(self.fireeye_interval) * 60
 
     def _get_token(self):
         r = requests.post(
@@ -413,7 +419,7 @@ class FireEye:
                 message = "End of synchronization"
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(message)
-                time.sleep(120)
+                time.sleep(self.get_interval())
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)
