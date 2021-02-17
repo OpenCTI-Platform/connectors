@@ -106,11 +106,12 @@ class FireEye:
         self.auth_token = data.get("access_token")
 
     def _search(self, stix_id, retry=False):
+        time.sleep(3)
         self.helper.log_info("Searching for " + stix_id)
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-4.2.2",
+            "x-app-name": "opencti-connector-4.2.3",
         }
         body = """
             {
@@ -147,7 +148,7 @@ class FireEye:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-4.2.2",
+            "x-app-name": "opencti-connector-4.2.3",
         }
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
