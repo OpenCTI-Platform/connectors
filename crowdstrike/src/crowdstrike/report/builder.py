@@ -33,6 +33,7 @@ from crowdstrike.utils import (
     create_uses_relationships,
     datetime_utc_epoch_start,
     datetime_utc_now,
+    normalize_start_time_and_stop_time,
 )
 
 
@@ -67,23 +68,21 @@ class ReportBundleBuilder:
         self.report_file = report_file
         self.guessed_malwares = guessed_malwares
 
-        # Use report dates for first seen and last seen.
-        first_seen = self.report.created_date
-        if first_seen is None:
-            first_seen = datetime_utc_epoch_start()
+        # Use report dates for start time and stop time.
+        start_time = self.report.created_date
+        if start_time is None:
+            start_time = datetime_utc_epoch_start()
 
-        last_seen = self.report.last_modified_date
-        if last_seen is None:
-            last_seen = datetime_utc_now()
+        stop_time = self.report.last_modified_date
+        if stop_time is None:
+            stop_time = datetime_utc_now()
 
-        if first_seen > last_seen:
-            logger.warning(
-                "First seen is greater than last seen for report: %s", self.report.name
-            )
-            first_seen, last_seen = last_seen, first_seen
+        start_time, stop_time = normalize_start_time_and_stop_time(
+            start_time, stop_time
+        )
 
-        self.first_seen = first_seen
-        self.last_seen = last_seen
+        self.start_time = start_time
+        self.stop_time = stop_time
 
     def _create_malwares(self) -> List[Malware]:
         malwares = []
@@ -154,8 +153,8 @@ class ReportBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            self.first_seen,
-            self.last_seen,
+            self.start_time,
+            self.stop_time,
         )
 
     def _create_targets_relationships(
@@ -167,8 +166,8 @@ class ReportBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            self.first_seen,
-            self.last_seen,
+            self.start_time,
+            self.stop_time,
         )
 
     def _create_targeted_sectors(self) -> List[Identity]:

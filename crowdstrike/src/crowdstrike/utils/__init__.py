@@ -5,7 +5,7 @@ import base64
 import calendar
 import functools
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import (
     Any,
     Callable,
@@ -261,6 +261,30 @@ def datetime_utc_now() -> datetime:
 def datetime_utc_epoch_start() -> datetime:
     """Get Unix epoch start as UTC datetime."""
     return timestamp_to_datetime(0)
+
+
+def normalize_start_time_and_stop_time(
+    start_time: datetime, stop_time: datetime
+) -> Tuple[datetime, datetime]:
+    """
+    Normalize start and stop time.
+
+    STIX2 relationship expects the stop time to be later than the start time.
+    """
+    logger.info("start_time: %s, stop_time: %s", start_time, stop_time)
+
+    if start_time == stop_time:
+        logger.warning("Start time equals stop time, adding 1 second to stop time")
+
+        stop_time += timedelta(seconds=1)
+        return start_time, stop_time
+
+    if start_time > stop_time:
+        logger.warning("Start time is greater than stop time, swapping times")
+
+        start_time, stop_time = stop_time, start_time
+
+    return start_time, stop_time
 
 
 def _create_random_identifier(identifier_type: str) -> str:
