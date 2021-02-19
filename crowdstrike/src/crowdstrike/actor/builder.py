@@ -27,6 +27,7 @@ from crowdstrike.utils import (
     create_targets_relationships,
     datetime_utc_epoch_start,
     datetime_utc_now,
+    normalize_start_time_and_stop_time,
     remove_html_tags,
 )
 
@@ -72,11 +73,9 @@ class ActorBundleBuilder:
         if last_seen is None:
             last_seen = datetime_utc_now()
 
-        if first_seen > last_seen:
-            logger.warning(
-                "First seen is greater than last seen for actor: %s", self.actor.name
-            )
-            first_seen, last_seen = last_seen, first_seen
+        first_seen, last_seen = normalize_start_time_and_stop_time(
+            first_seen, last_seen
+        )
 
         self.first_seen = first_seen
         self.last_seen = last_seen

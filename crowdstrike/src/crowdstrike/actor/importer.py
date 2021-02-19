@@ -128,7 +128,7 @@ class ActorImporter(BaseImporter):
 
         self._send_bundle(actor_bundle)
 
-    def _create_actor_bundle(self, actor: Actor) -> Optional[Bundle]:
+    def _create_actor_bundle(self, actor: Actor) -> Bundle:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]

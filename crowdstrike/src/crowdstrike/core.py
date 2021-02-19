@@ -356,7 +356,7 @@ class CrowdStrike:
             except (KeyboardInterrupt, SystemExit):
                 self._info("CrowdStrike connector stopping...")
                 exit(0)
-            except Exception as e:
+            except Exception as e:  # noqa: B902
                 self._error("CrowdStrike connector internal error: {0}", str(e))
                 self._sleep()
 
