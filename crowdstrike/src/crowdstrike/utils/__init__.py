@@ -267,12 +267,12 @@ def normalize_start_time_and_stop_time(
     start_time: datetime, stop_time: datetime
 ) -> Tuple[datetime, datetime]:
     """
-    Normalize start and stop time.
+    Normalize start and stop times.
 
-    STIX2 relationship expects the stop time to be later than the start time.
+    Make sure that the stop time is later than the start time, because the
+    STIX 2 Relationship object expects the stop time to be later than the start time
+    or the creation of Relationship object fails.
     """
-    logger.info("start_time: %s, stop_time: %s", start_time, stop_time)
-
     if start_time == stop_time:
         logger.warning("Start time equals stop time, adding 1 second to stop time")
 
