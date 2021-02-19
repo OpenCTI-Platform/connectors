@@ -391,7 +391,6 @@ class TaniumConnector:
             intel_document = self._get_by_id(entity["id"])
             if intel_document is not None:
                 return intel_document
-
         stix2_bundle = self.helper.api.stix2.export_entity(
             entity["entity_type"],
             entity["id"],
@@ -633,7 +632,11 @@ class TaniumConnector:
         intel_document = None
         if entity_type == "indicator":
             entity = self.helper.api.indicator.read(id=data["data"]["x_opencti_id"])
-            if entity is None or entity["revoked"]:
+            if (
+                entity is None
+                or entity["revoked"]
+                or entity["pattern_type"] not in self.tanium_indicator_types
+            ):
                 return {"entity": entity, "intel_document": intel_document}
             if entity["pattern_type"] == "stix":
                 intel_document = self._create_indicator_stix(
@@ -746,28 +749,33 @@ class TaniumConnector:
                 and "add" in data["data"]["x_data_update"]
                 and "labels" in data["data"]["x_data_update"]["add"]
             ):
-                if (
-                    self.tanium_reputation_blacklist_label
-                    in data["data"]["x_data_update"]["add"]["labels"]
+                if self.tanium_reputation_blacklist_label in data["data"][
+                    "x_data_update"
+                ]["add"]["labels"] and StixCyberObservableTypes.has_value(
+                    data["data"]["type"]
                 ):
-                    if "hashes" in data["data"]:
+                    observable = self.helper.api.stix_cyber_observable.read(
+                        id=data["data"]["id"]
+                    )
+                    observable = self.helper.api.stix2.generate_export(observable)
+                    if "hashes" in observable:
                         entry = {"list": "blacklist"}
-                        if "MD5" in data["data"]["hashes"]:
-                            entry["md5"] = data["data"]["hashes"]["MD5"]
-                            entry["uploadedHash"] = data["data"]["hashes"]["MD5"]
+                        if "MD5" in observable["hashes"]:
+                            entry["md5"] = observable["hashes"]["MD5"]
+                            entry["uploadedHash"] = observable["hashes"]["MD5"]
                         else:
                             entry["md5"] = ""
-                        if "SHA-1" in data["data"]["hashes"]:
-                            entry["sha1"] = data["data"]["hashes"]["SHA-1"]
-                            entry["uploadedHash"] = data["data"]["hashes"]["SHA-1"]
+                        if "SHA-1" in observable["hashes"]:
+                            entry["sha1"] = observable["hashes"]["SHA-1"]
+                            entry["uploadedHash"] = observable["hashes"]["SHA-1"]
                         else:
                             entry["sha1"] = ""
-                        if "SHA-256" in data["data"]["hashes"]:
-                            entry["sha256"] = data["data"]["hashes"]["SHA-256"]
-                            entry["uploadedHash"] = data["data"]["hashes"]["SHA-256"]
+                        if "SHA-256" in observable["hashes"]:
+                            entry["sha256"] = observable["hashes"]["SHA-256"]
+                            entry["uploadedHash"] = observable["hashes"]["SHA-256"]
                         else:
                             entry["sha256"] = ""
-                        entry["notes"] = ",".join(data["data"]["labels"])
+                        entry["notes"] = ",".join(observable["labels"])
                         self._query(
                             "post",
                             "/plugin/products/reputation/v3/reputations/custom/upload?append=true",
