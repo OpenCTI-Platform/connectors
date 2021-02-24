@@ -88,6 +88,9 @@ class Misp:
         self.misp_ssl_verify = get_config_variable(
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
         )
+        self.misp_datetime_attribute = get_config_variable(
+            "MISP_DATETIME_ATTRIBUTE", ["misp", "datetime_attribute"], config
+        )
         self.misp_create_report = get_config_variable(
             "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
         )
@@ -190,7 +193,7 @@ class Misp:
             if complex_query_tag is not None:
                 kwargs["tags"] = complex_query_tag
             if last_run is not None:
-                kwargs["timestamp"] = int(last_run.timestamp())
+                kwargs[self.misp_datetime_attribute] = int(last_run.timestamp())
             elif import_from_date is not None:
                 kwargs["date_from"] = import_from_date.strftime("%Y-%m-%d")
 
