@@ -12,6 +12,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
       - TANIUM_URL=https://console.changeme.com
+      - TANIUM_SSL_VERIFY=true
       - TANIUM_LOGIN=ChangeMe
       - TANIUM_PASSWORD=ChangeMe
       - TANIUM_INDICATOR_TYPES=stix,yara,tanium-signal

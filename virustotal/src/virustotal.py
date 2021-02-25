@@ -42,7 +42,7 @@ class VirusTotalConnector:
             if json_data["error"]["message"] == "Quota exceeded":
                 self.helper.log_info("Quota reached, waiting 1 hour.")
                 sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
-            elif json_data["error"]["message"] == "Resource not found.":
+            elif "not found" in json_data["error"]["message"]:
                 self.helper.log_info("File not found on VirusTotal.")
                 return "File not found on VirusTotal."
             else:
