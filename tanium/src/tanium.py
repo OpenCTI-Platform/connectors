@@ -17,12 +17,15 @@ from pycti import OpenCTIConnectorHelper, get_config_variable, StixCyberObservab
 
 
 class TaniumConnectorAlertsGatherer(threading.Thread):
-    def __init__(self, helper, tanium_url, tanium_login, tanium_password):
+    def __init__(
+        self, helper, tanium_url, tanium_login, tanium_password, tanium_ssl_verify
+    ):
         threading.Thread.__init__(self)
         self.helper = helper
         self.tanium_url = tanium_url
         self.tanium_login = tanium_login
         self.tanium_password = tanium_password
+        self.tanium_ssl_verify = tanium_ssl_verify
 
         # Variables
         self.session = None
@@ -41,7 +44,11 @@ class TaniumConnectorAlertsGatherer(threading.Thread):
             "username": self.tanium_login,
             "password": self.tanium_password,
         }
-        r = requests.post(self.tanium_url + "/api/v2/session/login", json=payload)
+        r = requests.post(
+            self.tanium_url + "/api/v2/session/login",
+            json=payload,
+            verify=self.tanium_ssl_verify,
+        )
         if r.status_code == 200:
             result = r.json()
             self.session = result["data"]["session"]
@@ -65,7 +72,12 @@ class TaniumConnectorAlertsGatherer(threading.Thread):
             headers["name"] = payload["name"]
             headers["description"] = payload["description"]
         if method == "get":
-            r = requests.get(self.tanium_url + uri, headers=headers, params=payload)
+            r = requests.get(
+                self.tanium_url + uri,
+                headers=headers,
+                params=payload,
+                verify=self.tanium_ssl_verify,
+            )
         elif method == "post":
             if content_type == "application/octet-stream":
                 r = requests.post(
@@ -75,16 +87,36 @@ class TaniumConnectorAlertsGatherer(threading.Thread):
                 )
             elif type is not None:
                 r = requests.post(
-                    self.tanium_url + uri, headers=headers, data=payload["intelDoc"]
+                    self.tanium_url + uri,
+                    headers=headers,
+                    data=payload["intelDoc"],
+                    verify=self.tanium_ssl_verify,
                 )
             else:
-                r = requests.post(self.tanium_url + uri, headers=headers, json=payload)
+                r = requests.post(
+                    self.tanium_url + uri,
+                    headers=headers,
+                    json=payload,
+                    verify=self.tanium_ssl_verify,
+                )
         elif method == "put":
-            r = requests.put(self.tanium_url + uri, headers=headers, json=payload)
+            r = requests.put(
+                self.tanium_url + uri,
+                headers=headers,
+                json=payload,
+                verify=self.tanium_ssl_verify,
+            )
         elif method == "patch":
-            r = requests.patch(self.tanium_url + uri, headers=headers, json=payload)
+            r = requests.patch(
+                self.tanium_url + uri,
+                headers=headers,
+                json=payload,
+                verify=self.tanium_ssl_verify,
+            )
         elif method == "delete":
-            r = requests.delete(self.tanium_url + uri, headers=headers)
+            r = requests.delete(
+                self.tanium_url + uri, headers=headers, verify=self.tanium_ssl_verify
+            )
         else:
             raise ValueError("Unspported method")
         if r.status_code == 200:
@@ -183,6 +215,9 @@ class TaniumConnector:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.tanium_url = get_config_variable("TANIUM_URL", ["tanium", "url"], config)
+        self.tanium_ssl_verify = get_config_variable(
+            "TANIUM_SSL_VERIFY", ["tanium", "ssl_verify"], config, False, True
+        )
         self.tanium_login = get_config_variable(
             "TANIUM_LOGIN", ["tanium", "login"], config
         )
@@ -256,7 +291,11 @@ class TaniumConnector:
             "username": self.tanium_login,
             "password": self.tanium_password,
         }
-        r = requests.post(self.tanium_url + "/api/v2/session/login", json=payload)
+        r = requests.post(
+            self.tanium_url + "/api/v2/session/login",
+            json=payload,
+            verify=self.tanium_ssl_verify,
+        )
         if r.status_code == 200:
             result = r.json()
             self.session = result["data"]["session"]
@@ -287,35 +326,71 @@ class TaniumConnector:
             if "description" in payload:
                 headers["description"] = payload["description"]
         if method == "get":
-            r = requests.get(self.tanium_url + uri, headers=headers, params=payload)
+            r = requests.get(
+                self.tanium_url + uri,
+                headers=headers,
+                params=payload,
+                verify=self.tanium_ssl_verify,
+            )
         elif method == "post":
             if content_type == "application/octet-stream":
                 r = requests.post(
                     self.tanium_url + uri,
                     headers=headers,
                     data=payload["document"],
+                    verify=self.tanium_ssl_verify,
                 )
             elif type is not None:
                 r = requests.post(
-                    self.tanium_url + uri, headers=headers, data=payload["intelDoc"]
+                    self.tanium_url + uri,
+                    headers=headers,
+                    data=payload["intelDoc"],
+                    verify=self.tanium_ssl_verify,
                 )
             else:
-                r = requests.post(self.tanium_url + uri, headers=headers, json=payload)
+                r = requests.post(
+                    self.tanium_url + uri,
+                    headers=headers,
+                    json=payload,
+                    verify=self.tanium_ssl_verify,
+                )
         elif method == "upload":
             f = open(payload["filename"], "w")
             f.write(payload["content"])
             f.close()
             files = {"hash": open(payload["filename"], "rb")}
-            r = requests.post(self.tanium_url + uri, headers=headers, files=files)
+            r = requests.post(
+                self.tanium_url + uri,
+                headers=headers,
+                files=files,
+                verify=self.tanium_ssl_verify,
+            )
         elif method == "put":
             if content_type == "application/xml":
-                r = requests.put(self.tanium_url + uri, headers=headers, data=payload)
+                r = requests.put(
+                    self.tanium_url + uri,
+                    headers=headers,
+                    data=payload,
+                    verify=self.tanium_ssl_verify,
+                )
             else:
-                r = requests.put(self.tanium_url + uri, headers=headers, json=payload)
+                r = requests.put(
+                    self.tanium_url + uri,
+                    headers=headers,
+                    json=payload,
+                    verify=self.tanium_ssl_verify,
+                )
         elif method == "patch":
-            r = requests.patch(self.tanium_url + uri, headers=headers, json=payload)
+            r = requests.patch(
+                self.tanium_url + uri,
+                headers=headers,
+                json=payload,
+                verify=self.tanium_ssl_verify,
+            )
         elif method == "delete":
-            r = requests.delete(self.tanium_url + uri, headers=headers)
+            r = requests.delete(
+                self.tanium_url + uri, headers=headers, verify=self.tanium_ssl_verify
+            )
         else:
             raise ValueError("Unspported method")
         if r.status_code == 200:
@@ -968,7 +1043,11 @@ class TaniumConnector:
 
     def start(self):
         self.alerts_gatherer = TaniumConnectorAlertsGatherer(
-            self.helper, self.tanium_url, self.tanium_login, self.tanium_password
+            self.helper,
+            self.tanium_url,
+            self.tanium_login,
+            self.tanium_password,
+            self.tanium_ssl_verify,
         )
         self.alerts_gatherer.start()
         self.helper.listen_stream(self._process_message)

@@ -12,6 +12,7 @@ connector:
 
 tanium:
   url: 'https://console.changeme.com'
+  ssl_verify: true
   login: 'ChangeMe'
   password: 'ChangeMe'
   indicator_types: 'stix,yara,tanium-signal'
