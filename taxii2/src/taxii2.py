@@ -12,7 +12,6 @@ from taxii2client.exceptions import TAXIIServiceException
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
-
 class Taxii2Connector:
     """Connector object"""
 
@@ -257,6 +256,7 @@ class Taxii2Connector:
                 return root
         msg = f"Api Root {root_path} does not exist in the TAXII server"
         raise TAXIIServiceException(msg)
+
 
 if __name__ == "__main__":
     try:
