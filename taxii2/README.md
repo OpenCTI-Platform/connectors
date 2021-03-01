@@ -9,13 +9,14 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Docker Env variable | config variable | Description
 | --------------------|-----------------|------------
-| TAXII2_SERVER_URL   | server_url      | Base URL of TAXII2 server. Please note this is *not* the discovery URL, so please delete any trailing `taxii/` or `taxii2/`
+| TAXII2_DISCOVERY_URL   | discovery_url      | Discovery URL of TAXII2 Server
 | TAXII2_USERNAME     | username        | Username credential to access TAXII Server
 | TAXXI2_PASSWORD     | password        | Password credential to access TAXII Server
 | TAXII2_v21          | v2.1            | Boolean statement to determine if the TAXII Server is V2.0 or V2.1. Defaults to False (V2.0)
 | TAXII2_COLLECTIONS  | collections     | Specify what TAXII Collections you want to poll. Syntax Detailed below
 | TAXII2_INITIAL_HISTORY| initial_history| In hours, the "lookback" window for the intial Poll. This will limit the respones only to STIX2 objects that were added to the collection during the specified lookback time. In all subsequent polls, the `interval` configuration option is used to determine the lookback window
 | TAXII2_INTERVAL     | interval        | In hours, the amount of time between each run of the connector. This option also sets the "lookback" window for all polls except the first one
+| VERIFY_SSL          | verify_ssl      | Boolean statement on whether to require an SSL/TLS connection with the TAXII Server. Default to True
 
 
 ### Collections and API roots
@@ -26,6 +27,8 @@ Unfortunately, the introduction of API Roots makes it more complicated to config
 `stix.Enterprise ATT&CK,stix.Mobile ATT&CK`
 
 Furthermore, this argument supports the use of `*` as a wildcard operator. To Poll all collections in the `STIX` API Root, you could use the syntax `stix.*` If you wanted to poll all collections in the server, you can use the syntax `*.*`
+
+Finally, please note that the "title" of an API Root differs from it's pathing in a URL. For example, the title could be "Malware analysis" whereas the URL for an API Root could just be some_url/malware/. In the Collections parameters, please specify the URL path of an API Root, **not** its title
 
 ## Installation
 

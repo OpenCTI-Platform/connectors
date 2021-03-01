@@ -6,9 +6,11 @@ import json
 from datetime import datetime, timedelta
 import yaml
 from requests.exceptions import HTTPError
-from taxii2client.v20 import Server, ApiRoot
+import taxii2client.v20 as tx20
+import taxii2client.v21 as tx21
 from taxii2client.exceptions import TAXIIServiceException
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
 
 
 class Taxii2Connector:
@@ -25,23 +27,29 @@ class Taxii2Connector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        # Extra config
-        self.username = get_config_variable(
+
+        username = get_config_variable(
             "TAXII2_USERNAME", ["taxii2", "username"], config
         )
-        self.password = get_config_variable(
+        password = get_config_variable(
             "TAXII2_PASSWORD", ["taxii2", "password"], config
         )
-        self.is_v21 = get_config_variable("TAXII2_V21", ["taxii2", "v2.1"], config)
-        if self.is_v21:
-            global Server, ApiRoot
-            from taxii2client.v21 import Server, ApiRoot
-
-        self.server_url = get_config_variable(
-            "TAXII2_SERVER_URL", ["taxii2", "server_url"], config
+        server_url = get_config_variable(
+            "TAXII2_DISCOVERY_URL", ["taxii2", "discovery_url"], config
         )
-        discovery_tail = "taxii/" if not self.is_v21 else "taxii2/"
-        self.discovery_url = os.path.join(self.server_url, discovery_tail)
+        self.verify_ssl = get_config_variable(
+            "VERIFY_SSL", ["taxii2", "verify_ssl"], config, default=True
+        )
+
+        # if V21 flag set to true
+        if get_config_variable("TAXII2_V21", ["taxii2", "v2.1"], config, default=True):
+            self.server = tx21.Server(
+                server_url, user=username, password=password, verify=self.verify_ssl
+            )
+        else:
+            self.server = tx20.Server(
+                server_url, user=username, password=password, verify=self.verify_ssl
+            )
 
         self.collections = get_config_variable(
             "TAXII2_COLLECTIONS", ["taxii2", "collections"], config
@@ -56,7 +64,7 @@ class Taxii2Connector:
         )
 
         self.interval = get_config_variable(
-            "TAXII2_INTERVAl", ["taxii2", "interval"], config, True
+            "TAXII2_INTERVAL", ["taxii2", "interval"], config, True
         )
 
         self.update_existing_data = get_config_variable(
@@ -85,7 +93,7 @@ class Taxii2Connector:
                 table[root].add(coll)
             else:
                 table[root] = {coll}
-        print(table)
+
         return table
 
     def get_interval(self):
@@ -101,11 +109,11 @@ class Taxii2Connector:
     def run(self):
         """Run connector on a schedule"""
         while True:
+            self.server.refresh()
             timestamp = int(time.time())
             if self.first_run:
                 last_run = None
                 self.helper.log_info("Connector has never run")
-
             else:
                 last_run = datetime.utcfromtimestamp(
                     self.helper.get_state()["last_run"]
@@ -114,15 +122,16 @@ class Taxii2Connector:
 
             for collection in self.collections:
                 try:
-                    root_title, coll_title = collection.split(".")
-                    if root_title == "*":
+                    root_path, coll_title = collection.split(".")
+                    if root_path == "*":
                         self.poll_all_roots(coll_title)
                     elif coll_title == "*":
-                        self.poll_entire_root(root_title)
+                        root = self._get_root(root_path)
+                        self.poll_entire_root(root)
                     else:
-                        url = os.path.join(self.server_url, root_title)
-                        root = ApiRoot(url, user=self.username, password=self.password)
-                        self.poll(root, coll_title)
+                        root = self._get_root(root_path)
+                        coll = self._get_collection(root, coll_title)
+                        self.poll(coll)
                 except (TAXIIServiceException, HTTPError) as err:
                     self.helper.log_error("Error connecting to TAXII server")
                     self.helper.log_error(err)
@@ -139,13 +148,20 @@ class Taxii2Connector:
         Args:
             coll_title (str): The Name of a Collection
         """
-        server = Server(self.discovery_url, user=self.username, password=self.password)
-        for root in server.api_roots:
+        self.helper.log_info("Polling all API Roots")
+        for root in self.server.api_roots:
             if coll_title == "*":
-                self.poll_entire_root(root.title)
+                self.poll_entire_root(root)
             else:
                 try:
-                    self.poll(root.title, coll_title)
+                    coll = self._get_collection(root, coll_title)
+                except TAXIIServiceException as err:
+                    self.helper.log_error(
+                        f"Error searching for  collection {coll_title} in API Root {root.title}"
+                    )
+                    return
+                try:
+                    self.poll(coll)
                 except TAXIIServiceException as err:
                     msg = (
                         f"Error trying to poll Collection {coll_title} "
@@ -154,23 +170,17 @@ class Taxii2Connector:
                     self.helper.log_error(msg)
                     self.helper.log_error(err)
 
-    def poll_entire_root(self, root_title, conn=None):
+    def poll_entire_root(self, root):
         """
         Polls all Collections in a given API Root
         Args:
-            root_title (str): The Name of an API Root to poll
+            root (taxii2client.v2*.ApiRoot: Api Root to poll
         """
+        self.helper.log_info(f"Polling entire API root {root.title}")
 
-        url = os.path.join(self.server_url, root_title)
-        try:
-            root = ApiRoot(url, user=self.username, password=self.password, conn=conn)
-        except (TAXIIServiceException, HTTPError) as err:
-            self.helper.log_error("Error trying to connec to API root {root_title}")
-            self.helper.log_error(err)
-            return
         for coll in root.collections:
             try:
-                self.poll(root, coll.title)
+                self.poll(coll)
             except TAXIIServiceException as err:
                 msg = (
                     f"Error trying to poll Collection {coll.title} "
@@ -179,14 +189,12 @@ class Taxii2Connector:
                 self.helper.log_error(msg)
                 self.helper.log_error(err)
 
-    def poll(self, root, coll_title):
+    def poll(self, collection):
         """
         Polls a specified collection in a specified API root
         Args:
-            root (taxii2.v2*.ApiRoot): The API Root to poll
-            coll_title (str): The name of the collection to poll
+            colllection (taxii2client.v2*.Collection: THe Collection to poll
         """
-        coll = self._get_collection(root, coll_title)
 
         filters = {}
         if self.first_run:
@@ -196,10 +204,8 @@ class Taxii2Connector:
         if lookback:
             added_after = datetime.now() - timedelta(hours=lookback)
             filters["added_after"] = added_after
-        self.helper.log_info(
-            f"Polling Collection {coll_title} " f"in API Root {root.title}"
-        )
-        self.send_to_server(coll.get_objects(**filters))
+        self.helper.log_info(f"Polling Collection {collection.title}")
+        self.send_to_server(collection.get_objects(**filters))
 
     def send_to_server(self, bundle):
         """
@@ -236,6 +242,21 @@ class Taxii2Connector:
         msg = f"Collection {coll_title} does not exist in API root {root.title}"
         raise TAXIIServiceException(msg)
 
+    def _get_root(self, root_path):
+        """
+        Returns an APi Root object, given a Server and an API Root path
+        Args:
+            Server (taxii2.v2*.Server): The TAXII Server to search for
+            root_path (str): the path of the API root in the URL
+        Returns:
+            The taxii2.v2*.Collection object with the name `coll_title`
+
+        """
+        for root in self.server.api_roots:
+            if root.url.split("/")[-2] == root_path:
+                return root
+        msg = f"Api Root {root_path} does not exist in the TAXII server"
+        raise TAXIIServiceException(msg)
 
 if __name__ == "__main__":
     try:

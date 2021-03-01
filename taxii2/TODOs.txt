@@ -1,0 +1,3 @@
+Change the FETCH all APi roots to be a server call of API roots (easy)
+
+FOr denoting API roots, should it be through url path or titleANoma
