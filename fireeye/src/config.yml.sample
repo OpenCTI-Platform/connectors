@@ -17,3 +17,4 @@ fireeye:
   api_v3_secret: 'ChangeMe'
   collections: 'reports,indicators'
   import_start_date: '2020-01-01'
+  interval: 5 # Required, in minutes

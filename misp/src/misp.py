@@ -88,6 +88,9 @@ class Misp:
         self.misp_ssl_verify = get_config_variable(
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
         )
+        self.misp_datetime_attribute = get_config_variable(
+            "MISP_DATETIME_ATTRIBUTE", ["misp", "datetime_attribute"], config
+        )
         self.misp_create_report = get_config_variable(
             "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
         )
@@ -190,7 +193,7 @@ class Misp:
             if complex_query_tag is not None:
                 kwargs["tags"] = complex_query_tag
             if last_run is not None:
-                kwargs["timestamp"] = int(last_run.timestamp())
+                kwargs[self.misp_datetime_attribute] = int(last_run.timestamp())
             elif import_from_date is not None:
                 kwargs["date_from"] = import_from_date.strftime("%Y-%m-%d")
 
@@ -313,7 +316,7 @@ class Misp:
             # Elements
             event_elements = self.prepare_elements(
                 event["Event"]["Galaxy"],
-                event["Event"]["Tag"],
+                event["Event"]["Tag"] if "Tags" in event["Event"] else [],
                 author,
                 event_markings,
             )
@@ -380,7 +383,8 @@ class Misp:
                     if indicator is not None:
                         indicators.append(indicator)
                         if (
-                            object["meta-category"] == "file"
+                            indicator["indicator"] is not None
+                            and object["meta-category"] == "file"
                             and indicator["indicator"].x_opencti_main_observable_type
                             in FILETYPES
                         ):
@@ -833,34 +837,34 @@ class Misp:
                         object_marking_refs=attribute_markings,
                     )
                     relationships.append(relationship_uses)
-                    if indicator is not None:
-                        relationship_indicates = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
-                            relationship_type="indicates",
-                            created_by_ref=author,
-                            source_ref=indicator.id,
-                            target_ref=relationship_uses.id,
-                            description=attribute["comment"],
-                            confidence=self.helper.connect_confidence_level,
-                            object_marking_refs=attribute_markings,
-                        )
-                        relationships.append(relationship_indicates)
-                    if observable is not None:
-                        relationship_indicates = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
-                            relationship_type="indicates",
-                            created_by_ref=author,
-                            source_ref=observable.id,
-                            target_ref=relationship_uses.id,
-                            description=attribute["comment"],
-                            confidence=self.helper.connect_confidence_level,
-                            object_marking_refs=attribute_markings,
-                        )
-                        relationships.append(relationship_indicates)
+                    # if indicator is not None:
+                    #    relationship_indicates = Relationship(
+                    #        id=OpenCTIStix2Utils.generate_random_stix_id(
+                    #            "relationship"
+                    #        ),
+                    #        relationship_type="indicates",
+                    #        created_by_ref=author,
+                    #        source_ref=indicator.id,
+                    #        target_ref=relationship_uses.id,
+                    #        description=attribute["comment"],
+                    #        confidence=self.helper.connect_confidence_level,
+                    #        object_marking_refs=attribute_markings,
+                    #    )
+                    #    relationships.append(relationship_indicates)
+                    # if observable is not None:
+                    #    relationship_indicates = Relationship(
+                    #        id=OpenCTIStix2Utils.generate_random_stix_id(
+                    #            "relationship"
+                    #        ),
+                    #        relationship_type="indicates",
+                    #        created_by_ref=author,
+                    #        source_ref=observable.id,
+                    #        target_ref=relationship_uses.id,
+                    #        description=attribute["comment"],
+                    #        confidence=self.helper.connect_confidence_level,
+                    #        object_marking_refs=attribute_markings,
+                    #    )
+                    #    relationships.append(relationship_indicates)
             return {
                 "indicator": indicator,
                 "observable": observable,

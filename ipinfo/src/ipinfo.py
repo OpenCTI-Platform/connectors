@@ -1,7 +1,6 @@
 import yaml
 import os
 import requests
-import json
 import pycountry
 
 from stix2 import Relationship, Location, Bundle
@@ -91,13 +90,13 @@ class IpInfoConnector:
         observable_id = observable["standard_id"]
         observable_value = observable["value"]
         # Get the geo loc from the API
-        api_url = "https://ipinfo.io/" + observable_value + "?token=" + self.token
+        api_url = "https://ipinfo.io/" + observable_value + "/json/?token=" + self.token
         response = requests.request(
             "GET",
             api_url,
             headers={"accept": "application/json", "content-type": "application/json"},
         )
-        json_data = json.loads(response.text)
+        json_data = response.json()
         country = pycountry.countries.get(alpha_2=json_data["country"])
         if country is None:
             raise ValueError(

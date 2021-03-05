@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'GreyNoise'
+  scope: 'ipv4-addr'
+  auto: true # Enable/disable auto-enrichment of observables
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+greynoise:
+  key: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'
+  name: 'GreyNoise sensors'
+  description: 'GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.'
+  sighting_not_seen: false
+  spoofable_confidence_level: 30

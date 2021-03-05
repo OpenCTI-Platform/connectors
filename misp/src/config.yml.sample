@@ -15,6 +15,7 @@ misp:
   url: 'http://localhost' # Required
   key: 'ChangeMe' # Required
   ssl_verify: False # Required
+  datetime_attribute: 'timestamp' # Required, filter to be used in query for new MISP events
   create_reports: True # Required, create report for MISP event
   create_indicators: True # Required, create indicators for attributes
   create_observables: True # Required, create observables for attributes

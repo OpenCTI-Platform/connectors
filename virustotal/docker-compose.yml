@@ -1,14 +1,14 @@
 version: '3'
 services:
   connector-virustotal:
-    image: opencti/connector-virustotal:4.0.3
+    image: opencti/connector-virustotal:4.2.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=VirusTotal
-      - CONNECTOR_SCOPE=StixFile
+      - CONNECTOR_SCOPE=StixFile,Artifact
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info

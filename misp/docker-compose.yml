@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-misp:
-    image: opencti/connector-misp:4.0.3
+    image: opencti/connector-misp:4.2.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -15,6 +15,7 @@ services:
       - MISP_URL=http://localhost # Required
       - MISP_KEY=ChangeMe # Required
       - MISP_SSL_VERIFY=False # Required
+      - MISP_DATETIME_ATTRIBUTE=timestamp # Required, filter to be used in query for new MISP events
       - MISP_CREATE_REPORTS=True # Required, create report for MISP event
       - MISP_CREATE_INDICATORS=True # Required, create indicators from attributes
       - MISP_CREATE_OBSERVABLES=True # Required, create observables from attributes

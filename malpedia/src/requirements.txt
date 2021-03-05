@@ -1,5 +1,2 @@
-git+https://github.com/OpenCTI-Platform/client-python@master
-PyYAML==5.3.1
-pika==1.1.0
-pydantic==1.7.2
-python-dateutil==2.8.1
+pycti==4.2.4
+pydantic==1.7.3

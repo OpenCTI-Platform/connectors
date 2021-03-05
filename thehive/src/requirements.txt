@@ -1,0 +1,2 @@
+pycti==4.2.4
+thehive4py

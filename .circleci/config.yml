@@ -133,6 +133,30 @@ jobs:
           name: Build Docker image opencti/connector-kaspersky
           command: docker build -t opencti/connector-kaspersky:latest . && docker tag opencti/connector-kaspersky:latest opencti/connector-kaspersky:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/greynoise
+          name: Build Docker image opencti/connector-greynoise
+          command: docker build -t opencti/connector-greynoise:latest . && docker tag opencti/connector-greynoise:latest opencti/connector-greynoise:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/taxii2
+          name: Build Docker image opencti/connector-taxii2
+          command: docker build -t opencti/connector-taxii2:latest . && docker tag opencti/connector-taxii2:latest opencti/connector-taxii2:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/thehive
+          name: Build Docker image opencti/connector-thehive
+          command: docker build -t opencti/connector-thehive:latest . && docker tag opencti/connector-thehive:latest opencti/connector-thehive:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/abuseipdb
+          name: Build Docker image opencti/connector-abuseipdb
+          command: docker build -t opencti/connector-abuseipdb:latest . && docker tag opencti/connector-abuseipdb:latest opencti/connector-abuseipdb:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/urlhaus
+          name: Build Docker image opencti/connector-urlhaus
+          command: docker build -t opencti/connector-urlhaus:latest . && docker tag opencti/connector-urlhaus:latest opencti/connector-urlhaus:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/malbeacon
+          name: Build Docker image opencti/connector-malbeacon
+          command: docker build -t opencti/connector-malbeacon:latest . && docker tag opencti/connector-malbeacon:latest opencti/connector-malbeacon:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -186,6 +210,18 @@ jobs:
             docker push opencti/connector-fireeye:${CIRCLE_TAG}
             docker push opencti/connector-kaspersky:latest
             docker push opencti/connector-kaspersky:${CIRCLE_TAG}
+            docker push opencti/connector-greynoise:latest
+            docker push opencti/connector-greynoise:${CIRCLE_TAG}
+            docker push opencti/connector-taxii2:latest
+            docker push opencti/connector-taxii2:${CIRCLE_TAG}
+            docker push opencti/connector-thehive:latest
+            docker push opencti/connector-thehive:${CIRCLE_TAG}
+            docker push opencti/connector-abuseipdb:latest
+            docker push opencti/connector-abuseipdb:${CIRCLE_TAG}
+            docker push opencti/connector-urlhaus:latest
+            docker push opencti/connector-urlhaus:${CIRCLE_TAG}
+            docker push opencti/connector-malbeacon:latest
+            docker push opencti/connector-malbeacon:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -294,6 +330,30 @@ jobs:
           name: Build Docker image opencti/connector-kaspersky
           command: docker build -t opencti/connector-kaspersky:rolling .
       - run:
+          working_directory: ~/opencti/greynoise
+          name: Build Docker image opencti/connector-greynoise
+          command: docker build -t opencti/connector-greynoise:rolling .
+      - run:
+          working_directory: ~/opencti/taxii2
+          name: Build Docker image opencti/connector-taxii2
+          command: docker build -t opencti/connector-taxii2:rolling .
+      - run:
+          working_directory: ~/opencti/thehive
+          name: Build Docker image opencti/connector-thehive
+          command: docker build -t opencti/connector-thehive:rolling .
+      - run:
+          working_directory: ~/opencti/abuseipdb
+          name: Build Docker image opencti/connector-abuseipdb
+          command: docker build -t opencti/connector-abuseipdb:rolling .
+      - run:
+          working_directory: ~/opencti/urlhaus
+          name: Build Docker image opencti/connector-urlhaus
+          command: docker build -t opencti/connector-urlhaus:rolling .
+      - run:
+          working_directory: ~/opencti/malbeacon
+          name: Build Docker image opencti/connector-malbeacon
+          command: docker build -t opencti/connector-malbeacon:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -322,6 +382,12 @@ jobs:
             docker push opencti/connector-synchronizer:rolling
             docker push opencti/connector-fireeye:rolling
             docker push opencti/connector-kaspersky:rolling
+            docker push opencti/connector-greynoise:rolling
+            docker push opencti/connector-taxii2:rolling
+            docker push opencti/connector-thehive:rolling
+            docker push opencti/connector-abuseipdb:rolling
+            docker push opencti/connector-urlhaus:rolling
+            docker push opencti/connector-malbeacon:rolling
 workflows:
   version: 2
   opencti:

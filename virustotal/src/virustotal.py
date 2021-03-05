@@ -42,7 +42,7 @@ class VirusTotalConnector:
             if json_data["error"]["message"] == "Quota exceeded":
                 self.helper.log_info("Quota reached, waiting 1 hour.")
                 sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
-            elif json_data["error"]["message"] == "Resource not found.":
+            elif "not found" in json_data["error"]["message"]:
                 self.helper.log_info("File not found on VirusTotal.")
                 return "File not found on VirusTotal."
             else:
@@ -73,11 +73,11 @@ class VirusTotalConnector:
                     id=final_observable["id"], key="name", value=attributes["names"][0]
                 )
                 del attributes["names"][0]
-                for name in attributes["names"]:
+                if len(attributes["names"]) > 0:
                     self.helper.api.stix_cyber_observable.update_field(
                         id=final_observable["id"],
                         key="x_opencti_additional_names",
-                        value=name,
+                        value=attributes["names"],
                     )
 
             # Create external reference
