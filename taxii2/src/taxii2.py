@@ -63,7 +63,7 @@ class Taxii2Connector:
         )
 
         self.interval = get_config_variable(
-            "TAXII2_INTERVAL", ["taxii2", "interval"], config, True
+            "TAXII2_INTERVAL", ["taxii2", "interval"], config, True, 1
         )
 
         self.update_existing_data = get_config_variable(
