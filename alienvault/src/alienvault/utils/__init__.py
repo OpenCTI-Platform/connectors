@@ -198,10 +198,10 @@ def create_indicator(
     x_opencti_main_observable_type: Optional[str] = None,
 ) -> Indicator:
     """Create an indicator."""
-    custom_properies: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
+    custom_properties: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
 
     if x_opencti_main_observable_type is not None:
-        custom_properies[
+        custom_properties[
             X_OPENCTI_MAIN_OBSERVABLE_TYPE
         ] = x_opencti_main_observable_type
 
@@ -216,7 +216,7 @@ def create_indicator(
         labels=labels,
         confidence=confidence,
         object_marking_refs=object_markings,
-        custom_properties=custom_properies,
+        custom_properties=custom_properties,
     )
 
 
