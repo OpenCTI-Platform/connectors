@@ -59,7 +59,7 @@ class PulseImporter:
 
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
-        self.work_id = None
+        self.work_id: Optional[str] = None
 
     def run(self, state: Mapping[str, Any], work_id: str) -> Mapping[str, Any]:
         """Run importer."""

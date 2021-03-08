@@ -365,16 +365,19 @@ class PulseBundleBuilder:
             indicator_based_on_observable = None
 
             if self.create_indicators:
-                pattern = factory.create_indicator_pattern(pulse_indicator_value)
+                indicator_pattern = factory.create_indicator_pattern(
+                    pulse_indicator_value
+                )
                 pattern_type = self._INDICATOR_PATTERN_TYPE_STIX
 
                 indicator = self._create_indicator(
                     pulse_indicator_value,
                     self._create_indicator_description(pulse_indicator),
-                    pattern,
+                    indicator_pattern.pattern,
                     pattern_type,
                     pulse_indicator.created,
                     labels,
+                    main_observable_type=indicator_pattern.main_observable_type,
                 )
 
                 if observable is not None:
@@ -428,6 +431,7 @@ class PulseBundleBuilder:
         pattern_type: str,
         valid_from: datetime,
         labels: List[str],
+        main_observable_type: Optional[str] = None,
     ) -> Indicator:
         return create_indicator(
             pattern,
@@ -439,6 +443,7 @@ class PulseBundleBuilder:
             labels=labels,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
+            x_opencti_main_observable_type=main_observable_type,
         )
 
     @staticmethod
