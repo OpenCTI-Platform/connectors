@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import (
     Any,
     Callable,
+    Dict,
     Generator,
     List,
     Mapping,
@@ -49,10 +50,12 @@ from crowdstrike.utils.constants import (
     X_OPENCTI_ALIASES,
     X_OPENCTI_FILES,
     X_OPENCTI_LOCATION_TYPE,
+    X_OPENCTI_MAIN_OBSERVABLE_TYPE,
     X_OPENCTI_REPORT_STATUS,
     X_OPENCTI_SCORE,
 )
 from crowdstrike.utils.indicators import (
+    IndicatorPattern,
     create_indicator_pattern_cryptocurrency_wallet,
     create_indicator_pattern_domain_name,
     create_indicator_pattern_email_address,
@@ -100,7 +103,7 @@ class ObservationFactory(NamedTuple):
     """Observation factory."""
 
     create_observable: Callable[[ObservableProperties], _Observable]
-    create_indicator_pattern: Callable[[str], str]
+    create_indicator_pattern: Callable[[str], IndicatorPattern]
 
 
 OBSERVATION_FACTORY_IPV4_ADDRESS = ObservationFactory(
@@ -261,6 +264,14 @@ def datetime_utc_now() -> datetime:
 def datetime_utc_epoch_start() -> datetime:
     """Get Unix epoch start as UTC datetime."""
     return timestamp_to_datetime(0)
+
+
+def is_timestamp_in_future(timestamp: int) -> bool:
+    """Return True if the timestamp is in the future, otherwise False."""
+    timestamp_datetime = timestamp_to_datetime(timestamp)
+    now = datetime_utc_now()
+
+    return timestamp_datetime > now
 
 
 def normalize_start_time_and_stop_time(
@@ -965,8 +976,16 @@ def create_indicator(
     labels: Optional[List[str]] = None,
     confidence: Optional[int] = None,
     object_markings: Optional[List[MarkingDefinition]] = None,
+    x_opencti_main_observable_type: Optional[str] = None,
 ) -> STIXIndicator:
     """Create an indicator."""
+    custom_properties: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
+
+    if x_opencti_main_observable_type is not None:
+        custom_properties[
+            X_OPENCTI_MAIN_OBSERVABLE_TYPE
+        ] = x_opencti_main_observable_type
+
     return STIXIndicator(
         id=_create_random_identifier("indicator"),
         created_by_ref=created_by,
@@ -979,5 +998,5 @@ def create_indicator(
         labels=labels,
         confidence=confidence,
         object_marking_refs=object_markings,
-        custom_properties={X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE},
+        custom_properties=custom_properties,
     )
