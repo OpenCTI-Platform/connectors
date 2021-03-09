@@ -23,5 +23,6 @@ X_OPENCTI_REPORT_STATUS = "x_opencti_report_status"
 X_OPENCTI_SCORE = "x_opencti_score"
 X_OPENCTI_LABELS = "x_opencti_labels"
 X_OPENCTI_CREATED_BY_REF = "x_opencti_created_by_ref"
+X_OPENCTI_MAIN_OBSERVABLE_TYPE = "x_opencti_main_observable_type"
 
 DEFAULT_X_OPENCTI_SCORE = 50

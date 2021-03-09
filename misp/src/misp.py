@@ -470,7 +470,7 @@ class Misp:
             # Create the report if needed
             if self.misp_create_report and len(object_refs) > 0:
                 report = Report(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("report"),
+                    id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
                     published=parse(event["Event"]["date"]),
