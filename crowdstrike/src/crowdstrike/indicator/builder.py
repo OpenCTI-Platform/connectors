@@ -331,7 +331,7 @@ class IndicatorBundleBuilder:
         indicator_published = self.indicator.published_date
 
         return create_indicator(
-            indicator_pattern,
+            indicator_pattern.pattern,
             indicator_pattern_type,
             created_by=self.author,
             name=indicator_value,
@@ -340,6 +340,7 @@ class IndicatorBundleBuilder:
             labels=labels,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
+            x_opencti_main_observable_type=indicator_pattern.main_observable_type,
         )
 
     def _create_based_on_relationships(
