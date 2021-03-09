@@ -242,7 +242,7 @@ class AlienVault:
             except (KeyboardInterrupt, SystemExit):
                 self._info("Connector stop")
                 exit(0)
-            except Exception as e:
+            except Exception as e:  # noqa: B902
                 self._error("Internal error: {0}", str(e))
                 self._sleep()
 
