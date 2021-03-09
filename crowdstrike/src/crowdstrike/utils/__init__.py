@@ -266,6 +266,14 @@ def datetime_utc_epoch_start() -> datetime:
     return timestamp_to_datetime(0)
 
 
+def is_timestamp_in_future(timestamp: int) -> bool:
+    """Return True if the timestamp is in the future, otherwise False."""
+    timestamp_datetime = timestamp_to_datetime(timestamp)
+    now = datetime_utc_now()
+
+    return timestamp_datetime > now
+
+
 def normalize_start_time_and_stop_time(
     start_time: datetime, stop_time: datetime
 ) -> Tuple[datetime, datetime]:
