@@ -406,7 +406,7 @@ class KasperskyConnector:
             except (KeyboardInterrupt, SystemExit):
                 self._info("Kaspersky connector stop")
                 exit(0)
-            except Exception as e:
+            except Exception as e:  # noqa: B902
                 self._error("Kaspersky connector internal error: {0}", str(e))
                 self._sleep()
 

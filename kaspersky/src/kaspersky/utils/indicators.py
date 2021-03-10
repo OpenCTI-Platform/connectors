@@ -1,6 +1,6 @@
 """Kaspersky indicator utilities module."""
 
-from typing import List
+from typing import List, NamedTuple
 
 from stix2 import (  # type: ignore
     EqualityComparisonExpression,
@@ -10,6 +10,48 @@ from stix2 import (  # type: ignore
 )
 
 from kaspersky.utils.common import is_ip_address, is_ipv4_address
+
+
+_OBJECT_TYPE_IPV4_ADDR = "ipv4-addr"
+_OBJECT_TYPE_IPV6_ADDR = "ipv6-addr"
+_OBJECT_TYPE_DOMAIN_NAME = "domain-name"
+_OBJECT_TYPE_HOSTNAME = "x-opencti-hostname"
+_OBJECT_TYPE_EMAIL_ADDR = "email-addr"
+_OBJECT_TYPE_EMAIL_MESSAGE = "email-message"
+_OBJECT_TYPE_URL = "url"
+_OBJECT_TYPE_FILE = "file"
+_OBJECT_TYPE_MUTEX = "mutex"
+_OBJECT_TYPE_CRYPTOCURRENCY_WALLET = "x-opencti-cryptocurrency-wallet"
+_OBJECT_TYPE_PROCESS = "process"
+_OBJECT_TYPE_X509_CERTIFICATE = "x509-certificate"
+_OBJECT_TYPE_USER_AGENT = "x-opencti-user-agent"
+
+_HASH_MD5 = "MD5"
+_HASH_SHA1 = "SHA-1"
+_HASH_SHA256 = "SHA-256"
+
+_OBJECT_TYPE_TO_OBSERVABLE_TYPE_MAP = {
+    _OBJECT_TYPE_IPV4_ADDR: "IPv4-Addr",
+    _OBJECT_TYPE_IPV6_ADDR: "IPv6-Addr",
+    _OBJECT_TYPE_DOMAIN_NAME: "Domain-Name",
+    _OBJECT_TYPE_HOSTNAME: "X-OpenCTI-Hostname",
+    _OBJECT_TYPE_EMAIL_ADDR: "Email-Addr",
+    _OBJECT_TYPE_EMAIL_MESSAGE: "Email-Message",
+    _OBJECT_TYPE_URL: "Url",
+    _OBJECT_TYPE_FILE: "StixFile",
+    _OBJECT_TYPE_MUTEX: "Mutex",
+    _OBJECT_TYPE_CRYPTOCURRENCY_WALLET: "X-OpenCTI-Cryptocurrency-Wallet",
+    _OBJECT_TYPE_PROCESS: "Process",
+    _OBJECT_TYPE_X509_CERTIFICATE: "X509-Certificate",
+    _OBJECT_TYPE_USER_AGENT: "X-OpenCTI-User-Agent",
+}
+
+
+class IndicatorPattern(NamedTuple):
+    """Indicator pattern."""
+
+    pattern: str
+    main_observable_type: str
 
 
 def _create_equality_observation_expression_str(
@@ -26,28 +68,36 @@ def _create_object_path(object_type: str, property_path: List[str]) -> ObjectPat
     return ObjectPath(object_type, property_path)
 
 
-def _create_indicator_pattern(
-    object_type: str, property_path: List[str], value: str
-) -> str:
+def _create_pattern(object_type: str, property_path: List[str], value: str) -> str:
     object_path = _create_object_path(object_type, property_path)
     return _create_equality_observation_expression_str(object_path, value)
 
 
-def _create_indicator_pattern_with_value(object_type: str, value: str) -> str:
+def _create_indicator_pattern(
+    object_type: str, property_path: List[str], value: str
+) -> IndicatorPattern:
+    pattern = _create_pattern(object_type, property_path, value)
+    main_observable_type = _OBJECT_TYPE_TO_OBSERVABLE_TYPE_MAP[object_type]
+    return IndicatorPattern(pattern=pattern, main_observable_type=main_observable_type)
+
+
+def _create_indicator_pattern_with_value(
+    object_type: str, value: str
+) -> IndicatorPattern:
     return _create_indicator_pattern(object_type, ["value"], value)
 
 
-def create_indicator_pattern_ipv4_address(value: str) -> str:
+def create_indicator_pattern_ipv4_address(value: str) -> IndicatorPattern:
     """Create an indicator pattern for an IPv4 address."""
-    return _create_indicator_pattern_with_value("ipv4-addr", value)
+    return _create_indicator_pattern_with_value(_OBJECT_TYPE_IPV4_ADDR, value)
 
 
-def create_indicator_pattern_ipv6_address(value: str) -> str:
+def create_indicator_pattern_ipv6_address(value: str) -> IndicatorPattern:
     """Create an indicator pattern for an IPv6 address."""
-    return _create_indicator_pattern_with_value("ipv6-addr", value)
+    return _create_indicator_pattern_with_value(_OBJECT_TYPE_IPV6_ADDR, value)
 
 
-def create_indicator_pattern_ip_address(value: str) -> str:
+def create_indicator_pattern_ip_address(value: str) -> IndicatorPattern:
     """Create an indicator pattern for an IPv4 address or an IPv6 address."""
     if is_ipv4_address(value):
         return create_indicator_pattern_ipv4_address(value)
@@ -55,7 +105,7 @@ def create_indicator_pattern_ip_address(value: str) -> str:
         return create_indicator_pattern_ipv6_address(value)
 
 
-def create_indicator_pattern_network_activity(value: str) -> str:
+def create_indicator_pattern_network_activity(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a network activity."""
     if is_ip_address(value):
         return create_indicator_pattern_ip_address(value)
@@ -63,106 +113,118 @@ def create_indicator_pattern_network_activity(value: str) -> str:
         return create_indicator_pattern_domain_name(value)
 
 
-def create_indicator_pattern_domain_name(value: str) -> str:
+def create_indicator_pattern_domain_name(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a domain name."""
-    return _create_indicator_pattern_with_value("domain-name", value)
+    return _create_indicator_pattern_with_value(_OBJECT_TYPE_DOMAIN_NAME, value)
 
 
-def create_indicator_pattern_hostname(value: str) -> str:
+def create_indicator_pattern_hostname(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a hostname."""
-    return _create_indicator_pattern_with_value("x-opencti-hostname", value)
+    return _create_indicator_pattern_with_value(_OBJECT_TYPE_HOSTNAME, value)
 
 
-def create_indicator_pattern_email_address(value: str) -> str:
+def create_indicator_pattern_email_address(value: str) -> IndicatorPattern:
     """Create an indicator pattern for an email address."""
-    return _create_indicator_pattern_with_value("email-addr", value)
+    return _create_indicator_pattern_with_value(_OBJECT_TYPE_EMAIL_ADDR, value)
 
 
-def create_indicator_pattern_url(value: str) -> str:
+def create_indicator_pattern_url(value: str) -> IndicatorPattern:
     """Create an indicator pattern for an URL."""
-    return _create_indicator_pattern_with_value("url", value)
+    return _create_indicator_pattern_with_value(_OBJECT_TYPE_URL, value)
 
 
-def _create_indicator_pattern_file_hashes(algorithm: str, value: str) -> str:
-    return _create_indicator_pattern("file", ["hashes", algorithm], value)
+def _create_indicator_pattern_file_hashes(
+    algorithm: str, value: str
+) -> IndicatorPattern:
+    return _create_indicator_pattern(_OBJECT_TYPE_FILE, ["hashes", algorithm], value)
 
 
-def create_indicator_pattern_file_md5(value: str) -> str:
+def create_indicator_pattern_file_md5(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a MD5 hash of a file."""
-    return _create_indicator_pattern_file_hashes("MD5", value)
+    return _create_indicator_pattern_file_hashes(_HASH_MD5, value)
 
 
-def create_indicator_pattern_file_sha1(value: str) -> str:
+def create_indicator_pattern_file_sha1(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a SHA-1 hash of a file."""
-    return _create_indicator_pattern_file_hashes("SHA-1", value)
+    return _create_indicator_pattern_file_hashes(_HASH_SHA1, value)
 
 
-def create_indicator_pattern_file_sha256(value: str) -> str:
+def create_indicator_pattern_file_sha256(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a SHA-256 hash of a file."""
-    return _create_indicator_pattern_file_hashes("SHA-256", value)
+    return _create_indicator_pattern_file_hashes(_HASH_SHA256, value)
 
 
-def _create_indicator_pattern_with_name(object_type: str, name: str) -> str:
+def _create_indicator_pattern_with_name(
+    object_type: str, name: str
+) -> IndicatorPattern:
     return _create_indicator_pattern(object_type, ["name"], name)
 
 
-def create_indicator_pattern_file_name(name: str) -> str:
+def create_indicator_pattern_file_name(name: str) -> IndicatorPattern:
     """Create an indicator pattern for a file name."""
-    return _create_indicator_pattern_with_name("file", name)
+    return _create_indicator_pattern_with_name(_OBJECT_TYPE_FILE, name)
 
 
-def create_indicator_pattern_mutex(name: str) -> str:
+def create_indicator_pattern_mutex(name: str) -> IndicatorPattern:
     """Create an indicator pattern for a mutex."""
-    return _create_indicator_pattern_with_name("mutex", name)
+    return _create_indicator_pattern_with_name(_OBJECT_TYPE_MUTEX, name)
 
 
-def create_indicator_pattern_cryptocurrency_wallet(value: str) -> str:
+def create_indicator_pattern_cryptocurrency_wallet(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a cryptocurrency wallet."""
     return _create_indicator_pattern_with_value(
-        "x-opencti-cryptocurrency-wallet", value
+        _OBJECT_TYPE_CRYPTOCURRENCY_WALLET, value
     )
 
 
-def _create_indicator_pattern_windows_service_ext(prop: str, value: str) -> str:
+def _create_indicator_pattern_windows_service_ext(
+    prop: str, value: str
+) -> IndicatorPattern:
     return _create_indicator_pattern(
-        "process", ["extensions", "windows-service-ext", prop], value
+        _OBJECT_TYPE_PROCESS, ["extensions", "windows-service-ext", prop], value
     )
 
 
-def create_indicator_pattern_windows_service_name(name: str) -> str:
+def create_indicator_pattern_windows_service_name(name: str) -> IndicatorPattern:
     """Create an indicator pattern for a Windows service name."""
     return _create_indicator_pattern_windows_service_ext("service_name", name)
 
 
-def create_indicator_pattern_windows_service_display_name(name: str) -> str:
+def create_indicator_pattern_windows_service_display_name(
+    name: str,
+) -> IndicatorPattern:
     """Create an indicator pattern for a Windows service display name."""
     return _create_indicator_pattern_windows_service_ext("display_name", name)
 
 
-def _create_indicator_pattern_x509_certificate(prop: str, value: str) -> str:
-    return _create_indicator_pattern("x509-certificate", [prop], value)
+def _create_indicator_pattern_x509_certificate(
+    prop: str, value: str
+) -> IndicatorPattern:
+    return _create_indicator_pattern(_OBJECT_TYPE_X509_CERTIFICATE, [prop], value)
 
 
-def create_indicator_pattern_x509_certificate_serial_number(value: str) -> str:
+def create_indicator_pattern_x509_certificate_serial_number(
+    value: str,
+) -> IndicatorPattern:
     """Create an indicator pattern for a X509 certificate serial number."""
     return _create_indicator_pattern_x509_certificate("serial_number", value)
 
 
-def create_indicator_pattern_x509_certificate_subject(value: str) -> str:
+def create_indicator_pattern_x509_certificate_subject(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a X509 certificate subject."""
     return _create_indicator_pattern_x509_certificate("subject", value)
 
 
-def create_indicator_pattern_x509_certificate_issuer(value: str) -> str:
+def create_indicator_pattern_x509_certificate_issuer(value: str) -> IndicatorPattern:
     """Create an indicator pattern for a X509 certificate issuer."""
     return _create_indicator_pattern_x509_certificate("issuer", value)
 
 
-def create_indicator_pattern_user_agent(value: str) -> str:
+def create_indicator_pattern_user_agent(value: str) -> IndicatorPattern:
     """Create an indicator pattern for an user-agent."""
-    return _create_indicator_pattern_with_value("x-opencti-user-agent", value)
+    return _create_indicator_pattern_with_value(_OBJECT_TYPE_USER_AGENT, value)
 
 
-def create_indicator_pattern_email_message_subject(value: str) -> str:
+def create_indicator_pattern_email_message_subject(value: str) -> IndicatorPattern:
     """Create an indicator pattern for an email message subject."""
-    return _create_indicator_pattern("email-message", ["subject"], value)
+    return _create_indicator_pattern(_OBJECT_TYPE_EMAIL_MESSAGE, ["subject"], value)

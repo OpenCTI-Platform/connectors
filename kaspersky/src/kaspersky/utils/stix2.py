@@ -2,7 +2,7 @@
 
 import base64
 from datetime import datetime
-from typing import Any, Callable, List, Mapping, NamedTuple, Optional, Union
+from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Union
 
 from pycti import OpenCTIStix2Utils  # type: ignore
 from pycti.utils.constants import LocationTypes  # type: ignore
@@ -27,10 +27,12 @@ from kaspersky.utils.common import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_FILES,
     X_OPENCTI_LOCATION_TYPE,
+    X_OPENCTI_MAIN_OBSERVABLE_TYPE,
     X_OPENCTI_REPORT_STATUS,
     X_OPENCTI_SCORE,
 )
 from kaspersky.utils.indicators import (
+    IndicatorPattern,
     create_indicator_pattern_cryptocurrency_wallet,
     create_indicator_pattern_domain_name,
     create_indicator_pattern_email_address,
@@ -116,7 +118,7 @@ class ObservationFactory(NamedTuple):
     """Observation factory."""
 
     create_observable: Callable[[ObservableProperties], _Observable]
-    create_indicator_pattern: Callable[[str], str]
+    create_indicator_pattern: Callable[[str], IndicatorPattern]
 
     def create(self, config: ObservationConfig) -> Observation:
         """Create an observation."""
@@ -150,14 +152,14 @@ class ObservationFactory(NamedTuple):
         indicator_based_on_observable = None
 
         if create_indicators:
-            pattern = self.create_indicator_pattern(value)
+            indicator_pattern = self.create_indicator_pattern(value)
             pattern_type = _INDICATOR_PATTERN_TYPE_STIX
 
             if modified is not None and created is not None and created > modified:
                 created, modified = modified, created
 
             indicator = create_indicator(
-                pattern,
+                indicator_pattern.pattern,
                 pattern_type,
                 created_by=created_by,
                 created=created,
@@ -168,6 +170,7 @@ class ObservationFactory(NamedTuple):
                 labels=labels,
                 confidence=confidence,
                 object_markings=object_markings,
+                x_opencti_main_observable_type=indicator_pattern.main_observable_type,
             )
 
             if observable is not None:
@@ -589,8 +592,16 @@ def create_indicator(
     labels: Optional[List[str]] = None,
     confidence: Optional[int] = None,
     object_markings: Optional[List[MarkingDefinition]] = None,
+    x_opencti_main_observable_type: Optional[str] = None,
 ) -> Indicator:
     """Create an indicator."""
+    custom_properties: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
+
+    if x_opencti_main_observable_type is not None:
+        custom_properties[
+            X_OPENCTI_MAIN_OBSERVABLE_TYPE
+        ] = x_opencti_main_observable_type
+
     return Indicator(
         id=_create_random_identifier("indicator"),
         created_by_ref=created_by,
@@ -604,5 +615,5 @@ def create_indicator(
         labels=labels,
         confidence=confidence,
         object_marking_refs=object_markings,
-        custom_properties={X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE},
+        custom_properties=custom_properties,
     )
