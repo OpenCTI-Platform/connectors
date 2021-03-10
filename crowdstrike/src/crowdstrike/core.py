@@ -23,6 +23,7 @@ from crowdstrike.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
+    is_timestamp_in_future,
     timestamp_to_datetime,
 )
 from crowdstrike.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
@@ -76,8 +77,6 @@ class CrowdStrike:
         """Initialize CrowdStrike connector."""
         config = self._read_configuration()
 
-        self.helper = OpenCTIConnectorHelper(config)
-
         # CrowdStrike connector configuration
         base_url = self._get_configuration(config, self._CONFIG_BASE_URL)
         client_id = self._get_configuration(config, self._CONFIG_CLIENT_ID)
@@ -114,10 +113,14 @@ class CrowdStrike:
         actor_start_timestamp = self._get_configuration(
             config, self._CONFIG_ACTOR_START_TIMESTAMP, is_number=True
         )
+        if is_timestamp_in_future(actor_start_timestamp):
+            raise ValueError("Actor start timestamp is in the future")
 
         report_start_timestamp = self._get_configuration(
             config, self._CONFIG_REPORT_START_TIMESTAMP, is_number=True
         )
+        if is_timestamp_in_future(report_start_timestamp):
+            raise ValueError("Report start timestamp is in the future")
 
         report_status_str = self._get_configuration(config, self._CONFIG_REPORT_STATUS)
         report_status = self._convert_report_status_str_to_report_status_int(
@@ -144,6 +147,8 @@ class CrowdStrike:
         indicator_start_timestamp = self._get_configuration(
             config, self._CONFIG_INDICATOR_START_TIMESTAMP, is_number=True
         )
+        if is_timestamp_in_future(indicator_start_timestamp):
+            raise ValueError("Indicator start timestamp is in the future")
 
         indicator_exclude_types_str = self._get_configuration(
             config, self._CONFIG_INDICATOR_EXCLUDE_TYPES
@@ -160,7 +165,10 @@ class CrowdStrike:
 
         author = self._create_author()
 
-        # Create CrowdStrike client and importers
+        # Create OpenCTI connector helper.
+        self.helper = OpenCTIConnectorHelper(config)
+
+        # Create CrowdStrike client and importers.
         client = CrowdStrikeClient(base_url, client_id, client_secret)
 
         # Create importers.
