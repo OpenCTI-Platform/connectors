@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-fireeye:
-    image: opencti/connector-fireeye:4.2.4
+    image: opencti/connector-fireeye:4.3.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
