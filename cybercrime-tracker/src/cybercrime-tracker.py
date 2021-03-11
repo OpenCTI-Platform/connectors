@@ -167,176 +167,176 @@ class Cybercrimetracker:
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
-
-                    # Get Feed Content
-                    feed = feedparser.parse(self.feed_url)
-
-                    self.helper.log_info(
-                        "Found: {} entries.".format(len(feed["entries"]))
-                    )
-
-                    self.feed_summary = {
-                        "Source": feed["feed"]["title"],
-                        "Date": self._time_to_datetime(
-                            feed["feed"]["published_parsed"]
-                        ),
-                        "Details": feed["feed"]["subtitle"],
-                        "Link": feed["feed"]["link"],
-                    }
-
-                    # Create the bundle
-                    bundle_objects = list()
-
-                    organization = stix2.Identity(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
-                        name="CYBERCRIME-TRACKER.NET",
-                        identity_class="organization",
-                        description="Tracker collecting and sharing daily updates of C2 IPs/Urls. http://cybercrime-tracker.net",
-                    )
-                    bundle_objects.append(organization)
-                    for entry in feed["entries"]:
-                        parsed_entry = self.parse_feed_entry(entry)
-                        external_reference = stix2.ExternalReference(
-                            source_name="{}".format(self.feed_summary["Source"]),
-                            url=parsed_entry["ext_link"],
+                    try:
+                        self.helper.log_info("Parsing feed on " + self.feed_url)
+                        # Get Feed Content
+                        feed = feedparser.parse(self.feed_url)
+                        self.helper.log_info(
+                            "Found: {} entries.".format(len(feed["entries"]))
                         )
-                        indicator_pattern = self.gen_indicator_pattern(parsed_entry)
-                        malware = stix2.Malware(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
-                            is_family=True,
-                            name=parsed_entry["type"],
-                            description="{} malware.".format(parsed_entry["type"]),
+                        self.feed_summary = {
+                            "Source": feed["feed"]["title"],
+                            "Date": self._time_to_datetime(
+                                feed["feed"]["published_parsed"]
+                            ),
+                            "Details": feed["feed"]["subtitle"],
+                            "Link": feed["feed"]["link"],
+                        }
+
+                        # Create the bundle
+                        bundle_objects = list()
+                        organization = stix2.Identity(
+                            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
+                            name="CYBERCRIME-TRACKER.NET",
+                            identity_class="organization",
+                            description="Tracker collecting and sharing daily updates of C2 IPs/Urls. http://cybercrime-tracker.net",
                         )
-                        bundle_objects.append(malware)
-                        indicator = None
-                        if self.create_indicators:
-                            indicator = stix2.Indicator(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "indicator"
-                                ),
-                                name=parsed_entry["url"],
-                                description="C2 URL for: {}".format(
-                                    parsed_entry["type"]
-                                ),
-                                labels=["C2 Server"],
-                                pattern_type="stix",
-                                pattern=indicator_pattern,
-                                valid_from=parsed_entry["date"],
-                                created=parsed_entry["date"],
-                                modified=parsed_entry["date"],
-                                created_by_ref=organization.id,
-                                object_marking_refs=[tlp["standard_id"]],
-                                external_references=[external_reference],
-                                custom_properties={
-                                    "x_opencti_main_observable_type": "Url"
-                                },
+                        bundle_objects.append(organization)
+                        for entry in feed["entries"]:
+                            parsed_entry = self.parse_feed_entry(entry)
+                            external_reference = stix2.ExternalReference(
+                                source_name="{}".format(self.feed_summary["Source"]),
+                                url=parsed_entry["ext_link"],
                             )
-                            bundle_objects.append(indicator)
-                            relation = stix2.Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
-                                ),
-                                source_ref=indicator.id,
-                                target_ref=malware.id,
-                                relationship_type="indicates",
-                                start_time=self._time_to_datetime(
-                                    entry["published_parsed"]
-                                ),
-                                stop_time=self._time_to_datetime(
-                                    entry["published_parsed"]
+                            indicator_pattern = self.gen_indicator_pattern(parsed_entry)
+                            malware = stix2.Malware(
+                                id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
+                                is_family=True,
+                                name=parsed_entry["type"],
+                                description="{} malware.".format(parsed_entry["type"]),
+                            )
+                            bundle_objects.append(malware)
+                            indicator = None
+                            if self.create_indicators:
+                                indicator = stix2.Indicator(
+                                    id=OpenCTIStix2Utils.generate_random_stix_id(
+                                        "indicator"
+                                    ),
+                                    name=parsed_entry["url"],
+                                    description="C2 URL for: {}".format(
+                                        parsed_entry["type"]
+                                    ),
+                                    labels=["C2 Server"],
+                                    pattern_type="stix",
+                                    pattern=indicator_pattern,
+                                    valid_from=parsed_entry["date"],
+                                    created=parsed_entry["date"],
+                                    modified=parsed_entry["date"],
+                                    created_by_ref=organization.id,
+                                    object_marking_refs=[tlp["standard_id"]],
+                                    external_references=[external_reference],
+                                    custom_properties={
+                                        "x_opencti_main_observable_type": "Url"
+                                    },
                                 )
-                                + datetime.timedelta(0, 3),
-                                description="URLs associated to: "
-                                + parsed_entry["type"],
-                                confidence=self.confidence_level,
-                                created_by_ref=organization.id,
-                                object_marking_refs=[tlp["standard_id"]],
-                                created=parsed_entry["date"],
-                                modified=parsed_entry["date"],
-                                external_references=[external_reference],
-                            )
-                            bundle_objects.append(relation)
-                        if self.create_observables:
-                            observable_url = SimpleObservable(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "x-opencti-simple-observable"
-                                ),
-                                key="Url.value",
-                                labels=["C2 Server"],
-                                value=parsed_entry["url"],
-                                created_by_ref=organization.id,
-                                object_marking_refs=[tlp["standard_id"]],
-                                external_references=[external_reference],
-                            )
-                            bundle_objects.append(observable_url)
-                            observable_ip = SimpleObservable(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "x-opencti-simple-observable"
-                                ),
-                                key="IPv4-Addr.value",
-                                labels=["C2 Server"],
-                                value=parsed_entry["ip"],
-                                created_by_ref=organization.id,
-                                object_marking_refs=[tlp["standard_id"]],
-                                external_references=[external_reference],
-                            )
-                            bundle_objects.append(observable_ip)
-                            observable_domain = None
-                            if "domain" in parsed_entry.keys():
-                                observable_domain = SimpleObservable(
+                                bundle_objects.append(indicator)
+                                relation = stix2.Relationship(
+                                    id=OpenCTIStix2Utils.generate_random_stix_id(
+                                        "relationship"
+                                    ),
+                                    source_ref=indicator.id,
+                                    target_ref=malware.id,
+                                    relationship_type="indicates",
+                                    start_time=self._time_to_datetime(
+                                        entry["published_parsed"]
+                                    ),
+                                    stop_time=self._time_to_datetime(
+                                        entry["published_parsed"]
+                                    )
+                                    + datetime.timedelta(0, 3),
+                                    description="URLs associated to: "
+                                    + parsed_entry["type"],
+                                    confidence=self.confidence_level,
+                                    created_by_ref=organization.id,
+                                    object_marking_refs=[tlp["standard_id"]],
+                                    created=parsed_entry["date"],
+                                    modified=parsed_entry["date"],
+                                    external_references=[external_reference],
+                                )
+                                bundle_objects.append(relation)
+                            if self.create_observables:
+                                observable_url = SimpleObservable(
                                     id=OpenCTIStix2Utils.generate_random_stix_id(
                                         "x-opencti-simple-observable"
                                     ),
-                                    key="Domain-Name.value",
+                                    key="Url.value",
                                     labels=["C2 Server"],
-                                    value=parsed_entry["domain"],
+                                    value=parsed_entry["url"],
                                     created_by_ref=organization.id,
                                     object_marking_refs=[tlp["standard_id"]],
                                     external_references=[external_reference],
                                 )
-                                bundle_objects.append(observable_domain)
+                                bundle_objects.append(observable_url)
+                                observable_ip = SimpleObservable(
+                                    id=OpenCTIStix2Utils.generate_random_stix_id(
+                                        "x-opencti-simple-observable"
+                                    ),
+                                    key="IPv4-Addr.value",
+                                    labels=["C2 Server"],
+                                    value=parsed_entry["ip"],
+                                    created_by_ref=organization.id,
+                                    object_marking_refs=[tlp["standard_id"]],
+                                    external_references=[external_reference],
+                                )
+                                bundle_objects.append(observable_ip)
+                                observable_domain = None
+                                if "domain" in parsed_entry.keys():
+                                    observable_domain = SimpleObservable(
+                                        id=OpenCTIStix2Utils.generate_random_stix_id(
+                                            "x-opencti-simple-observable"
+                                        ),
+                                        key="Domain-Name.value",
+                                        labels=["C2 Server"],
+                                        value=parsed_entry["domain"],
+                                        created_by_ref=organization.id,
+                                        object_marking_refs=[tlp["standard_id"]],
+                                        external_references=[external_reference],
+                                    )
+                                    bundle_objects.append(observable_domain)
 
-                            if indicator is not None:
-                                relationship_1 = stix2.Relationship(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "relationship"
-                                    ),
-                                    relationship_type="based-on",
-                                    created_by_ref=organization.id,
-                                    source_ref=indicator.id,
-                                    target_ref=observable_url.id,
-                                )
-                                bundle_objects.append(relationship_1)
-                                relationship_2 = stix2.Relationship(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "relationship"
-                                    ),
-                                    relationship_type="based-on",
-                                    created_by_ref=organization.id,
-                                    source_ref=indicator.id,
-                                    target_ref=observable_ip.id,
-                                )
-                                bundle_objects.append(relationship_2)
-                                if observable_domain is not None:
-                                    relationship_3 = stix2.Relationship(
+                                if indicator is not None:
+                                    relationship_1 = stix2.Relationship(
                                         id=OpenCTIStix2Utils.generate_random_stix_id(
                                             "relationship"
                                         ),
                                         relationship_type="based-on",
                                         created_by_ref=organization.id,
                                         source_ref=indicator.id,
-                                        target_ref=observable_domain.id,
+                                        target_ref=observable_url.id,
                                     )
-                                    bundle_objects.append(relationship_3)
+                                    bundle_objects.append(relationship_1)
+                                    relationship_2 = stix2.Relationship(
+                                        id=OpenCTIStix2Utils.generate_random_stix_id(
+                                            "relationship"
+                                        ),
+                                        relationship_type="based-on",
+                                        created_by_ref=organization.id,
+                                        source_ref=indicator.id,
+                                        target_ref=observable_ip.id,
+                                    )
+                                    bundle_objects.append(relationship_2)
+                                    if observable_domain is not None:
+                                        relationship_3 = stix2.Relationship(
+                                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                                "relationship"
+                                            ),
+                                            relationship_type="based-on",
+                                            created_by_ref=organization.id,
+                                            source_ref=indicator.id,
+                                            target_ref=observable_domain.id,
+                                        )
+                                        bundle_objects.append(relationship_3)
 
-                    # create stix bundle
-                    bundle = stix2.Bundle(objects=bundle_objects)
-                    # send data
-                    self.helper.send_stix2_bundle(
-                        bundle=bundle.serialize(),
-                        update=self.update_existing_data,
-                        work_id=work_id,
-                    )
+                        # create stix bundle
+                        bundle = stix2.Bundle(objects=bundle_objects)
+                        # send data
+                        self.helper.send_stix2_bundle(
+                            bundle=bundle.serialize(),
+                            update=self.update_existing_data,
+                            work_id=work_id,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
 
                     # Store the current timestamp as a last run
                     message = (
