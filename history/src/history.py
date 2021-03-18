@@ -19,7 +19,35 @@ class HistoryConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.logger_config = self.helper.api.get_logs_worker_config()
-        self.elasticsearch = Elasticsearch([self.logger_config["elasticsearch_url"]])
+        if (
+            self.logger_config["elasticsearch_username"] is not None
+            and self.logger_config["elasticsearch_password"] is not None
+        ):
+            self.elasticsearch = Elasticsearch(
+                [self.logger_config["elasticsearch_url"]],
+                verify_certs=self.logger_config[
+                    "elasticsearch_ssl_reject_unauthorized"
+                ],
+                http_auth=(
+                    self.logger_config["elasticsearch_username"],
+                    self.logger_config["elasticsearch_password"],
+                ),
+            )
+        elif self.logger_config["elasticsearch_api_key"] is not None:
+            self.elasticsearch = Elasticsearch(
+                [self.logger_config["elasticsearch_url"]],
+                verify_certs=self.logger_config[
+                    "elasticsearch_ssl_reject_unauthorized"
+                ],
+                api_key=self.logger_config["elasticsearch_api_key"],
+            )
+        else:
+            self.elasticsearch = Elasticsearch(
+                [self.logger_config["elasticsearch_url"]],
+                verify_certs=self.logger_config[
+                    "elasticsearch_ssl_reject_unauthorized"
+                ],
+            )
         self.elasticsearch_index = self.logger_config["elasticsearch_index"]
 
     def _process_message(self, msg):
