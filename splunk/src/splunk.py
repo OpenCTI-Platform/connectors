@@ -10,6 +10,7 @@ import splunklib.results as results
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+
 class Splunk:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -45,16 +46,13 @@ class Splunk:
             config,
         )
 
-    def export_splunk_to_json(self,indexes,host,port,username,password):
-        #connecting to the server
+    def export_splunk_to_json(self, indexes, host, port, username, password):
+        # connecting to the server
         service = client.connect(
-            host=host,
-            port=port,
-            username=username,
-            password=password
+            host=host, port=port, username=username, password=password
         )
-        #self.helper.log_info("indexname=" + index_name + " host=" + host + " port:" + str(port)
-        #+ " username=" + username + " password=" + password)
+        # self.helper.log_info("indexname=" + index_name + " host=" + host + " port:" + str(port)
+        # + " username=" + username + " password=" + password)
 
         indexes_list = indexes.split(",")
         for index_name in indexes_list:
@@ -66,27 +64,29 @@ class Splunk:
                 time.sleep(5)
             else:
                 self.helper.log_info("Job ready!")
-                
+
                 reader = results.ResultsReader(job.results())
 
                 result = ""
                 found = True
                 item = None
                 for item in reader:
-                    #_raw contains the stix data
+                    # _raw contains the stix data
                     result = result + item["_raw"] + ","
                 if item is None:
-                    self.helper.log_error("Index '" + index_name + "' not found or has no events")
+                    self.helper.log_error(
+                        "Index '" + index_name + "' not found or has no events"
+                    )
                     found = False
-                if (found):
+                if found:
                     result = result[:-1]
                     result = '{\n"objects": [\n' + result + "\n]\n}"
-                    #self.helper.log_info(result)
+                    # self.helper.log_info(result)
                     self.helper.send_stix2_bundle(
-                                result,
-                                entities_types=self.helper.connect_scope,
-                                update=self.update_existing_data,
-                    )               
+                        result,
+                        entities_types=self.helper.connect_scope,
+                        update=self.update_existing_data,
+                    )
 
     def get_interval(self):
         return int(self.splunk_interval) * 60 * 60 * 24
@@ -117,12 +117,13 @@ class Splunk:
                     self.helper.log_info("Connector will run!")
                     # Getting data from Splunk
                     self.helper.log_info("Requesting the index " + self.splunk_indexes)
-                    self.export_splunk_to_json(self.splunk_indexes,
-                                                self.splunk_host,
-                                                self.splunk_port,
-                                                self.splunk_username,
-                                                self.splunk_connector_password
-                    )     
+                    self.export_splunk_to_json(
+                        self.splunk_indexes,
+                        self.splunk_host,
+                        self.splunk_port,
+                        self.splunk_username,
+                        self.splunk_connector_password,
+                    )
                     # Store the current timestamp as a last run
                     self.helper.log_info(
                         "Connector successfully run, storing last_run as "
