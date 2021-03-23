@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cryptolaemus:
-    image: opencti/connector-cryptolaemus:4.3.0
+    image: opencti/connector-cryptolaemus:4.3.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
