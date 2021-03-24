@@ -30,6 +30,7 @@ kaspersky:
   master_ioc_report_type: 'threat-report'
   master_ioc_report_status: 'New'
   master_yara_fetch_weekday: 2  # If present then the Master YARA is fetched on given ISO weekday.
+  master_yara_include_report: true
   master_yara_report_type: 'threat-report'
   master_yara_report_status: 'New'
   interval_sec: 43200
