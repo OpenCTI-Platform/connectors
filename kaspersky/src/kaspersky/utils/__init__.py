@@ -8,7 +8,6 @@ from kaspersky.utils.common import (
     decode_base64_gzip_to_string,
     is_current_weekday_before_datetime,
     timestamp_to_datetime,
-    today_utc_midnight,
 )
 from kaspersky.utils.stix2 import (
     DEFAULT_TLP_MARKING_DEFINITION,
@@ -69,7 +68,6 @@ __all__ = [
     "get_tlp_string_marking_definition",
     "is_current_weekday_before_datetime",
     "timestamp_to_datetime",
-    "today_utc_midnight",
     "Observation",
     "ObservationConfig",
     "ObservationFactory",

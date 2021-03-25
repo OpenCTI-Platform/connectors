@@ -4,7 +4,7 @@ import base64
 import calendar
 import gzip
 import ipaddress
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import List, Optional
 
@@ -38,12 +38,6 @@ def timestamp_to_datetime(timestamp: int) -> datetime:
 def datetime_utc_now() -> datetime:
     """Get current UTC datetime."""
     return datetime.now(timezone.utc)
-
-
-def today_utc_midnight() -> datetime:
-    """Get today midnight UTC datetime."""
-    today = date.today()
-    return datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)
 
 
 def is_current_weekday_before_datetime(
