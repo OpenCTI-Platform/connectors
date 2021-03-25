@@ -60,6 +60,7 @@ class KasperskyConnector:
 
     _CONFIG_MASTER_YARA_PREFIX = f"{_CONFIG_NAMESPACE}.master_yara_"
     _CONFIG_MASTER_YARA_FETCH_WEEKDAY = f"{_CONFIG_MASTER_YARA_PREFIX}fetch_weekday"
+    _CONFIG_MASTER_YARA_INCLUDE_REPORT = f"{_CONFIG_MASTER_YARA_PREFIX}include_report"
     _CONFIG_MASTER_YARA_REPORT_TYPE = f"{_CONFIG_MASTER_YARA_PREFIX}report_type"
     _CONFIG_MASTER_YARA_REPORT_STATUS = f"{_CONFIG_MASTER_YARA_PREFIX}report_status"
 
@@ -76,6 +77,7 @@ class KasperskyConnector:
 
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
+    _DEFAULT_INCLUDE_REPORT = True
     _DEFAULT_REPORT_STATUS = "new"
     _DEFAULT_REPORT_TYPE = "threat-report"
 
@@ -208,6 +210,14 @@ class KasperskyConnector:
         if not master_yara_fetch_weekday:
             master_yara_fetch_weekday = None
 
+        master_yara_include_report = self._get_configuration(
+            config, self._CONFIG_MASTER_YARA_INCLUDE_REPORT
+        )
+        if master_yara_include_report is None:
+            master_yara_include_report = self._DEFAULT_INCLUDE_REPORT
+        else:
+            master_yara_include_report = bool(master_yara_include_report)
+
         master_yara_report_type = self._get_configuration(
             config, self._CONFIG_MASTER_YARA_REPORT_TYPE
         )
@@ -292,6 +302,7 @@ class KasperskyConnector:
                 tlp_marking,
                 update_existing_data,
                 master_yara_fetch_weekday,
+                master_yara_include_report,
                 master_yara_report_type,
                 master_yara_report_status,
             )

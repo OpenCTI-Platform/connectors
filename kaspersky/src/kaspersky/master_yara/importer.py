@@ -1,6 +1,7 @@
 """Kaspersky Master YARA importer module."""
 
-from typing import Any, Mapping, Optional
+import itertools
+from typing import Any, List, Mapping, Optional, Tuple
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
 
@@ -9,7 +10,7 @@ from stix2.exceptions import STIXError  # type: ignore
 
 from kaspersky.client import KasperskyClient
 from kaspersky.importer import BaseImporter
-from kaspersky.master_yara.builder import YaraRuleBundleBuilder
+from kaspersky.master_yara.builder import YaraRuleGroupBundleBuilder
 from kaspersky.models import Yara, YaraRule
 from kaspersky.utils import (
     YaraRuleUpdater,
@@ -34,6 +35,7 @@ class MasterYaraImporter(BaseImporter):
         tlp_marking: MarkingDefinition,
         update_existing_data: bool,
         master_yara_fetch_weekday: Optional[int],
+        master_yara_include_report: bool,
         master_yara_report_type: str,
         master_yara_report_status: int,
     ) -> None:
@@ -41,6 +43,7 @@ class MasterYaraImporter(BaseImporter):
         super().__init__(helper, client, author, tlp_marking, update_existing_data)
 
         self.master_yara_fetch_weekday = master_yara_fetch_weekday
+        self.master_yara_include_report = master_yara_include_report
         self.master_yara_report_type = master_yara_report_type
         self.master_yara_report_status = master_yara_report_status
 
@@ -49,8 +52,9 @@ class MasterYaraImporter(BaseImporter):
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
         self._info(
-            "Running Kaspersky Master YARA importer (update data: {0})...",
+            "Running Kaspersky Master YARA importer (update data: {0}, include report: {1})...",  # noqa: E501
             self.update_existing_data,
+            self.master_yara_include_report,
         )
 
         latest_master_yara_timestamp = state.get(self._LATEST_MASTER_YARA_TIMESTAMP)
@@ -87,19 +91,30 @@ class MasterYaraImporter(BaseImporter):
             new_yara_rule_count,
         )
 
+        grouped_yara_rules = self._group_yara_rules_by_report(new_yara_rules)
+        group_count = len(grouped_yara_rules)
+
+        self._info(
+            "{0} YARA rule groups...",
+            group_count,
+        )
+
+        for group, rules in grouped_yara_rules:
+            self._info("YARA rule group: ({0}) {1}", len(rules), group)
+
         failed_count = 0
 
-        for yara_rule in new_yara_rules:
-            result = self._process_yara_rule(yara_rule)
+        for yara_rule_group in grouped_yara_rules:
+            result = self._process_yara_rule_group(yara_rule_group)
             if not result:
                 failed_count += 1
 
-        success_count = new_yara_rule_count - failed_count
+        success_count = group_count - failed_count
 
         self._info(
             "Kaspersky Master YARA importer completed (imported: {0}, total: {1})",
             success_count,
-            new_yara_rule_count,
+            group_count,
         )
 
         return {
@@ -113,35 +128,56 @@ class MasterYaraImporter(BaseImporter):
         master_yara = self.client.get_master_yara(report_group)
         return convert_yara_rules_to_yara_model(master_yara, imports_at_top=True)
 
-    def _process_yara_rule(self, yara_rule: YaraRule) -> bool:
-        self._info("Processing YARA rule {0}...", yara_rule.name)
+    @staticmethod
+    def _group_yara_rules_by_report(
+        yara_rules: List[YaraRule],
+    ) -> List[Tuple[str, List[YaraRule]]]:
+        def _key_func(item: YaraRule) -> str:
+            if item.report is not None:
+                return item.report.strip()
+            return ""
 
-        yara_rule_bundle = self._create_yara_rule_bundle(yara_rule)
-        if yara_rule_bundle is None:
+        groups = []
+        sorted_yara_rules = sorted(yara_rules, key=_key_func)
+        for key, group in itertools.groupby(sorted_yara_rules, key=_key_func):
+            groups.append((key, list(group)))
+        return groups
+
+    def _process_yara_rule_group(
+        self, yara_rule_group: Tuple[str, List[YaraRule]]
+    ) -> bool:
+        self._info("Processing YARA rule group {0}...", yara_rule_group[0])
+
+        yara_rule_group_bundle = self._create_yara_rule_group_bundle(yara_rule_group)
+        if yara_rule_group_bundle is None:
             return False
 
-        # bundle_id = uuid5(yara_rule.name)
-        # with open(f"yara_rule_bundle_{bundle_id}.json", "w") as f:
-        #     f.write(yara_rule_bundle.serialize(pretty=True))
+        # with open(f"yara_rule_group_bundle_{yara_rule_group[0]}.json", "w") as f:
+        #     f.write(yara_rule_group_bundle.serialize(pretty=True))
 
-        self._send_bundle(yara_rule_bundle)
+        self._send_bundle(yara_rule_group_bundle)
 
         return True
 
-    def _create_yara_rule_bundle(self, yara_rule: YaraRule) -> Optional[Bundle]:
+    def _create_yara_rule_group_bundle(
+        self, yara_rule_group: Tuple[str, List[YaraRule]]
+    ) -> Optional[Bundle]:
         author = self.author
         object_markings = [self.tlp_marking]
         source_name = self._source_name()
         confidence_level = self._confidence_level()
+        include_report = self.master_yara_include_report
         report_type = self.master_yara_report_type
         report_status = self.master_yara_report_status
 
-        bundle_builder = YaraRuleBundleBuilder(
-            yara_rule,
+        bundle_builder = YaraRuleGroupBundleBuilder(
+            yara_rule_group[0],
+            yara_rule_group[1],
             author,
             object_markings,
             source_name,
             confidence_level,
+            include_report,
             report_type,
             report_status,
         )
@@ -151,7 +187,7 @@ class MasterYaraImporter(BaseImporter):
         except STIXError as e:
             self._error(
                 "Failed to build YARA rule bundle for '{0}': {1}",
-                yara_rule.name,
+                yara_rule_group[0],
                 e,
             )
             return None
