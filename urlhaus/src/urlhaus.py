@@ -42,9 +42,7 @@ class URLhaus:
             "URLHAUS_INTERVAL", ["urlhaus", "interval"], config, True
         )
         self.create_indicators = get_config_variable(
-            "URLHAUS_CREATE_INDICATORS",
-            ["urlhaus", "create_indicators"],
-            config, True
+            "URLHAUS_CREATE_INDICATORS", ["urlhaus", "create_indicators"], config, True
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
