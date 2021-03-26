@@ -10,7 +10,7 @@ If you are using it independently, remember that the connector will try to conne
 
 ## Configuration
 
-**Warning**: This connector is compatiable with MISP >=2.4.135.3.
+**Warning**: This connector is compatible with MISP >=2.4.135.3.
 
 | Parameter                         | Docker envvar                     | Mandatory    | Description                                                                                         |
 | --------------------------------- | --------------------------------- | ------------ | --------------------------------------------------------------------------------------------------- |
