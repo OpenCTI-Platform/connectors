@@ -206,6 +206,7 @@ class Misp:
                 self.helper.log_info(
                     "Fetching MISP events with args: " + json.dumps(kwargs)
                 )
+                kwargs = json.loads(json.dumps(kwargs))
                 events = []
                 try:
                     events = self.misp.search("events", **kwargs)
