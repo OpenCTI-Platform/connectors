@@ -14,5 +14,6 @@ connector:
 
 urlhaus:
   csv_url: 'https://urlhaus.abuse.ch/downloads/csv_recent/'
-  import_offline: true
+  import_offline: True
+  create_indicators: True
   interval: 3 # In days, must be strictly greater than 1

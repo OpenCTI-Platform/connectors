@@ -732,7 +732,7 @@ class TaniumConnector:
             entity = self.helper.api.stix_cyber_observable.read(
                 id=data["data"]["x_opencti_id"]
             )
-            if entity is None or entity["revoked"]:
+            if entity is None:
                 return {"entity": entity, "intel_document": intel_document}
             intel_document = self._create_observable(entity, original_intel_document)
         return {"entity": entity, "intel_document": intel_document}

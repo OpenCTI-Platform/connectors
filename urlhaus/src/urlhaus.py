@@ -41,6 +41,11 @@ class URLhaus:
         self.urlhaus_interval = get_config_variable(
             "URLHAUS_INTERVAL", ["urlhaus", "interval"], config, True
         )
+        self.create_indicators = get_config_variable(
+            "URLHAUS_CREATE_INDICATORS",
+            ["urlhaus", "create_indicators"],
+            config, True
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -50,11 +55,6 @@ class URLhaus:
             type="Organization",
             name="Abuse.ch",
             description="abuse.ch is operated by a random swiss guy fighting malware for non-profit, running a couple of projects helping internet service providers and network operators protecting their infrastructure from malware.",
-        )
-        self.create_indicator = get_config_variable(
-            "CONNECTOR_CREATE_INDICATORS",
-            ["connector", "create_indicator"],
-            config,
         )
 
     def get_interval(self):
@@ -127,7 +127,7 @@ class URLhaus:
                                     object_marking_refs=[TLP_WHITE],
                                     labels=row[5].split(","),
                                     created_by_ref=self.identity["standard_id"],
-                                    x_opencti_create_indicator=self.create_indicator,
+                                    x_opencti_create_indicator=self.create_indicators,
                                     external_references=[external_reference],
                                 )
                                 bundle_objects.append(stix_observable)
