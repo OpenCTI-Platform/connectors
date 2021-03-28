@@ -84,6 +84,9 @@ class Misp:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.misp_url = get_config_variable("MISP_URL", ["misp", "url"], config)
+        self.misp_reference_url = get_config_variable(
+            "MISP_REFERENCE_URL", ["misp", "reference_url"], config
+        )
         self.misp_key = get_config_variable("MISP_KEY", ["misp", "key"], config)
         self.misp_ssl_verify = get_config_variable(
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
@@ -326,11 +329,15 @@ class Misp:
             if "Tag" in event["Event"]:
                 event_tags = self.resolve_tags(event["Event"]["Tag"])
             # ExternalReference
+            if self.misp_reference_url is not None and len(self.misp_reference_url) > 0:
+                url = self.misp_reference_url + "/events/view/" + event["Event"]["uuid"]
+            else:
+                url = self.misp_url + "/events/view/" + event["Event"]["uuid"]
             event_external_reference = ExternalReference(
                 source_name=self.helper.connect_name,
                 description=event["Event"]["info"],
                 external_id=event["Event"]["uuid"],
-                url=self.misp_url + "/events/view/" + event["Event"]["uuid"],
+                url=url,
             )
 
             ### Get indicators

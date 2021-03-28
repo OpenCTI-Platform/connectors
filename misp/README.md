@@ -24,6 +24,7 @@ If you are using it independently, remember that the connector will try to conne
 | `connector_update_existing_data`  | `CONNECTOR_UPDATE_EXISTING_DATA`  | Yes          | If an entity already exists, update its attributes with information provided by this connector.     |
 | `connector_log_level`             | `CONNECTOR_LOG_LEVEL`             | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).       |
 | `misp_url`                        | `MISP_URL`                        | Yes          | The MISP instance URL.                                                                              |
+| `misp_reference_url`              | `MISP_REFERENCE_URL`              | Yes          | The MISP instance reference URL (used to create external reference, optional)                       |
 | `misp_key`                        | `MISP_KEY`                        | Yes          | The MISP instance key.                                                                              |
 | `misp_ssl_verify`                 | `MISP_SSL_VERIFY`                 | Yes          | A boolean (`True` or `False`), check if the SSL certificate is valid when using `https`.            |
 | `misp_datetime_attribute`         | `MISP_DATETIME_ATTRIBUTE`         | Yes          | The attribute to be used in filter to query new MISP events.                                        |
