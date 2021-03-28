@@ -130,6 +130,9 @@ class Misp:
         self.import_threat_levels = get_config_variable(
             "MISP_IMPORT_THREAT_LEVELS", ["misp", "import_threat_levels"], config
         )
+        self.import_only_published = get_config_variable(
+            "MISP_IMPORT_ONLY_PUBLISHED", ["misp", "import_only_published"], config
+        )
         self.misp_interval = get_config_variable(
             "MISP_INTERVAL", ["misp", "interval"], config, True
         )
@@ -296,6 +299,15 @@ class Misp:
                     "Event threat level "
                     + event["Event"]["threat_level_id"]
                     + " not in import_threat_levels, do not import"
+                )
+                continue
+            if (
+                self.import_only_published is not None
+                and self.import_only_published
+                and not event["Event"]["published"]
+            ):
+                self.helper.log_info(
+                    "Event is not published and import_only_published is set, do not import"
                 )
                 continue
 
