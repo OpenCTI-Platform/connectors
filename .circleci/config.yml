@@ -157,6 +157,10 @@ jobs:
           name: Build Docker image opencti/connector-malbeacon
           command: docker build -t opencti/connector-malbeacon:latest . && docker tag opencti/connector-malbeacon:latest opencti/connector-malbeacon:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/sekoia
+          name: Build Docker image opencti/connector-sekoia
+          command: docker build -t opencti/connector-sekoia:latest . && docker tag opencti/connector-sekoia:latest opencti/connector-sekoia:${CIRCLE_TAG}          
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -222,6 +226,8 @@ jobs:
             docker push opencti/connector-urlhaus:${CIRCLE_TAG}
             docker push opencti/connector-malbeacon:latest
             docker push opencti/connector-malbeacon:${CIRCLE_TAG}
+            docker push opencti/connector-sekoia:latest
+            docker push opencti/connector-sekoia:${CIRCLE_TAG}            
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -354,6 +360,10 @@ jobs:
           name: Build Docker image opencti/connector-malbeacon
           command: docker build -t opencti/connector-malbeacon:rolling .
       - run:
+          working_directory: ~/opencti/sekoia
+          name: Build Docker image opencti/connector-sekoia
+          command: docker build -t opencti/connector-sekoia:rolling .          
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -388,6 +398,7 @@ jobs:
             docker push opencti/connector-abuseipdb:rolling
             docker push opencti/connector-urlhaus:rolling
             docker push opencti/connector-malbeacon:rolling
+            docker push opencti/connector-sekoia:rolling
 workflows:
   version: 2
   opencti:
