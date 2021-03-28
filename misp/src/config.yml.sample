@@ -28,4 +28,5 @@ misp:
   import_owner_orgs: 'CIRCL' # Optional, only import events owned by this ORG (put the identifier here)
   import_distribution_levels: '0,1,2,3' # Optional, only import events with the given distribution levels
   import_threat_levels: '1,2,3,4' # Optional only import events with the given threat levels
+  import_only_published: False # Optional only import events published
   interval: 1 # Required, in minutes
