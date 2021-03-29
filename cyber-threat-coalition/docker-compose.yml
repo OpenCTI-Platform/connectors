@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cyber-threat-coalition:
-    image: opencti/connector-cyber-threat-coalition:4.3.2
+    image: opencti/connector-cyber-threat-coalition:4.3.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
