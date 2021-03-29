@@ -984,7 +984,7 @@ class TaniumConnector:
                             self._process_intel(entity_type, data, intel_document)
                     elif (
                         "revoked" in data["data"]["x_data_update"]["replace"]
-                        and data["data"]["x_data_update"]["replace"]["revoked"] == True
+                        and data["data"]["x_data_update"]["replace"]["revoked"] is True
                     ):
                         intel_document = self._get_by_id(data["data"]["x_opencti_id"])
                         if intel_document is not None:
