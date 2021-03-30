@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-malbeacon:
-    image: opencti/connector-malbeacon:4.3.3
+    image: opencti/connector-malbeacon:4.3.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
