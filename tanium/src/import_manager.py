@@ -90,7 +90,7 @@ class IntelManager:
         reputation_id = self.cache.get("reputation", data["id"])
         if reputation_id is not None:
             return reputation_id
-        reputation_document = self.tanium_api_handler.create_reputation(data)
+        self.tanium_api_handler.create_reputation(data)
         # if reputation_document is not None:
         #    self.cache.set(
         #        "intel", reputation_document["id"], str(reputation_document["id"])
