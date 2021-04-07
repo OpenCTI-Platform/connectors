@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike importer module."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional
+from typing import Any, Dict, Optional
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
 
@@ -27,31 +27,30 @@ class BaseImporter(ABC):
 
         self.work_id: Optional[str] = None
 
-    def start(self, work_id: str, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def start(self, work_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Start import.
 
         :param work_id: Work identifier for current import process.
         :type work_id: str
         :param state: Current state of the importer.
-        :type state: Mapping[str, Any]
+        :type state: Dict[str, Any]
         :return: State after the import.
-        :rtype: Mapping[str, Any]
+        :rtype: Dict[str, Any]
         """
         self.work_id = work_id
 
         return self.run(state)
 
     @abstractmethod
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Run import.
 
         :param state: Current state of the importer.
-        :type state: Mapping[str, Any]
-        :param work_id: Work_id
+        :type state: Dict[str, Any]
         :return: State after the import.
-        :rtype: Mapping[str, Any]
+        :rtype: Dict[str, Any]
         """
         ...
 
@@ -68,6 +67,9 @@ class BaseImporter(ABC):
 
     def _confidence_level(self) -> int:
         return self.helper.connect_confidence_level
+
+    def _set_state(self, state: Dict[str, Any]) -> None:
+        self.helper.set_state(state)
 
     def _send_bundle(self, bundle: Bundle) -> None:
         serialized_bundle = bundle.serialize()

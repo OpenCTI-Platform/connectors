@@ -49,7 +49,7 @@ class YaraMasterImporter(BaseImporter):
 
         self.report_fetcher = ReportFetcher(reports_api)
 
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
         self._info("Running YARA master importer with state: {0}...", state)
 

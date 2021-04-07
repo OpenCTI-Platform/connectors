@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike report importer module."""
 
+from datetime import datetime
 from typing import Any, Dict, Generator, List, Mapping, Optional
 
 from crowdstrike_client.api.intel import Reports
@@ -54,7 +55,7 @@ class ReportImporter(BaseImporter):
 
         self.malware_guess_cache: Dict[str, str] = {}
 
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
         self._info(
             "Running report importer (update data: {0}, guess malware: {1}) with state: {2}...",  # noqa: E501
@@ -69,36 +70,34 @@ class ReportImporter(BaseImporter):
             self._LATEST_REPORT_TIMESTAMP, self.default_latest_timestamp
         )
 
-        latest_fetched_report_timestamp = None
+        new_state = state.copy()
+
+        latest_report_created_timestamp = None
 
         for reports_batch in self._fetch_reports(fetch_timestamp):
             if not reports_batch:
                 break
 
-            if latest_fetched_report_timestamp is None:
-                first_in_batch = reports_batch[0]
+            latest_report_created_datetime = self._process_reports(reports_batch)
 
-                created_date = first_in_batch.created_date
-                if created_date is None:
-                    self._error(
-                        "Missing created date for report {0} ({1})",
-                        first_in_batch.name,
-                        first_in_batch.id,
-                    )
-                    break
+            if latest_report_created_datetime is not None:
+                latest_report_created_timestamp = datetime_to_timestamp(
+                    latest_report_created_datetime
+                )
 
-                latest_fetched_report_timestamp = datetime_to_timestamp(created_date)
+                new_state[
+                    self._LATEST_REPORT_TIMESTAMP
+                ] = latest_report_created_timestamp
+                self._set_state(new_state)
 
-            self._process_reports(reports_batch)
-
-        state_timestamp = latest_fetched_report_timestamp or fetch_timestamp
+        latest_report_timestamp = latest_report_created_timestamp or fetch_timestamp
 
         self._info(
             "Report importer completed, latest fetch {0}.",
-            timestamp_to_datetime(state_timestamp),
+            timestamp_to_datetime(latest_report_timestamp),
         )
 
-        return {self._LATEST_REPORT_TIMESTAMP: state_timestamp}
+        return {self._LATEST_REPORT_TIMESTAMP: latest_report_timestamp}
 
     def _clear_malware_guess_cache(self):
         self.malware_guess_cache.clear()
@@ -107,7 +106,7 @@ class ReportImporter(BaseImporter):
         self, start_timestamp: int
     ) -> Generator[List[Report], None, None]:
         limit = 30
-        sort = "created_date|desc"
+        sort = "created_date|asc"
         fields = ["__full__"]
 
         fql_filter = f"created_date:>{start_timestamp}"
@@ -142,14 +141,37 @@ class ReportImporter(BaseImporter):
             limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
         )
 
-    def _process_reports(self, reports: List[Report]) -> None:
+    def _process_reports(self, reports: List[Report]) -> Optional[datetime]:
         report_count = len(reports)
         self._info("Processing {0} reports...", report_count)
+
+        latest_created_datetime = None
 
         for report in reports:
             self._process_report(report)
 
-        self._info("Processing reports completed (imported: {0})", report_count)
+            created_date = report.created_date
+            if created_date is None:
+                self._error(
+                    "Missing created date for report {0} ({1})",
+                    report.name,
+                    report.id,
+                )
+                continue
+
+            if (
+                latest_created_datetime is None
+                or created_date > latest_created_datetime
+            ):
+                latest_created_datetime = created_date
+
+        self._info(
+            "Processing reports completed (imported: {0}, latest: {1})",
+            report_count,
+            latest_created_datetime,
+        )
+
+        return latest_created_datetime
 
     def _process_report(self, report: Report) -> None:
         self._info("Processing report {0} ({1})...", report.name, report.id)
