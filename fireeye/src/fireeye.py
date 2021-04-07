@@ -111,7 +111,7 @@ class FireEye:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-4.3.4",
+            "x-app-name": "opencti-connector-4.3.5",
         }
         body = """
             {
@@ -148,7 +148,7 @@ class FireEye:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-4.3.4",
+            "x-app-name": "opencti-connector-4.3.5",
         }
         r = requests.get(url, headers=headers)
         if r.status_code == 200:

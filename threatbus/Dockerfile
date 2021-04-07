@@ -7,7 +7,7 @@ RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-de
 WORKDIR /opt/opencti-connector-threatbus
 COPY src/requirements.txt .
 
-RUN pip3 install --no-cache-dir git+https://github.com/OpenCTI-Platform/client-python@4.3.4 && \
+RUN pip3 install --no-cache-dir git+https://github.com/OpenCTI-Platform/client-python@4.3.5 && \
     pip3 install --no-cache-dir -r requirements.txt
 
 # Reduce image size by cleaning up the build packages
