@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
+
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
