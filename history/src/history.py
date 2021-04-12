@@ -64,7 +64,7 @@ class HistoryConnector:
                 "event_type": msg.event,
                 "timestamp": timestamp,
                 "entity_type": "history",
-                "user_id": origin["user_id"],
+                "user_id": origin["user_id"] if "user_id" in origin else None,
                 "applicant_id": origin["applicant_id"]
                 if "applicant_id" in origin
                 else None,
