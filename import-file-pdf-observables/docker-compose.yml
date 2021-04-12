@@ -9,6 +9,7 @@ services:
       - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
       - CONNECTOR_NAME=ImportFilePdfObservables
       - CONNECTOR_SCOPE=application/pdf
+      - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
       - PDF_OBSERVABLES_CREATE_INDICATOR=False

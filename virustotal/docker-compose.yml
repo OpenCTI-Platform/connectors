@@ -9,8 +9,8 @@ services:
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=VirusTotal
       - CONNECTOR_SCOPE=StixFile,Artifact
-      - CONNECTOR_AUTO=true
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables
+      - CONNECTOR_CONFIDENCE_LEVEL=50  # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - VIRUSTOTAL_TOKEN=ChangeMe
       - VIRUSTOTAL_MAX_TLP=TLP:AMBER
