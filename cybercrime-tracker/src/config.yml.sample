@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Cybercrime-Tracker'
+  scope: 'cybercrime-tracker'
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  log_level: 'info'
+
+cybercrime-tracker:
+  feed_url: 'http://cybercrime-tracker.net/rss.xml'
+  tlp: 'WHITE'
+  interval: 86400  # seconds
+  create_indicators: True # Required, create indicators for attributes
+  create_observables: True # Required, create observables for attributes

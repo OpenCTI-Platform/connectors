@@ -7,7 +7,8 @@ connector:
   type: 'INTERNAL_IMPORT_FILE'
   name: 'ImportFilePdfObservables'
   scope: 'application/pdf'
-  confidence_level: 3
+  auto: false # Enable/disable auto-import of file
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 pdf_observables:

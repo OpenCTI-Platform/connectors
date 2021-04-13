@@ -7,16 +7,26 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'MISP' # Required
   scope: 'misp'
-  confidence_level: 3
+  confidence_level: 15 # 0 (Unknown) or from 1 to 100
   update_existing_data: False
   log_level: 'info'
 
 misp:
   url: 'http://localhost' # Required
+  reference_url: '' # Optional, will be used to create external reference to MISP event
   key: 'ChangeMe' # Required
   ssl_verify: False # Required
+  datetime_attribute: 'timestamp' # Required, filter to be used in query for new MISP events
   create_reports: True # Required, create report for MISP event
-  report_class: 'MISP event' # Optional, report_class if creating report for event
+  create_indicators: True # Required, create indicators for attributes
+  create_observables: True # Required, create observables for attributes
+  report_class: 'misp-event' # Optional, report_class if creating report for event
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: 'opencti:import,type:osint' # Optional, list of tags used for import events
+  import_tags_not: '' # Optional, list of tags to not include
+  import_creator_orgs: 'CIRCL,Luatix' # Optional, only import events created by this ORG (put the identifier here)
+  import_owner_orgs: 'CIRCL' # Optional, only import events owned by this ORG (put the identifier here)
+  import_distribution_levels: '0,1,2,3' # Optional, only import events with the given distribution levels
+  import_threat_levels: '1,2,3,4' # Optional only import events with the given threat levels
+  import_only_published: False # Optional only import events published
   interval: 1 # Required, in minutes

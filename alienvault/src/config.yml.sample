@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'AlienVault'
   scope: 'alienvault'
-  confidence_level: 3
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: false
   log_level: 'info'
 
@@ -15,6 +15,12 @@ alienvault:
   base_url: 'https://otx.alienvault.com'
   api_key: 'ChangeMe'
   tlp: 'White'
-  pulse_start_timestamp: '2020-01-23T00:00:00'  # ISO 8601
-  report_status: 'New'                          # New, In progress, Analyzed and Closed
-  interval_sec: 43200                           # Seconds
+  create_observables: true
+  create_indicators: true
+  pulse_start_timestamp: '2020-05-01T00:00:00'  # ISO 8601
+  report_type: 'threat-report'
+  report_status: 'New'                                          # New, In progress, Analyzed and Closed
+  guess_malware: false                                          # Use tags to guess malware
+  guess_cve: false                                              # Use tags to guess CVE
+  excluded_pulse_indicator_types: 'FileHash-MD5,FileHash-SHA1'  # Excluded Pulse indicator types
+  interval_sec: 1800                                            # Seconds

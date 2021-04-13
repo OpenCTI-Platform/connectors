@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'SEKOIA.IO'
+  scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator'
+  confidence_level: 3
+  update_existing_data: True
+  log_level: 'info'
+
+sekoia:
+  base_url: 'https://api.sekoia.io'
+  collection: 'd6092c37-d8d7-45c3-8aff-c4dc26030608'
+  api_key: 'ChangeMe'

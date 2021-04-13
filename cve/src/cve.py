@@ -6,6 +6,8 @@ import time
 import urllib.request
 import gzip
 import shutil
+import certifi
+import ssl
 
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -29,6 +31,9 @@ class Cve:
         self.cve_nvd_data_feed = get_config_variable(
             "CVE_NVD_DATA_FEED", ["cve", "nvd_data_feed"], config
         )
+        self.cve_history_data_feed = get_config_variable(
+            "CVE_HISTORY_DATA_FEED", ["cve", "history_data_feed"], config
+        )
         self.cve_interval = get_config_variable(
             "CVE_INTERVAL", ["cve", "interval"], config, True
         )
@@ -41,14 +46,26 @@ class Cve:
     def get_interval(self):
         return int(self.cve_interval) * 60 * 60 * 24
 
-    def convert_and_send(self, url):
+    def delete_files(self):
+        if os.path.exists("data.json"):
+            os.remove("data.json")
+        if os.path.exists("data.json.gz"):
+            os.remove("data.json.gz")
+        if os.path.exists("data-stix2.json"):
+            os.remove("data-stix2.json")
+
+    def convert_and_send(self, url, work_id):
         try:
             # Downloading json.gz file
             self.helper.log_info("Requesting the file " + url)
-            urllib.request.urlretrieve(
-                self.cve_nvd_data_feed,
-                os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz",
+            response = urllib.request.urlopen(
+                url, context=ssl.create_default_context(cafile=certifi.where())
             )
+            image = response.read()
+            with open(
+                os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz", "wb"
+            ) as file:
+                file.write(image)
             # Unzipping the file
             self.helper.log_info("Unzipping the file")
             with gzip.open("data.json.gz", "rb") as f_in:
@@ -60,13 +77,15 @@ class Cve:
             with open("data-stix2.json") as stix_json:
                 contents = stix_json.read()
                 self.helper.send_stix2_bundle(
-                    contents, self.helper.connect_scope, self.update_existing_data
+                    contents,
+                    entities_types=self.helper.connect_scope,
+                    update=self.update_existing_data,
+                    work_id=work_id,
                 )
             # Remove files
-            os.remove("data.json")
-            os.remove("data.json.gz")
-            os.remove("data-stix2.json")
+            self.delete_files()
         except Exception as e:
+            self.delete_files()
             self.helper.log_error(str(e))
             time.sleep(60)
 
@@ -93,16 +112,21 @@ class Cve:
                     (timestamp - last_run)
                     > ((int(self.cve_interval) - 1) * 60 * 60 * 24)
                 ):
-                    self.convert_and_send(self.cve_nvd_data_feed)
+                    timestamp = int(time.time())
+                    now = datetime.utcfromtimestamp(timestamp)
+                    friendly_name = "CVE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
+                    )
+                    self.convert_and_send(self.cve_nvd_data_feed, work_id)
                     # If import history and never run
                     if last_run is None and self.cve_import_history:
                         now = datetime.now()
-                        years = list(range(2002, now.year))
+                        years = list(range(2002, now.year + 1))
                         for year in years:
                             self.convert_and_send(
-                                "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-"
-                                + str(year)
-                                + ".json.gz"
+                                f"{self.cve_history_data_feed}nvdcve-1.1-{year}.json.gz",
+                                work_id,
                             )
 
                     # Store the current timestamp as a last run
@@ -111,11 +135,13 @@ class Cve:
                         + str(timestamp)
                     )
                     self.helper.set_state({"last_run": timestamp})
-                    self.helper.log_info(
+                    message = (
                         "Last_run stored, next run in: "
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))
                         + " days"
                     )
+                    self.helper.api.work.to_processed(work_id, message)
+                    self.helper.log_info(message)
                     time.sleep(60)
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)

@@ -1,8 +1,8 @@
+from time import sleep
 import yaml
 import os
 import requests
 import json
-import random
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -29,15 +29,9 @@ class VirusTotalConnector:
             "accept": "application/json",
             "content-type": "application/json",
         }
+        self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
 
     def _process_file(self, observable):
-        marking_definitions = observable["markingDefinitionsIds"]
-        created_by_ref_id = (
-            observable["createdByRef"]["id"]
-            if observable["createdByRef"] is not None
-            and "id" in observable["createdByRef"]
-            else None
-        )
         response = requests.request(
             "GET",
             self.api_url + "/files/" + observable["observable_value"],
@@ -45,95 +39,46 @@ class VirusTotalConnector:
         )
         json_data = json.loads(response.text)
         if "error" in json_data:
-            raise ValueError(json_data["error"]["message"])
+            if json_data["error"]["message"] == "Quota exceeded":
+                self.helper.log_info("Quota reached, waiting 1 hour.")
+                sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
+            elif "not found" in json_data["error"]["message"]:
+                self.helper.log_info("File not found on VirusTotal.")
+                return "File not found on VirusTotal."
+            else:
+                raise ValueError(json_data["error"]["message"])
         if "data" in json_data:
             data = json_data["data"]
             attributes = data["attributes"]
-            created_observables = []
-            # Create observables
-            # MD5
-            md5 = self.helper.api.stix_observable.create(
-                type="File-MD5",
-                observable_value=attributes["md5"],
-                markingDefinitions=marking_definitions,
-                createdByRef=created_by_ref_id,
-            )
-            created_observables.append(md5["id"])
-            # SHA1
-            sha1 = self.helper.api.stix_observable.create(
-                type="File-SHA1",
-                observable_value=attributes["sha1"],
-                markingDefinitions=marking_definitions,
-                createdByRef=created_by_ref_id,
-            )
-            created_observables.append(sha1["id"])
-            # SHA256
-            sha256 = self.helper.api.stix_observable.create(
-                type="File-SHA256",
-                observable_value=attributes["sha256"],
-                markingDefinitions=marking_definitions,
-                createdByRef=created_by_ref_id,
-            )
-            created_observables.append(sha256["id"])
-            # Names
-            for name in attributes["names"]:
-                file_name = self.helper.api.stix_observable.create(
-                    type="File-Name",
-                    observable_value=name,
-                    markingDefinitions=marking_definitions,
-                    createdByRef=created_by_ref_id,
-                )
-                created_observables.append(file_name["id"])
-                self.helper.api.stix_observable_relation.create(
-                    fromId=md5["id"],
-                    fromType="File-MD5",
-                    toId=file_name["id"],
-                    toType="File-Name",
-                    relationship_type="corresponds",
-                    ignore_dates=True,
-                )
-                self.helper.api.stix_observable_relation.create(
-                    fromId=sha1["id"],
-                    fromType="File-SHA1",
-                    toId=file_name["id"],
-                    toType="File-Name",
-                    relationship_type="corresponds",
-                    ignore_dates=True,
-                )
-                self.helper.api.stix_observable_relation.create(
-                    fromId=sha256["id"],
-                    fromType="File-SHA256",
-                    toId=file_name["id"],
-                    toType="File-Name",
-                    relationship_type="corresponds",
-                    ignore_dates=True,
-                )
 
-            # Create observables relation
-            self.helper.api.stix_observable_relation.create(
-                fromId=md5["id"],
-                fromType="File-MD5",
-                toId=sha1["id"],
-                toType="File-SHA1",
-                relationship_type="corresponds",
-                ignore_dates=True,
+            # Update the current observable
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=observable["id"], key="hashes.MD5", value=attributes["md5"]
             )
-            self.helper.api.stix_observable_relation.create(
-                fromId=md5["id"],
-                fromType="File-MD5",
-                toId=sha256["id"],
-                toType="File-SHA256",
-                relationship_type="corresponds",
-                ignore_dates=True,
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"], key="hashes.SHA-1", value=attributes["sha1"]
             )
-            self.helper.api.stix_observable_relation.create(
-                fromId=sha1["id"],
-                fromType="File-SHA1",
-                toId=sha256["id"],
-                toType="File-SHA256",
-                relationship_type="corresponds",
-                ignore_dates=True,
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"],
+                key="size",
+                value=str(attributes["size"]),
             )
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"],
+                key="hashes.SHA-256",
+                value=attributes["sha256"],
+            )
+            if observable["name"] is None and len(attributes["names"]) > 0:
+                self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"], key="name", value=attributes["names"][0]
+                )
+                del attributes["names"][0]
+                if len(attributes["names"]) > 0:
+                    self.helper.api.stix_cyber_observable.update_field(
+                        id=final_observable["id"],
+                        key="x_opencti_additional_names",
+                        value=attributes["names"],
+                    )
 
             # Create external reference
             external_reference = self.helper.api.external_reference.create(
@@ -144,30 +89,24 @@ class VirusTotalConnector:
 
             # Create tags
             for tag in attributes["tags"]:
-                tag_vt = self.helper.api.tag.create(
-                    tag_type="VirusTotal",
-                    value=tag,
-                    color="#" + "%06x" % random.randint(0, 0xFFFFFF),
-                )
-                for created_observable in created_observables:
-                    self.helper.api.stix_entity.add_tag(
-                        id=created_observable, tag_id=tag_vt["id"]
-                    )
-
-            for created_observable in created_observables:
-                self.helper.api.stix_entity.add_external_reference(
-                    id=created_observable,
-                    external_reference_id=external_reference["id"],
+                tag_vt = self.helper.api.label.create(value=tag, color="#0059f7")
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=final_observable["id"], label_id=tag_vt["id"]
                 )
 
-            return ["File found on VirusTotal, knowledge attached."]
+            self.helper.api.stix_cyber_observable.add_external_reference(
+                id=final_observable["id"],
+                external_reference_id=external_reference["id"],
+            )
+
+            return "File found on VirusTotal, knowledge attached."
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
-        observable = self.helper.api.stix_observable.read(id=entity_id)
+        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         # Extract TLP
         tlp = "TLP:WHITE"
-        for marking_definition in observable["markingDefinitions"]:
+        for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
@@ -176,8 +115,7 @@ class VirusTotalConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
-        observable_type = observable["entity_type"]
-        if "file" in observable_type:
+        if observable["entity_type"] == "StixFile":
             return self._process_file(observable)
 
     # Start the main loop

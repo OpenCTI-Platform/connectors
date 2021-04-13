@@ -1,7 +1,11 @@
+.vscode
 .idea
+.vscode
 __pycache__
 *.log
 *.iml
 test
 config.yml
 docker-compose-test.yml
+Pipfile*
+.DS_Store

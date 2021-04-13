@@ -2,7 +2,7 @@
 """OpenCTI AlienVault models module."""
 
 from datetime import datetime
-from typing import Union, Optional, List
+from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -12,12 +12,12 @@ class PulseIndicator(BaseModel):
 
     id: int
     type: str
-    title: str
+    title: Optional[str]
     indicator: str
-    description: str
+    description: Optional[str]
     created: datetime
     is_active: Union[bool, int]
-    content: str
+    content: Optional[str]
     observations: Optional[int] = None
     role: Optional[str] = None
     access_type: Optional[str] = None
@@ -35,7 +35,7 @@ class Pulse(BaseModel):
     author_name: str
     public: bool
     revision: int
-    adversary: str
+    adversary: Optional[str]
     malware_families: List[str]
     industries: List[str]
     attack_ids: List[str]
@@ -46,3 +46,8 @@ class Pulse(BaseModel):
     references: List[str]
     targeted_countries: List[str]
     indicators: List[PulseIndicator]
+
+    @property
+    def url(self) -> str:
+        """Pulse URL."""
+        return f"https://otx.alienvault.com/pulse/{self.id}"

@@ -59,28 +59,44 @@ class OpenCTI:
                     (timestamp - last_run)
                     > ((int(self.opencti_interval) - 1) * 60 * 60 * 24)
                 ):
-                    sectors_data = urllib.request.urlopen(
-                        self.opencti_sectors_file_url
-                    ).read()
-                    self.helper.send_stix2_bundle(
-                        sectors_data.decode("utf-8"),
-                        self.helper.connect_scope,
-                        self.update_existing_data,
+                    now = datetime.utcfromtimestamp(timestamp)
+                    friendly_name = "OpenCTI datasets run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
                     )
-                    geography_data = urllib.request.urlopen(
-                        self.opencti_geography_file_url
-                    ).read()
-                    self.helper.send_stix2_bundle(
-                        geography_data.decode("utf-8"),
-                        self.helper.connect_scope,
-                        self.update_existing_data,
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
                     )
+                    try:
+                        sectors_data = urllib.request.urlopen(
+                            self.opencti_sectors_file_url
+                        ).read()
+                        self.helper.send_stix2_bundle(
+                            sectors_data.decode("utf-8"),
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
+                            work_id=work_id,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+                    try:
+                        geography_data = urllib.request.urlopen(
+                            self.opencti_geography_file_url
+                        ).read()
+                        self.helper.send_stix2_bundle(
+                            geography_data.decode("utf-8"),
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
+                            work_id=work_id,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
-                    self.helper.log_info(
-                        "Connector successfully run, storing last_run as "
-                        + str(timestamp)
+                    message = "Connector successfully run, storing last_run as " + str(
+                        timestamp
                     )
+                    self.helper.log_info(message)
                     self.helper.set_state({"last_run": timestamp})
+                    self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))

@@ -1,4 +1,2 @@
-pycti
-PyYAML
-urllib3
-python-dateutil
+pycti==4.3.5
+stix2-elevator

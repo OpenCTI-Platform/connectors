@@ -1,15 +1,16 @@
 version: '3'
 services:
   connector-virustotal:
-    image: opencti/connector-virustotal:latest
+    image: opencti/connector-virustotal:4.3.5
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=VirusTotal
-      - CONNECTOR_SCOPE='file-md5,file-sha1,file-sha256'
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_SCOPE=StixFile,Artifact
+      - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables
+      - CONNECTOR_CONFIDENCE_LEVEL=50  # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - VIRUSTOTAL_TOKEN=ChangeMe
       - VIRUSTOTAL_MAX_TLP=TLP:AMBER

@@ -4,15 +4,19 @@
 [![CircleCI](https://circleci.com/gh/OpenCTI-Platform/connectors.svg?style=shield)](https://circleci.com/gh/OpenCTI-Platform/connectors/tree/master)
 [![Slack Status](https://slack.luatix.org/badge.svg)](https://slack.luatix.org)
 
-The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications. To know how to enable connectors on OpenCTI, please read the [dedicated documentation](https://opencti-platform.github.io/docs/installation/connectors).
+The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications. To know how to enable connectors on OpenCTI, please read the [dedicated documentation](https://www.notion.so/luatix/Connectors-4586c588462d4a1fb5e661f2d9837db8).
+
+## Connectors list and statuses
+
+This repository is used to host connectors that are supported by the core development team of OpenCTI. Nevertheless, the community is also developping a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the list of all available connectors and plugins in the [OpenCTI ecosystem dedicated space](https://www.notion.so/luatix/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+
+## Contributing
+
+We welcome your **[contributions for new connectors](https://www.notion.so/luatix/Connectors-70637122e18442a88ae666897f959023)**. We encourage you to look at the source of existing connector before developing your own. If you want to make your connector available to the community, **please create a Pull Request on this repository**, then we will integrate it to the CI and in the [OpenCTI ecosystem](https://www.notion.so/luatix/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
 
 ## License
 
 **Unless specified otherwise**, connectors are released under the [Apache 2.0](https://github.com/OpenCTI-Platform/connectors/blob/master/LICENSE). If a connector is released by its author under a different license, the subfolder corresponding to it will contain a *LICENSE* file.
-
-## Contributing
-
-We welcome your **[contributions for new connectors](https://opencti-platform.github.io/docs/development/connectors)**. Please feel free to fork the code, play with it, make some patches and send us pull requests using [issues](https://github.com/OpenCTI-Platform/connectors/issues).
 
 ## About
 

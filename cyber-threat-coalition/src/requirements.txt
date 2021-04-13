@@ -1,0 +1,2 @@
+pycti==4.3.5
+feedparser==5.2.1

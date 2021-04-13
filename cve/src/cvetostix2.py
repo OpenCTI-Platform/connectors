@@ -1,14 +1,18 @@
+# coding: utf-8
+
 import sys
+import datetime
 
 # Importing the JSON module
 import json
 
 # Importing the different stix2 modules
-from stix2 import MemoryStore
 from stix2 import Vulnerability
 from stix2 import Bundle
 from stix2 import Identity
 from stix2 import ExternalReference
+
+from pycti import OpenCTIStix2Utils
 
 
 def convert(filename, output="output.json"):
@@ -61,11 +65,14 @@ def convert(filename, output="output.json"):
                 if "baseMetricV3" in cves["impact"]
                 else None
             )
-            cdate = cves["publishedDate"]
-            mdate = cves["lastModifiedDate"]
+            cdate = datetime.datetime.strptime(cves["publishedDate"], "%Y-%m-%dT%H:%MZ")
+            mdate = datetime.datetime.strptime(
+                cves["lastModifiedDate"], "%Y-%m-%dT%H:%MZ"
+            )
 
             # Creating the vulnerability with the extracted fields
             vuln = Vulnerability(
+                id=OpenCTIStix2Utils.generate_random_stix_id("vulnerability"),
                 name=name,
                 created=cdate,
                 modified=mdate,
@@ -84,10 +91,11 @@ def convert(filename, output="output.json"):
             vulnerabilities_bundle.append(vuln)
     # Creating the bundle from the list of vulnerabilities
     bundle = Bundle(vulnerabilities_bundle)
-    # Creating a MemoryStore object from the bundle
-    memorystore = MemoryStore(bundle)
-    # Dumping this object to a file
-    memorystore.save_to_file(output)
+    bundle_json = bundle.serialize()
+
+    # Write to file
+    with open(output, "w") as f:
+        f.write(bundle_json)
 
 
 if __name__ == "__main__":

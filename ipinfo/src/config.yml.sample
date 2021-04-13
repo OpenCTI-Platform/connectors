@@ -6,8 +6,9 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'IpInfo'
-  scope: 'ipv4-addr'
-  confidence_level: 3
+  scope: 'IPv4-Addr'
+  auto: true # Enable/disable auto-enrichment of observables
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 ipinfo:

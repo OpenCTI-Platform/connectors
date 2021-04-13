@@ -1,11 +1,10 @@
 import yaml
 import os
 import requests
-import json
 import pycountry
 
-from stix2 import Relationship, Identity, Bundle
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2 import Relationship, Location, Bundle
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 
 
 class IpInfoConnector:
@@ -23,43 +22,51 @@ class IpInfoConnector:
             "IPINFO_MAX_TLP", ["ipinfo", "max_tlp"], config
         )
 
-    def _generate_stix_bundle(self, country, city, observable_id):
+    def _generate_stix_bundle(self, country, city, loc, observable_id):
         # Generate stix bundle
-        country_identity = Identity(
+        country_location = Location(
+            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
             name=country.name,
-            identity_class="group",
+            country=country.official_name
+            if hasattr(country, "official_name")
+            else country.name,
             custom_properties={
-                "x_opencti_identity_type": "country",
-                "x_opencti_alias": [
+                "x_opencti_location_type": "Country",
+                "x_opencti_aliases": [
                     country.official_name
                     if hasattr(country, "official_name")
                     else country.name
                 ],
             },
         )
-        city_identity = Identity(
+        loc_split = loc.split(",")
+        city_location = Location(
+            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
             name=city,
-            identity_class="group",
-            custom_properties={"x_opencti_identity_type": "city"},
+            country=country.official_name
+            if hasattr(country, "official_name")
+            else country.name,
+            latitude=loc_split[0],
+            longitude=loc_split[1],
+            custom_properties={"x_opencti_location_type": "City"},
         )
         city_to_country = Relationship(
-            relationship_type="localization",
-            source_ref=city_identity.id,
-            target_ref=country_identity.id,
+            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship_type="located-at",
+            source_ref=city_location.id,
+            target_ref=country_location.id,
         )
         observable_to_city = Relationship(
-            relationship_type="localization",
+            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship_type="located-at",
             source_ref=observable_id,
-            target_ref=city_identity.id,
-            custom_properties={
-                "x_opencti_weight": self.helper.connect_confidence_level,
-                "x_opencti_ignore_dates": True,
-            },
+            target_ref=city_location.id,
+            confidence=self.helper.connect_confidence_level,
         )
         return Bundle(
             objects=[
-                country_identity,
-                city_identity,
+                country_location,
+                city_location,
                 city_to_country,
                 observable_to_city,
             ]
@@ -67,10 +74,10 @@ class IpInfoConnector:
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
-        observable = self.helper.api.stix_observable.read(id=entity_id)
+        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         # Extract TLP
         tlp = "TLP:WHITE"
-        for marking_definition in observable["markingDefinitions"]:
+        for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
@@ -80,24 +87,26 @@ class IpInfoConnector:
             )
 
         # Extract IP from entity data
-        observable_id = observable["stix_id_key"]
-        observable_value = observable["observable_value"]
+        observable_id = observable["standard_id"]
+        observable_value = observable["value"]
         # Get the geo loc from the API
-        api_url = "https://ipinfo.io/" + observable_value + "?token=" + self.token
+        api_url = "https://ipinfo.io/" + observable_value + "/json/?token=" + self.token
         response = requests.request(
             "GET",
             api_url,
-            headers={"accept": "application/json", "content-type": "application/json",},
+            headers={"accept": "application/json", "content-type": "application/json"},
         )
-        json_data = json.loads(response.text)
+        json_data = response.json()
         country = pycountry.countries.get(alpha_2=json_data["country"])
         if country is None:
             raise ValueError(
                 "IpInfo was not able to find a country for this IP address"
             )
-        bundle = self._generate_stix_bundle(country, json_data["city"], observable_id)
+        bundle = self._generate_stix_bundle(
+            country, json_data["city"], json_data["loc"], observable_id
+        )
         bundles_sent = self.helper.send_stix2_bundle(bundle)
-        return ["Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"]
+        return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
 
     # Start the main loop
     def start(self):

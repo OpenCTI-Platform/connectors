@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-alienvault:
-    image: opencti/connector-alienvault:latest
+    image: opencti/connector-alienvault:4.3.5
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,14 +9,19 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=AlienVault
       - CONNECTOR_SCOPE=alienvault
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_CONFIDENCE_LEVEL=15
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - ALIENVAULT_BASE_URL=https://otx.alienvault.com
       - ALIENVAULT_API_KEY=ChangeMe
       - ALIENVAULT_TLP=White
-      - ALIENVAULT_PULSE_START_TIMESTAMP=2020-01-01T00:00:00  # BEWARE! Could be a lot of pulses!
-      - ALIENVAULT_REPORT_TYPE=Threat Report
-      - ALIENVAULT_REPORT_STATUS=Analyzed
+      - ALIENVAULT_CREATE_OBSERVABLES=true
+      - ALIENVAULT_CREATE_INDICATORS=true
+      - ALIENVAULT_PULSE_START_TIMESTAMP=2020-05-01T00:00:00                  # BEWARE! Could be a lot of pulses!
+      - ALIENVAULT_REPORT_TYPE=threat-report
+      - ALIENVAULT_REPORT_STATUS=New
+      - ALIENVAULT_GUESS_MALWARE=false                                        # Use tags to guess malware.
+      - ALIENVAULT_GUESS_CVE=false                                            # Use tags to guess CVE.
+      - ALIENVAULT_EXCLUDED_PULSE_INDICATOR_TYPES=FileHash-MD5,FileHash-SHA1  # Excluded Pulse indicator types.
       - ALIENVAULT_INTERVAL_SEC=1800
     restart: always

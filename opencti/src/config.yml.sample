@@ -14,4 +14,4 @@ connector:
 config:
   sectors_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json'
   geography_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json'
-  interval: 7 # Days
+  interval: 7 # In days, must be strictly greater than 1

@@ -1,0 +1,2 @@
+pycti==4.3.5
+elasticsearch==7.12.0

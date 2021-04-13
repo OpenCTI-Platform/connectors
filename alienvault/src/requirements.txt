@@ -1,4 +1,3 @@
-pycti
-PyYAML>=5.1
-pydantic
-OTXv2
+pycti==4.3.5
+pydantic==1.8.1
+OTXv2==1.5.10

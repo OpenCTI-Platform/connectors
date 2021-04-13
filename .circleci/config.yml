@@ -1,6 +1,30 @@
 version: 2.1
 
 jobs:
+  ensure_formatting:
+    docker:
+      - image: circleci/python:3.7.7
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: install dependencies
+          command: sudo pip3 install black
+      - run:
+          name: confirm black version
+          command: black --version
+      - run:
+          name: run black check
+          command: black --check .
+  linter:
+    docker:
+      - image: alpine/flake8
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: flake8
+          command: flake8 --ignore=E,W ~/repo
   build:
     working_directory: ~/opencti
     docker:
@@ -25,9 +49,25 @@ jobs:
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/hygiene
+          name: Build Docker image opencti/connector-hygiene
+          command: docker build -t opencti/connector-hygiene:latest . && docker tag opencti/connector-hygiene:latest opencti/connector-hygiene:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/alienvault
           name: Build Docker image opencti/connector-alienvault
           command: docker build -t opencti/connector-alienvault:latest . && docker tag opencti/connector-alienvault:latest opencti/connector-alienvault:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/crowdstrike
+          name: Build Docker image opencti/connector-crowdstrike
+          command: docker build -t opencti/connector-crowdstrike:latest . && docker tag opencti/connector-crowdstrike:latest opencti/connector-crowdstrike:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/cryptolaemus
+          name: Build Docker image opencti/connector-cryptolaemus
+          command: docker build -t opencti/connector-cryptolaemus:latest . && docker tag opencti/connector-cryptolaemus:latest opencti/connector-cryptolaemus:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/cyber-threat-coalition
+          name: Build Docker image opencti/connector-cyber-threat-coalition
+          command: docker build -t opencti/connector-cyber-threat-coalition:latest . && docker tag opencti/connector-cyber-threat-coalition:latest opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
@@ -35,7 +75,7 @@ jobs:
       - run:
           working_directory: ~/opencti/mitre
           name: Build Docker image opencti/connector-mitre
-          command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/opencti
           name: Build Docker image opencti/connector-opencti
@@ -57,6 +97,74 @@ jobs:
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:latest . && docker tag opencti/connector-virustotal:latest opencti/connector-virustotal:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/lastinfosec
+          name: Build Docker image opencti/connector-lastinfosec
+          command: docker build -t opencti/connector-lastinfosec:latest . && docker tag opencti/connector-lastinfosec:latest opencti/connector-lastinfosec:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/malpedia
+          name: Build Docker image opencti/connector-malpedia
+          command: docker build -t opencti/connector-malpedia:latest . && docker tag opencti/connector-malpedia:latest opencti/connector-malpedia:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/valhalla
+          name: Build Docker image opencti/connector-valhalla
+          command: docker build -t opencti/connector-valhalla:latest . && docker tag opencti/connector-valhalla:latest opencti/connector-valhalla:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/cybercrime-tracker
+          name: Build Docker image opencti/connector-cybercrime-tracker
+          command: docker build -t opencti/connector-cybercrime-tracker:latest . && docker tag opencti/connector-cybercrime-tracker:latest opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/history
+          name: Build Docker image opencti/connector-history
+          command: docker build -t opencti/connector-history:latest . && docker tag opencti/connector-history:latest opencti/connector-history:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/tanium
+          name: Build Docker image opencti/connector-tanium
+          command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}          
+      - run:
+          working_directory: ~/opencti/synchronizer
+          name: Build Docker image opencti/connector-synchronizer
+          command: docker build -t opencti/connector-synchronizer:latest . && docker tag opencti/connector-synchronizer:latest opencti/connector-synchronizer:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/fireeye
+          name: Build Docker image opencti/connector-fireeye
+          command: docker build -t opencti/connector-fireeye:latest . && docker tag opencti/connector-fireeye:latest opencti/connector-fireeye:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/kaspersky
+          name: Build Docker image opencti/connector-kaspersky
+          command: docker build -t opencti/connector-kaspersky:latest . && docker tag opencti/connector-kaspersky:latest opencti/connector-kaspersky:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/greynoise
+          name: Build Docker image opencti/connector-greynoise
+          command: docker build -t opencti/connector-greynoise:latest . && docker tag opencti/connector-greynoise:latest opencti/connector-greynoise:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/taxii2
+          name: Build Docker image opencti/connector-taxii2
+          command: docker build -t opencti/connector-taxii2:latest . && docker tag opencti/connector-taxii2:latest opencti/connector-taxii2:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/thehive
+          name: Build Docker image opencti/connector-thehive
+          command: docker build -t opencti/connector-thehive:latest . && docker tag opencti/connector-thehive:latest opencti/connector-thehive:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/abuseipdb
+          name: Build Docker image opencti/connector-abuseipdb
+          command: docker build -t opencti/connector-abuseipdb:latest . && docker tag opencti/connector-abuseipdb:latest opencti/connector-abuseipdb:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/urlhaus
+          name: Build Docker image opencti/connector-urlhaus
+          command: docker build -t opencti/connector-urlhaus:latest . && docker tag opencti/connector-urlhaus:latest opencti/connector-urlhaus:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/malbeacon
+          name: Build Docker image opencti/connector-malbeacon
+          command: docker build -t opencti/connector-malbeacon:latest . && docker tag opencti/connector-malbeacon:latest opencti/connector-malbeacon:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/sekoia
+          name: Build Docker image opencti/connector-sekoia
+          command: docker build -t opencti/connector-sekoia:latest . && docker tag opencti/connector-sekoia:latest opencti/connector-sekoia:${CIRCLE_TAG}          
+      - run:
+          working_directory: ~/opencti/threatbus
+          name: Build Docker image opencti/connector-threatbus
+          command: docker build -t opencti/connector-threatbus:latest . && docker tag opencti/connector-threatbus:latest opencti/connector-threatbus:${CIRCLE_TAG}                    
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -68,8 +176,16 @@ jobs:
             docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
             docker push opencti/connector-export-file-csv:latest
             docker push opencti/connector-export-file-csv:${CIRCLE_TAG}
+            docker push opencti/connector-hygiene:latest
+            docker push opencti/connector-hygiene:${CIRCLE_TAG}
             docker push opencti/connector-alienvault:latest
             docker push opencti/connector-alienvault:${CIRCLE_TAG}
+            docker push opencti/connector-crowdstrike:latest
+            docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
+            docker push opencti/connector-cryptolaemus:latest
+            docker push opencti/connector-cryptolaemus:${CIRCLE_TAG}
+            docker push opencti/connector-cyber-threat-coalition:latest
+            docker push opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
             docker push opencti/connector-mitre:latest
@@ -84,6 +200,40 @@ jobs:
             docker push opencti/connector-ipinfo:${CIRCLE_TAG}
             docker push opencti/connector-virustotal:latest
             docker push opencti/connector-virustotal:${CIRCLE_TAG}
+            docker push opencti/connector-lastinfosec:latest
+            docker push opencti/connector-lastinfosec:${CIRCLE_TAG}
+            docker push opencti/connector-malpedia:latest
+            docker push opencti/connector-malpedia:${CIRCLE_TAG}
+            docker push opencti/connector-valhalla:latest
+            docker push opencti/connector-valhalla:${CIRCLE_TAG}
+            docker push opencti/connector-cybercrime-tracker:latest
+            docker push opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
+            docker push opencti/connector-history:latest
+            docker push opencti/connector-history:${CIRCLE_TAG}
+            docker push opencti/connector-tanium:latest
+            docker push opencti/connector-tanium:${CIRCLE_TAG}            
+            docker push opencti/connector-synchronizer:latest
+            docker push opencti/connector-synchronizer:${CIRCLE_TAG}
+            docker push opencti/connector-fireeye:latest
+            docker push opencti/connector-fireeye:${CIRCLE_TAG}
+            docker push opencti/connector-kaspersky:latest
+            docker push opencti/connector-kaspersky:${CIRCLE_TAG}
+            docker push opencti/connector-greynoise:latest
+            docker push opencti/connector-greynoise:${CIRCLE_TAG}
+            docker push opencti/connector-taxii2:latest
+            docker push opencti/connector-taxii2:${CIRCLE_TAG}
+            docker push opencti/connector-thehive:latest
+            docker push opencti/connector-thehive:${CIRCLE_TAG}
+            docker push opencti/connector-abuseipdb:latest
+            docker push opencti/connector-abuseipdb:${CIRCLE_TAG}
+            docker push opencti/connector-urlhaus:latest
+            docker push opencti/connector-urlhaus:${CIRCLE_TAG}
+            docker push opencti/connector-malbeacon:latest
+            docker push opencti/connector-malbeacon:${CIRCLE_TAG}
+            docker push opencti/connector-sekoia:latest
+            docker push opencti/connector-sekoia:${CIRCLE_TAG}            
+            docker push opencti/connector-threatbus:latest
+            docker push opencti/connector-threatbus:${CIRCLE_TAG}                 
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -108,9 +258,25 @@ jobs:
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:rolling .
       - run:
+          working_directory: ~/opencti/hygiene
+          name: Build Docker image opencti/connector-hygiene
+          command: docker build -t opencti/connector-hygiene:rolling .
+      - run:
           working_directory: ~/opencti/alienvault
           name: Build Docker image opencti/connector-alienvault
           command: docker build -t opencti/connector-alienvault:rolling .
+      - run:
+          working_directory: ~/opencti/crowdstrike
+          name: Build Docker image opencti/connector-crowdstrike
+          command: docker build -t opencti/connector-crowdstrike:rolling .
+      - run:
+          working_directory: ~/opencti/cryptolaemus
+          name: Build Docker image opencti/connector-cryptolaemus
+          command: docker build -t opencti/connector-cryptolaemus:rolling .
+      - run:
+          working_directory: ~/opencti/cyber-threat-coalition
+          name: Build Docker image opencti/connector-cyber-threat-coalition
+          command: docker build -t opencti/connector-cyber-threat-coalition:rolling .
       - run:
           working_directory: ~/opencti/misp
           name: Build Docker image opencti/connector-misp
@@ -140,6 +306,74 @@ jobs:
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:rolling .
       - run:
+          working_directory: ~/opencti/lastinfosec
+          name: Build Docker image opencti/connector-lastinfosec
+          command: docker build -t opencti/connector-lastinfosec:rolling .
+      - run:
+          working_directory: ~/opencti/malpedia
+          name: Build Docker image opencti/connector-malpedia
+          command: docker build -t opencti/connector-malpedia:rolling .
+      - run:
+          working_directory: ~/opencti/valhalla
+          name: Build Docker image opencti/connector-valhalla
+          command: docker build -t opencti/connector-valhalla:rolling .
+      - run:
+          working_directory: ~/opencti/cybercrime-tracker
+          name: Build Docker image opencti/connector-cybercrime-tracker
+          command: docker build -t opencti/connector-cybercrime-tracker:rolling .
+      - run:
+          working_directory: ~/opencti/history
+          name: Build Docker image opencti/connector-history
+          command: docker build -t opencti/connector-history:rolling .
+      - run:
+          working_directory: ~/opencti/tanium
+          name: Build Docker image opencti/connector-tanium
+          command: docker build -t opencti/connector-tanium:rolling .          
+      - run:
+          working_directory: ~/opencti/synchronizer
+          name: Build Docker image opencti/connector-synchronizer
+          command: docker build -t opencti/connector-synchronizer:rolling .          
+      - run:
+          working_directory: ~/opencti/fireeye
+          name: Build Docker image opencti/connector-fireeye
+          command: docker build -t opencti/connector-fireeye:rolling .
+      - run:
+          working_directory: ~/opencti/kaspersky
+          name: Build Docker image opencti/connector-kaspersky
+          command: docker build -t opencti/connector-kaspersky:rolling .
+      - run:
+          working_directory: ~/opencti/greynoise
+          name: Build Docker image opencti/connector-greynoise
+          command: docker build -t opencti/connector-greynoise:rolling .
+      - run:
+          working_directory: ~/opencti/taxii2
+          name: Build Docker image opencti/connector-taxii2
+          command: docker build -t opencti/connector-taxii2:rolling .
+      - run:
+          working_directory: ~/opencti/thehive
+          name: Build Docker image opencti/connector-thehive
+          command: docker build -t opencti/connector-thehive:rolling .
+      - run:
+          working_directory: ~/opencti/abuseipdb
+          name: Build Docker image opencti/connector-abuseipdb
+          command: docker build -t opencti/connector-abuseipdb:rolling .
+      - run:
+          working_directory: ~/opencti/urlhaus
+          name: Build Docker image opencti/connector-urlhaus
+          command: docker build -t opencti/connector-urlhaus:rolling .
+      - run:
+          working_directory: ~/opencti/malbeacon
+          name: Build Docker image opencti/connector-malbeacon
+          command: docker build -t opencti/connector-malbeacon:rolling .
+      - run:
+          working_directory: ~/opencti/sekoia
+          name: Build Docker image opencti/connector-sekoia
+          command: docker build -t opencti/connector-sekoia:rolling . 
+      - run:
+          working_directory: ~/opencti/threatbus
+          name: Build Docker image opencti/connector-threatbus
+          command: docker build -t opencti/connector-threatbus:rolling .                        
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -147,7 +381,11 @@ jobs:
             docker push opencti/connector-import-file-pdf-observables:rolling
             docker push opencti/connector-export-file-stix:rolling
             docker push opencti/connector-export-file-csv:rolling
+            docker push opencti/connector-hygiene:rolling
             docker push opencti/connector-alienvault:rolling
+            docker push opencti/connector-crowdstrike:rolling
+            docker push opencti/connector-cryptolaemus:rolling
+            docker push opencti/connector-cyber-threat-coalition:rolling
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling
@@ -155,9 +393,29 @@ jobs:
             docker push opencti/connector-amitt:rolling
             docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-virustotal:rolling
+            docker push opencti/connector-lastinfosec:rolling
+            docker push opencti/connector-malpedia:rolling
+            docker push opencti/connector-valhalla:rolling
+            docker push opencti/connector-cybercrime-tracker:rolling
+            docker push opencti/connector-history:rolling
+            docker push opencti/connector-tanium:rolling
+            docker push opencti/connector-synchronizer:rolling
+            docker push opencti/connector-fireeye:rolling
+            docker push opencti/connector-kaspersky:rolling
+            docker push opencti/connector-greynoise:rolling
+            docker push opencti/connector-taxii2:rolling
+            docker push opencti/connector-thehive:rolling
+            docker push opencti/connector-abuseipdb:rolling
+            docker push opencti/connector-urlhaus:rolling
+            docker push opencti/connector-malbeacon:rolling
+            docker push opencti/connector-sekoia:rolling
+            docker push opencti/connector-threatbus:rolling
 workflows:
+  version: 2
   opencti:
     jobs:
+      - ensure_formatting
+      - linter
       - build:
           filters:
             tags:
@@ -165,6 +423,9 @@ workflows:
             branches:
               ignore: /.*/
       - build_rolling:
+          requires:
+            - ensure_formatting
+            - linter
           filters:
             branches:
               only:

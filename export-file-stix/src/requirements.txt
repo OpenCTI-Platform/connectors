@@ -1,4 +1,1 @@
-requests
-PyYAML
-pika
-pycti
+pycti==4.3.5

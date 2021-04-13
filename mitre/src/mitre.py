@@ -2,6 +2,8 @@ import os
 import yaml
 import time
 import urllib.request
+import certifi
+import ssl
 
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -23,6 +25,9 @@ class Mitre:
         )
         self.mitre_pre_attack_file_url = get_config_variable(
             "MITRE_PRE_ATTACK_FILE_URL", ["mitre", "pre_attack_file_url"], config
+        )
+        self.mitre_mobile_attack_file_url = get_config_variable(
+            "MITRE_MOBILE_ATTACK_FILE_URL", ["mitre", "mobile_attack_file_url"], config
         )
         self.mitre_interval = get_config_variable(
             "MITRE_INTERVAL", ["mitre", "interval"], config, True
@@ -63,30 +68,75 @@ class Mitre:
                     > ((int(self.mitre_interval) - 1) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
-                    enterprise_data = (
-                        urllib.request.urlopen(self.mitre_enterprise_file_url)
-                        .read()
-                        .decode("utf-8")
+                    now = datetime.utcfromtimestamp(timestamp)
+                    friendly_name = "MITRE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
                     )
-                    self.helper.send_stix2_bundle(
-                        enterprise_data,
-                        self.helper.connect_scope,
-                        self.update_existing_data,
-                    )
-                    pre_attack_data = urllib.request.urlopen(
-                        self.mitre_pre_attack_file_url
-                    ).read()
-                    self.helper.send_stix2_bundle(
-                        pre_attack_data.decode("utf-8"),
-                        self.helper.connect_scope,
-                        self.update_existing_data,
-                    )
+                    try:
+                        enterprise_data = (
+                            urllib.request.urlopen(
+                                self.mitre_enterprise_file_url,
+                                context=ssl.create_default_context(
+                                    cafile=certifi.where()
+                                ),
+                            )
+                            .read()
+                            .decode("utf-8")
+                        )
+                        self.helper.send_stix2_bundle(
+                            enterprise_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
+                            work_id=work_id,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+                    try:
+                        pre_attack_data = (
+                            urllib.request.urlopen(
+                                self.mitre_pre_attack_file_url,
+                                context=ssl.create_default_context(
+                                    cafile=certifi.where()
+                                ),
+                            )
+                            .read()
+                            .decode("utf-8")
+                        )
+                        self.helper.send_stix2_bundle(
+                            pre_attack_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
+                            work_id=work_id,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+                    try:
+                        mobile_attack_data = (
+                            urllib.request.urlopen(
+                                self.mitre_mobile_attack_file_url,
+                                context=ssl.create_default_context(
+                                    cafile=certifi.where()
+                                ),
+                            )
+                            .read()
+                            .decode("utf-8")
+                        )
+                        self.helper.send_stix2_bundle(
+                            mobile_attack_data,
+                            entities_types=self.helper.connect_scope,
+                            update=self.update_existing_data,
+                            work_id=work_id,
+                        )
+                    except Exception as e:
+                        self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
-                    self.helper.log_info(
-                        "Connector successfully run, storing last_run as "
-                        + str(timestamp)
+                    message = "Connector successfully run, storing last_run as " + str(
+                        timestamp
                     )
+                    self.helper.log_info(message)
                     self.helper.set_state({"last_run": timestamp})
+                    self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))

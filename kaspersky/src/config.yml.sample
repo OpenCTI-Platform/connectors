@@ -1,0 +1,36 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Kaspersky'
+  scope: 'kaspersky'
+  confidence_level: 15  # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  log_level: 'info'
+
+kaspersky:
+  base_url: 'https://tip.kaspersky.com'
+  user: 'ChangeMe'
+  password: 'ChangeMe'
+  certificate_path: 'ChangeMe'
+  tlp: 'Amber'
+  create_observables: true
+  create_indicators: true
+  scopes: 'publication,master_ioc,master_yara'
+  publication_start_timestamp: 0
+  publication_report_type: 'threat-report'
+  publication_report_status: 'New'
+  publication_report_ignore_prefixes: 'Monthly APT activity report'
+  publication_excluded_ioc_indicator_types: 'Md5sum, FileItem/Sha1sum'  # OpenIOC search values.
+  master_ioc_fetch_weekday: 1  # If present then the Master IOC is fetched on given ISO weekday.
+  master_ioc_excluded_ioc_indicator_types: 'md5Hash, sha1Hash'  # OpenIOC indicator types.
+  master_ioc_report_type: 'threat-report'
+  master_ioc_report_status: 'New'
+  master_yara_fetch_weekday: 2  # If present then the Master YARA is fetched on given ISO weekday.
+  master_yara_include_report: true
+  master_yara_report_type: 'threat-report'
+  master_yara_report_status: 'New'
+  interval_sec: 43200

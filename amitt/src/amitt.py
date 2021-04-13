@@ -66,15 +66,17 @@ class Amitt:
                         .decode("utf-8")
                     )
                     self.helper.send_stix2_bundle(
-                        amitt_data, self.helper.connect_scope, self.update_existing_data
+                        amitt_data,
+                        entities_types=self.helper.connect_scope,
+                        update=self.update_existing_data,
                     )
                     pre_amitt_data = urllib.request.urlopen(
                         self.pre_amitt_file_url
                     ).read()
                     self.helper.send_stix2_bundle(
                         pre_amitt_data.decode("utf-8"),
-                        self.helper.connect_scope,
-                        self.update_existing_data,
+                        entities_types=self.helper.connect_scope,
+                        update=self.update_existing_data,
                     )
                     # Store the current timestamp as a last run
                     self.helper.log_info(

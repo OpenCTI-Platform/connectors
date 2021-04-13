@@ -3,13 +3,18 @@
 import os
 import yaml
 import time
-import uuid
-import json
 
 import iocp
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
-from stix2 import Bundle, Indicator, Report
+from stix2 import (
+    Bundle,
+    Report,
+)
+from pycti import (
+    OpenCTIConnectorHelper,
+    OpenCTIStix2Utils,
+    get_config_variable,
+    SimpleObservable,
+)
 
 
 class ImportFilePdfObservables:
@@ -29,10 +34,10 @@ class ImportFilePdfObservables:
         )
 
     def _process_message(self, data):
-        file_path = data["file_path"]
-        file_name = os.path.basename(file_path)
-        work_context = data["work_context"]
-        file_uri = self.helper.opencti_url + file_path
+        file_fetch = data["file_fetch"]
+        file_uri = self.helper.opencti_url + file_fetch
+        file_name = os.path.basename(file_fetch)
+        container_id = data["container_id"]
         self.helper.log_info("Importing the file " + file_uri)
         # Get the file
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
@@ -42,18 +47,7 @@ class ImportFilePdfObservables:
         f.write(file_content)
         f.close()
         # Parse
-        bundle = {
-            "type": "bundle",
-            "id": "bundle--" + str(uuid.uuid4()),
-            "spec_version": "2.0",
-            "objects": [],
-        }
-        observed_data = {
-            "id": "observed-data--" + str(uuid.uuid4()),
-            "type": "observed-data",
-            "x_opencti_indicator_create": self.create_indicator,
-            "objects": {},
-        }
+        bundle_objects = []
         i = 0
         parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json")
         parsed = parser.parse(path)
@@ -66,45 +60,40 @@ class ImportFilePdfObservables:
                             for match in page:
                                 resolved_match = self.resolve_match(match)
                                 if resolved_match:
-                                    observable = {
-                                        "type": resolved_match["type"],
-                                        "x_opencti_observable_type": resolved_match[
-                                            "type"
-                                        ],
-                                        "x_opencti_observable_value": resolved_match[
-                                            "value"
-                                        ],
-                                        "x_opencti_indicator_create": self.create_indicator,
-                                    }
-                                    observed_data["objects"][i] = observable
+                                    observable = SimpleObservable(
+                                        id=OpenCTIStix2Utils.generate_random_stix_id(
+                                            "x-opencti-simple-observable"
+                                        ),
+                                        key=resolved_match["type"],
+                                        value=resolved_match["value"],
+                                        x_opencti_create_indicator=self.create_indicator,
+                                    )
+                                    bundle_objects.append(observable)
                                     i += 1
         else:
             self.helper.log_error("Could not parse the report!")
 
         # Get context
-        if len(observed_data["objects"]) > 0:
-            bundle["objects"].append(observed_data)
-            if work_context is not None and len(work_context) > 0:
-                report = self.helper.api.report.read(id=work_context)
+        if len(bundle_objects) > 0:
+            if container_id is not None and len(container_id) > 0:
+                report = self.helper.api.report.read(id=container_id)
                 if report is not None:
-                    report_stix = {
-                        "type": "report",
-                        "id": report["stix_id_key"],
-                        "name": report["name"],
-                        "description": report["description"],
-                        "published": self.helper.api.stix2.format_date(
+                    report = Report(
+                        id=report["standard_id"],
+                        name=report["name"],
+                        description=report["description"],
+                        published=self.helper.api.stix2.format_date(
                             report["published"]
                         ),
-                        "object_refs": [],
-                    }
-                    report_stix["object_refs"].append(observed_data["id"])
-                    bundle["objects"].append(report_stix)
-            bundles_sent = self.helper.send_stix2_bundle(
-                json.dumps(bundle), None, False, False
-            )
-            return [
+                        report_types=report["report_types"],
+                        object_refs=bundle_objects,
+                    )
+                    bundle_objects.append(report)
+            bundle = Bundle(objects=bundle_objects).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+            return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
-            ]
+            )
 
     # Start the main loop
     def start(self):
@@ -112,33 +101,52 @@ class ImportFilePdfObservables:
 
     def resolve_match(self, match):
         types = {
-            "MD5": ["File-MD5"],
-            "SHA1": ["File-SHA1"],
-            "SHA256": ["File-SHA256"],
-            "Filename": ["File-Name"],
-            "IP": ["IPv4-Addr"],
-            "Host": ["Domain"],
-            "Filepath": ["File-Name"],
-            "URL": ["URL"],
-            "Email": ["Email-Address"],
+            "MD5": "File.hashes.MD5",
+            "SHA1": "File.hashes.SHA-1",
+            "SHA256": "File.hashes.SHA-256",
+            "Filename": "File.name",
+            "IP": "IPv4-Addr.value",
+            "Host": "X-OpenCTI-Hostname.value",
+            "Filepath": "File.path",
+            "URL": "Url.value",
+            "Email": "Email-Addr.value",
         }
         type = match["type"]
         value = match["match"]
         if type in types:
-            resolved_types = types[type]
-            if resolved_types[0] == "IPv4-Addr":
+            resolved_type = types[type]
+            if resolved_type == "IPv4-Addr.value":
+                # Demilitarized IP
+                if "[.]" in value:
+                    value = value.replace("[.]", ".")
                 type_0 = self.detect_ip_version(value)
+            elif resolved_type == "Url.value":
+                # Demilitarized URL
+                if "hxxp://" in value:
+                    value = value.replace("hxxp://", "http://")
+                if "hxxps://" in value:
+                    value = value.replace("hxxps://", "https://")
+                if "hxxxs://" in value:
+                    value = value.replace("hxxxs://", "https://")
+                if "[.]" in value:
+                    value = value.replace("[.]", ".")
+                type_0 = resolved_type
+            elif resolved_type == "X-OpenCTI-Hostname.value":
+                # Demilitarized Host
+                if "[.]" in value:
+                    value = value.replace("[.]", ".")
+                type_0 = resolved_type
             else:
-                type_0 = resolved_types[0]
+                type_0 = resolved_type
             return {"type": type_0, "value": value}
         else:
             return False
 
     def detect_ip_version(self, value):
         if len(value) > 16:
-            return "IPv6-Addr"
+            return "IPv6-Addr.value"
         else:
-            return "IPv4-Addr"
+            return "IPv4-Addr.value"
 
 
 if __name__ == "__main__":

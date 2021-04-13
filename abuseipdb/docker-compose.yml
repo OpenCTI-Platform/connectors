@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-abuseipdb:
+    image: opencti/connector-abuseipdb:4.3.5
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=AbuseIPDB
+      - CONNECTOR_SCOPE=IPv4-Addr
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_LOG_LEVEL=info
+      - ABUSEIPDB_API_KEY=ChangeMe
+      - ABUSEIPDB_MAX_TLP=TLP:AMBER
+    restart: always
