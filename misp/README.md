@@ -29,6 +29,8 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_ssl_verify`                 | `MISP_SSL_VERIFY`                 | Yes          | A boolean (`True` or `False`), check if the SSL certificate is valid when using `https`.            |
 | `misp_datetime_attribute`         | `MISP_DATETIME_ATTRIBUTE`         | Yes          | The attribute to be used in filter to query new MISP events.                                        |
 | `misp_create_reports`             | `MISP_CREATE_REPORTS`             | Yes          | A boolean (`True` or `False`), create reports for each imported MISP event.                         |
+| `misp_create_observables`         | `MISP_CREATE_OBSERVABLES`         | Yes          | A boolean (`True` or `False`), create an observable for each imported MISP attribute.               |
+| `misp_create_indicators`          | `MISP_CREATE_INDICATORS`          | Yes          | A boolean (`True` or `False`), create an indicator for each imported MISP attribute.                |
 | `misp_report_class`               | `MISP_REPORT_CLASS`               | No           | If `create_reports` is `True`, specify the `report_class` (category), default is `MISP Event`       |
 | `misp_import_from_date`           | `MISP_IMPORT_FROM_DATE`           | No           | A date formatted `YYYY-MM-DD`, only import events created after this date.                          |
 | `misp_import_tags`                | `MISP_IMPORT_TAGS`                | No           | A list of tags separated with `,`, only import events with these tags.                              |
