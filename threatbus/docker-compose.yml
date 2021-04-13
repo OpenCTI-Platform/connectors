@@ -11,6 +11,8 @@ services:
       - CONNECTOR_SCOPE=threatbus
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_ENTITY_NAME=ChangeMe
+      - CONNECTOR_ENTITY_DESCRIPTION=ChangeMe
       - THREATBUS_ZMQ_HOST=localhost
-      - THREATBUS_ZMQ_RECEIVE_PORT=13372
+      - THREATBUS_ZMQ_PORT=13370
     restart: always
