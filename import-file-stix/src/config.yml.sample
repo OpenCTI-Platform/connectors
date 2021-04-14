@@ -7,5 +7,6 @@ connector:
   type: 'INTERNAL_IMPORT_FILE'
   name: 'ImportFileStix'
   scope: 'application/json,text/xml'
+  auto: false # Enable/disable auto-import of file
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
