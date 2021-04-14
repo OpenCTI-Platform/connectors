@@ -4,7 +4,6 @@ import time
 import json
 
 from datetime import datetime
-from dateutil.parser import parse
 from pymisp import ExpandedPyMISP
 from stix2 import (
     Bundle,
@@ -493,7 +492,9 @@ class Misp:
                     id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
-                    published=parse(event["Event"]["date"]),
+                    published=published=datetime.utcfromtimestamp(
+                        int(event["Event"]["timestamp"])
+                    ),
                     report_types=[self.misp_report_type],
                     created_by_ref=author,
                     object_marking_refs=event_markings,
