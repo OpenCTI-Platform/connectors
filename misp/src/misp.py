@@ -488,7 +488,7 @@ class Misp:
                 bundle_objects.append(object_relationship)
 
             # Create the report if needed
-            if self.misp_create_report and len(object_refs) > 0:
+            if self.misp_create_report:
                 report = Report(
                     id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
