@@ -14,6 +14,7 @@ from pycti import (
     OpenCTIStix2Utils,
     get_config_variable,
     SimpleObservable,
+    AttackPattern
 )
 
 
@@ -48,6 +49,7 @@ class ImportFilePdfObservables:
         f.close()
         # Parse
         bundle_objects = []
+        entities = []
         i = 0
         parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json")
         parsed = parser.parse(path)
@@ -60,20 +62,31 @@ class ImportFilePdfObservables:
                             for match in page:
                                 resolved_match = self.resolve_match(match)
                                 if resolved_match:
-                                    observable = SimpleObservable(
-                                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                                            "x-opencti-simple-observable"
-                                        ),
-                                        key=resolved_match["type"],
-                                        value=resolved_match["value"],
-                                        x_opencti_create_indicator=self.create_indicator,
-                                    )
-                                    bundle_objects.append(observable)
+                                    if resolved_match["type"] == "AttackPattern":
+                                        entity = self.helper.api.attack_pattern.read(
+                                            filters=[{
+                                                "key": "x_mitre_id",
+                                                "values": [resolved_match['value']]
+                                            }]
+                                        )
+                                        self.helper.log_info(entity)
+                                        entities.append(entity)
+                                    else:
+                                        observable = SimpleObservable(
+                                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                                "x-opencti-simple-observable"
+                                            ),
+                                            key=resolved_match["type"],
+                                            value=resolved_match["value"],
+                                            x_opencti_create_indicator=self.create_indicator,
+                                        )
+                                        bundle_objects.append(observable)
                                     i += 1
         else:
             self.helper.log_error("Could not parse the report!")
 
         # Get context
+        self.helper.log_info(bundle_objects)
         if len(bundle_objects) > 0:
             if container_id is not None and len(container_id) > 0:
                 report = self.helper.api.report.read(id=container_id)
@@ -91,8 +104,13 @@ class ImportFilePdfObservables:
                     bundle_objects.append(report)
             bundle = Bundle(objects=bundle_objects).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
+            total = len(bundles_sent)
+            bundle = Bundle(objects=entities).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+            total += len(bundles_sent)
+
             return (
-                "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+                "Sent " + str(total) + " stix bundle(s) for worker import"
             )
 
     # Start the main loop
@@ -110,6 +128,7 @@ class ImportFilePdfObservables:
             "Filepath": "File.path",
             "URL": "Url.value",
             "Email": "Email-Addr.value",
+            "AttackPattern": "Attack-Pattern.value",
         }
         type = match["type"]
         value = match["match"]
