@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
-from typing import Any, Generator, List, Mapping, Optional
+from datetime import datetime
+from typing import Any, Dict, Generator, List, Optional
 
 from crowdstrike_client.api.intel import Indicators, Reports
 from crowdstrike_client.api.models import Indicator
@@ -53,7 +54,7 @@ class IndicatorImporter(BaseImporter):
 
         self.report_fetcher = ReportFetcher(reports_api)
 
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
         self._info("Running indicator importer with state: {0}...", state)
 
@@ -63,29 +64,33 @@ class IndicatorImporter(BaseImporter):
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
         )
 
-        latest_fetched_indicator_timestamp = None
+        latest_indicator_published_datetime = None
 
         for indicator_batch in self._fetch_indicators(fetch_timestamp):
             if not indicator_batch:
                 break
 
-            if latest_fetched_indicator_timestamp is None:
-                first_in_batch = indicator_batch[0]
+            latest_batch_published_datetime = self._process_indicators(indicator_batch)
 
-                latest_fetched_indicator_timestamp = datetime_to_timestamp(
-                    first_in_batch.published_date
-                )
+            if latest_batch_published_datetime is not None and (
+                latest_indicator_published_datetime is None
+                or latest_batch_published_datetime > latest_indicator_published_datetime
+            ):
+                latest_indicator_published_datetime = latest_batch_published_datetime
 
-            self._process_indicators(indicator_batch)
+        latest_indicator_published_timestamp = fetch_timestamp
 
-        state_timestamp = latest_fetched_indicator_timestamp or fetch_timestamp
+        if latest_indicator_published_datetime is not None:
+            latest_indicator_published_timestamp = datetime_to_timestamp(
+                latest_indicator_published_datetime
+            )
 
         self._info(
             "Indicator importer completed, latest fetch {0}.",
-            timestamp_to_datetime(state_timestamp),
+            timestamp_to_datetime(latest_indicator_published_timestamp),
         )
 
-        return {self._LATEST_INDICATOR_TIMESTAMP: state_timestamp}
+        return {self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_published_timestamp}
 
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
@@ -155,9 +160,11 @@ class IndicatorImporter(BaseImporter):
                 self._info("Fetched {0} indicators in total", total_count)
                 return
 
-    def _process_indicators(self, indicators: List[Indicator]) -> None:
+    def _process_indicators(self, indicators: List[Indicator]) -> Optional[datetime]:
         indicator_count = len(indicators)
         self._info("Processing {0} indicators...", indicator_count)
+
+        latest_published_datetime = None
 
         failed = 0
         for indicator in indicators:
@@ -165,15 +172,25 @@ class IndicatorImporter(BaseImporter):
             if not result:
                 failed += 1
 
+            published_date = indicator.published_date
+            if (
+                latest_published_datetime is None
+                or published_date > latest_published_datetime
+            ):
+                latest_published_datetime = published_date
+
         imported = indicator_count - failed
         total = imported + failed
 
         self._info(
-            "Processing indicators completed (imported: {0}, failed: {1}, total: {2})",
+            "Processing indicators completed (imported: {0}, failed: {1}, total: {2}, latest: {3})",  # noqa: E501
             imported,
             failed,
             total,
+            latest_published_datetime,
         )
+
+        return latest_published_datetime
 
     def _process_indicator(self, indicator: Indicator) -> bool:
         self._info("Processing indicator {0}...", indicator.id)

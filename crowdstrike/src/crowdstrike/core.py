@@ -336,13 +336,15 @@ class CrowdStrike:
                     new_state = current_state.copy()
 
                     for importer in self.importers:
-                        importer_state = importer.start(work_id, current_state)
+                        importer_state = importer.start(work_id, new_state)
                         new_state.update(importer_state)
+
+                        self._info("Storing updated new state: {0}", new_state)
+                        self.helper.set_state(new_state)
 
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
                     self._info("Storing new state: {0}", new_state)
-
                     self.helper.set_state(new_state)
 
                     message = (

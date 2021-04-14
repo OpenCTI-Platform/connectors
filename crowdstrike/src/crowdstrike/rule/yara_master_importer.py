@@ -1,23 +1,35 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike YARA master importer module."""
 
+import itertools
 import zipfile
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
 from crowdstrike_client.api.intel import Reports, Rules
 from crowdstrike_client.api.models.download import Download
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 
+from requests import RequestException
+
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2.exceptions import STIXError  # type: ignore
 
 from crowdstrike.importer import BaseImporter
 from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike.utils import datetime_to_timestamp, timestamp_to_datetime
 from crowdstrike.rule.yara_master_builder import YaraRuleBundleBuilder
 from crowdstrike.utils.yara_parser import YaraParser, YaraRule
+
+
+class YaraMaster(NamedTuple):
+    """YARA Master."""
+
+    rules: List[YaraRule]
+    e_tag: Optional[str]
+    last_modified: Optional[datetime]
 
 
 class YaraMasterImporter(BaseImporter):
@@ -49,7 +61,7 @@ class YaraMasterImporter(BaseImporter):
 
         self.report_fetcher = ReportFetcher(reports_api)
 
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
         self._info("Running YARA master importer with state: {0}...", state)
 
@@ -60,26 +72,62 @@ class YaraMasterImporter(BaseImporter):
         if last_modified is not None:
             last_modified = timestamp_to_datetime(last_modified)
 
-        # TODO: CrowdStrike Etag and Last-Modified fails with HTTP 500.
-        # download = self._download_yara_master(e_tag, last_modified)
-        download = self._download_yara_master()
+        # XXX: Using Etag and Last-Modified results in HTTP 500.
+        # yara_master = self._fetch_yara_master(e_tag, last_modified)
+        yara_master = self._fetch_yara_master()
 
-        latest_e_tag = download.e_tag
-        latest_last_modified = download.last_modified
+        latest_e_tag = yara_master.e_tag
+        latest_last_modified = yara_master.last_modified
 
-        if last_modified is None or (
+        if (
             last_modified is not None
             and latest_last_modified is not None
-            and latest_last_modified > last_modified
+            and last_modified >= latest_last_modified
         ):
-            self._process_content(download.content)
-        else:
             self._info("YARA master not modified, skipping...")
+            return state
+
+        yara_rules = yara_master.rules
+        yara_rule_count = len(yara_rules)
 
         self._info(
-            "YARA master importer completed, latest download {0} ({1}).",
-            latest_last_modified,
+            "YARA master with {0} rules...",
+            yara_rule_count,
+        )
+
+        new_yara_rules = self._update_existing(yara_rules)
+        new_yara_rule_count = len(new_yara_rules)
+
+        self._info(
+            "{0} new YARA rules...",
+            new_yara_rule_count,
+        )
+
+        grouped_yara_rules = self._group_yara_rules_by_report(new_yara_rules)
+        group_count = len(grouped_yara_rules)
+
+        self._info(
+            "{0} YARA rule groups...",
+            group_count,
+        )
+
+        for group, rules in grouped_yara_rules:
+            self._info("YARA rule group: ({0}) {1}", len(rules), group)
+
+        failed_count = 0
+
+        for yara_rule_group in grouped_yara_rules:
+            failed = self._process_yara_rule_group(yara_rule_group)
+            failed_count += failed
+
+        success_count = new_yara_rule_count - failed_count
+
+        self._info(
+            "YARA master importer completed (imported: {0}, total: {1}, e_tag: {2}, last_modified: {3})",  # noqa: E501
+            success_count,
+            new_yara_rule_count,
             latest_e_tag,
+            latest_last_modified,
         )
 
         self._clear_report_fetcher_cache()
@@ -98,7 +146,19 @@ class YaraMasterImporter(BaseImporter):
         self._info("Clearing report fetcher cache...")
         self.report_fetcher.clear_cache()
 
-    def _download_yara_master(
+    def _fetch_yara_master(
+        self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
+    ) -> YaraMaster:
+        download = self._fetch_latest_yara_master(
+            e_tag=e_tag, last_modified=last_modified
+        )
+        return YaraMaster(
+            rules=self._parse_download(download),
+            e_tag=download.e_tag,
+            last_modified=download.last_modified,
+        )
+
+    def _fetch_latest_yara_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
     ) -> Download:
         rule_set_type = "yara-master"
@@ -106,10 +166,9 @@ class YaraMasterImporter(BaseImporter):
             rule_set_type, e_tag=e_tag, last_modified=last_modified
         )
 
-    def _process_content(self, compressed_content: BytesIO) -> None:
-        yara_rules = self._unzip_content(compressed_content)
-        rules = self._parse_yara_rules(yara_rules)
-        self._process_rules(rules)
+    def _parse_download(self, download: Download) -> List[YaraRule]:
+        yara_str = self._unzip_content(download.content)
+        return self._parse_yara_rules(yara_str)
 
     @staticmethod
     def _unzip_content(compressed_content: BytesIO) -> str:
@@ -122,52 +181,89 @@ class YaraMasterImporter(BaseImporter):
     def _parse_yara_rules(yara_rules: str) -> List[YaraRule]:
         return YaraParser.parse(yara_rules)
 
-    def _process_rules(self, rules: List[YaraRule]) -> None:
-        rule_count = len(rules)
-        self._info("Processing {0} YARA rules...", rule_count)
+    def _update_existing(self, yara_rules: List[YaraRule]) -> List[YaraRule]:
+        """Update YARA rules if they already exists in the OpenCTI."""
+        new_yara_rules = []
 
-        failed = 0
         updated = 0
         not_updated = 0
 
-        for rule in rules:
-            rule_name = rule.name
-
-            existing_rule = self._find_rule_by_name(rule_name)
-            if existing_rule is not None:
-                existing_rule_updated = self._update_if_needed(rule, existing_rule)
-                if existing_rule_updated:
+        for yara_rule in yara_rules:
+            rule_updated = self._try_updating(yara_rule)
+            if rule_updated is None:
+                new_yara_rules.append(yara_rule)
+            else:
+                if rule_updated:
                     updated += 1
                 else:
                     not_updated += 1
-            else:
-                result = self._process_rule(rule)
-                if not result:
-                    failed += 1
 
         existing = updated + not_updated
-        imported = rule_count - failed - existing
-        total = existing + imported + failed
+
+        self._info("Updated {0} of {1} existing YARA rules", updated, existing)
+
+        return new_yara_rules
+
+    def _try_updating(self, yara_rule: YaraRule) -> Optional[bool]:
+        """Try updating YARA rule if it already exists in the OpenCTI."""
+        name = yara_rule.name
+
+        existing_rule = self._find_rule_by_name(name)
+        if existing_rule is None:
+            return None
+
+        return self._update_if_needed(yara_rule, existing_rule)
+
+    @staticmethod
+    def _group_yara_rules_by_report(
+        yara_rules: List[YaraRule],
+    ) -> List[Tuple[str, List[YaraRule]]]:
+        def _key_func(item: YaraRule) -> str:
+            reports = item.reports
+            if reports:
+                sorted_reports = sorted(reports)
+                return "_".join(sorted_reports)
+            return ""
+
+        groups = []
+        sorted_yara_rules = sorted(yara_rules, key=_key_func)
+        for key, group in itertools.groupby(sorted_yara_rules, key=_key_func):
+            groups.append((key, list(group)))
+        return groups
+
+    def _process_yara_rule_group(
+        self, yara_rule_group: Tuple[str, List[YaraRule]]
+    ) -> int:
+        group = yara_rule_group[0]
+        self._info("Processing YARA rule group '{0}'...", group)
+
+        yara_rules = yara_rule_group[1]
+        total_count = len(yara_rules)
+
+        failed_count = 0
+
+        for yara_rule in yara_rules:
+            fetched_reports = self._get_reports_by_code(yara_rule.reports)
+
+            yara_rule_bundle = self._create_yara_rule_bundle(yara_rule, fetched_reports)
+            if yara_rule_bundle is None:
+                failed_count += 1
+
+            # with open(f"yara_rule_bundle_{yara_rule.name}.json", "w") as f:
+            #     f.write(yara_rule_bundle.serialize(pretty=True))
+
+            self._send_bundle(yara_rule_bundle)
+
+        success_count = total_count - failed_count
 
         self._info(
-            "Processing rules completed (imported: {0}, updated: {1} of {2}, failed: {3}, total: {4})",  # noqa: E501
-            imported,
-            updated,
-            existing,
-            failed,
-            total,
+            "Completed processing YARA rule group '{0}' (imported: {1}, total: {2})",
+            group,
+            success_count,
+            total_count,
         )
 
-    def _process_rule(self, rule: YaraRule) -> bool:
-        self._info("Processing YARA rule '{0}'...", rule.name)
-
-        reports = self._get_reports_by_code(rule.reports)
-
-        indicator_bundle = self._create_indicator_bundle(rule, reports)
-
-        self._send_bundle(indicator_bundle)
-
-        return True
+        return failed_count
 
     def _update_if_needed(
         self, new_rule: YaraRule, existing_rule: Tuple[str, YaraRule]
@@ -252,11 +348,15 @@ class YaraMasterImporter(BaseImporter):
         return updated.get(self._KEY_ID) == indicator_id
 
     def _get_reports_by_code(self, codes: List[str]) -> List[FetchedReport]:
-        return self.report_fetcher.get_by_codes(codes)
+        try:
+            return self.report_fetcher.get_by_codes(codes)
+        except RequestException as e:
+            self._error("Failed to fetch reports {0}: {1}", codes, e)
+            return []
 
-    def _create_indicator_bundle(
+    def _create_yara_rule_bundle(
         self, rule: YaraRule, reports: List[FetchedReport]
-    ) -> Bundle:
+    ) -> Optional[Bundle]:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]
@@ -274,4 +374,13 @@ class YaraMasterImporter(BaseImporter):
             report_type,
             reports,
         )
-        return bundle_builder.build()
+
+        try:
+            return bundle_builder.build()
+        except STIXError as e:
+            self._error(
+                "Failed to build YARA rule bundle for '{0}': {1}",
+                rule.name,
+                e,
+            )
+            return None
