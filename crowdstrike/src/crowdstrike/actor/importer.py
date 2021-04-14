@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike actor importer module."""
 
-from typing import Any, Generator, List, Mapping, Optional
+from datetime import datetime
+from typing import Any, Dict, Generator, List, Optional
 
 from crowdstrike_client.api.intel.actors import Actors
 from crowdstrike_client.api.models import Response
@@ -37,7 +38,7 @@ class ActorImporter(BaseImporter):
 
         self.default_latest_timestamp = default_latest_timestamp
 
-    def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
+    def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
         self._info("Running actor importer with state: {0}...", state)
 
@@ -45,40 +46,36 @@ class ActorImporter(BaseImporter):
             self._LATEST_ACTOR_TIMESTAMP, self.default_latest_timestamp
         )
 
-        latest_fetched_actor_timestamp = None
+        new_state = state.copy()
+
+        latest_actor_created_timestamp = None
 
         for actors_batch in self._fetch_actors(fetch_timestamp):
             if not actors_batch:
                 break
 
-            if latest_fetched_actor_timestamp is None:
-                first_in_batch = actors_batch[0]
+            latest_actor_created_datetime = self._process_actors(actors_batch)
 
-                created_date = first_in_batch.created_date
-                if created_date is None:
-                    self._error(
-                        "Missing created date for actor {0} ({1})",
-                        first_in_batch.name,
-                        first_in_batch.id,
-                    )
-                    break
+            if latest_actor_created_datetime is not None:
+                latest_actor_created_timestamp = datetime_to_timestamp(
+                    latest_actor_created_datetime
+                )
 
-                latest_fetched_actor_timestamp = datetime_to_timestamp(created_date)
+                new_state[self._LATEST_ACTOR_TIMESTAMP] = latest_actor_created_timestamp
+                self._set_state(new_state)
 
-            self._process_actors(actors_batch)
-
-        state_timestamp = latest_fetched_actor_timestamp or fetch_timestamp
+        latest_actor_timestamp = latest_actor_created_timestamp or fetch_timestamp
 
         self._info(
             "Actor importer completed, latest fetch {0}.",
-            timestamp_to_datetime(state_timestamp),
+            timestamp_to_datetime(latest_actor_timestamp),
         )
 
-        return {self._LATEST_ACTOR_TIMESTAMP: state_timestamp}
+        return {self._LATEST_ACTOR_TIMESTAMP: latest_actor_timestamp}
 
     def _fetch_actors(self, start_timestamp: int) -> Generator[List[Actor], None, None]:
         limit = 50
-        sort = "created_date|desc"
+        sort = "created_date|asc"
         fql_filter = f"created_date:>{start_timestamp}"
         fields = ["__full__"]
 
@@ -109,14 +106,37 @@ class ActorImporter(BaseImporter):
             limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
         )
 
-    def _process_actors(self, actors: List[Actor]) -> None:
+    def _process_actors(self, actors: List[Actor]) -> Optional[datetime]:
         actor_count = len(actors)
         self._info("Processing {0} actors...", actor_count)
+
+        latest_created_datetime = None
 
         for actor in actors:
             self._process_actor(actor)
 
-        self._info("Processing actors completed (imported: {0})", actor_count)
+            created_date = actor.created_date
+            if created_date is None:
+                self._error(
+                    "Missing created date for actor {0} ({1})",
+                    actor.name,
+                    actor.id,
+                )
+                continue
+
+            if (
+                latest_created_datetime is None
+                or created_date > latest_created_datetime
+            ):
+                latest_created_datetime = created_date
+
+        self._info(
+            "Processing actors completed (imported: {0}, latest: {1})",
+            actor_count,
+            latest_created_datetime,
+        )
+
+        return latest_created_datetime
 
     def _process_actor(self, actor: Actor) -> None:
         self._info("Processing actor {0} ({1})...", actor.name, actor.id)
