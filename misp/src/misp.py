@@ -41,6 +41,7 @@ OPENCTISTIX2 = {
         "transform": {"operation": "remove_string", "value": "AS"},
     },
     "mac-addr": {"type": "mac-addr", "path": ["value"]},
+    "hostname": {"type": "x-opencti-hostname", "path": ["value"]},
     "domain": {"type": "domain-name", "path": ["value"]},
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
