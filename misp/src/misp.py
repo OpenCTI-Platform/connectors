@@ -492,7 +492,7 @@ class Misp:
                     id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
-                    published=published=datetime.utcfromtimestamp(
+                    published=datetime.utcfromtimestamp(
                         int(event["Event"]["timestamp"])
                     ),
                     report_types=[self.misp_report_type],
