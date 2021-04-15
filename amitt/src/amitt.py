@@ -42,7 +42,7 @@ class Amitt:
         self.helper.api.marking_definition.create(
             stix_id="marking-definition--8c9e2257-1c62-4ff0-9de0-1deed93cf282",
             definition_type="statement",
-            definition="Copyright 2021, CogSec."
+            definition="Copyright 2021, CogSec.",
         )
 
     def get_interval(self):
