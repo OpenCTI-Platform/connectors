@@ -1,4 +1,4 @@
-git+https://github.com/OpenCTI-Platform/client-python@4.3.5
+git+https://github.com/OpenCTI-Platform/client-python@4.4.0
 PyYAML
 sseclient
 stix2 >= 2.1
