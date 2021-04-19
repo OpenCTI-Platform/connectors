@@ -43,6 +43,8 @@ class ThreatBusConnector(object):
         self.threatbus_helper = ThreatBusConnectorHelper(
             zmq_endpoint,
             self._report_sighting,
+            self.opencti_helper.log_info,
+            self.opencti_helper.log_error,
             subscribe_topic="stix2/sighting",
             publish_topic="stix2/indicator",
         )
