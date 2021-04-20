@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   ensure_formatting:
     docker:
-      - image: circleci/python:3.7.7
+      - image: circleci/python:3.9
     working_directory: ~/repo
     steps:
       - checkout
