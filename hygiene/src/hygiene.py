@@ -139,7 +139,7 @@ class HygieneConnector:
                 # Create external references
                 external_reference_id = self.helper.api.external_reference.create(
                     source_name="misp-warninglist",
-                    url="https://github.com/MISP/misp-warninglists/tree/master/"
+                    url="https://github.com/MISP/misp-warninglists/tree/main/"
                     + LIST_MAPPING[hit.name],
                     external_id=hit.name,
                     description=hit.description,
