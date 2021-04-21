@@ -14,7 +14,7 @@ OpenCTI data is coming from *import* connectors. Once this data is ingested in O
 
 ### Requirements
 
-- OpenCTI Platform >= 4.4.0
+- OpenCTI Platform >= 4.4.1
 - Tanium Threat Response >= 3.X.X
 - Tanium Reputation >= 5.X.X
 
