@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from posixpath import join as urljoin
 from typing import Any, Iterable, List, Set, Dict
 
+from dateutil.parser import parse, ParserError
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -29,6 +30,7 @@ class Sekoia(object):
         self._cache = {}
         # Extra config
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
+        self.start_date: str = self.get_config("start_date", config, None)
         self.collection = self.get_config(
             "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
         )
@@ -83,13 +85,18 @@ class Sekoia(object):
             self.base_url, "v2/inthreat/objects", item_id, "files", file_hash
         )
 
-    @staticmethod
-    def generate_first_cursor() -> str:
+    def generate_first_cursor(self) -> str:
         """
         Generate the first cursor to interrogate the API
         so we don't start at the beginning.
         """
         start = f"{(datetime.utcnow() - timedelta(hours=1)).isoformat()}Z"
+        if self.start_date:
+            try:
+                start = f"{parse(self.start_date).isoformat()}Z"
+            except ParserError:
+                pass
+
         return base64.b64encode(start.encode("utf-8")).decode("utf-8")
 
     @staticmethod
