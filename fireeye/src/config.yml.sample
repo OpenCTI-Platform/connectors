@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'FireEye'
   scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report'
-  confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: True
   log_level: 'info'
 

@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   connector-kaspersky:
-    image: opencti/connector-kaspersky:4.4.0
+    image: opencti/connector-kaspersky:4.4.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Kaspersky
       - CONNECTOR_SCOPE=kaspersky
-      - CONNECTOR_CONFIDENCE_LEVEL=15  # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - KASPERSKY_BASE_URL=https://tip.kaspersky.com

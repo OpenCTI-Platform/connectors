@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-greynoise:
-    image: opencti/connector-greynoise:4.4.0
+    image: opencti/connector-greynoise:4.4.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=greynoise
       - CONNECTOR_SCOPE=ipv4-addr
       - CONNECTOR_AUTO=true
-      - CONNECTOR_CONFIDENCE_LEVEL=80
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - GREYNOISE_KEY=ChangeMe
       - GREYNOISE_MAX_TLP=TLP:AMBER

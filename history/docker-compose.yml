@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-hygiene:
-    image: opencti/connector-history:4.4.0
+    image: opencti/connector-history:4.4.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,6 +10,6 @@ services:
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=History
       - CONNECTOR_SCOPE=history
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
     restart: always

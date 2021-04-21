@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-ipinfo:
-    image: opencti/connector-ipinfo:4.4.0
+    image: opencti/connector-ipinfo:4.4.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=IpInfo
       - CONNECTOR_SCOPE=IPv4-Addr
       - CONNECTOR_AUTO=true
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - IPINFO_TOKEN=ChangeMe
       - IPINFO_MAX_TLP=TLP:AMBER
