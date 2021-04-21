@@ -10,6 +10,6 @@ services:
       - CONNECTOR_NAME=ImportFileStix
       - CONNECTOR_SCOPE=application/json,text/xml
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
     restart: always

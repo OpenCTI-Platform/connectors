@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=Synchronizer
       - CONNECTOR_SCOPE=synchronizer
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - REMOTE_OPENCTI_URL=https://ChangeMe.Com
       - REMOTE_OPENCTI_TOKEN=ChangeMe
