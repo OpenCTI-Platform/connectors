@@ -113,6 +113,7 @@ class Sekoia(object):
             return next_cursor
 
         items = self._retrieve_references(items)
+        items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
         bundle = self.helper.stix2_create_bundle(items)
         self.helper.send_stix2_bundle(bundle, update=True)
@@ -124,6 +125,31 @@ class Sekoia(object):
 
         # More results to fetch
         return self._run(next_cursor)
+
+    def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
+        """
+        Remove fields specific to the Intelligence Center
+        that will not add value in OpenCTI
+        """
+        return [
+            {
+                field: value
+                for field, value in item.items()
+                if not self._field_to_ignore(field)
+            }
+            for item in items
+        ]
+
+    @staticmethod
+    def _field_to_ignore(field: str) -> bool:
+        to_ignore = [
+            "x_ic_impacted_locations",
+            "x_ic_impacted_sectors",
+        ]
+        return (
+            (field.startswith("x_ic") or field.startswith("x_inthreat"))
+            and (field.endswith("ref") or field.endswith("refs"))
+        ) or field in to_ignore
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
@@ -166,11 +192,27 @@ class Sekoia(object):
             if item.get("created_by_ref"):
                 refs.add(item["created_by_ref"])
             if item["type"] == "report":
-                refs.update(item.get("object_refs", []))
+                object_refs = [
+                    ref
+                    for ref in item.get("object_refs", [])
+                    if not self._is_mapped_ref(ref)
+                ]
+                refs.update(object_refs)
             if item["type"] == "relationship":
-                refs.add(item["source_ref"])
-                refs.add(item["target_ref"])
+                if not self._is_mapped_ref(item["source_ref"]):
+                    refs.add(item["source_ref"])
+                if not self._is_mapped_ref(item["target_ref"]):
+                    refs.add(item["target_ref"])
         return refs - ids
+
+    def _is_mapped_ref(self, ref: str) -> bool:
+        """
+        Whether or not the reference is a mapped one.
+        """
+        return (
+            ref in self._geography_mapping.values()
+            or ref in self._sectors_mapping.values()
+        )
 
     def _update_mapped_refs(self, items: List[Dict]):
         """
@@ -256,11 +298,11 @@ class Sekoia(object):
         # Mapping between SEKOIA sectors/locations and OpenCTI ones
         self.helper.log_info("Loading locations mapping")
         with open("./data/geography_mapping.json") as fp:
-            self._geography_mapping = json.load(fp)
+            self._geography_mapping: Dict = json.load(fp)
 
         self.helper.log_info("Loading sectors mapping")
         with open("./data/sectors_mapping.json") as fp:
-            self._sectors_mapping = json.load(fp)
+            self._sectors_mapping: Dict = json.load(fp)
 
         # Adds OpenCTI sectors/locations to cache
         self.helper.log_info("Loading OpenCTI sectors")
