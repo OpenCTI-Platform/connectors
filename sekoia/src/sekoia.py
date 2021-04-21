@@ -113,6 +113,7 @@ class Sekoia(object):
             return next_cursor
 
         items = self._retrieve_references(items)
+        items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
         bundle = self.helper.stix2_create_bundle(items)
         self.helper.send_stix2_bundle(bundle, update=True)
@@ -124,6 +125,31 @@ class Sekoia(object):
 
         # More results to fetch
         return self._run(next_cursor)
+
+    def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
+        """
+        Remove fields specific to the Intelligence Center
+        that will not add value in OpenCTI
+        """
+        return [
+            {
+                field: value
+                for field, value in item.items()
+                if not self._field_to_ignore(field)
+            }
+            for item in items
+        ]
+
+    @staticmethod
+    def _field_to_ignore(field: str) -> bool:
+        to_ignore = [
+            "x_ic_impacted_locations",
+            "x_ic_impacted_sectors",
+        ]
+        return (
+            (field.startswith("x_ic") or field.startswith("x_inthreat"))
+            and (field.endswith("ref") or field.endswith("refs"))
+        ) or field in to_ignore
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
