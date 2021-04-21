@@ -2,6 +2,7 @@
 """OpenCTI AlienVault importer module."""
 
 import re
+from datetime import datetime
 from typing import Any, Dict, List, Mapping, Optional, Set
 
 from pycti.connector.opencti_connector_helper import (  # type: ignore
@@ -25,6 +26,8 @@ class PulseImporter:
     _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
 
     _GUESS_CVE_PATTERN = r"(CVE-\d{4}-\d{4,7})"
+
+    _STATE_UPDATE_INTERVAL_COUNT = 20
 
     def __init__(
         self,
@@ -61,9 +64,10 @@ class PulseImporter:
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
         self.work_id: Optional[str] = None
 
-    def run(self, state: Mapping[str, Any], work_id: str) -> Mapping[str, Any]:
+    def run(self, state: Dict[str, Any], work_id: str) -> Dict[str, Any]:
         """Run importer."""
         self.work_id = work_id
+
         self._info(
             "Running pulse importer (update data: {0}, guess malware: {1}, guess cve: {2})...",  # noqa: E501
             self.update_existing_data,
@@ -73,28 +77,35 @@ class PulseImporter:
 
         self._clear_malware_guess_cache()
 
-        fetch_timestamp = state.get(
-            self._LATEST_PULSE_TIMESTAMP, self.default_latest_timestamp
-        )
-        fetch_datetime = iso_datetime_str_to_datetime(fetch_timestamp)
+        latest_pulse_datetime = self._get_latest_pulse_datetime_from_state(state)
 
-        latest_fetched_indicator_datetime = fetch_datetime
-
-        pulses = self.client.get_pulses_subscribed(fetch_datetime)
+        pulses = self._fetch_subscribed_pulses(latest_pulse_datetime)
         pulse_count = len(pulses)
 
-        self._info("{0} pulse(s) since {1}...", pulse_count, fetch_datetime)
+        self._info("{0} pulse(s) since {1}...", pulse_count, latest_pulse_datetime)
 
         failed = 0
-        for pulse in pulses:
+        new_state = state.copy()
+        latest_pulse_modified_datetime = latest_pulse_datetime
+
+        for count, pulse in enumerate(pulses, start=1):
             result = self._process_pulse(pulse)
             if not result:
                 failed += 1
 
-            if pulse.modified > latest_fetched_indicator_datetime:
-                latest_fetched_indicator_datetime = pulse.modified
+            pulse_modified_datetime = pulse.modified
+            if pulse_modified_datetime > latest_pulse_modified_datetime:
+                latest_pulse_modified_datetime = pulse_modified_datetime
 
-        state_timestamp = latest_fetched_indicator_datetime
+            if count % self._STATE_UPDATE_INTERVAL_COUNT == 0:  # noqa: S001
+                self._info(
+                    "Store state: {0}: {1}", count, latest_pulse_modified_datetime
+                )
+                new_state.update(
+                    self._create_pulse_state(latest_pulse_modified_datetime)
+                )
+                self._set_state(new_state)
+
         imported = pulse_count - failed
 
         self._info(
@@ -102,10 +113,19 @@ class PulseImporter:
             imported,
             failed,
             pulse_count,
-            state_timestamp,
+            latest_pulse_modified_datetime,
         )
 
-        return {self._LATEST_PULSE_TIMESTAMP: state_timestamp.isoformat()}
+        return self._create_pulse_state(latest_pulse_modified_datetime)
+
+    def _create_pulse_state(self, latest_pulse_timestamp: datetime) -> Dict[str, Any]:
+        return {self._LATEST_PULSE_TIMESTAMP: latest_pulse_timestamp.isoformat()}
+
+    def _get_latest_pulse_datetime_from_state(self, state: Dict[str, Any]) -> datetime:
+        latest_modified_timestamp = state.get(
+            self._LATEST_PULSE_TIMESTAMP, self.default_latest_timestamp
+        )
+        return iso_datetime_str_to_datetime(latest_modified_timestamp)
 
     def _clear_malware_guess_cache(self):
         self.malware_guess_cache.clear()
@@ -117,6 +137,17 @@ class PulseImporter:
     def _error(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
         self.helper.log_error(fmt_msg)
+
+    def _fetch_subscribed_pulses(self, modified_since: datetime) -> List[Pulse]:
+        pulses = self.client.get_pulses_subscribed(modified_since)
+        return self._sort_pulses(pulses)
+
+    @staticmethod
+    def _sort_pulses(pulses: List[Pulse]) -> List[Pulse]:
+        def _key_func(pulse: Pulse) -> datetime:
+            return pulse.modified
+
+        return sorted(pulses, key=_key_func)
 
     def _process_pulse(self, pulse: Pulse) -> bool:
         self._info("Processing pulse {0} ({1})...", pulse.name, pulse.id)
@@ -242,6 +273,9 @@ class PulseImporter:
 
     def _confidence_level(self) -> int:
         return self.helper.connect_confidence_level
+
+    def _set_state(self, state: Dict[str, Any]) -> None:
+        self.helper.set_state(state)
 
     def _send_bundle(self, bundle: Bundle) -> None:
         serialized_bundle = bundle.serialize()

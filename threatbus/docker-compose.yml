@@ -1,0 +1,16 @@
+version: "3"
+services:
+  connector-threatbus:
+    image: opencti/connector-threatbus:4.4.0
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=Threat Bus
+      - CONNECTOR_SCOPE=threatbus
+      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_LOG_LEVEL=info
+      - THREATBUS_ZMQ_HOST=localhost
+      - THREATBUS_ZMQ_RECEIVE_PORT=13372
+    restart: always

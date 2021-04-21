@@ -58,13 +58,13 @@ class HistoryConnector:
                 unix_time, datetime.timezone.utc
             )
             timestamp = event_date.isoformat().replace("+00:00", "Z")
-            origin = event_json["origin"]
+            origin = event_json["origin"] if "origin" in event_json else {}
             history_data = {
                 "internal_id": msg.id,
                 "event_type": msg.event,
                 "timestamp": timestamp,
                 "entity_type": "history",
-                "user_id": origin["user_id"],
+                "user_id": origin["user_id"] if "user_id" in origin else None,
                 "applicant_id": origin["applicant_id"]
                 if "applicant_id" in origin
                 else None,

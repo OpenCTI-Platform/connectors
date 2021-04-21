@@ -4,7 +4,6 @@ import time
 import json
 
 from datetime import datetime
-from dateutil.parser import parse
 from pymisp import ExpandedPyMISP
 from stix2 import (
     Bundle,
@@ -42,6 +41,7 @@ OPENCTISTIX2 = {
         "transform": {"operation": "remove_string", "value": "AS"},
     },
     "mac-addr": {"type": "mac-addr", "path": ["value"]},
+    "hostname": {"type": "x-opencti-hostname", "path": ["value"]},
     "domain": {"type": "domain-name", "path": ["value"]},
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
@@ -84,6 +84,9 @@ class Misp:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.misp_url = get_config_variable("MISP_URL", ["misp", "url"], config)
+        self.misp_reference_url = get_config_variable(
+            "MISP_REFERENCE_URL", ["misp", "reference_url"], config
+        )
         self.misp_key = get_config_variable("MISP_KEY", ["misp", "key"], config)
         self.misp_ssl_verify = get_config_variable(
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
@@ -126,6 +129,9 @@ class Misp:
         )
         self.import_threat_levels = get_config_variable(
             "MISP_IMPORT_THREAT_LEVELS", ["misp", "import_threat_levels"], config
+        )
+        self.import_only_published = get_config_variable(
+            "MISP_IMPORT_ONLY_PUBLISHED", ["misp", "import_only_published"], config
         )
         self.misp_interval = get_config_variable(
             "MISP_INTERVAL", ["misp", "interval"], config, True
@@ -295,6 +301,15 @@ class Misp:
                     + " not in import_threat_levels, do not import"
                 )
                 continue
+            if (
+                self.import_only_published is not None
+                and self.import_only_published
+                and not event["Event"]["published"]
+            ):
+                self.helper.log_info(
+                    "Event is not published and import_only_published is set, do not import"
+                )
+                continue
 
             ### Default variables
             added_markings = []
@@ -326,11 +341,15 @@ class Misp:
             if "Tag" in event["Event"]:
                 event_tags = self.resolve_tags(event["Event"]["Tag"])
             # ExternalReference
+            if self.misp_reference_url is not None and len(self.misp_reference_url) > 0:
+                url = self.misp_reference_url + "/events/view/" + event["Event"]["uuid"]
+            else:
+                url = self.misp_url + "/events/view/" + event["Event"]["uuid"]
             event_external_reference = ExternalReference(
                 source_name=self.helper.connect_name,
                 description=event["Event"]["info"],
                 external_id=event["Event"]["uuid"],
-                url=self.misp_url + "/events/view/" + event["Event"]["uuid"],
+                url=url,
             )
 
             ### Get indicators
@@ -469,12 +488,14 @@ class Misp:
                 bundle_objects.append(object_relationship)
 
             # Create the report if needed
-            if self.misp_create_report and len(object_refs) > 0:
+            if self.misp_create_report:
                 report = Report(
                     id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
-                    published=parse(event["Event"]["date"]),
+                    published=datetime.utcfromtimestamp(
+                        int(event["Event"]["timestamp"])
+                    ),
                     report_types=[self.misp_report_type],
                     created_by_ref=author,
                     object_marking_refs=event_markings,

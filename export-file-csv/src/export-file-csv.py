@@ -159,6 +159,7 @@ class ExportFileCsv:
 
             # List
             lister = {
+                "Stix-Domain-Object": self.helper.api.stix_domain_object.list,
                 "Attack-Pattern": self.helper.api.attack_pattern.list,
                 "Campaign": self.helper.api.campaign.list,
                 "Note": self.helper.api.note.list,

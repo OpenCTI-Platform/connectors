@@ -13,6 +13,7 @@ connector:
 
 misp:
   url: 'http://localhost' # Required
+  reference_url: '' # Optional, will be used to create external reference to MISP event
   key: 'ChangeMe' # Required
   ssl_verify: False # Required
   datetime_attribute: 'timestamp' # Required, filter to be used in query for new MISP events
@@ -27,4 +28,5 @@ misp:
   import_owner_orgs: 'CIRCL' # Optional, only import events owned by this ORG (put the identifier here)
   import_distribution_levels: '0,1,2,3' # Optional, only import events with the given distribution levels
   import_threat_levels: '1,2,3,4' # Optional only import events with the given threat levels
+  import_only_published: False # Optional only import events published
   interval: 1 # Required, in minutes

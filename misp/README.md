@@ -10,7 +10,7 @@ If you are using it independently, remember that the connector will try to conne
 
 ## Configuration
 
-**Warning**: This connector is compatiable with MISP >=2.4.135.3.
+**Warning**: This connector is compatible with MISP >=2.4.135.3.
 
 | Parameter                         | Docker envvar                     | Mandatory    | Description                                                                                         |
 | --------------------------------- | --------------------------------- | ------------ | --------------------------------------------------------------------------------------------------- |
@@ -24,10 +24,13 @@ If you are using it independently, remember that the connector will try to conne
 | `connector_update_existing_data`  | `CONNECTOR_UPDATE_EXISTING_DATA`  | Yes          | If an entity already exists, update its attributes with information provided by this connector.     |
 | `connector_log_level`             | `CONNECTOR_LOG_LEVEL`             | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).       |
 | `misp_url`                        | `MISP_URL`                        | Yes          | The MISP instance URL.                                                                              |
+| `misp_reference_url`              | `MISP_REFERENCE_URL`              | Yes          | The MISP instance reference URL (used to create external reference, optional)                       |
 | `misp_key`                        | `MISP_KEY`                        | Yes          | The MISP instance key.                                                                              |
 | `misp_ssl_verify`                 | `MISP_SSL_VERIFY`                 | Yes          | A boolean (`True` or `False`), check if the SSL certificate is valid when using `https`.            |
 | `misp_datetime_attribute`         | `MISP_DATETIME_ATTRIBUTE`         | Yes          | The attribute to be used in filter to query new MISP events.                                        |
 | `misp_create_reports`             | `MISP_CREATE_REPORTS`             | Yes          | A boolean (`True` or `False`), create reports for each imported MISP event.                         |
+| `misp_create_observables`         | `MISP_CREATE_OBSERVABLES`         | Yes          | A boolean (`True` or `False`), create an observable for each imported MISP attribute.               |
+| `misp_create_indicators`          | `MISP_CREATE_INDICATORS`          | Yes          | A boolean (`True` or `False`), create an indicator for each imported MISP attribute.                |
 | `misp_report_class`               | `MISP_REPORT_CLASS`               | No           | If `create_reports` is `True`, specify the `report_class` (category), default is `MISP Event`       |
 | `misp_import_from_date`           | `MISP_IMPORT_FROM_DATE`           | No           | A date formatted `YYYY-MM-DD`, only import events created after this date.                          |
 | `misp_import_tags`                | `MISP_IMPORT_TAGS`                | No           | A list of tags separated with `,`, only import events with these tags.                              |
@@ -36,6 +39,7 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_import_owner_orgs`          | `MISP_IMPORT_OWNER_ORGS`          | No           | A list of org identifiers separated with `,`, only import events owned by these orgs                |
 | `misp_import_distribution_levels` | `MISP_IMPORT_DISTRIBUTION_LEVELS` | No           | A list of distribution levels separated with `,`, only import events with these distribution levels.|
 | `misp_import_threat_levels`       | `MISP_IMPORT_THREAT_LEVELS`       | No           | A list of threat levels separated with `,`, only import events with these threat levels.            |
+| `misp_import_only_published`      | `MISP_IMPORT_ONLY_PUBLISHED`      | No           | Import only MISP published events                                                                   |
 | `misp_interval`                   | `MISP_INTERVAL`                   | Yes          | Check for new event to import every `n` minutes.                                                    |
 
 ## Behavior

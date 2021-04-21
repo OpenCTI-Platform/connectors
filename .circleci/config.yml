@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   ensure_formatting:
     docker:
-      - image: circleci/python:3.7.7
+      - image: circleci/python:3.9
     working_directory: ~/repo
     steps:
       - checkout
@@ -157,6 +157,14 @@ jobs:
           name: Build Docker image opencti/connector-malbeacon
           command: docker build -t opencti/connector-malbeacon:latest . && docker tag opencti/connector-malbeacon:latest opencti/connector-malbeacon:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/sekoia
+          name: Build Docker image opencti/connector-sekoia
+          command: docker build -t opencti/connector-sekoia:latest . && docker tag opencti/connector-sekoia:latest opencti/connector-sekoia:${CIRCLE_TAG}          
+      - run:
+          working_directory: ~/opencti/threatbus
+          name: Build Docker image opencti/connector-threatbus
+          command: docker build -t opencti/connector-threatbus:latest . && docker tag opencti/connector-threatbus:latest opencti/connector-threatbus:${CIRCLE_TAG}                    
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -222,6 +230,10 @@ jobs:
             docker push opencti/connector-urlhaus:${CIRCLE_TAG}
             docker push opencti/connector-malbeacon:latest
             docker push opencti/connector-malbeacon:${CIRCLE_TAG}
+            docker push opencti/connector-sekoia:latest
+            docker push opencti/connector-sekoia:${CIRCLE_TAG}            
+            docker push opencti/connector-threatbus:latest
+            docker push opencti/connector-threatbus:${CIRCLE_TAG}                 
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -354,6 +366,14 @@ jobs:
           name: Build Docker image opencti/connector-malbeacon
           command: docker build -t opencti/connector-malbeacon:rolling .
       - run:
+          working_directory: ~/opencti/sekoia
+          name: Build Docker image opencti/connector-sekoia
+          command: docker build -t opencti/connector-sekoia:rolling . 
+      - run:
+          working_directory: ~/opencti/threatbus
+          name: Build Docker image opencti/connector-threatbus
+          command: docker build -t opencti/connector-threatbus:rolling .                        
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -388,6 +408,8 @@ jobs:
             docker push opencti/connector-abuseipdb:rolling
             docker push opencti/connector-urlhaus:rolling
             docker push opencti/connector-malbeacon:rolling
+            docker push opencti/connector-sekoia:rolling
+            docker push opencti/connector-threatbus:rolling
 workflows:
   version: 2
   opencti:
