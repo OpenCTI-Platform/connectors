@@ -14,7 +14,7 @@ from requests import RequestException
 
 class Sekoia(object):
 
-    limit = 20
+    limit = 200
 
     def __init__(self):
         # Instantiate the connector helper from config
@@ -47,11 +47,20 @@ class Sekoia(object):
         cursor = state.get("last_cursor", self.generate_first_cursor())
         self.helper.log_info(f"Starting with {cursor}")
         while True:
+            friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
             try:
-                cursor = self._run(cursor)
-                self.helper.log_info(f"Cursor updated to {cursor}")
+                cursor = self._run(cursor, work_id)
+                message = f"Connector successfully run, cursor updated to {cursor}"
+                self.helper.log_info(message)
+                self.helper.api.work.to_processed(work_id, message)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
+                self.helper.api.work.to_processed(work_id, "Connector is stopping")
                 exit(0)
             except Exception as ex:
                 # In case of error try to get the last updated cursor
@@ -59,6 +68,9 @@ class Sekoia(object):
                 state = self.helper.get_state() or {}
                 cursor = state.get("last_cursor", cursor)
                 self.helper.log_error(str(ex))
+                message = f"Connector encountered an error, cursor updated to {cursor}"
+                self.helper.api.work.to_processed(work_id, message)
+
             time.sleep(60)
 
     @staticmethod
@@ -100,7 +112,7 @@ class Sekoia(object):
         for i in range(0, len(items), chunk_size):
             yield items[i : i + chunk_size]
 
-    def _run(self, cursor):
+    def _run(self, cursor, work_id):
         params = {"limit": self.limit, "cursor": cursor}
 
         data = self._send_request(self.get_collection_url(), params)
@@ -116,7 +128,7 @@ class Sekoia(object):
         items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
         bundle = self.helper.stix2_create_bundle(items)
-        self.helper.send_stix2_bundle(bundle, update=True)
+        self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
 
         self.helper.set_state({"last_cursor": next_cursor})
         if len(items) < self.limit:
@@ -124,7 +136,7 @@ class Sekoia(object):
             return next_cursor
 
         # More results to fetch
-        return self._run(next_cursor)
+        return self._run(next_cursor, work_id)
 
     def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
         """
