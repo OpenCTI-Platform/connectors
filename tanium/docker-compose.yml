@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-tanium:
-    image: opencti/connector-tanium:4.3.5
+    image: opencti/connector-tanium:4.4.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=Tanium
       - CONNECTOR_SCOPE=tanium
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - TANIUM_URL=https://console.changeme.com
       - TANIUM_SSL_VERIFY=true

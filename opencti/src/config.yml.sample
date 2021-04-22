@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'OpenCTI'
   scope: 'identity,sector,region,country,city'
-  confidence_level: 5
+  confidence_level: 90 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: True
   log_level: 'info'
 

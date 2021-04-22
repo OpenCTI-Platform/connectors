@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-import-file-pdf-observables:
-    image: opencti/connector-import-file-pdf-observables:4.3.5
+    image: opencti/connector-import-file-pdf-observables:4.4.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=ImportFilePdfObservables
       - CONNECTOR_SCOPE=application/pdf
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - PDF_OBSERVABLES_CREATE_INDICATOR=False
     restart: always

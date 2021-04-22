@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from posixpath import join as urljoin
 from typing import Any, Iterable, List, Set, Dict
 
+from dateutil.parser import parse, ParserError
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -14,7 +15,7 @@ from requests import RequestException
 
 class Sekoia(object):
 
-    limit = 20
+    limit = 200
 
     def __init__(self):
         # Instantiate the connector helper from config
@@ -29,6 +30,7 @@ class Sekoia(object):
         self._cache = {}
         # Extra config
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
+        self.start_date: str = self.get_config("start_date", config, None)
         self.collection = self.get_config(
             "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
         )
@@ -47,11 +49,20 @@ class Sekoia(object):
         cursor = state.get("last_cursor", self.generate_first_cursor())
         self.helper.log_info(f"Starting with {cursor}")
         while True:
+            friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
             try:
-                cursor = self._run(cursor)
-                self.helper.log_info(f"Cursor updated to {cursor}")
+                cursor = self._run(cursor, work_id)
+                message = f"Connector successfully run, cursor updated to {cursor}"
+                self.helper.log_info(message)
+                self.helper.api.work.to_processed(work_id, message)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
+                self.helper.api.work.to_processed(work_id, "Connector is stopping")
                 exit(0)
             except Exception as ex:
                 # In case of error try to get the last updated cursor
@@ -59,6 +70,9 @@ class Sekoia(object):
                 state = self.helper.get_state() or {}
                 cursor = state.get("last_cursor", cursor)
                 self.helper.log_error(str(ex))
+                message = f"Connector encountered an error, cursor updated to {cursor}"
+                self.helper.api.work.to_processed(work_id, message)
+
             time.sleep(60)
 
     @staticmethod
@@ -83,13 +97,18 @@ class Sekoia(object):
             self.base_url, "v2/inthreat/objects", item_id, "files", file_hash
         )
 
-    @staticmethod
-    def generate_first_cursor() -> str:
+    def generate_first_cursor(self) -> str:
         """
         Generate the first cursor to interrogate the API
         so we don't start at the beginning.
         """
         start = f"{(datetime.utcnow() - timedelta(hours=1)).isoformat()}Z"
+        if self.start_date:
+            try:
+                start = f"{parse(self.start_date).isoformat()}Z"
+            except ParserError:
+                pass
+
         return base64.b64encode(start.encode("utf-8")).decode("utf-8")
 
     @staticmethod
@@ -100,7 +119,7 @@ class Sekoia(object):
         for i in range(0, len(items), chunk_size):
             yield items[i : i + chunk_size]
 
-    def _run(self, cursor):
+    def _run(self, cursor, work_id):
         params = {"limit": self.limit, "cursor": cursor}
 
         data = self._send_request(self.get_collection_url(), params)
@@ -113,9 +132,10 @@ class Sekoia(object):
             return next_cursor
 
         items = self._retrieve_references(items)
+        items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
         bundle = self.helper.stix2_create_bundle(items)
-        self.helper.send_stix2_bundle(bundle, update=True)
+        self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
 
         self.helper.set_state({"last_cursor": next_cursor})
         if len(items) < self.limit:
@@ -123,7 +143,32 @@ class Sekoia(object):
             return next_cursor
 
         # More results to fetch
-        return self._run(next_cursor)
+        return self._run(next_cursor, work_id)
+
+    def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
+        """
+        Remove fields specific to the Intelligence Center
+        that will not add value in OpenCTI
+        """
+        return [
+            {
+                field: value
+                for field, value in item.items()
+                if not self._field_to_ignore(field)
+            }
+            for item in items
+        ]
+
+    @staticmethod
+    def _field_to_ignore(field: str) -> bool:
+        to_ignore = [
+            "x_ic_impacted_locations",
+            "x_ic_impacted_sectors",
+        ]
+        return (
+            (field.startswith("x_ic") or field.startswith("x_inthreat"))
+            and (field.endswith("ref") or field.endswith("refs"))
+        ) or field in to_ignore
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
@@ -166,11 +211,27 @@ class Sekoia(object):
             if item.get("created_by_ref"):
                 refs.add(item["created_by_ref"])
             if item["type"] == "report":
-                refs.update(item.get("object_refs", []))
+                object_refs = [
+                    ref
+                    for ref in item.get("object_refs", [])
+                    if not self._is_mapped_ref(ref)
+                ]
+                refs.update(object_refs)
             if item["type"] == "relationship":
-                refs.add(item["source_ref"])
-                refs.add(item["target_ref"])
+                if not self._is_mapped_ref(item["source_ref"]):
+                    refs.add(item["source_ref"])
+                if not self._is_mapped_ref(item["target_ref"]):
+                    refs.add(item["target_ref"])
         return refs - ids
+
+    def _is_mapped_ref(self, ref: str) -> bool:
+        """
+        Whether or not the reference is a mapped one.
+        """
+        return (
+            ref in self._geography_mapping.values()
+            or ref in self._sectors_mapping.values()
+        )
 
     def _update_mapped_refs(self, items: List[Dict]):
         """
@@ -256,11 +317,11 @@ class Sekoia(object):
         # Mapping between SEKOIA sectors/locations and OpenCTI ones
         self.helper.log_info("Loading locations mapping")
         with open("./data/geography_mapping.json") as fp:
-            self._geography_mapping = json.load(fp)
+            self._geography_mapping: Dict = json.load(fp)
 
         self.helper.log_info("Loading sectors mapping")
         with open("./data/sectors_mapping.json") as fp:
-            self._sectors_mapping = json.load(fp)
+            self._sectors_mapping: Dict = json.load(fp)
 
         # Adds OpenCTI sectors/locations to cache
         self.helper.log_info("Loading OpenCTI sectors")

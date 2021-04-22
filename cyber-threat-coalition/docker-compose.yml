@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cyber-threat-coalition:
-    image: opencti/connector-cyber-threat-coalition:4.3.5
+    image: opencti/connector-cyber-threat-coalition:4.4.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CyberThreatCoalition
       - CONNECTOR_SCOPE=indicator,report,identity
-      - CONNECTOR_CONFIDENCE_LEVEL=3
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - CYBER_THREAT_COALITION_INTERVAL=604800 # Seconds (1 week)

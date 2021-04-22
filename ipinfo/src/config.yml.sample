@@ -8,7 +8,7 @@ connector:
   name: 'IpInfo'
   scope: 'IPv4-Addr'
   auto: true # Enable/disable auto-enrichment of observables
-  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 ipinfo:

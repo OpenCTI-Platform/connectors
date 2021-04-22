@@ -1,2 +1,2 @@
-pycti==4.3.5
+pycti==4.4.3
 elasticsearch==7.12.0

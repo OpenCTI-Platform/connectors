@@ -4,7 +4,6 @@ import time
 import json
 
 from datetime import datetime
-from dateutil.parser import parse
 from pymisp import ExpandedPyMISP
 from stix2 import (
     Bundle,
@@ -42,6 +41,7 @@ OPENCTISTIX2 = {
         "transform": {"operation": "remove_string", "value": "AS"},
     },
     "mac-addr": {"type": "mac-addr", "path": ["value"]},
+    "hostname": {"type": "x-opencti-hostname", "path": ["value"]},
     "domain": {"type": "domain-name", "path": ["value"]},
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
@@ -488,12 +488,14 @@ class Misp:
                 bundle_objects.append(object_relationship)
 
             # Create the report if needed
-            if self.misp_create_report and len(object_refs) > 0:
+            if self.misp_create_report:
                 report = Report(
                     id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
-                    published=parse(event["Event"]["date"]),
+                    published=datetime.utcfromtimestamp(
+                        int(event["Event"]["timestamp"])
+                    ),
                     report_types=[self.misp_report_type],
                     created_by_ref=author,
                     object_marking_refs=event_markings,
