@@ -15,3 +15,4 @@ sekoia:
   base_url: 'https://api.sekoia.io'
   collection: 'd6092c37-d8d7-45c3-8aff-c4dc26030608'
   api_key: 'ChangeMe'
+  start_date: '2021-04-21'  # Optional, the date to start consuming data from. Maybe in the formats YYYY-MM-DD or YYYY-MM-DDT00:00:00
