@@ -9,7 +9,9 @@ connector:
   scope: threatbus
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: info
+  entity_name: ChangeMe
+  entity_description: ChangeMe
 
 threatbus:
   zmq_host: localhost
-  zmq_receive_port: 13372
+  zmq_port: 13370
