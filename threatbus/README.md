@@ -38,16 +38,16 @@ You can run the connector either locally or via Docker.
 We recommend using a virtual environment for local instalations. Use `pip` to install the `src/requirements.txt` file.
 
 ```
-virtualenv venv
+python -m venv venv
 source venv/bin/activate
-pip install -r src/requirements.txt`
+pip install -r src/requirements.txt
 ```
 
-Copy the `config.yaml.example` and modify it accordingly for your setup. See above for details about parameter values. You can then simply invoke the connector directly:
+Copy the `config.yml.example` and modify it accordingly for your setup. See above for details about parameter values. You can then simply invoke the connector directly:
 
 ```
-cp src/config.yaml.example src/config.yaml
-# vim src/config.yaml    # change parameters
+cp src/config.yml.example src/config.yml
+# vim src/config.yml    # change parameters
 python src/connector.py
 ```
 
