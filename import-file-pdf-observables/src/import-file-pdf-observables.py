@@ -5,16 +5,12 @@ import yaml
 import time
 
 import iocp
-from stix2 import (
-    Bundle,
-    Report,
-)
+from stix2 import Bundle, Report
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     get_config_variable,
     SimpleObservable,
-    AttackPattern
 )
 
 
@@ -62,15 +58,38 @@ class ImportFilePdfObservables:
                             for match in page:
                                 resolved_match = self.resolve_match(match)
                                 if resolved_match:
-                                    if resolved_match["type"] == "AttackPattern":
+                                    if resolved_match["type"] == "Attack-Pattern.value":
                                         entity = self.helper.api.attack_pattern.read(
-                                            filters=[{
-                                                "key": "x_mitre_id",
-                                                "values": [resolved_match['value']]
-                                            }]
+                                            filters=[
+                                                {
+                                                    "key": "x_mitre_id",
+                                                    "values": [resolved_match["value"]],
+                                                }
+                                            ]
                                         )
-                                        self.helper.log_info(entity)
-                                        entities.append(entity)
+                                        if entity:
+                                            entities.append(entity)
+                                        else:
+                                            self.helper.log_info(
+                                                f"Attack pattern {resolved_match['value']} was not found in OpenCTI."
+                                                + "Is the mitre connector configured and running?"
+                                            )
+                                    elif resolved_match["type"] == "CVE.value":
+                                        entity = self.helper.api.vulnerability.read(
+                                            filters=[
+                                                {
+                                                    "key": "name",
+                                                    "values": [resolved_match["value"]],
+                                                }
+                                            ]
+                                        )
+                                        if entity:
+                                            entities.append(entity)
+                                        else:
+                                            self.helper.log_info(
+                                                f"CVE {resolved_match['value']} was not found in OpenCTI."
+                                                + "Is the mitre connector configured and running?"
+                                            )
                                     else:
                                         observable = SimpleObservable(
                                             id=OpenCTIStix2Utils.generate_random_stix_id(
@@ -85,8 +104,9 @@ class ImportFilePdfObservables:
         else:
             self.helper.log_error("Could not parse the report!")
 
+        total = 0
+
         # Get context
-        self.helper.log_info(bundle_objects)
         if len(bundle_objects) > 0:
             if container_id is not None and len(container_id) > 0:
                 report = self.helper.api.report.read(id=container_id)
@@ -104,14 +124,18 @@ class ImportFilePdfObservables:
                     bundle_objects.append(report)
             bundle = Bundle(objects=bundle_objects).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
-            total = len(bundles_sent)
-            bundle = Bundle(objects=entities).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
             total += len(bundles_sent)
 
-            return (
-                "Sent " + str(total) + " stix bundle(s) for worker import"
-            )
+        if len(entities) > 0:
+            report = self.helper.api.report.read(id=container_id)
+            for entity in entities:
+                self.helper.api.report.add_stix_object_or_stix_relationship(
+                    id=report["id"], stixObjectOrStixRelationshipId=entity["id"]
+                )
+
+            total += len(entities)
+
+        return "Sent " + str(total) + " stix bundle(s)/entities for worker import"
 
     # Start the main loop
     def start(self):
@@ -129,9 +153,12 @@ class ImportFilePdfObservables:
             "URL": "Url.value",
             "Email": "Email-Addr.value",
             "AttackPattern": "Attack-Pattern.value",
+            "CVE": "CVE.value",
+            "Registry": "Windows-Registry-Key.value",
         }
         type = match["type"]
         value = match["match"]
+        self.helper.log_info(match)
         if type in types:
             resolved_type = types[type]
             if resolved_type == "IPv4-Addr.value":
