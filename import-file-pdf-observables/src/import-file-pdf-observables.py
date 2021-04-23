@@ -158,7 +158,6 @@ class ImportFilePdfObservables:
         }
         type = match["type"]
         value = match["match"]
-        self.helper.log_info(match)
         if type in types:
             resolved_type = types[type]
             if resolved_type == "IPv4-Addr.value":
