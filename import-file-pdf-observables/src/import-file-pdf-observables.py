@@ -154,7 +154,7 @@ class ImportFilePdfObservables:
             "Email": "Email-Addr.value",
             "AttackPattern": "Attack-Pattern.value",
             "CVE": "CVE.value",
-            "Registry": "Windows-Registry-Key.value",
+            "Registry": "Windows-Registry-Key.key",
         }
         type = match["type"]
         value = match["match"]
