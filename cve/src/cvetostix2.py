@@ -33,8 +33,10 @@ def convert(filename, output="output.json"):
             )
             external_references = [external_reference]
 
-            # Import references
-            if "references" in cves["cve"]:
+            if (
+                "references" in cves["cve"]
+                and "reference_data" in cves["cve"]["references"]
+            ):
                 for reference in cves["cve"]["references"]["reference_data"]:
                     external_reference = ExternalReference(
                         source_name=reference["refsource"], url=reference["url"]

@@ -89,6 +89,7 @@ class IOC_Parser(object):
         library="pdfminer",
         output_format="csv",
         output_handler=None,
+        custom_indicators=None,
     ):
         basedir = os.path.dirname(os.path.abspath(__file__))
         if patterns_ini is None:
@@ -103,6 +104,8 @@ class IOC_Parser(object):
             self.handler = output.getHandler(output_format)
 
         self.ext_filter = "*." + input_format
+        self.custom_indicators = custom_indicators
+
         parser_format = "parse_" + input_format
         try:
             self.parser_func = getattr(self, parser_format)
@@ -123,7 +126,7 @@ class IOC_Parser(object):
     def load_patterns(self, fpath):
         config = ConfigParser.ConfigParser()
         with open(fpath) as f:
-            config.readfp(f)
+            config.read_file(f)
 
         for ind_type in config.sections():
             try:
