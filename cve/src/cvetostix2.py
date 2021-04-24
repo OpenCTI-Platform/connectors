@@ -32,11 +32,15 @@ def convert(filename, output="output.json"):
                 source_name="NIST NVD", url="https://nvd.nist.gov/vuln/detail/" + name
             )
             external_references = [external_reference]
-            for reference in cves["cve"]["references"]["reference_data"]:
-                external_reference = ExternalReference(
-                    source_name=reference["refsource"], url=reference["url"]
-                )
-                external_references.append(external_reference)
+            if (
+                "references" in cves["cve"]
+                and "reference_data" in cves["cve"]["references"]
+            ):
+                for reference in cves["cve"]["references"]["reference_data"]:
+                    external_reference = ExternalReference(
+                        source_name=reference["refsource"], url=reference["url"]
+                    )
+                    external_references.append(external_reference)
 
             # Getting the different fields
             description = cves["cve"]["description"]["description_data"][0]["value"]
