@@ -5,7 +5,7 @@ import yaml
 import time
 
 import iocp
-from stix2 import Bundle, Report
+from stix2 import Bundle, Report, Vulnerability
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
@@ -74,22 +74,9 @@ class ImportFilePdfObservables:
                                                 f"Attack pattern {resolved_match['value']} was not found in OpenCTI."
                                                 + "Is the mitre connector configured and running?"
                                             )
-                                    elif resolved_match["type"] == "CVE.value":
-                                        entity = self.helper.api.vulnerability.read(
-                                            filters=[
-                                                {
-                                                    "key": "name",
-                                                    "values": [resolved_match["value"]],
-                                                }
-                                            ]
-                                        )
-                                        if entity:
-                                            entities.append(entity)
-                                        else:
-                                            self.helper.log_info(
-                                                f"CVE {resolved_match['value']} was not found in OpenCTI."
-                                                + "Is the mitre connector configured and running?"
-                                            )
+                                    elif resolved_match["type"] == "Vulnerability.name":
+                                        vulnerability = Vulnerability(name=resolved_match["value"])
+                                        bundle_objects.append(vulnerability)
                                     else:
                                         observable = SimpleObservable(
                                             id=OpenCTIStix2Utils.generate_random_stix_id(
@@ -128,10 +115,11 @@ class ImportFilePdfObservables:
 
         if len(entities) > 0:
             report = self.helper.api.report.read(id=container_id)
-            for entity in entities:
-                self.helper.api.report.add_stix_object_or_stix_relationship(
-                    id=report["id"], stixObjectOrStixRelationshipId=entity["id"]
-                )
+            if report:
+                for entity in entities:
+                    self.helper.api.report.add_stix_object_or_stix_relationship(
+                        id=report["id"], stixObjectOrStixRelationshipId=entity["id"]
+                    )
 
             total += len(entities)
 
@@ -153,7 +141,7 @@ class ImportFilePdfObservables:
             "URL": "Url.value",
             "Email": "Email-Addr.value",
             "AttackPattern": "Attack-Pattern.value",
-            "CVE": "CVE.value",
+            "CVE": "Vulnerability.name",
             "Registry": "Windows-Registry-Key.key",
         }
         type = match["type"]
