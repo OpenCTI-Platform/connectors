@@ -2,9 +2,9 @@
 
 import os
 import yaml
+import requests
 import time
 
-import iocp
 from stix2 import (
     Bundle,
     Report,
@@ -17,7 +17,7 @@ from pycti import (
 )
 
 
-class ImportFilePdfObservables:
+class HybridAnalysis:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -27,11 +27,20 @@ class ImportFilePdfObservables:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        self.create_indicator = get_config_variable(
-            "PDF_OBSERVABLES_CREATE_INDICATOR",
-            ["pdf_observables", "create_indicator"],
-            config,
+        self.api_key = get_config_variable(
+            "HYBRID_ANALYSIS_TOKEN", ["hybrid_analysis", "api_key"], config
         )
+        self.max_tlp = get_config_variable(
+            "HYBRID_ANALYSIS_MAX_TLP", ["hybrid_analysis", "max_tlp"], config
+        )
+        self.api_url = "https://www.hybrid-analysis.com/api/v2"
+        self.headers = {
+            "api-key": self.api_key,
+            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 4.4.1",
+            "accept": "application/json",
+            "content-type": "application/json",
+        }
+        self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
 
     def _process_message(self, data):
         file_fetch = data["file_fetch"]
@@ -46,30 +55,13 @@ class ImportFilePdfObservables:
         f = open(path, "wb")
         f.write(file_content)
         f.close()
-        # Parse
-        bundle_objects = []
-        i = 0
-        parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json")
-        parsed = parser.parse(path)
-        os.remove(path)
-        if parsed != []:
-            for file in parsed:
-                if file != None:
-                    for page in file:
-                        if page != []:
-                            for match in page:
-                                resolved_match = self.resolve_match(match)
-                                if resolved_match:
-                                    observable = SimpleObservable(
-                                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                                            "x-opencti-simple-observable"
-                                        ),
-                                        key=resolved_match["type"],
-                                        value=resolved_match["value"],
-                                        x_opencti_create_indicator=self.create_indicator,
-                                    )
-                                    bundle_objects.append(observable)
-                                    i += 1
+        files = {'file': open(path,'rb')}
+        values = {'scan_type': 'all'}
+        r = requests.post(self.api_url + "/quick-scan/file", files=files, data=values)
+
+
+
+
         else:
             self.helper.log_error("Could not parse the report!")
 
@@ -92,7 +84,7 @@ class ImportFilePdfObservables:
             bundle = Bundle(objects=bundle_objects).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return (
-                "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+                    "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
             )
 
     # Start the main loop
@@ -151,8 +143,8 @@ class ImportFilePdfObservables:
 
 if __name__ == "__main__":
     try:
-        connectorImportFilePdfObservables = ImportFilePdfObservables()
-        connectorImportFilePdfObservables.start()
+        hybridAnalysis = HybridAnalysis()
+        hybridAnalysis.start()
     except Exception as e:
         print(e)
         time.sleep(10)
