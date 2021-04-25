@@ -7,7 +7,7 @@ from dateutil.parser import parse
 from pycti import (
     OpenCTIConnectorHelper,
     get_config_variable,
-    StixXOpenCTIIncident,
+    StixIncident,
     OpenCTIStix2Utils,
     SimpleObservable,
 )
@@ -103,8 +103,8 @@ class TheHive:
         if len(markings) == 0:
             markings.append(TLP_WHITE)
         bundle_objects = []
-        incident = StixXOpenCTIIncident(
-            id=OpenCTIStix2Utils.generate_random_stix_id("x-opencti-incident"),
+        incident = StixIncident(
+            id=OpenCTIStix2Utils.generate_random_stix_id("incident"),
             name=case["title"],
             description=case["description"],
             first_seen=datetime.utcfromtimestamp(
