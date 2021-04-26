@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+  ssl_verify: True
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'History'
+  scope: 'history'
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+
+elastic:
+  cloud.id: 'https://console.changeme.com'
+  ssl_verify: true
+  login: 'ChangeMe'
+  password: 'ChangeMe'
+  indicator_types: 'stix,yara,tanium-signal'
+  observable_types: '' # empty by default, could be ipv4-addr,ipv6-addr,domain-name,x-opencti-hostname,file,process
+  import_label: 'tanium' # can be "*" to import everything
+  import_from_date: '2021-01-01 00:00:00' # Optional
+  reputation_blacklist_label: 'blacklist' # Optional, can be "*" to import everything
+  auto_quickscan: False # trigger a quick scan when an intel document is imported
+  computer_groups: '1,2,3' # computer groups targeted by the auto quick scan (separated by ,)
