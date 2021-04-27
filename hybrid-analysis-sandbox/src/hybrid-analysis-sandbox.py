@@ -96,6 +96,7 @@ class HybridAnalysis:
                     custom_properties={
                         "x_mitre_id": tactic["attck_id"],
                     },
+                    object_marking_refs=[TLP_WHITE],
                 )
                 relationship = Relationship(
                     id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
@@ -103,6 +104,7 @@ class HybridAnalysis:
                     created_by_ref=self.identity,
                     source_ref=observable["standard_id"],
                     target_ref=attack_pattern.id,
+                    object_marking_refs=[TLP_WHITE],
                 )
                 bundle_objects.append(attack_pattern)
                 bundle_objects.append(relationship)
@@ -123,6 +125,7 @@ class HybridAnalysis:
                 created_by_ref=self.identity,
                 source_ref=observable["standard_id"],
                 target_ref=domain_stix.id,
+                object_marking_refs=[TLP_WHITE],
             )
             bundle_objects.append(domain_stix)
             bundle_objects.append(relationship)
@@ -143,6 +146,7 @@ class HybridAnalysis:
                 created_by_ref=self.identity,
                 source_ref=observable["standard_id"],
                 target_ref=host_stix.id,
+                object_marking_refs=[TLP_WHITE],
             )
             bundle_objects.append(host_stix)
             bundle_objects.append(relationship)
