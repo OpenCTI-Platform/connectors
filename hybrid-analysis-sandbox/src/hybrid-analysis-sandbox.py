@@ -7,7 +7,6 @@ import time
 
 from stix2 import (
     Bundle,
-    Report,
     AttackPattern,
     Relationship,
     File,
