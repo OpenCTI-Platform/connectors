@@ -232,7 +232,7 @@ class HybridAnalysis:
                 raise ValueError(r.text)
             result = r.json()
             state = result["state"]
-            time.sleep(5)
+            time.sleep(30)
         if state == "ERROR":
             raise ValueError(result["error"])
         r = requests.get(
@@ -278,7 +278,7 @@ class HybridAnalysis:
                 raise ValueError(r.text)
             result = r.json()
             state = result["state"]
-            time.sleep(5)
+            time.sleep(30)
         if state == "ERROR":
             raise ValueError(result["error"])
         r = requests.get(
