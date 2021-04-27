@@ -80,10 +80,8 @@ class GreyNoiseConnector:
             self._call_api(observable)
             return "Observable processed after quota reached, waiting 1 hour."
         if response.status_code >= 400:
-            self.helper.log_error(
-                f'HTTP error: {response.status_code} - error: {json_data["error"]}'
-            )
-            return json_data["error"]
+            raise ValueError(response.text)
+
         self.helper.log_info(
             f'Start processing observable {observable["observable_value"]}'
         )

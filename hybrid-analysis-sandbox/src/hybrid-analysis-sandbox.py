@@ -58,31 +58,34 @@ class HybridAnalysis:
 
     def _send_knowledge(self, observable, report):
         bundle_objects = []
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
-            id=observable["id"], key="hashes.MD5", value=report["md5"]
-        )
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
-            id=final_observable["id"], key="hashes.SHA-1", value=report["sha1"]
-        )
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
-            id=final_observable["id"],
-            key="size",
-            value=str(report["size"]),
-        )
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
-            id=final_observable["id"],
-            key="hashes.SHA-256",
-            value=report["sha256"],
-        )
-        if observable["name"] is None:
-            self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                key="x_opencti_additional_names",
-                value=report["name"],
-                operation="add",
+        final_observable = observable
+        if observable["entity_type"] in ["StixFile", "Artifact"]:
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"], key="hashes.MD5", value=report["md5"]
             )
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"], key="hashes.SHA-1", value=report["sha1"]
+            )
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"],
+                key="hashes.SHA-256",
+                value=report["sha256"],
+            )
+            if "name" not in final_observable or final_observable["name"] is None:
+                self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    key="x_opencti_additional_names",
+                    value=report["submit_name"],
+                    operation="add",
+                )
+            if final_observable["entity_type"] == "StixFile":
+                self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    key="size",
+                    value=str(report["size"]),
+                )
         self.helper.api.stix_cyber_observable.update_field(
-            id=observable["id"],
+            id=final_observable["id"],
             key="x_opencti_score",
             value=str(report["threat_score"]),
         )
@@ -96,14 +99,14 @@ class HybridAnalysis:
             description="Hybrid Analysis Report",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
-            id=observable["id"],
+            id=final_observable["id"],
             external_reference_id=external_reference["id"],
         )
         # Create tags
         for tag in report["type_short"]:
             tag_ha = self.helper.api.label.create(value=tag, color="#0059f7")
             self.helper.api.stix_cyber_observable.add_label(
-                id=observable["id"], label_id=tag_ha["id"]
+                id=final_observable["id"], label_id=tag_ha["id"]
             )
         # Attach the TTPs
         for tactic in report["mitre_attcks"]:
@@ -124,7 +127,7 @@ class HybridAnalysis:
                     id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                     relationship_type="uses",
                     created_by_ref=self.identity,
-                    source_ref=observable["standard_id"],
+                    source_ref=final_observable["standard_id"],
                     target_ref=attack_pattern.id,
                     object_marking_refs=[TLP_WHITE],
                 )
@@ -145,7 +148,7 @@ class HybridAnalysis:
                 id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
-                source_ref=observable["standard_id"],
+                source_ref=final_observable["standard_id"],
                 target_ref=domain_stix.id,
                 object_marking_refs=[TLP_WHITE],
             )
@@ -166,7 +169,7 @@ class HybridAnalysis:
                 id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
-                source_ref=observable["standard_id"],
+                source_ref=final_observable["standard_id"],
                 target_ref=host_stix.id,
                 object_marking_refs=[TLP_WHITE],
             )
@@ -192,7 +195,7 @@ class HybridAnalysis:
                     id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                     relationship_type="drops",
                     created_by_ref=self.identity,
-                    source_ref=observable["standard_id"],
+                    source_ref=final_observable["standard_id"],
                     target_ref=file_stix.id,
                 )
                 bundle_objects.append(file_stix)
@@ -214,7 +217,7 @@ class HybridAnalysis:
                     id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                     relationship_type="uses",
                     created_by_ref=self.identity,
-                    source_ref=observable["standard_id"],
+                    source_ref=final_observable["standard_id"],
                     target_ref=attack_pattern.id,
                 )
                 bundle_objects.append(attack_pattern)
@@ -317,7 +320,6 @@ class HybridAnalysis:
         self.helper.log_info(
             "Processing the observable " + observable["observable_value"]
         )
-
         # If File or Artifact
         result = []
         if observable["entity_type"] in ["StixFile", "Artifact"]:
