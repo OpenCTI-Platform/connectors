@@ -44,7 +44,7 @@ class GreyNoiseConnector:
         self.greynoise_id = None
 
     def _get_greynoise_id(self) -> int:
-        """ Get or create a Greynoise entity if not exists"""
+        """Get or create a Greynoise entity if not exists"""
 
         if self.greynoise_id is not None:
             return self.greynoise_id
