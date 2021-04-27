@@ -76,8 +76,9 @@ class AbuseIPDBConnector:
             "Key": "%s" % self.api_key,
         }
         params = {"maxAgeInDays": 365, "verbose": "True", "ipAddress": observable_value}
-        response = requests.get(url, headers=headers, params=params)
-        data = response.json()
+        r = requests.get(url, headers=headers, params=params)
+        r.raise_for_status()
+        data = r.json()
         data = data["data"]
         self.helper.api.stix_cyber_observable.update_field(
             id=observable_id,

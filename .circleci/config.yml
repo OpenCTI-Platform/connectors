@@ -163,7 +163,11 @@ jobs:
       - run:
           working_directory: ~/opencti/threatbus
           name: Build Docker image opencti/connector-threatbus
-          command: docker build -t opencti/connector-threatbus:latest . && docker tag opencti/connector-threatbus:latest opencti/connector-threatbus:${CIRCLE_TAG}                    
+          command: docker build -t opencti/connector-threatbus:latest . && docker tag opencti/connector-threatbus:latest opencti/connector-threatbus:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/hybrid-analysis-sandbox
+          name: Build Docker image opencti/connector-hybrid-analysis-sandbox
+          command: docker build -t opencti/connector-hybrid-analysis-sandbox:latest . && docker tag opencti/connector-hybrid-analysis-sandbox:latest opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -233,7 +237,9 @@ jobs:
             docker push opencti/connector-sekoia:latest
             docker push opencti/connector-sekoia:${CIRCLE_TAG}            
             docker push opencti/connector-threatbus:latest
-            docker push opencti/connector-threatbus:${CIRCLE_TAG}                 
+            docker push opencti/connector-threatbus:${CIRCLE_TAG}
+            docker push opencti/connector-hybrid-analysis-sandbox:latest
+            docker push opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -372,7 +378,11 @@ jobs:
       - run:
           working_directory: ~/opencti/threatbus
           name: Build Docker image opencti/connector-threatbus
-          command: docker build -t opencti/connector-threatbus:rolling .                        
+          command: docker build -t opencti/connector-threatbus:rolling .
+      - run:
+          working_directory: ~/opencti/hybrid-analysis-sandbox
+          name: Build Docker image opencti/connector-hybrid-analysis-sandbox
+          command: docker build -t opencti/connector-hybrid-analysis-sandbox:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -410,6 +420,7 @@ jobs:
             docker push opencti/connector-malbeacon:rolling
             docker push opencti/connector-sekoia:rolling
             docker push opencti/connector-threatbus:rolling
+            docker push opencti/connector-connector-hybrid-analysis-sandbox:rolling
 workflows:
   version: 2
   opencti:
