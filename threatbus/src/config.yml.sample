@@ -11,6 +11,7 @@ connector:
   log_level: info
   entity_name: ChangeMe
   entity_description: ChangeMe
+  forward_all_iocs: false
 
 threatbus:
   zmq_host: localhost
