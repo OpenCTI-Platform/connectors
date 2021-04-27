@@ -420,7 +420,7 @@ jobs:
             docker push opencti/connector-malbeacon:rolling
             docker push opencti/connector-sekoia:rolling
             docker push opencti/connector-threatbus:rolling
-            docker push opencti/connector-connector-hybrid-analysis-sandbox:rolling
+            docker push opencti/connector-hybrid-analysis-sandbox:rolling
 workflows:
   version: 2
   opencti:
