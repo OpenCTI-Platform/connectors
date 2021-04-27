@@ -50,7 +50,6 @@ class VirusTotalConnector:
         if "data" in json_data:
             data = json_data["data"]
             attributes = data["attributes"]
-
             # Update the current observable
             final_observable = self.helper.api.stix_cyber_observable.update_field(
                 id=observable["id"], key="hashes.MD5", value=attributes["md5"]
@@ -109,14 +108,11 @@ class VirusTotalConnector:
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
-
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-
-        if observable["entity_type"] == "StixFile":
-            return self._process_file(observable)
+        return self._process_file(observable)
 
     # Start the main loop
     def start(self):
