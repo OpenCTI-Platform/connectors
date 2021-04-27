@@ -58,7 +58,29 @@ class HybridAnalysis:
 
     def _send_knowledge(self, observable, report):
         bundle_objects = []
-        # Update the threat score
+        final_observable = self.helper.api.stix_cyber_observable.update_field(
+            id=observable["id"], key="hashes.MD5", value=report["md5"]
+        )
+        final_observable = self.helper.api.stix_cyber_observable.update_field(
+            id=final_observable["id"], key="hashes.SHA-1", value=report["sha1"]
+        )
+        final_observable = self.helper.api.stix_cyber_observable.update_field(
+            id=final_observable["id"],
+            key="size",
+            value=str(report["size"]),
+        )
+        final_observable = self.helper.api.stix_cyber_observable.update_field(
+            id=final_observable["id"],
+            key="hashes.SHA-256",
+            value=report["sha256"],
+        )
+        if observable["name"] is None:
+            self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"],
+                key="x_opencti_additional_names",
+                value=report["name"],
+                operation="add",
+            )
         self.helper.api.stix_cyber_observable.update_field(
             id=observable["id"],
             key="x_opencti_score",
