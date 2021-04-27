@@ -35,6 +35,7 @@ class StixIndicator(object):
                 "windows-registry-key": WindowsRegistryKeyIndicator,
                 "win-registry-key": WindowsRegistryKeyIndicator,
                 "x509-certificate": X509CertificateIndicator,
+                "x-opencti-hostname": XOpenCTIHostnameIndicator,
             }
             objs.append(switch.get(item, UnknownIndicator)
                         (typename=item)._parse(data[item]))
@@ -188,6 +189,12 @@ class DomainNameIndicator(StixIndicator):
         if self.resolves_to is not None:
             recursive_update(obj, {"ip": self.resolves_to})
         return obj
+
+
+class XOpenCTIHostnameIndicator(DomainNameIndicator):
+    def __init__(self, **kwargs) -> None:
+        self.typename: str = "domain-name"
+        super().__init__(**kwargs)
 
 
 class EmailAddrIndicator(StixIndicator):

@@ -73,6 +73,12 @@ data = [
         """[process:command_line MATCHES '-add GlobalSign.cer -c -s -r localMachine Root'] FOLLOWEDBY [process:command_line MATCHES'-add GlobalSign.cer -c -s -r localMachineTrustedPublisher'] WITHIN 300 SECONDS""",
         {"process": {"command_line": ["-add GlobalSign.cer -c -s -r localMachine Root",
                                       "-add GlobalSign.cer -c -s -r localMachineTrustedPublisher"]}}
+    ),
+    (
+        """[x-opencti-hostname:value = 'jon-steak.duckdns.org']"""
+        {
+            "domain": ["jon-steak.duckdns.org"]
+        }
     )
 ]
 

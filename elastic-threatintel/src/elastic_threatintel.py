@@ -1,4 +1,5 @@
 import datetime
+import time
 import os
 from pprint import PrettyPrinter
 
@@ -41,6 +42,9 @@ class ElasticThreatIntelConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+        self.helper.set_state(
+            {"connectorLastEventId": int(round(time.time() * 1000)) - 1000}
+        )
         self.msg_count = 0
 
         self.opencti_ext_url = get_config_variable(
@@ -83,7 +87,7 @@ class ElasticThreatIntelConnector:
             }
         }
         """
-        self.platform_url = instance.helper.api.query(
+        self.platform_url = self.helper.api.query(
             query)["data"]["settings"]["platform_url"]
 
         api_key: tuple(str) = None
@@ -147,13 +151,18 @@ class ElasticThreatIntelConnector:
             tpl = Template(f.read())
             content = tpl.substitute(alias_name=self.elasticsearch_index)
             self.elasticsearch.indices.put_index_template(
-                "self.elasticsearch_index", body=content)
+                self.elasticsearch_index, body=content)
 
     def _create_ecs_indicator_stix(self, entity, threatintel_data, original_intel_document=None):
         from stix2ecs import StixIndicator
 
         indicator = StixIndicator()
-        item = indicator.parse_pattern(entity["pattern"])[0]
+        try:
+            item = indicator.parse_pattern(entity["pattern"])[0]
+        except NotImplementedError as e:
+            logger.info(e)
+            return {}
+
         threatintel_data["threatintel"]["indicator"] = item.get_ecs_indicator()
 
         if entity.get("objectMarking", None):
@@ -195,7 +204,61 @@ class ElasticThreatIntelConnector:
         }
 
         if entity_type == "indicator":
+            logger.trace(f"Querying indicator: { data['data']['x_opencti_id'] }")
             entity = self.helper.api.indicator.read(id=data["data"]["x_opencti_id"])
+
+            query = """
+query IndicatorQuery($id: String!) {
+  indicator(id: $id) {
+    id
+    revoked
+    externalReferences {
+      ... on ExternalReferenceConnection {
+        edges {
+          node {
+            url
+          }
+        }
+      }
+    }
+    valid_from
+    valid_until
+    x_opencti_detection
+    x_opencti_score
+    confidence
+    pattern
+    pattern_type
+    x_mitre_platforms
+
+    name
+    description
+    createdBy {
+      ... on Organization {
+        name
+      }
+      ... on Individual {
+        name
+      }
+    }
+
+    indicator_types
+
+    objectMarking {
+      edges {
+        node {
+          definition
+          definition_type
+        }
+      }
+    }
+  }
+}
+"""
+            # entity = self.helper.api.query(
+            #     query, variables={"id": data["data"]["x_opencti_id"]})
+
+            logger.trace(entity)
+
             if (
                 entity is None
                 or entity["revoked"]
@@ -228,9 +291,13 @@ class ElasticThreatIntelConnector:
                 }
 
             if entity["pattern_type"] == "stix":
+                logger.trace("STIX entity type===================")
                 intel_document = self._create_ecs_indicator_stix(
                     entity, threatintel_data, original_intel_document
                 )
+
+            logger.trace("intel_document")
+            logger.trace(intel_document)
 
         elif (
             StixCyberObservableTypes.has_value(entity_type)
@@ -248,16 +315,19 @@ class ElasticThreatIntelConnector:
         return {"entity": entity, "intel_document": intel_document}
 
     def _process_message(self, msg):
+        from time import sleep
+        # sleep(0.05)
+
         import pprint
         pp = PrettyPrinter(indent=4)
+
+        # print(json.dumps(msg.__dict__, sort_keys=True, indent=4))
+        # print("=========================================================")
         try:
+
             data = json.loads(msg.data)
             entity_type = data["data"]["type"]
-            # self.msg_count += 1
-            # if self.msg_count % 1000 == 0:
-            #     print(f"Message count: {self.msg_count}      \tEntity: {entity_type}")
-            #     pp.pprint(json.dumps(msg.__dict__))
-            #     print("=========================================================")
+            self.msg_count += 1
 
             if msg.event != "create":
                 return
@@ -271,6 +341,11 @@ class ElasticThreatIntelConnector:
                 #     "Not an indicator and not an observable to import, skipping"
                 # )
                 return
+
+            # if self.msg_count % 1000 == 0:
+            #     print(f"Message count: {self.msg_count}      \tEntity: {entity_type}")
+            #     print(json.dumps(msg.__dict__, sort_keys=True, indent=4))
+            #     print("=========================================================")
 
             if msg.event == "create":
 
@@ -303,8 +378,15 @@ class ElasticThreatIntelConnector:
                     and self.elastic_import_label in data["data"]["labels"]
                 ) or self.elastic_import_label == "*":
 
+                    if self.msg_count % 13 == 0:
+                        print(
+                            f"Message count: {self.msg_count}      \tEntity: {entity_type}")
+                        print(json.dumps(msg.__dict__, sort_keys=True, indent=4))
+                        print("=========================================================")
+
                     # Get timestamp from message
                     # msg.id is of format <timestamp millis-<count>, e.g. `1615413396466-0`
+
                     unix_time = round(int(msg.id.split("-")[0]) / 1000)
                     event_date = datetime.datetime.fromtimestamp(
                         unix_time, datetime.timezone.utc
@@ -313,27 +395,28 @@ class ElasticThreatIntelConnector:
 
                     # Process intel
                     processed_intel = self._process_intel(entity_type, timestamp, data)
+                    if processed_intel is None:
+                        return
 
                     intel_document = processed_intel["intel_document"]
                     entity = processed_intel["entity"]
 
-                    print("================================")
-                    print(json.dumps(intel_document))
-                    print("################################")
-                    pp.pprint(entity)
-                    print("================================")
-
-                    return
+                    logger.info("================================")
+                    logger.info(json.dumps(intel_document, sort_keys=True, indent=4))
+                    logger.info("################################")
+                    logger.info(pp.pformat(entity))
+                    logger.info("================================")
 
                     # Submit to Elastic threatintel
-
-                # self.elasticsearch.index(
-                #     index=self.elasticsearch_index, id=msg.id, body=threatintel_data
-                # )
+                    self.elasticsearch.index(
+                        index=self.elasticsearch_index, id=msg.id, body=intel_document
+                    )
 
         except elasticsearch.RequestError as err:
             print("Unexpected error:", err, msg)
-            pass
+
+        except Exception as err:
+            print("Something else happened", err, msg)
 
     def start(self):
         import requests
