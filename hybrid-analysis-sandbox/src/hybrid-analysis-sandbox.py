@@ -46,7 +46,7 @@ class HybridAnalysis:
         self.api_url = "https://www.hybrid-analysis.com/api/v2"
         self.headers = {
             "api-key": self.api_key,
-            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 4.4.1",
+            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 4.5.0",
             "accept": "application/json",
         }
         self.identity = self.helper.api.identity.create(
@@ -342,7 +342,7 @@ class HybridAnalysis:
             return self._submit_url(observable)
         # If no file
         if "importFiles" not in observable or len(observable["importFiles"]) == 0:
-            raise ValueError("File not found and no file to upload")
+            return "Observable not found and no file to upload in the sandbox"
         return self._trigger_sandbox(observable)
 
     def _process_message(self, data):
