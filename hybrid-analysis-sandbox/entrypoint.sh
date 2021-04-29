@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-hybrid-analysis-sandbox
 
 # Launch the worker
-python3 hybrid-analysis-sansdbox.py
+python3 hybrid-analysis-sandbox.py
