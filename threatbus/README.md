@@ -21,7 +21,8 @@ The connector requires a configuration file or certain environment variables to 
 | `connector.confidence_level`    | `CONNECTOR_CONFIDENCE_LEVEL`  | Yes       | The confidence_level of relationships created by the connector. Unused. |
 | `connector.log_level`           | `CONNECTOR_LOG_LEVEL`         | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error`. |
 | `connector.entity_name`         | `CONNECTOR_ENTITY_NAME`       | Yes       | The name for a STIX-2 entity (e.g., the organization in which the connector is used). Used to report Sightings of Indicators as part of this STIX-2 entity.|
-| `connector.entity_description`  | `CONNECTOR_ENTITY_DESCRIPTION`| Yes       | The description for the STIX-2 entity. See above.
+| `connector.entity_description`  | `CONNECTOR_ENTITY_DESCRIPTION`| Yes       | The description for the STIX-2 entity. See above.|
+| `connector.forward_all_iocs`    | `CONNECTOR_FORWARD_ALL_IOCS`  | Yes       | Set to `true` to forward all Indicators from OpenCTI to Threat Bus. Set to `false` to forward only those whith the `detection` attribute toggled on (`x_opencti_detection = true`).|
 | `threatbus.zmq_host`            | `THREATBUS_ZMQ_HOST`          | Yes       | The Threat Bus host (IP address or hostname). |
 | `threatbus.zmq_port`            | `THREATBUS_ZMQ_PORT`          | Yes       | The Threat Bus ZMQ management port spawned by the [ZMQ-App plugin](https://docs.tenzir.com/threatbus/plugins/apps/zmq-app). |
 

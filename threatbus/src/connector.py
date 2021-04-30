@@ -27,6 +27,9 @@ class ThreatBusConnector(object):
         self.entity_desc = get_config_variable(
             "CONNECTOR_ENTITY_DESCRIPTION", ["connector", "entity_description"], config
         )
+        self.forward_all_iocs = get_config_variable(
+            "CONNECTOR_FORWARD_ALL_IOCS", ["connector", "forward_all_iocs"], config
+        )
         self.threatbus_entity = None
 
         # Custom configuration for Threat Bus ZeroMQ-App plugin endpoint
@@ -134,6 +137,11 @@ class ThreatBusConnector(object):
         indicator: dict = self.opencti_helper.api.indicator.read(id=opencti_id)
         if not indicator:
             # we are only interested in indicators at this time
+            return
+        detection_enabled: bool = indicator.get("x_opencti_detection", False)
+        if not detection_enabled and self.forward_all_iocs is not True:
+            # only propagate indicators that are toggled for detection or the
+            # user enabled forwarding of all indicators regardless of the toggle
             return
         # overwrite custom OpenCTI ID
         indicator["id"] = indicator.get("standard_id")

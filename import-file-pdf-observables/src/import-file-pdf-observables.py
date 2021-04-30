@@ -36,23 +36,28 @@ class ImportFilePdfObservables:
         file_fetch = data["file_fetch"]
         file_uri = self.helper.opencti_url + file_fetch
         file_name = os.path.basename(file_fetch)
-        container_id = data["container_id"]
+        entity_id = data["entity_id"]
+        # Get context
+        is_context = entity_id is not None and len(entity_id) > 0
+        if self.helper.get_only_contextual() and not is_context:
+            raise ValueError(
+                "No context defined, connector is get_only_contextual true"
+            )
         self.helper.log_info("Importing the file " + file_uri)
         # Get the file
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
         # Write the file
-        path = "/tmp/" + file_name
-        f = open(path, "wb")
+        f = open(file_name, "wb")
         f.write(file_content)
         f.close()
         # Parse
         bundle_objects = []
-        entities = [2]
+        entities = []
         i = 0
         custom_indicators = self._get_entities()
         parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json", custom_indicators=custom_indicators)
-        parsed = parser.parse(path)
-        os.remove(path)
+        parsed = parser.parse(file_name)
+        os.remove(file_name)
         if parsed != []:
             for file in parsed:
                 if file != None:
@@ -94,27 +99,22 @@ class ImportFilePdfObservables:
         else:
             self.helper.log_error("Could not parse the report!")
 
-        total = 0
-
-        # Get context
-        if len(bundle_objects) > 0:
-            if container_id is not None and len(container_id) > 0:
-                report = self.helper.api.report.read(id=container_id)
-                if report is not None:
+        if is_context:
+            entity = self.helper.api.stix_domain_object.read(id=entity_id)
+            if entity is not None:
+                if entity["entity_type"] == "Report" and len(bundle_objects) > 0:
                     report = Report(
-                        id=report["standard_id"],
-                        name=report["name"],
-                        description=report["description"],
-                        published=self.helper.api.stix2.format_date(
-                            report["published"]
-                        ),
-                        report_types=report["report_types"],
+                        id=entity["standard_id"],
+                        name=entity["name"],
+                        description=entity["description"],
+                        published=self.helper.api.stix2.format_date(entity["created"]),
+                        report_types=entity["report_types"],
                         object_refs=bundle_objects,
                     )
                     bundle_objects.append(report)
-            bundle = Bundle(objects=bundle_objects).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
-            total += len(bundles_sent)
+
+        bundle = Bundle(objects=bundle_objects).serialize()
+        bundles_sent = self.helper.send_stix2_bundle(bundle)
 
         if len(entities) > 0:
             report = self.helper.api.report.read(id=container_id)
@@ -124,9 +124,10 @@ class ImportFilePdfObservables:
                         id=report["id"], stixObjectOrStixRelationshipId=entity["id"]
                     )
 
-            total += len(entities)
+            # total += len(entities)
 
-        return "Sent " + str(total) + " stix bundle(s)/entities for worker import"
+        return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+
 
     # Start the main loop
     def start(self):
