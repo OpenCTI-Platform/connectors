@@ -350,7 +350,8 @@ class HybridAnalysis:
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:
             raise ValueError(
-                "Observable not found (may be linked to data seggregation, check your group and permissions"
+                "Observable not found "
+                "(may be linked to data seggregation, check your group and permissions)"
             )
         # Extract TLP
         tlp = "TLP:WHITE"
