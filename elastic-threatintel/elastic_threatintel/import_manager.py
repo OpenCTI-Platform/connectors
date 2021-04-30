@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import urllib.parse
 from datetime import datetime, timezone
 from logging import getLogger
@@ -23,7 +21,7 @@ class IntelManager(object):
         self.es_client: Elasticsearch = elasticsearch_client
         self.config: Cut = Cut(config)
         self.datadir: str = datadir
-        self.idx: str = self.config.get("setup.template.name", "threatintel")
+        self.idx: str = self.config.get("elastic.setup.template.name", "threatintel")
 
         self._setup_elasticsearch_index()
 
@@ -35,16 +33,17 @@ class IntelManager(object):
         assert self.es_client.ping()
 
         _policy_name: str = self.config.get(
-            "setup.ilm.policy_name",
-            self.config.get("setup.ilm.rollover_alias", "threatintel"),
+            "elastic.setup.ilm.policy_name",
+            self.config.get("elastic.setup.ilm.rollover_alias", "threatintel"),
         )
         _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
 
         # TODO: Check if xpack is available and skip ILM if not
-        if self.config.get("setup.ilm.enabled", True) is True:
+        if self.config.get("elastic.setup.ilm.enabled", True) is True:
             # Create ILM policy if needed
             if (_policy is None) or (
-                _policy is not None and self.config.get("setup.ilm.overwrite", None)
+                _policy is not None
+                and self.config.get("elastic.setup.ilm.overwrite", None)
             ):
                 with open(
                     os.path.join(self.datadir, "threatintel-index-ilm.json")
@@ -53,15 +52,19 @@ class IntelManager(object):
                     self.es_client.ilm.put_lifecycle(policy=_policy_name, body=content)
 
         # Create index template
-        if self.config.get("setup.template.enabled", True) is True:
-            _template_name: str = self.config.get("setup.template.name", "threatintel")
+        if self.config.get("elastic.setup.template.enabled", True) is True:
+            _template_name: str = self.config.get(
+                "elastic.setup.template.name", "threatintel"
+            )
 
             values = {
                 "policy_name": _policy_name,
                 "rollover_alias": self.config.get(
-                    "setup.ilm.rollover_alias", "threatintel"
+                    "elastic.setup.ilm.rollover_alias", "threatintel"
                 ),
-                "pattern": self.config.get("setup.template.pattern", "threatintel-*"),
+                "pattern": self.config.get(
+                    "elastic.setup.template.pattern", "threatintel-*"
+                ),
             }
             with open(
                 os.path.join(self.datadir, "threatintel-index-template.json")
@@ -84,15 +87,16 @@ class IntelManager(object):
     def import_threatintel_from_indicator(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
-        logger.trace(f"Querying indicator: { data['x_opencti_id']}")
+        logger.debug(f"Querying indicator: { data['x_opencti_id']}")
         entity = self.helper.api.indicator.read(id=data["x_opencti_id"])
 
-        logger.trace(entity)
+        logger.debug(entity)
 
         if (
             entity is None
             or entity["revoked"]
-            or entity["pattern_type"] not in self.config.get("indicator_types", [])
+            or entity["pattern_type"]
+            not in self.config.get("elastic.indicator_types", [])
         ):
             return None
 
@@ -116,9 +120,9 @@ class IntelManager(object):
                 item.get("url", None) for item in entity["externalReferences"]
             ]
 
-        if self.config["platform_url"] is not None:
+        if self.config.get("elastic.platform_url") is not None:
             _document["event"]["url"] = urllib.parse.urljoin(
-                f"{self.config['platform_url']}",
+                f"{self.config.get('elastic.platform_url')}",
                 f"/dashboard/observations/indicators/{entity['id']}",
             )
 
@@ -143,10 +147,12 @@ class IntelManager(object):
             if _indicator == {}:
                 return {}
 
+            _document["threatintel"]["stix"] = {"id": entity.get("standard_id")}
             _document["threatintel"]["indicator"] = _indicator
 
         try:
             # Submit to Elastic index
+            logger.debug(f"Indexing document: {_document}")
             self.es_client.index(
                 index=self.idx, id=data["x_opencti_id"], body=_document
             )

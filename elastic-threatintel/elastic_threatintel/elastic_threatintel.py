@@ -1,15 +1,16 @@
-from datetime import datetime, timezone
 import json
 import os
 import sys
+import threading
 import time
+from datetime import datetime, timezone
 from logging import getLogger
-import urllib.parse
-
 
 from elasticsearch import Elasticsearch
 from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes, get_config_variable
+from requests.exceptions import ConnectionError
 
+from .sightings_manager import SignalsManager
 from .import_manager import IntelManager
 
 logger = getLogger("elastic-threatintel-connector")
@@ -17,6 +18,8 @@ logger = getLogger("elastic-threatintel-connector")
 
 class ElasticThreatIntelConnector:
     def __init__(self, config: dict = {}, datadir: str = None):
+        self.shutdown_event: threading.Event = threading.Event()
+
         self.helper = OpenCTIConnectorHelper(config)
 
         logger.info("Connected to OpenCTI")
@@ -31,24 +34,26 @@ class ElasticThreatIntelConnector:
         )
 
         self.es_config = {
-            "elasticsearch_url": get_config_variable(
-                "ELASTIC_URL", ["elastic", "url"], config
-            ),
-            "ssl_verify": get_config_variable(
-                "ELASTIC_SSL_VERIFY", ["elastic", "ssl_verify"], config, False, True
-            ),
-            "cloud_id": get_config_variable(
-                "ELASTIC_CLOUD_ID", ["elastic", "cloud.id"], config
-            ),
-            "api_key": get_config_variable(
-                "ELASTIC_API_KEY", ["elastic", "api_key"], config
-            ),
-            "username": get_config_variable(
-                "ELASTIC_USERNAME", ["elastic", "username"], config
-            ),
-            "password": get_config_variable(
-                "ELASTIC_PASSWORD", ["elastic", "password"], config
-            ),
+            "elastic": {
+                "elasticsearch_url": get_config_variable(
+                    "ELASTIC_URL", ["elastic", "url"], config
+                ),
+                "ssl_verify": get_config_variable(
+                    "ELASTIC_SSL_VERIFY", ["elastic", "ssl_verify"], config, False, True
+                ),
+                "cloud_id": get_config_variable(
+                    "ELASTIC_CLOUD_ID", ["elastic", "cloud.id"], config
+                ),
+                "api_key": get_config_variable(
+                    "ELASTIC_API_KEY", ["elastic", "api_key"], config
+                ),
+                "username": get_config_variable(
+                    "ELASTIC_USERNAME", ["elastic", "username"], config
+                ),
+                "password": get_config_variable(
+                    "ELASTIC_PASSWORD", ["elastic", "password"], config
+                ),
+            }
         }
 
         # Get setup configuration
@@ -57,11 +62,25 @@ class ElasticThreatIntelConnector:
             try:
                 _value = json.loads(_value)
             except json.JSONDecodeError:
-                logger.error("ELASTIC_SETUP env var is not a valid JSON string")
+                logger.error("ELASTIC_SETUP_JSON env var is not a valid JSON string")
                 sys.exit(-1)
 
         if isinstance(_value, dict):
-            self.es_config["setup"] = _value
+            self.es_config["elastic"]["setup"] = _value
+
+        # Get signals configuration
+        _value = get_config_variable(
+            "ELASTIC_SIGNALS_JSON", ["elastic", "signals"], config
+        )
+        if _value is not None and not isinstance(_value, dict):
+            try:
+                _value = json.loads(_value)
+            except json.JSONDecodeError:
+                logger.error("ELASTIC_SIGNALS_JSON env var is not a valid JSON string")
+                sys.exit(-1)
+
+        if isinstance(_value, dict):
+            self.es_config["elastic"]["signals"] = _value
 
         # Get import start date
         _value = get_config_variable(
@@ -80,7 +99,7 @@ class ElasticThreatIntelConnector:
         if isinstance(_value, str):
             _value = _value.split(",")
         if isinstance(_value, list):
-            self.es_config["indicator_types"] = _value
+            self.es_config["elastic"]["indicator_types"] = _value
         else:
             raise ValueError("Invalid setting for ELASTIC_INDICATOR_TYPES")
 
@@ -99,19 +118,22 @@ class ElasticThreatIntelConnector:
         }
         """
         _settings = self.helper.api.query(query)["data"]["settings"]
-        self.es_config["platform_url"] = _settings.get("platform_url", None)
+        self.es_config["elastic"]["platform_url"] = _settings.get("platform_url", None)
 
         api_key: tuple(str) = None
         http_auth: tuple(str) = None
 
-        if self.es_config.get("username", None) and self.es_config.get(
+        if self.es_config["elastic"].get("username", None) and self.es_config.get(
             "password", None
         ):
-            http_auth = (self.es_config.get("username"), self.es_config.get("password"))
+            http_auth = (
+                self.es_config["elastic"].get("username"),
+                self.es_config["elastic"].get("password"),
+            )
 
         api_key = None
-        if self.es_config.get("api_key", None):
-            api_key = tuple(self.es_config.get("api_key").split(":"))
+        if self.es_config["elastic"].get("api_key", None):
+            api_key = tuple(self.es_config["elastic"].get("api_key").split(":"))
 
         assert (http_auth is None or api_key is None) and (
             http_auth is not None or api_key is not None
@@ -120,17 +142,17 @@ class ElasticThreatIntelConnector:
         logger.trace(f"http_auth: {http_auth}")
         logger.trace(f"api_key: {api_key}")
 
-        if self.es_config.get("cloud_id"):
+        if self.es_config["elastic"].get("cloud_id"):
             self.elasticsearch = Elasticsearch(
-                cloud_id=self.es_config.get("cloud_id"),
-                verify_certs=self.es_config.get("ssl_verify"),
+                cloud_id=self.es_config["elastic"].get("cloud_id"),
+                verify_certs=self.es_config["elastic"].get("ssl_verify"),
                 http_auth=http_auth,
                 api_key=api_key,
             )
-        elif self.es_config.get("elasticsearch_url"):
+        elif self.es_config["elastic"].get("elasticsearch_url"):
             self.elasticsearch = Elasticsearch(
-                [self.es_config.get("elasticsearch_url")],
-                verify_certs=self.es_config.get("ssl_verify"),
+                [self.es_config["elastic"].get("elasticsearch_url")],
+                verify_certs=self.es_config["elastic"].get("ssl_verify"),
                 http_auth=http_auth,
                 api_key=api_key,
             )
@@ -139,6 +161,13 @@ class ElasticThreatIntelConnector:
 
         self.import_manager = IntelManager(
             self.helper, self.elasticsearch, self.es_config, datadir
+        )
+
+        self.sightings_manager = SignalsManager(
+            config=self.es_config,
+            shutdown_event=self.shutdown_event,
+            opencti_client=self.helper,
+            elasticsearch_client=self.elasticsearch,
         )
 
     def _process_intel(
@@ -284,6 +313,9 @@ class ElasticThreatIntelConnector:
     def handle_update_indicator(self, timestamp, data):
         pass
 
+    def handle_delete_indicator(self, timestamp, data):
+        pass
+
     def _process_message(self, msg) -> None:
         try:
             event_id = msg.id
@@ -300,7 +332,7 @@ class ElasticThreatIntelConnector:
         if msg.event == "create":
             if (
                 data["type"] == "indicator"
-                and data["pattern_type"] in self.es_config["indicator_types"]
+                and data["pattern_type"] in self.es_config["elastic"]["indicator_types"]
             ):
                 logger.trace(data)
                 return self.handle_create_indicator(timestamp, data)
@@ -310,7 +342,7 @@ class ElasticThreatIntelConnector:
         if msg.event == "update":
             if (
                 data["type"] == "indicator"
-                and data["pattern_type"] in self.es_config["indicator_types"]
+                and data["pattern_type"] in self.es_config["elastic"]["indicator_types"]
             ):
                 return self.handle_update_indicator(timestamp, data)
 
@@ -346,9 +378,10 @@ class ElasticThreatIntelConnector:
                     print("=========================================================")
 
     def start(self):
-        from requests.exceptions import ConnectionError
-
         retries_left = 10
+
+        self.shutdown_event.clear()
+        self.sightings_manager.start()
 
         while retries_left > 0:
             try:
@@ -359,3 +392,7 @@ class ElasticThreatIntelConnector:
                 logger.warn("Disconnected from OpenCTI")
             else:
                 retries_left = 0
+
+        logger.info("Shutting down")
+        self.shutdown_event.set()
+        self.sightings_manager.join()

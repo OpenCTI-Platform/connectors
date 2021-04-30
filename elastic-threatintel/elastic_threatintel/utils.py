@@ -1,3 +1,5 @@
+import re
+from datetime import timedelta
 import logging
 
 TRACE_LOG_LEVEL = 5
@@ -49,3 +51,22 @@ def setup_logger(verbosity: int = 30, name: str = None) -> None:
     logging.basicConfig(format=FORMAT, datefmt="%Y-%m-%dT%H:%M:%S")
 
     logger.setLevel(verbosity)
+
+
+# Elastic supports Months and Years, but `timedelta` does not, so skipping
+# TODO: Checkout extending https://github.com/nickmaccarthy/python-datemath
+RE_ELASTIC_INTERVALS = re.compile(
+    r"((?P<weeks>\d+?)w)?((?P<days>\d+?)d)?((?P<hours>\d+?)h)?((?P<minutes>\d+?)m)?((?P<seconds>\d+?)s)?"
+)
+
+
+def parse_duration(time_str):
+    parts = RE_ELASTIC_INTERVALS.match(time_str)
+    if not parts:
+        return
+    parts = parts.groupdict()
+    time_params = {}
+    for name, param in parts.items():
+        if param:
+            time_params[name] = int(param)
+    return timedelta(**time_params)
