@@ -86,6 +86,12 @@ class ElasticToOCTIConnector:
         self.elastic_id = get_config_variable(
             "OPENCTI_ID_FOR_ELASTIC", ["opencti", "elastic_id"], config
         )
+        self.author_id = get_config_variable(
+            "CONNECTOR_AUTHOR_ID", ["opencti", "author_id"], config
+        )
+        self.elastic_sleep = get_config_variable(
+            "CONNECTOR_SLEEP_TIME", ["elastic", "sleep"], config
+        )
 
         # Get the external URL as configured in OpenCTI Settings page
 
@@ -141,11 +147,11 @@ class ElasticToOCTIConnector:
 
         """Main loop"""
 
-        sleep = 30     # 30 sec ## 5 minute sleep between loops
+        sleep = self.elastic_sleep
 
         while True:
 
-            print("[!] Still looping")
+            print("\t[!] Still looping")
 
             # Look for new Threat Match Signals from Elastic SIEM
             results = self.elasticsearch.search(index=self.elasticsearch_signal_index, body=self.elasticsearch_query)
@@ -171,7 +177,7 @@ class ElasticToOCTIConnector:
                 indicator = self.helper.api.indicator.read(id=item)
                 if indicator:
 
-                    print("[!] - got one")
+                    print("\t[+] - got one")
 
                     stix_id = indicator["standard_id"]
                     t = ids_dict[item]
@@ -189,14 +195,14 @@ class ElasticToOCTIConnector:
                         created=None,
                         modified=None,
                         confidence=50,
-                        created_by="identity--f7c2b7f1-ba99-51c2-8a86-8b1bc36678e2",  # openCTI ID for the connector
+                        created_by=self.author_id,
                         object_marking=None,
                         object_label=None,
                         external_references=None,
                         update=False,
                     )
 
-            print("[!] - sleeping 30 sec")
+            print("\t[!] - sleeping " + str(sleep) + " seconds.")
             time.sleep(sleep)
 
 
