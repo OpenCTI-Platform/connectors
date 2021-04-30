@@ -1,4 +1,3 @@
-
 import collections.abc
 from typing import Dict, List, Tuple
 from stix2patterns.pattern import Pattern
@@ -8,7 +7,8 @@ class StixIndicator(object):
     def __init__(self, typename: str = None) -> None:
         self.typename: str = typename
 
-    def parse_pattern(self, pattern: str) -> None:
+    @staticmethod
+    def parse_pattern(pattern: str) -> None:
         p = Pattern(pattern)
         data = p.inspect().comparisons
 
@@ -37,8 +37,9 @@ class StixIndicator(object):
                 "x509-certificate": X509CertificateIndicator,
                 "x-opencti-hostname": XOpenCTIHostnameIndicator,
             }
-            objs.append(switch.get(item, UnknownIndicator)
-                        (typename=item)._parse(data[item]))
+            objs.append(
+                switch.get(item, UnknownIndicator)(typename=item)._parse(data[item])
+            )
 
         return objs
 
@@ -79,7 +80,6 @@ class UnknownIndicator(StixIndicator):
 
 
 class ArtifactIndicator(StixIndicator):
-
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.hashes: List[Dict[str, str]] = None
@@ -90,12 +90,21 @@ class ArtifactIndicator(StixIndicator):
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
         obj = super().get_ecs_indicator()
         for item in data:
-            if item[0][0].lower() == 'hashes':
-                recursive_update(obj, {"hashes": {item[0][1].lower().replace(
-                    '-', ''): item[2].lower().replace("'", "")}})
-            elif item[0][0].lower() == 'mime_type':
+            if item[0][0].lower() == "hashes":
                 recursive_update(
-                    obj, {"mime_type": item[2].lower().replace("'", "")})
+                    obj,
+                    {
+                        "hashes": {
+                            item[0][1]
+                            .lower()
+                            .replace("-", ""): item[2]
+                            .lower()
+                            .replace("'", "")
+                        }
+                    },
+                )
+            elif item[0][0].lower() == "mime_type":
+                recursive_update(obj, {"mime_type": item[2].lower().replace("'", "")})
 
         if "hashes" in obj:
             self.hashes = obj["hashes"]
@@ -123,15 +132,12 @@ class AutonomousSystemIndicator(StixIndicator):
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
         obj = super().get_ecs_indicator()
         for item in data:
-            if item[0][0].lower() == 'number':
-                recursive_update(
-                    obj, {"number": item[2]})
-            elif item[0][0].lower() == 'name':
-                recursive_update(
-                    obj, {"name": item[2].replace("'", "")})
-            elif item[0][0].lower() == 'rir':
-                recursive_update(
-                    obj, {"rir": item[2].replace("'", "")})
+            if item[0][0].lower() == "number":
+                recursive_update(obj, {"number": item[2]})
+            elif item[0][0].lower() == "name":
+                recursive_update(obj, {"name": item[2].replace("'", "")})
+            elif item[0][0].lower() == "rir":
+                recursive_update(obj, {"rir": item[2].replace("'", "")})
 
         if "number" in obj:
             self.number = obj["number"]
@@ -168,12 +174,10 @@ class DomainNameIndicator(StixIndicator):
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
         obj = super().get_ecs_indicator()
         for item in data:
-            if item[0][0].lower() == 'value':
-                recursive_update(
-                    obj, {"domain": item[2].replace("'", "")})
-            elif item[0][0].lower() == 'resolves_to_refs':
-                recursive_update(
-                    obj, {"resolves_to": item[2].replace("'", "")})
+            if item[0][0].lower() == "value":
+                recursive_update(obj, {"domain": item[2].replace("'", "")})
+            elif item[0][0].lower() == "resolves_to_refs":
+                recursive_update(obj, {"resolves_to": item[2].replace("'", "")})
 
         if "domain" in obj:
             self.domain = obj["domain"]
@@ -195,6 +199,7 @@ class XOpenCTIHostnameIndicator(DomainNameIndicator):
     def __init__(self, **kwargs) -> None:
         self.typename: str = "domain-name"
         super().__init__(**kwargs)
+        self.typename: str = "domain-name"
 
 
 class EmailAddrIndicator(StixIndicator):
@@ -207,16 +212,12 @@ class EmailAddrIndicator(StixIndicator):
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
         obj = super().get_ecs_indicator()
         for item in data:
-            if item[0][0].lower() == 'value':
-                recursive_update(
-                    obj, {"value": item[2].replace("'", "")})
-            elif item[0][0].lower() == 'display_name':
-                recursive_update(
-                    obj, {"display_name": item[2].replace("'", "")}
-                )
-            elif item[0][0].lower() == 'belongs_to_refs':
-                recursive_update(
-                    obj, {"belongs_to": item[2].replace("'", "")})
+            if item[0][0].lower() == "value":
+                recursive_update(obj, {"value": item[2].replace("'", "")})
+            elif item[0][0].lower() == "display_name":
+                recursive_update(obj, {"display_name": item[2].replace("'", "")})
+            elif item[0][0].lower() == "belongs_to_refs":
+                recursive_update(obj, {"belongs_to": item[2].replace("'", "")})
 
         if "value" in obj:
             self.address = obj["value"]
@@ -258,13 +259,24 @@ class FileIndicator(StixIndicator):
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
         obj = super().get_ecs_indicator()
         for item in data:
-            if item[0][0].lower() == 'hashes':
-                recursive_update(obj, {"hashes": {item[0][1].lower().replace(
-                    '-', ''): item[2].lower().replace("'", "")}})
-            elif item[0][0].lower() in ('mime_type', 'name'):
+            if item[0][0].lower() == "hashes":
                 recursive_update(
-                    obj, {item[0][0].lower(): item[2].lower().replace("'", "")})
-            elif item[0][0].lower() == 'size':
+                    obj,
+                    {
+                        "hashes": {
+                            item[0][1]
+                            .lower()
+                            .replace("-", ""): item[2]
+                            .lower()
+                            .replace("'", "")
+                        }
+                    },
+                )
+            elif item[0][0].lower() in ("mime_type", "name"):
+                recursive_update(
+                    obj, {item[0][0].lower(): item[2].lower().replace("'", "")}
+                )
+            elif item[0][0].lower() == "size":
                 recursive_update(obj, {item[0][0].lower(): item[2]})
 
         if "hashes" in obj:
@@ -303,15 +315,12 @@ class IPv4AddrIndicator(StixIndicator):
         obj = super().get_ecs_indicator()
         for item in data:
             print(item)
-            if item[0][0].lower() == 'value':
-                recursive_update(
-                    obj, {"ip": item[2].replace("'", "")})
-            elif item[0][0].lower() == 'resolves_to_refs':
-                recursive_update(
-                    obj, {"resolves_to": item[2].replace("'", "")})
-            elif item[0][0].lower() == 'belongs_to_refs':
-                recursive_update(
-                    obj, {"belongs_to": item[2].replace("'", "")})
+            if item[0][0].lower() == "value":
+                recursive_update(obj, {"ip": item[2].replace("'", "")})
+            elif item[0][0].lower() == "resolves_to_refs":
+                recursive_update(obj, {"resolves_to": item[2].replace("'", "")})
+            elif item[0][0].lower() == "belongs_to_refs":
+                recursive_update(obj, {"belongs_to": item[2].replace("'", "")})
 
         if "ip" in obj:
             self.ip = obj["ip"]
@@ -347,9 +356,8 @@ class MacAddrIndicator(StixIndicator):
         obj = super().get_ecs_indicator()
         for item in data:
             print(item)
-            if item[0][0].lower() == 'value':
-                recursive_update(
-                    obj, {"mac": item[2].replace("'", "")})
+            if item[0][0].lower() == "value":
+                recursive_update(obj, {"mac": item[2].replace("'", "")})
 
         if "mac" in obj:
             self.mac = obj["mac"]
@@ -384,16 +392,16 @@ class NetworkTrafficIndicator(StixIndicator):
         for item in data:
             print(item)
 
-            if item[0][0].lower() in ('src_ref', 'dst_ref'):
+            if item[0][0].lower() in ("src_ref", "dst_ref"):
                 if item[0][1].lower() == "type":
                     continue
 
-                if item[0][0].lower() == 'src_ref':
+                if item[0][0].lower() == "src_ref":
                     side = "source"
-                elif item[0][0].lower() == 'dst_ref':
+                elif item[0][0].lower() == "dst_ref":
                     side = "destination"
 
-                if item[0][1].lower() == 'value':
+                if item[0][1].lower() == "value":
                     value = item[2].replace("'", "")
                     try:
                         value = f"{ip_address(value)}"
@@ -407,16 +415,16 @@ class NetworkTrafficIndicator(StixIndicator):
                             # Neither network, nor address. Use it as-is as domain
                             recursive_update(obj, {side: {"domain": value}})
 
-            if item[0][0].lower() in ('src_port', 'dst_port'):
-                if item[0][0].lower() == 'src_port':
+            if item[0][0].lower() in ("src_port", "dst_port"):
+                if item[0][0].lower() == "src_port":
                     side = "source"
-                elif item[0][0].lower() == 'dst_port':
+                elif item[0][0].lower() == "dst_port":
                     side = "destination"
 
                 recursive_update(obj, {side: {"port": item[2]}})
 
             if item[0][0].lower() == "protocols":
-                protos = item[2].replace("'", "").split(',')
+                protos = item[2].replace("'", "").split(",")
                 recursive_update(obj, {"protocols": protos})
 
         if "source" in obj:
@@ -455,12 +463,11 @@ class ProcessIndicator(StixIndicator):
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
         obj = super().get_ecs_indicator()
         for item in data:
-            if item[0][0].lower() == 'arguments':
-                args = item[2].replace("'", "").split(',')
+            if item[0][0].lower() == "arguments":
+                args = item[2].replace("'", "").split(",")
                 recursive_update(obj, {"arguments": args})
-            elif item[0][0].lower() in ('name', 'command_line'):
-                recursive_update(
-                    obj, {item[0][0].lower(): item[2].replace("'", "")})
+            elif item[0][0].lower() in ("name", "command_line"):
+                recursive_update(obj, {item[0][0].lower(): item[2].replace("'", "")})
 
         if "arguments" in obj:
             self.arguments = obj["arguments"]

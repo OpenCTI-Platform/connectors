@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "elastic-threatintel"
+version = "0.1.0"
+description = ""
+authors = ["Derek Ditch <dcode@elastic.co>"]
+
+[tool.poetry.scripts]
+elastic-threatintel-connector = 'elastic_threatintel.console:run'
+
+[tool.poetry.dependencies]
+python = "^3.9"
+elasticsearch = "^7.12.1"
+pycti = "4.4.3"
+scalpl = "^0.4.2"
+docopt = "^0.6.2"
+python-json-logger = "^2.0.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+black = "^21.4b2"
+flake8 = "^3.9.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

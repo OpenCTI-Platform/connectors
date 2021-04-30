@@ -4,3 +4,4 @@ logs
 *.gql
 .pytest_cache
 .python-version
+.vscode
