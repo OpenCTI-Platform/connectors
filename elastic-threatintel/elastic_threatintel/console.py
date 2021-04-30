@@ -81,6 +81,7 @@ def run():
         # Enable full logging for all loggers
         logger_name = None
         verbosity = 10
+
     setup_logger(verbosity=verbosity, name=logger_name)
     logger = getLogger(name=logger_name)
 
