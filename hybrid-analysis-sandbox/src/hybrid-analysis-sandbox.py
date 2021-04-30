@@ -348,6 +348,8 @@ class HybridAnalysis:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        if observable is None:
+            raise ValueError("Observable not found")
         # Extract TLP
         tlp = "TLP:WHITE"
         for marking_definition in observable["objectMarking"]:
