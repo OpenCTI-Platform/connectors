@@ -1,6 +1,8 @@
 # coding: utf-8
 
 import os
+from typing import Dict
+
 import yaml
 import time
 
@@ -45,9 +47,10 @@ class ImportFilePdfObservables:
         f.close()
         # Parse
         bundle_objects = []
-        entities = []
+        entities = [2]
         i = 0
-        parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json")
+        custom_indicators = self._get_entities()
+        parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json", custom_indicators=custom_indicators)
         parsed = parser.parse(path)
         os.remove(path)
         if parsed != []:
@@ -173,6 +176,7 @@ class ImportFilePdfObservables:
                 type_0 = resolved_type
             return {"type": type_0, "value": value}
         else:
+            self.helper.log_info('Some odd info received: {}'.format(match))
             return False
 
     def detect_ip_version(self, value):
@@ -180,6 +184,68 @@ class ImportFilePdfObservables:
             return "IPv6-Addr.value"
         else:
             return "IPv4-Addr.value"
+
+    def _get_entities(self):
+        setup = {
+            'identity': {
+                'filter': None,
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            },
+            'location': {
+                'filter': [{"key": "entity_type", "values": ["Country"]}],
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            },
+            'intrusion_set': {
+                'filter': None,
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            },
+            'malware': {
+                'filter': None,
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            },
+            'tool': {
+                'filter': None,
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            }
+        }
+
+        return self.resolve_setup(setup)
+
+    def resolve_setup(self, setup_dict: Dict):
+        base_func = self.helper.api
+        information_list = {}
+        for entity, args in setup_dict.items():
+            func_format = entity
+            try:
+                custom_function = getattr(base_func, func_format)
+            except AttributeError:
+                e = "Selected parser format is not supported: %s" % (func_format)
+                raise NotImplementedError(e)
+
+            entries = custom_function.list(getAll=True, filters=args['filter'])
+            information_list[entity] = self._make_1d_list(entries, args['fields'])
+
+        # pprint(information_list)
+        return information_list
+
+
+    def _make_1d_list(self, values, keys):
+        items = []
+        for key in keys:
+            for item in values:
+                elem = item.get(key, [])
+                if elem:
+                    if type(elem) == list:
+                        items += elem
+                    elif type(elem) == str:
+                        items.append(elem)
+
+        return set(items)
 
 
 if __name__ == "__main__":

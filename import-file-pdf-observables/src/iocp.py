@@ -40,6 +40,8 @@ import fnmatch
 import argparse
 import re
 from io import StringIO
+from setuptools.namespaces import flatten
+
 
 try:
     import configparser as ConfigParser
@@ -177,6 +179,27 @@ class IOC_Parser(object):
                 list_matches.append(
                     self.handler.print_match(fpath, page_num, ind_type, ind_match)
                 )
+
+        if self.custom_indicators:
+            for indicator_type, indicator_dict in self.custom_indicators.items():
+                indicators = set(flatten(indicator_dict.values()))
+                #indicators = set(map(lambda x: x.lower(), indicators))
+                indicators = ['\\b{}\\b'.format(v) for v in indicators]
+                indicators = '|'.join(indicators)
+                findings = re.findall(indicators, data, re.IGNORECASE)
+
+                if len(findings) > 0 and type(findings[0]) != tuple:
+                    for stix_id, names in indicator_dict.items():
+                        lower_names = set(map(lambda x: x.lower(), names))
+                        for finding in findings:
+                            try:
+                                if finding.lower() in lower_names:
+                                    list_matches.append(
+                                        self.handler.print_match(fpath, page_num, indicator_type, stix_id)
+                                    )
+                            except Exception as e:
+                                print('{} -> {} {}'.format(e, findings, names))
+
         return list_matches
 
     def parse_pdf_pypdf2(self, f, fpath):
