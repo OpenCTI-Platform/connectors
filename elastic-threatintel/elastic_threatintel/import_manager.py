@@ -4,7 +4,7 @@ import urllib.parse
 from datetime import datetime, timezone
 from logging import getLogger
 
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, RequestError
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
