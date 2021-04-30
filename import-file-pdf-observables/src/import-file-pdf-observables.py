@@ -1,20 +1,18 @@
 # coding: utf-8
 
 import os
+from typing import Dict
+
 import yaml
 import time
 
 import iocp
-from stix2 import (
-    Bundle,
-    Report,
-)
+from stix2 import Bundle, Report, Vulnerability
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     get_config_variable,
     SimpleObservable,
-    AttackPattern
 )
 
 
@@ -49,9 +47,10 @@ class ImportFilePdfObservables:
         f.close()
         # Parse
         bundle_objects = []
-        entities = []
+        entities = [2]
         i = 0
-        parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json")
+        custom_indicators = self._get_entities()
+        parser = iocp.IOC_Parser(None, "pdf", True, "pdfminer", "json", custom_indicators=custom_indicators)
         parsed = parser.parse(path)
         os.remove(path)
         if parsed != []:
@@ -62,15 +61,25 @@ class ImportFilePdfObservables:
                             for match in page:
                                 resolved_match = self.resolve_match(match)
                                 if resolved_match:
-                                    if resolved_match["type"] == "AttackPattern":
+                                    if resolved_match["type"] == "Attack-Pattern.value":
                                         entity = self.helper.api.attack_pattern.read(
-                                            filters=[{
-                                                "key": "x_mitre_id",
-                                                "values": [resolved_match['value']]
-                                            }]
+                                            filters=[
+                                                {
+                                                    "key": "x_mitre_id",
+                                                    "values": [resolved_match["value"]],
+                                                }
+                                            ]
                                         )
-                                        self.helper.log_info(entity)
-                                        entities.append(entity)
+                                        if entity:
+                                            entities.append(entity)
+                                        else:
+                                            self.helper.log_info(
+                                                f"Attack pattern {resolved_match['value']} was not found in OpenCTI."
+                                                + "Is the mitre connector configured and running?"
+                                            )
+                                    elif resolved_match["type"] == "Vulnerability.name":
+                                        vulnerability = Vulnerability(name=resolved_match["value"])
+                                        bundle_objects.append(vulnerability)
                                     else:
                                         observable = SimpleObservable(
                                             id=OpenCTIStix2Utils.generate_random_stix_id(
@@ -85,8 +94,9 @@ class ImportFilePdfObservables:
         else:
             self.helper.log_error("Could not parse the report!")
 
+        total = 0
+
         # Get context
-        self.helper.log_info(bundle_objects)
         if len(bundle_objects) > 0:
             if container_id is not None and len(container_id) > 0:
                 report = self.helper.api.report.read(id=container_id)
@@ -104,14 +114,19 @@ class ImportFilePdfObservables:
                     bundle_objects.append(report)
             bundle = Bundle(objects=bundle_objects).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
-            total = len(bundles_sent)
-            bundle = Bundle(objects=entities).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
             total += len(bundles_sent)
 
-            return (
-                "Sent " + str(total) + " stix bundle(s) for worker import"
-            )
+        if len(entities) > 0:
+            report = self.helper.api.report.read(id=container_id)
+            if report:
+                for entity in entities:
+                    self.helper.api.report.add_stix_object_or_stix_relationship(
+                        id=report["id"], stixObjectOrStixRelationshipId=entity["id"]
+                    )
+
+            total += len(entities)
+
+        return "Sent " + str(total) + " stix bundle(s)/entities for worker import"
 
     # Start the main loop
     def start(self):
@@ -129,6 +144,8 @@ class ImportFilePdfObservables:
             "URL": "Url.value",
             "Email": "Email-Addr.value",
             "AttackPattern": "Attack-Pattern.value",
+            "CVE": "Vulnerability.name",
+            "Registry": "Windows-Registry-Key.key",
         }
         type = match["type"]
         value = match["match"]
@@ -159,6 +176,7 @@ class ImportFilePdfObservables:
                 type_0 = resolved_type
             return {"type": type_0, "value": value}
         else:
+            self.helper.log_info('Some odd info received: {}'.format(match))
             return False
 
     def detect_ip_version(self, value):
@@ -166,6 +184,68 @@ class ImportFilePdfObservables:
             return "IPv6-Addr.value"
         else:
             return "IPv4-Addr.value"
+
+    def _get_entities(self):
+        setup = {
+            'identity': {
+                'filter': None,
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            },
+            'location': {
+                'filter': [{"key": "entity_type", "values": ["Country"]}],
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            },
+            'intrusion_set': {
+                'filter': None,
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            },
+            'malware': {
+                'filter': None,
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            },
+            'tool': {
+                'filter': None,
+                'fields': ['aliases', 'name'],
+                'type': 'value'
+            }
+        }
+
+        return self.resolve_setup(setup)
+
+    def resolve_setup(self, setup_dict: Dict):
+        base_func = self.helper.api
+        information_list = {}
+        for entity, args in setup_dict.items():
+            func_format = entity
+            try:
+                custom_function = getattr(base_func, func_format)
+            except AttributeError:
+                e = "Selected parser format is not supported: %s" % (func_format)
+                raise NotImplementedError(e)
+
+            entries = custom_function.list(getAll=True, filters=args['filter'])
+            information_list[entity] = self._make_1d_list(entries, args['fields'])
+
+        # pprint(information_list)
+        return information_list
+
+
+    def _make_1d_list(self, values, keys):
+        items = []
+        for key in keys:
+            for item in values:
+                elem = item.get(key, [])
+                if elem:
+                    if type(elem) == list:
+                        items += elem
+                    elif type(elem) == str:
+                        items.append(elem)
+
+        return set(items)
 
 
 if __name__ == "__main__":
