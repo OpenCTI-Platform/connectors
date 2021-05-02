@@ -187,6 +187,7 @@ class IOC_Parser(object):
                 indicators = ['\\b{}\\b'.format(v) for v in indicators]
                 indicators = '|'.join(indicators)
                 findings = re.findall(indicators, data, re.IGNORECASE)
+                print('Findings: {}'.format(findings))
 
                 if len(findings) > 0 and type(findings[0]) != tuple:
                     for stix_id, names in indicator_dict.items():
@@ -198,7 +199,7 @@ class IOC_Parser(object):
                                         self.handler.print_match(fpath, page_num, indicator_type, stix_id)
                                     )
                             except Exception as e:
-                                print('{} -> {} {}'.format(e, findings, names))
+                                self.handler.print_error(findings, e)
 
         return list_matches
 
