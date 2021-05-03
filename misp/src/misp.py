@@ -378,6 +378,7 @@ class Misp:
                     indicators.append(indicator)
             # Get attributes of objects
             objects_relationships = []
+            object_uuid_dict = {}
             for object in event["Event"]["Object"]:
                 attribute_external_references = []
                 for attribute in object["Attribute"]:
@@ -402,14 +403,29 @@ class Misp:
                     )
                     if indicator is not None:
                         indicators.append(indicator)
-                        if (
-                            indicator["indicator"] is not None
-                            and object["meta-category"] == "file"
-                            and indicator["indicator"].x_opencti_main_observable_type
-                            in FILETYPES
-                        ):
-                            object_attributes.append(indicator)
+                        if(indicator["indicator"] is not None):
+                            object_uuid_dict[object["uuid"]] = indicator["indicator"]["id"] # we want a map the OpenCTI ids to MISP ids to do a lookup later
+                            if (
+                                object["meta-category"] == "file"
+                                and indicator["indicator"].x_opencti_main_observable_type
+                                in FILETYPES
+                            ):
+                                object_attributes.append(indicator)
                 # TODO Extend observable
+            for object in event["Event"]["Object"]: # Reiterate after we have all the OpenCTI ids to create Relationships with those
+                for obj_ref in object["ObjectReference"]:
+                    obj_ref_src = object_uuid_dict.get(obj_ref["source_uuid"], None)
+                    obj_ref_target = object_uuid_dict.get(obj_ref["referenced_uuid"], None)
+                    if obj_ref_src is not None and obj_ref_target is not None:
+                        objects_relationships.append(
+                            Relationship(
+                                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                                relationship_type=obj_ref["relationship_type"] or "related-to",
+                                created_by_ref=author,
+                                source_ref=obj_ref_src,
+                                target_ref=obj_ref_target,
+                            )
+                        )
 
             ### Prepare the bundle
             bundle_objects = [author]
