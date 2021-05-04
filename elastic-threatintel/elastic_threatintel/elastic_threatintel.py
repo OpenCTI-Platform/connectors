@@ -53,7 +53,15 @@ class ElasticThreatIntelConnector:
                 "password": get_config_variable(
                     "ELASTIC_PASSWORD", ["elastic", "password"], config
                 ),
-            }
+            },
+            "connector": {
+                "entity_name": get_config_variable(
+                    "CONNECTOR_ENTITY_NAME", ["connector", "entity_name"], config
+                ),
+                "entity_description": get_config_variable(
+                    "CONNECTOR_ENTITY_NAME", ["connector", "entity_name"], config
+                ),
+            },
         }
 
         # Get setup configuration
@@ -170,151 +178,61 @@ class ElasticThreatIntelConnector:
             elasticsearch_client=self.elasticsearch,
         )
 
-    def _process_intel(
-        self, entity_type, timestamp, data, original_intel_document=None
-    ):
-        entity = None
-        intel_document = None
-        creation_time = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
-
-        threatintel_data = {
-            "@timestamp": timestamp,
-            "event": {
-                "created": creation_time,
-                "kind": "enrichment",
-                "category": "threat",
-                "type": "indicator",
-                "dataset": "threatintel.opencti",
-            },
-            "threatintel": {},
-        }
-
-        if entity_type == "indicator":
-            logger.trace(f"Querying indicator: { data['data']['x_opencti_id'] }")
-            entity = self.helper.api.indicator.read(id=data["data"]["x_opencti_id"])
-
-            #             query = """
-            # query IndicatorQuery($id: String!) {
-            #   indicator(id: $id) {
-            #     id
-            #     revoked
-            #     externalReferences {
-            #       ... on ExternalReferenceConnection {
-            #         edges {
-            #           node {
-            #             url
-            #           }
-            #         }
-            #       }
-            #     }
-            #     valid_from
-            #     valid_until
-            #     x_opencti_detection
-            #     x_opencti_score
-            #     confidence
-            #     pattern
-            #     pattern_type
-            #     x_mitre_platforms
-
-            #     name
-            #     description
-            #     createdBy {
-            #       ... on Organization {
-            #         name
-            #       }
-            #       ... on Individual {
-            #         name
-            #       }
-            #     }
-
-            #     indicator_types
-
-            #     objectMarking {
-            #       edges {
-            #         node {
-            #           definition
-            #           definition_type
-            #         }
-            #       }
-            #     }
-            #   }
-            # }
-            # """
-            # entity = self.helper.api.query(
-            #     query, variables={"id": data["data"]["x_opencti_id"]})
-
-            logger.trace(entity)
-
-            if (
-                entity is None
-                or entity["revoked"]
-                or entity["pattern_type"] not in self.es_config["indicator_types"]
-            ):
-                return None
-
-            if "externalReferences" in entity:
-                threatintel_data["event"]["reference"] = [
-                    item.get("url", None) for item in entity["externalReferences"]
-                ]
-
-            if self.platform_url is not None:
-                threatintel_data["event"][
-                    "url"
-                ] = f"{self.platform_url}/dashboard/observations/indicators/{entity['id']}"
-
-            threatintel_data["threatintel"]["opencti"] = {
-                "internal_id": entity.get("id", None),
-                "valid_from": entity.get("valid_from", None),
-                "valid_until": entity.get("valid_until", None),
-                "enable_detection": entity.get("x_opencti_detection", None),
-                "risk_score": entity.get("x_opencti_score", None),
-                "confidence": entity.get("confidence", None),
-                "original_pattern": entity.get("pattern", None),
-                "pattern_type": entity.get("pattern_type", None),
-            }
-
-            if entity.get("x_mitre_platforms", None):
-                threatintel_data["threatintel"]["opencti"]["mitre"] = {
-                    "platforms": entity.get("x_mitre_platforms", None)
-                }
-
-            if entity["pattern_type"] == "stix":
-                logger.trace("STIX entity type===================")
-                intel_document = self._create_ecs_indicator_stix(
-                    entity, threatintel_data, original_intel_document
-                )
-
-            logger.trace("intel_document")
-            logger.trace(intel_document)
-
-        elif (
-            StixCyberObservableTypes.has_value(entity_type)
-            and entity_type.lower() in self.elastic_observable_types
-        ):
-            entity = self.helper.api.stix_cyber_observable.read(
-                id=data["data"]["x_opencti_id"]
-            )
-            if entity is None or entity["revoked"]:
-                return {"entity": entity, "intel_document": intel_document}
-
-        intel_document = {k: v for k, v in intel_document.items() if v is not None}
-
-        # intel_document = self._create_observable(entity, original_intel_document)
-        return {"entity": entity, "intel_document": intel_document}
-
-    def handle_create_indicator(self, timestamp: datetime, data: dict):
+    def handle_create_indicator(self, timestamp: datetime, data: dict) -> None:
         logger.debug("[CREATE] Processing indicator {" + data["id"] + "}")
 
         if self.elastic_import_label == "*":
-            return self.import_manager.import_threatintel_from_indicator(
-                timestamp, data
+            self.import_manager.import_threatintel_from_indicator(timestamp, data)
+            return
+
+        # If no label in this creation and import if filtered
+        if ("labels" not in data) or (self.elastic_import_label not in data["labels"]):
+            self.helper.log_info(
+                "[CREATE] No label corresponding to import filter, doing nothing"
             )
+            return
+
+        if self.elastic_import_label in data["labels"]:
+            self.import_manager.import_threatintel_from_indicator(timestamp, data)
+            return
 
     def handle_update_indicator(self, timestamp, data):
-        pass
+        logger.debug("[UPDATE] Processing indicator {" + data["id"] + "}")
+
+        if self.elastic_import_label == "*":
+            self.import_manager.import_threatintel_from_indicator(
+                timestamp, data, is_update=True
+            )
+            return
+
+        # If no label in this creation and import if filtered
+        if ("labels" not in data) or (self.elastic_import_label not in data["labels"]):
+            self.helper.log_info(
+                "[UPDATE] No label corresponding to import filter, doing nothing"
+            )
+            return
+
+        if self.elastic_import_label in data["labels"]:
+            self.import_manager.import_threatintel_from_indicator(
+                timestamp, data, is_update=True
+            )
+            return
 
     def handle_delete_indicator(self, timestamp, data):
-        pass
+        logger.debug("[DELETE] Processing indicator {" + data["id"] + "}")
+
+        if self.elastic_import_label == "*":
+            self.import_manager.delete_threatintel_from_indicator(data)
+        # If no label in this creation and import if filtered
+        if ("labels" not in data) or (self.elastic_import_label not in data["labels"]):
+            self.helper.log_info(
+                "[DELETE] No label corresponding to import filter, doing nothing"
+            )
+            return
+
+        if self.elastic_import_label in data["labels"]:
+            self.import_manager.delete_threatintel_from_indicator(data)
+            return
 
     def _process_message(self, msg) -> None:
         try:
@@ -377,7 +295,7 @@ class ElasticThreatIntelConnector:
                     print(json.dumps(msg.__dict__, sort_keys=True, indent=4))
                     print("=========================================================")
 
-    def start(self):
+    def start(self) -> None:
         retries_left = 10
 
         self.shutdown_event.clear()
@@ -390,9 +308,22 @@ class ElasticThreatIntelConnector:
             except ConnectionError:
                 retries_left -= 1
                 logger.warn("Disconnected from OpenCTI")
-            else:
+            except KeyboardInterrupt:
                 retries_left = 0
+                break
+            except Exception as e:
+                logger.error("Something went wrong")
+                retries_left = 0
+                raise e
 
         logger.info("Shutting down")
         self.shutdown_event.set()
-        self.sightings_manager.join()
+        self.elasticsearch.close()
+
+        self.sightings_manager.join(timeout=3)
+        if self.sightings_manager.is_alive():
+            logger.warn("Killing sightings manager")
+
+        logger.info(
+            "Main thread complete. Waiting on background threads to complete. Press CTRL+C to quit."
+        )

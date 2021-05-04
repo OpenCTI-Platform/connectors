@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Usage:  elastic-threatintel-connector [-v | -vv | -q | --debug] [-c FILE] [-d DIR]
+Usage:  elastic-threatintel-connector [-v | -vv | -vvv | -q | --debug] [-c FILE] [-d DIR]
         elastic-threatintel-connector --version
 
 Runs OpenCTI connector using provided config.yml file. See config.yml.reference
@@ -17,7 +17,9 @@ Options:
 """
 
 import os
+import sys
 from importlib.metadata import version
+from logging import getLogger
 
 import yaml
 from docopt import docopt
@@ -25,7 +27,6 @@ from docopt import docopt
 from . import __version__
 from .elastic_threatintel import ElasticThreatIntelConnector
 from .utils import setup_logger
-from logging import getLogger
 
 BANNER = f"""
 
@@ -72,7 +73,9 @@ def run():
         DEBUG    | 10
         NOTSET   | 0
         """
-        verbosity = 20 + (arguments["-v"] * -10)
+        verbosity = 30 + (arguments["-v"] * -10)
+        if verbosity == 0:
+            verbosity = 1
     else:
         verbosity = 40
 
@@ -109,3 +112,5 @@ def run():
         print(BANNER)
     ElasticInstance = ElasticThreatIntelConnector(config=config, datadir=datadir)
     ElasticInstance.start()
+
+    sys.exit(0)

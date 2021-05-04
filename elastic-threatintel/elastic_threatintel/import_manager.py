@@ -2,7 +2,7 @@ import urllib.parse
 from datetime import datetime, timezone
 from logging import getLogger
 
-from elasticsearch import Elasticsearch, RequestError
+from elasticsearch import Elasticsearch, RequestError, NotFoundError
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
@@ -92,17 +92,40 @@ class IntelManager(object):
 
         logger.debug(entity)
 
+        _result: dict = {}
+
         if (
             entity is None
             or entity["revoked"]
             or entity["pattern_type"]
             not in self.config.get("elastic.indicator_types", [])
         ):
-            return None
+            return {}
+
+        _version = 0
+
+        if is_update is True:
+            try:
+                # Attempt to retreive existing document
+                logger.debug(f"Retrieving document id: {data['x_opencti_id']}")
+                _result = self.es_client.get(
+                    index=self.idx, id=data["x_opencti_id"], doc_type="_doc"
+                )
+
+            except RequestError as err:
+                logger.error(
+                    f"Unexpected error retreiving document at /{self.idx}/_doc/{data['x_opencti_id']}:",
+                    err,
+                )
+
+            if _result["found"] is True:
+                _document = _result["_source"]
+                _version = _result["_version"]
 
         creation_time: str = (
             datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
         )
+
         _document: dict = {
             "@timestamp": timestamp,
             "event": {
@@ -115,6 +138,9 @@ class IntelManager(object):
             "threatintel": {},
         }
 
+        # Increment version of document
+        _version += 1
+
         if len(entity.get("externalReferences", [])) > 0:
             _document["event"]["reference"] = [
                 item.get("url", None) for item in entity["externalReferences"]
@@ -126,15 +152,27 @@ class IntelManager(object):
                 f"/dashboard/observations/indicators/{entity['id']}",
             )
 
+        _document["event"]["risk_score"] = entity.get("x_opencti_score", None)
+        _document["event"]["risk_score_norm"] = entity.get("x_opencti_score", None)
+        _document["threatintel"]["confidence"] = entity.get("confidence", None)
+        _document["threatintel"]["confidence_norm"] = entity.get("confidence", None)
+
         _document["threatintel"]["opencti"] = {
             "internal_id": entity.get("id", None),
             "valid_from": entity.get("valid_from", None),
             "valid_until": entity.get("valid_until", None),
             "enable_detection": entity.get("x_opencti_detection", None),
-            "risk_score": entity.get("x_opencti_score", None),
-            "confidence": entity.get("confidence", None),
             "original_pattern": entity.get("pattern", None),
             "pattern_type": entity.get("pattern_type", None),
+            "created_at": entity.get("created_at", None),
+            "updated_at": entity.get("created_at", None),
+        }
+
+        # Remove any empty values
+        _document["threatintel"]["opencti"] = {
+            k: v
+            for k, v in _document["threatintel"]["opencti"].items()
+            if v is not None
         }
 
         if entity.get("x_mitre_platforms", None):
@@ -162,6 +200,22 @@ class IntelManager(object):
             logger.error("Something else happened", err, _document)
 
         return _document
+
+    def delete_threatintel_from_indicator(self, data: dict) -> None:
+
+        logger.debug(f"Deleting {data}")
+        _result: dict = {}
+        try:
+            _result = self.es_client.delete(
+                index=self.idx, id=data["x_opencti_id"], doc_type="_doc"
+            )
+        except NotFoundError:
+            logger.warn(f"Document id {data['x_opencti_id']} not found in index")
+
+        if _result.get("result", None) == "deleted":
+            logger.debug(f"Document id {data['x_opencti_id']} deleted")
+
+        return
 
     def _create_ecs_indicator_stix(self, entity: dict):
         from .stix2ecs import StixIndicator

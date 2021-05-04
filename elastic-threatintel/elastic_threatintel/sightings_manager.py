@@ -1,10 +1,11 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from threading import Thread, Event
 from logging import getLogger
 from scalpl import Cut
 import json
 
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, NotFoundError
+from elasticsearch_dsl import Search
 from pycti import OpenCTIConnectorHelper
 
 from .utils import parse_duration
@@ -17,19 +18,13 @@ DEFAULT_QUERY = """
     "bool": {
       "must": {
         "match": { "signal.rule.type": "threat_match" }
-      },
-      "filter": {
-        "range": {
-          "@timestamp": {
-            "gte": "now-5m/m",
-            "lt": "now/m"
-          }
-        }
       }
     }
   }
 }
 """
+
+DEFAULT_LOOKBACK = "5m"
 
 
 class SignalsManager(Thread):
@@ -44,6 +39,7 @@ class SignalsManager(Thread):
         self.config: Cut = Cut(config)
         self.shutdown_event: Event = shutdown_event
         self.es_client: Elasticsearch = elasticsearch_client
+
         self.helper: OpenCTIConnectorHelper = opencti_client
 
         # Default to 5 minutes
@@ -56,16 +52,56 @@ class SignalsManager(Thread):
         self.search_idx = self.config.get(
             "elastic.signals.signal_index", ".siem-signals-*"
         )
-        self.signals_query = self.config.get("elastic.signals.query", DEFAULT_QUERY)
+        _query: dict = json.loads(
+            self.config.get("elastic.signals.query", DEFAULT_QUERY)
+        )
+        _lookback: str = self.config.get(
+            "elastic.signals.lookback_interval", DEFAULT_LOOKBACK
+        )
+
+        self.signals_search: dict = (
+            Search(using=self.es_client, index=self.search_idx)
+            .from_dict(_query)
+            .filter(
+                "range", **{"@timestamp": {"gte": f"now-{_lookback}/m", "lt": "now/m"}}
+            )
+            .to_dict()
+        )
+
+        self.author_id = None
 
         # XXX MAD HAX!
         # self.author_id = self.config.get("connector.author_id")
-        self.author_id = "identity--9a7de335-5d7b-55a1-bfde-cb9c98ca6ebc"
+        # self.author_id = "identity--9a7de335-5d7b-55a1-bfde-cb9c98ca6ebc"
 
         logger.info("Signals manager thread initialized")
 
     def _get_elastic_entity(self) -> str:
-        return self.author_id
+        """Get or create a Elastic Threatintel Connector entity if not exists"""
+        if self.author_id is not None:
+            return self.author_id
+
+        _entity_name = self.config.get(
+            "connector.entity_name", "Elastic ThreatIntel Connector"
+        )
+        _entity_desc = self.config.get("connector.entity_description", "")
+
+        elastic_entity = self.helper.api.stix_domain_object.get_by_stix_id_or_name(
+            name=_entity_name
+        )
+        if not elastic_entity:
+            logger.info(f"Create {_entity_name}")
+            self.author_id = self.helper.api.identity.create(
+                # NOTE: This should maybe be `system` See https://github.com/OpenCTI-Platform/opencti/issues/1322
+                type="Organization",
+                name=_entity_name,
+                description=_entity_desc,
+            )["id"]
+            return self.author_id
+        else:
+            logger.info(f"Cache {_entity_name} id")
+            self.author_id = elastic_entity["id"]
+            return self.author_id
 
     def run(self) -> None:
 
@@ -73,6 +109,7 @@ class SignalsManager(Thread):
         # self.shutdown_event.wait(self.interval)
 
         logger.info("Signals manager thread starting")
+        logger.debug(self.signals_search)
 
         """Main loop"""
         while not self.shutdown_event.is_set():
@@ -81,44 +118,75 @@ class SignalsManager(Thread):
 
             # Look for new Threat Match Signals from Elastic SIEM
             results = self.es_client.search(
-                index=self.search_idx, body=self.signals_query
+                index=self.search_idx, body=self.signals_search
             )
             ids_dict = {}
 
             # Parse the results
             for hit in results["hits"]["hits"]:
-
                 for indicator in hit["_source"]["threat"]["indicator"]:
-                    b = json.loads(
-                        '{"query": {"bool": {"must": {"match": {"_id" : "'
-                        + indicator["matched"]["id"]
-                        + '"}}}}}'
-                    )
-                    i = indicator["matched"]["index"]
+                    # Get original threatintel document
+                    try:
+                        _doc = self.es_client.get(
+                            index=indicator["matched"]["index"],
+                            id=indicator["matched"]["id"],
+                        )
+                    except NotFoundError as err:
+                        logger.error(
+                            f"ThreatIntel document for {indicator['matched']['atomic'][0]} was not found",
+                            err,
+                        )
+                        continue
 
-                    # Lookup and parse the openCTI ID from the threatintel index
-                    threat_intel_hits = self.es_client.search(index=i, body=b)
+                    if _doc["found"] is not True:
+                        continue
 
-                    for h in threat_intel_hits["hits"]["hits"]:
-                        ids_dict[
-                            h["_source"]["threatintel"]["opencti"]["internal_id"]
-                        ] = h["_source"]["@timestamp"]
+                    if (
+                        "threatintel" in _doc["_source"]
+                        and "opencti" in _doc["_source"]["threatintel"]
+                    ):
+                        _opencti_id = _doc["_source"]["threatintel"]["opencti"][
+                            "internal_id"
+                        ]
+                    else:
+                        logger.warn(
+                            "Signal for threatintel document doesn't have opencti reference. Skipping"
+                        )
+                        # XXX Optionally, could look up via OpenCTI API for an indicator match
+                        continue
+
+                    _timestamp = hit["_source"]["signal"]["original_time"]
+                    if _opencti_id not in ids_dict:
+                        ids_dict[_opencti_id] = {
+                            "first_seen": _timestamp,
+                            "last_seen": _timestamp,
+                            "count": 1,
+                        }
+                    else:
+                        ids_dict[_opencti_id]["count"] += 1
+
+                        if _timestamp < ids_dict[_opencti_id]["first_seen"]:
+                            ids_dict[_opencti_id]["first_seen"] = _timestamp
+                        elif _timestamp > ids_dict[_opencti_id]["last_seen"]:
+                            ids_dict[_opencti_id]["last_seen"] = _timestamp
 
             # Loop through signal hits and create new sightings
-            for item in ids_dict:
+            for k, v in ids_dict.items():
 
                 # Check if indicator exists
-                indicator = self.helper.api.indicator.read(id=item)
+                indicator = self.helper.api.indicator.read(id=k)
                 if indicator:
 
                     logger.info("Found matching indicator in OpenCTI")
 
                     stix_id = indicator["standard_id"]
-                    t = ids_dict[item]
 
                     entity_id = self._get_elastic_entity()
+                    confidence = int(
+                        self.config.get("connector.confidence_level", "80")
+                    )
 
-                    logger.debug(f"{stix_id} -> {entity_id}")
+                    logger.debug(f"Creating sighting from {stix_id} -> {entity_id}")
 
                     # Create new Sighting
                     self.helper.api.stix_sighting_relationship.create(
@@ -126,13 +194,13 @@ class SignalsManager(Thread):
                         toId=entity_id,
                         stix_id=None,
                         description="Threat Match sighting from Elastic SIEM",
-                        first_seen=t,
-                        last_seen=t,
-                        count=1,
+                        first_seen=v["first_seen"],
+                        last_seen=v["last_seen"],
+                        count=v["count"],
                         x_opencti_negative=False,
                         created=None,
                         modified=None,
-                        confidence=50,
+                        confidence=confidence,
                         created_by=entity_id,
                         object_marking=None,
                         object_label=None,

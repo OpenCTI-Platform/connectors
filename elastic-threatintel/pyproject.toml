@@ -10,10 +10,11 @@ elastic-threatintel-connector = 'elastic_threatintel.console:run'
 [tool.poetry.dependencies]
 python = "^3.9"
 elasticsearch = "^7.12.1"
-pycti = "4.4.3"
+pycti = "4.5.0"
 scalpl = "^0.4.2"
 docopt = "^0.6.2"
 python-json-logger = "^2.0.1"
+elasticsearch-dsl = ">=7.0.0,<8.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
