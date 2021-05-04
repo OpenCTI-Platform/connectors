@@ -2,29 +2,17 @@
 
 import os
 from typing import Dict
-
 import yaml
 import time
 import uuid
 import magic
-
 import iocp
-from stix2 import (
-    Bundle,
-    Report,
-    Vulnerability,
-    Identity,
-    Location,
-    Tool,
-    Malware,
-    IntrusionSet,
-    AttackPattern
-)
+from stix2 import Bundle, Report, Vulnerability
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     get_config_variable,
-    SimpleObservable
+    SimpleObservable,
 )
 
 
@@ -67,8 +55,10 @@ class ImportFilePdfObservables:
         self.helper.log_info(entity_id)
         # Get context
         is_context = entity_id is not None and len(entity_id) > 0
-        self.helper.log_info('Context: {}'.format(is_context))
-        self.helper.log_info('get_only_contextual: {}'.format(self.helper.get_only_contextual()))
+        self.helper.log_info("Context: {}".format(is_context))
+        self.helper.log_info(
+            "get_only_contextual: {}".format(self.helper.get_only_contextual())
+        )
         if self.helper.get_only_contextual() and not is_context:
             raise ValueError(
                 "No context defined, connector is get_only_contextual true"
@@ -88,11 +78,16 @@ class ImportFilePdfObservables:
         mime_type = self._get_mime_type(file_name)
         print(mime_type)
         if mime_type is None:
-            raise ValueError(
-                "Invalid file format of {}".format(file_name)
-            )
+            raise ValueError("Invalid file format of {}".format(file_name))
 
-        parser = iocp.IOC_Parser(None, mime_type, True, "pdfminer", "json", custom_indicators=custom_indicators)
+        parser = iocp.IOC_Parser(
+            None,
+            mime_type,
+            True,
+            "pdfminer",
+            "json",
+            custom_indicators=custom_indicators,
+        )
         parsed = parser.parse(file_name)
         os.remove(file_name)
         if parsed != []:
@@ -104,14 +99,20 @@ class ImportFilePdfObservables:
                                 resolved_match = self._resolve_match(match)
                                 if resolved_match:
                                     # For the creation of relationships
-                                    if resolved_match['type'] not in self.types.values() and self._is_uuid(resolved_match['value']):
-                                        stix_objects.add(resolved_match['value'])
+                                    if resolved_match[
+                                        "type"
+                                    ] not in self.types.values() and self._is_uuid(
+                                        resolved_match["value"]
+                                    ):
+                                        stix_objects.add(resolved_match["value"])
                                     # For CVEs since SimpleObservable doesn't support Vulnerabilities yet
                                     elif resolved_match["type"] == "Vulnerability.name":
-                                        vulnerability = Vulnerability(name=resolved_match["value"])
+                                        vulnerability = Vulnerability(
+                                            name=resolved_match["value"]
+                                        )
                                         bundle_objects.append(vulnerability)
                                     # Other observables
-                                    elif resolved_match['type'] in self.types.values():
+                                    elif resolved_match["type"] in self.types.values():
                                         observable = SimpleObservable(
                                             id=OpenCTIStix2Utils.generate_random_stix_id(
                                                 "x-opencti-simple-observable"
@@ -122,7 +123,11 @@ class ImportFilePdfObservables:
                                         )
                                         bundle_objects.append(observable)
                                     else:
-                                        self.helper.log_info('Odd data received: {}'.format(resolved_match))
+                                        self.helper.log_info(
+                                            "Odd data received: {}".format(
+                                                resolved_match
+                                            )
+                                        )
                                     i += 1
         else:
             self.helper.log_error("Could not parse the report!")
@@ -192,7 +197,7 @@ class ImportFilePdfObservables:
         elif self._is_uuid(value):
             return {"type": type, "value": value}
         else:
-            self.helper.log_info('Some odd info received: {}'.format(match))
+            self.helper.log_info("Some odd info received: {}".format(match))
             return False
 
     def _detect_ip_version(self, value):
@@ -210,36 +215,36 @@ class ImportFilePdfObservables:
 
     def _get_entities(self):
         setup = {
-            'attack_pattern': {
-                'entity_filter': None,
-                'entity_fields': ['x_mitre_id'],
-                'type': 'entity'
+            "attack_pattern": {
+                "entity_filter": None,
+                "entity_fields": ["x_mitre_id"],
+                "type": "entity",
             },
-            'identity': {
-                'entity_filter': None,
-                'entity_fields': ['aliases', 'name'],
-                'type': 'entity'
+            "identity": {
+                "entity_filter": None,
+                "entity_fields": ["aliases", "name"],
+                "type": "entity",
             },
-            'location': {
-                'entity_filter': [{"key": "entity_type", "values": ["Country"]}],
-                'entity_fields': ['aliases', 'name'],
-                'type': 'entity'
+            "location": {
+                "entity_filter": [{"key": "entity_type", "values": ["Country"]}],
+                "entity_fields": ["aliases", "name"],
+                "type": "entity",
             },
-            'intrusion_set': {
-                'entity_filter': None,
-                'entity_fields': ['aliases', 'name'],
-                'type': 'entity'
+            "intrusion_set": {
+                "entity_filter": None,
+                "entity_fields": ["aliases", "name"],
+                "type": "entity",
             },
-            'malware': {
-                'entity_filter': None,
-                'entity_fields': ['aliases', 'name'],
-                'type': 'entity'
+            "malware": {
+                "entity_filter": None,
+                "entity_fields": ["aliases", "name"],
+                "type": "entity",
             },
-            'tool': {
-                'entity_filter': None,
-                'entity_fields': ['aliases', 'name'],
-                'type': 'entity'
-            }
+            "tool": {
+                "entity_filter": None,
+                "entity_fields": ["aliases", "name"],
+                "type": "entity",
+            },
         }
 
         return self._collect_stix_objects(setup)
@@ -251,8 +256,12 @@ class ImportFilePdfObservables:
             func_format = entity
             try:
                 custom_function = getattr(base_func, func_format)
-                entries = custom_function.list(getAll=True, filters=args['entity_filter'])
-                information_list[entity] = self._make_1d_list(entries, args['entity_fields'])
+                entries = custom_function.list(
+                    getAll=True, filters=args["entity_filter"]
+                )
+                information_list[entity] = self._make_1d_list(
+                    entries, args["entity_fields"]
+                )
             except AttributeError:
                 e = "Selected parser format is not supported: %s" % func_format
                 raise NotImplementedError(e)
@@ -262,9 +271,12 @@ class ImportFilePdfObservables:
     def _make_1d_list(self, values, keys):
         items = {}
         for item in values:
-            _id = item.get('id')
+            _id = item.get("id")
             sub_items = set()
-            if item.get('externalReferences', None) is None or len(item['externalReferences']) == 0:
+            if (
+                item.get("externalReferences", None) is None
+                or len(item["externalReferences"]) == 0
+            ):
                 continue
             for key in keys:
                 elem = item.get(key, [])
@@ -280,7 +292,7 @@ class ImportFilePdfObservables:
     def _get_mime_type(self, file_name):
         mime = magic.Magic(mime=True)
         translation = {
-            'application/pdf': 'pdf',
+            "application/pdf": "pdf",
             # 'text/html': 'html',
             # 'text/plain': 'txt'
         }

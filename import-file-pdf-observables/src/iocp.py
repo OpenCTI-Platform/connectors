@@ -183,8 +183,8 @@ class IOC_Parser(object):
         if self.custom_indicators:
             for indicator_type, indicator_dict in self.custom_indicators.items():
                 indicators = set(flatten(indicator_dict.values()))
-                indicators = ['\\b{}\\b'.format(v) for v in indicators]
-                indicators = '|'.join(indicators)
+                indicators = ["\\b{}\\b".format(v) for v in indicators]
+                indicators = "|".join(indicators)
                 findings = re.findall(indicators, data, re.IGNORECASE)
 
                 if len(findings) > 0 and type(findings[0]) != tuple:
@@ -194,7 +194,9 @@ class IOC_Parser(object):
                             try:
                                 if finding.lower() in lower_names:
                                     list_matches.append(
-                                        self.handler.print_match(fpath, page_num, indicator_type, stix_id)
+                                        self.handler.print_match(
+                                            fpath, page_num, indicator_type, stix_id
+                                        )
                                     )
                             except Exception as e:
                                 self.handler.print_error(findings, e)
