@@ -183,11 +183,9 @@ class IOC_Parser(object):
         if self.custom_indicators:
             for indicator_type, indicator_dict in self.custom_indicators.items():
                 indicators = set(flatten(indicator_dict.values()))
-                #indicators = set(map(lambda x: x.lower(), indicators))
                 indicators = ['\\b{}\\b'.format(v) for v in indicators]
                 indicators = '|'.join(indicators)
                 findings = re.findall(indicators, data, re.IGNORECASE)
-                print('Findings: {}'.format(findings))
 
                 if len(findings) > 0 and type(findings[0]) != tuple:
                     for stix_id, names in indicator_dict.items():
@@ -284,7 +282,7 @@ class IOC_Parser(object):
                 self.dedup_store = set()
 
             data = f.read()
-            soup = BeautifulSoup(data)
+            soup = BeautifulSoup(data, features="lxml")
             html = soup.findAll(text=True)
 
             text = u""
