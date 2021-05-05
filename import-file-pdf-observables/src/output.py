@@ -258,6 +258,8 @@ class OutputHandler_autofocus(OutputHandler):
             )
         elif name == "CVE":
             return
+        elif name == "AttackPattern":
+            return
         print(auto_focus_query)
 
     def print_header(self, fpath):
