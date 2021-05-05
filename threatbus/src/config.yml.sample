@@ -16,3 +16,4 @@ connector:
 threatbus:
   zmq_host: localhost
   zmq_port: 13370
+  snapshot: 30

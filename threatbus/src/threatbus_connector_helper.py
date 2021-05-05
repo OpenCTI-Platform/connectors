@@ -6,8 +6,9 @@ MQ.
 
 import asyncio
 from threading import Event, Thread
-from typing import Callable
+from typing import Callable, List
 import zmq
+import time
 
 
 def send_manage_message(endpoint: str, action: dict, timeout: int = 1):
@@ -49,13 +50,13 @@ def reply_is_success(reply: dict):
     )
 
 
-def subscribe(endpoint: str, topic: str):
+def subscribe(endpoint: str, topic: str, snapshot: int):
     """
     Subscribes this app to Threat Bus for the given topic.
     @param endpoint The ZMQ management endpoint of Threat Bus ('host:port')
     @param topic The topic to subscribe to
     """
-    action = {"action": "subscribe", "topic": topic}
+    action = {"action": "subscribe", "topic": topic, "snapshot": snapshot}
     return send_manage_message(endpoint, action, timeout=5)
 
 
@@ -76,8 +77,9 @@ class ThreatBusConnectorHelper(Thread):
         message_callback: Callable[[str], None],
         log_info_callback: Callable[[str], None],
         log_error_callback: Callable[[str], None],
-        subscribe_topic: str = None,
+        subscribe_topics: List[str] = None,
         publish_topic: str = None,
+        snapshot: int = 0,
     ):
         super(ThreatBusConnectorHelper, self).__init__()
         self._stop_event = Event()
@@ -85,8 +87,9 @@ class ThreatBusConnectorHelper(Thread):
         self.message_callback = message_callback
         self.log_error = log_error_callback
         self.log_info = log_info_callback
-        self.subscribe_topic = subscribe_topic
+        self.subscribe_topics = subscribe_topics
         self.publish_topic = publish_topic
+        self.snapshot = snapshot
 
         self.event_loop = None
 
@@ -94,23 +97,25 @@ class ThreatBusConnectorHelper(Thread):
         self.publish_socket = None
         self.receive_socket = None
         self.poller = None
-        self.p2p_topic = None
+        self.p2p_topics = None
 
     def _running(self):
         """Private predicate to test if this Thread should keep on running"""
         return not self._stop_event.is_set()
 
     def _unsubscribe(self) -> dict:
-        reply = unsubscribe(self.zmq_manage_ep, self.p2p_topic)
-        self.p2p_topic = None
-        return reply
+        for p2p_topic in self.p2p_topics:
+            reply = unsubscribe(self.zmq_manage_ep, p2p_topic)
+            if not reply_is_success(reply):
+                self.log_error(
+                    f"Error unsubscribing from Threat Bus p2p_topic '{p2p_topic}'."
+                )
+        self.p2p_topics = None
 
     def stop(self):
         """Stops the current Thread"""
         self._stop_event.set()
-        reply = self._unsubscribe()
-        if not reply_is_success(reply):
-            raise RuntimeError("Error unsubscribing from Threat Bus.")
+        self._unsubscribe()
 
     def send(self, msg: str):
         """
@@ -130,6 +135,7 @@ class ThreatBusConnectorHelper(Thread):
                 self._register_to_threatbus()
             except Exception as e:
                 self.log_error(e)
+                time.sleep(5)
 
         # create new event loop for the current thread
         loop = asyncio.new_event_loop()
@@ -145,7 +151,7 @@ class ThreatBusConnectorHelper(Thread):
     async def _receive(self):
         while self._running():
             socks = dict(
-                self.poller.poll(timeout=100)
+                self.poller.poll(timeout=1000)
             )  # smaller timeouts may increase CPU load
             if (
                 self.receive_socket in socks
@@ -167,7 +173,7 @@ class ThreatBusConnectorHelper(Thread):
         not answered.)
         """
         while self._running():
-            action = {"action": "heartbeat", "topic": self.p2p_topic}
+            action = {"action": "heartbeat", "topic": self.p2p_topics[0]}
             reply = send_manage_message(self.zmq_manage_ep, action)
             if not reply_is_success(reply):
                 self.log_error("Lost connection to Threat Bus.")
@@ -183,30 +189,38 @@ class ThreatBusConnectorHelper(Thread):
         Populates the registration details to this connector instance.
         @return True for successful subscription, False otherwise
         """
-        reply = subscribe(self.zmq_manage_ep, self.subscribe_topic)
-        if not reply_is_success(reply):
-            raise RuntimeError(
-                "Threat Bus subscription failed. Is the endpoint reachable?"
-            )
-        pub_endpoint = reply.get("pub_endpoint", None)
-        sub_endpoint = reply.get("sub_endpoint", None)
-        topic = reply.get("topic", None)
-        if not pub_endpoint or not sub_endpoint or not topic:
-            raise RuntimeError(
-                "Threat Bus subscription failed with an incomplete reply."
-            )
+        p2p_topics = []
+        for topic in self.subscribe_topics:
+            reply = subscribe(self.zmq_manage_ep, topic, self.snapshot)
+            if not reply_is_success(reply):
+                raise RuntimeError(
+                    f"Threat Bus subscription for topic '{topic}' failed. Is the endpoint reachable?"
+                )
+            pub_endpoint = reply.get("pub_endpoint", None)
+            sub_endpoint = reply.get("sub_endpoint", None)
+            p2p_topic = reply.get("topic", None)
+            if not pub_endpoint or not sub_endpoint or not p2p_topic:
+                raise RuntimeError(
+                    "Threat Bus subscription failed with an incomplete reply."
+                )
+            p2p_topics.append(p2p_topic)
 
         # Registration successful, create ZMQ sockets
-        if self.p2p_topic:
+        if self.p2p_topics:
             # p2p_topic is already set, so we might be recovering from a
             # connection loss. Unsubscribe the old topic before re-subscribing.
             self._unsubscribe()
-        self.p2p_topic = topic
+        self.p2p_topics = p2p_topics
         self.publish_socket = zmq.Context().socket(zmq.PUB)
         self.publish_socket.connect(f"tcp://{sub_endpoint}")
         self.receive_socket = zmq.Context().socket(zmq.SUB)
         self.receive_socket.connect(f"tcp://{pub_endpoint}")
-        self.receive_socket.setsockopt(zmq.SUBSCRIBE, self.p2p_topic.encode())
+        for p2p_topic in self.p2p_topics:
+            self.receive_socket.setsockopt(zmq.SUBSCRIBE, p2p_topic.encode())
+            self.log_info(f"Subscribed to Threat Bus using p2p_topic '{p2p_topic}'.")
         self.poller = zmq.Poller()
         self.poller.register(self.receive_socket, zmq.POLLIN)
-        self.log_info(f"Connected to Threat Bus using p2p_topic '{self.p2p_topic}'.")
+
+        # unset the snapshot interval, so it is not re-requested in case the
+        # connector and Threat Bus lose connection and reconnect.
+        self.snapshot = 0
