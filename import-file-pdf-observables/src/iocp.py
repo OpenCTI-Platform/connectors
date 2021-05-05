@@ -40,6 +40,8 @@ import fnmatch
 import argparse
 import re
 from io import StringIO
+from setuptools.namespaces import flatten
+
 
 try:
     import configparser as ConfigParser
@@ -89,6 +91,7 @@ class IOC_Parser(object):
         library="pdfminer",
         output_format="csv",
         output_handler=None,
+        custom_indicators=None,
     ):
         basedir = os.path.dirname(os.path.abspath(__file__))
         if patterns_ini is None:
@@ -103,6 +106,8 @@ class IOC_Parser(object):
             self.handler = output.getHandler(output_format)
 
         self.ext_filter = "*." + input_format
+        self.custom_indicators = custom_indicators
+
         parser_format = "parse_" + input_format
         try:
             self.parser_func = getattr(self, parser_format)
@@ -123,7 +128,7 @@ class IOC_Parser(object):
     def load_patterns(self, fpath):
         config = ConfigParser.ConfigParser()
         with open(fpath) as f:
-            config.readfp(f)
+            config.read_file(f)
 
         for ind_type in config.sections():
             try:
@@ -174,6 +179,28 @@ class IOC_Parser(object):
                 list_matches.append(
                     self.handler.print_match(fpath, page_num, ind_type, ind_match)
                 )
+
+        if self.custom_indicators:
+            for indicator_type, indicator_dict in self.custom_indicators.items():
+                indicators = set(flatten(indicator_dict.values()))
+                indicators = ["\\b{}\\b".format(v) for v in indicators]
+                indicators = "|".join(indicators)
+                findings = re.findall(indicators, data, re.IGNORECASE)
+
+                if len(findings) > 0 and type(findings[0]) != tuple:
+                    for stix_id, names in indicator_dict.items():
+                        lower_names = set(map(lambda x: x.lower(), names))
+                        for finding in findings:
+                            try:
+                                if finding.lower() in lower_names:
+                                    list_matches.append(
+                                        self.handler.print_match(
+                                            fpath, page_num, indicator_type, stix_id
+                                        )
+                                    )
+                            except Exception as e:
+                                self.handler.print_error(findings, e)
+
         return list_matches
 
     def parse_pdf_pypdf2(self, f, fpath):
@@ -257,7 +284,7 @@ class IOC_Parser(object):
                 self.dedup_store = set()
 
             data = f.read()
-            soup = BeautifulSoup(data)
+            soup = BeautifulSoup(data, features="lxml")
             html = soup.findAll(text=True)
 
             text = u""
