@@ -182,17 +182,21 @@ class TaniumApiHandler:
             True,
         )
         # Convert the STIX 2 bundle in STIX 1
-        initialize_options()
-        stix_indicator = slide_string(stix2_bundle)
-        payload = {"intelDoc": stix_indicator}
-        intel_document = self._query(
-            "post",
-            "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
-            payload,
-            "application/xml",
-            "stix",
-        )
-        return intel_document
+        try:
+            initialize_options()
+            stix_indicator = slide_string(stix2_bundle)
+            payload = {"intelDoc": stix_indicator}
+            intel_document = self._query(
+                "post",
+                "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
+                payload,
+                "application/xml",
+                "stix",
+            )
+            return intel_document
+        except Exception as e:
+            self.helper.log_error(str(e))
+            return None
 
     def update_indicator_stix(self, intel_id, entity):
         # Export to STIX bundle
@@ -204,16 +208,20 @@ class TaniumApiHandler:
             True,
         )
         # Convert the STIX 2 bundle in STIX 1
-        initialize_options()
-        stix_indicator = slide_string(stix2_bundle)
-        intel_document = self._query(
-            "put",
-            "/plugin/products/detect3/api/v1/intels/" + intel_id,
-            stix_indicator,
-            "application/xml",
-            "stix",
-        )
-        return intel_document
+        try:
+            initialize_options()
+            stix_indicator = slide_string(stix2_bundle)
+            intel_document = self._query(
+                "put",
+                "/plugin/products/detect3/api/v1/intels/" + intel_id,
+                stix_indicator,
+                "application/xml",
+                "stix",
+            )
+            return intel_document
+        except Exception as e:
+            self.helper.log_error(str(e))
+            return None
 
     def create_indicator_yara(self, entity):
         filename = entity["name"] + ".yara"
