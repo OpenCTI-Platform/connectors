@@ -21,9 +21,15 @@ class ElasticsearchConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
 
-        self.elasticsearch_url = get_config_variable("ELASTICSEARCH_URL", ["elasticsearch", "url"], config)
+        self.elasticsearch_url = get_config_variable(
+            "ELASTICSEARCH_URL", ["elasticsearch", "url"], config
+        )
         self.elasticsearch_ssl_verify = get_config_variable(
-            "ELASTICSEARCH_SSL_VERIFY", ["elasticsearch", "ssl_verify"], config, False, True
+            "ELASTICSEARCH_SSL_VERIFY",
+            ["elasticsearch", "ssl_verify"],
+            config,
+            False,
+            True,
         )
         self.elasticsearch_login = get_config_variable(
             "ELASTICSEARCH_LOGIN", ["elasticsearch", "login"], config
@@ -34,7 +40,9 @@ class ElasticsearchConnector:
         self.elasticsearch_owner = get_config_variable(
             "ELASTICSEARCH_OWNER", ["elasticsearch", "owner"], config
         )
-        self.elasticsearch_app = get_config_variable("ELASTICSEARCH_APP", ["elasticsearch", "app"], config)
+        self.elasticsearch_app = get_config_variable(
+            "ELASTICSEARCH_APP", ["elasticsearch", "app"], config
+        )
 
         if (
             self.helper.connect_live_stream_id is None
