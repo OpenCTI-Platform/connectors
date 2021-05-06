@@ -19,14 +19,20 @@ Options:
 import os
 import sys
 from importlib.metadata import version
-from logging import getLogger
+import logging
+from typing import OrderedDict
+from scalpl import Cut
+import json
+
 
 import yaml
+
 from docopt import docopt
 
 from . import __version__
 from .elastic_threatintel import ElasticThreatIntelConnector
-from .utils import setup_logger
+from .utils import add_branch, setup_logger, dict_merge, remove_nones
+from .conf import defaults
 
 BANNER = f"""
 
@@ -53,49 +59,108 @@ BANNER = f"""
                ░░░
 """
 
+LOGGER_NAME = "elastic-threatintel-connector"
 
-def run():
+
+def __process_config(argv={}, config={}) -> dict:
+    """
+    Order of precedence:
+        Environment variables override command line options
+        Command line options override configuration file values
+        Configuration file values override defaults
+    """
+
+    # Get defaults, update with file config
+    _conf: dict = dict_merge(defaults, config)
+
+    # Skipping the other OpenCTI values since the helper handles them
+    _env = {
+        "connector": {
+            "log_level": os.environ.get("CONNECTOR_LOG_LEVEL", None),
+            "confidence_level": os.environ.get("CONNECTOR_CONFIDENCE_LEVEL", None),
+        },
+        "cloud": {
+            "auth": os.environ.get("CLOUD_AUTH", None),
+            "id": os.environ.get("CLOUD_ID", None),
+        },
+        "output": {
+            "elasticsearch": {
+                "api_key": os.environ.get("ELASTICSEARCH_APIKEY", None),
+                "hosts": os.environ.get("ELASTICSEARCH_HOSTS", "").split(","),
+                "username": os.environ.get("ELASTICSEARCH_USERNAME", None),
+                "password": os.environ.get("ELASTICSEARCH_PASSWORD", None),
+                "ssl_verify": os.environ.get("ELASTICSEARCH_SSL_VERIFY", None),
+            }
+        },
+        "elastic": {
+            "import_label": os.environ.get("ELASTIC_IMPORT_LABEL", None),
+            "import_from_date": os.environ.get("ELASTIC_IMPORT_FROM_DATE", None),
+        },
+    }
+
+    _env = remove_nones(_env)
+    _conf: dict = dict_merge(_conf, _env)
+
+    # This var overrides everything
+    if os.environ.get("CONNECTOR_JSON_CONFIG", None):
+        _jsonenv = json.loads(os.environ.get("CONNECTOR_JSON_CONFIG"))
+        _conf: dict = dict_merge(_conf, _jsonenv)
+
+    return _conf
+
+
+def run() -> int:
     pycti_ver: str = version("pycti")
     my_version: str = (
         f"elastic-threatintel-connector  {__version__}\n" f"pyopencti  {pycti_ver}"
     )
     arguments: dict = docopt(__doc__, version=my_version)
-    verbosity: int = 20
-
+    _verbosity: int = 0
     if not arguments["-q"] is True:
-        """
-        Level    | Value
-        ---------|---------
-        CRITICAL | 50
-        ERROR    | 40
-        WARNING  | 30
-        INFO     | 20
-        DEBUG    | 10
-        NOTSET   | 0
-        """
-        verbosity = 30 + (arguments["-v"] * -10)
-        if verbosity == 0:
-            verbosity = 1
+        _verbosity = 30 + (arguments["-v"] * -10)
+        # If this is set to 0, it defaults to the root logger configuration,
+        # which we don't want to manipulate because it will spam from other modules
+        if _verbosity == 0:
+            _verbosity = 1
     else:
-        verbosity = 40
+        _verbosity = 40
 
-    logger_name = "elastic-threatintel-connector"
+    _loggername = LOGGER_NAME
     if arguments["--debug"] is True:
         # Enable full logging for all loggers
-        logger_name = None
-        verbosity = 10
+        _loggername = None
+        _verbosity = 10
 
-    setup_logger(verbosity=verbosity, name=logger_name)
-    logger = getLogger(name=logger_name)
+    setup_logger(verbosity=_verbosity, name=_loggername)
+    logger = logging.getLogger(LOGGER_NAME)
 
     # This can be overridden by environment variables
-    config = {}
+    f_config: OrderedDict = {}
     if not os.path.exists(arguments["--config"]):
-        logger.warn(f"""Config file '{arguments["--config"]}' does not exist""")
+        logger.warn(
+            f"""Config file '{arguments["--config"]}' does not exist. Relying on environment and defaults."""
+        )
     elif not os.path.isfile(arguments["--config"]):
-        logger.warn(f"""'{arguments["--config"]}' is not a file for --config""")
+        logger.warn(
+            f"""Config path '{arguments["--config"]}' exists but is not a file. Relying on environment and defaults."""
+        )
     else:
-        config = yaml.load(open(arguments["--config"]), Loader=yaml.FullLoader)
+        f_config = yaml.load(open(arguments["--config"]), Loader=yaml.FullLoader)
+
+    if "connector" not in f_config:
+        f_config["connector"] = {}
+
+    f_config["connector"]["log_level"] = (
+        logging.getLevelName(_verbosity) if _verbosity != 1 else "DEBUG"
+    )
+
+    config: dict = {}
+    for k, v in f_config.items():
+        config = add_branch(config, k.split("."), v)
+
+    config = __process_config(arguments, config)
+
+    logger.trace(json.dumps(config, sort_keys=True, indent=4))
 
     # This can be overridden by environment variables
     datadir = None

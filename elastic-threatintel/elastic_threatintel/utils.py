@@ -70,3 +70,78 @@ def parse_duration(time_str):
         if param:
             time_params[name] = int(param)
     return timedelta(**time_params)
+
+
+def dict_merge(dct, merge_dct, add_keys=True):
+    """Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
+    updating only top-level keys, dict_merge recurses down into dicts nested
+    to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
+    ``dct``.
+
+    This version will return a copy of the dictionary and leave the original
+    arguments untouched.
+
+    The optional argument ``add_keys``, determines whether keys which are
+    present in ``merge_dict`` but not ``dct`` should be included in the
+    new dict.
+
+    Args:
+        dct (dict) onto which the merge is executed
+        merge_dct (dict): dct merged into dct
+        add_keys (bool): whether to add new keys
+
+    Returns:
+        dict: updated dict
+
+    Source: https://gist.github.com/angstwad/bf22d1822c38a92ec0a9#gistcomment-2622319
+    """
+    import collections
+
+    dct = dct.copy()
+    if not add_keys:
+        merge_dct = {k: merge_dct[k] for k in set(dct).intersection(set(merge_dct))}
+
+    for k, v in merge_dct.items():
+        if (
+            k in dct
+            and isinstance(dct[k], dict)
+            and isinstance(merge_dct[k], collections.Mapping)
+        ):
+            dct[k] = dict_merge(dct[k], merge_dct[k], add_keys=add_keys)
+        else:
+            dct[k] = merge_dct[k]
+
+    return dct
+
+
+def add_branch(tree, vector, value):
+    """Recursively update dictionary given a vector containing the path of
+    the branch. Useful for directly adding a value at a specified key path.
+
+    Source: https://stackoverflow.com/a/59634887/6654930
+    """
+    key = vector[0]
+    if len(vector) == 1:
+        tree[key] = value
+    else:
+        tree[key] = add_branch(tree[key] if key in tree else {}, vector[1:], value)
+    return tree
+
+
+def remove_nones(d: dict):
+    _clean: dict = {}
+    # Remove all the 'None' values
+    for k, v in d.items():
+        if isinstance(v, dict):
+            _clean[k] = remove_nones(v)
+        elif isinstance(v, list):
+            l2 = []
+            for item in v:
+                if item:
+                    l2.append(item)
+            if len(l2) > 0:
+                _clean[k] = l2
+        elif v:
+            _clean[k] = v
+
+    return _clean

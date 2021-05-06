@@ -90,7 +90,7 @@ class SignalsManager(Thread):
             name=_entity_name
         )
         if not elastic_entity:
-            logger.info(f"Create {_entity_name}")
+            logger.info(f"Creating {_entity_name} STIX identity")
             self.author_id = self.helper.api.identity.create(
                 # NOTE: This should maybe be `system` See https://github.com/OpenCTI-Platform/opencti/issues/1322
                 type="Organization",
@@ -99,7 +99,7 @@ class SignalsManager(Thread):
             )["id"]
             return self.author_id
         else:
-            logger.info(f"Cache {_entity_name} id")
+            logger.info(f"Caching {_entity_name} id")
             self.author_id = elastic_entity["id"]
             return self.author_id
 
@@ -109,7 +109,6 @@ class SignalsManager(Thread):
         # self.shutdown_event.wait(self.interval)
 
         logger.info("Signals manager thread starting")
-        logger.debug(self.signals_search)
 
         """Main loop"""
         while not self.shutdown_event.is_set():
