@@ -44,8 +44,7 @@ class IntelManager:
                 if intel_document is not None:
                     self.cache.set("intel", data["id"], str(intel_document["id"]))
                     return intel_document["id"]
-            else:
-                return intel_id
+            return intel_id
         # Entity does not exist and update is requested, doing nothing
         elif is_update:
             self.helper.log_info("[UPDATE] Entity does not exist, doing nothing")
@@ -75,8 +74,7 @@ class IntelManager:
                 if intel_document is not None:
                     self.cache.set("intel", data["id"], str(intel_document["id"]))
                     return intel_document["id"]
-            else:
-                return intel_id
+            return intel_id
         elif is_update:
             return None
         intel_document = self.tanium_api_handler.create_observable(data)

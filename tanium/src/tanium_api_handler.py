@@ -134,7 +134,14 @@ class TaniumApiHandler:
                 verify=self.ssl_verify,
             )
         elif method == "put":
-            if content_type == "application/xml":
+            if type is not None:
+                r = requests.put(
+                    self.url + uri,
+                    headers=headers,
+                    data=payload["intelDoc"],
+                    verify=self.ssl_verify,
+                )
+            elif content_type == "application/xml":
                 r = requests.put(
                     self.url + uri,
                     headers=headers,
