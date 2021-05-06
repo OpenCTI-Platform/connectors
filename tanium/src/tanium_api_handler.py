@@ -454,7 +454,7 @@ class TaniumApiHandler:
     def delete_intel(self, intel_id):
         self._query(
             "delete",
-            "/plugin/products/detect3/api/v1/intels/" + intel_id,
+            "/plugin/products/detect3/api/v1/intels/?id=" + intel_id,
         )
 
     def delete_reputation(self, reputation_id):

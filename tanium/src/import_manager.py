@@ -32,18 +32,20 @@ class IntelManager:
         intel_document = None
         if intel_id is not None:
             if is_update:
+                # TODO Manage update
+                return intel_id
                 # Entity exist, handle update
-                if data["pattern_type"] == "stix":
-                    intel_document = self.tanium_api_handler.update_indicator_stix(data)
-                elif data["pattern_type"] == "yara":
-                    intel_document = self.tanium_api_handler.update_indicator_yara(data)
-                elif data["pattern_type"] == "tanium-signal":
-                    intel_document = (
-                        self.tanium_api_handler.update_indicator_tanium_signal(data)
-                    )
-                if intel_document is not None:
-                    self.cache.set("intel", data["id"], str(intel_document["id"]))
-                    return intel_document["id"]
+                # if data["pattern_type"] == "stix":
+                #     intel_document = self.tanium_api_handler.update_indicator_stix(data)
+                # elif data["pattern_type"] == "yara":
+                #     intel_document = self.tanium_api_handler.update_indicator_yara(data)
+                # elif data["pattern_type"] == "tanium-signal":
+                #     intel_document = (
+                #         self.tanium_api_handler.update_indicator_tanium_signal(data)
+                #     )
+                # if intel_document is not None:
+                #     self.cache.set("intel", data["id"], str(intel_document["id"]))
+                #     return intel_document["id"]
             return intel_id
         # Entity does not exist and update is requested, doing nothing
         elif is_update:
@@ -68,12 +70,14 @@ class IntelManager:
         intel_id = self.cache.get("intel", data["id"])
         if intel_id is not None:
             if is_update:
-                intel_document = self.tanium_api_handler.update_observable(
-                    intel_id, data
-                )
-                if intel_document is not None:
-                    self.cache.set("intel", data["id"], str(intel_document["id"]))
-                    return intel_document["id"]
+                # TODO Manage update
+                return intel_id
+                # intel_document = self.tanium_api_handler.update_observable(
+                #     intel_id, data
+                # )
+                # if intel_document is not None:
+                #     self.cache.set("intel", data["id"], str(intel_document["id"]))
+                #     return intel_document["id"]
             return intel_id
         elif is_update:
             return None
