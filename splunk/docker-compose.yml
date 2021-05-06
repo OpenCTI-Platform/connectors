@@ -17,4 +17,5 @@ services:
       - SPLUNK_PASSWORD=ChangeMe
       - SPLUNK_OWNER=nobody
       - SPLUNK_APP=search
+      - SPLUNK_KV_STORE_NAME=opencti
     restart: always

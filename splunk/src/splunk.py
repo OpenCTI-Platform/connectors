@@ -35,6 +35,9 @@ class SplunkConnector:
             "SPLUNK_OWNER", ["splunk", "owner"], config
         )
         self.splunk_app = get_config_variable("SPLUNK_APP", ["splunk", "app"], config)
+        self.splunk_kv_store_name = get_config_variable(
+            "SPLUNK_KV_STORE_NAME", ["splunk", "kv_store_name"], config
+        )
 
         if (
             self.helper.connect_live_stream_id is None
@@ -43,7 +46,7 @@ class SplunkConnector:
             raise ValueError("Missing Live Stream ID")
 
         # Initialize the KV Store
-        self._query("post", "/config", {"name": self.helper.connect_live_stream_id})
+        self._query("post", "/config", {"name": self.splunk_kv_store_name})
 
     def _query(self, method, uri, payload=None, is_json=False):
         self.helper.log_info("Query " + method + " on " + uri)
@@ -66,7 +69,6 @@ class SplunkConnector:
         elif method == "post":
             if is_json:
                 headers = {"content-type": "application/json"}
-                print(payload)
                 r = requests.post(
                     url,
                     auth=(self.splunk_login, self.splunk_password),
@@ -108,16 +110,14 @@ class SplunkConnector:
         if msg.event == "create":
             self.helper.log_info("[CREATE] Processing data {" + data["id"] + "}")
             data["_key"] = data["id"]
-            return self._query(
-                "post", "/data/" + self.helper.connect_live_stream_id, data, True
-            )
+            return self._query("post", "/data/" + self.splunk_kv_store_name, data, True)
         # Handle update
         if msg.event == "update":
             self.helper.log_info("[UPDATE] Processing data {" + data["id"] + "}")
             data["_key"] = data["id"]
             return self._query(
                 "post",
-                "/data/" + self.helper.connect_live_stream_id + "/" + data["id"],
+                "/data/" + self.splunk_kv_store_name + "/" + data["id"],
                 data,
                 True,
             )
@@ -126,7 +126,7 @@ class SplunkConnector:
             self.helper.log_info("[DELETE] Processing data {" + data["id"] + "}")
             return self._query(
                 "delete",
-                "/data/" + self.helper.connect_live_stream_id + "/" + data["id"],
+                "/data/" + self.splunk_kv_store_name + "/" + data["id"],
                 data,
             )
         return None
