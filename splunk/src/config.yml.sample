@@ -18,3 +18,4 @@ splunk:
   password: 'ChangeMe'
   owner: 'nobody'
   app: 'search'
+  kv_store_name: 'opencti'
