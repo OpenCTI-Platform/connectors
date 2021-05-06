@@ -169,6 +169,10 @@ jobs:
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:latest . && docker tag opencti/connector-hybrid-analysis-sandbox:latest opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/splunk
+          name: Build Docker image opencti/connector-splunk
+          command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -240,6 +244,8 @@ jobs:
             docker push opencti/connector-threatbus:${CIRCLE_TAG}
             docker push opencti/connector-hybrid-analysis-sandbox:latest
             docker push opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
+            docker push opencti/connector-splunk:latest
+            docker push opencti/connector-splunk:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -384,6 +390,10 @@ jobs:
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:rolling .
       - run:
+          working_directory: ~/opencti/splunk
+          name: Build Docker image opencti/connector-splunk
+          command: docker build -t opencti/connector-splunk:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -421,6 +431,7 @@ jobs:
             docker push opencti/connector-sekoia:rolling
             docker push opencti/connector-threatbus:rolling
             docker push opencti/connector-hybrid-analysis-sandbox:rolling
+            docker push opencti/connector-splunk:rolling
 workflows:
   version: 2
   opencti:
