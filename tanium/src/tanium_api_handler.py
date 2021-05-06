@@ -158,7 +158,7 @@ class TaniumApiHandler:
         elif method == "delete":
             r = requests.delete(self.url + uri, headers=headers, verify=self.ssl_verify)
         else:
-            raise ValueError("Unspported method")
+            raise ValueError("Unsupported method")
         if r.status_code == 200:
             try:
                 return r.json()
