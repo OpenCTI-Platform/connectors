@@ -239,7 +239,7 @@ class TaniumApiHandler:
                 "filename": filename,
                 "document": entity["pattern"],
                 "name": entity["name"],
-                "description": entity["id"],
+                "description": entity["description"],
             },
             "application/octet-stream",
             "yara",
@@ -255,7 +255,7 @@ class TaniumApiHandler:
                 "filename": filename,
                 "document": entity["pattern"],
                 "name": entity["name"],
-                "description": entity["id"],
+                "description": entity["description"],
             },
             "application/octet-stream",
             "yara",
@@ -277,7 +277,7 @@ class TaniumApiHandler:
             "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
             {
                 "name": entity["name"],
-                "description": entity["id"],
+                "description": entity["description"],
                 "platforms": platforms,
                 "contents": entity["pattern"],
             },
@@ -299,7 +299,7 @@ class TaniumApiHandler:
             "/plugin/products/detect3/api/v1/intels/" + intel_id,
             {
                 "name": entity["name"],
-                "description": entity["id"],
+                "description": entity["description"],
                 "platforms": platforms,
                 "contents": entity["pattern"],
             },
@@ -344,7 +344,7 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": entity["id"],
+                "description": entity["x_opencti_description"] if "x_opencti_description" in entity else "",
                 "type": intel_type,
                 "text": value,
             },
@@ -399,7 +399,7 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": entity["id"],
+                "description": entity["x_opencti_description"] if "x_opencti_description" in entity else "",
                 "type": intel_type,
                 "text": value,
             },

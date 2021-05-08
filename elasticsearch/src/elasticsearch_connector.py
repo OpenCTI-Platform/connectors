@@ -70,7 +70,7 @@ class ElasticsearchConnector:
 
     def _index(self, payload):
         self.elasticsearch.index(
-            index=self.elasticsearch_index, id=payload["id"], body=payload
+            index=self.elasticsearch_index, id=payload["x_opencti_id"], body=payload
         )
 
     def _delete(self, id):
@@ -83,16 +83,16 @@ class ElasticsearchConnector:
             raise ValueError("Cannot process the message: " + msg)
         # Handle creation
         if msg.event == "create":
-            self.helper.log_info("[CREATE] Processing data {" + data["id"] + "}")
+            self.helper.log_info("[CREATE] Processing data {" + data["x_opencti_id"] + "}")
             return self._index(data)
         # Handle update
         if msg.event == "update":
-            self.helper.log_info("[UPDATE] Processing data {" + data["id"] + "}")
+            self.helper.log_info("[UPDATE] Processing data {" + data["x_opencti_id"] + "}")
             return self._index(data)
         # Handle delete
         elif msg.event == "delete":
-            self.helper.log_info("[DELETE] Processing data {" + data["id"] + "}")
-            return self._delete(data["id"])
+            self.helper.log_info("[DELETE] Processing data {" + data["x_opencti_id"] + "}")
+            return self._delete(data["x_opencti_id"])
         return None
 
     def start(self):
