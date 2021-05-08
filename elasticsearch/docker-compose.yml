@@ -13,7 +13,7 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - ELASTICSEARCH_URL=https://elasticsearch.changeme.com
       - ELASTICSEARCH_SSL_VERIFY=true
-      - ELASTICSEARCH_LOGIN=ChangeMe
-      - ELASTICSEARCH_PASSWORD=ChangeMe
+      - ELASTICSEARCH_LOGIN=
+      - ELASTICSEARCH_PASSWORD=
       - ELASTICSEARCH_INDEX=opencti
     restart: always
