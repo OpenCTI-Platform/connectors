@@ -90,7 +90,7 @@ class TaniumConnector:
         if msg.event == "create":
             if data["type"] == "indicator":
                 self.helper.log_info(
-                    "[CREATE] Processing indicator {" + data["id"] + "}"
+                    "[CREATE] Processing indicator {" + data["x_opencti_id"] + "}"
                 )
                 self.import_manager.import_intel_from_indicator(data)
             elif data["type"] in [
@@ -101,7 +101,7 @@ class TaniumConnector:
                 "process",
             ]:
                 self.helper.log_info(
-                    "[CREATE] Processing observable {" + data["id"] + "}"
+                    "[CREATE] Processing observable {" + data["x_opencti_id"] + "}"
                 )
                 self.import_manager.import_intel_from_observable(data)
             elif data["type"] in ["file", "artifact"]:
@@ -114,7 +114,7 @@ class TaniumConnector:
         if msg.event == "update":
             if data["type"] == "indicator":
                 self.helper.log_info(
-                    "[UPDATE] Processing indicator {" + data["id"] + "}"
+                    "[UPDATE] Processing indicator {" + data["x_opencti_id"] + "}"
                 )
                 self.import_manager.import_intel_from_indicator(data, True)
             elif data["type"] in [
@@ -127,7 +127,7 @@ class TaniumConnector:
                 "process",
             ]:
                 self.helper.log_info(
-                    "[UPDATE] Processing observable {" + data["id"] + "}"
+                    "[UPDATE] Processing observable {" + data["x_opencti_id"] + "}"
                 )
                 self.import_manager.import_intel_from_observable(data, True)
             return
