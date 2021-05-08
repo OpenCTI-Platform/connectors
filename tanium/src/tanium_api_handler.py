@@ -344,7 +344,9 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": entity["x_opencti_description"] if "x_opencti_description" in entity else "",
+                "description": entity["x_opencti_description"]
+                if "x_opencti_description" in entity
+                else "",
                 "type": intel_type,
                 "text": value,
             },
@@ -399,7 +401,9 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": entity["x_opencti_description"] if "x_opencti_description" in entity else "",
+                "description": entity["x_opencti_description"]
+                if "x_opencti_description" in entity
+                else "",
                 "type": intel_type,
                 "text": value,
             },
