@@ -24,13 +24,29 @@ class TaniumConnector:
         self.helper = OpenCTIConnectorHelper(config)
 
         # Initialize the Tanium API Handler
-        tanium_url = get_config_variable("TANIUM_URL", ["tanium", "url"], config)
-        tanium_ssl_verify = get_config_variable(
+        self.tanium_url = get_config_variable("TANIUM_URL", ["tanium", "url"], config)
+        self.tanium_ssl_verify = get_config_variable(
             "TANIUM_SSL_VERIFY", ["tanium", "ssl_verify"], config, False, True
         )
-        tanium_login = get_config_variable("TANIUM_LOGIN", ["tanium", "login"], config)
-        tanium_password = get_config_variable(
+        self.tanium_login = get_config_variable(
+            "TANIUM_LOGIN", ["tanium", "login"], config
+        )
+        self.tanium_password = get_config_variable(
             "TANIUM_PASSWORD", ["tanium", "password"], config
+        )
+        self.tanium_hashes_in_reputation = get_config_variable(
+            "TANIUM_HASHES_IN_REPUTATION",
+            ["tanium", "hashes_in_reputation"],
+            config,
+            False,
+            True,
+        )
+        self.tanium_no_hashes_in_intels = get_config_variable(
+            "TANIUM_NO_HASHES_IN_INTELS",
+            ["tanium", "no_hashes_in_intels"],
+            config,
+            False,
+            True,
         )
         # Launch quickscan automatically (true/false)
         self.tanium_auto_quickscan = get_config_variable(
@@ -51,10 +67,10 @@ class TaniumConnector:
         # Initialize Tanium API
         self.tanium_api_handler = TaniumApiHandler(
             self.helper,
-            tanium_url,
-            tanium_login,
-            tanium_password,
-            tanium_ssl_verify,
+            self.tanium_url,
+            self.tanium_login,
+            self.tanium_password,
+            self.tanium_ssl_verify,
             self.tanium_auto_quickscan,
             self.tanium_computer_groups,
         )
@@ -76,29 +92,32 @@ class TaniumConnector:
                 self.helper.log_info(
                     "[CREATE] Processing indicator {" + data["id"] + "}"
                 )
-                return self.import_manager.import_intel_from_indicator(data)
-            if data["type"] in [
+                self.import_manager.import_intel_from_indicator(data)
+            elif data["type"] in [
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
                 "x-opencti-hostname",
-                "file",
-                "artifact",
                 "process",
             ]:
                 self.helper.log_info(
                     "[CREATE] Processing observable {" + data["id"] + "}"
                 )
-                return self.import_manager.import_intel_from_observable(data)
-            return None
+                self.import_manager.import_intel_from_observable(data)
+            elif data["type"] in ["file", "artifact"]:
+                if self.tanium_hashes_in_reputation:
+                    self.import_manager.import_reputation(data)
+                if not self.tanium_no_hashes_in_intels:
+                    self.import_manager.import_intel_from_observable(data)
+            return
         # Handle update
         if msg.event == "update":
             if data["type"] == "indicator":
                 self.helper.log_info(
                     "[UPDATE] Processing indicator {" + data["id"] + "}"
                 )
-                return self.import_manager.import_intel_from_indicator(data, True)
-            if data["type"] in [
+                self.import_manager.import_intel_from_indicator(data, True)
+            elif data["type"] in [
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
@@ -110,24 +129,24 @@ class TaniumConnector:
                 self.helper.log_info(
                     "[UPDATE] Processing observable {" + data["id"] + "}"
                 )
-                return self.import_manager.import_intel_from_observable(data, True)
-            return None
+                self.import_manager.import_intel_from_observable(data, True)
+            return
         # Handle delete
         elif msg.event == "delete":
             if data["type"] == "indicator":
-                return self.import_manager.delete_intel(data)
-            if data["type"] in [
+                self.import_manager.delete_intel(data)
+            elif data["type"] in [
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
                 "x-opencti-hostname",
-                "file",
-                "artifact",
-                "process",
             ]:
-                return self.import_manager.delete_intel(data)
-            return None
-        return None
+                self.import_manager.delete_intel(data)
+            elif data["type"] in ["file", "artifact"]:
+                self.import_manager.delete_intel(data)
+                self.import_manager.delete_reputation(data)
+            return
+        return
 
     def start(self):
         self.helper.listen_stream(self._process_message)

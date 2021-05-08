@@ -12,9 +12,8 @@ connector:
   log_level: 'info'
 
 elasticsearch:
-  url: 'https://elasticsearch.changeme.com:8089'
+  url: 'https://elasticsearch.changeme.com'
   ssl_verify: true
-  login: 'ChangeMe'
-  password: 'ChangeMe'
-  owner: 'nobody'
-  app: 'search'
+  login: ''
+  password: ''
+  index: 'opencti'
