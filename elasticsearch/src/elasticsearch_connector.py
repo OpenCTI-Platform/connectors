@@ -83,15 +83,21 @@ class ElasticsearchConnector:
             raise ValueError("Cannot process the message: " + msg)
         # Handle creation
         if msg.event == "create":
-            self.helper.log_info("[CREATE] Processing data {" + data["x_opencti_id"] + "}")
+            self.helper.log_info(
+                "[CREATE] Processing data {" + data["x_opencti_id"] + "}"
+            )
             return self._index(data)
         # Handle update
         if msg.event == "update":
-            self.helper.log_info("[UPDATE] Processing data {" + data["x_opencti_id"] + "}")
+            self.helper.log_info(
+                "[UPDATE] Processing data {" + data["x_opencti_id"] + "}"
+            )
             return self._index(data)
         # Handle delete
         elif msg.event == "delete":
-            self.helper.log_info("[DELETE] Processing data {" + data["x_opencti_id"] + "}")
+            self.helper.log_info(
+                "[DELETE] Processing data {" + data["x_opencti_id"] + "}"
+            )
             return self._delete(data["x_opencti_id"])
         return None
 

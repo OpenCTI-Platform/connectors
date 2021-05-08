@@ -108,12 +108,16 @@ class SplunkConnector:
             raise ValueError("Cannot process the message: " + msg)
         # Handle creation
         if msg.event == "create":
-            self.helper.log_info("[CREATE] Processing data {" + data["x_opencti_id"] + "}")
+            self.helper.log_info(
+                "[CREATE] Processing data {" + data["x_opencti_id"] + "}"
+            )
             data["_key"] = data["x_opencti_id"]
             return self._query("post", "/data/" + self.splunk_kv_store_name, data, True)
         # Handle update
         if msg.event == "update":
-            self.helper.log_info("[UPDATE] Processing data {" + data["x_opencti_id"] + "}")
+            self.helper.log_info(
+                "[UPDATE] Processing data {" + data["x_opencti_id"] + "}"
+            )
             data["_key"] = data["x_opencti_id"]
             return self._query(
                 "post",
@@ -123,7 +127,9 @@ class SplunkConnector:
             )
         # Handle delete
         elif msg.event == "delete":
-            self.helper.log_info("[DELETE] Processing data {" + data["x_opencti_id"] + "}")
+            self.helper.log_info(
+                "[DELETE] Processing data {" + data["x_opencti_id"] + "}"
+            )
             return self._query(
                 "delete",
                 "/data/" + self.splunk_kv_store_name + "/" + data["x_opencti_id"],
