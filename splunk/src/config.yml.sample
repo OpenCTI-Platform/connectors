@@ -6,17 +6,16 @@ connector:
   id: 'ChangeMe'
   type: 'STREAM'
   live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
-  name: 'Tanium'
-  scope: 'tanium' # Reserved
+  name: 'Splunk'
+  scope: 'splunk' # Reserved
   confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
-tanium:
-  url: 'https://console.changeme.com'
+splunk:
+  url: 'https://splunk.changeme.com:8089'
   ssl_verify: true
   login: 'ChangeMe'
   password: 'ChangeMe'
-  hashes_in_reputation: true
-  no_hashes_in_intels: true
-  auto_quickscan: False # trigger a quick scan when an intel document is imported
-  computer_groups: '1' # computer groups targeted by the auto quick scan (separated by ,)
+  owner: 'nobody'
+  app: 'search'
+  kv_store_name: 'opencti'

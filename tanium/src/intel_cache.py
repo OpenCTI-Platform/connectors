@@ -26,7 +26,6 @@ class IntelCache:
         else:
             current_state = {}
             current_state[opencti_entity_id] = tanium_intel_id
-            self.helper.set_state(current_state)
         self.helper.set_state(current_state)
         return tanium_intel_id
 

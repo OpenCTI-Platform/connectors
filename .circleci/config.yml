@@ -169,6 +169,14 @@ jobs:
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:latest . && docker tag opencti/connector-hybrid-analysis-sandbox:latest opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/splunk
+          name: Build Docker image opencti/connector-splunk
+          command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/elasticsearch
+          name: Build Docker image opencti/connector-elasticsearch
+          command: docker build -t opencti/connector-elasticsearch:latest . && docker tag opencti/connector-elasticsearch:latest opencti/connector-elasticsearch:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -240,6 +248,10 @@ jobs:
             docker push opencti/connector-threatbus:${CIRCLE_TAG}
             docker push opencti/connector-hybrid-analysis-sandbox:latest
             docker push opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
+            docker push opencti/connector-splunk:latest
+            docker push opencti/connector-splunk:${CIRCLE_TAG}
+            docker push opencti/connector-elasticsearch:latest
+            docker push opencti/connector-elasticsearch:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -384,6 +396,14 @@ jobs:
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:rolling .
       - run:
+          working_directory: ~/opencti/splunk
+          name: Build Docker image opencti/connector-splunk
+          command: docker build -t opencti/connector-splunk:rolling .
+      - run:
+          working_directory: ~/opencti/elasticsearch
+          name: Build Docker image opencti/connector-elasticsearch
+          command: docker build -t opencti/connector-elasticsearch:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -421,6 +441,8 @@ jobs:
             docker push opencti/connector-sekoia:rolling
             docker push opencti/connector-threatbus:rolling
             docker push opencti/connector-hybrid-analysis-sandbox:rolling
+            docker push opencti/connector-splunk:rolling
+            docker push opencti/connector-elasticsearch:rolling
 workflows:
   version: 2
   opencti:

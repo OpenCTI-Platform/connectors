@@ -25,6 +25,7 @@ The connector requires a configuration file or certain environment variables to 
 | `connector.forward_all_iocs`    | `CONNECTOR_FORWARD_ALL_IOCS`  | Yes       | Set to `true` to forward all Indicators from OpenCTI to Threat Bus. Set to `false` to forward only those whith the `detection` attribute toggled on (`x_opencti_detection = true`).|
 | `threatbus.zmq_host`            | `THREATBUS_ZMQ_HOST`          | Yes       | The Threat Bus host (IP address or hostname). |
 | `threatbus.zmq_port`            | `THREATBUS_ZMQ_PORT`          | Yes       | The Threat Bus ZMQ management port spawned by the [ZMQ-App plugin](https://docs.tenzir.com/threatbus/plugins/apps/zmq-app). |
+| `threatbus.snapshot`            | `THREATBUS_SNAPSHOT`          | Yes       | Request an optional snapshot (number of days) of historic threat intelligence from other apps that are connected to Threat Bus. E.g., use this to export data from MISP or similar and ingest it in OpenCTI.|
 
 ## Installation & Usage
 

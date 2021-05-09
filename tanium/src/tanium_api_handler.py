@@ -134,7 +134,14 @@ class TaniumApiHandler:
                 verify=self.ssl_verify,
             )
         elif method == "put":
-            if content_type == "application/xml":
+            if type is not None:
+                r = requests.put(
+                    self.url + uri,
+                    headers=headers,
+                    data=payload["intelDoc"],
+                    verify=self.ssl_verify,
+                )
+            elif content_type == "application/xml":
                 r = requests.put(
                     self.url + uri,
                     headers=headers,
@@ -158,7 +165,7 @@ class TaniumApiHandler:
         elif method == "delete":
             r = requests.delete(self.url + uri, headers=headers, verify=self.ssl_verify)
         else:
-            raise ValueError("Unspported method")
+            raise ValueError("Unsupported method")
         if r.status_code == 200:
             try:
                 return r.json()
@@ -182,17 +189,21 @@ class TaniumApiHandler:
             True,
         )
         # Convert the STIX 2 bundle in STIX 1
-        initialize_options()
-        stix_indicator = slide_string(stix2_bundle)
-        payload = {"intelDoc": stix_indicator}
-        intel_document = self._query(
-            "post",
-            "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
-            payload,
-            "application/xml",
-            "stix",
-        )
-        return intel_document
+        try:
+            initialize_options()
+            stix_indicator = slide_string(stix2_bundle)
+            payload = {"intelDoc": stix_indicator}
+            intel_document = self._query(
+                "post",
+                "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
+                payload,
+                "application/xml",
+                "stix",
+            )
+            return intel_document
+        except Exception as e:
+            self.helper.log_error(str(e))
+            return None
 
     def update_indicator_stix(self, intel_id, entity):
         # Export to STIX bundle
@@ -204,16 +215,20 @@ class TaniumApiHandler:
             True,
         )
         # Convert the STIX 2 bundle in STIX 1
-        initialize_options()
-        stix_indicator = slide_string(stix2_bundle)
-        intel_document = self._query(
-            "put",
-            "/plugin/products/detect3/api/v1/intels/" + intel_id,
-            stix_indicator,
-            "application/xml",
-            "stix",
-        )
-        return intel_document
+        try:
+            initialize_options()
+            stix_indicator = slide_string(stix2_bundle)
+            intel_document = self._query(
+                "put",
+                "/plugin/products/detect3/api/v1/intels/" + intel_id,
+                stix_indicator,
+                "application/xml",
+                "stix",
+            )
+            return intel_document
+        except Exception as e:
+            self.helper.log_error(str(e))
+            return None
 
     def create_indicator_yara(self, entity):
         filename = entity["name"] + ".yara"
@@ -224,7 +239,7 @@ class TaniumApiHandler:
                 "filename": filename,
                 "document": entity["pattern"],
                 "name": entity["name"],
-                "description": entity["id"],
+                "description": entity["description"],
             },
             "application/octet-stream",
             "yara",
@@ -240,7 +255,7 @@ class TaniumApiHandler:
                 "filename": filename,
                 "document": entity["pattern"],
                 "name": entity["name"],
-                "description": entity["id"],
+                "description": entity["description"],
             },
             "application/octet-stream",
             "yara",
@@ -262,7 +277,7 @@ class TaniumApiHandler:
             "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
             {
                 "name": entity["name"],
-                "description": entity["id"],
+                "description": entity["description"],
                 "platforms": platforms,
                 "contents": entity["pattern"],
             },
@@ -284,7 +299,7 @@ class TaniumApiHandler:
             "/plugin/products/detect3/api/v1/intels/" + intel_id,
             {
                 "name": entity["name"],
-                "description": entity["id"],
+                "description": entity["description"],
                 "platforms": platforms,
                 "contents": entity["pattern"],
             },
@@ -329,7 +344,9 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": entity["id"],
+                "description": entity["x_opencti_description"]
+                if "x_opencti_description" in entity
+                else "",
                 "type": intel_type,
                 "text": value,
             },
@@ -384,7 +401,9 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": entity["id"],
+                "description": entity["x_opencti_description"]
+                if "x_opencti_description" in entity
+                else "",
                 "type": intel_type,
                 "text": value,
             },
@@ -439,7 +458,7 @@ class TaniumApiHandler:
     def delete_intel(self, intel_id):
         self._query(
             "delete",
-            "/plugin/products/detect3/api/v1/intels/" + intel_id,
+            "/plugin/products/detect3/api/v1/intels/?id=" + intel_id,
         )
 
     def delete_reputation(self, reputation_id):

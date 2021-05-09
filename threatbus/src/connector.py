@@ -32,12 +32,19 @@ class ThreatBusConnector(object):
         )
         self.threatbus_entity = None
 
-        # Custom configuration for Threat Bus ZeroMQ-App plugin endpoint
+        # Custom configuration for Threat Bus & ZeroMQ plugin endpoint
         self.threatbus_zmq_host = get_config_variable(
             "THREATBUS_ZMQ_HOST", ["threatbus", "zmq_host"], config
         )
         self.threatbus_zmq_port = get_config_variable(
             "THREATBUS_ZMQ_PORT", ["threatbus", "zmq_port"], config
+        )
+        threatbus_snapshot = get_config_variable(
+            "THREATBUS_SNAPSHOT",
+            ["threatbus", "snapshot"],
+            config,
+            isNumber=True,
+            default=0,
         )
 
         # Helper initialization
@@ -45,11 +52,12 @@ class ThreatBusConnector(object):
         zmq_endpoint = f"{self.threatbus_zmq_host}:{self.threatbus_zmq_port}"
         self.threatbus_helper = ThreatBusConnectorHelper(
             zmq_endpoint,
-            self._report_sighting,
+            self._handle_threatbus_message,
             self.opencti_helper.log_info,
             self.opencti_helper.log_error,
-            subscribe_topic="stix2/sighting",
+            subscribe_topics=["stix2/sighting", "stix2/indicator"],
             publish_topic="stix2/indicator",
+            snapshot=threatbus_snapshot,
         )
 
     def _get_threatbus_entity(self) -> int:
@@ -83,21 +91,56 @@ class ThreatBusConnector(object):
         )
         return self.threatbus_entity
 
-    def _report_sighting(self, msg: str):
+    def _handle_threatbus_message(self, msg: str):
         """
-        Converts a JSON string to a STIX-2 Sighting and reports it to OpenCTI.
-        @param msg The JSON string
+        Processes a JSON message from Threat Bus (either a serialized STIX-2
+        Sighting or STIX-2 Indicator) and forwards it to OpenCTI.
         """
         try:
-            sighting: Sighting = parse(msg, allow_custom=True)
+            stix_msg = parse(msg, allow_custom=True)
         except Exception as e:
             self.opencti_helper.log_error(
-                f"Error parsing message from Threat Bus. Expected a STIX-2 Sighting: {e}"
+                f"Error parsing message from Threat Bus. Expected a STIX-2 Sighting or Indicator: {e}"
             )
             return
+        if type(stix_msg) is Sighting:
+            self._report_sighting(stix_msg)
+        elif type(stix_msg) is Indicator:
+            self._ingest_indicator(stix_msg)
+        else:
+            self.opencti_helper.log_error(
+                f"Received STIX object with unexpected type from Threat Bus: {type(stix_msg)}"
+            )
+
+    def _ingest_indicator(self, indicator: Indicator):
+        """
+        Ingests a STIX-2 Indicator into OpenCTI. Does nothing in case the
+        indicator already exists.
+        @param indicator The STIX-2 Indicator object to ingest
+        """
+        if type(indicator) is not Indicator:
+            self.opencti_helper.log_error(
+                f"Error ingesting indicator from Threat Bus. Expected a STIX-2 Indicator: {indicator}"
+            )
+            return
+        ioc_dct = json.loads(indicator.serialize())
+        ioc_dct["name"] = ioc_dct.get("name", indicator.id)  #  default to UUID
+        ioc_dct["stix_id"] = indicator.id
+        del ioc_dct["id"]
+        obs_type = ioc_dct.get("x_opencti_main_observable_type", "Unknown")
+        ioc_dct["x_opencti_main_observable_type"] = obs_type
+        resp = self.opencti_helper.api.indicator.create(**ioc_dct)
+        self.opencti_helper.log_info(f"Created or added to indicator: {resp}")
+
+    def _report_sighting(self, sighting: Sighting):
+        """
+        Reports a STIX-2 Sighting to OpenCTI, modeled as a
+        `OpenCTI.stix_sighting_relation`.
+        @param sighting The STIX-2 Sighting object to report
+        """
         if type(sighting) is not Sighting:
             self.opencti_helper.log_error(
-                f"Error parsing message from Threat Bus. Expected a STIX-2 Sighting: {sighting}"
+                f"Error reporting sighting from Threat Bus. Expected a STIX-2 Sighting: {sighting}"
             )
             return
         entity_id = self._get_threatbus_entity().get("id", None)
@@ -134,6 +177,19 @@ class ThreatBusConnector(object):
                 "Cannot process data without 'x_opencti_id' field"
             )
             return
+
+        event_id = data.get("id", None)
+        update = data.get("x_data_update", {})
+        added = update.get("add", {})
+        added_ids = added.get("x_opencti_stix_ids", [])
+        type_ = data.get("type", None)
+        if type_ == "indicator" and len(added_ids) == 1 and added_ids[0] == event_id:
+            # Discard the update if it was empty. An update is empty when the
+            # only "changed" attribute is the stix_id and it changed to its own
+            # already existing value. Example:
+            # data ~ {'id': 'XXX', 'x_data_update': {'add': {'x_opencti_stix_ids': ['XXX']}}}
+            return
+
         indicator: dict = self.opencti_helper.api.indicator.read(id=opencti_id)
         if not indicator:
             # we are only interested in indicators at this time
