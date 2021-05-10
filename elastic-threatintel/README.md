@@ -1,10 +1,8 @@
 # Elastic Threat Intel Connector
 
-TODO: Update this documentation on how to build and configure
+This connector allows organizations to feed their Elastic platform using OpenCTI knowledge for the purposes of using "[indicator match](https://www.elastic.co/guide/en/security/current/rules-ui-create.html#create-indicator-rule)" rules in the Detection Engine.
 
-This connector allows organizations to feed their Elastic platform using OpenCTI knowledge.
-
-This connector uses the OpenCTI *events stream*, so it consumes knowledge in real time and, depending on the settings, creates detection and hunting threat intel documents that can be used with Indicator Match rules in the Elastic Security application.
+This connector uses the OpenCTI *events stream*, so it consumes knowledge in real time and updates `threatintel` documents in ECS format. It also creates a background thread to poll for matches and update the OpenCTI indicators with sightings.
 
 ## Quick Start
 
