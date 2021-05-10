@@ -24,6 +24,7 @@ from stix2 import (
     ObjectPath,
     EqualityComparisonExpression,
     ObservationExpression,
+    Note,
 )
 
 from pycti import (
@@ -419,9 +420,10 @@ class Misp:
                     if obj_ref_src is not None and obj_ref_target is not None:
                         objects_relationships.append(
                             Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                                id="relationship--" + obj_ref["uuid"],
                                 relationship_type=obj_ref["relationship_type"] or "related-to",
                                 created_by_ref=author,
+                                description=obj_ref["comment"],
                                 source_ref=obj_ref_src,
                                 target_ref=obj_ref_target,
                             )
@@ -505,8 +507,7 @@ class Misp:
                 bundle_objects.append(object_relationship)
 
             # Create the report if needed
-            # Report in STIX must have at least one object_refs
-            if self.misp_create_report and len(object_refs) > 0:
+            if self.misp_create_report:
                 report = Report(
                     id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
@@ -525,6 +526,23 @@ class Misp:
                     },
                 )
                 bundle_objects.append(report)
+                for note in event["Event"]["EventReport"]:
+                    note = Note(
+                            id="note--" + note["uuid"],
+                            confidence=self.helper.connect_confidence_level,
+                            created=datetime.utcfromtimestamp(
+                                int(note["timestamp"])
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            modified=datetime.utcfromtimestamp(
+                                int(note["timestamp"])
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            created_by_ref=author,
+                            object_marking_refs=event_markings,
+                            abstract=note["name"],
+                            content=note["content"],
+                            object_refs=[report],
+                    )
+                    bundle_objects.append(note)
             bundle = Bundle(objects=bundle_objects).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
             self.helper.send_stix2_bundle(
