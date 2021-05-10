@@ -33,10 +33,20 @@ class SynchronizerConnector:
         data = json.loads(msg.data)
         try:
             if "create" in self.remote_opencti_events and msg.event == "create":
-                bundle = json.dumps({"objects": [data["data"]]})
+                bundle = json.dumps(
+                    {
+                        "objects": [data["data"]],
+                        "x_opencti_event_version": data["version"],
+                    }
+                )
                 self.helper.send_stix2_bundle(bundle)
             elif "update" in self.remote_opencti_events and msg.event == "update":
-                bundle = json.dumps({"objects": [data["data"]]})
+                bundle = json.dumps(
+                    {
+                        "objects": [data["data"]],
+                        "x_opencti_event_version": data["version"],
+                    }
+                )
                 self.helper.send_stix2_bundle(bundle)
             elif "delete" in self.remote_opencti_events and msg.event == "delete":
                 if data["data"]["type"] == "relationship":
