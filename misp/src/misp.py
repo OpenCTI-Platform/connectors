@@ -501,6 +501,7 @@ class Misp:
                     bundle_objects.append(relationship)
             # Add object_relationships
             for object_relationship in objects_relationships:
+                object_refs.append(object_relationship)
                 bundle_objects.append(object_relationship)
 
             # Create the report if needed
