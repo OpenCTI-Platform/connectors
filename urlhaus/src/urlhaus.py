@@ -133,7 +133,6 @@ class URLhaus:
                         bundle = Bundle(objects=bundle_objects).serialize()
                         self.helper.send_stix2_bundle(
                             bundle,
-                            entities_types=self.helper.connect_scope,
                             update=self.update_existing_data,
                             work_id=work_id,
                         )
