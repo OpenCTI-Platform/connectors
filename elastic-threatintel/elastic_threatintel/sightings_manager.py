@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from logging import getLogger
 from threading import Event, Thread
 

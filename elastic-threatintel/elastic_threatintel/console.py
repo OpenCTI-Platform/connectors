@@ -25,7 +25,6 @@ from typing import OrderedDict
 
 import yaml
 from docopt import docopt
-from scalpl import Cut
 
 from . import __version__
 from .conf import defaults

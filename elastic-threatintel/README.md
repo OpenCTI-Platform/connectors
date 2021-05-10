@@ -29,7 +29,7 @@ docker run --rm -ti --volume $(pwd)/config.yml:/app/config.yml connector-elastic
 
 ### Configuration
 
-Detailed configuration can be managed via the configuration file as noted in the Quickstart. The script looks for `config.yml` in the current directory, but a different path can be given on the command line. The "current directory" is `/app` in the
+Detailed configuration can be managed via the configuration file as noted in the quick start. The script looks for `config.yml` in the current directory, but a different path can be given on the command line. The "current directory" is `/app` in the
 Docker container.
 
 Optionally, many of the configuration points can be handled solely by environment variables as noted in the table below. This can be helpful to spin up a quick container to only specify what you need beyond the defaults. Lastly, the environment
