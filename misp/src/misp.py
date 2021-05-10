@@ -507,7 +507,8 @@ class Misp:
                 bundle_objects.append(object_relationship)
 
             # Create the report if needed
-            if self.misp_create_report:
+            # Report in STIX must have at least one object_refs
+            if self.misp_create_report and len(object_refs) > 0:
                 report = Report(
                     id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
