@@ -379,7 +379,7 @@ class Misp:
                     indicators.append(indicator)
             # Get attributes of objects
             objects_relationships = []
-            object_uuid_dict = {}
+            uuid_dict = {}
             for object in event["Event"]["Object"]:
                 attribute_external_references = []
                 for attribute in object["Attribute"]:
@@ -404,28 +404,32 @@ class Misp:
                     )
                     if indicator is not None:
                         indicators.append(indicator)
-                        if(indicator["indicator"] is not None):
-                            object_uuid_dict[object["uuid"]] = indicator["indicator"]["id"] # we want a map the OpenCTI ids to MISP ids to do a lookup later
-                            if (
-                                object["meta-category"] == "file"
-                                and indicator["indicator"].x_opencti_main_observable_type
-                                in FILETYPES
-                            ):
-                                object_attributes.append(indicator)
+                        if indicator["indicator"] is not None:
+                            # we want to map the OpenCTI ids to MISP ids to do a lookup later
+                            uuid_dict[object["uuid"]] = indicator["indicator"]["id"]
+                        if (
+                            indicator["indicator"] is not None
+                            and object["meta-category"] == "file"
+                            and indicator["indicator"].x_opencti_main_observable_type
+                            in FILETYPES
+                        ):
+                            object_attributes.append(indicator)
                 # TODO Extend observable
-            for object in event["Event"]["Object"]: # Reiterate after we have all the OpenCTI ids to create Relationships with those
-                for obj_ref in object["ObjectReference"]:
-                    obj_ref_src = object_uuid_dict.get(obj_ref["source_uuid"], None)
-                    obj_ref_target = object_uuid_dict.get(obj_ref["referenced_uuid"], None)
-                    if obj_ref_src is not None and obj_ref_target is not None:
+            # Reiterate after we have all the OpenCTI ids to create Relationships with those
+            for object in event["Event"]["Object"]:
+                for ref in object["ObjectReference"]:
+                    ref_src = uuid_dict.get(ref["source_uuid"], None)
+                    ref_target = uuid_dict.get(ref["referenced_uuid"], None)
+                    if ref_src is not None and ref_target is not None:
                         objects_relationships.append(
                             Relationship(
-                                id="relationship--" + obj_ref["uuid"],
-                                relationship_type=obj_ref["relationship_type"] or "related-to",
+                                id="relationship--" + ref["uuid"],
+                                relationship_type=ref["relationship_type"]
+                                or "related-to",
                                 created_by_ref=author,
-                                description=obj_ref["comment"],
-                                source_ref=obj_ref_src,
-                                target_ref=obj_ref_target,
+                                description=ref["comment"],
+                                source_ref=ref_src,
+                                target_ref=ref_target,
                             )
                         )
 
@@ -529,19 +533,19 @@ class Misp:
                 bundle_objects.append(report)
                 for note in event["Event"]["EventReport"]:
                     note = Note(
-                            id="note--" + note["uuid"],
-                            confidence=self.helper.connect_confidence_level,
-                            created=datetime.utcfromtimestamp(
-                                int(note["timestamp"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            modified=datetime.utcfromtimestamp(
-                                int(note["timestamp"])
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            created_by_ref=author,
-                            object_marking_refs=event_markings,
-                            abstract=note["name"],
-                            content=note["content"],
-                            object_refs=[report],
+                        id="note--" + note["uuid"],
+                        confidence=self.helper.connect_confidence_level,
+                        created=datetime.utcfromtimestamp(
+                            int(note["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        modified=datetime.utcfromtimestamp(
+                            int(note["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        created_by_ref=author,
+                        object_marking_refs=event_markings,
+                        abstract=note["name"],
+                        content=note["content"],
+                        object_refs=[report],
                     )
                     bundle_objects.append(note)
             bundle = Bundle(objects=bundle_objects).serialize()
