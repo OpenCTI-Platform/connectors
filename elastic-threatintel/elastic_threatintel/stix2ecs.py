@@ -1,5 +1,6 @@
 import collections.abc
 from typing import Dict, List, Tuple
+
 from stix2patterns.pattern import Pattern
 
 
@@ -314,7 +315,6 @@ class IPv4AddrIndicator(StixIndicator):
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
         obj = super().get_ecs_indicator()
         for item in data:
-            print(item)
             if item[0][0].lower() == "value":
                 recursive_update(obj, {"ip": item[2].replace("'", "")})
             elif item[0][0].lower() == "resolves_to_refs":
@@ -355,7 +355,6 @@ class MacAddrIndicator(StixIndicator):
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
         obj = super().get_ecs_indicator()
         for item in data:
-            print(item)
             if item[0][0].lower() == "value":
                 recursive_update(obj, {"mac": item[2].replace("'", "")})
 
@@ -390,8 +389,6 @@ class NetworkTrafficIndicator(StixIndicator):
 
         obj: dict[str, str] = {}
         for item in data:
-            print(item)
-
             if item[0][0].lower() in ("src_ref", "dst_ref"):
                 if item[0][1].lower() == "type":
                     continue

@@ -2,11 +2,30 @@ import urllib.parse
 from datetime import datetime, timezone
 from logging import getLogger
 
-from elasticsearch import Elasticsearch, RequestError, NotFoundError
+from elasticsearch import Elasticsearch, NotFoundError, RequestError
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
+from .utils import remove_nones
+
 logger = getLogger("elastic-threatintel-connector")
+
+entity_field_mapping = {
+    "id": "threatintel.opencti.internal_id",
+    "valid_from": "threatintel.opencti.valid_from",
+    "valid_until": "threatintel.opencti.valid_until",
+    "x_opencti_detection": "threatintel.opencti.enable_detection",
+    "pattern": "threatintel.opencti.original_pattern",
+    "pattern_type": "threatintel.opencti.pattern_type",
+    "created_at": "threatintel.opencti.created_at",
+    "updated_at": "threatintel.opencti.updated_at",
+    "x_opencti_score": ["risk_score", "risk_score_norm"],
+    "confidence": ["threatintel.confidence", "threatintel.confidence_norm"],
+    "x_mitre_platforms": "threatintel.opencti.mitre.platforms",
+    "standard_id": "threatintel.stix.id",
+    "revoked": "threatintel.opencti.revoked",
+    "description": "threatintel.indicator.description",
+}
 
 
 class IntelManager(object):
@@ -96,7 +115,7 @@ class IntelManager(object):
 
         if (
             entity is None
-            or entity["revoked"]
+            or (entity["revoked"] and not is_update)
             or entity["pattern_type"]
             not in self.config.get("elastic.indicator_types", [])
         ):
@@ -105,6 +124,9 @@ class IntelManager(object):
         _version = 0
 
         if is_update is True:
+            update_time: str = (
+                datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+            )
             try:
                 # Attempt to retreive existing document
                 logger.debug(f"Retrieving document id: {data['x_opencti_id']}")
@@ -112,15 +134,83 @@ class IntelManager(object):
                     index=self.idx, id=data["x_opencti_id"], doc_type="_doc"
                 )
 
+            except NotFoundError:
+                logger.warn(
+                    f"Document not found to update at /{self.idx}/_doc/{data['x_opencti_id']}"
+                )
+                logger.warn("Skipping")
+                return {}
+
             except RequestError as err:
                 logger.error(
                     f"Unexpected error retreiving document at /{self.idx}/_doc/{data['x_opencti_id']}:",
-                    err,
+                    err.__dict__,
                 )
 
             if _result["found"] is True:
-                _document = _result["_source"]
+                _document = Cut(_result["_source"])
                 _version = _result["_version"]
+                _version += 1
+
+            if data.get("x_data_update", None):
+                if data["x_data_update"].get("replace", None):
+                    if entity["pattern_type"] == "stix":
+                        # Pull in any indicator updates
+                        _indicator: dict = self._create_ecs_indicator_stix(entity)
+                        if _indicator == {}:
+                            return {}
+                        _document["threatintel.indicator"] = _indicator
+                        if entity.get("killChainPhases", None):
+                            phases = []
+                            for phase in sorted(
+                                entity["killChainPhases"],
+                                key=lambda i: (
+                                    i["kill_chain_name"],
+                                    i["x_opencti_order"],
+                                ),
+                            ):
+                                phases.append(
+                                    {
+                                        "killchain_name": phase["kill_chain_name"],
+                                        "phase_name": phase["phase_name"],
+                                        "opencti_phase_order": phase["x_opencti_order"],
+                                    }
+                                )
+
+                            _document.setdefault(
+                                "threatintel.opencti.killchain_phases", phases
+                            )
+
+                    for k, v in data["x_data_update"].get("replace", {}).items():
+                        logger.debug(
+                            f"Updating field {k} -> {entity_field_mapping.get(k)} to {v}"
+                        )
+                        try:
+                            _field = entity_field_mapping.get(k)
+                            _document.setdefault(_field, v)
+                            _document[_field] = v
+                        except KeyError as err:
+                            logger.error(f"Unable to find field mapping for {k}", err)
+
+                    _document["threatintel.opencti.updated_at"] = update_time
+
+                    #  This scrubs the Cut object and returns a dict
+                    _document = remove_nones(_document)
+
+                    try:
+                        # Submit to Elastic index
+                        logger.debug(f"Indexing document: {_document}")
+                        self.es_client.index(
+                            index=self.idx,
+                            id=data["x_opencti_id"],
+                            body=_document,
+                        )
+                    except RequestError as err:
+                        logger.error("Unexpected error:", err, _document)
+                    except Exception as err:
+                        logger.error("Something else happened", err, _document)
+
+                    return _document
 
         creation_time: str = (
             datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
@@ -166,7 +256,24 @@ class IntelManager(object):
             "pattern_type": entity.get("pattern_type", None),
             "created_at": entity.get("created_at", None),
             "updated_at": entity.get("created_at", None),
+            "revoked": entity.get("revoked", None),
         }
+
+        if entity.get("killChainPhases", None):
+            phases = []
+            for phase in sorted(
+                entity["killChainPhases"],
+                key=lambda i: (i["kill_chain_name"], i["x_opencti_order"]),
+            ):
+                phases.append(
+                    {
+                        "killchain_name": phase["kill_chain_name"],
+                        "phase_name": phase["phase_name"],
+                        "opencti_phase_order": phase["x_opencti_order"],
+                    }
+                )
+
+            _document["threatintel"]["opencti"]["killchain_phases"] = phases
 
         # Remove any empty values
         _document["threatintel"]["opencti"] = {
@@ -188,11 +295,15 @@ class IntelManager(object):
             _document["threatintel"]["stix"] = {"id": entity.get("standard_id")}
             _document["threatintel"]["indicator"] = _indicator
 
+        _document = remove_nones(_document)
+
         try:
             # Submit to Elastic index
             logger.debug(f"Indexing document: {_document}")
             self.es_client.index(
-                index=self.idx, id=data["x_opencti_id"], body=_document
+                index=self.idx,
+                id=data["x_opencti_id"],
+                body=_document,
             )
         except RequestError as err:
             logger.error("Unexpected error:", err, _document)
@@ -231,15 +342,17 @@ class IntelManager(object):
         if entity.get("objectMarking", None):
             markings = {}
             for mark in entity["objectMarking"]:
-                if mark["definition_type"].lower() == "tlp":
-                    value = mark["definition"].split(":")[1].lower()
+                markings[mark["definition_type"].lower()] = []
+
+            for mark in entity["objectMarking"]:
+                if len(mark["definition"].split(":")) > 1:
+                    value = ":".join(mark["definition"].split(":")[1:]).lower()
                 else:
                     value = mark["definition"].lower()
 
-                markings[mark["definition_type"].lower()] = value
+                markings[mark["definition_type"].lower()].append(value)
 
-            if markings != {}:
-                _indicator["marking"] = markings
+            _indicator["marking"] = markings
 
         if entity.get("description", None):
             _indicator["description"] = entity["description"]

@@ -16,23 +16,21 @@ Options:
   --debug                     enable debug logging for all Python modules
 """
 
+import json
+import logging
 import os
 import sys
 from importlib.metadata import version
-import logging
 from typing import OrderedDict
-from scalpl import Cut
-import json
-
 
 import yaml
-
 from docopt import docopt
+from scalpl import Cut
 
 from . import __version__
-from .elastic_threatintel import ElasticThreatIntelConnector
-from .utils import add_branch, setup_logger, dict_merge, remove_nones
 from .conf import defaults
+from .elastic_threatintel import ElasticThreatIntelConnector
+from .utils import add_branch, dict_merge, remove_nones, setup_logger
 
 BANNER = f"""
 
@@ -70,8 +68,10 @@ def __process_config(argv={}, config={}) -> dict:
         Configuration file values override defaults
     """
 
+    logger = logging.getLogger(LOGGER_NAME)
     # Get defaults, update with file config
     _conf: dict = dict_merge(defaults, config)
+    logger.debug(f"Post-config merging:\n {json.dumps(_conf)}")
 
     # Skipping the other OpenCTI values since the helper handles them
     _env = {
@@ -98,8 +98,15 @@ def __process_config(argv={}, config={}) -> dict:
         },
     }
 
+    if _env["connector"]["log_level"] is not None:
+        _env["connector"]["log_level"] = _env["connector"]["log_level"].upper()
+
+    logger.debug(f"Raw ENV config:\n {json.dumps(_env)}")
+
     _env = remove_nones(_env)
     _conf: dict = dict_merge(_conf, _env)
+
+    logger.debug(f"Merged ENV config:\n {json.dumps(_conf)}")
 
     # This var overrides everything
     if os.environ.get("CONNECTOR_JSON_CONFIG", None):
@@ -149,16 +156,19 @@ def run() -> int:
 
     if "connector" not in f_config:
         f_config["connector"] = {}
-
-    f_config["connector"]["log_level"] = (
-        logging.getLevelName(_verbosity) if _verbosity != 1 else "DEBUG"
-    )
+        f_config["connector"]["log_level"] = (
+            logging.getLevelName(_verbosity) if _verbosity != 1 else "TRACE"
+        )
 
     config: dict = {}
     for k, v in f_config.items():
         config = add_branch(config, k.split("."), v)
 
     config = __process_config(arguments, config)
+
+    # Check if we need to update logger config
+    if logging.getLevelName(logger.level) != config["connector"]["log_level"]:
+        logger.setLevel(config["connector"]["log_level"])
 
     logger.trace(json.dumps(config, sort_keys=True, indent=4))
 
@@ -175,6 +185,11 @@ def run() -> int:
 
     if not arguments["-q"] is True:
         print(BANNER)
+
+    # If we're using the custom TRACE level, just tell OpenCTI to run as DEBUG
+    if config["connector"]["log_level"] == "TRACE":
+        os.environ["CONNECTOR_LOG_LEVEL"] = "DEBUG"
+
     ElasticInstance = ElasticThreatIntelConnector(config=config, datadir=datadir)
     ElasticInstance.start()
 

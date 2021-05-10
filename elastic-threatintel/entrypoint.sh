@@ -1,7 +1,17 @@
-#!/bin/sh
+#!/bin/bash
+set -e
 
-# Go to the right directory
-cd /opt/opencti-connector-elastic-threatintel
+if [ $# -eq 0 ]; then
+  # Default case of no args
+  set -- /app/connector-elastic-threatintel
+elif [ "${1:0:1}" = '-' ]; then
+  # If the user is trying to run connector directly with some arguments, then
+  # pass them along.
+    set -- /app/connector-elastic-threatintel "$@"
+elif [ $# -gt 0 ]; then
+  # Run whatever command the user wanted
+  exec "$@"
+fi
 
-# Launch the worker
-python3 elastic-threatintel.py
+cd /app
+exec "$@"

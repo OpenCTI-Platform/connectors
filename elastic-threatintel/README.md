@@ -8,16 +8,32 @@ This connector uses the OpenCTI *events stream*, so it consumes knowledge in rea
 
 ## Quick Start
 
-## Installation
+We recommend running this connector from a container, when appropriate. If you build the container according to the directions below, you can pass in a detailed config, or specify configuration via environment variables. By default the container
+looks for a config at the path `/app/config.yml`. You should specify a different location if you need with the `-c` flag. Review the usage:
+
+```shell
+docker run --rm -ti connector-elastic-threatintel:latest --help
+```
+
+It's probably easiest to grab a copy of the reference config (`config.reference.yml`) and rename it `config.yml`. Make the necessary changes for your environment and pass it into the container.
+
+```shell
+docker run --rm -ti --volume $(pwd)/config.yml:/app/config.yml connector-elastic-threatintel:latest
+```
 
 ### Requirements
 
 - OpenCTI Platform >= 4.5.0
 - Elastic platform >= 7.12.0
+- Python 3.9.x (may work with lower version 3.x, but it was developed with 3.9)
 
 ### Configuration
 
-Detailed configuration can be managed via the configuration file. The script looks for `config.yml` in the current directory, but a different path can be given on the command line.
+Detailed configuration can be managed via the configuration file as noted in the Quickstart. The script looks for `config.yml` in the current directory, but a different path can be given on the command line. The "current directory" is `/app` in the
+Docker container.
+
+Optionally, many of the configuration points can be handled solely by environment variables as noted in the table below. This can be helpful to spin up a quick container to only specify what you need beyond the defaults. Lastly, the environment
+variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and will override all configuration values.
 
 | YAML Parameter                    | Environment Var              | Mandatory | Description                                                                                                                                                              |
 |-----------------------------------|------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -38,5 +54,38 @@ Detailed configuration can be managed via the configuration file. The script loo
 | `output.elasticsearch.username`   | `ELASTICSEARCH_USERNAME`     | No        | The Elasticsearch login user (ApiKey is recommended).                                                                                                                    |
 | `output.elasticsearch.ssl_verify` | `ELASTICSEARCH_SSL_VERIFY`   | No        | Set to `False` to disable TLS certificate validation. Defaults to `True`                                                                                                 |
 | `elastic_import_from_date`        | `ELASTIC_IMPORT_FROM_DATE`   | No        | At the very first run, ignore all knowledge events before this date. Defaults to `now()` minus one minute.                                                               |
-| `elastic.import_label`            | `ELASTIC_IMPORT_LABEL`       | Yes       | If this label is added or present to the indicator, the entity will be imported in Elasticsearch. Defaults to `*`, which imports everything.                             |
+| `elastic.import_label`            | `ELASTIC_IMPORT_LABEL`       | No        | If this label is added or present to the indicator, the entity will be imported in Elasticsearch. Defaults to `*`, which imports everything.                             |
 |                                   | `CONNECTOR_JSON_CONFIG`      | No        | (Optional) environment variable allowing full configuration via a single environment variable using JSON. Helpful for some container deployment scenarios.               |
+
+## Building Container
+
+To build the container to run on Docker, Kubernetes, or other OCI runtime, simply run the build from this directory.
+
+```shell
+docker build -t connector-elastic-threatintel .
+```
+
+## Building virtual environment
+
+This connector uses [Python Poetry](https://python-poetry.org/) to manage dependencies. If you want to run the project locally, create a virtual environment using your favorite tool (I like pyenv, but the virtualenv module would be just fine). See the
+Poetry installation docs on how to install it.
+
+```shell
+# Install runtime dependencies
+poetry install --no-dev
+
+# Configure connector as noted above
+cp config.reference.yml config.yml
+
+# Run main script, it was installed to your virtualenv bin/ dir.
+connector-elastic-threatintel
+```
+
+If you want to run tests and do other development things use poetry to install those deps.
+
+```shell
+poetry install
+
+# Run all tests tests (flake8, black, isort, unit tests in tests/ dir)
+pytest
+```

@@ -1,6 +1,6 @@
+import logging
 import re
 from datetime import timedelta
-import logging
 
 TRACE_LOG_LEVEL = 5
 logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
@@ -16,31 +16,7 @@ logging.Logger.trace = trace
 
 
 def setup_logger(verbosity: int = 30, name: str = None) -> None:
-    # # XXX: This would allow to provide an optional JSON output, which is handy in the cloud
-    # supported_keys = [
-    #     "asctime",
-    #     "filename",
-    #     "funcName",
-    #     "levelname",
-    #     "lineno",
-    #     "module",
-    #     "message",
-    #     "name",
-    #     "process",
-    #     "processName",
-    #     "thread",
-    #     "threadName",
-    # ]
-
-    # def get_log_format(log_keys):
-    #     return " ".join(["%({0:s})s".format(i) for i in log_keys])
-    # logger.handlers.clear()
-    # logHandler = logging.StreamHandler()
-    # custom_format = get_log_format(supported_keys)
-    # formatter = jsonlogger.JsonFormatter(custom_format)
-    # logHandler.setFormatter(formatter)
-    # logger.addHandler(logHandler)
-
+    # TODO: It'd be great to handle an optional JSON output
     logger = logging.getLogger(name=name)
 
     if verbosity < 20:
@@ -141,7 +117,7 @@ def remove_nones(d: dict):
                     l2.append(item)
             if len(l2) > 0:
                 _clean[k] = l2
-        elif v:
+        elif (v is not None) and (v != ""):
             _clean[k] = v
 
     return _clean

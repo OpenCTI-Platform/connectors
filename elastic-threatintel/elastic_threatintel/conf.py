@@ -11,7 +11,7 @@ defaults: dict = {
         "name": "Elastic Threat Intel Connector",
         "scope": "elastic",
         "confidence_level": 80,
-        "log_level": "info",
+        "log_level": "INFO",
         "entity_description": "Elastic detection engine results via connector",
         "entity_name": "Elastic ThreatIntel Cluster",
     },

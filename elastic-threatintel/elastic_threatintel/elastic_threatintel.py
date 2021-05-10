@@ -7,11 +7,11 @@ from logging import getLogger
 
 from elasticsearch import Elasticsearch
 from pycti import OpenCTIConnectorHelper
-from scalpl import Cut
 from requests.exceptions import ConnectionError
+from scalpl import Cut
 
-from .sightings_manager import SignalsManager
 from .import_manager import IntelManager
+from .sightings_manager import SignalsManager
 
 logger = getLogger("elastic-threatintel-connector")
 
@@ -140,6 +140,9 @@ class ElasticThreatIntelConnector:
 
     def handle_update_indicator(self, timestamp, data):
         logger.debug("[UPDATE] Processing indicator {" + data["id"] + "}")
+        """
+        {"id": "indicator--4d649d3a-d6ca-5dbc-8ed1-767f4a5fa23b", "x_opencti_id": "ab717e44-ccae-40b6-ad37-9183527d3392", "type": "indicator", "x_data_update": {"replace": {"valid_until": "2021-06-10T18:07:00.000Z", "revoked": false}}}
+        """
 
         if self.config["elastic.import_label"] == "*":
             self.import_manager.import_threatintel_from_indicator(
@@ -203,10 +206,8 @@ class ElasticThreatIntelConnector:
             return None
 
         if msg.event == "update":
-            if (
-                data["type"] == "indicator"
-                and data["pattern_type"] in self.config["elastic.indicator_types"]
-            ):
+            logger.trace(f"[UPDATE]: {json.dumps(data)}")
+            if data["type"] == "indicator":
                 return self.handle_update_indicator(timestamp, data)
 
             return None

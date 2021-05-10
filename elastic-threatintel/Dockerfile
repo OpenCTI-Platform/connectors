@@ -32,7 +32,7 @@ FROM base as runtime
 RUN apt-get update && apt-get install -y libmagic1 && apt-get clean
 COPY --from=builder /runtime /usr/local
 COPY . /app
-COPY --from=builder /usr/local/bin/elastic-threatintel-connector /app
+COPY --from=builder /usr/local/bin/connector-elastic-threatintel /app
 
 # Expose and entrypoint
 COPY entrypoint.sh /

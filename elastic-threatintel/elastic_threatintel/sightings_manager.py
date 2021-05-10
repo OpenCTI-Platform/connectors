@@ -1,12 +1,12 @@
-from datetime import timedelta, datetime
-from threading import Thread, Event
-from logging import getLogger
-from scalpl import Cut
 import json
+from datetime import datetime, timedelta
+from logging import getLogger
+from threading import Event, Thread
 
 from elasticsearch import Elasticsearch, NotFoundError
 from elasticsearch_dsl import Search
 from pycti import OpenCTIConnectorHelper
+from scalpl import Cut
 
 from .utils import parse_duration
 

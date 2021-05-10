@@ -1,6 +1,5 @@
 import pytest
 
-
 data = [
     (
         """[artifact:mime_type = 'application/vnd.tcpdump.pcap' AND artifact:payload_bin MATCHES '\\\\xd4\\\\xc3\\\\xb2\\\\xa1\\\\x02\\\\x00\\\\x04\\\\x00' AND artifact:hashes.'SHA-256' = 'cead3f77f6cda6ec00f57d76c9a6879f' OR artifact:hashes.'SHA-256' = 'abcde3f77f6cda6ec00f57d76c9a6879f']""",
