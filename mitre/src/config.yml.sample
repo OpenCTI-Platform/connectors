@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'MITRE ATT&CK'
-  scope: '' # Can be marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,external-reference-as-report (default is everything)
+  scope: 'marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,external-reference-as-report'
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: True
   log_level: 'info'
