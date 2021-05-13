@@ -11,7 +11,9 @@ services:
       - CONNECTOR_SCOPE=synchronizer
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
-      - REMOTE_OPENCTI_URL=https://ChangeMe.Com
+      - REMOTE_OPENCTI_URL=https://ChangeMe.com
+      - REMOTE_OPENCTI_SSL_VERIFY=true
       - REMOTE_OPENCTI_TOKEN=ChangeMe
       - REMOTE_OPENCTI_EVENTS=create,update,delete
+      - REMOTE_OPENCTI_START_TIMESTAMP=
     restart: always

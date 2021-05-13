@@ -22,32 +22,30 @@ class SynchronizerConnector:
         self.remote_opencti_url = get_config_variable(
             "REMOTE_OPENCTI_URL", ["remote_opencti", "url"], config
         )
+        self.remote_opencti_ssl_verify = get_config_variable(
+            "REMOTE_OPENCTI_SSL_VERIFY", ["remote_opencti", "ssl_verify"], config
+        )
         self.remote_opencti_token = get_config_variable(
             "REMOTE_OPENCTI_TOKEN", ["remote_opencti", "token"], config
         )
         self.remote_opencti_events = get_config_variable(
             "REMOTE_OPENCTI_EVENTS", ["remote_opencti", "events"], config
         ).split(",")
+        self.remote_opencti_start_timestamp = get_config_variable(
+            "REMOTE_OPENCTI_START_TIMESTAMP",
+            ["remote_opencti", "start_timestamp"],
+            config,
+        )
 
     def _process_message(self, msg):
         data = json.loads(msg.data)
         try:
             if "create" in self.remote_opencti_events and msg.event == "create":
-                bundle = json.dumps(
-                    {
-                        "objects": [data["data"]],
-                        "x_opencti_event_version": data["version"],
-                    }
-                )
-                self.helper.send_stix2_bundle(bundle)
+                bundle = json.dumps({"objects": [data["data"]]})
+                self.helper.send_stix2_bundle(bundle, event_version=data["version"])
             elif "update" in self.remote_opencti_events and msg.event == "update":
-                bundle = json.dumps(
-                    {
-                        "objects": [data["data"]],
-                        "x_opencti_event_version": data["version"],
-                    }
-                )
-                self.helper.send_stix2_bundle(bundle)
+                bundle = json.dumps({"objects": [data["data"]]})
+                self.helper.send_stix2_bundle(bundle, event_version=data["version"])
             elif "delete" in self.remote_opencti_events and msg.event == "delete":
                 if data["data"]["type"] == "relationship":
                     self.helper.api.stix_core_relationship.delete(id=data["data"]["id"])
@@ -60,7 +58,11 @@ class SynchronizerConnector:
 
     def start(self):
         self.helper.listen_stream(
-            self._process_message, self.remote_opencti_url, self.remote_opencti_token
+            self._process_message,
+            self.remote_opencti_url,
+            self.remote_opencti_token,
+            self.remote_opencti_ssl_verify,
+            self.remote_opencti_start_timestamp,
         )
 
 
