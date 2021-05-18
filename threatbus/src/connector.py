@@ -123,6 +123,13 @@ class ThreatBusConnector(object):
                 f"Error ingesting indicator from Threat Bus. Expected a STIX-2 Indicator: {indicator}"
             )
             return
+        if (
+            ThreatBusSTIX2Constants.X_THREATBUS_UPDATE.value
+            in indicator.object_properties()
+            and indicator.x_threatbus_update == Operation.REMOVE.value
+        ):
+            # OpenCTI does not support deletion via API calls (yet)
+            return
         ioc_dct = json.loads(indicator.serialize())
         ioc_dct["name"] = ioc_dct.get("name", indicator.id)  #  default to UUID
         ioc_dct["stix_id"] = indicator.id
@@ -190,25 +197,29 @@ class ThreatBusConnector(object):
             # data ~ {'id': 'XXX', 'x_data_update': {'add': {'x_opencti_stix_ids': ['XXX']}}}
             return
 
-        indicator: dict = self.opencti_helper.api.indicator.read(id=opencti_id)
-        if not indicator:
-            # we are only interested in indicators at this time
-            return
-        detection_enabled: bool = indicator.get("x_opencti_detection", False)
-        if not detection_enabled and self.forward_all_iocs is not True:
-            # only propagate indicators that are toggled for detection or the
-            # user enabled forwarding of all indicators regardless of the toggle
-            return
-        # overwrite custom OpenCTI ID
-        indicator["id"] = indicator.get("standard_id")
-        if opencti_action == "update":
-            indicator[
-                ThreatBusSTIX2Constants.X_THREATBUS_UPDATE.value
-            ] = Operation.EDIT.value
         if opencti_action == "delete":
+            indicator: dict = data
             indicator[
                 ThreatBusSTIX2Constants.X_THREATBUS_UPDATE.value
             ] = Operation.REMOVE.value
+        else:
+            indicator: dict = self.opencti_helper.api.indicator.read(id=opencti_id)
+            if not indicator:
+                # we are only interested in indicators at this time
+                return
+            # overwrite custom OpenCTI ID
+            indicator["id"] = indicator.get("standard_id")
+            if opencti_action == "update":
+                indicator[
+                    ThreatBusSTIX2Constants.X_THREATBUS_UPDATE.value
+                ] = Operation.EDIT.value
+
+        # only propagate indicators that are toggled for detection or the user
+        # enabled forwarding of all indicators regardless of the toggle
+        detection_enabled: bool = indicator.get("x_opencti_detection", False)
+        if not detection_enabled and self.forward_all_iocs is not True:
+            return
+
         return Indicator(**indicator, allow_custom=True)
 
     def _process_message(self, sse_msg: Event):
