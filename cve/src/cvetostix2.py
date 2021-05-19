@@ -69,6 +69,11 @@ def convert(filename, output="output.json"):
                 if "baseMetricV3" in cves["impact"]
                 else None
             )
+            confidentiality_impact = (
+                cves["impact"]["baseMetricV3"]["cvssV3"]["confidentialityImpact"]
+                if "baseMetricV3" in cves["impact"]
+                else None
+            )
             cdate = datetime.datetime.strptime(cves["publishedDate"], "%Y-%m-%dT%H:%MZ")
             mdate = datetime.datetime.strptime(
                 cves["lastModifiedDate"], "%Y-%m-%dT%H:%MZ"
@@ -89,6 +94,7 @@ def convert(filename, output="output.json"):
                     "x_opencti_attack_vector": attack_vector,
                     "x_opencti_integrity_impact": integrity_impact,
                     "x_opencti_availability_impact": availability_impact,
+                    "x_opencti_confidentiality_impact": confidentiality_impact,
                 },
             )
             # Adding the vulnerability to the list of vulnerabilities
