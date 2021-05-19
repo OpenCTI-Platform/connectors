@@ -106,17 +106,20 @@ class ThreatBusConnector(object):
         if type(stix_msg) is Sighting:
             self._report_sighting(stix_msg)
         elif type(stix_msg) is Indicator:
-            self._ingest_indicator(stix_msg)
+            self._handle_indicator(stix_msg)
         else:
             self.opencti_helper.log_error(
                 f"Received STIX object with unexpected type from Threat Bus: {type(stix_msg)}"
             )
 
-    def _ingest_indicator(self, indicator: Indicator):
+    def _handle_indicator(self, indicator: Indicator):
         """
-        Ingests a STIX-2 Indicator into OpenCTI. Does nothing in case the
-        indicator already exists.
-        @param indicator The STIX-2 Indicator object to ingest
+        Handles a STIX-2 Indicator update received via Threat Bus. Does nothing
+        in case the indicator already exists and the new indicator does not add
+        any new fields/values to the existing indicator. By doing so, this
+        function effectively avoids double updates that otherwise would result
+        in SSE events without a real change.
+        @param indicator The STIX-2 Indicator received from Threat Bus
         """
         if type(indicator) is not Indicator:
             self.opencti_helper.log_error(
@@ -128,8 +131,32 @@ class ThreatBusConnector(object):
             in indicator.object_properties()
             and indicator.x_threatbus_update == Operation.REMOVE.value
         ):
-            # OpenCTI does not support deletion via API calls (yet)
+            # OpenCTI does not support indicator removal via API calls (yet)
             return
+        lookup_resp = self.opencti_helper.api.indicator.read(id=indicator.id)
+        if not lookup_resp:
+            # No indicator with that ID exists already.
+            self._create_or_update_indicator(indicator)
+            return
+        lookup_resp["id"] = lookup_resp["standard_id"]
+        lookup_indicator = Indicator(**lookup_resp, allow_custom=True)
+
+        # We found an existing indicator. To avoid double updates in the SSE
+        # stream we check if the indicator from Threat Bus adds anything new.
+
+        for prop, new_value in indicator.items():
+            if prop == "id" or prop.startswith("x_"):
+                continue
+            existing_value = lookup_indicator.get(prop, None)
+            if existing_value is None or new_value != existing_value:
+                self._create_or_update_indicator(indicator)
+                return
+
+    def _create_or_update_indicator(self, indicator: Indicator):
+        """
+        Creates or updates a STIX-2 Indicator in OpenCTI
+        @param indicator The STIX-2 Indicator
+        """
         ioc_dct = json.loads(indicator.serialize())
         ioc_dct["name"] = ioc_dct.get("name", indicator.id)  #  default to UUID
         ioc_dct["stix_id"] = indicator.id
