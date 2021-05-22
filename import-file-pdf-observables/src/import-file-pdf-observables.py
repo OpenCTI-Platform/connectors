@@ -1,12 +1,9 @@
 # coding: utf-8
-
 import os
-from typing import Dict
+import pprint
+from typing import Dict, List
 import yaml
 import time
-import uuid
-import magic
-import iocp
 from stix2 import Bundle, Report, Vulnerability
 from pycti import (
     OpenCTIConnectorHelper,
@@ -14,12 +11,17 @@ from pycti import (
     get_config_variable,
     SimpleObservable,
 )
+from lib import util
+from lib.models import Observable, EntityConfig, Entity
+from lib.report_parser import ReportParser
+from pydantic import BaseModel
 
 
 class ImportFilePdfObservables:
-    def __init__(self):
+    def __init__(self) -> None:
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        config_file_path = base_path + "/config.yml"
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
@@ -32,272 +34,167 @@ class ImportFilePdfObservables:
             config,
         )
 
-        self.types = {
-            "MD5": "File.hashes.MD5",
-            "SHA1": "File.hashes.SHA-1",
-            "SHA256": "File.hashes.SHA-256",
-            "Filename": "File.name",
-            "IP": "IPv4-Addr.value",
-            "DomainName": "Domain-Name.value",
-            # Directory is not yet fully functional
-            # "Directory": "Directory.path",
-            "URL": "Url.value",
-            "Email": "Email-Addr.value",
-            "CVE": "Vulnerability.name",
-            "Registry": "Windows-Registry-Key.key",
-        }
+        # Load Entity and Observable configs
+        observable_config_file = base_path + '/config/observable_config.ini'
+        entity_config_file = base_path + '/config/entity_config.ini'
 
-    def _process_message(self, data):
-        file_fetch = data["file_fetch"]
-        file_uri = self.helper.opencti_url + file_fetch
-        file_name = os.path.basename(file_fetch)
+        if os.path.isfile(observable_config_file) and os.path.isfile(entity_config_file):
+            self.observable_config = self._parse_config(observable_config_file, Observable)
+        else:
+            raise FileNotFoundError(f'{observable_config_file} was not found')
+
+        if os.path.isfile(entity_config_file):
+            self.entity_config = self._parse_config(entity_config_file, EntityConfig)
+        else:
+            raise FileNotFoundError(f'{entity_config_file} was not found')
+
+    def _process_message(self, data: Dict) -> str:
+        file_name = self._download_import_file(data)
         entity_id = data.get("entity_id", None)
-        self.helper.log_info(entity_id)
-        # Get context
-        is_context = entity_id is not None and len(entity_id) > 0
-        self.helper.log_info("Context: {}".format(is_context))
-        self.helper.log_info(
-            "get_only_contextual: {}".format(self.helper.get_only_contextual())
-        )
-        if self.helper.get_only_contextual() and not is_context:
+        if self._check_context(entity_id):
             raise ValueError(
                 "No context defined, connector is get_only_contextual true"
             )
-        self.helper.log_info("Importing the file " + file_uri)
-        # Get the file
-        file_content = self.helper.api.fetch_opencti_file(file_uri, True)
-        # Write the file
-        f = open(file_name, "wb")
-        f.write(file_content)
-        f.close()
-        # Parse
-        bundle_objects = []
-        stix_objects = set()
-        i = 0
-        custom_indicators = self._get_entities()
-        mime_type = self._get_mime_type(file_name)
-        print(mime_type)
-        if mime_type is None:
-            raise ValueError("Invalid file format of {}".format(file_name))
 
-        parser = iocp.IOC_Parser(
-            None,
-            mime_type,
-            True,
-            "pdfminer",
-            "json",
-            custom_indicators=custom_indicators,
-        )
-        parsed = parser.parse(file_name)
+        # Retrieve entity set from OpenCTI
+        entity_indicators = self._collect_stix_objects(self.entity_config)
+
+        # Parse peport
+        parser = ReportParser(entity_indicators, self.observable_config)
+        parsed = parser.run_parser(file_name, data['file_mime'])
         os.remove(file_name)
-        if parsed != []:
-            for file in parsed:
-                if file != None:
-                    for page in file:
-                        if page != []:
-                            for match in page:
-                                resolved_match = self._resolve_match(match)
-                                if resolved_match:
-                                    # For the creation of relationships
-                                    if resolved_match[
-                                        "type"
-                                    ] not in self.types.values() and self._is_uuid(
-                                        resolved_match["value"]
-                                    ):
-                                        stix_objects.add(resolved_match["value"])
-                                    # For CVEs since SimpleObservable doesn't support Vulnerabilities yet
-                                    elif resolved_match["type"] == "Vulnerability.name":
-                                        vulnerability = Vulnerability(
-                                            name=resolved_match["value"]
-                                        )
-                                        bundle_objects.append(vulnerability)
-                                    # Other observables
-                                    elif resolved_match["type"] in self.types.values():
-                                        observable = SimpleObservable(
-                                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                                "x-opencti-simple-observable"
-                                            ),
-                                            key=resolved_match["type"],
-                                            value=resolved_match["value"],
-                                            x_opencti_create_indicator=self.create_indicator,
-                                        )
-                                        bundle_objects.append(observable)
-                                    else:
-                                        self.helper.log_info(
-                                            "Odd data received: {}".format(
-                                                resolved_match
-                                            )
-                                        )
-                                    i += 1
-        else:
-            self.helper.log_error("Could not parse the report!")
 
-        if is_context:
-            entity = self.helper.api.stix_domain_object.read(id=entity_id)
-            if entity is not None:
-                if entity["entity_type"] == "Report" and len(bundle_objects) > 0:
-                    report = Report(
-                        id=entity["standard_id"],
-                        name=entity["name"],
-                        description=entity["description"],
-                        published=self.helper.api.stix2.format_date(entity["created"]),
-                        report_types=entity["report_types"],
-                        object_refs=bundle_objects,
-                    )
-                    bundle_objects.append(report)
+        if not parsed:
+            return "No information extracted from report"
 
-        bundles_sent = []
-        if len(bundle_objects) > 0:
-            bundle = Bundle(objects=bundle_objects).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
+        # Process parsing results
+        observables, entities = self._process_parsing_results(parsed)
+        report = self.helper.api.report.read(id=entity_id)
+        # Send results to OpenCTI
+        observable_cnt = self._process_observables(report, observables)
+        entity_cnt = self._process_entities(report, entities)
 
-        if len(stix_objects) > 0 and entity_id is not None:
-            report = self.helper.api.report.read(id=entity_id)
-            if report:
-                for stix_object in stix_objects:
-                    self.helper.log_info(stix_object)
-                    self.helper.api.report.add_stix_object_or_stix_relationship(
-                        id=report["id"], stixObjectOrStixRelationshipId=stix_object
-                    )
+        return f"Sent {observable_cnt} stix bundle(s) and {entity_cnt} entity connections for worker import"
 
-        return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
-
-    def start(self):
+    def start(self) -> None:
         self.helper.listen(self._process_message)
 
-    def _resolve_match(self, match):
-        type = match["type"]
-        value = match["match"]
-        if type in self.types:
-            resolved_type = self.types[type]
-            if resolved_type == "IPv4-Addr.value":
-                # Demilitarized IP
-                if "[.]" in value:
-                    value = value.replace("[.]", ".")
-                type_0 = self._detect_ip_version(value)
-            elif resolved_type == "Url.value":
-                # Demilitarized URL
-                if "hxxp://" in value:
-                    value = value.replace("hxxp://", "http://")
-                if "hxxps://" in value:
-                    value = value.replace("hxxps://", "https://")
-                if "hxxxs://" in value:
-                    value = value.replace("hxxxs://", "https://")
-                if "[.]" in value:
-                    value = value.replace("[.]", ".")
-                type_0 = resolved_type
-            elif resolved_type == "DomainName.value":
-                # Demilitarized Host
-                if "[.]" in value:
-                    value = value.replace("[.]", ".")
-                type_0 = resolved_type
-            else:
-                type_0 = resolved_type
-            return {"type": type_0, "value": value}
-        elif self._is_uuid(value):
-            return {"type": type, "value": value}
-        else:
-            self.helper.log_info("Some odd info received: {}".format(match))
-            return False
+    def _download_import_file(self, data: Dict) -> str:
+        file_fetch = data["file_fetch"]
+        file_uri = self.helper.opencti_url + file_fetch
 
-    def _detect_ip_version(self, value):
-        if len(value) > 16:
-            return "IPv6-Addr.value"
-        else:
-            return "IPv4-Addr.value"
+        # Downloading and saving file to connector
+        self.helper.log_info("Importing the file " + file_uri)
+        file_name = os.path.basename(file_fetch)
+        file_content = self.helper.api.fetch_opencti_file(file_uri, True)
 
-    def _is_uuid(self, value):
-        try:
-            uuid.UUID(value)
-        except ValueError:
-            return False
-        return True
+        with open(file_name, "wb") as f:
+            f.write(file_content)
 
-    def _get_entities(self):
-        setup = {
-            "attack_pattern": {
-                "entity_filter": None,
-                "entity_fields": ["x_mitre_id"],
-                "type": "entity",
-            },
-            "identity": {
-                "entity_filter": None,
-                "entity_fields": ["aliases", "name"],
-                "type": "entity",
-            },
-            "location": {
-                "entity_filter": [{"key": "entity_type", "values": ["Country"]}],
-                "entity_fields": ["aliases", "name"],
-                "type": "entity",
-            },
-            "intrusion_set": {
-                "entity_filter": None,
-                "entity_fields": ["aliases", "name"],
-                "type": "entity",
-            },
-            "malware": {
-                "entity_filter": None,
-                "entity_fields": ["aliases", "name"],
-                "type": "entity",
-            },
-            "tool": {
-                "entity_filter": None,
-                "entity_fields": ["aliases", "name"],
-                "type": "entity",
-            },
-        }
+        return file_name
 
-        return self._collect_stix_objects(setup)
+    def _check_context(self, entity_id: str) -> bool:
+        is_context = entity_id and len(entity_id) > 0
+        return self.helper.get_only_contextual() and not is_context
 
-    def _collect_stix_objects(self, setup_dict: Dict):
+    def _collect_stix_objects(self, entity_config_list: List[EntityConfig]) -> List[Entity]:
         base_func = self.helper.api
-        information_list = {}
-        for entity, args in setup_dict.items():
-            func_format = entity
+        entity_list = []
+        for entity_config in entity_config_list:
+            func_format = entity_config.stix_class
             try:
                 custom_function = getattr(base_func, func_format)
                 entries = custom_function.list(
-                    getAll=True, filters=args["entity_filter"]
+                    getAll=True, filters=entity_config.filter
                 )
-                information_list[entity] = self._make_1d_list(
-                    entries, args["entity_fields"]
-                )
+                entity_list += entity_config.convert_to_entity(entries)
             except AttributeError:
                 e = "Selected parser format is not supported: %s" % func_format
                 raise NotImplementedError(e)
 
-        return information_list
+        return entity_list
 
-    def _make_1d_list(self, values, keys):
-        items = {}
-        for item in values:
-            _id = item.get("id")
-            sub_items = set()
-            if (
-                item.get("externalReferences", None) is None
-                or len(item["externalReferences"]) == 0
-            ):
-                continue
-            for key in keys:
-                elem = item.get(key, [])
-                if elem:
-                    if type(elem) == list:
-                        sub_items.update(elem)
-                    elif type(elem) == str:
-                        sub_items.add(elem)
+    def _parse_config(self, config_file: str, file_class: BaseModel) -> List[BaseModel]:
+        """
+        Parse ini Config and store output in dict
 
-            items[_id] = sub_items
-        return items
+        :param config_file: path of the ini config file
+        :param list_keys: ini keys which have a \n separated list as value
+        :param dict_keys: ini keys which have a dict as value
+        :return: ini config as dict
+        """
+        config = util.MyConfigParser()
+        config.read(config_file)
 
-    def _get_mime_type(self, file_name):
-        mime = magic.Magic(mime=True)
-        translation = {
-            "application/pdf": "pdf",
-            # 'text/html': 'html',
-            # 'text/plain': 'txt'
-        }
-        mimetype = mime.from_file(file_name)
-        return translation.get(mimetype, None)
+        config_list = []
+        for section, content in config.as_dict().items():
+            content['name'] = section
+            config_object = file_class(**content)
+            config_list.append(config_object)
+
+        return config_list
+
+    def _process_parsing_results(self, parsed: List[Dict]) -> (List[SimpleObservable], List[str]):
+        observables = []
+        entities = []
+        for match in parsed:
+            if match['type'] == 'observable':
+                # Hardcoded exceptions since SimpleObservable doesn't support those types yet
+                if match['category'] == 'Vulnerability.name':
+                    observable = Vulnerability(
+                        name=match["match"]
+                    )
+                else:
+                    observable = SimpleObservable(
+                        id=OpenCTIStix2Utils.generate_random_stix_id(
+                            "x-opencti-simple-observable"
+                        ),
+                        key=match['category'],
+                        value=match["match"],
+                        x_opencti_create_indicator=self.create_indicator,
+                    )
+
+                observables.append(observable)
+            elif match['type'] == 'entity':
+                entities.append(match["match"])
+            else:
+                self.helper.log_info(
+                    "Odd data received: {}".format(
+                        match
+                    )
+                )
+
+        return observables, entities
+
+    def _process_observables(self, report: Dict, observables: List) -> int:
+        if report is not None:
+            if report["entity_type"] == "Report" and len(observables) > 0:
+                report = Report(
+                    id=report["standard_id"],
+                    name=report["name"],
+                    description=report["description"],
+                    published=self.helper.api.stix2.format_date(report["created"]),
+                    report_types=report["report_types"],
+                    object_refs=observables
+                )
+                observables.append(report)
+
+        bundles_sent = []
+        if len(observables) > 0:
+            bundle = Bundle(objects=observables).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+
+        # -1 since report gets updated as well
+        return len(bundles_sent)-1
+
+    def _process_entities(self, report: Dict, entities: List) -> int:
+        if report:
+            for stix_object in entities:
+                self.helper.api.report.add_stix_object_or_stix_relationship(
+                    id=report["id"], stixObjectOrStixRelationshipId=stix_object
+                )
+
+        return len(entities)
 
 
 if __name__ == "__main__":
