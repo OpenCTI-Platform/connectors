@@ -23,27 +23,17 @@ class ElasticThreatIntelConnector:
         self.helper = OpenCTIConnectorHelper(config)
         logger.info("Connected to OpenCTI")
 
-        self.config = Cut(config)
-        # Set first event start time
-        if self.config.get("elastic.import_from_date", None):
-            try:
-                # Convert configured value to UTC epoch
-                _value = self.config.get("elastic.import_from_date")
-                _t = int(round(datetime.fromisoformat(_value).timestamp() * 1000))
-                self.config["elastic.import_from_date"] = _t
-            except ValueError:
-                logger.error(
-                    "Invalid 'elastic.import_from_date' format. It must be in ISO format matching the pattern: YYYY-MM-DD[*HH[:MM[:SS[.fff[fff]]]][+HH:MM[:SS[.ffffff]]]]"
-                )
-                sys.exit(1)
-        else:
-            # Start from the beginning of the current second
-            self.config["elastic.import_from_date"] = (
-                int(round(time.time() * 1000)) - 1000
-            )
+        if (
+            self.helper.connect_live_stream_id is None
+            or self.helper.connect_live_stream_id == "ChangeMe"
+        ):
+            raise ValueError("Missing Live Stream ID")
 
+        self.config = Cut(config)
+
+        # Start streaming from 1 second ago
         self.helper.set_state(
-            {"connectorLastEventId": self.config["elastic.import_from_date"]}
+            {"connectorLastEventId": str(int(round(time.time() * 1000)) - 1000)}
         )
 
         # Get the external URL as configured in OpenCTI Settings page
@@ -121,68 +111,24 @@ class ElasticThreatIntelConnector:
 
     def handle_create_indicator(self, timestamp: datetime, data: dict) -> None:
         logger.debug("[CREATE] Processing indicator {" + data["id"] + "}")
-
-        if self.config["elastic.import_label"] == "*":
-            self.import_manager.import_threatintel_from_indicator(timestamp, data)
-            return
-
-        if ("labels" not in data) or (
-            self.config["elastic.import_label"] not in data["labels"]
-        ):
-            logger.info(
-                "[CREATE] No label corresponding to import filter, doing nothing"
-            )
-            return
-
-        if self.config["elastic.import_label"] in data["labels"]:
-            self.import_manager.import_threatintel_from_indicator(timestamp, data)
-            return
+        self.import_manager.import_threatintel_from_indicator(timestamp, data)
+        return
 
     def handle_update_indicator(self, timestamp, data):
         logger.debug("[UPDATE] Processing indicator {" + data["id"] + "}")
-        """
-        {"id": "indicator--4d649d3a-d6ca-5dbc-8ed1-767f4a5fa23b", "x_opencti_id": "ab717e44-ccae-40b6-ad37-9183527d3392", "type": "indicator", "x_data_update": {"replace": {"valid_until": "2021-06-10T18:07:00.000Z", "revoked": false}}}
-        """
 
-        if self.config["elastic.import_label"] == "*":
-            self.import_manager.import_threatintel_from_indicator(
-                timestamp, data, is_update=True
-            )
-            return
-
-        if ("labels" not in data) or (
-            self.config["elastic.import_label"] not in data["labels"]
-        ):
-            logger.info(
-                "[UPDATE] No label corresponding to import filter, doing nothing"
-            )
-            return
-
-        if self.config["elastic.import_label"] in data["labels"]:
-            self.import_manager.import_threatintel_from_indicator(
-                timestamp, data, is_update=True
-            )
-            return
+        self.import_manager.import_threatintel_from_indicator(
+            timestamp, data, is_update=True
+        )
+        return
 
     def handle_delete_indicator(self, timestamp, data):
         logger.debug("[DELETE] Processing indicator {" + data["id"] + "}")
-
-        if self.config["elastic.import_label"] == "*":
-            self.import_manager.delete_threatintel_from_indicator(data)
-
-        if ("labels" not in data) or (
-            self.config["elastic.import_label"] not in data["labels"]
-        ):
-            logger.info(
-                "[DELETE] No label corresponding to import filter, doing nothing"
-            )
-            return
-
-        if self.config["elastic.import_label"] in data["labels"]:
-            self.import_manager.delete_threatintel_from_indicator(data)
-            return
+        self.import_manager.delete_threatintel_from_indicator(data)
+        return
 
     def _process_message(self, msg) -> None:
+        logger.debug("_process_message")
         try:
             event_id = msg.id
             timestamp = datetime.fromtimestamp(
@@ -196,11 +142,7 @@ class ElasticThreatIntelConnector:
         logger.debug(f"[PROCESS] Message (id: {event_id}, date: {timestamp})")
 
         if msg.event == "create":
-            if (
-                data["type"] == "indicator"
-                and data["pattern_type"] in self.config["elastic.indicator_types"]
-            ):
-                logger.trace(data)
+            if data["type"] == "indicator":
                 return self.handle_create_indicator(timestamp, data)
 
             return None
@@ -217,32 +159,25 @@ class ElasticThreatIntelConnector:
                 logger.trace(data)
                 return self.handle_delete_indicator(timestamp, data)
 
-    def start(self) -> None:
-        retries_left = 10
+        return None
 
+    def start(self) -> None:
         self.shutdown_event.clear()
         self.sightings_manager.start()
 
-        while retries_left > 0:
-            try:
-                logger.info("Streaming events from OpenCTI")
-                self.helper.listen_stream(self._process_message)
-            except ConnectionError:
-                retries_left -= 1
-                logger.warn("Disconnected from OpenCTI")
-            except KeyboardInterrupt:
-                retries_left = 0
-                break
-            except Exception as e:
-                logger.error("Something went wrong")
-                retries_left = 0
-                raise e
+        # Look out, this doesn't block
+        self.helper.listen_stream(self._process_message)
+
+        try:
+            # Just wait here until someone presses ctrl+c
+            self.shutdown_event.wait()
+        except KeyboardInterrupt:
+            self.shutdown_event.set()
 
         logger.info("Shutting down")
-        self.shutdown_event.set()
+        self.sightings_manager.join(timeout=3)
         self.elasticsearch.close()
 
-        self.sightings_manager.join(timeout=3)
         if self.sightings_manager.is_alive():
             logger.warn("Sightings manager didn't shutdown by request")
 

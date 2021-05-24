@@ -40,7 +40,7 @@ class IntelManager(object):
         self.es_client: Elasticsearch = elasticsearch_client
         self.config: Cut = Cut(config)
         self.datadir: str = datadir
-        self.idx: str = self.config.get("elastic.setup.template.name", "threatintel")
+        self.idx: str = self.config.get("setup.template.name", "threatintel")
 
         self._setup_elasticsearch_index()
 
@@ -52,17 +52,16 @@ class IntelManager(object):
         assert self.es_client.ping()
 
         _policy_name: str = self.config.get(
-            "elastic.setup.ilm.policy_name",
-            self.config.get("elastic.setup.ilm.rollover_alias", "threatintel"),
+            "setup.ilm.policy_name",
+            self.config.get("setup.ilm.rollover_alias", "threatintel"),
         )
         _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
 
         # TODO: Check if xpack is available and skip ILM if not
-        if self.config.get("elastic.setup.ilm.enabled", True) is True:
+        if self.config.get("setup.ilm.enabled", True) is True:
             # Create ILM policy if needed
             if (_policy is None) or (
-                _policy is not None
-                and self.config.get("elastic.setup.ilm.overwrite", None)
+                _policy is not None and self.config.get("setup.ilm.overwrite", None)
             ):
                 with open(
                     os.path.join(self.datadir, "threatintel-index-ilm.json")
@@ -71,19 +70,15 @@ class IntelManager(object):
                     self.es_client.ilm.put_lifecycle(policy=_policy_name, body=content)
 
         # Create index template
-        if self.config.get("elastic.setup.template.enabled", True) is True:
-            _template_name: str = self.config.get(
-                "elastic.setup.template.name", "threatintel"
-            )
+        if self.config.get("setup.template.enabled", True) is True:
+            _template_name: str = self.config.get("setup.template.name", "threatintel")
 
             values = {
                 "policy_name": _policy_name,
                 "rollover_alias": self.config.get(
-                    "elastic.setup.ilm.rollover_alias", "threatintel"
+                    "setup.ilm.rollover_alias", "threatintel"
                 ),
-                "pattern": self.config.get(
-                    "elastic.setup.template.pattern", "threatintel-*"
-                ),
+                "pattern": self.config.get("setup.template.pattern", "threatintel-*"),
             }
             with open(
                 os.path.join(self.datadir, "threatintel-index-template.json")
@@ -112,16 +107,7 @@ class IntelManager(object):
         logger.debug(entity)
 
         _result: dict = {}
-
-        if (
-            entity is None
-            or (entity["revoked"] and not is_update)
-            or entity["pattern_type"]
-            not in self.config.get("elastic.indicator_types", [])
-        ):
-            return {}
-
-        _version = 0
+        _document: Cut = {}
 
         if is_update is True:
             update_time: str = (
@@ -149,8 +135,6 @@ class IntelManager(object):
 
             if _result["found"] is True:
                 _document = Cut(_result["_source"])
-                _version = _result["_version"]
-                _version += 1
 
             if data.get("x_data_update", None):
                 if data["x_data_update"].get("replace", None):
@@ -180,6 +164,11 @@ class IntelManager(object):
                             _document.setdefault(
                                 "threatintel.opencti.killchain_phases", phases
                             )
+                    else:
+                        logger.warning(
+                            f"Unsupported indicator pattern type: {entity['pattern_type']}. Skipping."
+                        )
+                        return _document
 
                     for k, v in data["x_data_update"].get("replace", {}).items():
                         logger.debug(
@@ -228,9 +217,6 @@ class IntelManager(object):
             "threatintel": {},
         }
 
-        # Increment version of document
-        _version += 1
-
         if len(entity.get("externalReferences", [])) > 0:
             _document["event"]["reference"] = [
                 item.get("url", None) for item in entity["externalReferences"]
@@ -275,13 +261,6 @@ class IntelManager(object):
 
             _document["threatintel"]["opencti"]["killchain_phases"] = phases
 
-        # Remove any empty values
-        _document["threatintel"]["opencti"] = {
-            k: v
-            for k, v in _document["threatintel"]["opencti"].items()
-            if v is not None
-        }
-
         if entity.get("x_mitre_platforms", None):
             _document["threatintel"]["opencti"]["mitre"] = {
                 "platforms": entity.get("x_mitre_platforms", None)
@@ -294,6 +273,12 @@ class IntelManager(object):
 
             _document["threatintel"]["stix"] = {"id": entity.get("standard_id")}
             _document["threatintel"]["indicator"] = _indicator
+
+        else:
+            logger.warning(
+                f"Unsupported indicator pattern type: {entity['pattern_type']}. Skipping."
+            )
+            return {}
 
         _document = remove_nones(_document)
 

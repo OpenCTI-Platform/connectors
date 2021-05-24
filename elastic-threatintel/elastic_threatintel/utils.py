@@ -20,7 +20,7 @@ def setup_logger(verbosity: int = 30, name: str = None) -> None:
     logger = logging.getLogger(name=name)
 
     if verbosity < 20:
-        FORMAT = "[%(asctime)s.%(msecs)03d][%(filename)20s:%(lineno)-4s][ %(funcName)20s() ][%(levelname)s] %(message)s"
+        FORMAT = "[%(asctime)s.%(msecs)03d][%(filename)20s:%(lineno)-4s][%(threadName)s][ %(funcName)20s() ][%(levelname)s] %(message)s"
     else:
         FORMAT = "[%(asctime)s.%(msecs)03d][%(levelname)s] %(message)s"
 

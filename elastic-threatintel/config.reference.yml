@@ -12,6 +12,7 @@ connector:
   log_level: 'info'
   entity_name: 'Elastic ThreatIntel Cluster'
   entity_description: 'Elasticsearch detection engine cluster'
+  live_stream_id: 'ChangeMe'
 
 # =============================== Elastic Cloud ================================
 # The cloud.id setting overwrites the `elastic.hosts`

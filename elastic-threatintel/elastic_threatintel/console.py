@@ -115,7 +115,7 @@ def __process_config(argv={}, config={}) -> dict:
     return _conf
 
 
-def run() -> int:
+def main() -> None:
     pycti_ver: str = version("pycti")
     my_version: str = (
         f"elastic-threatintel-connector  {__version__}\n" f"pyopencti  {pycti_ver}"
@@ -167,7 +167,7 @@ def run() -> int:
 
     # Check if we need to update logger config
     if logging.getLevelName(logger.level) != config["connector"]["log_level"]:
-        logger.setLevel(config["connector"]["log_level"])
+        logger.setLevel(config["connector"]["log_level"].upper())
 
     logger.trace(json.dumps(config, sort_keys=True, indent=4))
 
@@ -193,3 +193,7 @@ def run() -> int:
     ElasticInstance.start()
 
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
