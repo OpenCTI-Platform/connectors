@@ -59,14 +59,15 @@ class VirusTotalConnector:
             )
             final_observable = self.helper.api.stix_cyber_observable.update_field(
                 id=final_observable["id"],
-                key="size",
-                value=str(attributes["size"]),
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
                 key="hashes.SHA-256",
                 value=attributes["sha256"],
             )
+            if observable["entity_type"] == "StixFile":
+                self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    key="size",
+                    value=str(attributes["size"]),
+                )
             if observable["name"] is None and len(attributes["names"]) > 0:
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"], key="name", value=attributes["names"][0]

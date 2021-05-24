@@ -92,10 +92,7 @@ class HybridAnalysis:
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
             source_name="Hybrid Analysis",
-            url="https://www.hybrid-analysis.com/sample/"
-            + report["sha256"]
-            + "/"
-            + report["job_id"],
+            url="https://www.hybrid-analysis.com/sample/" + report["sha256"],
             description="Hybrid Analysis Report",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
