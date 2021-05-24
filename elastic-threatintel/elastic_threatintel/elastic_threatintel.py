@@ -7,7 +7,6 @@ from logging import getLogger
 
 from elasticsearch import Elasticsearch
 from pycti import OpenCTIConnectorHelper
-from requests.exceptions import ConnectionError
 from scalpl import Cut
 
 from .import_manager import IntelManager

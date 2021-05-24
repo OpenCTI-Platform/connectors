@@ -15,6 +15,7 @@ scalpl = "^0.4.2"
 docopt = "^0.6.2"
 python-json-logger = "^2.0.1"
 elasticsearch-dsl = ">=7.0.0,<8.0.0"
+pyproject-flake8 = "^0.0.1-alpha.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"
@@ -32,3 +33,7 @@ build-backend = "poetry.core.masonry.api"
 minversion = "6.0"
 addopts = "--black --isort --flake8"
 testpaths = ["."]
+
+[tool.flake8]
+ignore = "E,W"
+#max-complexity = "10"
