@@ -2,7 +2,6 @@
 import os
 from typing import Dict, List
 import yaml
-import time
 from stix2 import Bundle, Report, Vulnerability
 from pycti import (
     OpenCTIConnectorHelper,

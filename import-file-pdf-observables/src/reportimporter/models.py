@@ -3,7 +3,7 @@ import os
 import re
 from typing import List, Optional, Dict, Pattern, Any
 from pydantic import BaseModel, validator
-from reportimporter.constants import COMMENT_INDICATOR, PATH_TRAVERSAL, CONFIG_PATH
+from reportimporter.constants import COMMENT_INDICATOR, CONFIG_PATH
 
 
 class Observable(BaseModel):
@@ -28,9 +28,7 @@ class Observable(BaseModel):
         filter_paths = []
         for filter_file in filter_config:
             base_path = os.path.dirname(os.path.abspath(__file__))
-            file_path = os.path.join(
-                base_path, CONFIG_PATH, filter_file
-            )
+            file_path = os.path.join(base_path, CONFIG_PATH, filter_file)
             if not os.path.isfile(file_path):
                 raise ValueError(
                     "{} is not a valid filter config file".format(file_path)

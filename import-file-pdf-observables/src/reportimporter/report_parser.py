@@ -41,7 +41,7 @@ class ReportParser(object):
         for regex in regex_list:
             result = regex.search(ind_match)
             if result:
-                logging.info('Value {} is whitelisted with {}'.format(ind_match, regex))
+                logging.info("Value {} is whitelisted with {}".format(ind_match, regex))
                 return True
         return False
 
@@ -55,7 +55,7 @@ class ReportParser(object):
                     if isinstance(ind_match, tuple):
                         ind_match = ind_match[0]
 
-                    logging.info('Match {}'.format(ind_match))
+                    logging.info("Match {}".format(ind_match))
 
                     if observable.defang:
                         ind_match = self._defang(ind_match)
@@ -177,7 +177,11 @@ class ReportParser(object):
                 for entity in self.entity_list:
                     if self._is_whitelisted(entity.regex, value[RESULT_FORMAT_MATCH]):
                         match = True
-                        logging.debug('Value {} is also matched by entity {}'.format(value, entity.name))
+                        logging.debug(
+                            "Value {} is also matched by entity {}".format(
+                                value, entity.name
+                            )
+                        )
                         break
 
                 if not match:
