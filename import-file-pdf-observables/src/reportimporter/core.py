@@ -69,7 +69,7 @@ class ReportImporter:
         entity_indicators = self._collect_stix_objects(self.entity_config)
 
         # Parse peport
-        parser = ReportParser(entity_indicators, self.observable_config)
+        parser = ReportParser(self.helper, entity_indicators, self.observable_config)
         parsed = parser.run_parser(file_name, data["file_mime"])
         os.remove(file_name)
 
@@ -127,14 +127,6 @@ class ReportImporter:
         return entity_list
 
     def _parse_config(self, config_file: str, file_class: BaseModel) -> List[BaseModel]:
-        """
-        Parse ini Config and store output in dict
-
-        :param config_file: path of the ini config file
-        :param list_keys: ini keys which have a \n separated list as value
-        :param dict_keys: ini keys which have a dict as value
-        :return: ini config as dict
-        """
         config = MyConfigParser()
         config.read(config_file)
 

@@ -6,6 +6,8 @@ from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 
 import logging
+
+from pycti import OpenCTIConnectorHelper
 from reportimporter.models import Observable, Entity
 from reportimporter.constants import (
     OBSERVABLE_CLASS,
@@ -23,8 +25,14 @@ class ReportParser(object):
     Report parser based on IOCParser
     """
 
-    def __init__(self, entity_list: List[Entity], observable_list: List[Observable]):
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        entity_list: List[Entity],
+        observable_list: List[Observable],
+    ):
 
+        self.helper = helper
         self.entity_list = entity_list
         self.observable_list = observable_list
 
@@ -41,7 +49,10 @@ class ReportParser(object):
         for regex in regex_list:
             result = regex.search(ind_match)
             if result:
-                logging.info("Value {} is whitelisted with {}".format(ind_match, regex))
+                # Debug in future
+                self.helper.log_info(
+                    "Value {} is whitelisted with {}".format(ind_match, regex)
+                )
                 return True
         return False
 
@@ -55,7 +66,8 @@ class ReportParser(object):
                     if isinstance(ind_match, tuple):
                         ind_match = ind_match[0]
 
-                    logging.info("Match {}".format(ind_match))
+                    # Debug in future
+                    self.helper.log_info("Match {}".format(ind_match))
 
                     if observable.defang:
                         ind_match = self._defang(ind_match)
@@ -79,7 +91,8 @@ class ReportParser(object):
                         self._format_match(ENTITY_CLASS, entity.name, entity.stix_id)
                     )
 
-        logging.debug("Text: {} -> extracts {}".format(data, list_matches))
+        # Debug in future
+        self.helper.log_info("Text: {} -> extracts {}".format(data, list_matches))
         return list_matches
 
     def _parse_pdf(self, file_data: str) -> List[Dict]:
@@ -123,7 +136,7 @@ class ReportParser(object):
         if not os.path.isfile(file_path):
             raise IOError("File path is not a file: %s" % (file_path))
 
-        logging.info("Parsing report {} {}".format(file_path, file_type))
+        self.helper.log_info("Parsing report {} {}".format(file_path, file_type))
 
         try:
             with open(file_path, "rb") as file_data:
@@ -177,7 +190,8 @@ class ReportParser(object):
                 for entity in self.entity_list:
                     if self._is_whitelisted(entity.regex, value[RESULT_FORMAT_MATCH]):
                         match = True
-                        logging.debug(
+                        # Debug in future
+                        self.helper.log_info(
                             "Value {} is also matched by entity {}".format(
                                 value, entity.name
                             )
