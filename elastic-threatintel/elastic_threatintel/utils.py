@@ -2,7 +2,6 @@ import logging
 import re
 from datetime import timedelta
 
-
 TRACE_LOG_LEVEL = 5
 
 
