@@ -169,7 +169,7 @@ class ReportParser(object):
 
         for defang_type in defang_types:
             if defang_type[0] in value:
-                value.replace(defang_type[0], defang_type[1])
+                value = value.replace(defang_type[0], defang_type[1])
 
         return value
 
