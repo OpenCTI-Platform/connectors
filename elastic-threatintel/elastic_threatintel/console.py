@@ -117,8 +117,11 @@ def __process_config(argv={}, config={}) -> dict:
 
 def main() -> None:
     pycti_ver: str = version("pycti")
+    elastic_ver: str = version("elasticsearch")
     my_version: str = (
-        f"elastic-threatintel-connector  {__version__}\n" f"pyopencti  {pycti_ver}"
+        f"elastic-threatintel-connector  {__version__}\n"
+        f"pyopencti                      {pycti_ver}\n"
+        f"elasticsearch                  {elastic_ver}\n"
     )
     arguments: dict = docopt(__doc__, version=my_version)
     _verbosity: int = 0

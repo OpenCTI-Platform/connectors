@@ -2,8 +2,8 @@ import logging
 import re
 from datetime import timedelta
 
+
 TRACE_LOG_LEVEL = 5
-logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 
 
 def trace(self, message, *args, **kws):
@@ -12,6 +12,7 @@ def trace(self, message, *args, **kws):
         self._log(TRACE_LOG_LEVEL, message, args, **kws)
 
 
+logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 logging.Logger.trace = trace
 
 
@@ -25,7 +26,6 @@ def setup_logger(verbosity: int = 30, name: str = None) -> None:
         FORMAT = "[%(asctime)s.%(msecs)03d][%(levelname)s] %(message)s"
 
     logging.basicConfig(format=FORMAT, datefmt="%Y-%m-%dT%H:%M:%S")
-
     logger.setLevel(verbosity)
 
 
@@ -105,11 +105,16 @@ def add_branch(tree, vector, value):
 
 
 def remove_nones(d: dict):
+    """
+    Recurses through dictionary and removes keys with None values,
+    empty strings, empty lists, and empty dicts
+    """
     _clean: dict = {}
-    # Remove all the 'None' values
     for k, v in d.items():
         if isinstance(v, dict):
-            _clean[k] = remove_nones(v)
+            d2 = remove_nones(v)
+            if len(d2) > 0:
+                _clean[k] = d2
         elif isinstance(v, list):
             l2 = []
             for item in v:

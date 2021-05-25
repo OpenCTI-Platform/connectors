@@ -21,7 +21,7 @@ docker run --rm -ti --volume $(pwd)/config.yml:/app/config.yml connector-elastic
 
 ### Requirements
 
-- OpenCTI Platform >= 4.5.0
+- OpenCTI Platform >= 4.5.3
 - Elastic platform >= 7.12.0
 - Python 3.9.x (may work with lower version 3.x, but it was developed with 3.9)
 

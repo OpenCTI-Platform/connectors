@@ -1,7 +1,10 @@
 [tool.poetry]
 name = "elastic-threatintel"
-version = "0.1.0"
-description = ""
+version = "0.2.0"
+description = """
+Connector for OpenCTI that writes indicator objects to Elasticsearch in ECS format, allowing Indicator Match rules.
+Successful matches found in the Elastic Detection Engine will be reported as sightings of the indicator in OpenCTI.
+"""
 authors = ["Derek Ditch <dcode@elastic.co>"]
 
 [tool.poetry.scripts]
@@ -36,4 +39,3 @@ testpaths = ["."]
 
 [tool.flake8]
 ignore = "E,W"
-#max-complexity = "10"

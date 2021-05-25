@@ -45,7 +45,7 @@ class ElasticThreatIntelConnector:
         }
         """
         _settings = self.helper.api.query(query)["data"]["settings"]
-        self.config["elastic.platform_url"] = _settings.get("platform_url", None)
+        self.config["opencti.platform_url"] = _settings.get("platform_url", None)
 
         self._connect_elasticsearch()
 
@@ -110,6 +110,7 @@ class ElasticThreatIntelConnector:
 
     def handle_create_indicator(self, timestamp: datetime, data: dict) -> None:
         logger.debug("[CREATE] Processing indicator {" + data["id"] + "}")
+
         self.import_manager.import_threatintel_from_indicator(timestamp, data)
         return
 
@@ -123,11 +124,13 @@ class ElasticThreatIntelConnector:
 
     def handle_delete_indicator(self, timestamp, data):
         logger.debug("[DELETE] Processing indicator {" + data["id"] + "}")
+
         self.import_manager.delete_threatintel_from_indicator(data)
         return
 
     def _process_message(self, msg) -> None:
         logger.debug("_process_message")
+
         try:
             event_id = msg.id
             timestamp = datetime.fromtimestamp(

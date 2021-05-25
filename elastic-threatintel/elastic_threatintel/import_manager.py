@@ -222,9 +222,9 @@ class IntelManager(object):
                 item.get("url", None) for item in entity["externalReferences"]
             ]
 
-        if self.config.get("elastic.platform_url") is not None:
+        if self.config.get("opencti.platform_url") is not None:
             _document["event"]["url"] = urllib.parse.urljoin(
-                f"{self.config.get('elastic.platform_url')}",
+                f"{self.config.get('opencti.platform_url')}",
                 f"/dashboard/observations/indicators/{entity['id']}",
             )
 

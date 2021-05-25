@@ -41,6 +41,7 @@ class SignalsManager(Thread):
         self.es_client: Elasticsearch = elasticsearch_client
 
         self.helper: OpenCTIConnectorHelper = opencti_client
+        self.author_id = None
 
         # Default to 5 minutes
         self.interval = 300
@@ -68,12 +69,6 @@ class SignalsManager(Thread):
             )
             .to_dict()
         )
-
-        self.author_id = None
-
-        # XXX MAD HAX!
-        # self.author_id = self.config.get("connector.author_id")
-        # self.author_id = "identity--9a7de335-5d7b-55a1-bfde-cb9c98ca6ebc"
 
         logger.info("Signals manager thread initialized")
 
@@ -105,9 +100,6 @@ class SignalsManager(Thread):
             return self.author_id
 
     def run(self) -> None:
-
-        # Wait the first interval before first query
-        # self.shutdown_event.wait(self.interval)
 
         logger.info("Signals manager thread starting")
 
@@ -152,7 +144,7 @@ class SignalsManager(Thread):
                         logger.warn(
                             "Signal for threatintel document doesn't have opencti reference. Skipping"
                         )
-                        # XXX Optionally, could look up via OpenCTI API for an indicator match
+                        # XXX Optionally, could look up via OpenCTI API for an indicator that matches
                         continue
 
                     _timestamp = hit["_source"]["signal"]["original_time"]
@@ -178,7 +170,6 @@ class SignalsManager(Thread):
                 if indicator:
 
                     logger.info("Found matching indicator in OpenCTI")
-
                     stix_id = indicator["standard_id"]
 
                     entity_id = self._get_elastic_entity()
