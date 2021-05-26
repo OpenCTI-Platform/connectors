@@ -75,7 +75,9 @@ class ReportParser(object):
                         continue
 
                     list_matches.append(
-                        self._format_match(OBSERVABLE_CLASS, observable.stix_target, ind_match)
+                        self._format_match(
+                            OBSERVABLE_CLASS, observable.stix_target, ind_match
+                        )
                     )
 
         for entity in self.entity_list:
