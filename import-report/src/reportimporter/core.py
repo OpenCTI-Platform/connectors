@@ -1,7 +1,7 @@
 import os
 from typing import Dict, List, Callable
+
 import yaml
-from stix2 import Bundle, Report, Vulnerability
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
@@ -9,9 +9,6 @@ from pycti import (
     SimpleObservable,
 )
 from pydantic import BaseModel
-from reportimporter.util import MyConfigParser
-from reportimporter.models import Observable, EntityConfig, Entity
-from reportimporter.report_parser import ReportParser
 from reportimporter.constants import (
     RESULT_FORMAT_TYPE,
     RESULT_FORMAT_MATCH,
@@ -19,6 +16,10 @@ from reportimporter.constants import (
     OBSERVABLE_CLASS,
     ENTITY_CLASS,
 )
+from reportimporter.models import Observable, EntityConfig, Entity
+from reportimporter.report_parser import ReportParser
+from reportimporter.util import MyConfigParser
+from stix2 import Bundle, Report, Vulnerability
 
 
 class ReportImporter:

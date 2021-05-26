@@ -1,13 +1,10 @@
+import logging
 import os
 from typing import Dict, List, Pattern, IO
 
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
-
-import logging
-
 from pycti import OpenCTIConnectorHelper
-from reportimporter.models import Observable, Entity
 from reportimporter.constants import (
     OBSERVABLE_CLASS,
     ENTITY_CLASS,
@@ -17,6 +14,7 @@ from reportimporter.constants import (
     MIME_PDF,
     MIME_TXT,
 )
+from reportimporter.models import Observable, Entity
 
 
 class ReportParser(object):
