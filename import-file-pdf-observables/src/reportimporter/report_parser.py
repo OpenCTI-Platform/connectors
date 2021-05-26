@@ -1,6 +1,5 @@
-import io
 import os
-from typing import Dict, List, Pattern
+from typing import Dict, List, Pattern, IO
 
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
@@ -76,9 +75,7 @@ class ReportParser(object):
                         continue
 
                     list_matches.append(
-                        self._format_match(
-                            OBSERVABLE_CLASS, observable.stix_target, ind_match
-                        )
+                        self._format_match(OBSERVABLE_CLASS, observable.stix_target, ind_match)
                     )
 
         for entity in self.entity_list:
@@ -95,7 +92,7 @@ class ReportParser(object):
         self.helper.log_info("Text: {} -> extracts {}".format(data, list_matches))
         return list_matches
 
-    def _parse_pdf(self, file_data: str) -> List[Dict]:
+    def _parse_pdf(self, file_data: IO) -> List[Dict]:
         parse_info = []
         try:
             for page_layout in extract_pages(file_data):
@@ -118,7 +115,7 @@ class ReportParser(object):
 
         return parse_info
 
-    def _parse_text(self, file_data: io.BufferedReader) -> List[Dict]:
+    def _parse_text(self, file_data: IO) -> List[Dict]:
         parse_info = []
         for text in file_data.readlines():
             parse_info += self._parse(text.decode("utf-8"))
@@ -134,7 +131,7 @@ class ReportParser(object):
             )
 
         if not os.path.isfile(file_path):
-            raise IOError("File path is not a file: %s" % (file_path))
+            raise IOError("File path is not a file: {}".format(file_path))
 
         self.helper.log_info("Parsing report {} {}".format(file_path, file_type))
 
@@ -149,7 +146,8 @@ class ReportParser(object):
 
         return parsing_results
 
-    def _deduplicate(self, parsed_info: List):
+    @staticmethod
+    def _deduplicate(parsed_info: List):
         unique_list = list()
         for value in parsed_info:
             if value not in unique_list:
@@ -157,7 +155,8 @@ class ReportParser(object):
 
         return unique_list
 
-    def _defang(self, value: str) -> str:
+    @staticmethod
+    def _defang(value: str) -> str:
         defang_types = [
             ("[.]", "."),
             ("hxxx://", "http://"),
@@ -173,9 +172,10 @@ class ReportParser(object):
 
         return value
 
-    def _format_match(self, type, category, match):
+    @staticmethod
+    def _format_match(format_type, category, match):
         return {
-            RESULT_FORMAT_TYPE: type,
+            RESULT_FORMAT_TYPE: format_type,
             RESULT_FORMAT_CATEGORY: category,
             RESULT_FORMAT_MATCH: match,
         }

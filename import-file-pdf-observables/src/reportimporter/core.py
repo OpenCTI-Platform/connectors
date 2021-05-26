@@ -1,6 +1,5 @@
-# coding: utf-8
 import os
-from typing import Dict, List
+from typing import Dict, List, Callable
 import yaml
 from stix2 import Bundle, Report, Vulnerability
 from pycti import (
@@ -121,12 +120,13 @@ class ReportImporter:
                 )
                 entity_list += entity_config.convert_to_entity(entries)
             except AttributeError:
-                e = "Selected parser format is not supported: %s" % func_format
+                e = "Selected parser format is not supported: {}".format(func_format)
                 raise NotImplementedError(e)
 
         return entity_list
 
-    def _parse_config(self, config_file: str, file_class: BaseModel) -> List[BaseModel]:
+    @staticmethod
+    def _parse_config(config_file: str, file_class: Callable) -> List[BaseModel]:
         config = MyConfigParser()
         config.read(config_file)
 
