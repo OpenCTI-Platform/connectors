@@ -101,12 +101,6 @@ class EntityConfig(BaseModel):
         return filter
 
     def convert_to_entity(self, opencti_response: List) -> List[Entity]:
-        """
-        TODO
-
-        :param opencti_response:
-        :return:
-        """
         entities = []
         for item in opencti_response:
             _id = item.get("id")
