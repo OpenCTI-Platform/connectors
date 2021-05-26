@@ -68,6 +68,23 @@ class Observation(NamedTuple):
     relationship: Optional[Relationship]
 
 
+class PulseBundleBuilderConfig(NamedTuple):
+    """Pulse bundle builder configuration."""
+
+    pulse: Pulse
+    provider: Identity
+    source_name: str
+    object_markings: List[MarkingDefinition]
+    create_observables: bool
+    create_indicators: bool
+    confidence_level: int
+    report_status: int
+    report_type: str
+    guessed_malwares: Mapping[str, str]
+    guessed_cves: Set[str]
+    excluded_pulse_indicator_types: Set[str]
+
+
 class PulseBundleBuilder:
     """Pulse bundle builder."""
 
@@ -112,33 +129,29 @@ class PulseBundleBuilder:
 
     def __init__(
         self,
-        pulse: Pulse,
-        provider: Identity,
-        source_name: str,
-        object_markings: List[MarkingDefinition],
-        create_observables: bool,
-        create_indicators: bool,
-        confidence_level: int,
-        report_status: int,
-        report_type: str,
-        guessed_malwares: Mapping[str, str],
-        guessed_cves: Set[str],
-        excluded_pulse_indicator_types: Set[str],
+        config: PulseBundleBuilderConfig,
     ) -> None:
         """Initialize pulse bundle builder."""
+        pulse = config.pulse
         self.pulse = pulse
+
+        provider = config.provider
         self.pulse_author = self._determine_pulse_author(pulse, provider)
         self.provider = provider
-        self.source_name = source_name
+
+        self.source_name = config.source_name
+
+        object_markings = config.object_markings
         self.object_markings = self._determine_pulse_tlp(pulse, object_markings)
-        self.confidence_level = confidence_level
-        self.create_observables = create_observables
-        self.create_indicators = create_indicators
-        self.report_status = report_status
-        self.report_type = report_type
-        self.guessed_malwares = guessed_malwares
-        self.guessed_cves = guessed_cves
-        self.excluded_pulse_indicator_types = excluded_pulse_indicator_types
+
+        self.confidence_level = config.confidence_level
+        self.create_observables = config.create_observables
+        self.create_indicators = config.create_indicators
+        self.report_status = config.report_status
+        self.report_type = config.report_type
+        self.guessed_malwares = config.guessed_malwares
+        self.guessed_cves = config.guessed_cves
+        self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
 
     @staticmethod
     def _determine_pulse_author(pulse: Pulse, provider: Identity) -> Identity:
