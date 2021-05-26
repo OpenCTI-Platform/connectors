@@ -83,6 +83,7 @@ class PulseBundleBuilderConfig(NamedTuple):
     guessed_malwares: Mapping[str, str]
     guessed_cves: Set[str]
     excluded_pulse_indicator_types: Set[str]
+    enable_relationships: bool
 
 
 class PulseBundleBuilder:
@@ -152,6 +153,10 @@ class PulseBundleBuilder:
         self.guessed_malwares = config.guessed_malwares
         self.guessed_cves = config.guessed_cves
         self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
+        self.enable_relationships = config.enable_relationships
+
+    def _no_relationships(self) -> bool:
+        return not self.enable_relationships
 
     @staticmethod
     def _determine_pulse_author(pulse: Pulse, provider: Identity) -> Identity:
@@ -223,6 +228,9 @@ class PulseBundleBuilder:
     def _create_uses_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
+        if self._no_relationships():
+            return []
+
         return create_uses_relationships(
             self.pulse_author,
             sources,
@@ -243,6 +251,9 @@ class PulseBundleBuilder:
     def _create_targets_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
+        if self._no_relationships():
+            return []
+
         return create_targets_relationships(
             self.pulse_author,
             sources,
@@ -517,6 +528,9 @@ class PulseBundleBuilder:
     def _create_indicates_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
     ) -> List[Relationship]:
+        if self._no_relationships():
+            return []
+
         return create_indicates_relationships(
             self.pulse_author,
             sources,

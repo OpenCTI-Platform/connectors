@@ -34,6 +34,7 @@ class PulseImporterConfig(NamedTuple):
     guess_malware: bool
     guess_cve: bool
     excluded_pulse_indicator_types: Set[str]
+    enable_relationships: bool
 
 
 class PulseImporter:
@@ -65,6 +66,7 @@ class PulseImporter:
         self.guess_malware = config.guess_malware
         self.guess_cve = config.guess_cve
         self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
+        self.enable_relationships = config.enable_relationships
 
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
@@ -75,10 +77,11 @@ class PulseImporter:
         self.work_id = work_id
 
         self._info(
-            "Running pulse importer (update data: {0}, guess malware: {1}, guess cve: {2})...",  # noqa: E501
+            "Running pulse importer (update data: {0}, guess malware: {1}, guess cve: {2}, relationships: {3})...",  # noqa: E501
             self.update_existing_data,
             self.guess_malware,
             self.guess_cve,
+            self.enable_relationships,
         )
 
         self._clear_malware_guess_cache()
@@ -183,6 +186,7 @@ class PulseImporter:
             guessed_malwares=self._guess_malwares_from_tags(pulse.tags),
             guessed_cves=self._guess_cves_from_tags(pulse.tags),
             excluded_pulse_indicator_types=self.excluded_pulse_indicator_types,
+            enable_relationships=self.enable_relationships,
         )
 
         bundle_builder = PulseBundleBuilder(config)
