@@ -3,7 +3,7 @@
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Mapping, Optional, Set
+from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Set
 
 from pycti.connector.opencti_connector_helper import (  # type: ignore
     OpenCTIConnectorHelper,
@@ -12,10 +12,29 @@ from pycti.connector.opencti_connector_helper import (  # type: ignore
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore
 
-from alienvault.builder import PulseBundleBuilder
+from alienvault.builder import PulseBundleBuilder, PulseBundleBuilderConfig
 from alienvault.client import AlienVaultClient
 from alienvault.models import Pulse
 from alienvault.utils import iso_datetime_str_to_datetime
+
+
+class PulseImporterConfig(NamedTuple):
+    """Pulse importer configuration."""
+
+    helper: OpenCTIConnectorHelper
+    client: AlienVaultClient
+    author: Identity
+    tlp_marking: MarkingDefinition
+    create_observables: bool
+    create_indicators: bool
+    update_existing_data: bool
+    default_latest_timestamp: str
+    report_status: int
+    report_type: str
+    guess_malware: bool
+    guess_cve: bool
+    excluded_pulse_indicator_types: Set[str]
+    enable_relationships: bool
 
 
 class PulseImporter:
@@ -31,34 +50,23 @@ class PulseImporter:
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
-        client: AlienVaultClient,
-        author: Identity,
-        tlp_marking: MarkingDefinition,
-        create_observables: bool,
-        create_indicators: bool,
-        update_existing_data: bool,
-        default_latest_timestamp: str,
-        report_status: int,
-        report_type: str,
-        guess_malware: bool,
-        guess_cve: bool,
-        excluded_pulse_indicator_types: Set[str],
+        config: PulseImporterConfig,
     ) -> None:
         """Initialize AlienVault indicator importer."""
-        self.helper = helper
-        self.client = client
-        self.author = author
-        self.tlp_marking = tlp_marking
-        self.create_observables = create_observables
-        self.create_indicators = create_indicators
-        self.update_existing_data = update_existing_data
-        self.default_latest_timestamp = default_latest_timestamp
-        self.report_status = report_status
-        self.report_type = report_type
-        self.guess_malware = guess_malware
-        self.guess_cve = guess_cve
-        self.excluded_pulse_indicator_types = excluded_pulse_indicator_types
+        self.helper = config.helper
+        self.client = config.client
+        self.author = config.author
+        self.tlp_marking = config.tlp_marking
+        self.create_observables = config.create_observables
+        self.create_indicators = config.create_indicators
+        self.update_existing_data = config.update_existing_data
+        self.default_latest_timestamp = config.default_latest_timestamp
+        self.report_status = config.report_status
+        self.report_type = config.report_type
+        self.guess_malware = config.guess_malware
+        self.guess_cve = config.guess_cve
+        self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
+        self.enable_relationships = config.enable_relationships
 
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
@@ -69,10 +77,11 @@ class PulseImporter:
         self.work_id = work_id
 
         self._info(
-            "Running pulse importer (update data: {0}, guess malware: {1}, guess cve: {2})...",  # noqa: E501
+            "Running pulse importer (update data: {0}, guess malware: {1}, guess cve: {2}, relationships: {3})...",  # noqa: E501
             self.update_existing_data,
             self.guess_malware,
             self.guess_cve,
+            self.enable_relationships,
         )
 
         self._clear_malware_guess_cache()
@@ -164,32 +173,23 @@ class PulseImporter:
         return True
 
     def _create_pulse_bundle(self, pulse: Pulse) -> Optional[Bundle]:
-        author = self.author
-        source_name = self._source_name()
-        object_marking_refs = [self.tlp_marking]
-        create_observables = self.create_observables
-        create_indicators = self.create_indicators
-        confidence_level = self._confidence_level()
-        report_status = self.report_status
-        report_type = self.report_type
-        guessed_malwares = self._guess_malwares_from_tags(pulse.tags)
-        guessed_cves = self._guess_cves_from_tags(pulse.tags)
-        excluded_pulse_indicator_types = self.excluded_pulse_indicator_types
-
-        bundle_builder = PulseBundleBuilder(
-            pulse,
-            author,
-            source_name,
-            object_marking_refs,
-            create_observables,
-            create_indicators,
-            confidence_level,
-            report_status,
-            report_type,
-            guessed_malwares,
-            guessed_cves,
-            excluded_pulse_indicator_types,
+        config = PulseBundleBuilderConfig(
+            pulse=pulse,
+            provider=self.author,
+            source_name=self._source_name(),
+            object_markings=[self.tlp_marking],
+            create_observables=self.create_observables,
+            create_indicators=self.create_indicators,
+            confidence_level=self._confidence_level(),
+            report_status=self.report_status,
+            report_type=self.report_type,
+            guessed_malwares=self._guess_malwares_from_tags(pulse.tags),
+            guessed_cves=self._guess_cves_from_tags(pulse.tags),
+            excluded_pulse_indicator_types=self.excluded_pulse_indicator_types,
+            enable_relationships=self.enable_relationships,
         )
+
+        bundle_builder = PulseBundleBuilder(config)
 
         try:
             return bundle_builder.build()
