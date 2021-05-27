@@ -1,14 +1,14 @@
 version: '3'
 services:
-  connector-import-report:
-    image: opencti/connector-import-report:4.5.3
+  connector-import-file-pdf-observables:
+    image: opencti/connector-import-file-pdf-observables:4.5.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
-      - CONNECTOR_NAME=ImportReport
-      - CONNECTOR_SCOPE=application/pdf,text/plain
+      - CONNECTOR_NAME=ImportFilePdfObservables
+      - CONNECTOR_SCOPE=application/pdf
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_ONLY_CONTEXTUAL=true # Only extract data related to an entity (a report, a threat actor, etc.)
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
