@@ -1,3 +1,3 @@
-pycti==4.5.0
+pycti==4.5.3
 maec
 stix2-elevator

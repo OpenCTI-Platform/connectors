@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-alienvault:
-    image: opencti/connector-alienvault:4.5.0
+    image: opencti/connector-alienvault:4.5.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -23,5 +23,6 @@ services:
       - ALIENVAULT_GUESS_MALWARE=false                                        # Use tags to guess malware.
       - ALIENVAULT_GUESS_CVE=false                                            # Use tags to guess CVE.
       - ALIENVAULT_EXCLUDED_PULSE_INDICATOR_TYPES=FileHash-MD5,FileHash-SHA1  # Excluded Pulse indicator types.
+      - ALIENVAULT_ENABLE_RELATIONSHIPS=true                                  # Enable/Disable relationship creation between SDOs.
       - ALIENVAULT_INTERVAL_SEC=1800
     restart: always

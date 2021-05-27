@@ -1,3 +1,4 @@
+import re
 import os
 import yaml
 import time
@@ -24,6 +25,7 @@ from stix2 import (
     ObjectPath,
     EqualityComparisonExpression,
     ObservationExpression,
+    Note,
 )
 
 from pycti import (
@@ -68,6 +70,7 @@ OPENCTISTIX2 = {
         "type": "x509-certificate",
         "path": ["serial_number"],
     },
+    "text": {"type": "x-opencti-text", "path": ["value"]},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
@@ -102,6 +105,11 @@ class Misp:
         )
         self.misp_create_observables = get_config_variable(
             "MISP_CREATE_OBSERVABLES", ["misp", "create_observables"], config
+        )
+        self.misp_create_object_observables = get_config_variable(
+            "MISP_CREATE_OBJECT_OBSERVABLES",
+            ["misp", "create_object_observables"],
+            config,
         )
         self.misp_report_type = (
             get_config_variable("MISP_REPORT_TYPE", ["misp", "report_type"], config)
@@ -355,13 +363,14 @@ class Misp:
             ### Get indicators
             event_external_references = [event_external_reference]
             indicators = []
-            # Get attributes
+            # Get attributes of event
             for attribute in event["Event"]["Attribute"]:
                 indicator = self.process_attribute(
                     author,
                     event_elements,
                     event_markings,
                     event_tags,
+                    None,
                     [],
                     attribute,
                     event["Event"]["threat_level_id"],
@@ -377,7 +386,10 @@ class Misp:
                 if indicator is not None:
                     indicators.append(indicator)
             # Get attributes of objects
+            indicators_relationships = []
             objects_relationships = []
+            objects_observables = []
+            event_threat_level = event["Event"]["threat_level_id"]
             for object in event["Event"]["Object"]:
                 attribute_external_references = []
                 for attribute in object["Attribute"]:
@@ -389,6 +401,30 @@ class Misp:
                                 url=attribute["value"],
                             )
                         )
+                object_observable = None
+                if self.misp_create_object_observables is not None:
+                    unique_key = ""
+                    if len(object["Attribute"]) > 0:
+                        unique_key = (
+                            " ("
+                            + object["Attribute"][0]["type"]
+                            + "="
+                            + object["Attribute"][0]["value"]
+                            + ")"
+                        )
+
+                    object_observable = SimpleObservable(
+                        id="x-opencti-simple-observable--" + object["uuid"],
+                        key="X-OpenCTI-Text.value",
+                        value=object["name"] + unique_key,
+                        description=object["description"],
+                        x_opencti_score=self.threat_level_to_score(event_threat_level),
+                        labels=event_tags,
+                        created_by_ref=author,
+                        object_marking_refs=event_markings,
+                        external_references=attribute_external_references,
+                    )
+                    objects_observables.append(object_observable)
                 object_attributes = []
                 for attribute in object["Attribute"]:
                     indicator = self.process_attribute(
@@ -396,6 +432,7 @@ class Misp:
                         event_elements,
                         event_markings,
                         event_tags,
+                        object_observable,
                         attribute_external_references,
                         attribute,
                         event["Event"]["threat_level_id"],
@@ -481,10 +518,42 @@ class Misp:
                         added_entities.append(attribute_element["name"])
                 # Add attribute relationships
                 for relationship in indicator["relationships"]:
-                    object_refs.append(relationship)
-                    bundle_objects.append(relationship)
+                    indicators_relationships.append(relationship)
+
+            # We want to make sure these are added as lasts, so we're sure all the related objects are created
+            for indicator_relationship in indicators_relationships:
+                objects_relationships.append(indicator_relationship)
+            # Add MISP objects_observables
+            for object_observable in objects_observables:
+                object_refs.append(object_observable)
+                bundle_objects.append(object_observable)
+
+            # Link all objects with each other, now so we can find the correct entity type prefix in bundle_objects
+            for object in event["Event"]["Object"]:
+                for ref in object["ObjectReference"]:
+                    ref_src = ref.get("source_uuid")
+                    ref_target = ref.get("referenced_uuid")
+
+                    src_result = self.find_type_by_uuid(ref_src, bundle_objects)
+                    target_result = self.find_type_by_uuid(ref_target, bundle_objects)
+
+                    if src_result is not None and target_result is not None:
+                        objects_relationships.append(
+                            Relationship(
+                                id="relationship--" + ref["uuid"],
+                                relationship_type="related-to",
+                                created_by_ref=author,
+                                description="Original Relationship: "
+                                + ref["relationship_type"]
+                                + "  \nComment: "
+                                + ref["comment"],
+                                source_ref=src_result["entity"]["id"],
+                                target_ref=target_result["entity"]["id"],
+                            )
+                        )
             # Add object_relationships
             for object_relationship in objects_relationships:
+                object_refs.append(object_relationship)
                 bundle_objects.append(object_relationship)
 
             # Create the report if needed
@@ -508,6 +577,23 @@ class Misp:
                     },
                 )
                 bundle_objects.append(report)
+                for note in event["Event"]["EventReport"]:
+                    note = Note(
+                        id="note--" + note["uuid"],
+                        confidence=self.helper.connect_confidence_level,
+                        created=datetime.utcfromtimestamp(
+                            int(note["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        modified=datetime.utcfromtimestamp(
+                            int(note["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        created_by_ref=author,
+                        object_marking_refs=event_markings,
+                        abstract=note["name"],
+                        content=self.process_note(note["content"], bundle_objects),
+                        object_refs=[report],
+                    )
+                    bundle_objects.append(note)
             bundle = Bundle(objects=bundle_objects).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
             self.helper.send_stix2_bundle(
@@ -520,6 +606,7 @@ class Misp:
         event_elements,
         event_markings,
         event_labels,
+        object_observable,
         attribute_external_references,
         attribute,
         event_threat_level,
@@ -593,19 +680,12 @@ class Misp:
                 )
                 pattern = genuine_pattern
 
-            if event_threat_level == "1":
-                score = 90
-            elif event_threat_level == "2":
-                score = 60
-            elif event_threat_level == "3":
-                score = 30
-            else:
-                score = 50
+            score = self.threat_level_to_score(event_threat_level)
 
             indicator = None
             if self.misp_create_indicators:
                 indicator = Indicator(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("indicator"),
+                    id="indicator--" + attribute["uuid"],
                     name=name,
                     description=attribute["comment"],
                     confidence=self.helper.connect_confidence_level,
@@ -633,9 +713,7 @@ class Misp:
             observable = None
             if self.misp_create_observables and observable_type is not None:
                 observable = SimpleObservable(
-                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                        "x-opencti-simple-observable"
-                    ),
+                    id="x-opencti-simple-observable--" + attribute["uuid"],
                     key=observable_type
                     + "."
                     + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
@@ -702,6 +780,21 @@ class Misp:
                         created_by_ref=author,
                         source_ref=indicator.id,
                         target_ref=observable.id,
+                    )
+                )
+            ### Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
+            if object_observable is not None and (
+                indicator is not None or observable is not None
+            ):
+                relationships.append(
+                    Relationship(
+                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                        relationship_type="related-to",
+                        created_by_ref=author,
+                        source_ref=object_observable.id,
+                        target_ref=observable.id
+                        if (observable is not None)
+                        else indicator.id,
                     )
                 )
             # Event threats
@@ -1216,6 +1309,14 @@ class Misp:
                         else None
                     )
                 return [{"resolver": resolver_0, "type": type_0, "value": value}]
+        # If not found, return text observable as a fallback
+        return [
+            {
+                "resolver": "text",
+                "type": "X-OpenCTI-Text",
+                "value": value + " (type=" + type + ")",
+            }
+        ]
 
     def detect_ip_version(self, value, type=False):
         if len(value) > 16:
@@ -1293,6 +1394,53 @@ class Misp:
                     tag_value = tag_value.replace('="', "-")[:-1]
                 opencti_tags.append(tag_value)
         return opencti_tags
+
+    def find_type_by_uuid(self, uuid, bundle_objects):
+        # filter by uuid
+        l_find = lambda o: o.id.endswith("--" + uuid)
+        result = list(filter(l_find, bundle_objects))
+
+        if len(result) > 0:
+            uuid = result[0]["id"]
+            return {
+                "entity": result[0],
+                "type": uuid[: uuid.index("--")],
+            }
+        return None
+
+    # Markdown object, attribute & tag links should be converted from MISP links to OpenCTI links
+    def process_note(self, content, bundle_objects):
+        def reformat(match):
+            type = match.group(1)
+            uuid = match.group(2)
+            result = self.find_type_by_uuid(uuid, bundle_objects)
+            if result is None:
+                return "[{}:{}](/dashboard/search/{})".format(type, uuid, uuid)
+            if result["type"] == "indicator":
+                name = result["entity"]["pattern"]
+            else:
+                name = result["entity"]["value"]
+            return "[{}:{}](/dashboard/search/{})".format(
+                type, name, result["entity"]["id"]
+            )
+
+        r_object = r"@\[(object|attribute)\]\(([a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})\)"
+        r_tag = r'@\[tag\]\(([a-zA-Z:"\'0-9\-=]+)\)'
+
+        content = re.sub(r_object, reformat, content, flags=re.MULTILINE)
+        content = re.sub(r_tag, r"tag:\1", content, flags=re.MULTILINE)
+        return content
+
+    def threat_level_to_score(self, threat_level):
+        if threat_level == "1":
+            score = 90
+        elif threat_level == "2":
+            score = 60
+        elif threat_level == "3":
+            score = 30
+        else:
+            score = 50
+        return score
 
 
 if __name__ == "__main__":

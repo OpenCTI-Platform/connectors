@@ -12,5 +12,7 @@ connector:
 
 remote_opencti:
   url: 'http://remote.opencti.io:8080'
+  ssl_verify: true
   token: 'ChangeMe'
   events: 'create,update,delete'
+  start_timestamp: ''
