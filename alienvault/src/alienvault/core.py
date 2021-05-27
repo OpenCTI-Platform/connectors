@@ -16,7 +16,7 @@ from pycti.connector.opencti_connector_helper import (  # type: ignore
 from stix2 import Identity, MarkingDefinition  # type: ignore
 
 from alienvault.client import AlienVaultClient
-from alienvault.importer import PulseImporter
+from alienvault.importer import PulseImporter, PulseImporterConfig
 from alienvault.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
@@ -43,6 +43,7 @@ class AlienVault:
     _CONFIG_EXCLUDED_PULSE_INDICATOR_TYPES = (
         f"{_CONFIG_NAMESPACE}.excluded_pulse_indicator_types"
     )
+    _CONFIG_ENABLE_RELATIONSHIPS = f"{_CONFIG_NAMESPACE}.enable_relationships"
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
@@ -57,6 +58,7 @@ class AlienVault:
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
+    _DEFAULT_ENABLE_RELATIONSHIPS = True
 
     _CONNECTOR_RUN_INTERVAL_SEC = 60
 
@@ -118,6 +120,14 @@ class AlienVault:
             )
             excluded_pulse_indicator_types = set(excluded_pulse_indicator_types_list)
 
+        enable_relationships = self._get_configuration(
+            config, self._CONFIG_ENABLE_RELATIONSHIPS
+        )
+        if enable_relationships is None:
+            enable_relationships = self._DEFAULT_ENABLE_RELATIONSHIPS
+        else:
+            enable_relationships = bool(enable_relationships)
+
         self.interval_sec = self._get_configuration(
             config, self._CONFIG_INTERVAL_SEC, is_number=True
         )
@@ -136,21 +146,24 @@ class AlienVault:
         client = AlienVaultClient(base_url, api_key)
 
         # Create pulse importer
-        self.pulse_importer = PulseImporter(
-            self.helper,
-            client,
-            author,
-            tlp_marking,
-            create_observables,
-            create_indicators,
-            update_existing_data,
-            default_latest_pulse_timestamp,
-            report_status,
-            report_type,
-            guess_malware,
-            guess_cve,
-            excluded_pulse_indicator_types,
+        pulse_importer_config = PulseImporterConfig(
+            helper=self.helper,
+            client=client,
+            author=author,
+            tlp_marking=tlp_marking,
+            create_observables=create_observables,
+            create_indicators=create_indicators,
+            update_existing_data=update_existing_data,
+            default_latest_timestamp=default_latest_pulse_timestamp,
+            report_status=report_status,
+            report_type=report_type,
+            guess_malware=guess_malware,
+            guess_cve=guess_cve,
+            excluded_pulse_indicator_types=excluded_pulse_indicator_types,
+            enable_relationships=enable_relationships,
         )
+
+        self.pulse_importer = PulseImporter(pulse_importer_config)
 
     @staticmethod
     def _create_author() -> Identity:

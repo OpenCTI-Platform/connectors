@@ -37,4 +37,5 @@ The connector can be configured with the following variables:
 | `guess_malware`                  | `ALIENVAULT_GUESS_MALWARE`                  | `false`                      | The Pulse tags are used to guess (queries malwares in the OpenCTI) malwares related to the given Pulse. |
 | `guess_cve`                      | `ALIENVAULT_GUESS_CVE`                      | `false`                      | The Pulse tags are used to guess (checks whether tag matches (CVE-\d{4}-\d{4,7})) vulnerabilities.      |
 | `excluded_pulse_indicator_types` | `ALIENVAULT_EXCLUDED_PULSE_INDICATOR_TYPES` | `FileHash-MD5,FileHash-SHA1` | The Pulse indicator types that will be excluded from the import.                                        |
+| `enable_relationships`           | `ALIENVAULT_ENABLE_RELATIONSHIPS`           | `true`                       | If true then the relationships will be created between SDOs.                                            |
 | `interval_sec`                   | `ALIENVAULT_INTERVAL_SEC`                   | `1800`                       | The import interval in seconds.                                                                         |
