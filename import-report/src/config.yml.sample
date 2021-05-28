@@ -13,4 +13,4 @@ connector:
   log_level: 'info'
 
 import_report:
-  create_indicator: False
+  create_indicator: false
