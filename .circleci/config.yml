@@ -37,9 +37,9 @@ jobs:
           name: Build Docker image opencti/connector-import-file-stix
           command: docker build -t opencti/connector-import-file-stix:latest . && docker tag opencti/connector-import-file-stix:latest opencti/connector-import-file-stix:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/import-file-pdf-observables
-          name: Build Docker image opencti/connector-import-file-pdf-observables
-          command: docker build -t opencti/connector-import-file-pdf-observables:latest . && docker tag opencti/connector-import-file-pdf-observables:latest opencti/connector-import-file-pdf-observables:${CIRCLE_TAG}
+          working_directory: ~/opencti/import-report
+          name: Build Docker image opencti/connector-import-report
+          command: docker build -t opencti/connector-import-report:latest . && docker tag opencti/connector-import-report:latest opencti/connector-import-report:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
@@ -182,8 +182,8 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-import-file-stix:latest
             docker push opencti/connector-import-file-stix:${CIRCLE_TAG}
-            docker push opencti/connector-import-file-pdf-observables:latest
-            docker push opencti/connector-import-file-pdf-observables:${CIRCLE_TAG}
+            docker push opencti/connector-import-report:latest
+            docker push opencti/connector-import-report:${CIRCLE_TAG}
             docker push opencti/connector-export-file-stix:latest
             docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
             docker push opencti/connector-export-file-csv:latest
@@ -264,9 +264,9 @@ jobs:
           name: Build Docker image opencti/connector-import-file-stix
           command: docker build -t opencti/connector-import-file-stix:rolling .
       - run:
-          working_directory: ~/opencti/import-file-pdf-observables
-          name: Build Docker image opencti/connector-import-file-pdf-observables
-          command: docker build -t opencti/connector-import-file-pdf-observables:rolling .
+          working_directory: ~/opencti/import-report
+          name: Build Docker image opencti/connector-import-report
+          command: docker build -t opencti/connector-import-report:rolling .
       - run:
           working_directory: ~/opencti/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
@@ -408,7 +408,7 @@ jobs:
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-import-file-stix:rolling
-            docker push opencti/connector-import-file-pdf-observables:rolling
+            docker push opencti/connector-import-report:rolling
             docker push opencti/connector-export-file-stix:rolling
             docker push opencti/connector-export-file-csv:rolling
             docker push opencti/connector-hygiene:rolling
