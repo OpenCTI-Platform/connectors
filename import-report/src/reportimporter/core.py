@@ -34,8 +34,8 @@ class ReportImporter:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.create_indicator = get_config_variable(
-            "PDF_OBSERVABLES_CREATE_INDICATOR",
-            ["pdf_observables", "create_indicator"],
+            "IMPORT_REPORT_CREATE_INDICATOR",
+            ["import_report", "create_indicator"],
             config,
         )
 
