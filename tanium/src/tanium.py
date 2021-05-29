@@ -10,6 +10,7 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 from intel_cache import IntelCache
 from import_manager import IntelManager
 from tanium_api_handler import TaniumApiHandler
+from sightings import Sightings
 
 
 class TaniumConnector:
@@ -149,6 +150,8 @@ class TaniumConnector:
         return
 
     def start(self):
+        self.sightings = Sightings(self.helper, self.tanium_api_handler)
+        self.sightings.start()
         self.helper.listen_stream(self._process_message)
 
 
