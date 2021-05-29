@@ -28,7 +28,7 @@ OpenCTI data is coming from *import* connectors.
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported file types: `'application/pdf','text/plain'`                                                                                                     |
 | `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 4).                                                                             |
 | `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
-| `pdf_observables_create_indicator`   | `PDF_OBSERVABLES_CREATE_INDICATOR`  | Yes          | Create an indicator for each extracted observable                                                                                                         |
+| `import_report_create_indicator`     | `IMPORT_REPORT_CREATE_INDICATOR`    | Yes          | Create an indicator for each extracted observable                                                                                                         |
 
 After adding the connector, you should be able to extract information from a report.
 
