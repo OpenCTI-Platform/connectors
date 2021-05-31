@@ -38,7 +38,7 @@ class Cybercrimetracker:
         )
         # CYBERCRIME-TRACKER.NET Config
         self.feed_url = get_config_variable(
-            "CYBERCRIMET_RACKER_FEED_URL", ["cybercrime-tracker", "feed_url"], config
+            "CYBERCRIME_TRACKER_FEED_URL", ["cybercrime-tracker", "feed_url"], config
         )
         self.connector_tlp = get_config_variable(
             "CYBERCRIME_TRACKER_TLP", ["cybercrime-tracker", "tlp"], config
