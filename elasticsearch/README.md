@@ -6,7 +6,7 @@ This connector allows organizations to feed a **Elasticsearch** using OpenCTI kn
 
 ### Requirements
 
-- OpenCTI Platform >= 4.5.3
+- OpenCTI Platform >= 4.5.4
 
 ### Configuration
 
