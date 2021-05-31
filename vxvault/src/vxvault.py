@@ -1,6 +1,5 @@
 import os
 import yaml
-import csv
 import time
 import urllib.request
 import certifi
