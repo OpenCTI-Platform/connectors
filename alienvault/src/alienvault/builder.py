@@ -84,6 +84,7 @@ class PulseBundleBuilderConfig(NamedTuple):
     guessed_cves: Set[str]
     excluded_pulse_indicator_types: Set[str]
     enable_relationships: bool
+    enable_attack_patterns_indicates: bool
 
 
 class PulseBundleBuilder:
@@ -154,9 +155,13 @@ class PulseBundleBuilder:
         self.guessed_cves = config.guessed_cves
         self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
         self.enable_relationships = config.enable_relationships
+        self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
 
     def _no_relationships(self) -> bool:
         return not self.enable_relationships
+
+    def _no_indicates(self) -> bool:
+        return not self.enable_attack_patterns_indicates
 
     @staticmethod
     def _determine_pulse_author(pulse: Pulse, provider: Identity) -> Identity:
@@ -530,11 +535,17 @@ class PulseBundleBuilder:
     ) -> List[Relationship]:
         if self._no_relationships():
             return []
+        new_targets = targets
+        if self._no_indicates():
+            new_targets = []
+            for target in targets:
+                if target["type"] != "attack-pattern":
+                    new_targets.append(target)
 
         return create_indicates_relationships(
             self.pulse_author,
             sources,
-            targets,
+            new_targets,
             self.confidence_level,
             self.object_markings,
         )

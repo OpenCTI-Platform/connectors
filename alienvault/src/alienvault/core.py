@@ -44,6 +44,9 @@ class AlienVault:
         f"{_CONFIG_NAMESPACE}.excluded_pulse_indicator_types"
     )
     _CONFIG_ENABLE_RELATIONSHIPS = f"{_CONFIG_NAMESPACE}.enable_relationships"
+    _CONFIG_ENABLE_ATTACK_PATTERNS_INDICATES = (
+        f"{_CONFIG_NAMESPACE}.enable_attack_patterns_indicates"
+    )
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
@@ -59,6 +62,7 @@ class AlienVault:
     _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
     _DEFAULT_ENABLE_RELATIONSHIPS = True
+    _DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES = True
 
     _CONNECTOR_RUN_INTERVAL_SEC = 60
 
@@ -128,6 +132,16 @@ class AlienVault:
         else:
             enable_relationships = bool(enable_relationships)
 
+        enable_attack_patterns_indicates = self._get_configuration(
+            config, self._CONFIG_ENABLE_ATTACK_PATTERNS_INDICATES
+        )
+        if enable_attack_patterns_indicates is None:
+            enable_attack_patterns_indicates = (
+                self._DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES
+            )
+        else:
+            enable_attack_patterns_indicates = bool(enable_attack_patterns_indicates)
+
         self.interval_sec = self._get_configuration(
             config, self._CONFIG_INTERVAL_SEC, is_number=True
         )
@@ -161,6 +175,7 @@ class AlienVault:
             guess_cve=guess_cve,
             excluded_pulse_indicator_types=excluded_pulse_indicator_types,
             enable_relationships=enable_relationships,
+            enable_attack_patterns_indicates=enable_attack_patterns_indicates,
         )
 
         self.pulse_importer = PulseImporter(pulse_importer_config)
@@ -255,9 +270,6 @@ class AlienVault:
             except (KeyboardInterrupt, SystemExit):
                 self._info("Connector stop")
                 exit(0)
-            except Exception as e:  # noqa: B902
-                self._error("Internal error: {0}", str(e))
-                self._sleep()
 
     @classmethod
     def _sleep(cls, delay_sec: Optional[int] = None) -> None:

@@ -24,5 +24,6 @@ services:
       - ALIENVAULT_GUESS_CVE=false                                            # Use tags to guess CVE.
       - ALIENVAULT_EXCLUDED_PULSE_INDICATOR_TYPES=FileHash-MD5,FileHash-SHA1  # Excluded Pulse indicator types.
       - ALIENVAULT_ENABLE_RELATIONSHIPS=true                                  # Enable/Disable relationship creation between SDOs.
+      - ALIENVAULT_ENABLE_ATTACK_PATTERNS_INDICATES=true                      # Enable/Disable "indicates" relationships between indicators and attack patterns
       - ALIENVAULT_INTERVAL_SEC=1800
     restart: always

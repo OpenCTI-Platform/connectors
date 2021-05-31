@@ -24,4 +24,5 @@ alienvault:
   guess_cve: false                                              # Use tags to guess CVE
   excluded_pulse_indicator_types: 'FileHash-MD5,FileHash-SHA1'  # Excluded Pulse indicator types
   enable_relationships: true                                    # Enable/Disable relationship creation between SDOs
+  enable_attack_patterns_indicates: true                        # Enable/Disable "indicates" relationships between indicators and attack patterns
   interval_sec: 1800                                            # Seconds
