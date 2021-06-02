@@ -23,7 +23,6 @@ from stix2 import (  # type: ignore
 from stix2.properties import ListProperty, ReferenceProperty, StringProperty  # type: ignore # noqa: E501
 
 from crowdstrike.utils.constants import (
-    DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_CREATED_BY_REF,
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
@@ -37,12 +36,13 @@ def _create_random_identifier(identifier_type: str) -> str:
 def _get_default_custom_properties(
     created_by: Optional[Identity] = None,
     labels: Optional[List[str]] = None,
+    score: Optional[int] = None,
 ) -> Mapping[str, Any]:
     # XXX: Causes an unexpected property (x_opencti_score) error
     # when creating a Bundle without allow_custom=True flag.
     custom_properties = {
         X_OPENCTI_LABELS: labels,
-        X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE,
+        X_OPENCTI_SCORE: score,
     }
 
     if created_by is not None:
@@ -57,12 +57,15 @@ class ObservableProperties(NamedTuple):
     value: str
     created_by: Identity
     labels: List[str]
+    score: int
     object_markings: List[MarkingDefinition]
 
 
 def _get_custom_properties(properties: ObservableProperties) -> Mapping[str, Any]:
     return _get_default_custom_properties(
-        created_by=properties.created_by, labels=properties.labels
+        created_by=properties.created_by,
+        labels=properties.labels,
+        score=properties.score,
     )
 
 

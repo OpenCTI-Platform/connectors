@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike indicator builder module."""
 
 import logging
-from typing import List, Mapping, NamedTuple, Optional
+from typing import List, Mapping, NamedTuple, Optional, Set
 
 from crowdstrike_client.api.models import Indicator
 from crowdstrike_client.api.models.report import Report
@@ -23,6 +23,7 @@ from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 from crowdstrike.utils.report_fetcher import FetchedReport
 from crowdstrike.utils import (
+    DEFAULT_X_OPENCTI_SCORE,
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,
     OBSERVATION_FACTORY_EMAIL_ADDRESS,
@@ -62,6 +63,23 @@ class Observation(NamedTuple):
     observable: Optional[_Observable]
     indicator: Optional[STIXIndicator]
     relationship: Optional[Relationship]
+
+
+class IndicatorBundleBuilderConfig(NamedTuple):
+    """Indicator bundle builder configuration."""
+
+    indicator: Indicator
+    author: Identity
+    source_name: str
+    object_markings: List[MarkingDefinition]
+    confidence_level: int
+    create_observables: bool
+    create_indicators: bool
+    indicator_report_status: int
+    indicator_report_type: str
+    indicator_reports: List[FetchedReport]
+    indicator_low_score: int
+    indicator_low_score_labels: Set[str]
 
 
 class IndicatorBundleBuilder:
@@ -115,32 +133,22 @@ class IndicatorBundleBuilder:
         "ActionOnObjectives": "action-on-objectives",
     }
 
-    def __init__(
-        self,
-        indicator: Indicator,
-        author: Identity,
-        source_name: str,
-        object_markings: List[MarkingDefinition],
-        confidence_level: int,
-        create_observables: bool,
-        create_indicators: bool,
-        indicator_report_status: int,
-        indicator_report_type: str,
-        indicator_reports: List[FetchedReport],
-    ) -> None:
+    def __init__(self, config: IndicatorBundleBuilderConfig) -> None:
         """Initialize indicator bundle builder."""
-        self.indicator = indicator
-        self.author = author
-        self.source_name = source_name
-        self.object_markings = object_markings
-        self.confidence_level = confidence_level
-        self.create_observables = create_observables
-        self.create_indicators = create_indicators
-        self.indicator_reports = indicator_reports
-        self.indicator_report_status = indicator_report_status
-        self.indicator_report_type = indicator_report_type
+        self.indicator = config.indicator
+        self.author = config.author
+        self.source_name = config.source_name
+        self.object_markings = config.object_markings
+        self.confidence_level = config.confidence_level
+        self.create_observables = config.create_observables
+        self.create_indicators = config.create_indicators
+        self.indicator_reports = config.indicator_reports
+        self.indicator_report_status = config.indicator_report_status
+        self.indicator_report_type = config.indicator_report_type
+        self.indicator_low_score = config.indicator_low_score
+        self.indicator_low_score_labels = config.indicator_low_score_labels
 
-        self.observation_factory = self._get_observation_factory(indicator.type)
+        self.observation_factory = self._get_observation_factory(self.indicator.type)
 
         self.first_seen = self.indicator.published_date
 
@@ -267,14 +275,17 @@ class IndicatorBundleBuilder:
         if not (self.create_observables or self.create_indicators):
             return None
 
-        # Get labels.
+        # Get the labels.
         labels = self._get_labels()
 
+        # Determine the score based on the labels.
+        score = self._determine_score_by_labels(labels)
+
         # Create an observable.
-        observable = self._create_observable(labels)
+        observable = self._create_observable(labels, score)
 
         # Create an indicator.
-        indicator = self._create_indicator(kill_chain_phases, labels)
+        indicator = self._create_indicator(kill_chain_phases, labels, score)
 
         # Create a based on relationship.
         indicator_based_on_observable = None
@@ -299,26 +310,50 @@ class IndicatorBundleBuilder:
 
         return labels
 
-    def _create_observable(self, labels: List[str]) -> Optional[_Observable]:
+    def _create_observable(
+        self, labels: List[str], score: int
+    ) -> Optional[_Observable]:
         if not self.create_observables:
             return None
 
         indicator_value = self.indicator.indicator
 
         observable_properties = self._create_observable_properties(
-            indicator_value, labels
+            indicator_value, labels, score
         )
         observable = self.observation_factory.create_observable(observable_properties)
 
         return observable
 
     def _create_observable_properties(
-        self, value: str, labels: List[str]
+        self,
+        value: str,
+        labels: List[str],
+        score: int,
     ) -> ObservableProperties:
-        return ObservableProperties(value, self.author, labels, self.object_markings)
+        return ObservableProperties(
+            value=value,
+            created_by=self.author,
+            labels=labels,
+            score=score,
+            object_markings=self.object_markings,
+        )
+
+    def _determine_score_by_labels(self, labels: List[str]) -> int:
+        score = DEFAULT_X_OPENCTI_SCORE
+
+        for label in labels:
+            if label in self.indicator_low_score_labels:
+                score = self.indicator_low_score
+                break
+
+        return score
 
     def _create_indicator(
-        self, kill_chain_phases: List[KillChainPhase], labels: List[str]
+        self,
+        kill_chain_phases: List[KillChainPhase],
+        labels: List[str],
+        score: int,
     ) -> Optional[STIXIndicator]:
         if not self.create_indicators:
             return None
@@ -341,6 +376,7 @@ class IndicatorBundleBuilder:
             confidence=self.confidence_level,
             object_markings=self.object_markings,
             x_opencti_main_observable_type=indicator_pattern.main_observable_type,
+            x_opencti_score=score,
         )
 
     def _create_based_on_relationships(

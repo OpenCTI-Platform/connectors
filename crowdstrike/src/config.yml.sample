@@ -27,4 +27,6 @@ crowdstrike:
   report_guess_malware: false                                       # Use report tags to guess malware
   indicator_start_timestamp: 0                                      # BEWARE! All the indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'
+  indicator_low_score: 40
+  indicator_low_score_labels: 'MaliciousConfidence/Low'
   interval_sec: 1800                                                # Seconds
