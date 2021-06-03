@@ -144,59 +144,47 @@ def create_observable_url(properties: ObservableProperties) -> URL:
 
 
 def _create_observable_file(
+    properties: ObservableProperties,
     hashes: Optional[Mapping[str, str]] = None,
     name: Optional[str] = None,
-    created_by: Optional[Identity] = None,
-    labels: Optional[List[str]] = None,
-    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> File:
     return File(
         hashes=hashes,
         name=name,
-        object_marking_refs=object_markings,
-        custom_properties=_get_default_custom_properties(
-            created_by=created_by, labels=labels
-        ),
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_custom_properties(properties),
     )
 
 
 def create_observable_file_md5(properties: ObservableProperties) -> File:
     """Create an observable representing a MD5 hash of a file."""
     return _create_observable_file(
+        properties,
         hashes={"MD5": properties.value},
-        created_by=properties.created_by,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
     )
 
 
 def create_observable_file_sha1(properties: ObservableProperties) -> File:
     """Create an observable representing a SHA-1 hash of a file."""
     return _create_observable_file(
+        properties,
         hashes={"SHA-1": properties.value},
-        created_by=properties.created_by,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
     )
 
 
 def create_observable_file_sha256(properties: ObservableProperties) -> File:
     """Create an observable representing a SHA-256 hash of a file."""
     return _create_observable_file(
+        properties,
         hashes={"SHA-256": properties.value},
-        created_by=properties.created_by,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
     )
 
 
 def create_observable_file_name(properties: ObservableProperties) -> File:
     """Create an observable representing a file name."""
     return _create_observable_file(
+        properties,
         name=properties.value,
-        created_by=properties.created_by,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
     )
 
 
@@ -253,16 +241,15 @@ def create_observable_windows_service_name(properties: ObservableProperties) -> 
 
 
 def _create_observable_x509_certificate(
+    properties: ObservableProperties,
     serial_number: Optional[str] = None,
     subject: Optional[str] = None,
-    labels: Optional[List[str]] = None,
-    object_markings: Optional[List[MarkingDefinition]] = None,
 ) -> X509Certificate:
     return X509Certificate(
         serial_number=serial_number,
         subject=subject,
-        object_marking_refs=object_markings,
-        custom_properties=_get_default_custom_properties(labels),
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_custom_properties(properties),
     )
 
 
@@ -271,9 +258,8 @@ def create_observable_x509_certificate_serial_number(
 ) -> X509Certificate:
     """Create an observable representing a X509 certificate serial number."""
     return _create_observable_x509_certificate(
+        properties,
         serial_number=properties.value,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
     )
 
 
@@ -282,9 +268,8 @@ def create_observable_x509_certificate_subject(
 ) -> X509Certificate:
     """Create an observable representing a X509 certificate subject."""
     return _create_observable_x509_certificate(
+        properties,
         subject=properties.value,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
     )
 
 
