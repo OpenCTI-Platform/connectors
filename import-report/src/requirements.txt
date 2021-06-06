@@ -4,3 +4,5 @@ beautifulsoup4==4.9.3
 pdfminer.six==20201018
 stix==1.2.0.11
 pydantic==1.8.2
+ioc-finder==6.0.0
+dateparser==1.0.0
