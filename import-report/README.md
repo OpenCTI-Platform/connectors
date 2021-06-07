@@ -68,6 +68,8 @@ After adding the connector, you should be able to extract information from a rep
     - SHA-256
 - IPv4
   - value
+- IPv6
+  - value
 - URL
   - value
 - Domain Name

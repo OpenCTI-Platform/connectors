@@ -77,7 +77,7 @@ class ReportImporter:
             return "No information extracted from report"
 
         # Process parsing results
-        self.helper.log_info("Results: {}".format(parsed))
+        self.helper.log_debug("Results: {}".format(parsed))
         observables, entities = self._process_parsing_results(parsed)
         report = self.helper.api.report.read(id=entity_id)
         # Send results to OpenCTI
