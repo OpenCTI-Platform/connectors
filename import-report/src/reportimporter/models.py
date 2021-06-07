@@ -3,25 +3,45 @@ import os
 import re
 from typing import List, Optional, Dict, Pattern, Any
 from pydantic import BaseModel, validator
-from reportimporter.constants import COMMENT_INDICATOR, CONFIG_PATH
+from reportimporter.constants import (
+    COMMENT_INDICATOR,
+    CONFIG_PATH,
+    OBSERVABLE_DETECTION_CUSTOM_REGEX,
+    OBSERVABLE_DETECTION_OPTIONS,
+)
 
 
 class Observable(BaseModel):
     name: str
-    regex_patterns: List[str]
+    detection_option: str
+
+    # Custom Regex approach
+    regex_patterns: List[str] = []
     regex: List[Pattern] = []
+
+    # Further processing
     defang: bool = False
     stix_target: str
+
+    # Whitelisting options
     filter_config: List[str] = []
     filter_regex: List[Pattern] = []
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        self.regex = self._load_regex_pattern(self.regex_patterns)
+        if self.detection_option == OBSERVABLE_DETECTION_CUSTOM_REGEX:
+            self.regex = self._load_regex_pattern(self.regex_patterns)
+
         self.filter_regex = self._load_filter_values(self.filter_config)
 
+    @validator("detection_option")
+    def validate_detection_value(cls, value: str) -> str:
+        if value not in OBSERVABLE_DETECTION_OPTIONS:
+            raise ValueError("{} is not a valid detection_option value")
+        return value
+
     @validator("filter_config")
-    def config_file_exists(cls, filter_config: List[str]) -> List[str]:
+    def validate_files_exist(cls, filter_config: List[str]) -> List[str]:
         if len(filter_config) == 0:
             return filter_config
 
@@ -38,12 +58,13 @@ class Observable(BaseModel):
         return filter_paths
 
     @validator("regex_patterns", "filter_config", pre=True)
-    def split_lines(cls, field: str) -> Any:
+    def pre_validate_transform_str_to_list(cls, field: str) -> Any:
         if isinstance(field, str):
             return list(filter(None, (x.strip() for x in field.splitlines())))
         return field
 
-    def _load_regex_pattern(self, regex_values: List[str]) -> List[Pattern]:
+    @staticmethod
+    def _load_regex_pattern(regex_values: List[str]) -> List[Pattern]:
         regexes = []
         if len(regex_values) == 0:
             return []
@@ -89,13 +110,13 @@ class EntityConfig(BaseModel):
     regex: List[Pattern] = []
 
     @validator("fields", "exclude", pre=True)
-    def split_lines(cls, field: str) -> Any:
+    def pre_validate_transform_str_to_list(cls, field: str) -> Any:
         if isinstance(field, str):
             return list(filter(None, (x.strip() for x in field.splitlines())))
         return field
 
     @validator("filter", pre=True)
-    def convert_dict(cls, filter: str) -> Any:
+    def pre_validate_transform_str_to_json(cls, filter: str) -> Any:
         if isinstance(filter, str):
             return json.loads(filter)
         return filter
