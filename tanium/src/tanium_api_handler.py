@@ -90,9 +90,9 @@ class TaniumApiHandler:
                 "attachment; filename=" + payload["filename"]
             )
             if "name" in payload:
-                headers["name"] = payload["name"]
+                headers["name"] = payload["name"].strip()
             if "description" in payload:
-                headers["description"] = payload["description"]
+                headers["description"] = payload["description"].replace("\n", " ").strip()
         if method == "get":
             r = requests.get(
                 self.url + uri,
