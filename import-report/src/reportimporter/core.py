@@ -156,6 +156,19 @@ class ReportImporter:
                             f"found. Is the CVE Connector activated?"
                         )
                         continue
+                elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
+                    observable = self.helper.api.attack_pattern.read(
+                        filters={
+                            "key": "x_mitre_id",
+                            "values": [match[RESULT_FORMAT_MATCH]],
+                        }
+                    )
+                    if observable is None:
+                        self.helper.log_info(
+                            f"AttackPattern with MITRE ID '{match[RESULT_FORMAT_MATCH]}' could not be "
+                            f"found. Is the MITRE Connector activated?"
+                        )
+                        continue
 
                 else:
                     observable = self.helper.api.stix_cyber_observable.create(
