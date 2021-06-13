@@ -54,7 +54,7 @@ def custom_asnparse(text: str) -> List:
                 output.append(asn_value)
             except SyntaxError:
                 print(
-                    f"Error ReportParser: Could convert ASN match to int from {value}"
+                    f"Error ReportParser: Could not convert ASN match to int from {value}"
                 )
         else:
             print(f"Error ReportParser: Could not extract ASN number from {value}")
