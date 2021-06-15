@@ -49,7 +49,7 @@ class ReportParser(object):
 
     def _is_whitelisted(self, regex_list: List[Pattern], ind_match: str):
         for regex in regex_list:
-            self.helper.log_debug("Regex value: {}".format(regex))
+            self.helper.log_debug(f"Filter regex '{regex}' for value '{ind_match}'")
             result = regex.search(ind_match)
             if result:
                 self.helper.log_debug(
@@ -209,7 +209,9 @@ class ReportParser(object):
             else:
                 match = False
                 for entity in self.entity_list:
-                    if self._is_whitelisted(entity.regex, value[RESULT_FORMAT_MATCH]):
+                    if self._is_whitelisted(
+                        entity.regex, str(value[RESULT_FORMAT_MATCH])
+                    ):
                         match = True
                         self.helper.log_debug(
                             "Value {} is also matched by entity {}".format(
