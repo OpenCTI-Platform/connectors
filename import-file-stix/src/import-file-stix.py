@@ -60,15 +60,17 @@ class ImportFileStix:
 
     def _update_report(self, bundle: List, entity_id: int) -> List:
         report = self.helper.api.report.read(id=entity_id)
-        report = Report(
-            id=report["standard_id"],
-            name=report["name"],
-            description=report["description"],
-            published=self.helper.api.stix2.format_date(report["created"]),
-            report_types=report["report_types"],
-            object_refs=bundle,
-        )
-        bundle.append(report)
+        # The entity_id can be any SDO
+        if report:
+            report = Report(
+                id=report["standard_id"],
+                name=report["name"],
+                description=report["description"],
+                published=self.helper.api.stix2.format_date(report["created"]),
+                report_types=report["report_types"],
+                object_refs=bundle,
+            )
+            bundle.append(report)
         return bundle
 
 
