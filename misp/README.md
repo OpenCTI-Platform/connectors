@@ -41,6 +41,7 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_import_distribution_levels` | `MISP_IMPORT_DISTRIBUTION_LEVELS` | No           | A list of distribution levels separated with `,`, only import events with these distribution levels.|
 | `misp_import_threat_levels`       | `MISP_IMPORT_THREAT_LEVELS`       | No           | A list of threat levels separated with `,`, only import events with these threat levels.            |
 | `misp_import_only_published`      | `MISP_IMPORT_ONLY_PUBLISHED`      | No           | Import only MISP published events                                                                   |
+| `misp_import_with_attachments`    | `MISP_IMPORT_WITH_ATTACHMENTS`    | No           | Import attachment attribute content as a file if it is a PDF.                                    |
 | `misp_interval`                   | `MISP_INTERVAL`                   | Yes          | Check for new event to import every `n` minutes.                                                    |
 
 ## Behavior

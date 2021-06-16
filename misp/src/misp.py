@@ -141,6 +141,15 @@ class Misp:
         self.import_only_published = get_config_variable(
             "MISP_IMPORT_ONLY_PUBLISHED", ["misp", "import_only_published"], config
         )
+        self.import_with_attachments = bool(
+            get_config_variable(
+                "MISP_IMPORT_WITH_ATTACHMENTS",
+                ["misp", "import_with_attachments"],
+                config,
+                isNumber=False,
+                default=False,
+            )
+        )
         self.misp_interval = get_config_variable(
             "MISP_INTERVAL", ["misp", "interval"], config, True
         )
@@ -210,6 +219,10 @@ class Misp:
                 kwargs[self.misp_datetime_attribute] = int(last_run.timestamp())
             elif import_from_date is not None:
                 kwargs["date_from"] = import_from_date.strftime("%Y-%m-%d")
+
+            # With attachments
+            if self.import_with_attachments:
+                kwargs["with_attachments"] = self.import_with_attachments
 
             # Query with pagination of 100
             current_page = 1
@@ -324,6 +337,7 @@ class Misp:
             added_entities = []
             added_object_refs = []
             added_sightings = []
+            added_files = []
 
             ### Pre-process
             # Author
@@ -385,6 +399,11 @@ class Misp:
                     )
                 if indicator is not None:
                     indicators.append(indicator)
+
+                pdf_file = self._get_pdf_file(attribute)
+                if pdf_file is not None:
+                    added_files.append(pdf_file)
+
             # Get attributes of objects
             indicators_relationships = []
             objects_relationships = []
@@ -401,6 +420,11 @@ class Misp:
                                 url=attribute["value"],
                             )
                         )
+
+                    pdf_file = self._get_pdf_file(attribute)
+                    if pdf_file is not None:
+                        added_files.append(pdf_file)
+
                 object_observable = None
                 if self.misp_create_object_observables is not None:
                     unique_key = ""
@@ -580,6 +604,7 @@ class Misp:
                     external_references=event_external_references,
                     custom_properties={
                         "x_opencti_report_status": 2,
+                        "x_opencti_files": added_files,
                     },
                 )
                 bundle_objects.append(report)
@@ -605,6 +630,42 @@ class Misp:
             self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, update=self.update_existing_data
             )
+
+    def _get_pdf_file(self, attribute):
+        if not self.import_with_attachments:
+            return None
+
+        attr_type = attribute["type"]
+        attr_category = attribute["category"]
+        if not (attr_type == "attachment" and attr_category == "External analysis"):
+            return None
+
+        attr_value = attribute["value"]
+        if not attr_value.endswith((".pdf", ".PDF")):
+            return None
+
+        attr_uuid = attribute["uuid"]
+
+        attr_data = attribute.get("data")
+        if attr_data is None:
+            self.helper.log_error(
+                "No data for attribute: {0} ({1}:{2})".format(
+                    attr_uuid, attr_type, attr_category
+                )
+            )
+            return None
+
+        self.helper.log_info(
+            "Found PDF '{0}' for attribute: {1} ({2}:{3})".format(
+                attr_value, attr_uuid, attr_type, attr_category
+            )
+        )
+
+        return {
+            "name": attr_value,
+            "data": attr_data,
+            "mime_type": "application/pdf",
+        }
 
     def process_attribute(
         self,
