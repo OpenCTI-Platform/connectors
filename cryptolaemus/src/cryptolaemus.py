@@ -17,7 +17,7 @@ class Cryptolaemus:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.interval = 1  # 1 Day interval between each scraping
+        self.interval = 2  # 2 Days interval between each scraping
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.confidence_level = get_config_variable(
