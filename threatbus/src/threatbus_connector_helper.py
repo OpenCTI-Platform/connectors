@@ -179,7 +179,7 @@ class ThreatBusConnectorHelper(Thread):
                 try:
                     self._register_to_threatbus()
                 except Exception as e:
-                    self.log_error(f"Error: {e}")
+                    self.log_error(e)
             await asyncio.sleep(5)  # heartbeat every 5 secs
 
     def _register_to_threatbus(self):
