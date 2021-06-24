@@ -150,6 +150,12 @@ class Misp:
                 default=False,
             )
         )
+        self.import_to_ids_no_score = get_config_variable(
+            "MISP_IMPORT_TO_IDS_NO_SCORE",
+            ["misp", "import_to_ids_no_score"],
+            config,
+            True,
+        )
         self.misp_interval = get_config_variable(
             "MISP_INTERVAL", ["misp", "interval"], config, True
         )
@@ -747,7 +753,11 @@ class Misp:
                 )
                 pattern = genuine_pattern
 
+            to_ids = attribute["to_ids"]
+
             score = self.threat_level_to_score(event_threat_level)
+            if self.import_to_ids_no_score is not None and not to_ids:
+                score = self.import_to_ids_no_score
 
             indicator = None
             if self.misp_create_indicators:
@@ -773,7 +783,7 @@ class Misp:
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     custom_properties={
                         "x_opencti_main_observable_type": observable_type,
-                        "x_opencti_detection": attribute["to_ids"],
+                        "x_opencti_detection": to_ids,
                         "x_opencti_score": score,
                     },
                 )
