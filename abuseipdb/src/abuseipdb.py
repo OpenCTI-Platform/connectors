@@ -100,16 +100,27 @@ class AbuseIPDBConnector:
             return "IP found in AbuseIPDB WHITELIST."
         if len(data["reports"]) > 0:
             for report in data["reports"]:
-                country = self.helper.api.stix_domain_object.get_by_stix_id_or_name(
-                    name=report["reporterCountryName"]
+                country = self.helper.api.location.read(
+                    filters=[
+                        {
+                            "key": "x_opencti_aliases",
+                            "values": [report["reporterCountryCode"]],
+                        }
+                    ],
+                    getAll=True,
                 )
-                self.helper.api.stix_sighting_relationship.create(
-                    fromId=observable_id,
-                    toId=country["id"],
-                    count=1,
-                    first_seen=report["reportedAt"],
-                    last_seen=report["reportedAt"],
-                )
+                if country is None:
+                    self.helper.log_warning(
+                        f"No country found with Alpha 2 code {report['reporterCountryCode']}"
+                    )
+                else:
+                    self.helper.api.stix_sighting_relationship.create(
+                        fromId=observable_id,
+                        toId=country["id"],
+                        count=1,
+                        first_seen=report["reportedAt"],
+                        last_seen=report["reportedAt"],
+                    )
                 for category in report["categories"]:
                     category_text = self.extract_abuse_ipdb_category(category)
                     label = self.helper.api.label.create(value=category_text)
