@@ -31,5 +31,6 @@ services:
       - MISP_IMPORT_THREAT_LEVELS=1,2,3,4 # Optional only import events with the given threat levels
       - MISP_IMPORT_ONLY_PUBLISHED=False
       - MISP_IMPORT_WITH_ATTACHMENTS=False # Optional, try to import a PDF file from the attachment attribute
+      - MISP_IMPORT_TO_IDS_NO_SCORE=40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
       - MISP_INTERVAL=1 # Required, in minutes
     restart: always
