@@ -597,7 +597,8 @@ class Misp:
                         int(event["Event"]["publish_timestamp"])
                     ),
                     created=datetime.utcfromtimestamp(
-                        int(datetime.strptime(str(event["Event"]["date"]), '%Y-%m-%d').timestamp())
+                        int(datetime.strptime(
+                            str(event["Event"]["date"]), '%Y-%m-%d').timestamp())
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     modified=datetime.utcfromtimestamp(
                         int(event["Event"]["timestamp"])
