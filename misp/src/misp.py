@@ -594,15 +594,23 @@ class Misp:
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
                     published=datetime.utcfromtimestamp(
-                        int(event["Event"]["publish_timestamp"])
+                        int(
+                            datetime.strptime(
+                                str(event["Event"]["date"]), "%Y-%m-%d"
+                            ).timestamp()
+                        )
                     ),
                     created=datetime.utcfromtimestamp(
-                        int(datetime.strptime(
-                            str(event["Event"]["date"]), '%Y-%m-%d').timestamp())
+                        int(
+                            datetime.strptime(
+                                str(event["Event"]["date"]), "%Y-%m-%d"
+                            ).timestamp()
+                        )
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     modified=datetime.utcfromtimestamp(
                         int(event["Event"]["timestamp"])
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+
                     report_types=[self.misp_report_type],
                     created_by_ref=author,
                     object_marking_refs=event_markings,
