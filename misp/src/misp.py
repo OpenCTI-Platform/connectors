@@ -610,7 +610,6 @@ class Misp:
                     modified=datetime.utcfromtimestamp(
                         int(event["Event"]["timestamp"])
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-
                     report_types=[self.misp_report_type],
                     created_by_ref=author,
                     object_marking_refs=event_markings,
