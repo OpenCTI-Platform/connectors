@@ -1,8 +1,7 @@
 import logging
 import os
-from typing import Dict, List, Pattern, IO
-
 import ioc_finder
+from typing import Dict, List, Pattern, IO
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 from pycti import OpenCTIConnectorHelper
