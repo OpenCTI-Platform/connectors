@@ -594,10 +594,18 @@ class Misp:
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
                     published=datetime.utcfromtimestamp(
-                        int(event["Event"]["timestamp"])
+                        int(
+                            datetime.strptime(
+                                str(event["Event"]["date"]), "%Y-%m-%d"
+                            ).timestamp()
+                        )
                     ),
                     created=datetime.utcfromtimestamp(
-                        int(event["Event"]["timestamp"])
+                        int(
+                            datetime.strptime(
+                                str(event["Event"]["date"]), "%Y-%m-%d"
+                            ).timestamp()
+                        )
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     modified=datetime.utcfromtimestamp(
                         int(event["Event"]["timestamp"])
