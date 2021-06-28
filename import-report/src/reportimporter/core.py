@@ -177,7 +177,7 @@ class ReportImporter:
                         ),
                         simple_observable_key=match[RESULT_FORMAT_CATEGORY],
                         simple_observable_value=match[RESULT_FORMAT_MATCH],
-                        x_opencti_create_indicator=self.create_indicator,
+                        createIndicator=self.create_indicator,
                     )
 
                 observables.append(observable["id"])
