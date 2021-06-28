@@ -2,6 +2,7 @@ import logging
 import os
 from typing import Dict, List, Pattern, IO
 
+import ioc_finder
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 from pycti import OpenCTIConnectorHelper
@@ -61,9 +62,6 @@ class ReportParser(object):
     def _post_parse_observables(self, ind_match: str, observable: Observable) -> Dict:
         self.helper.log_debug("Observable match {}".format(ind_match))
 
-        if observable.defang:
-            ind_match = self._defang(ind_match)
-
         if self._is_whitelisted(observable.filter_regex, ind_match):
             return {}
 
@@ -71,6 +69,9 @@ class ReportParser(object):
 
     def _parse(self, data: str) -> List[Dict]:
         list_matches = []
+
+        # Defang text
+        data = ioc_finder.prepare_text(data)
 
         for observable in self.observable_list:
             if observable.detection_option == OBSERVABLE_DETECTION_CUSTOM_REGEX:
@@ -92,6 +93,7 @@ class ReportParser(object):
                             observable.iocfinder_function
                         )
                     )
+                    continue
 
                 matches = lookup_function(data)
 
@@ -175,23 +177,6 @@ class ReportParser(object):
                 unique_list.append(value)
 
         return unique_list
-
-    @staticmethod
-    def _defang(value: str) -> str:
-        defang_types = [
-            ("[.]", "."),
-            ("hxxx://", "http://"),
-            ("hxxp://", "http://"),
-            ("hxxxx://", "https://"),
-            ("hxxps://", "https://"),
-            ("hxxxs://", "https://"),
-        ]
-
-        for defang_type in defang_types:
-            if defang_type[0] in value:
-                value = value.replace(defang_type[0], defang_type[1])
-
-        return value
 
     @staticmethod
     def _format_match(format_type: str, category: str, match: str) -> Dict:
