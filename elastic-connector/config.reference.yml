@@ -13,6 +13,7 @@ connector:
   entity_name: 'Elastic ThreatIntel Cluster'
   entity_description: 'Elasticsearch detection engine cluster'
   live_stream_id: 'ChangeMe'
+  mode: ecs # Options are 'ecs' (indicators only) or 'stix' (raw STIX documents)
 
 # =============================== Elastic Cloud ================================
 # The cloud.id setting overwrites the `elastic.hosts`

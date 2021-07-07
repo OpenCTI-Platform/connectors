@@ -28,6 +28,64 @@ entity_field_mapping = {
 }
 
 
+class StixManager(object):
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        elasticsearch_client: Elasticsearch,
+        config: dict[str, str],
+        datadir: str,
+    ):
+        self.helper: OpenCTIConnectorHelper = helper
+        self.es_client: Elasticsearch = elasticsearch_client
+        self.config: Cut = Cut(config)
+        self.datadir: str = datadir
+
+        _alias: str = self.config.get("setup.template.name", "opencti")
+        self.idx: str = self.config.get("output.elasticsearch.index", _alias)
+
+        self._setup_elasticsearch_index()
+
+    def _setup_elasticsearch_index(self) -> None:
+        # Index pattern not yet implemented
+        pass
+
+    def import_cti_event(
+        self, timestamp: datetime, data: dict, is_update: bool = False
+    ) -> dict:
+        try:
+            # Submit to Elastic index
+            logger.debug(f"Indexing document: {data}")
+            _data = data
+            _data["@timestamp"] = timestamp
+            self.es_client.index(
+                index=self.idx,
+                id=data["x_opencti_id"],
+                body=_data,
+            )
+        except RequestError as err:
+            logger.error("Unexpected error:", err, data)
+        except Exception as err:
+            logger.error("Something else happened", err, data)
+
+        return data
+
+    def delete_cti_event(self, data: dict) -> None:
+        _result: dict = {}
+        try:
+            # TODO lookup based on ID
+            _result = self.es_client.delete(
+                index=self.idx, id=data["x_opencti_id"], doc_type="_doc"
+            )
+        except NotFoundError:
+            logger.warn(f"Document id {data['x_opencti_id']} not found in index")
+
+        if _result.get("result", None) == "deleted":
+            logger.debug(f"Document id {data['x_opencti_id']} deleted")
+
+        return
+
+
 class IntelManager(object):
     def __init__(
         self,
@@ -98,7 +156,7 @@ class IntelManager(object):
                     index=f"{_template_name}-000001", name=f"{_template_name}"
                 )
 
-    def import_threatintel_from_indicator(
+    def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
         logger.debug(f"Querying indicator: { data['x_opencti_id']}")
@@ -108,6 +166,12 @@ class IntelManager(object):
 
         _result: dict = {}
         _document: Cut = {}
+
+        if data["type"] != "indicator":
+            logger.error(
+                f"Data type unsupported: {data['type']}. Only 'indicators are currently supported."
+            )
+            return None
 
         if is_update is True:
             update_time: str = (
@@ -297,10 +361,17 @@ class IntelManager(object):
 
         return _document
 
-    def delete_threatintel_from_indicator(self, data: dict) -> None:
+    def delete_cti_event(self, data: dict) -> None:
 
         logger.debug(f"Deleting {data}")
         _result: dict = {}
+
+        if data["type"] != "indicator":
+            logger.error(
+                f"Data type unsupported: {data['type']}. Only 'indicators are currently supported."
+            )
+            return None
+
         try:
             _result = self.es_client.delete(
                 index=self.idx, id=data["x_opencti_id"], doc_type="_doc"

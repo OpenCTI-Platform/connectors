@@ -21,8 +21,8 @@ docker run --rm -ti --volume $(pwd)/config.yml:/app/config.yml connector-elastic
 
 ### Requirements
 
-- OpenCTI Platform >= 4.5.3
-- Elastic platform >= 7.12.0
+- OpenCTI Platform >= 4.5.5
+- Elastic platform >= 7.13.0
 - Python 3.9.x (may work with lower version 3.x, but it was developed with 3.9)
 
 ### Configuration
@@ -44,6 +44,7 @@ variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and
 | `connector.name`                  | `CONNECTOR_NAME`             | Yes       | The name of the Elastic instance, to identify it if you have multiple Elastic instances connectors.                                                                      |
 | `connector.scope`                 | `CONNECTOR_SCOPE`            | Yes       | Must be `elastic`, not used in this connector.                                                                                                                           |
 | `connector.type`                  | `CONNECTOR_TYPE`             | Yes       | Must be `STREAM` (this is the connector type).                                                                                                                           |
+| `connector.mode`                  | `CONNECTOR_MODE`             | No        | Must be 'ecs' for ECS-formatted threat indicator documents or 'stix' for raw OpenCTI STIX documents. Defaults to 'ecs'.                                                  |
 | `cloud.auth`                      | `CLOUD_AUTH`                 | No        | Auth info for cloud instance of Elasticsearch Cloud                                                                                                                      |
 | `cloud.id`                        | `CLOUD_ID`                   | No        | Cloud ID for cloud instance of Elasticsearch                                                                                                                             |
 | `output.elasticsearch.api_key`    | `ELASTICSEARCH_APIKEY`       | No        | The Elasticsearch ApiKey (recommended authentication, see [apikey docs](https://www.elastic.co/guide/en/elasticsearch/reference/master/security-api-create-api-key.html) |

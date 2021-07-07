@@ -10,6 +10,7 @@ defaults: dict = {
         "type": "STREAM",
         "name": "Elastic Threat Intel Connector",
         "scope": "elasticsearch",
+        "mode": "ecs",
         "confidence_level": 80,
         "log_level": "INFO",
         "entity_description": "Elastic detection engine results via connector",

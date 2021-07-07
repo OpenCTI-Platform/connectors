@@ -9,13 +9,13 @@ from elasticsearch import Elasticsearch
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
-from .import_manager import IntelManager
+from .import_manager import IntelManager, StixManager
 from .sightings_manager import SignalsManager
 
-logger = getLogger("elastic-threatintel-connector")
+logger = getLogger("elastic-connector")
 
 
-class ElasticThreatIntelConnector:
+class ElasticConnector:
     def __init__(self, config: dict = {}, datadir: str = None):
         self.shutdown_event: threading.Event = threading.Event()
 
@@ -49,9 +49,18 @@ class ElasticThreatIntelConnector:
 
         self._connect_elasticsearch()
 
-        self.import_manager = IntelManager(
-            self.helper, self.elasticsearch, self.config, datadir
-        )
+        if self.config["connector.mode"] == "ecs":
+            self.import_manager = IntelManager(
+                self.helper, self.elasticsearch, self.config, datadir
+            )
+        elif self.config["connector.mode"] == "stix":
+            self.import_manager = StixManager(
+                self.helper, self.elasticsearch, self.config, datadir
+            )
+        else:
+            logger.error(
+                f"connector.mode: {self.config['connector.mode']} is unsupported. Should be 'ecs' or 'stix'"
+            )
 
         self.sightings_manager = SignalsManager(
             config=self.config,
@@ -108,24 +117,22 @@ class ElasticThreatIntelConnector:
 
         return
 
-    def handle_create_indicator(self, timestamp: datetime, data: dict) -> None:
+    def handle_create(self, timestamp: datetime, data: dict) -> None:
         logger.debug("[CREATE] Processing indicator {" + data["id"] + "}")
 
-        self.import_manager.import_threatintel_from_indicator(timestamp, data)
+        self.import_manager.import_cti_event(timestamp, data)
         return
 
-    def handle_update_indicator(self, timestamp, data):
+    def handle_update(self, timestamp, data):
         logger.debug("[UPDATE] Processing indicator {" + data["id"] + "}")
 
-        self.import_manager.import_threatintel_from_indicator(
-            timestamp, data, is_update=True
-        )
+        self.import_manager.import_cti_event(timestamp, data, is_update=True)
         return
 
-    def handle_delete_indicator(self, timestamp, data):
+    def handle_delete(self, timestamp, data):
         logger.debug("[DELETE] Processing indicator {" + data["id"] + "}")
 
-        self.import_manager.delete_threatintel_from_indicator(data)
+        self.import_manager.delete_cti_event(data)
         return
 
     def _process_message(self, msg) -> None:
@@ -144,28 +151,19 @@ class ElasticThreatIntelConnector:
         logger.debug(f"[PROCESS] Message (id: {event_id}, date: {timestamp})")
 
         if msg.event == "create":
-            if data["type"] == "indicator":
-                return self.handle_create_indicator(timestamp, data)
-
-            return None
+            return self.handle_create(timestamp, data)
 
         if msg.event == "update":
-            logger.trace(f"[UPDATE]: {json.dumps(data)}")
-            if data["type"] == "indicator":
-                return self.handle_update_indicator(timestamp, data)
-
-            return None
+            return self.handle_update(timestamp, data)
 
         if msg.event == "delete":
-            if data["type"] == "indicator":
-                logger.trace(data)
-                return self.handle_delete_indicator(timestamp, data)
-
-        return None
+            return self.handle_delete(timestamp, data)
 
     def start(self) -> None:
         self.shutdown_event.clear()
-        self.sightings_manager.start()
+
+        if self.config["connector.mode"] == "ecs":
+            self.sightings_manager.start()
 
         # Look out, this doesn't block
         self.helper.listen_stream(self._process_message)
@@ -177,12 +175,13 @@ class ElasticThreatIntelConnector:
             self.shutdown_event.set()
 
         logger.info("Shutting down")
-        self.sightings_manager.join(timeout=3)
+
+        if self.config["connector.mode"] == "ecs":
+            self.sightings_manager.join(timeout=3)
+            if self.sightings_manager.is_alive():
+                logger.warn("Sightings manager didn't shutdown by request")
+
         self.elasticsearch.close()
-
-        if self.sightings_manager.is_alive():
-            logger.warn("Sightings manager didn't shutdown by request")
-
         logger.info(
             "Main thread complete. Waiting on background threads to complete. Press CTRL+C to quit."
         )

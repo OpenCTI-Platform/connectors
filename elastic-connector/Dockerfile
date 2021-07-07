@@ -18,21 +18,18 @@ ENV PYTHONFAULTHANDLER=1 \
 # System deps:
 RUN apt-get update && apt-get install -y build-essential unzip wget python-dev
 RUN pip install "poetry==$POETRY_VERSION"
+RUN python3 -m venv /runtime
 
-WORKDIR /src
+# Generate requirements and install dependencies.
+COPY pyproject.toml poetry.lock ./
+RUN poetry export --without-hashes -f requirements.txt | /runtime/bin/pip3 install -r /dev/stdin
 
-# Generate requirements and install *all* dependencies.
-#COPY pyproject.toml poetry.lock /src/
-COPY . /src
-RUN poetry export --dev --without-hashes --no-interaction --no-ansi -f requirements.txt -o requirements.txt
-RUN poetry install
-RUN pip install --prefix=/runtime --force-reinstall -r requirements.txt
+COPY . .
+RUN poetry build && /runtime/bin/pip install dist/*.whl
 
 FROM base as runtime
 RUN apt-get update && apt-get install -y libmagic1 && apt-get clean
-COPY --from=builder /runtime /usr/local
-COPY . /app
-COPY --from=builder /usr/local/bin/connector-elastic-threatintel /app
+COPY --from=builder /runtime /runtime
 
 # Expose and entrypoint
 COPY entrypoint.sh /

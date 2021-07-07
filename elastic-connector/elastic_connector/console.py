@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Usage:  elastic-threatintel-connector [-v | -vv | -vvv | -q | --debug] [-c FILE] [-d DIR]
-        elastic-threatintel-connector --version
+Usage:  elastic-connector [-v | -vv | -vvv | -q | --debug] [-c FILE] [-d DIR]
+        elastic-connector --version
 
 Runs OpenCTI connector using provided config.yml file. See config.yml.reference
 for full configuration options and optional environment variables.
@@ -28,7 +28,7 @@ from docopt import docopt
 
 from . import __version__
 from .conf import defaults
-from .elastic_threatintel import ElasticThreatIntelConnector
+from .elastic_connector import ElasticConnector
 from .utils import add_branch, dict_merge, remove_nones, setup_logger
 
 BANNER = f"""
@@ -56,7 +56,7 @@ BANNER = f"""
                ░░░
 """
 
-LOGGER_NAME = "elastic-threatintel-connector"
+LOGGER_NAME = "elastic-connector"
 
 
 def __process_config(argv={}, config={}) -> dict:
@@ -77,6 +77,7 @@ def __process_config(argv={}, config={}) -> dict:
         "connector": {
             "log_level": os.environ.get("CONNECTOR_LOG_LEVEL", None),
             "confidence_level": os.environ.get("CONNECTOR_CONFIDENCE_LEVEL", None),
+            "mode": os.environ.get("CONNECTOR_MODE", None),
         },
         "cloud": {
             "auth": os.environ.get("CLOUD_AUTH", None),
@@ -119,7 +120,7 @@ def main() -> None:
     pycti_ver: str = version("pycti")
     elastic_ver: str = version("elasticsearch")
     my_version: str = (
-        f"elastic-threatintel-connector  {__version__}\n"
+        f"elastic-connector  {__version__}\n"
         f"pyopencti                      {pycti_ver}\n"
         f"elasticsearch                  {elastic_ver}\n"
     )
@@ -192,7 +193,7 @@ def main() -> None:
     if config["connector"]["log_level"] == "TRACE":
         os.environ["CONNECTOR_LOG_LEVEL"] = "DEBUG"
 
-    ElasticInstance = ElasticThreatIntelConnector(config=config, datadir=datadir)
+    ElasticInstance = ElasticConnector(config=config, datadir=datadir)
     ElasticInstance.start()
 
     sys.exit(0)
