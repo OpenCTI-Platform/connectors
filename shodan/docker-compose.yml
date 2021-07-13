@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-ipinfo:
+    image: opencti/connector-shodan:4.5.5
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=Shodan
+      - CONNECTOR_SCOPE=IPv4-Addr
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - SHODAN_TOKEN=ChangeMe
+      - SHODAN_MAX_TLP=TLP:AMBER
+    restart: always

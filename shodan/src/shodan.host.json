@@ -1,0 +1,1160 @@
+{
+    "region_code": "VA",
+    "ip": 875358352,
+    "postal_code": null,
+    "country_code": "US",
+    "city": "Ashburn",
+    "dma_code": null,
+    "last_update": "2021-07-09T13:57:11.557635",
+    "latitude": 39.04372,
+    "tags": [
+        "cloud"
+    ],
+    "area_code": null,
+    "country_name": "United States",
+    "hostnames": [
+        "ec2-52-44-232-144.compute-1.amazonaws.com"
+    ],
+    "org": "Amazon Technologies Inc.",
+    "data": [
+        {
+            "hash": -2084835459,
+            "_shodan": {
+                "options": {},
+                "id": "b7a31831-8179-445c-a8bc-d0db98781aa9",
+                "module": "https",
+                "crawler": "f4bb88763d8ed3a0f3f91439c2c62b77fb9e06f3"
+            },
+            "http": {
+                "robots_hash": null,
+                "redirects": [],
+                "securitytxt": null,
+                "title": "Omnipod DASH",
+                "sitemap_hash": null,
+                "robots": null,
+                "server": null,
+                "host": "52.44.232.144",
+                "html": "<html prefix=\"og: http://ogp.me/ns#\">\n<head>\n<title>Omnipod DASH</title>\n<meta property=\"og:title\" content=\"Omnipod DASH\" />\n<meta property=\"og:description\" content=\"Tubeless, wearable insulin pump that delivers continuous insulin therapy.\" />\n<link rel=\"apple-touch-icon\" href=\"omnipodLogo.png\" />\n</head>\n</html>\n\n",
+                "location": "/",
+                "components": {},
+                "html_hash": 953881735,
+                "sitemap": null,
+                "securitytxt_hash": null
+            },
+            "os": null,
+            "tags": [
+                "cloud"
+            ],
+            "opts": {
+                "vulns": [],
+                "heartbleed": "2021/07/09 13:58:03 52.44.232.144:443 - SAFE\n"
+            },
+            "ip": 875358352,
+            "isp": "Amazon.com, Inc.",
+            "location": {
+                "city": "Ashburn",
+                "region_code": "VA",
+                "area_code": null,
+                "longitude": -77.48749,
+                "country_code3": null,
+                "country_name": "United States",
+                "postal_code": null,
+                "dma_code": null,
+                "country_code": "US",
+                "latitude": 39.04372
+            },
+            "port": 443,
+            "ssl": {
+                "chain_sha256": [
+                    "978a0cbdaf6a4144b634be0ccd132c2fe6a31603c9963bfc5bdd42216f1edfdd",
+                    "f55f9ffcb83c73453261601c7e044db15a0f034b93c05830f28635ef889cf670",
+                    "87dcd4dc74640a322cd205552506d1be64f12596258096544986b4850bc72706",
+                    "28689b30e4c306aab53b027b29e36ad6dd1dcf4b953994482ca84bdc1ecac996",
+                    "1465fa205397b876faa6f0a9958e5590e40fcc7faa4fb7c2c8677521fb5fb658"
+                ],
+                "jarm": "29d29d00029d29d00029d29d29d29d4d0c5eed338ce212ffe821a67732ded8",
+                "chain": [
+                    "-----BEGIN CERTIFICATE-----\nMIIFYDCCBEigAwIBAgIQDaH3t+u6zAljY1txmbuidjANBgkqhkiG9w0BAQsFADBG\nMQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRUwEwYDVQQLEwxTZXJ2ZXIg\nQ0EgMUIxDzANBgNVBAMTBkFtYXpvbjAeFw0yMTAyMTMwMDAwMDBaFw0yMjAzMTQy\nMzU5NTlaMBwxGjAYBgNVBAMMESoub21uaXBvZGFwcHMuY29tMIIBIjANBgkqhkiG\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnKhdRdblU1TdUOTmCvz4oazHS9WxKHaCE6k5\n5j3skI7Y1VHhXz0KXB9NU9t72WT9niRUCNLktzqG0ElbnFRJ9Lk5jQo8bdp+1mKC\nRLxzROgYzERui+TP34iwDmVTychK8zWlbeciI97oX1BwXjm+gLnTnqKgI28UD+8A\nFReHbXyPP4qavwKcCPBNliY/NwqL8yXod/P9N9MnCujbkl5dLGbVJp3ejJg1039s\nXpxaq6oQQxQ1IDM8Dp9Rz9UUicub8aYKM097LXgUIl3sBvZxowK5fyaBkjTsszvm\nkm5LSl4wG/Gn9WTp0Ck0tqYmpaqJTKTBCDaDK7DHLh7VLG6cvwIDAQABo4ICcjCC\nAm4wHwYDVR0jBBgwFoAUWaRmBlKge5WSPKOUByeWdFv5PdAwHQYDVR0OBBYEFJ48\nKvPAvEUzxKciF73Q3BrEAjsQMBwGA1UdEQQVMBOCESoub21uaXBvZGFwcHMuY29t\nMA4GA1UdDwEB/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIw\nOwYDVR0fBDQwMjAwoC6gLIYqaHR0cDovL2NybC5zY2ExYi5hbWF6b250cnVzdC5j\nb20vc2NhMWIuY3JsMBMGA1UdIAQMMAowCAYGZ4EMAQIBMHUGCCsGAQUFBwEBBGkw\nZzAtBggrBgEFBQcwAYYhaHR0cDovL29jc3Auc2NhMWIuYW1hem9udHJ1c3QuY29t\nMDYGCCsGAQUFBzAChipodHRwOi8vY3J0LnNjYTFiLmFtYXpvbnRydXN0LmNvbS9z\nY2ExYi5jcnQwDAYDVR0TAQH/BAIwADCCAQYGCisGAQQB1nkCBAIEgfcEgfQA8gB3\nACl5vvCeOTkh8FZzn2Old+W+V32cYAr4+U1dJlwlXceEAAABd5joZTQAAAQDAEgw\nRgIhAKpVYgH/6F4vv2nkvWicqUbB+3CG3GpqUprevyVMODXrAiEAnWpEJe/GUpwJ\n7C/NikXqf2AZdvq8pz5sTYcicY2RPjYAdwAiRUUHWVUkVpY/oS/x922G4CMmY63A\nS39dxoNcbuIPAgAAAXeY6GWEAAAEAwBIMEYCIQDnIZKwY/rz4Vp6fbIvlXfiPajT\nHovq0BH5Wjg4mqjzSwIhAPZzuNOIxjq6Eqelvcb3/EwFWOEE8j/FuA7w7Fip0dHS\nMA0GCSqGSIb3DQEBCwUAA4IBAQCHS1balYOXmKtcKiw13MVdj8wvxng5nlWf7DB/\ntipDTQBPeG0QbPCw2TASzcHLKLnaeriJuh/OB71HYcQ6RJ9LJ9FqQMh9DGNczpTt\nmJapQ06WDTU+8YX/MTemcaUtIKPvLHuB/FIL1SzmKhNKUC9gS/pM3dyjbW01s9j5\nYvyrUnQ+1Fysq79/HaAdnfwouobGiGdyMhajyrSTtRr+ZnRCu7GqC5OD3pzzohdH\nZXVKaqHmdga1bzhXVXEf0EZ+Cl3y5YQjwQPN7A4uQHedx87hoObr0y2vzM7Y7QuG\n0FM7zRZBpjguPwhRHsqSC7kZD0mVVu8fL9/kscgfsTb4JW2B\n-----END CERTIFICATE-----\n",
+                    "-----BEGIN CERTIFICATE-----\nMIIESTCCAzGgAwIBAgITBn+UV4WH6Kx33rJTMlu8mYtWDTANBgkqhkiG9w0BAQsF\nADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6\nb24gUm9vdCBDQSAxMB4XDTE1MTAyMjAwMDAwMFoXDTI1MTAxOTAwMDAwMFowRjEL\nMAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEVMBMGA1UECxMMU2VydmVyIENB\nIDFCMQ8wDQYDVQQDEwZBbWF6b24wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK\nAoIBAQDCThZn3c68asg3Wuw6MLAd5tES6BIoSMzoKcG5blPVo+sDORrMd4f2AbnZ\ncMzPa43j4wNxhplty6aUKk4T1qe9BOwKFjwK6zmxxLVYo7bHViXsPlJ6qOMpFge5\nblDP+18x+B26A0piiQOuPkfyDyeR4xQghfj66Yo19V+emU3nazfvpFA+ROz6WoVm\nB5x+F2pV8xeKNR7u6azDdU5YVX1TawprmxRC1+WsAYmz6qP+z8ArDITC2FMVy2fw\n0IjKOtEXc/VfmtTFch5+AfGYMGMqqvJ6LcXiAhqG5TI+Dr0RtM88k+8XUBCeQ8IG\nKuANaL7TiItKZYxK1MMuTJtV9IblAgMBAAGjggE7MIIBNzASBgNVHRMBAf8ECDAG\nAQH/AgEAMA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQUWaRmBlKge5WSPKOUByeW\ndFv5PdAwHwYDVR0jBBgwFoAUhBjMhTTsvAyUlC4IWZzHshBOCggwewYIKwYBBQUH\nAQEEbzBtMC8GCCsGAQUFBzABhiNodHRwOi8vb2NzcC5yb290Y2ExLmFtYXpvbnRy\ndXN0LmNvbTA6BggrBgEFBQcwAoYuaHR0cDovL2NydC5yb290Y2ExLmFtYXpvbnRy\ndXN0LmNvbS9yb290Y2ExLmNlcjA/BgNVHR8EODA2MDSgMqAwhi5odHRwOi8vY3Js\nLnJvb3RjYTEuYW1hem9udHJ1c3QuY29tL3Jvb3RjYTEuY3JsMBMGA1UdIAQMMAow\nCAYGZ4EMAQIBMA0GCSqGSIb3DQEBCwUAA4IBAQCFkr41u3nPo4FCHOTjY3NTOVI1\n59Gt/a6ZiqyJEi+752+a1U5y6iAwYfmXss2lJwJFqMp2PphKg5625kXg8kP2CN5t\n6G7bMQcT8C8xDZNtYTd7WPD8UZiRKAJPBXa30/AbwuZe0GaFEQ8ugcYQgSn+IGBI\n8/LwhBNTZTUVEWuCUUBVV18YtbAiPq3yXqMB48Oz+ctBWuZSkbvkNodPLamkB2g1\nupRyzQ7qDn1X8nn8N8V7YJ6y68AtkHcNSRAnpTitxBKjtKPISLMVCx7i4hncxHZS\nyLyKQXhw2W2Xs0qLeC1etA+jTGDK4UfLeC0SF7FSi8o5LL21L8IzApar2pR/\n-----END CERTIFICATE-----\n",
+                    "-----BEGIN CERTIFICATE-----\nMIIEkjCCA3qgAwIBAgITBn+USionzfP6wq4rAfkI7rnExjANBgkqhkiG9w0BAQsF\nADCBmDELMAkGA1UEBhMCVVMxEDAOBgNVBAgTB0FyaXpvbmExEzARBgNVBAcTClNj\nb3R0c2RhbGUxJTAjBgNVBAoTHFN0YXJmaWVsZCBUZWNobm9sb2dpZXMsIEluYy4x\nOzA5BgNVBAMTMlN0YXJmaWVsZCBTZXJ2aWNlcyBSb290IENlcnRpZmljYXRlIEF1\ndGhvcml0eSAtIEcyMB4XDTE1MDUyNTEyMDAwMFoXDTM3MTIzMTAxMDAwMFowOTEL\nMAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv\nb3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj\nca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM\n9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw\nIFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6\nVOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L\n93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm\njgSubJrIqg0CAwEAAaOCATEwggEtMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/\nBAQDAgGGMB0GA1UdDgQWBBSEGMyFNOy8DJSULghZnMeyEE4KCDAfBgNVHSMEGDAW\ngBScXwDfqgHXMCs4iKK4bUqc8hGRgzB4BggrBgEFBQcBAQRsMGowLgYIKwYBBQUH\nMAGGImh0dHA6Ly9vY3NwLnJvb3RnMi5hbWF6b250cnVzdC5jb20wOAYIKwYBBQUH\nMAKGLGh0dHA6Ly9jcnQucm9vdGcyLmFtYXpvbnRydXN0LmNvbS9yb290ZzIuY2Vy\nMD0GA1UdHwQ2MDQwMqAwoC6GLGh0dHA6Ly9jcmwucm9vdGcyLmFtYXpvbnRydXN0\nLmNvbS9yb290ZzIuY3JsMBEGA1UdIAQKMAgwBgYEVR0gADANBgkqhkiG9w0BAQsF\nAAOCAQEAYjdCXLwQtT6LLOkMm2xF4gcAevnFWAu5CIw+7bMlPLVvUOTNNWqnkzSW\nMiGpSESrnO09tKpzbeR/FoCJbM8oAxiDR3mjEH4wW6w7sGDgd9QIpuEdfF7Au/ma\neyKdpwAJfqxGF4PcnCZXmTA5YpaP7dreqsXMGz7KQ2hsVxa81Q4gLv7/wmpdLqBK\nbRRYh5TmOTFffHPLkIhqhBGWJ6bt2YFGpn6jcgAKUj6DiAdjd4lpFw85hdKrCEVN\n0FE6/V1dN2RMfjCyVSRCnTawXZwXgWHxyvkQAiSr6w10kY17RSlQOYiypok1JR4U\nakcjMS9cmvqtmg5iUaQqqcT5NJ0hGA==\n-----END CERTIFICATE-----\n",
+                    "-----BEGIN CERTIFICATE-----\nMIIEdTCCA12gAwIBAgIJAKcOSkw0grd/MA0GCSqGSIb3DQEBCwUAMGgxCzAJBgNV\nBAYTAlVTMSUwIwYDVQQKExxTdGFyZmllbGQgVGVjaG5vbG9naWVzLCBJbmMuMTIw\nMAYDVQQLEylTdGFyZmllbGQgQ2xhc3MgMiBDZXJ0aWZpY2F0aW9uIEF1dGhvcml0\neTAeFw0wOTA5MDIwMDAwMDBaFw0zNDA2MjgxNzM5MTZaMIGYMQswCQYDVQQGEwJV\nUzEQMA4GA1UECBMHQXJpem9uYTETMBEGA1UEBxMKU2NvdHRzZGFsZTElMCMGA1UE\nChMcU3RhcmZpZWxkIFRlY2hub2xvZ2llcywgSW5jLjE7MDkGA1UEAxMyU3RhcmZp\nZWxkIFNlcnZpY2VzIFJvb3QgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IC0gRzIwggEi\nMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDVDDrEKvlO4vW+GZdfjohTsR8/\ny8+fIBNtKTrID30892t2OGPZNmCom15cAICyL1l/9of5JUOG52kbUpqQ4XHj2C0N\nTm/2yEnZtvMaVq4rtnQU68/7JuMauh2WLmo7WJSJR1b/JaCTcFOD2oR0FMNnngRo\nOt+OQFodSk7PQ5E751bWAHDLUu57fa4657wx+UX2wmDPE1kCK4DMNEffud6QZW0C\nzyyRpqbn3oUYSXxmTqM6bam17jQuug0DuDPfR+uxa40l2ZvOgdFFRjKWcIfeAg5J\nQ4W2bHO7ZOphQazJ1FTfhy/HIrImzJ9ZVGif/L4qL8RVHHVAYBeFAlU5i38FAgMB\nAAGjgfAwge0wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0O\nBBYEFJxfAN+qAdcwKziIorhtSpzyEZGDMB8GA1UdIwQYMBaAFL9ft9HO3R+G9FtV\nrNzXEMIOqYjnME8GCCsGAQUFBwEBBEMwQTAcBggrBgEFBQcwAYYQaHR0cDovL28u\nc3MyLnVzLzAhBggrBgEFBQcwAoYVaHR0cDovL3guc3MyLnVzL3guY2VyMCYGA1Ud\nHwQfMB0wG6AZoBeGFWh0dHA6Ly9zLnNzMi51cy9yLmNybDARBgNVHSAECjAIMAYG\nBFUdIAAwDQYJKoZIhvcNAQELBQADggEBACMd44pXyn3pF3lM8R5V/cxTbj5HD9/G\nVfKyBDbtgB9TxF00KGu+x1X8Z+rLP3+QsjPNG1gQggL4+C/1E2DUBc7xgQjB3ad1\nl08YuW3e95ORCLp+QCztweq7dp4zBncdDQh/U90bZKuCJ/Fp1U1ervShw3WnWEQt\n8jxwmKy6abaVd38PMV4s/KCHOkdp8Hlf9BRUpJVeEXgSYCfOn8J3/yNTd126/+pZ\n59vPr5KW7ySaNRB6nJHGDn2Z9j8Z3/VyVOEVqQdZe4O/Ui5GjLIAZHYcSNPYeehu\nVsyuLAOQ1xk4meTKCRlb/weWsKh/NEnfVqn3sF/tM+2MR7cwA130A4w=\n-----END CERTIFICATE-----\n",
+                    "-----BEGIN CERTIFICATE-----\nMIIEDzCCAvegAwIBAgIBADANBgkqhkiG9w0BAQUFADBoMQswCQYDVQQGEwJVUzEl\nMCMGA1UEChMcU3RhcmZpZWxkIFRlY2hub2xvZ2llcywgSW5jLjEyMDAGA1UECxMp\nU3RhcmZpZWxkIENsYXNzIDIgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMDQw\nNjI5MTczOTE2WhcNMzQwNjI5MTczOTE2WjBoMQswCQYDVQQGEwJVUzElMCMGA1UE\nChMcU3RhcmZpZWxkIFRlY2hub2xvZ2llcywgSW5jLjEyMDAGA1UECxMpU3RhcmZp\nZWxkIENsYXNzIDIgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwggEgMA0GCSqGSIb3\nDQEBAQUAA4IBDQAwggEIAoIBAQC3Msj+6XGmBIWtDBFk385N78gDGIc/oav7PKaf\n8MOh2tTYbitTkPskpD6E8J7oX+zlJ0T1KKY/e97gKvDIr1MvnsoFAZMej2YcOadN\n+lq2cwQlZut3f+dZxkqZJRRU6ybH838Z1TBwj6+wRir/resp7defqgSHo9T5iaU0\nX9tDkYI22WY8sbi5gv2cOj4QyDvvBmVmepsZGD3/cVE8MC5fvj13c7JdBmzDI1aa\nK4UmkhynArPkPw2vCHmCuDY96pzTNbO8acr1zJ3o/WSNF4Azbl5KXZnJHoe0nRrA\n1W4TNSNe35tfPe/W93bC6j67eA0cQmdrBNj41tpvi/JEoAGrAgEDo4HFMIHCMB0G\nA1UdDgQWBBS/X7fRzt0fhvRbVazc1xDCDqmI5zCBkgYDVR0jBIGKMIGHgBS/X7fR\nzt0fhvRbVazc1xDCDqmI56FspGowaDELMAkGA1UEBhMCVVMxJTAjBgNVBAoTHFN0\nYXJmaWVsZCBUZWNobm9sb2dpZXMsIEluYy4xMjAwBgNVBAsTKVN0YXJmaWVsZCBD\nbGFzcyAyIENlcnRpZmljYXRpb24gQXV0aG9yaXR5ggEAMAwGA1UdEwQFMAMBAf8w\nDQYJKoZIhvcNAQEFBQADggEBAAWdP4id0ckaVaGsafPzWdqbAYcaT1epoXkJKtv3\nL7IezMdeatiDh6GX70k1PncGQVhiv45YuApnP+yz3SFmH8lU+nLMPUxA2IGvd56D\neruix/U0F47ZEUD0/CwqTRV/p2JdLiXTAAsgGh1o+Re49L2L7ShZ3U0WixeDyLJl\nxy16paq8U4Zt3VekyvggQQto8PT7dL5WXXp59fkdheMtlb71cZBDzI0fmgAKhynp\nVSJYACPq4xJDKVtHCN2MQWplBqjlIapBtJUhlbl90TSrE9atvNziPTnNvT51cKEY\nWQPJIrSPnNVeKtelttQKbfi3QBFGmh95DmK/D5fs4C8fF5Q=\n-----END CERTIFICATE-----\n"
+                ],
+                "dhparams": null,
+                "versions": [
+                    "-TLSv1",
+                    "-SSLv2",
+                    "-SSLv3",
+                    "-TLSv1.1",
+                    "TLSv1.2",
+                    "-TLSv1.3"
+                ],
+                "acceptable_cas": [],
+                "tlsext": [
+                    {
+                        "id": 65281,
+                        "name": "renegotiation_info"
+                    },
+                    {
+                        "id": 11,
+                        "name": "ec_point_formats"
+                    },
+                    {
+                        "id": 35,
+                        "name": "session_ticket"
+                    }
+                ],
+                "ja3s": "ccc514751b175866924439bdbb5bba34",
+                "cert": {
+                    "sig_alg": "sha256WithRSAEncryption",
+                    "issued": "20210213000000Z",
+                    "expires": "20220314235959Z",
+                    "expired": false,
+                    "version": 2,
+                    "extensions": [
+                        {
+                            "data": "0\\x16\\x80\\x14Y\\xa4f\\x06R\\xa0{\\x95\\x92<\\xa3\\x94\\x07\\'\\x96t[\\xf9=\\xd0",
+                            "name": "authorityKeyIdentifier"
+                        },
+                        {
+                            "data": "\\x04\\x14\\x9e<*\\xf3\\xc0\\xbcE3\\xc4\\xa7\"\\x17\\xbd\\xd0\\xdc\\x1a\\xc4\\x02;\\x10",
+                            "name": "subjectKeyIdentifier"
+                        },
+                        {
+                            "data": "0\\x13\\x82\\x11*.omnipodapps.com",
+                            "name": "subjectAltName"
+                        },
+                        {
+                            "critical": true,
+                            "data": "\\x03\\x02\\x05\\xa0",
+                            "name": "keyUsage"
+                        },
+                        {
+                            "data": "0\\x14\\x06\\x08+\\x06\\x01\\x05\\x05\\x07\\x03\\x01\\x06\\x08+\\x06\\x01\\x05\\x05\\x07\\x03\\x02",
+                            "name": "extendedKeyUsage"
+                        },
+                        {
+                            "data": "0200\\xa0.\\xa0,\\x86*http://crl.sca1b.amazontrust.com/sca1b.crl",
+                            "name": "crlDistributionPoints"
+                        },
+                        {
+                            "data": "0\\n0\\x08\\x06\\x06g\\x81\\x0c\\x01\\x02\\x01",
+                            "name": "certificatePolicies"
+                        },
+                        {
+                            "data": "0g0-\\x06\\x08+\\x06\\x01\\x05\\x05\\x070\\x01\\x86!http://ocsp.sca1b.amazontrust.com06\\x06\\x08+\\x06\\x01\\x05\\x05\\x070\\x02\\x86*http://crt.sca1b.amazontrust.com/sca1b.crt",
+                            "name": "authorityInfoAccess"
+                        },
+                        {
+                            "critical": true,
+                            "data": "0\\x00",
+                            "name": "basicConstraints"
+                        },
+                        {
+                            "data": "\\x04\\x81\\xf4\\x00\\xf2\\x00w\\x00)y\\xbe\\xf0\\x9e99!\\xf0Vs\\x9fc\\xa5w\\xe5\\xbeW}\\x9c`\\n\\xf8\\xf9M]&\\\\%]\\xc7\\x84\\x00\\x00\\x01w\\x98\\xe8e4\\x00\\x00\\x04\\x03\\x00H0F\\x02!\\x00\\xaaUb\\x01\\xff\\xe8^/\\xbfi\\xe4\\xbdh\\x9c\\xa9F\\xc1\\xfbp\\x86\\xdcjjR\\x9a\\xde\\xbf%L85\\xeb\\x02!\\x00\\x9djD%\\xef\\xc6R\\x9c\\t\\xec/\\xcd\\x8aE\\xea\\x7f`\\x19v\\xfa\\xbc\\xa7>lM\\x87\"q\\x8d\\x91>6\\x00w\\x00\"EE\\x07YU$V\\x96?\\xa1/\\xf1\\xf7m\\x86\\xe0#&c\\xad\\xc0K\\x7f]\\xc6\\x83\\\\n\\xe2\\x0f\\x02\\x00\\x00\\x01w\\x98\\xe8e\\x84\\x00\\x00\\x04\\x03\\x00H0F\\x02!\\x00\\xe7!\\x92\\xb0c\\xfa\\xf3\\xe1Zz}\\xb2/\\x95w\\xe2=\\xa8\\xd3\\x1e\\x8b\\xea\\xd0\\x11\\xf9Z88\\x9a\\xa8\\xf3K\\x02!\\x00\\xf6s\\xb8\\xd3\\x88\\xc6:\\xba\\x12\\xa7\\xa5\\xbd\\xc6\\xf7\\xfcL\\x05X\\xe1\\x04\\xf2?\\xc5\\xb8\\x0e\\xf0\\xecX\\xa9\\xd1\\xd1\\xd2",
+                            "name": "ct_precert_scts"
+                        }
+                    ],
+                    "fingerprint": {
+                        "sha256": "978a0cbdaf6a4144b634be0ccd132c2fe6a31603c9963bfc5bdd42216f1edfdd",
+                        "sha1": "b39c14ba8d6639ae033c5e24915bfed8b769b4a5"
+                    },
+                    "serial": 18120948066308656715320678906005791350,
+                    "subject": {
+                        "CN": "*.omnipodapps.com"
+                    },
+                    "pubkey": {
+                        "type": "rsa",
+                        "bits": 2048
+                    },
+                    "issuer": {
+                        "C": "US",
+                        "OU": "Server CA 1B",
+                        "O": "Amazon",
+                        "CN": "Amazon"
+                    }
+                },
+                "cipher": {
+                    "version": "TLSv1/SSLv3",
+                    "bits": 128,
+                    "name": "ECDHE-RSA-AES128-GCM-SHA256"
+                },
+                "trust": {
+                    "revoked": false,
+                    "browser": {
+                        "mozilla": true,
+                        "apple": true,
+                        "microsoft": true
+                    }
+                },
+                "alpn": [
+                    "h2",
+                    "http/1.1"
+                ],
+                "ocsp": {}
+            },
+            "hostnames": [
+                "ec2-52-44-232-144.compute-1.amazonaws.com"
+            ],
+            "transport": "tcp",
+            "timestamp": "2021-07-09T13:57:11.557635",
+            "domains": [
+                "amazonaws.com"
+            ],
+            "org": "Amazon Technologies Inc.",
+            "_id": "f0017f5b-e92e-4af9-bfbc-ca4034dc1f78",
+            "data": "HTTP/1.1 200 OK\r\nDate: Fri, 09 Jul 2021 13:57:11 GMT\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: 316\r\nConnection: keep-alive\r\nX-Powered-By: Express\r\nAccept-Ranges: bytes\r\nCache-Control: public, max-age=0\r\nLast-Modified: Wed, 05 Dec 2018 19:31:04 GMT\r\nETag: W/\"13c-1677fda2cc0\"\r\n\r\n",
+            "asn": "AS14618",
+            "cloud": {
+                "region": "us-east-1",
+                "service": "AMAZON",
+                "provider": "Amazon"
+            },
+            "ip_str": "52.44.232.144"
+        },
+        {
+            "hash": -570792777,
+            "_shodan": {
+                "id": "354ffa57-3029-4c80-a2a0-904737010181",
+                "options": {},
+                "ptr": true,
+                "module": "https",
+                "crawler": "78039f81a0245caa8ab71c98182f0eff0ce52aab"
+            },
+            "http": {
+                "robots_hash": null,
+                "redirects": [],
+                "securitytxt": null,
+                "title": "502 Bad Gateway",
+                "sitemap_hash": null,
+                "robots": null,
+                "server": "awselb/2.0",
+                "host": "52.44.232.144",
+                "html": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n</body>\r\n</html>\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n",
+                "location": "/",
+                "components": {},
+                "html_hash": 1759065767,
+                "sitemap": null,
+                "securitytxt_hash": null
+            },
+            "os": null,
+            "tags": [
+                "cloud"
+            ],
+            "opts": {
+                "vulns": [],
+                "heartbleed": "2021/06/23 20:49:26 52.44.232.144:8443 - SAFE\n"
+            },
+            "ip": 875358352,
+            "isp": "Amazon.com, Inc.",
+            "location": {
+                "city": "Ashburn",
+                "region_code": "VA",
+                "area_code": null,
+                "longitude": -77.48749,
+                "country_code3": null,
+                "country_name": "United States",
+                "postal_code": null,
+                "dma_code": null,
+                "country_code": "US",
+                "latitude": 39.04372
+            },
+            "port": 8443,
+            "ssl": {
+                "chain_sha256": [
+                    "978a0cbdaf6a4144b634be0ccd132c2fe6a31603c9963bfc5bdd42216f1edfdd",
+                    "f55f9ffcb83c73453261601c7e044db15a0f034b93c05830f28635ef889cf670",
+                    "87dcd4dc74640a322cd205552506d1be64f12596258096544986b4850bc72706",
+                    "28689b30e4c306aab53b027b29e36ad6dd1dcf4b953994482ca84bdc1ecac996",
+                    "1465fa205397b876faa6f0a9958e5590e40fcc7faa4fb7c2c8677521fb5fb658"
+                ],
+                "jarm": "29d29d00029d29d00029d29d29d29d4d0c5eed338ce212ffe821a67732ded8",
+                "chain": [
+                    "-----BEGIN CERTIFICATE-----\nMIIFYDCCBEigAwIBAgIQDaH3t+u6zAljY1txmbuidjANBgkqhkiG9w0BAQsFADBG\nMQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRUwEwYDVQQLEwxTZXJ2ZXIg\nQ0EgMUIxDzANBgNVBAMTBkFtYXpvbjAeFw0yMTAyMTMwMDAwMDBaFw0yMjAzMTQy\nMzU5NTlaMBwxGjAYBgNVBAMMESoub21uaXBvZGFwcHMuY29tMIIBIjANBgkqhkiG\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnKhdRdblU1TdUOTmCvz4oazHS9WxKHaCE6k5\n5j3skI7Y1VHhXz0KXB9NU9t72WT9niRUCNLktzqG0ElbnFRJ9Lk5jQo8bdp+1mKC\nRLxzROgYzERui+TP34iwDmVTychK8zWlbeciI97oX1BwXjm+gLnTnqKgI28UD+8A\nFReHbXyPP4qavwKcCPBNliY/NwqL8yXod/P9N9MnCujbkl5dLGbVJp3ejJg1039s\nXpxaq6oQQxQ1IDM8Dp9Rz9UUicub8aYKM097LXgUIl3sBvZxowK5fyaBkjTsszvm\nkm5LSl4wG/Gn9WTp0Ck0tqYmpaqJTKTBCDaDK7DHLh7VLG6cvwIDAQABo4ICcjCC\nAm4wHwYDVR0jBBgwFoAUWaRmBlKge5WSPKOUByeWdFv5PdAwHQYDVR0OBBYEFJ48\nKvPAvEUzxKciF73Q3BrEAjsQMBwGA1UdEQQVMBOCESoub21uaXBvZGFwcHMuY29t\nMA4GA1UdDwEB/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIw\nOwYDVR0fBDQwMjAwoC6gLIYqaHR0cDovL2NybC5zY2ExYi5hbWF6b250cnVzdC5j\nb20vc2NhMWIuY3JsMBMGA1UdIAQMMAowCAYGZ4EMAQIBMHUGCCsGAQUFBwEBBGkw\nZzAtBggrBgEFBQcwAYYhaHR0cDovL29jc3Auc2NhMWIuYW1hem9udHJ1c3QuY29t\nMDYGCCsGAQUFBzAChipodHRwOi8vY3J0LnNjYTFiLmFtYXpvbnRydXN0LmNvbS9z\nY2ExYi5jcnQwDAYDVR0TAQH/BAIwADCCAQYGCisGAQQB1nkCBAIEgfcEgfQA8gB3\nACl5vvCeOTkh8FZzn2Old+W+V32cYAr4+U1dJlwlXceEAAABd5joZTQAAAQDAEgw\nRgIhAKpVYgH/6F4vv2nkvWicqUbB+3CG3GpqUprevyVMODXrAiEAnWpEJe/GUpwJ\n7C/NikXqf2AZdvq8pz5sTYcicY2RPjYAdwAiRUUHWVUkVpY/oS/x922G4CMmY63A\nS39dxoNcbuIPAgAAAXeY6GWEAAAEAwBIMEYCIQDnIZKwY/rz4Vp6fbIvlXfiPajT\nHovq0BH5Wjg4mqjzSwIhAPZzuNOIxjq6Eqelvcb3/EwFWOEE8j/FuA7w7Fip0dHS\nMA0GCSqGSIb3DQEBCwUAA4IBAQCHS1balYOXmKtcKiw13MVdj8wvxng5nlWf7DB/\ntipDTQBPeG0QbPCw2TASzcHLKLnaeriJuh/OB71HYcQ6RJ9LJ9FqQMh9DGNczpTt\nmJapQ06WDTU+8YX/MTemcaUtIKPvLHuB/FIL1SzmKhNKUC9gS/pM3dyjbW01s9j5\nYvyrUnQ+1Fysq79/HaAdnfwouobGiGdyMhajyrSTtRr+ZnRCu7GqC5OD3pzzohdH\nZXVKaqHmdga1bzhXVXEf0EZ+Cl3y5YQjwQPN7A4uQHedx87hoObr0y2vzM7Y7QuG\n0FM7zRZBpjguPwhRHsqSC7kZD0mVVu8fL9/kscgfsTb4JW2B\n-----END CERTIFICATE-----\n",
+                    "-----BEGIN CERTIFICATE-----\nMIIESTCCAzGgAwIBAgITBn+UV4WH6Kx33rJTMlu8mYtWDTANBgkqhkiG9w0BAQsF\nADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6\nb24gUm9vdCBDQSAxMB4XDTE1MTAyMjAwMDAwMFoXDTI1MTAxOTAwMDAwMFowRjEL\nMAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEVMBMGA1UECxMMU2VydmVyIENB\nIDFCMQ8wDQYDVQQDEwZBbWF6b24wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK\nAoIBAQDCThZn3c68asg3Wuw6MLAd5tES6BIoSMzoKcG5blPVo+sDORrMd4f2AbnZ\ncMzPa43j4wNxhplty6aUKk4T1qe9BOwKFjwK6zmxxLVYo7bHViXsPlJ6qOMpFge5\nblDP+18x+B26A0piiQOuPkfyDyeR4xQghfj66Yo19V+emU3nazfvpFA+ROz6WoVm\nB5x+F2pV8xeKNR7u6azDdU5YVX1TawprmxRC1+WsAYmz6qP+z8ArDITC2FMVy2fw\n0IjKOtEXc/VfmtTFch5+AfGYMGMqqvJ6LcXiAhqG5TI+Dr0RtM88k+8XUBCeQ8IG\nKuANaL7TiItKZYxK1MMuTJtV9IblAgMBAAGjggE7MIIBNzASBgNVHRMBAf8ECDAG\nAQH/AgEAMA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQUWaRmBlKge5WSPKOUByeW\ndFv5PdAwHwYDVR0jBBgwFoAUhBjMhTTsvAyUlC4IWZzHshBOCggwewYIKwYBBQUH\nAQEEbzBtMC8GCCsGAQUFBzABhiNodHRwOi8vb2NzcC5yb290Y2ExLmFtYXpvbnRy\ndXN0LmNvbTA6BggrBgEFBQcwAoYuaHR0cDovL2NydC5yb290Y2ExLmFtYXpvbnRy\ndXN0LmNvbS9yb290Y2ExLmNlcjA/BgNVHR8EODA2MDSgMqAwhi5odHRwOi8vY3Js\nLnJvb3RjYTEuYW1hem9udHJ1c3QuY29tL3Jvb3RjYTEuY3JsMBMGA1UdIAQMMAow\nCAYGZ4EMAQIBMA0GCSqGSIb3DQEBCwUAA4IBAQCFkr41u3nPo4FCHOTjY3NTOVI1\n59Gt/a6ZiqyJEi+752+a1U5y6iAwYfmXss2lJwJFqMp2PphKg5625kXg8kP2CN5t\n6G7bMQcT8C8xDZNtYTd7WPD8UZiRKAJPBXa30/AbwuZe0GaFEQ8ugcYQgSn+IGBI\n8/LwhBNTZTUVEWuCUUBVV18YtbAiPq3yXqMB48Oz+ctBWuZSkbvkNodPLamkB2g1\nupRyzQ7qDn1X8nn8N8V7YJ6y68AtkHcNSRAnpTitxBKjtKPISLMVCx7i4hncxHZS\nyLyKQXhw2W2Xs0qLeC1etA+jTGDK4UfLeC0SF7FSi8o5LL21L8IzApar2pR/\n-----END CERTIFICATE-----\n",
+                    "-----BEGIN CERTIFICATE-----\nMIIEkjCCA3qgAwIBAgITBn+USionzfP6wq4rAfkI7rnExjANBgkqhkiG9w0BAQsF\nADCBmDELMAkGA1UEBhMCVVMxEDAOBgNVBAgTB0FyaXpvbmExEzARBgNVBAcTClNj\nb3R0c2RhbGUxJTAjBgNVBAoTHFN0YXJmaWVsZCBUZWNobm9sb2dpZXMsIEluYy4x\nOzA5BgNVBAMTMlN0YXJmaWVsZCBTZXJ2aWNlcyBSb290IENlcnRpZmljYXRlIEF1\ndGhvcml0eSAtIEcyMB4XDTE1MDUyNTEyMDAwMFoXDTM3MTIzMTAxMDAwMFowOTEL\nMAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv\nb3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj\nca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM\n9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw\nIFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6\nVOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L\n93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm\njgSubJrIqg0CAwEAAaOCATEwggEtMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/\nBAQDAgGGMB0GA1UdDgQWBBSEGMyFNOy8DJSULghZnMeyEE4KCDAfBgNVHSMEGDAW\ngBScXwDfqgHXMCs4iKK4bUqc8hGRgzB4BggrBgEFBQcBAQRsMGowLgYIKwYBBQUH\nMAGGImh0dHA6Ly9vY3NwLnJvb3RnMi5hbWF6b250cnVzdC5jb20wOAYIKwYBBQUH\nMAKGLGh0dHA6Ly9jcnQucm9vdGcyLmFtYXpvbnRydXN0LmNvbS9yb290ZzIuY2Vy\nMD0GA1UdHwQ2MDQwMqAwoC6GLGh0dHA6Ly9jcmwucm9vdGcyLmFtYXpvbnRydXN0\nLmNvbS9yb290ZzIuY3JsMBEGA1UdIAQKMAgwBgYEVR0gADANBgkqhkiG9w0BAQsF\nAAOCAQEAYjdCXLwQtT6LLOkMm2xF4gcAevnFWAu5CIw+7bMlPLVvUOTNNWqnkzSW\nMiGpSESrnO09tKpzbeR/FoCJbM8oAxiDR3mjEH4wW6w7sGDgd9QIpuEdfF7Au/ma\neyKdpwAJfqxGF4PcnCZXmTA5YpaP7dreqsXMGz7KQ2hsVxa81Q4gLv7/wmpdLqBK\nbRRYh5TmOTFffHPLkIhqhBGWJ6bt2YFGpn6jcgAKUj6DiAdjd4lpFw85hdKrCEVN\n0FE6/V1dN2RMfjCyVSRCnTawXZwXgWHxyvkQAiSr6w10kY17RSlQOYiypok1JR4U\nakcjMS9cmvqtmg5iUaQqqcT5NJ0hGA==\n-----END CERTIFICATE-----\n",
+                    "-----BEGIN CERTIFICATE-----\nMIIEdTCCA12gAwIBAgIJAKcOSkw0grd/MA0GCSqGSIb3DQEBCwUAMGgxCzAJBgNV\nBAYTAlVTMSUwIwYDVQQKExxTdGFyZmllbGQgVGVjaG5vbG9naWVzLCBJbmMuMTIw\nMAYDVQQLEylTdGFyZmllbGQgQ2xhc3MgMiBDZXJ0aWZpY2F0aW9uIEF1dGhvcml0\neTAeFw0wOTA5MDIwMDAwMDBaFw0zNDA2MjgxNzM5MTZaMIGYMQswCQYDVQQGEwJV\nUzEQMA4GA1UECBMHQXJpem9uYTETMBEGA1UEBxMKU2NvdHRzZGFsZTElMCMGA1UE\nChMcU3RhcmZpZWxkIFRlY2hub2xvZ2llcywgSW5jLjE7MDkGA1UEAxMyU3RhcmZp\nZWxkIFNlcnZpY2VzIFJvb3QgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IC0gRzIwggEi\nMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDVDDrEKvlO4vW+GZdfjohTsR8/\ny8+fIBNtKTrID30892t2OGPZNmCom15cAICyL1l/9of5JUOG52kbUpqQ4XHj2C0N\nTm/2yEnZtvMaVq4rtnQU68/7JuMauh2WLmo7WJSJR1b/JaCTcFOD2oR0FMNnngRo\nOt+OQFodSk7PQ5E751bWAHDLUu57fa4657wx+UX2wmDPE1kCK4DMNEffud6QZW0C\nzyyRpqbn3oUYSXxmTqM6bam17jQuug0DuDPfR+uxa40l2ZvOgdFFRjKWcIfeAg5J\nQ4W2bHO7ZOphQazJ1FTfhy/HIrImzJ9ZVGif/L4qL8RVHHVAYBeFAlU5i38FAgMB\nAAGjgfAwge0wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0O\nBBYEFJxfAN+qAdcwKziIorhtSpzyEZGDMB8GA1UdIwQYMBaAFL9ft9HO3R+G9FtV\nrNzXEMIOqYjnME8GCCsGAQUFBwEBBEMwQTAcBggrBgEFBQcwAYYQaHR0cDovL28u\nc3MyLnVzLzAhBggrBgEFBQcwAoYVaHR0cDovL3guc3MyLnVzL3guY2VyMCYGA1Ud\nHwQfMB0wG6AZoBeGFWh0dHA6Ly9zLnNzMi51cy9yLmNybDARBgNVHSAECjAIMAYG\nBFUdIAAwDQYJKoZIhvcNAQELBQADggEBACMd44pXyn3pF3lM8R5V/cxTbj5HD9/G\nVfKyBDbtgB9TxF00KGu+x1X8Z+rLP3+QsjPNG1gQggL4+C/1E2DUBc7xgQjB3ad1\nl08YuW3e95ORCLp+QCztweq7dp4zBncdDQh/U90bZKuCJ/Fp1U1ervShw3WnWEQt\n8jxwmKy6abaVd38PMV4s/KCHOkdp8Hlf9BRUpJVeEXgSYCfOn8J3/yNTd126/+pZ\n59vPr5KW7ySaNRB6nJHGDn2Z9j8Z3/VyVOEVqQdZe4O/Ui5GjLIAZHYcSNPYeehu\nVsyuLAOQ1xk4meTKCRlb/weWsKh/NEnfVqn3sF/tM+2MR7cwA130A4w=\n-----END CERTIFICATE-----\n",
+                    "-----BEGIN CERTIFICATE-----\nMIIEDzCCAvegAwIBAgIBADANBgkqhkiG9w0BAQUFADBoMQswCQYDVQQGEwJVUzEl\nMCMGA1UEChMcU3RhcmZpZWxkIFRlY2hub2xvZ2llcywgSW5jLjEyMDAGA1UECxMp\nU3RhcmZpZWxkIENsYXNzIDIgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMDQw\nNjI5MTczOTE2WhcNMzQwNjI5MTczOTE2WjBoMQswCQYDVQQGEwJVUzElMCMGA1UE\nChMcU3RhcmZpZWxkIFRlY2hub2xvZ2llcywgSW5jLjEyMDAGA1UECxMpU3RhcmZp\nZWxkIENsYXNzIDIgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwggEgMA0GCSqGSIb3\nDQEBAQUAA4IBDQAwggEIAoIBAQC3Msj+6XGmBIWtDBFk385N78gDGIc/oav7PKaf\n8MOh2tTYbitTkPskpD6E8J7oX+zlJ0T1KKY/e97gKvDIr1MvnsoFAZMej2YcOadN\n+lq2cwQlZut3f+dZxkqZJRRU6ybH838Z1TBwj6+wRir/resp7defqgSHo9T5iaU0\nX9tDkYI22WY8sbi5gv2cOj4QyDvvBmVmepsZGD3/cVE8MC5fvj13c7JdBmzDI1aa\nK4UmkhynArPkPw2vCHmCuDY96pzTNbO8acr1zJ3o/WSNF4Azbl5KXZnJHoe0nRrA\n1W4TNSNe35tfPe/W93bC6j67eA0cQmdrBNj41tpvi/JEoAGrAgEDo4HFMIHCMB0G\nA1UdDgQWBBS/X7fRzt0fhvRbVazc1xDCDqmI5zCBkgYDVR0jBIGKMIGHgBS/X7fR\nzt0fhvRbVazc1xDCDqmI56FspGowaDELMAkGA1UEBhMCVVMxJTAjBgNVBAoTHFN0\nYXJmaWVsZCBUZWNobm9sb2dpZXMsIEluYy4xMjAwBgNVBAsTKVN0YXJmaWVsZCBD\nbGFzcyAyIENlcnRpZmljYXRpb24gQXV0aG9yaXR5ggEAMAwGA1UdEwQFMAMBAf8w\nDQYJKoZIhvcNAQEFBQADggEBAAWdP4id0ckaVaGsafPzWdqbAYcaT1epoXkJKtv3\nL7IezMdeatiDh6GX70k1PncGQVhiv45YuApnP+yz3SFmH8lU+nLMPUxA2IGvd56D\neruix/U0F47ZEUD0/CwqTRV/p2JdLiXTAAsgGh1o+Re49L2L7ShZ3U0WixeDyLJl\nxy16paq8U4Zt3VekyvggQQto8PT7dL5WXXp59fkdheMtlb71cZBDzI0fmgAKhynp\nVSJYACPq4xJDKVtHCN2MQWplBqjlIapBtJUhlbl90TSrE9atvNziPTnNvT51cKEY\nWQPJIrSPnNVeKtelttQKbfi3QBFGmh95DmK/D5fs4C8fF5Q=\n-----END CERTIFICATE-----\n"
+                ],
+                "dhparams": null,
+                "versions": [
+                    "-TLSv1",
+                    "-SSLv2",
+                    "-SSLv3",
+                    "-TLSv1.1",
+                    "TLSv1.2"
+                ],
+                "acceptable_cas": [],
+                "tlsext": [
+                    {
+                        "id": 65281,
+                        "name": "renegotiation_info"
+                    },
+                    {
+                        "id": 11,
+                        "name": "ec_point_formats"
+                    },
+                    {
+                        "id": 35,
+                        "name": "session_ticket"
+                    }
+                ],
+                "ja3s": "ccc514751b175866924439bdbb5bba34",
+                "cert": {
+                    "sig_alg": "sha256WithRSAEncryption",
+                    "issued": "20210213000000Z",
+                    "expires": "20220314235959Z",
+                    "expired": false,
+                    "version": 2,
+                    "extensions": [
+                        {
+                            "data": "0\\x16\\x80\\x14Y\\xa4f\\x06R\\xa0{\\x95\\x92<\\xa3\\x94\\x07\\'\\x96t[\\xf9=\\xd0",
+                            "name": "authorityKeyIdentifier"
+                        },
+                        {
+                            "data": "\\x04\\x14\\x9e<*\\xf3\\xc0\\xbcE3\\xc4\\xa7\"\\x17\\xbd\\xd0\\xdc\\x1a\\xc4\\x02;\\x10",
+                            "name": "subjectKeyIdentifier"
+                        },
+                        {
+                            "data": "0\\x13\\x82\\x11*.omnipodapps.com",
+                            "name": "subjectAltName"
+                        },
+                        {
+                            "critical": true,
+                            "data": "\\x03\\x02\\x05\\xa0",
+                            "name": "keyUsage"
+                        },
+                        {
+                            "data": "0\\x14\\x06\\x08+\\x06\\x01\\x05\\x05\\x07\\x03\\x01\\x06\\x08+\\x06\\x01\\x05\\x05\\x07\\x03\\x02",
+                            "name": "extendedKeyUsage"
+                        },
+                        {
+                            "data": "0200\\xa0.\\xa0,\\x86*http://crl.sca1b.amazontrust.com/sca1b.crl",
+                            "name": "crlDistributionPoints"
+                        },
+                        {
+                            "data": "0\\n0\\x08\\x06\\x06g\\x81\\x0c\\x01\\x02\\x01",
+                            "name": "certificatePolicies"
+                        },
+                        {
+                            "data": "0g0-\\x06\\x08+\\x06\\x01\\x05\\x05\\x070\\x01\\x86!http://ocsp.sca1b.amazontrust.com06\\x06\\x08+\\x06\\x01\\x05\\x05\\x070\\x02\\x86*http://crt.sca1b.amazontrust.com/sca1b.crt",
+                            "name": "authorityInfoAccess"
+                        },
+                        {
+                            "critical": true,
+                            "data": "0\\x00",
+                            "name": "basicConstraints"
+                        },
+                        {
+                            "data": "\\x04\\x81\\xf4\\x00\\xf2\\x00w\\x00)y\\xbe\\xf0\\x9e99!\\xf0Vs\\x9fc\\xa5w\\xe5\\xbeW}\\x9c`\\n\\xf8\\xf9M]&\\\\%]\\xc7\\x84\\x00\\x00\\x01w\\x98\\xe8e4\\x00\\x00\\x04\\x03\\x00H0F\\x02!\\x00\\xaaUb\\x01\\xff\\xe8^/\\xbfi\\xe4\\xbdh\\x9c\\xa9F\\xc1\\xfbp\\x86\\xdcjjR\\x9a\\xde\\xbf%L85\\xeb\\x02!\\x00\\x9djD%\\xef\\xc6R\\x9c\\t\\xec/\\xcd\\x8aE\\xea\\x7f`\\x19v\\xfa\\xbc\\xa7>lM\\x87\"q\\x8d\\x91>6\\x00w\\x00\"EE\\x07YU$V\\x96?\\xa1/\\xf1\\xf7m\\x86\\xe0#&c\\xad\\xc0K\\x7f]\\xc6\\x83\\\\n\\xe2\\x0f\\x02\\x00\\x00\\x01w\\x98\\xe8e\\x84\\x00\\x00\\x04\\x03\\x00H0F\\x02!\\x00\\xe7!\\x92\\xb0c\\xfa\\xf3\\xe1Zz}\\xb2/\\x95w\\xe2=\\xa8\\xd3\\x1e\\x8b\\xea\\xd0\\x11\\xf9Z88\\x9a\\xa8\\xf3K\\x02!\\x00\\xf6s\\xb8\\xd3\\x88\\xc6:\\xba\\x12\\xa7\\xa5\\xbd\\xc6\\xf7\\xfcL\\x05X\\xe1\\x04\\xf2?\\xc5\\xb8\\x0e\\xf0\\xecX\\xa9\\xd1\\xd1\\xd2",
+                            "name": "ct_precert_scts"
+                        }
+                    ],
+                    "fingerprint": {
+                        "sha256": "978a0cbdaf6a4144b634be0ccd132c2fe6a31603c9963bfc5bdd42216f1edfdd",
+                        "sha1": "b39c14ba8d6639ae033c5e24915bfed8b769b4a5"
+                    },
+                    "serial": 18120948066308656715320678906005791350,
+                    "subject": {
+                        "CN": "*.omnipodapps.com"
+                    },
+                    "pubkey": {
+                        "type": "rsa",
+                        "bits": 2048
+                    },
+                    "issuer": {
+                        "C": "US",
+                        "OU": "Server CA 1B",
+                        "O": "Amazon",
+                        "CN": "Amazon"
+                    }
+                },
+                "cipher": {
+                    "version": "TLSv1/SSLv3",
+                    "bits": 128,
+                    "name": "ECDHE-RSA-AES128-GCM-SHA256"
+                },
+                "trust": {
+                    "revoked": false,
+                    "browser": {
+                        "mozilla": true,
+                        "apple": true,
+                        "microsoft": true
+                    }
+                },
+                "alpn": [
+                    "h2",
+                    "http/1.1"
+                ],
+                "ocsp": {}
+            },
+            "hostnames": [
+                "ec2-52-44-232-144.compute-1.amazonaws.com"
+            ],
+            "transport": "tcp",
+            "timestamp": "2021-06-23T20:49:18.574462",
+            "domains": [
+                "amazonaws.com"
+            ],
+            "org": "Amazon Technologies Inc.",
+            "_id": "05835d12-6452-4c4a-ba78-fdf1c15a0cca",
+            "data": "HTTP/1.1 502 Bad Gateway\r\nServer: awselb/2.0\r\nDate: Wed, 23 Jun 2021 20:49:18 GMT\r\nContent-Type: text/html\r\nContent-Length: 524\r\nConnection: keep-alive\r\n\r\n",
+            "asn": "AS14618",
+            "cloud": {
+                "region": "us-east-1",
+                "service": "AMAZON",
+                "provider": "Amazon"
+            },
+            "ip_str": "52.44.232.144"
+        }
+    ],
+    "asn": "AS14618",
+    "isp": "Amazon.com, Inc.",
+    "longitude": -77.48749,
+    "country_code3": null,
+    "domains": [
+        "amazonaws.com"
+    ],
+    "ip_str": "52.44.232.144",
+    "os": null,
+    "ports": [
+        443,
+        8443
+    ]
+}
+
+---
+{
+    "region_code": "40",
+    "ip": 2057031116,
+    "postal_code": null,
+    "country_code": "TH",
+    "city": "Bangkok",
+    "dma_code": null,
+    "last_update": "2021-07-12T16:43:27.312381",
+    "vulns": [
+        "CVE-2017-7679",
+        "CVE-2017-9798",
+        "CVE-2016-1546",
+        "CVE-2018-1312",
+        "CVE-2018-1333",
+        "CVE-2018-11763",
+        "CVE-2016-8612",
+        "CVE-2019-0197",
+        "CVE-2019-0196",
+        "CVE-2019-0211",
+        "CVE-2017-15710",
+        "CVE-2017-7668",
+        "CVE-2017-15715",
+        "CVE-2018-17199",
+        "CVE-2017-9788",
+        "CVE-2017-3167",
+        "CVE-2017-3169",
+        "CVE-2016-4979",
+        "CVE-2019-0220",
+        "CVE-2016-4975",
+        "CVE-2018-1283",
+        "CVE-2016-8740",
+        "CVE-2016-8743"
+    ],
+    "country_name": "Thailand",
+    "tags": [],
+    "area_code": null,
+    "latitude": 13.75398,
+    "hostnames": [],
+    "org": "CAT IDC Nonthaburi",
+    "data": [
+        {
+            "ip": 2057031116,
+            "port": 22,
+            "transport": "tcp",
+            "version": "7.2p2 Ubuntu-4ubuntu2.8",
+            "location": {
+                "city": "Bangkok",
+                "region_code": "40",
+                "area_code": null,
+                "longitude": 100.50144,
+                "country_code3": null,
+                "country_name": "Thailand",
+                "postal_code": null,
+                "dma_code": null,
+                "country_code": "TH",
+                "latitude": 13.75398
+            },
+            "product": "OpenSSH",
+            "hash": -1918635715,
+            "timestamp": "2021-07-12T16:43:27.312381",
+            "hostnames": [],
+            "ssh": {
+                "hassh": "d43d91bc39d5aaed819ad9f6b57b7348",
+                "fingerprint": "1d:2b:d7:e6:cc:f8:6e:a3:c0:93:58:6e:03:84:a7:db",
+                "mac": "hmac-sha2-256",
+                "cipher": "aes128-ctr",
+                "key": "AAAAB3NzaC1yc2EAAAADAQABAAABAQDTstpfIlYW1b2RpgzawDagjifrxP77XBC3tyFQ7OGuvhjF\nEBms0hPvvuGrnLPKUQr3ukWOs0LHZ9TWDf1Enp8INx/yk2+M8OUPTOwi436i7bNi58qCAX4FXf5S\nPxuAzccukmJme4fP2fSdXRJhFu7JwdCL25Pg0PzknVsrB6geJe68CSon+Zz78hrQTYYOqQr8ZueJ\nQpyR2ANjWUhevI45gw2u15MvqNaFE4PryMemITGudzwKnahQ7A2ktLS2Pmo3usB/8VYQgiwZS6SE\n3Eg6eem54u1kNWsuECa0SMYFEkpUmHa1yfBxakMXvN4LU+cVe/dEpubQGK6E7uP+mDt5\n",
+                "kex": {
+                    "languages": [
+                        ""
+                    ],
+                    "server_host_key_algorithms": [
+                        "ssh-rsa",
+                        "rsa-sha2-512",
+                        "rsa-sha2-256",
+                        "ecdsa-sha2-nistp256",
+                        "ssh-ed25519"
+                    ],
+                    "encryption_algorithms": [
+                        "chacha20-poly1305@openssh.com",
+                        "aes128-ctr",
+                        "aes192-ctr",
+                        "aes256-ctr",
+                        "aes128-gcm@openssh.com",
+                        "aes256-gcm@openssh.com"
+                    ],
+                    "kex_follows": false,
+                    "unused": 0,
+                    "kex_algorithms": [
+                        "curve25519-sha256@libssh.org",
+                        "ecdh-sha2-nistp256",
+                        "ecdh-sha2-nistp384",
+                        "ecdh-sha2-nistp521",
+                        "diffie-hellman-group-exchange-sha256",
+                        "diffie-hellman-group14-sha1"
+                    ],
+                    "compression_algorithms": [
+                        "none",
+                        "zlib@openssh.com"
+                    ],
+                    "mac_algorithms": [
+                        "umac-64-etm@openssh.com",
+                        "umac-128-etm@openssh.com",
+                        "hmac-sha2-256-etm@openssh.com",
+                        "hmac-sha2-512-etm@openssh.com",
+                        "hmac-sha1-etm@openssh.com",
+                        "umac-64@openssh.com",
+                        "umac-128@openssh.com",
+                        "hmac-sha2-256",
+                        "hmac-sha2-512",
+                        "hmac-sha1"
+                    ]
+                },
+                "type": "ssh-rsa"
+            },
+            "org": "CAT IDC Nonthaburi",
+            "data": "SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.8\nKey type: ssh-rsa\nKey: AAAAB3NzaC1yc2EAAAADAQABAAABAQDTstpfIlYW1b2RpgzawDagjifrxP77XBC3tyFQ7OGuvhjF\nEBms0hPvvuGrnLPKUQr3ukWOs0LHZ9TWDf1Enp8INx/yk2+M8OUPTOwi436i7bNi58qCAX4FXf5S\nPxuAzccukmJme4fP2fSdXRJhFu7JwdCL25Pg0PzknVsrB6geJe68CSon+Zz78hrQTYYOqQr8ZueJ\nQpyR2ANjWUhevI45gw2u15MvqNaFE4PryMemITGudzwKnahQ7A2ktLS2Pmo3usB/8VYQgiwZS6SE\n3Eg6eem54u1kNWsuECa0SMYFEkpUmHa1yfBxakMXvN4LU+cVe/dEpubQGK6E7uP+mDt5\nFingerprint: 1d:2b:d7:e6:cc:f8:6e:a3:c0:93:58:6e:03:84:a7:db\n\nKex Algorithms:\n\tcurve25519-sha256@libssh.org\n\tecdh-sha2-nistp256\n\tecdh-sha2-nistp384\n\tecdh-sha2-nistp521\n\tdiffie-hellman-group-exchange-sha256\n\tdiffie-hellman-group14-sha1\n\nServer Host Key Algorithms:\n\tssh-rsa\n\trsa-sha2-512\n\trsa-sha2-256\n\tecdsa-sha2-nistp256\n\tssh-ed25519\n\nEncryption Algorithms:\n\tchacha20-poly1305@openssh.com\n\taes128-ctr\n\taes192-ctr\n\taes256-ctr\n\taes128-gcm@openssh.com\n\taes256-gcm@openssh.com\n\nMAC Algorithms:\n\tumac-64-etm@openssh.com\n\tumac-128-etm@openssh.com\n\thmac-sha2-256-etm@openssh.com\n\thmac-sha2-512-etm@openssh.com\n\thmac-sha1-etm@openssh.com\n\tumac-64@openssh.com\n\tumac-128@openssh.com\n\thmac-sha2-256\n\thmac-sha2-512\n\thmac-sha1\n\nCompression Algorithms:\n\tnone\n\tzlib@openssh.com\n\n",
+            "asn": "AS9335",
+            "cpe23": [
+                "cpe:2.3:a:openbsd:openssh:7.2p2 Ubuntu-4ubuntu2.8"
+            ],
+            "info": "protocol 2.0",
+            "isp": "CAT Telecom Public Company Limited",
+            "cpe": [
+                "cpe:/a:openbsd:openssh:7.2p2 Ubuntu-4ubuntu2.8"
+            ],
+            "domains": [],
+            "ip_str": "122.155.205.204",
+            "_id": "8bc779f1-bf38-4193-af6d-18c4cc0abda9",
+            "os": "Ubuntu",
+            "_shodan": {
+                "id": "def498b7-4a0c-4724-b63e-47b913097a18",
+                "options": {},
+                "ptr": true,
+                "module": "ssh",
+                "crawler": "49217c0cdcbcebaf23c2979ae16d4eba64180b1f"
+            },
+            "opts": {}
+        },
+        {
+            "vulns": {
+                "CVE-2017-7679": {
+                    "references": [
+                        "http://www.debian.org/security/2017/dsa-3896",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuoct2017-3236626.html",
+                        "http://www.securityfocus.com/bid/99170",
+                        "http://www.securitytracker.com/id/1038711",
+                        "https://access.redhat.com/errata/RHSA-2017:2478",
+                        "https://access.redhat.com/errata/RHSA-2017:2479",
+                        "https://access.redhat.com/errata/RHSA-2017:2483",
+                        "https://access.redhat.com/errata/RHSA-2017:3193",
+                        "https://access.redhat.com/errata/RHSA-2017:3194",
+                        "https://access.redhat.com/errata/RHSA-2017:3195",
+                        "https://access.redhat.com/errata/RHSA-2017:3475",
+                        "https://access.redhat.com/errata/RHSA-2017:3476",
+                        "https://access.redhat.com/errata/RHSA-2017:3477",
+                        "https://github.com/gottburgm/Exploits/tree/master/CVE-2017-7679",
+                        "https://lists.apache.org/thread.html/f4515e580dfb6eeca589a5cdebd4c4c709ce632b12924f343c3b7751@%3Cdev.httpd.apache.org%3E",
+                        "https://security.gentoo.org/glsa/201710-32",
+                        "https://security.netapp.com/advisory/ntap-20180601-0002/",
+                        "https://support.apple.com/HT208221",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbhf03821en_us",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03908en_us",
+                        "https://www.nomachine.com/SU08O00185"
+                    ],
+                    "verified": false,
+                    "cvss": "7.5",
+                    "summary": "In Apache httpd 2.2.x before 2.2.33 and 2.4.x before 2.4.26, mod_mime can read one byte past the end of a buffer when sending a malicious Content-Type response header."
+                },
+                "CVE-2017-9798": {
+                    "references": [
+                        "http://openwall.com/lists/oss-security/2017/09/18/2",
+                        "http://www.debian.org/security/2017/dsa-3980",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuapr2018-3678067.html",
+                        "http://www.oracle.com/technetwork/security-advisory/cpujan2018-3236628.html",
+                        "http://www.oracle.com/technetwork/security-advisory/cpujul2018-4258247.html",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuoct2018-4428296.html",
+                        "http://www.securityfocus.com/bid/100872",
+                        "http://www.securityfocus.com/bid/105598",
+                        "http://www.securitytracker.com/id/1039387",
+                        "https://access.redhat.com/errata/RHSA-2017:2882",
+                        "https://access.redhat.com/errata/RHSA-2017:2972",
+                        "https://access.redhat.com/errata/RHSA-2017:3018",
+                        "https://access.redhat.com/errata/RHSA-2017:3113",
+                        "https://access.redhat.com/errata/RHSA-2017:3114",
+                        "https://access.redhat.com/errata/RHSA-2017:3193",
+                        "https://access.redhat.com/errata/RHSA-2017:3194",
+                        "https://access.redhat.com/errata/RHSA-2017:3195",
+                        "https://access.redhat.com/errata/RHSA-2017:3239",
+                        "https://access.redhat.com/errata/RHSA-2017:3240",
+                        "https://access.redhat.com/errata/RHSA-2017:3475",
+                        "https://access.redhat.com/errata/RHSA-2017:3476",
+                        "https://access.redhat.com/errata/RHSA-2017:3477",
+                        "https://blog.fuzzing-project.org/60-Optionsbleed-HTTP-OPTIONS-method-can-leak-Apaches-server-memory.html",
+                        "https://blog.fuzzing-project.org/uploads/apache-2.2-optionsbleed-backport.patch",
+                        "https://github.com/apache/httpd/commit/29afdd2550b3d30a8defece2b95ae81edcf66ac9",
+                        "https://github.com/hannob/optionsbleed",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html#CVE-2017-9798",
+                        "https://security-tracker.debian.org/tracker/CVE-2017-9798",
+                        "https://security.gentoo.org/glsa/201710-32",
+                        "https://security.netapp.com/advisory/ntap-20180601-0003/",
+                        "https://support.apple.com/HT208331",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03909en_us",
+                        "https://svn.apache.org/viewvc/httpd/httpd/branches/2.4.x/server/core.c?r1=1805223&r2=1807754&pathrev=1807754&view=patch",
+                        "https://www.exploit-db.com/exploits/42745/",
+                        "https://www.oracle.com/technetwork/security-advisory/cpuapr2019-5072813.html",
+                        "https://www.oracle.com/technetwork/security-advisory/cpujan2019-5072801.html"
+                    ],
+                    "verified": false,
+                    "cvss": "5.0",
+                    "summary": "Apache httpd allows remote attackers to read secret data from process memory if the Limit directive can be set in a user's .htaccess file, or if httpd.conf has certain misconfigurations, aka Optionsbleed. This affects the Apache HTTP Server through 2.2.34 and 2.4.x through 2.4.27. The attacker sends an unauthenticated OPTIONS HTTP request when attempting to read secret data. This is a use-after-free issue and thus secret data is not always sent, and the specific data depends on many factors including configuration. Exploitation with .htaccess can be blocked with a patch to the ap_limit_section function in server/core.c."
+                },
+                "CVE-2016-1546": {
+                    "references": [
+                        "http://httpd.apache.org/security/vulnerabilities_24.html",
+                        "http://svn.apache.org/viewvc?view=revision&revision=1733727",
+                        "http://www.apache.org/dist/httpd/CHANGES_2.4",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuoct2016-2881722.html",
+                        "http://www.oracle.com/technetwork/topics/security/bulletinoct2016-3090566.html",
+                        "http://www.securityfocus.com/bid/92331",
+                        "https://access.redhat.com/errata/RHSA-2017:1161",
+                        "https://security.gentoo.org/glsa/201610-02",
+                        "https://security.netapp.com/advisory/ntap-20180601-0001/"
+                    ],
+                    "verified": false,
+                    "cvss": "4.3",
+                    "summary": "The Apache HTTP Server 2.4.17 and 2.4.18, when mod_http2 is enabled, does not limit the number of simultaneous stream workers for a single HTTP/2 connection, which allows remote attackers to cause a denial of service (stream-processing outage) via modified flow-control windows."
+                },
+                "CVE-2018-1312": {
+                    "references": [
+                        "http://www.openwall.com/lists/oss-security/2018/03/24/7",
+                        "http://www.securityfocus.com/bid/103524",
+                        "http://www.securitytracker.com/id/1040571",
+                        "https://access.redhat.com/errata/RHSA-2018:3558",
+                        "https://access.redhat.com/errata/RHSA-2019:0366",
+                        "https://access.redhat.com/errata/RHSA-2019:0367",
+                        "https://access.redhat.com/errata/RHSA-2019:1898",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.debian.org/debian-lts-announce/2018/05/msg00020.html",
+                        "https://security.netapp.com/advisory/ntap-20180601-0004/",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03909en_us",
+                        "https://usn.ubuntu.com/3627-1/",
+                        "https://usn.ubuntu.com/3627-2/",
+                        "https://usn.ubuntu.com/3937-2/",
+                        "https://www.debian.org/security/2018/dsa-4164"
+                    ],
+                    "verified": false,
+                    "cvss": "6.8",
+                    "summary": "In Apache httpd 2.2.0 to 2.4.29, when generating an HTTP Digest authentication challenge, the nonce sent to prevent reply attacks was not correctly generated using a pseudo-random seed. In a cluster of servers using a common Digest authentication configuration, HTTP requests could be replayed across servers by an attacker without detection."
+                },
+                "CVE-2018-1333": {
+                    "references": [
+                        "http://www.securitytracker.com/id/1041402",
+                        "https://access.redhat.com/errata/RHSA-2018:3558",
+                        "https://access.redhat.com/errata/RHSA-2019:0366",
+                        "https://access.redhat.com/errata/RHSA-2019:0367",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html#CVE-2018-1333",
+                        "https://lists.apache.org/thread.html/56c2e7cc9deb1c12a843d0dc251ea7fd3e7e80293cde02fcd65286ba@%3Ccvs.httpd.apache.org%3E",
+                        "https://security.netapp.com/advisory/ntap-20180926-0007/",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03909en_us",
+                        "https://usn.ubuntu.com/3783-1/"
+                    ],
+                    "verified": false,
+                    "cvss": "5.0",
+                    "summary": "By specially crafting HTTP/2 requests, workers would be allocated 60 seconds longer than necessary, leading to worker exhaustion and a denial of service. Fixed in Apache HTTP Server 2.4.34 (Affected 2.4.18-2.4.30,2.4.33)."
+                },
+                "CVE-2018-11763": {
+                    "references": [
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-06/msg00030.html",
+                        "http://www.securityfocus.com/bid/105414",
+                        "http://www.securitytracker.com/id/1041713",
+                        "https://access.redhat.com/errata/RHSA-2018:3558",
+                        "https://access.redhat.com/errata/RHSA-2019:0366",
+                        "https://access.redhat.com/errata/RHSA-2019:0367",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://security.netapp.com/advisory/ntap-20190204-0004/",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03909en_us",
+                        "https://usn.ubuntu.com/3783-1/",
+                        "https://www.oracle.com/technetwork/security-advisory/cpuapr2019-5072813.html",
+                        "https://www.oracle.com/technetwork/security-advisory/cpujan2019-5072801.html"
+                    ],
+                    "verified": false,
+                    "cvss": "4.3",
+                    "summary": "In Apache HTTP Server 2.4.17 to 2.4.34, by sending continuous, large SETTINGS frames a client can occupy a connection, server thread and CPU time without any connection timeout coming to effect. This affects only HTTP/2 connections. A possible mitigation is to not enable the h2 protocol."
+                },
+                "CVE-2016-8612": {
+                    "references": [
+                        "http://rhn.redhat.com/errata/RHSA-2016-2957.html",
+                        "http://www.securityfocus.com/bid/94939",
+                        "https://access.redhat.com/errata/RHSA-2017:0193",
+                        "https://access.redhat.com/errata/RHSA-2017:0194",
+                        "https://bugzilla.redhat.com/show_bug.cgi?id=1387605",
+                        "https://security.netapp.com/advisory/ntap-20180601-0005/"
+                    ],
+                    "verified": false,
+                    "cvss": "3.3",
+                    "summary": "Apache HTTP Server mod_cluster before version httpd 2.4.23 is vulnerable to an Improper Input Validation in the protocol parsing logic in the load balancer resulting in a Segmentation Fault in the serving httpd process."
+                },
+                "CVE-2019-0197": {
+                    "references": [
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00051.html",
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00061.html",
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00084.html",
+                        "http://www.openwall.com/lists/oss-security/2019/04/02/2",
+                        "http://www.securityfocus.com/bid/107665",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.apache.org/thread.html/e0b8f6e858b1c8ec2ce8e291a2c543d438915037c7af661ab6d33808@%3Cdev.httpd.apache.org%3E",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/WETXNQWNQLWHV6XNW6YTO5UGDTIWAQGT/",
+                        "https://security.netapp.com/advisory/ntap-20190617-0002/",
+                        "https://support.f5.com/csp/article/K44591505"
+                    ],
+                    "verified": false,
+                    "cvss": "4.9",
+                    "summary": "A vulnerability was found in Apache HTTP Server 2.4.34 to 2.4.38. When HTTP/2 was enabled for a http: host or H2Upgrade was enabled for h2 on a https: host, an Upgrade request from http/1.1 to http/2 that was not the first request on a connection could lead to a misconfiguration and crash. Server that never enabled the h2 protocol or that only enabled it for https: and did not set \"H2Upgrade on\" are unaffected by this issue."
+                },
+                "CVE-2019-0196": {
+                    "references": [
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00051.html",
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00061.html",
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00084.html",
+                        "http://www.apache.org/dist/httpd/CHANGES_2.4.39",
+                        "http://www.openwall.com/lists/oss-security/2019/04/02/1",
+                        "http://www.securityfocus.com/bid/107669",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.apache.org/thread.html/97a1c58e138ed58a364513b58d807a802e72bf6079ff81a10948ef7c@%3Ccvs.httpd.apache.org%3E",
+                        "https://lists.apache.org/thread.html/fd110f4ace2d8364c7d9190e1993cde92f79e4eb85576ed9285686ac@%3Ccvs.httpd.apache.org%3E",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/WETXNQWNQLWHV6XNW6YTO5UGDTIWAQGT/",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/YTJPHI3E3OKW7OT7COQXVG7DE7IDQ2OT/",
+                        "https://seclists.org/bugtraq/2019/Apr/5",
+                        "https://security.netapp.com/advisory/ntap-20190617-0002/",
+                        "https://support.f5.com/csp/article/K44591505",
+                        "https://usn.ubuntu.com/3937-1/",
+                        "https://www.debian.org/security/2019/dsa-4422"
+                    ],
+                    "verified": false,
+                    "cvss": "5.0",
+                    "summary": "A vulnerability was found in Apache HTTP Server 2.4.17 to 2.4.38. Using fuzzed network input, the http/2 request handling could be made to access freed memory in string comparison when determining the method of a request and thus process the request incorrectly."
+                },
+                "CVE-2019-0211": {
+                    "references": [
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00051.html",
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00061.html",
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00084.html",
+                        "http://packetstormsecurity.com/files/152386/Apache-2.4.38-Root-Privilege-Escalation.html",
+                        "http://packetstormsecurity.com/files/152415/Slackware-Security-Advisory-httpd-Updates.html",
+                        "http://packetstormsecurity.com/files/152441/CARPE-DIEM-Apache-2.4.x-Local-Privilege-Escalation.html",
+                        "http://www.apache.org/dist/httpd/CHANGES_2.4.39",
+                        "http://www.openwall.com/lists/oss-security/2019/04/02/3",
+                        "http://www.securityfocus.com/bid/107666",
+                        "https://access.redhat.com/errata/RHBA-2019:0959",
+                        "https://access.redhat.com/errata/RHSA-2019:0746",
+                        "https://access.redhat.com/errata/RHSA-2019:0980",
+                        "https://access.redhat.com/errata/RHSA-2019:1296",
+                        "https://access.redhat.com/errata/RHSA-2019:1297",
+                        "https://access.redhat.com/errata/RHSA-2019:1543",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.apache.org/thread.html/890507b85c30adf133216b299cc35cd8cd0346a885acfc671c04694e@%3Cdev.community.apache.org%3E",
+                        "https://lists.apache.org/thread.html/b1613d44ec364c87bb7ee8c5939949f9b061c05c06e0e90098ebf7aa@%3Cusers.httpd.apache.org%3E",
+                        "https://lists.apache.org/thread.html/b2bdb308dc015e771ba79c0586b2de6fb50caa98b109833f5d4daf28@%3Cdev.community.apache.org%3E",
+                        "https://lists.apache.org/thread.html/de881a130bc9cb2f3a9ff220784520556884fb8ea80e69400a45509e@%3Cdev.community.apache.org%3E",
+                        "https://lists.apache.org/thread.html/fd110f4ace2d8364c7d9190e1993cde92f79e4eb85576ed9285686ac@%3Ccvs.httpd.apache.org%3E",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/ALIR5S3O7NRHEGFMIDMUSYQIZOE4TJJN/",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/EZRMTEIGZKYFNGIDOTXN3GNEJTLVCYU7/",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/WETXNQWNQLWHV6XNW6YTO5UGDTIWAQGT/",
+                        "https://seclists.org/bugtraq/2019/Apr/16",
+                        "https://seclists.org/bugtraq/2019/Apr/5",
+                        "https://security.gentoo.org/glsa/201904-20",
+                        "https://security.netapp.com/advisory/ntap-20190423-0001/",
+                        "https://support.f5.com/csp/article/K32957101",
+                        "https://usn.ubuntu.com/3937-1/",
+                        "https://www.debian.org/security/2019/dsa-4422",
+                        "https://www.exploit-db.com/exploits/46676/",
+                        "https://www.synology.com/security/advisory/Synology_SA_19_14"
+                    ],
+                    "verified": false,
+                    "cvss": "7.2",
+                    "summary": "In Apache HTTP Server 2.4 releases 2.4.17 to 2.4.38, with MPM event, worker or prefork, code executing in less-privileged child processes or threads (including scripts executed by an in-process scripting interpreter) could execute arbitrary code with the privileges of the parent process (usually root) by manipulating the scoreboard. Non-Unix systems are not affected."
+                },
+                "CVE-2017-15710": {
+                    "references": [
+                        "http://www.openwall.com/lists/oss-security/2018/03/24/8",
+                        "http://www.securityfocus.com/bid/103512",
+                        "http://www.securitytracker.com/id/1040569",
+                        "https://access.redhat.com/errata/RHSA-2018:3558",
+                        "https://access.redhat.com/errata/RHSA-2019:0366",
+                        "https://access.redhat.com/errata/RHSA-2019:0367",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.apache.org/thread.html/56c2e7cc9deb1c12a843d0dc251ea7fd3e7e80293cde02fcd65286ba@%3Ccvs.httpd.apache.org%3E",
+                        "https://lists.debian.org/debian-lts-announce/2018/05/msg00020.html",
+                        "https://security.netapp.com/advisory/ntap-20180601-0004/",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03909en_us",
+                        "https://usn.ubuntu.com/3627-1/",
+                        "https://usn.ubuntu.com/3627-2/",
+                        "https://usn.ubuntu.com/3937-2/",
+                        "https://www.debian.org/security/2018/dsa-4164"
+                    ],
+                    "verified": false,
+                    "cvss": "5.0",
+                    "summary": "In Apache httpd 2.0.23 to 2.0.65, 2.2.0 to 2.2.34, and 2.4.0 to 2.4.29, mod_authnz_ldap, if configured with AuthLDAPCharsetConfig, uses the Accept-Language header value to lookup the right charset encoding when verifying the user's credentials. If the header value is not present in the charset conversion table, a fallback mechanism is used to truncate it to a two characters value to allow a quick retry (for example, 'en-US' is truncated to 'en'). A header value of less than two characters forces an out of bound write of one NUL byte to a memory location that is not part of the string. In the worst case, quite unlikely, the process would crash which could be used as a Denial of Service attack. In the more likely case, this memory is already reserved for future use and the issue has no effect at all."
+                },
+                "CVE-2017-7668": {
+                    "references": [
+                        "http://www.debian.org/security/2017/dsa-3896",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuoct2017-3236626.html",
+                        "http://www.securityfocus.com/bid/99137",
+                        "http://www.securitytracker.com/id/1038711",
+                        "https://access.redhat.com/errata/RHSA-2017:2479",
+                        "https://access.redhat.com/errata/RHSA-2017:2483",
+                        "https://access.redhat.com/errata/RHSA-2017:3193",
+                        "https://access.redhat.com/errata/RHSA-2017:3194",
+                        "https://lists.apache.org/thread.html/55a068b6a5eec0b3198ae7d96a7cb412352d0ffa7716612c5af3745b@%3Cdev.httpd.apache.org%3E",
+                        "https://security.gentoo.org/glsa/201710-32",
+                        "https://security.netapp.com/advisory/ntap-20180601-0002/",
+                        "https://support.apple.com/HT208221",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbhf03821en_us",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03908en_us"
+                    ],
+                    "verified": false,
+                    "cvss": "7.5",
+                    "summary": "The HTTP strict parsing changes added in Apache httpd 2.2.32 and 2.4.24 introduced a bug in token list parsing, which allows ap_find_token() to search past the end of its input string. By maliciously crafting a sequence of request headers, an attacker may be able to cause a segmentation fault, or to force ap_find_token() to return an incorrect value."
+                },
+                "CVE-2017-15715": {
+                    "references": [
+                        "http://www.openwall.com/lists/oss-security/2018/03/24/6",
+                        "http://www.securityfocus.com/bid/103525",
+                        "http://www.securitytracker.com/id/1040570",
+                        "https://access.redhat.com/errata/RHSA-2018:3558",
+                        "https://access.redhat.com/errata/RHSA-2019:0366",
+                        "https://access.redhat.com/errata/RHSA-2019:0367",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.apache.org/thread.html/56c2e7cc9deb1c12a843d0dc251ea7fd3e7e80293cde02fcd65286ba@%3Ccvs.httpd.apache.org%3E",
+                        "https://security.netapp.com/advisory/ntap-20180601-0004/",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03909en_us",
+                        "https://usn.ubuntu.com/3627-1/",
+                        "https://usn.ubuntu.com/3627-2/",
+                        "https://www.debian.org/security/2018/dsa-4164"
+                    ],
+                    "verified": false,
+                    "cvss": "6.8",
+                    "summary": "In Apache httpd 2.4.0 to 2.4.29, the expression specified in <FilesMatch> could match '$' to a newline character in a malicious filename, rather than matching only the end of the filename. This could be exploited in environments where uploads of some files are are externally blocked, but only by matching the trailing portion of the filename."
+                },
+                "CVE-2018-17199": {
+                    "references": [
+                        "http://www.securityfocus.com/bid/106742",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.debian.org/debian-lts-announce/2019/01/msg00024.html",
+                        "https://seclists.org/bugtraq/2019/Apr/5",
+                        "https://security.gentoo.org/glsa/201903-21",
+                        "https://security.netapp.com/advisory/ntap-20190125-0001/",
+                        "https://usn.ubuntu.com/3937-1/",
+                        "https://www.debian.org/security/2019/dsa-4422",
+                        "https://www.oracle.com/technetwork/security-advisory/cpuapr2019-5072813.html",
+                        "https://www.oracle.com/technetwork/security-advisory/cpujul2019-5072835.html"
+                    ],
+                    "verified": false,
+                    "cvss": "5.0",
+                    "summary": "In Apache HTTP Server 2.4 release 2.4.37 and prior, mod_session checks the session expiry time before decoding the session. This causes session expiry time to be ignored for mod_session_cookie sessions since the expiry time is loaded when the session is decoded."
+                },
+                "CVE-2017-9788": {
+                    "references": [
+                        "http://www.debian.org/security/2017/dsa-3913",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuoct2017-3236626.html",
+                        "http://www.securityfocus.com/bid/99569",
+                        "http://www.securitytracker.com/id/1038906",
+                        "https://access.redhat.com/errata/RHSA-2017:2478",
+                        "https://access.redhat.com/errata/RHSA-2017:2479",
+                        "https://access.redhat.com/errata/RHSA-2017:2483",
+                        "https://access.redhat.com/errata/RHSA-2017:2708",
+                        "https://access.redhat.com/errata/RHSA-2017:2709",
+                        "https://access.redhat.com/errata/RHSA-2017:2710",
+                        "https://access.redhat.com/errata/RHSA-2017:3113",
+                        "https://access.redhat.com/errata/RHSA-2017:3114",
+                        "https://access.redhat.com/errata/RHSA-2017:3193",
+                        "https://access.redhat.com/errata/RHSA-2017:3194",
+                        "https://access.redhat.com/errata/RHSA-2017:3195",
+                        "https://access.redhat.com/errata/RHSA-2017:3239",
+                        "https://access.redhat.com/errata/RHSA-2017:3240",
+                        "https://httpd.apache.org/security/vulnerabilities_22.html",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.apache.org/thread.html/0dd69204a6bd643cc4e9ccd008f07a9375525d977c6ebeb07a881afb@%3Cannounce.httpd.apache.org%3E",
+                        "https://lists.apache.org/thread.html/56c2e7cc9deb1c12a843d0dc251ea7fd3e7e80293cde02fcd65286ba@%3Ccvs.httpd.apache.org%3E",
+                        "https://security.gentoo.org/glsa/201710-32",
+                        "https://security.netapp.com/advisory/ntap-20170911-0002/",
+                        "https://support.apple.com/HT208221",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03908en_us"
+                    ],
+                    "verified": false,
+                    "cvss": "6.4",
+                    "summary": "In Apache httpd before 2.2.34 and 2.4.x before 2.4.27, the value placeholder in [Proxy-]Authorization headers of type 'Digest' was not initialized or reset before or between successive key=value assignments by mod_auth_digest. Providing an initial key with no '=' assignment could reflect the stale value of uninitialized pool memory used by the prior request, leading to leakage of potentially confidential information, and a segfault in other cases resulting in denial of service."
+                },
+                "CVE-2017-3167": {
+                    "references": [
+                        "http://www.debian.org/security/2017/dsa-3896",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuoct2017-3236626.html",
+                        "http://www.securityfocus.com/bid/99135",
+                        "http://www.securitytracker.com/id/1038711",
+                        "https://access.redhat.com/errata/RHSA-2017:2478",
+                        "https://access.redhat.com/errata/RHSA-2017:2479",
+                        "https://access.redhat.com/errata/RHSA-2017:2483",
+                        "https://access.redhat.com/errata/RHSA-2017:3193",
+                        "https://access.redhat.com/errata/RHSA-2017:3194",
+                        "https://access.redhat.com/errata/RHSA-2017:3195",
+                        "https://access.redhat.com/errata/RHSA-2017:3475",
+                        "https://access.redhat.com/errata/RHSA-2017:3476",
+                        "https://access.redhat.com/errata/RHSA-2017:3477",
+                        "https://lists.apache.org/thread.html/8409e41a8f7dd9ded37141c38df001be930115428c3d64f70bbdb8b4@%3Cdev.httpd.apache.org%3E",
+                        "https://security.gentoo.org/glsa/201710-32",
+                        "https://security.netapp.com/advisory/ntap-20180601-0002/",
+                        "https://support.apple.com/HT208221",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03908en_us",
+                        "https://www.nomachine.com/SU08O00185"
+                    ],
+                    "verified": false,
+                    "cvss": "7.5",
+                    "summary": "In Apache httpd 2.2.x before 2.2.33 and 2.4.x before 2.4.26, use of the ap_get_basic_auth_pw() by third-party modules outside of the authentication phase may lead to authentication requirements being bypassed."
+                },
+                "CVE-2017-3169": {
+                    "references": [
+                        "http://www.debian.org/security/2017/dsa-3896",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuoct2017-3236626.html",
+                        "http://www.securityfocus.com/bid/99134",
+                        "http://www.securitytracker.com/id/1038711",
+                        "https://access.redhat.com/errata/RHSA-2017:2478",
+                        "https://access.redhat.com/errata/RHSA-2017:2479",
+                        "https://access.redhat.com/errata/RHSA-2017:2483",
+                        "https://access.redhat.com/errata/RHSA-2017:3193",
+                        "https://access.redhat.com/errata/RHSA-2017:3194",
+                        "https://access.redhat.com/errata/RHSA-2017:3195",
+                        "https://access.redhat.com/errata/RHSA-2017:3475",
+                        "https://access.redhat.com/errata/RHSA-2017:3476",
+                        "https://access.redhat.com/errata/RHSA-2017:3477",
+                        "https://github.com/gottburgm/Exploits/tree/master/CVE-2017-3169",
+                        "https://lists.apache.org/thread.html/84bf7fcc5cad35d355f11839cbdd13cbc5ffc1d34675090bff0f96ae@%3Cdev.httpd.apache.org%3E",
+                        "https://security.gentoo.org/glsa/201710-32",
+                        "https://security.netapp.com/advisory/ntap-20180601-0002/",
+                        "https://support.apple.com/HT208221",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03908en_us",
+                        "https://www.nomachine.com/SU08O00185"
+                    ],
+                    "verified": false,
+                    "cvss": "7.5",
+                    "summary": "In Apache httpd 2.2.x before 2.2.33 and 2.4.x before 2.4.26, mod_ssl may dereference a NULL pointer when third-party modules call ap_hook_process_connection() during an HTTP request to an HTTPS port."
+                },
+                "CVE-2016-4979": {
+                    "references": [
+                        "http://httpd.apache.org/security/vulnerabilities_24.html",
+                        "http://packetstormsecurity.com/files/137771/Apache-2.4.20-X509-Authentication-Bypass.html",
+                        "http://seclists.org/fulldisclosure/2016/Jul/11",
+                        "http://www.apache.org/dist/httpd/CHANGES_2.4",
+                        "http://www.openwall.com/lists/oss-security/2016/07/05/5",
+                        "http://www.oracle.com/technetwork/security-advisory/cpuoct2016-2881722.html",
+                        "http://www.oracle.com/technetwork/topics/security/bulletinoct2016-3090566.html",
+                        "http://www.securityfocus.com/bid/91566",
+                        "http://www.securitytracker.com/id/1036225",
+                        "https://access.redhat.com/errata/RHSA-2016:1420",
+                        "https://github.com/apache/httpd/commit/2d0e4eff04ea963128a41faaef21f987272e05a2",
+                        "https://security.gentoo.org/glsa/201610-02",
+                        "https://security.netapp.com/advisory/ntap-20180601-0001/"
+                    ],
+                    "verified": false,
+                    "cvss": "5.0",
+                    "summary": "The Apache HTTP Server 2.4.18 through 2.4.20, when mod_http2 and mod_ssl are enabled, does not properly recognize the \"SSLVerifyClient require\" directive for HTTP/2 request authorization, which allows remote attackers to bypass intended access restrictions by leveraging the ability to send multiple requests over a single connection and aborting a renegotiation."
+                },
+                "CVE-2019-0220": {
+                    "references": [
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00051.html",
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00061.html",
+                        "http://lists.opensuse.org/opensuse-security-announce/2019-04/msg00084.html",
+                        "http://www.openwall.com/lists/oss-security/2019/04/02/6",
+                        "http://www.securityfocus.com/bid/107670",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.debian.org/debian-lts-announce/2019/04/msg00008.html",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/ALIR5S3O7NRHEGFMIDMUSYQIZOE4TJJN/",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/EZRMTEIGZKYFNGIDOTXN3GNEJTLVCYU7/",
+                        "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/WETXNQWNQLWHV6XNW6YTO5UGDTIWAQGT/",
+                        "https://seclists.org/bugtraq/2019/Apr/5",
+                        "https://security.netapp.com/advisory/ntap-20190625-0007/",
+                        "https://support.f5.com/csp/article/K44591505",
+                        "https://usn.ubuntu.com/3937-1/",
+                        "https://www.debian.org/security/2019/dsa-4422"
+                    ],
+                    "verified": false,
+                    "cvss": "5.0",
+                    "summary": "A vulnerability was found in Apache HTTP Server 2.4.0 to 2.4.38. When the path component of a request URL contains multiple consecutive slashes ('/'), directives such as LocationMatch and RewriteRule must account for duplicates in regular expressions while other aspects of the servers processing will implicitly collapse them."
+                },
+                "CVE-2016-4975": {
+                    "references": [
+                        "http://www.securityfocus.com/bid/105093",
+                        "https://httpd.apache.org/security/vulnerabilities_22.html#CVE-2016-4975",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html#CVE-2016-4975",
+                        "https://security.netapp.com/advisory/ntap-20180926-0006/",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03908en_us"
+                    ],
+                    "verified": false,
+                    "cvss": "4.3",
+                    "summary": "Possible CRLF injection allowing HTTP response splitting attacks for sites which use mod_userdir. This issue was mitigated by changes made in 2.4.25 and 2.2.32 which prohibit CR or LF injection into the \"Location\" or other outbound header key or value. Fixed in Apache HTTP Server 2.4.25 (Affected 2.4.1-2.4.23). Fixed in Apache HTTP Server 2.2.32 (Affected 2.2.0-2.2.31)."
+                },
+                "CVE-2018-1283": {
+                    "references": [
+                        "http://www.openwall.com/lists/oss-security/2018/03/24/4",
+                        "http://www.securityfocus.com/bid/103520",
+                        "http://www.securitytracker.com/id/1040568",
+                        "https://access.redhat.com/errata/RHSA-2018:3558",
+                        "https://access.redhat.com/errata/RHSA-2019:0366",
+                        "https://access.redhat.com/errata/RHSA-2019:0367",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html",
+                        "https://lists.apache.org/thread.html/56c2e7cc9deb1c12a843d0dc251ea7fd3e7e80293cde02fcd65286ba@%3Ccvs.httpd.apache.org%3E",
+                        "https://security.netapp.com/advisory/ntap-20180601-0004/",
+                        "https://support.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03909en_us",
+                        "https://usn.ubuntu.com/3627-1/",
+                        "https://usn.ubuntu.com/3627-2/",
+                        "https://www.debian.org/security/2018/dsa-4164"
+                    ],
+                    "verified": false,
+                    "cvss": "3.5",
+                    "summary": "In Apache httpd 2.4.0 to 2.4.29, when mod_session is configured to forward its session data to CGI applications (SessionEnv on, not the default), a remote user may influence their content by using a \"Session\" header. This comes from the \"HTTP_SESSION\" variable name used by mod_session to forward its data to CGIs, since the prefix \"HTTP_\" is also used by the Apache HTTP Server to pass HTTP header fields, per CGI specifications."
+                },
+                "CVE-2016-8740": {
+                    "references": [
+                        "http://packetstormsecurity.com/files/140023/Apache-HTTPD-Web-Server-2.4.23-Memory-Exhaustion.html",
+                        "http://rhn.redhat.com/errata/RHSA-2017-1415.html",
+                        "http://www.securityfocus.com/bid/94650",
+                        "http://www.securitytracker.com/id/1037388",
+                        "https://access.redhat.com/errata/RHSA-2017:1161",
+                        "https://access.redhat.com/errata/RHSA-2017:1413",
+                        "https://access.redhat.com/errata/RHSA-2017:1414",
+                        "https://github.com/apache/httpd/commit/29c63b786ae028d82405421585e91283c8fa0da3",
+                        "https://h20566.www2.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03725en_us",
+                        "https://security.gentoo.org/glsa/201701-36",
+                        "https://security.netapp.com/advisory/ntap-20180423-0001/",
+                        "https://support.apple.com/HT208221",
+                        "https://www.exploit-db.com/exploits/40909/",
+                        "https://www.tenable.com/security/tns-2017-04"
+                    ],
+                    "verified": false,
+                    "cvss": 5.0,
+                    "summary": "The mod_http2 module in the Apache HTTP Server 2.4.17 through 2.4.23, when the Protocols configuration includes h2 or h2c, does not restrict request-header length, which allows remote attackers to cause a denial of service (memory consumption) via crafted CONTINUATION frames in an HTTP/2 request."
+                },
+                "CVE-2016-8743": {
+                    "references": [
+                        "http://rhn.redhat.com/errata/RHSA-2017-1415.html",
+                        "http://www.debian.org/security/2017/dsa-3796",
+                        "http://www.securityfocus.com/bid/95077",
+                        "http://www.securitytracker.com/id/1037508",
+                        "https://access.redhat.com/errata/RHSA-2017:0906",
+                        "https://access.redhat.com/errata/RHSA-2017:1161",
+                        "https://access.redhat.com/errata/RHSA-2017:1413",
+                        "https://access.redhat.com/errata/RHSA-2017:1414",
+                        "https://access.redhat.com/errata/RHSA-2017:1721",
+                        "https://h20566.www2.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbmu03753en_us",
+                        "https://h20566.www2.hpe.com/hpsc/doc/public/display?docLocale=en_US&docId=emr_na-hpesbux03725en_us",
+                        "https://httpd.apache.org/security/vulnerabilities_24.html#CVE-2016-8743",
+                        "https://security.gentoo.org/glsa/201701-36",
+                        "https://security.netapp.com/advisory/ntap-20180423-0001/",
+                        "https://support.apple.com/HT208221",
+                        "https://www.tenable.com/security/tns-2017-04"
+                    ],
+                    "verified": false,
+                    "cvss": 5.0,
+                    "summary": "Apache HTTP Server, in all releases prior to 2.2.32 and 2.4.25, was liberal in the whitespace accepted from requests and sent in response lines and headers. Accepting these different behaviors represented a security concern when httpd participates in any chain of proxies or interacts with back-end application servers, either through mod_proxy or using conventional CGI mechanisms, and may result in request smuggling, response splitting and cache pollution."
+                }
+            },
+            "hash": -1499853421,
+            "port": 80,
+            "transport": "tcp",
+            "version": "2.4.18",
+            "location": {
+                "city": "Bangkok",
+                "region_code": "40",
+                "area_code": null,
+                "longitude": 100.50144,
+                "country_code3": null,
+                "country_name": "Thailand",
+                "postal_code": null,
+                "dma_code": null,
+                "country_code": "TH",
+                "latitude": 13.75398
+            },
+            "ip": 2057031116,
+            "product": "Apache httpd",
+            "http": {
+                "robots_hash": null,
+                "redirects": [],
+                "securitytxt": null,
+                "title": null,
+                "sitemap_hash": null,
+                "robots": null,
+                "server": "Apache/2.4.18 (Ubuntu)",
+                "host": "122.155.205.204",
+                "html": "",
+                "location": "/",
+                "html_hash": 0,
+                "sitemap": null,
+                "securitytxt_hash": null
+            },
+            "timestamp": "2021-06-26T12:57:26.058676",
+            "hostnames": [],
+            "org": "CAT IDC Nonthaburi",
+            "data": "HTTP/1.1 200 OK\r\nDate: Sat, 26 Jun 2021 12:57:25 GMT\r\nServer: Apache/2.4.18 (Ubuntu)\r\nSet-Cookie: XF4T0vASQgJ7YBA=f2d76eec1fce680ebb4dd36966dcd13e; expires=Sat, 26-Jun-2021 14:57:25 GMT; Max-Age=7200; path=/\r\nSet-Cookie: ci_session_volunteer_cms=4thu1ptb7qdindctsk9bsfqam1fum89m; expires=Sat, 26-Jun-2021 14:57:25 GMT; Max-Age=7200; path=/; HttpOnly\r\nExpires: Thu, 19 Nov 1981 08:52:00 GMT\r\nCache-Control: no-store, no-cache, must-revalidate\r\nPragma: no-cache\r\nRefresh: 0;url=http://uatcontent.royaljitarsa.com/backend/auth/login\r\nContent-Length: 0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n",
+            "asn": "AS9335",
+            "cpe23": [
+                "cpe:2.3:a:apache:http_server:2.4.18"
+            ],
+            "info": "(Ubuntu)",
+            "isp": "CAT Telecom Public Company Limited",
+            "cpe": [
+                "cpe:/a:apache:http_server:2.4.18"
+            ],
+            "domains": [],
+            "ip_str": "122.155.205.204",
+            "_id": "874c1fa8-2ab5-476e-8caf-3aadbc56a154",
+            "os": null,
+            "_shodan": {
+                "id": "944ee9c2-d148-4ecb-9c4f-e8bc4118c043",
+                "options": {},
+                "ptr": true,
+                "module": "http",
+                "crawler": "78039f81a0245caa8ab71c98182f0eff0ce52aab"
+            },
+            "opts": {}
+        }
+    ],
+    "asn": "AS9335",
+    "isp": "CAT Telecom Public Company Limited",
+    "longitude": 100.50144,
+    "country_code3": null,
+    "domains": [],
+    "ip_str": "122.155.205.204",
+    "os": "Ubuntu",
+    "ports": [
+        80,
+        22
+    ]
+}

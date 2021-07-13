@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Shodan'
+  scope: 'IPv4-Addr'
+  auto: true # Enable/disable auto-enrichment of observables
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+shodan:
+  token: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'
+  
