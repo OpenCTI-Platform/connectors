@@ -43,6 +43,7 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_import_only_published`      | `MISP_IMPORT_ONLY_PUBLISHED`      | No           | Import only MISP published events                                                                   |
 | `misp_import_with_attachments`    | `MISP_IMPORT_WITH_ATTACHMENTS`    | No           | Import attachment attribute content as a file if it is a PDF.                                       |
 | `misp_import_to_ids_no_score`     | `MISP_IMPORT_TO_IDS_NO_SCORE`     | No           | A score (`Integer`) value for the indicator/observable if the attribute `to_ids` value is no.       |
+| `import_unsupported_observables_as_text`     | `MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT`     | No           | Import unsupported observable as x_opencti_text                          |
 | `misp_interval`                   | `MISP_INTERVAL`                   | Yes          | Check for new event to import every `n` minutes.                                                    |
 
 ## Behavior

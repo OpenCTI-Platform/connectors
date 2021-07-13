@@ -156,6 +156,15 @@ class Misp:
             config,
             True,
         )
+        self.import_unsupported_observables_as_text = bool(
+            get_config_variable(
+                "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT",
+                ["misp", "import_unsupported_observables_as_text"],
+                config,
+                isNumber=False,
+                default=False,
+            )
+        )
         self.misp_interval = get_config_variable(
             "MISP_INTERVAL", ["misp", "interval"], config, True
         )
@@ -1395,13 +1404,16 @@ class Misp:
                     )
                 return [{"resolver": resolver_0, "type": type_0, "value": value}]
         # If not found, return text observable as a fallback
-        return [
-            {
-                "resolver": "text",
-                "type": "X-OpenCTI-Text",
-                "value": value + " (type=" + type + ")",
-            }
-        ]
+        if self.import_unsupported_observables_as_text:
+            return [
+                {
+                    "resolver": "text",
+                    "type": "X-OpenCTI-Text",
+                    "value": value + " (type=" + type + ")",
+                }
+            ]
+        else:
+            return None
 
     def detect_ip_version(self, value, type=False):
         if len(value) > 16:
