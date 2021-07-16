@@ -778,32 +778,35 @@ class Misp:
 
             indicator = None
             if self.misp_create_indicators:
-                indicator = Indicator(
-                    id="indicator--" + attribute["uuid"],
-                    name=name,
-                    description=attribute["comment"],
-                    confidence=self.helper.connect_confidence_level,
-                    pattern_type=pattern_type,
-                    pattern=pattern,
-                    valid_from=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    labels=attribute_tags,
-                    created_by_ref=author,
-                    object_marking_refs=attribute_markings,
-                    external_references=attribute_external_references,
-                    created=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    modified=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    custom_properties={
-                        "x_opencti_main_observable_type": observable_type,
-                        "x_opencti_detection": to_ids,
-                        "x_opencti_score": score,
-                    },
-                )
+                try:
+                    indicator = Indicator(
+                        id="indicator--" + attribute["uuid"],
+                        name=name,
+                        description=attribute["comment"],
+                        confidence=self.helper.connect_confidence_level,
+                        pattern_type=pattern_type,
+                        pattern=pattern,
+                        valid_from=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        labels=attribute_tags,
+                        created_by_ref=author,
+                        object_marking_refs=attribute_markings,
+                        external_references=attribute_external_references,
+                        created=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        modified=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        custom_properties={
+                            "x_opencti_main_observable_type": observable_type,
+                            "x_opencti_detection": to_ids,
+                            "x_opencti_score": score,
+                        },
+                    )
+                except Exception as e:
+                    self.helper.log_error(str(e))
             observable = None
             if self.misp_create_observables and observable_type is not None:
                 observable = SimpleObservable(
