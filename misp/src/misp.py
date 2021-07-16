@@ -809,19 +809,22 @@ class Misp:
                     self.helper.log_error(str(e))
             observable = None
             if self.misp_create_observables and observable_type is not None:
-                observable = SimpleObservable(
-                    id="x-opencti-simple-observable--" + attribute["uuid"],
-                    key=observable_type
-                    + "."
-                    + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
-                    value=observable_value,
-                    description=attribute["comment"],
-                    x_opencti_score=score,
-                    labels=attribute_tags,
-                    created_by_ref=author,
-                    object_marking_refs=attribute_markings,
-                    external_references=attribute_external_references,
-                )
+                try:
+                    observable = SimpleObservable(
+                        id="x-opencti-simple-observable--" + attribute["uuid"],
+                        key=observable_type
+                        + "."
+                        + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
+                        value=observable_value,
+                        description=attribute["comment"],
+                        x_opencti_score=score,
+                        labels=attribute_tags,
+                        created_by_ref=author,
+                        object_marking_refs=attribute_markings,
+                        external_references=attribute_external_references,
+                    )
+                except Exception as e:
+                    self.helper.log_error(str(e))
             sightings = []
             identities = []
             if "Sighting" in attribute:
