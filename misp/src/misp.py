@@ -572,24 +572,23 @@ class Misp:
                 for ref in object["ObjectReference"]:
                     ref_src = ref.get("source_uuid")
                     ref_target = ref.get("referenced_uuid")
-
-                    src_result = self.find_type_by_uuid(ref_src, bundle_objects)
-                    target_result = self.find_type_by_uuid(ref_target, bundle_objects)
-
-                    if src_result is not None and target_result is not None:
-                        objects_relationships.append(
-                            Relationship(
-                                id="relationship--" + ref["uuid"],
-                                relationship_type="related-to",
-                                created_by_ref=author,
-                                description="Original Relationship: "
-                                + ref["relationship_type"]
-                                + "  \nComment: "
-                                + ref["comment"],
-                                source_ref=src_result["entity"]["id"],
-                                target_ref=target_result["entity"]["id"],
+                    if ref_src is not None and ref_target is not None:
+                        src_result = self.find_type_by_uuid(ref_src, bundle_objects)
+                        target_result = self.find_type_by_uuid(ref_target, bundle_objects)
+                        if src_result is not None and target_result is not None:
+                            objects_relationships.append(
+                                Relationship(
+                                    id="relationship--" + ref["uuid"],
+                                    relationship_type="related-to",
+                                    created_by_ref=author,
+                                    description="Original Relationship: "
+                                    + ref["relationship_type"]
+                                    + "  \nComment: "
+                                    + ref["comment"],
+                                    source_ref=src_result["entity"]["id"],
+                                    target_ref=target_result["entity"]["id"],
+                                )
                             )
-                        )
             # Add object_relationships
             for object_relationship in objects_relationships:
                 object_refs.append(object_relationship)
