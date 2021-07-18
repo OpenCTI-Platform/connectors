@@ -574,7 +574,9 @@ class Misp:
                     ref_target = ref.get("referenced_uuid")
                     if ref_src is not None and ref_target is not None:
                         src_result = self.find_type_by_uuid(ref_src, bundle_objects)
-                        target_result = self.find_type_by_uuid(ref_target, bundle_objects)
+                        target_result = self.find_type_by_uuid(
+                            ref_target, bundle_objects
+                        )
                         if src_result is not None and target_result is not None:
                             objects_relationships.append(
                                 Relationship(
