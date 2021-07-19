@@ -135,31 +135,27 @@ class ShodanConnector:
         vulns = []
 
         for vuln in shodanHostResponse["vulns"]:
-            vulnX = self.helper.api.vulnerability.create(
-                name=vuln
-            )
-            
+            vulnX = self.helper.api.vulnerability.create(name=vuln)
+
             vulns.append(vulnX)
         return vulns
 
     def _generate_identity(self, shodanHostResponse):
         org = shodanHostResponse["org"]
         orgFound = False
-        for orgX in self.helper.api.identity.list():   # Get Orgs and attampt match
+        for orgX in self.helper.api.identity.list():  # Get Orgs and attampt match
             if orgX["entity_type"] == "Organization":
-                orgX["name"]==org # Match fuzzy name
-                if orgX["name"]==org: 
+                orgX["name"] == org  # Match fuzzy name
+                if orgX["name"] == org:
                     return orgX
-                 
+
         if not orgFound:
             orgX = self.helper.api.identity.create(
-                type = "Organization",
-                name = org,
-                Description =  org,
+                type="Organization",
+                name=org,
+                Description=org,
             )
         return orgX
-
-
 
     def _convert_shodan_to_stix(self, shodanHostResponse, observable):
 
@@ -184,7 +180,7 @@ class ShodanConnector:
         x509s = self._generate_x509(shodanHostResponse)
         domains = self._generate_domains(shodanHostResponse)
         vulns = self._generate_vulns(shodanHostResponse)
-        org =  self._generate_identity(shodanHostResponse)
+        org = self._generate_identity(shodanHostResponse)
 
         # Create ASN Helper Object
         ASNumber = int(shodanHostResponse["asn"].replace("AS", ""))
@@ -275,9 +271,8 @@ class ShodanConnector:
                 confidence=self.helper.connect_confidence_level,
             )
 
-        
         # Link Vulns to Observable
-        VulnEOL =  datetime.now() + timedelta(days=60)
+        VulnEOL = datetime.now() + timedelta(days=60)
         for vuln in vulns:
             self.helper.api.stix_core_relationship.create(
                 fromId=observable["id"],
