@@ -133,6 +133,25 @@ class ShodanConnector:
             domains.append(domainX)
         return domains
 
+    def _generate_identity(self, shodanHostResponse):
+        org = shodanHostResponse["org"]
+        orgFound = False
+        for orgX in self.helper.api.identity.list():   # Get Orgs and attampt match
+            if orgX["entity_type"] == "Organization":
+                orgX["name"]==org # Match fuzzy name
+                if orgX["name"]==org: 
+                    return orgX
+                 
+        if not orgFound:
+            orgX = self.helper.api.identity.create(
+                type = "Organization",
+                name = org,
+                Description =  org,
+            )
+        return orgX
+
+
+
     def _convert_shodan_to_stix(self, shodanHostResponse, observable):
 
         # --------------------------------------------------------------------
@@ -156,6 +175,7 @@ class ShodanConnector:
 
         x509s = self._generate_x509(shodanHostResponse)
         domains = self._generate_domains(shodanHostResponse)
+        org =  self._generate_identity(shodanHostResponse)
 
         # Create ASN Helper Object
         ASNumber = int(shodanHostResponse["asn"].replace("AS", ""))
@@ -200,6 +220,15 @@ class ShodanConnector:
         #  Relationships
         # --------------------------------------------------------------------
 
+        # Link Observable to Identity
+        self.helper.api.stix_core_relationship.create(
+            fromId=observable["id"],
+            toId=org["id"],
+            relationship_type="related-to",
+            update=True,
+            confidence=self.helper.connect_confidence_level,
+        )
+
         # Link Indicator to Observable
         self.helper.api.stix_core_relationship.create(
             fromId=final_indicator["id"],
@@ -208,6 +237,7 @@ class ShodanConnector:
             update=True,
             confidence=self.helper.connect_confidence_level,
         )
+
         # Link ASN to Observable
         self.helper.api.stix_cyber_observable_relationship.create(
             fromId=final_observable["id"],
