@@ -1,7 +1,7 @@
 import yaml
 import os
 import shodan
-from datetime import datetime
+from datetime import datetime, timedelta
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -50,8 +50,6 @@ class ShodanConnector:
 
         # Create the description for the Observable
         Observable_Description = f"""
-**ORG:** {shodanHostResponse["org"]}
-
 **ISP:** {shodanHostResponse["isp"]}
 
 **OS:** {str(shodanHostResponse["os"])}
@@ -133,6 +131,17 @@ class ShodanConnector:
             domains.append(domainX)
         return domains
 
+    def _generate_vulns(self, shodanHostResponse):
+        vulns = []
+
+        for vuln in shodanHostResponse["vulns"]:
+            vulnX = self.helper.api.vulnerability.create(
+                name=vuln
+            )
+            
+            vulns.append(vulnX)
+        return vulns
+
     def _generate_identity(self, shodanHostResponse):
         org = shodanHostResponse["org"]
         orgFound = False
@@ -172,9 +181,9 @@ class ShodanConnector:
 
         # Create description
         Description = self._generate_host_description(shodanHostResponse)
-
         x509s = self._generate_x509(shodanHostResponse)
         domains = self._generate_domains(shodanHostResponse)
+        vulns = self._generate_vulns(shodanHostResponse)
         org =  self._generate_identity(shodanHostResponse)
 
         # Create ASN Helper Object
@@ -263,6 +272,20 @@ class ShodanConnector:
                 toId=observable["id"],
                 relationship_type="resolves-to",
                 update=True,
+                confidence=self.helper.connect_confidence_level,
+            )
+
+        
+        # Link Vulns to Observable
+        VulnEOL =  datetime.now() + timedelta(days=60)
+        for vuln in vulns:
+            self.helper.api.stix_core_relationship.create(
+                fromId=observable["id"],
+                toId=vuln["id"],
+                relationship_type="related-to",
+                update=True,
+                start_time=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                stop_time=VulnEOL.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 confidence=self.helper.connect_confidence_level,
             )
 
