@@ -108,8 +108,8 @@ class ThreatBusConnector(object):
         elif type(stix_msg) is Indicator:
             self._handle_indicator(stix_msg)
         else:
-            self.opencti_helper.log_error(
-                f"Received STIX object with unexpected type from Threat Bus: {type(stix_msg)}"
+            self.opencti_helper.log_warning(
+                f"Discarding Threat Bus message with unsupported type: {type(stix_msg)}. Hint: SnapshotRequests are not yet supported."
             )
 
     def _handle_indicator(self, indicator: Indicator):

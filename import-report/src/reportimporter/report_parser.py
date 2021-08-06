@@ -1,7 +1,7 @@
 import logging
 import os
+import ioc_finder
 from typing import Dict, List, Pattern, IO
-
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 from pycti import OpenCTIConnectorHelper
@@ -13,8 +13,11 @@ from reportimporter.constants import (
     RESULT_FORMAT_CATEGORY,
     MIME_PDF,
     MIME_TXT,
+    OBSERVABLE_DETECTION_CUSTOM_REGEX,
+    OBSERVABLE_DETECTION_LIBRARY,
 )
 from reportimporter.models import Observable, Entity
+from reportimporter.util import library_mapping
 
 
 class ReportParser(object):
@@ -42,41 +45,61 @@ class ReportParser(object):
             MIME_TXT: self._parse_text,
         }
 
+        self.library_lookup = library_mapping()
+
     def _is_whitelisted(self, regex_list: List[Pattern], ind_match: str):
         for regex in regex_list:
+            self.helper.log_debug(f"Filter regex '{regex}' for value '{ind_match}'")
             result = regex.search(ind_match)
             if result:
-                # Debug in future
-                self.helper.log_info(
+                self.helper.log_debug(
                     "Value {} is whitelisted with {}".format(ind_match, regex)
                 )
                 return True
         return False
 
+    def _post_parse_observables(self, ind_match: str, observable: Observable) -> Dict:
+        self.helper.log_debug("Observable match {}".format(ind_match))
+
+        if self._is_whitelisted(observable.filter_regex, ind_match):
+            return {}
+
+        return self._format_match(OBSERVABLE_CLASS, observable.stix_target, ind_match)
+
     def _parse(self, data: str) -> List[Dict]:
         list_matches = []
 
+        # Defang text
+        data = ioc_finder.prepare_text(data)
+
         for observable in self.observable_list:
-            for regex in observable.regex:
-                matches = regex.findall(data)
-                for ind_match in matches:
-                    if isinstance(ind_match, tuple):
-                        ind_match = ind_match[0]
+            if observable.detection_option == OBSERVABLE_DETECTION_CUSTOM_REGEX:
+                for regex in observable.regex:
+                    matches = regex.findall(data)
+                    for ind_match in matches:
+                        if isinstance(ind_match, tuple):
+                            ind_match = ind_match[0]
 
-                    # Debug in future
-                    self.helper.log_info("Match {}".format(ind_match))
+                        ind_match = self._post_parse_observables(ind_match, observable)
+                        if ind_match:
+                            list_matches.append(ind_match)
 
-                    if observable.defang:
-                        ind_match = self._defang(ind_match)
-
-                    if self._is_whitelisted(observable.filter_regex, ind_match):
-                        continue
-
-                    list_matches.append(
-                        self._format_match(
-                            OBSERVABLE_CLASS, observable.stix_target, ind_match
+            elif observable.detection_option == OBSERVABLE_DETECTION_LIBRARY:
+                lookup_function = self.library_lookup.get(observable.stix_target, None)
+                if not lookup_function:
+                    self.helper.log_error(
+                        "Selected library function is not implemented: {}".format(
+                            observable.iocfinder_function
                         )
                     )
+                    continue
+
+                matches = lookup_function(data)
+
+                for ind_match in matches:
+                    ind_match = self._post_parse_observables(ind_match, observable)
+                    if ind_match:
+                        list_matches.append(ind_match)
 
         for entity in self.entity_list:
             regex_list = entity.regex
@@ -88,8 +111,7 @@ class ReportParser(object):
                         self._format_match(ENTITY_CLASS, entity.name, entity.stix_id)
                     )
 
-        # Debug in future
-        self.helper.log_info("Text: {} -> extracts {}".format(data, list_matches))
+        self.helper.log_debug("Text: {} -> extracts {}".format(data, list_matches))
         return list_matches
 
     def _parse_pdf(self, file_data: IO) -> List[Dict]:
@@ -101,7 +123,7 @@ class ReportParser(object):
                         text = element.get_text()
                         no_newline_text = text.replace("\n", "")
                         parse_info += self._parse(no_newline_text)
-                        parse_info += self._parse(text)
+                        # Parsing with newlines has been deprecated
 
                 # TODO also extract information from images/figures using OCR
                 # https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html#topic-pdf-to-text-layout
@@ -156,31 +178,14 @@ class ReportParser(object):
         return unique_list
 
     @staticmethod
-    def _defang(value: str) -> str:
-        defang_types = [
-            ("[.]", "."),
-            ("hxxx://", "http://"),
-            ("hxxp://", "http://"),
-            ("hxxxx://", "https://"),
-            ("hxxps://", "https://"),
-            ("hxxxs://", "https://"),
-        ]
-
-        for defang_type in defang_types:
-            if defang_type[0] in value:
-                value = value.replace(defang_type[0], defang_type[1])
-
-        return value
-
-    @staticmethod
-    def _format_match(format_type, category, match):
+    def _format_match(format_type: str, category: str, match: str) -> Dict:
         return {
             RESULT_FORMAT_TYPE: format_type,
             RESULT_FORMAT_CATEGORY: category,
             RESULT_FORMAT_MATCH: match,
         }
 
-    def _remove_entities_from_observables(self, parsing_results):
+    def _remove_entities_from_observables(self, parsing_results: List) -> List:
         unique_list = list()
         for value in parsing_results:
             if value[RESULT_FORMAT_TYPE] != OBSERVABLE_CLASS:
@@ -188,10 +193,11 @@ class ReportParser(object):
             else:
                 match = False
                 for entity in self.entity_list:
-                    if self._is_whitelisted(entity.regex, value[RESULT_FORMAT_MATCH]):
+                    if self._is_whitelisted(
+                        entity.regex, str(value[RESULT_FORMAT_MATCH])
+                    ):
                         match = True
-                        # Debug in future
-                        self.helper.log_info(
+                        self.helper.log_debug(
                             "Value {} is also matched by entity {}".format(
                                 value, entity.name
                             )

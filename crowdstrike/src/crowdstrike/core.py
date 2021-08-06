@@ -16,7 +16,7 @@ from stix2 import Identity, MarkingDefinition  # type: ignore
 
 from crowdstrike.actor.importer import ActorImporter
 from crowdstrike.importer import BaseImporter
-from crowdstrike.indicator.importer import IndicatorImporter
+from crowdstrike.indicator.importer import IndicatorImporter, IndicatorImporterConfig
 from crowdstrike.report.importer import ReportImporter
 from crowdstrike.rule.yara_master_importer import YaraMasterImporter
 from crowdstrike.utils import (
@@ -50,6 +50,10 @@ class CrowdStrike:
     _CONFIG_REPORT_GUESS_MALWARE = f"{_CONFIG_NAMESPACE}.report_guess_malware"
     _CONFIG_INDICATOR_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.indicator_start_timestamp"
     _CONFIG_INDICATOR_EXCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.indicator_exclude_types"
+    _CONFIG_INDICATOR_LOW_SCORE = f"{_CONFIG_NAMESPACE}.indicator_low_score"
+    _CONFIG_INDICATOR_LOW_SCORE_LABELS = (
+        f"{_CONFIG_NAMESPACE}.indicator_low_score_labels"
+    )
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
 
@@ -68,6 +72,7 @@ class CrowdStrike:
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
+    _DEFAULT_INDICATOR_LOW_SCORE = 40
 
     _CONNECTOR_RUN_INTERVAL_SEC = 60
 
@@ -159,6 +164,21 @@ class CrowdStrike:
                 indicator_exclude_types_str
             )
 
+        indicator_low_score = self._get_configuration(
+            config, self._CONFIG_INDICATOR_LOW_SCORE, is_number=True
+        )
+        if indicator_low_score is None:
+            indicator_low_score = self._DEFAULT_INDICATOR_LOW_SCORE
+
+        indicator_low_score_labels_str = self._get_configuration(
+            config, self._CONFIG_INDICATOR_LOW_SCORE_LABELS
+        )
+        indicator_low_score_labels = []
+        if indicator_low_score_labels_str is not None:
+            indicator_low_score_labels = convert_comma_separated_str_to_list(
+                indicator_low_score_labels_str
+            )
+
         update_existing_data = bool(
             self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
@@ -203,21 +223,24 @@ class CrowdStrike:
             importers.append(report_importer)
 
         if self._CONFIG_SCOPE_INDICATOR in scopes:
-            indicator_importer = IndicatorImporter(
-                self.helper,
-                client.intel_api.indicators,
-                client.intel_api.reports,
-                update_existing_data,
-                author,
-                indicator_start_timestamp,
-                tlp_marking,
-                create_observables,
-                create_indicators,
-                indicator_exclude_types,
-                report_status,
-                report_type,
+            indicator_importer_config = IndicatorImporterConfig(
+                helper=self.helper,
+                indicators_api=client.intel_api.indicators,
+                reports_api=client.intel_api.reports,
+                update_existing_data=update_existing_data,
+                author=author,
+                default_latest_timestamp=indicator_start_timestamp,
+                tlp_marking=tlp_marking,
+                create_observables=create_observables,
+                create_indicators=create_indicators,
+                exclude_types=indicator_exclude_types,
+                report_status=report_status,
+                report_type=report_type,
+                indicator_low_score=indicator_low_score,
+                indicator_low_score_labels=set(indicator_low_score_labels),
             )
 
+            indicator_importer = IndicatorImporter(indicator_importer_config)
             importers.append(indicator_importer)
 
         if self._CONFIG_SCOPE_YARA_MASTER in scopes:

@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike indicator importer module."""
 
 from datetime import datetime
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, NamedTuple, Optional, Set
 
 from crowdstrike_client.api.intel import Indicators, Reports
 from crowdstrike_client.api.models import Indicator
@@ -12,9 +12,31 @@ from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # t
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from crowdstrike.importer import BaseImporter
-from crowdstrike.indicator.builder import IndicatorBundleBuilder
+from crowdstrike.indicator.builder import (
+    IndicatorBundleBuilder,
+    IndicatorBundleBuilderConfig,
+)
 from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike.utils import datetime_to_timestamp, timestamp_to_datetime
+
+
+class IndicatorImporterConfig(NamedTuple):
+    """CrowdStrike indicator importer configuration."""
+
+    helper: OpenCTIConnectorHelper
+    indicators_api: Indicators
+    reports_api: Reports
+    update_existing_data: bool
+    author: Identity
+    default_latest_timestamp: int
+    tlp_marking: MarkingDefinition
+    create_observables: bool
+    create_indicators: bool
+    exclude_types: List[str]
+    report_status: int
+    report_type: str
+    indicator_low_score: int
+    indicator_low_score_labels: Set[str]
 
 
 class IndicatorImporter(BaseImporter):
@@ -22,37 +44,30 @@ class IndicatorImporter(BaseImporter):
 
     _LATEST_INDICATOR_TIMESTAMP = "latest_indicator_timestamp"
 
-    def __init__(
-        self,
-        helper: OpenCTIConnectorHelper,
-        indicators_api: Indicators,
-        reports_api: Reports,
-        update_existing_data: bool,
-        author: Identity,
-        default_latest_timestamp: int,
-        tlp_marking: MarkingDefinition,
-        create_observables: bool,
-        create_indicators: bool,
-        exclude_types: List[str],
-        report_status: int,
-        report_type: str,
-    ) -> None:
+    def __init__(self, config: IndicatorImporterConfig) -> None:
         """Initialize CrowdStrike indicator importer."""
-        super().__init__(helper, author, tlp_marking, update_existing_data)
+        super().__init__(
+            config.helper,
+            config.author,
+            config.tlp_marking,
+            config.update_existing_data,
+        )
 
-        self.indicators_api = indicators_api
-        self.create_observables = create_observables
-        self.create_indicators = create_indicators
-        self.default_latest_timestamp = default_latest_timestamp
-        self.exclude_types = exclude_types
-        self.report_status = report_status
-        self.report_type = report_type
+        self.indicators_api = config.indicators_api
+        self.create_observables = config.create_observables
+        self.create_indicators = config.create_indicators
+        self.default_latest_timestamp = config.default_latest_timestamp
+        self.exclude_types = config.exclude_types
+        self.report_status = config.report_status
+        self.report_type = config.report_type
+        self.indicator_low_score = config.indicator_low_score
+        self.indicator_low_score_labels = config.indicator_low_score_labels
 
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
 
-        self.report_fetcher = ReportFetcher(reports_api)
+        self.report_fetcher = ReportFetcher(config.reports_api)
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
@@ -215,28 +230,23 @@ class IndicatorImporter(BaseImporter):
     def _create_indicator_bundle(
         self, indicator: Indicator, indicator_reports: List[FetchedReport]
     ) -> Optional[Bundle]:
-        author = self.author
-        source_name = self._source_name()
-        object_markings = [self.tlp_marking]
-        confidence_level = self._confidence_level()
-        create_observables = self.create_observables
-        create_indicators = self.create_indicators
-        report_status = self.report_status
-        report_type = self.report_type
+        bundle_builder_config = IndicatorBundleBuilderConfig(
+            indicator=indicator,
+            author=self.author,
+            source_name=self._source_name(),
+            object_markings=[self.tlp_marking],
+            confidence_level=self._confidence_level(),
+            create_observables=self.create_observables,
+            create_indicators=self.create_indicators,
+            indicator_report_status=self.report_status,
+            indicator_report_type=self.report_type,
+            indicator_reports=indicator_reports,
+            indicator_low_score=self.indicator_low_score,
+            indicator_low_score_labels=self.indicator_low_score_labels,
+        )
 
         try:
-            bundle_builder = IndicatorBundleBuilder(
-                indicator,
-                author,
-                source_name,
-                object_markings,
-                confidence_level,
-                create_observables,
-                create_indicators,
-                report_status,
-                report_type,
-                indicator_reports,
-            )
+            bundle_builder = IndicatorBundleBuilder(bundle_builder_config)
             return bundle_builder.build()
         except TypeError as te:
             self._error(

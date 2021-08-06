@@ -24,7 +24,7 @@ class HistoryConnector:
             and self.logger_config["elasticsearch_password"] is not None
         ):
             self.elasticsearch = Elasticsearch(
-                [self.logger_config["elasticsearch_url"]],
+                self.logger_config["elasticsearch_url"],
                 verify_certs=self.logger_config[
                     "elasticsearch_ssl_reject_unauthorized"
                 ],
@@ -35,7 +35,7 @@ class HistoryConnector:
             )
         elif self.logger_config["elasticsearch_api_key"] is not None:
             self.elasticsearch = Elasticsearch(
-                [self.logger_config["elasticsearch_url"]],
+                self.logger_config["elasticsearch_url"],
                 verify_certs=self.logger_config[
                     "elasticsearch_ssl_reject_unauthorized"
                 ],
@@ -43,7 +43,7 @@ class HistoryConnector:
             )
         else:
             self.elasticsearch = Elasticsearch(
-                [self.logger_config["elasticsearch_url"]],
+                self.logger_config["elasticsearch_url"],
                 verify_certs=self.logger_config[
                     "elasticsearch_ssl_reject_unauthorized"
                 ],

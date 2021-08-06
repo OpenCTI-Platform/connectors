@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-misp:
-    image: opencti/connector-misp:4.5.4
+    image: opencti/connector-misp:4.5.5
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -30,5 +30,8 @@ services:
       - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3 # Optional, only import events with the given distribution levels
       - MISP_IMPORT_THREAT_LEVELS=1,2,3,4 # Optional only import events with the given threat levels
       - MISP_IMPORT_ONLY_PUBLISHED=False
+      - MISP_IMPORT_WITH_ATTACHMENTS=False # Optional, try to import a PDF file from the attachment attribute
+      - MISP_IMPORT_TO_IDS_NO_SCORE=40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
+      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=False #  Optional, import unsupported observable as x_opencti_text
       - MISP_INTERVAL=1 # Required, in minutes
     restart: always

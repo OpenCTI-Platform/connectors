@@ -30,4 +30,7 @@ misp:
   import_distribution_levels: '0,1,2,3' # Optional, only import events with the given distribution levels
   import_threat_levels: '1,2,3,4' # Optional only import events with the given threat levels
   import_only_published: False # Optional only import events published
+  import_with_attachments: False # Optional, try to import a PDF file from the attachment attribute
+  import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
+  import_unsupported_observables_as_text: False # Optional, import unsupported observable as x_opencti_text
   interval: 1 # Required, in minutes

@@ -19,7 +19,6 @@ from reportimporter.constants import (
 from reportimporter.models import Observable, EntityConfig, Entity
 from reportimporter.report_parser import ReportParser
 from reportimporter.util import MyConfigParser
-from stix2 import Bundle, Report, Vulnerability
 
 
 class ReportImporter:
@@ -77,7 +76,7 @@ class ReportImporter:
             return "No information extracted from report"
 
         # Process parsing results
-        self.helper.log_info("Results: {}".format(parsed))
+        self.helper.log_debug("Results: {}".format(parsed))
         observables, entities = self._process_parsing_results(parsed)
         report = self.helper.api.report.read(id=entity_id)
         # Send results to OpenCTI
@@ -148,18 +147,41 @@ class ReportImporter:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
                 # Hardcoded exceptions since SimpleObservable doesn't support those types yet
                 if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
-                    observable = Vulnerability(name=match[RESULT_FORMAT_MATCH])
+                    observable = self.helper.api.vulnerability.read(
+                        filters={"key": "name", "values": [match[RESULT_FORMAT_MATCH]]}
+                    )
+                    if observable is None:
+                        self.helper.log_info(
+                            f"Vulnerability with name '{match[RESULT_FORMAT_MATCH]}' could not be "
+                            f"found. Is the CVE Connector activated?"
+                        )
+                        continue
+                elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
+                    observable = self.helper.api.attack_pattern.read(
+                        filters={
+                            "key": "x_mitre_id",
+                            "values": [match[RESULT_FORMAT_MATCH]],
+                        }
+                    )
+                    if observable is None:
+                        self.helper.log_info(
+                            f"AttackPattern with MITRE ID '{match[RESULT_FORMAT_MATCH]}' could not be "
+                            f"found. Is the MITRE Connector activated?"
+                        )
+                        continue
+
                 else:
-                    observable = SimpleObservable(
-                        id=OpenCTIStix2Utils.generate_random_stix_id(
+                    observable = self.helper.api.stix_cyber_observable.create(
+                        simple_observable_id=OpenCTIStix2Utils.generate_random_stix_id(
                             "x-opencti-simple-observable"
                         ),
-                        key=match[RESULT_FORMAT_CATEGORY],
-                        value=match[RESULT_FORMAT_MATCH],
-                        x_opencti_create_indicator=self.create_indicator,
+                        simple_observable_key=match[RESULT_FORMAT_CATEGORY],
+                        simple_observable_value=match[RESULT_FORMAT_MATCH],
+                        createIndicator=self.create_indicator,
                     )
 
-                observables.append(observable)
+                observables.append(observable["id"])
+
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
                 entities.append(match[RESULT_FORMAT_MATCH])
             else:
@@ -168,25 +190,29 @@ class ReportImporter:
         return observables, entities
 
     def _process_observables(self, report: Dict, observables: List) -> int:
-        if report is not None:
-            if report["entity_type"] == "Report" and len(observables) > 0:
-                report = Report(
-                    id=report["standard_id"],
-                    name=report["name"],
-                    description=report["description"],
-                    published=self.helper.api.stix2.format_date(report["created"]),
-                    report_types=report["report_types"],
-                    object_refs=observables,
-                )
-                observables.append(report)
+        if report is None:
+            self.helper.log_error(
+                "No report found! This is a purely contextual connector and this should not happen"
+            )
 
-        bundles_sent = []
-        if len(observables) > 0:
-            bundle = Bundle(objects=observables).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
+        if len(observables) == 0:
+            return 0
 
-        # -1 since report gets updated as well
-        return len(bundles_sent) - 1
+        report = self.helper.api.report.create(
+            id=report["standard_id"],
+            name=report["name"],
+            description=report["description"],
+            published=self.helper.api.stix2.format_date(report["created"]),
+            report_types=report["report_types"],
+            update=True,
+        )
+
+        for observable in observables:
+            self.helper.api.report.add_stix_object_or_stix_relationship(
+                id=report["id"], stixObjectOrStixRelationshipId=observable
+            )
+
+        return len(observables)
 
     def _process_entities(self, report: Dict, entities: List) -> int:
         if report:

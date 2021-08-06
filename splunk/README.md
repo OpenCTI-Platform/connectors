@@ -6,7 +6,7 @@ This connector allows organizations to feed a **Splunk** KV Store using OpenCTI 
 
 ### Requirements
 
-- OpenCTI Platform >= 4.5.4
+- OpenCTI Platform >= 4.5.5
 
 ### Configuration
 

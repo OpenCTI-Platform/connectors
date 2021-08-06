@@ -1,5 +1,8 @@
 import configparser
+import re
 from typing import List, Dict
+import ioc_finder
+from dateparser.search import search_dates
 
 
 class MyConfigParser(configparser.ConfigParser):
@@ -21,3 +24,47 @@ class MyConfigParser(configparser.ConfigParser):
             d[k] = dict(self._defaults, **d[k])
             d[k].pop("__name__", None)
         return d
+
+
+def library_mapping() -> Dict:
+    return {
+        "Autonomous-System.number": custom_asnparse,
+        #        'Date.foo': custom_dateparse,
+        "Domain-Name.value": ioc_finder.parse_domain_names,
+        "Email-Addr.value": ioc_finder.parse_email_addresses,
+        "IPv4-Addr.value": ioc_finder.parse_ipv4_addresses,
+        "IPv6-Addr.value": ioc_finder.parse_ipv6_addresses,
+        "File.hashes.MD5": ioc_finder.parse_md5s,
+        "File.hashes.SHA-1": ioc_finder.parse_sha1s,
+        "File.hashes.SHA-256": ioc_finder.parse_sha256s,
+        "Url.value": ioc_finder.parse_urls,
+        "Vulnerability.name": ioc_finder.parse_cves,
+        "Windows-Registry-Key.key": ioc_finder.parse_registry_key_paths,
+    }
+
+
+def custom_asnparse(text: str) -> List:
+    values = ioc_finder.parse_asns(text)
+    output = []
+    for value in values:
+        asn_value = re.findall(r"\d+", value)
+        if asn_value:
+            try:
+                asn_value = int(asn_value[0])
+                output.append(asn_value)
+            except SyntaxError:
+                print(
+                    f"Error ReportParser: Could not convert ASN match to int from {value}"
+                )
+        else:
+            print(f"Error ReportParser: Could not extract ASN number from {value}")
+
+    return output
+
+
+def custom_dateparse(text: str) -> List:
+    result = search_dates(text=text)
+    if not result:
+        return []
+    else:
+        return [value[1].isoformat(timespec="seconds") for value in result]

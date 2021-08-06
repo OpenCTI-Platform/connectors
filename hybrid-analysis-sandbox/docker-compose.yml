@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-hybrid-analysis-sandbox:
-    image: opencti/connector-hybrid-analysis-sandbox:4.5.4
+    image: opencti/connector-hybrid-analysis-sandbox:4.5.5
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
