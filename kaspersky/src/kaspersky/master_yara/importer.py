@@ -1,6 +1,7 @@
 """Kaspersky Master YARA importer module."""
 
 import itertools
+from datetime import datetime
 from typing import Any, List, Mapping, Optional, Tuple
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
@@ -71,7 +72,7 @@ class MasterYaraImporter(BaseImporter):
                 master_yara_fetch_weekday, latest_master_yara_datetime
             ):
                 self._info("It is not time to fetch the Master YARA yet.")
-                return state
+                return self._create_state(latest_master_yara_datetime)
 
         yara = self._fetch_master_yara()
 
@@ -117,10 +118,15 @@ class MasterYaraImporter(BaseImporter):
             group_count,
         )
 
+        return self._create_state(datetime_utc_now())
+
+    @classmethod
+    def _create_state(cls, latest_datetime: Optional[datetime]) -> Mapping[str, Any]:
+        if latest_datetime is None:
+            return {}
+
         return {
-            self._LATEST_MASTER_YARA_TIMESTAMP: datetime_to_timestamp(
-                datetime_utc_now()
-            )
+            cls._LATEST_MASTER_YARA_TIMESTAMP: datetime_to_timestamp(latest_datetime)
         }
 
     def _fetch_master_yara(self) -> Yara:
