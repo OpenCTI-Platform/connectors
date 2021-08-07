@@ -388,7 +388,12 @@ class KasperskyConnector:
 
                     for importer in self.importers:
                         importer_state = importer.start(work_id, current_state)
-                        new_state.update(importer_state)
+                        if importer_state:
+                            self._info(
+                                "Updating global state with importer state: {0}",
+                                importer_state,
+                            )
+                            new_state.update(importer_state)
 
                     new_state[
                         self._STATE_LATEST_RUN_TIMESTAMP
