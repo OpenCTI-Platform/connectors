@@ -121,16 +121,12 @@ class ReportParser(object):
                 for element in page_layout:
                     if isinstance(element, LTTextContainer):
                         text = element.get_text()
+                        # Parsing with newlines has been deprecated
                         no_newline_text = text.replace("\n", "")
                         parse_info += self._parse(no_newline_text)
-                        # Parsing with newlines has been deprecated
 
                 # TODO also extract information from images/figures using OCR
                 # https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html#topic-pdf-to-text-layout
-
-            # output_string = io.StringIO()
-            # extract_text_to_fp(file_data, output_string)
-            # parse_info += self._parse(output_string.getvalue())
 
         except Exception as e:
             logging.exception("Pdf Parsing Error: {}".format(e))

@@ -1,7 +1,9 @@
 import json
 import os
 import re
+import ioc_finder.data
 from typing import List, Optional, Dict, Pattern, Any
+from pycti import OpenCTIConnectorHelper
 from pydantic import BaseModel, validator
 from reportimporter.constants import (
     COMMENT_INDICATOR,
@@ -121,10 +123,12 @@ class EntityConfig(BaseModel):
             return json.loads(filter)
         return filter
 
-    def convert_to_entity(self, opencti_response: List) -> List[Entity]:
+    def convert_to_entity(
+        self, opencti_response: List, helper: OpenCTIConnectorHelper
+    ) -> List[Entity]:
         entities = []
         for item in opencti_response:
-            _id = item.get("id")
+            _id = item.get("standard_id")
             item_values = set()
             if (
                 item.get("externalReferences", None) is None
@@ -140,12 +144,25 @@ class EntityConfig(BaseModel):
                     elif type(elem) == str:
                         item_values.add(elem)
 
-            # Continue if exclude value is present
-            if set(self.exclude) & item_values:
-                print("Name {} exclude {}".format(self.name, self.exclude))
-                continue
+            # Exclude certain SDO names which are too generic for being used to automatically parse text
+            indicators = []
+            for value in item_values:
+                # Approach 1: Remove SDO names which are also TLDs
+                if value.lower() in ioc_finder.data.tlds:
+                    helper.log_debug(
+                        f"Entity: Discarding value '{value}' due to TLD match"
+                    )
+                    continue
 
-            indicators = ["\\b{}\\b".format(v) for v in item_values]
+                # Approach 2: Remove SDO names which are defined to be excluded in the entity config
+                if value.lower() in self.exclude:
+                    helper.log_debug(
+                        f"Entity: Discarding value '{value}' due to explicit exclusion"
+                    )
+                    continue
+
+                indicators.append(f"\\b{value}\\b")
+
             indicators = "|".join(indicators)
             regex = re.compile(indicators, re.IGNORECASE)
 
@@ -156,7 +173,6 @@ class EntityConfig(BaseModel):
                 values=item_values,
                 regex=[regex],
             )
-
             entities.append(entity)
 
         return entities
