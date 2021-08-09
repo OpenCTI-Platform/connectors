@@ -79,7 +79,7 @@ class MasterIOCImporter(BaseImporter):
                 master_ioc_fetch_weekday, latest_master_ioc_datetime
             ):
                 self._info("It is not time to fetch the Master IOC yet.")
-                return state
+                return self._create_state(latest_master_ioc_datetime)
 
         openioc_csv = self._fetch_master_ioc()
 
@@ -122,8 +122,15 @@ class MasterIOCImporter(BaseImporter):
             group_count,
         )
 
+        return self._create_state(datetime_utc_now())
+
+    @classmethod
+    def _create_state(cls, latest_datetime: Optional[datetime]) -> Mapping[str, Any]:
+        if latest_datetime is None:
+            return {}
+
         return {
-            self._LATEST_MASTER_IOC_TIMESTAMP: datetime_to_timestamp(datetime_utc_now())
+            cls._LATEST_MASTER_IOC_TIMESTAMP: datetime_to_timestamp(latest_datetime)
         }
 
     def _fetch_master_ioc(self) -> OpenIOCCSV:

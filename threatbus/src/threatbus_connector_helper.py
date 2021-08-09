@@ -193,10 +193,12 @@ class ThreatBusConnectorHelper(Thread):
             raise RuntimeError(
                 f"Threat Bus subscription with topics {self.subscribe_topics} failed. Is the endpoint reachable?"
             )
-        pub_endpoint = reply.get("pub_endpoint", None)
-        sub_endpoint = reply.get("sub_endpoint", None)
+
+        pub_port = reply.get("pub_port", None)
+        sub_port = reply.get("sub_port", None)
         p2p_topic = reply.get("topic", None)
-        if not pub_endpoint or not sub_endpoint or not p2p_topic:
+
+        if not pub_port or not sub_port or not p2p_topic:
             raise RuntimeError(
                 "Threat Bus subscription failed with an incomplete reply."
             )
@@ -207,10 +209,11 @@ class ThreatBusConnectorHelper(Thread):
             # connection loss. Unsubscribe the old topic before re-subscribing.
             self._unsubscribe()
         self.p2p_topic = p2p_topic
+        zmq_host = self.zmq_manage_ep.split(":")[1]
         self.publish_socket = zmq.Context().socket(zmq.PUB)
-        self.publish_socket.connect(f"tcp://{sub_endpoint}")
+        self.publish_socket.connect(f"tcp://{zmq_host}:{pub_port}")
         self.receive_socket = zmq.Context().socket(zmq.SUB)
-        self.receive_socket.connect(f"tcp://{pub_endpoint}")
+        self.receive_socket.connect(f"tcp://{zmq_host}:{sub_port}")
         self.receive_socket.setsockopt(zmq.SUBSCRIBE, self.p2p_topic.encode())
         self.log_info(f"Subscribed to Threat Bus using p2p_topic '{self.p2p_topic}'.")
         self.poller = zmq.Poller()

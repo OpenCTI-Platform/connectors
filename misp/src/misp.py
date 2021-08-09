@@ -572,24 +572,25 @@ class Misp:
                 for ref in object["ObjectReference"]:
                     ref_src = ref.get("source_uuid")
                     ref_target = ref.get("referenced_uuid")
-
-                    src_result = self.find_type_by_uuid(ref_src, bundle_objects)
-                    target_result = self.find_type_by_uuid(ref_target, bundle_objects)
-
-                    if src_result is not None and target_result is not None:
-                        objects_relationships.append(
-                            Relationship(
-                                id="relationship--" + ref["uuid"],
-                                relationship_type="related-to",
-                                created_by_ref=author,
-                                description="Original Relationship: "
-                                + ref["relationship_type"]
-                                + "  \nComment: "
-                                + ref["comment"],
-                                source_ref=src_result["entity"]["id"],
-                                target_ref=target_result["entity"]["id"],
-                            )
+                    if ref_src is not None and ref_target is not None:
+                        src_result = self.find_type_by_uuid(ref_src, bundle_objects)
+                        target_result = self.find_type_by_uuid(
+                            ref_target, bundle_objects
                         )
+                        if src_result is not None and target_result is not None:
+                            objects_relationships.append(
+                                Relationship(
+                                    id="relationship--" + ref["uuid"],
+                                    relationship_type="related-to",
+                                    created_by_ref=author,
+                                    description="Original Relationship: "
+                                    + ref["relationship_type"]
+                                    + "  \nComment: "
+                                    + ref["comment"],
+                                    source_ref=src_result["entity"]["id"],
+                                    target_ref=target_result["entity"]["id"],
+                                )
+                            )
             # Add object_relationships
             for object_relationship in objects_relationships:
                 object_refs.append(object_relationship)
@@ -778,47 +779,53 @@ class Misp:
 
             indicator = None
             if self.misp_create_indicators:
-                indicator = Indicator(
-                    id="indicator--" + attribute["uuid"],
-                    name=name,
-                    description=attribute["comment"],
-                    confidence=self.helper.connect_confidence_level,
-                    pattern_type=pattern_type,
-                    pattern=pattern,
-                    valid_from=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    labels=attribute_tags,
-                    created_by_ref=author,
-                    object_marking_refs=attribute_markings,
-                    external_references=attribute_external_references,
-                    created=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    modified=datetime.utcfromtimestamp(
-                        int(attribute["timestamp"])
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    custom_properties={
-                        "x_opencti_main_observable_type": observable_type,
-                        "x_opencti_detection": to_ids,
-                        "x_opencti_score": score,
-                    },
-                )
+                try:
+                    indicator = Indicator(
+                        id="indicator--" + attribute["uuid"],
+                        name=name,
+                        description=attribute["comment"],
+                        confidence=self.helper.connect_confidence_level,
+                        pattern_type=pattern_type,
+                        pattern=pattern,
+                        valid_from=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        labels=attribute_tags,
+                        created_by_ref=author,
+                        object_marking_refs=attribute_markings,
+                        external_references=attribute_external_references,
+                        created=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        modified=datetime.utcfromtimestamp(
+                            int(attribute["timestamp"])
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        custom_properties={
+                            "x_opencti_main_observable_type": observable_type,
+                            "x_opencti_detection": to_ids,
+                            "x_opencti_score": score,
+                        },
+                    )
+                except Exception as e:
+                    self.helper.log_error(str(e))
             observable = None
             if self.misp_create_observables and observable_type is not None:
-                observable = SimpleObservable(
-                    id="x-opencti-simple-observable--" + attribute["uuid"],
-                    key=observable_type
-                    + "."
-                    + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
-                    value=observable_value,
-                    description=attribute["comment"],
-                    x_opencti_score=score,
-                    labels=attribute_tags,
-                    created_by_ref=author,
-                    object_marking_refs=attribute_markings,
-                    external_references=attribute_external_references,
-                )
+                try:
+                    observable = SimpleObservable(
+                        id="x-opencti-simple-observable--" + attribute["uuid"],
+                        key=observable_type
+                        + "."
+                        + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
+                        value=observable_value,
+                        description=attribute["comment"],
+                        x_opencti_score=score,
+                        labels=attribute_tags,
+                        created_by_ref=author,
+                        object_marking_refs=attribute_markings,
+                        external_references=attribute_external_references,
+                    )
+                except Exception as e:
+                    self.helper.log_error(str(e))
             sightings = []
             identities = []
             if "Sighting" in attribute:

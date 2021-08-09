@@ -131,6 +131,7 @@ class ShodanConnector:
             domains.append(domainX)
         return domains
 
+
     def _generate_vulns(self, shodanHostResponse):
         vulns = []
 
@@ -159,7 +160,6 @@ class ShodanConnector:
                 Description=org,
             )
         return orgX
-
     def _convert_shodan_to_stix(self, shodanHostResponse, observable):
 
         # --------------------------------------------------------------------
@@ -228,6 +228,7 @@ class ShodanConnector:
         #  Relationships
         # --------------------------------------------------------------------
 
+
         # Link Observable to Identity
         self.helper.api.stix_core_relationship.create(
             fromId=observable["id"],
@@ -236,6 +237,7 @@ class ShodanConnector:
             update=True,
             confidence=self.helper.connect_confidence_level,
         )
+
 
         # Link Indicator to Observable
         self.helper.api.stix_core_relationship.create(
@@ -274,6 +276,7 @@ class ShodanConnector:
                 confidence=self.helper.connect_confidence_level,
             )
 
+
         # Link Vulns to Observable
         VulnEOL = datetime.now() + timedelta(days=60)
         for vuln in vulns:
@@ -286,6 +289,7 @@ class ShodanConnector:
                 stop_time=VulnEOL.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 confidence=self.helper.connect_confidence_level,
             )
+
 
         # --------------------------------------------------------------------
         #  References
