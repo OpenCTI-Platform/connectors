@@ -92,7 +92,7 @@ class HistoryConnector:
                 index=self.elasticsearch_index, id=msg.id, body=history_data
             )
 
-        except elasticsearch.RequestError as err:
+        except Exception as err:
             print("Unexpected error:", err, msg)
             pass
 
