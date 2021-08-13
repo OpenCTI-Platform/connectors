@@ -80,8 +80,12 @@ class HistoryConnector:
                     if "x_opencti_target_ref" in event_json["data"]
                     else None,
                     "message": event_json["message"],
-                    "commit_message": event_json["commit_message"] if "commit_message" in event_json else None,
-                    "commit_references": event_json["commit_references"] if "commit_references" in event_json else None,
+                    "commit_message": event_json["commit_message"]
+                    if "commit_message" in event_json
+                    else None,
+                    "commit_references": event_json["commit_references"]
+                    if "commit_references" in event_json
+                    else None,
                 },
             }
             self.elasticsearch.index(
