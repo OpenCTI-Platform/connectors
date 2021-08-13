@@ -1,7 +1,5 @@
 import datetime
 import os
-
-import elasticsearch
 import yaml
 import json
 
@@ -91,7 +89,6 @@ class HistoryConnector:
             self.elasticsearch.index(
                 index=self.elasticsearch_index, id=msg.id, body=history_data
             )
-
         except Exception as err:
             print("Unexpected error:", err, msg)
             pass
