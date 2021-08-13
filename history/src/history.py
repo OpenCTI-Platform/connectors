@@ -1,7 +1,5 @@
 import datetime
 import os
-
-import elasticsearch
 import yaml
 import json
 
@@ -80,13 +78,18 @@ class HistoryConnector:
                     if "x_opencti_target_ref" in event_json["data"]
                     else None,
                     "message": event_json["message"],
+                    "commit_message": event_json["commit_message"]
+                    if "commit_message" in event_json
+                    else None,
+                    "commit_references": event_json["commit_references"]
+                    if "commit_references" in event_json
+                    else None,
                 },
             }
             self.elasticsearch.index(
                 index=self.elasticsearch_index, id=msg.id, body=history_data
             )
-
-        except elasticsearch.RequestError as err:
+        except Exception as err:
             print("Unexpected error:", err, msg)
             pass
 

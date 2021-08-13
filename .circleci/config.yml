@@ -181,6 +181,10 @@ jobs:
           name: Build Docker image opencti/connector-vxvault
           command: docker build -t opencti/connector-vxvault:latest . && docker tag opencti/connector-vxvault:latest opencti/connector-vxvault:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/shodan
+          name: Build Docker image opencti/connector-shodan
+          command: docker build -t opencti/connector-shodan:latest . && docker tag opencti/connector-shodan:latest opencti/connector-shodan:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -258,6 +262,8 @@ jobs:
             docker push opencti/connector-elasticsearch:${CIRCLE_TAG}
             docker push opencti/connector-vxvault:latest
             docker push opencti/connector-vxvault:${CIRCLE_TAG}
+            docker push opencti/connector-shodan:latest
+            docker push opencti/connector-shodan:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -414,6 +420,10 @@ jobs:
           name: Build Docker image opencti/connector-vxvault
           command: docker build -t opencti/connector-vxvault:rolling .
       - run:
+          working_directory: ~/opencti/shodan
+          name: Build Docker image opencti/connector-shodan
+          command: docker build -t opencti/connector-shodan:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -454,6 +464,7 @@ jobs:
             docker push opencti/connector-splunk:rolling
             docker push opencti/connector-elasticsearch:rolling
             docker push opencti/connector-vxvault:rolling
+            docker push opencti/connector-shodan:rolling
 workflows:
   version: 2
   opencti:
