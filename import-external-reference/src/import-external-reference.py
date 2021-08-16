@@ -44,6 +44,7 @@ class ImportExternalReferenceConnector:
             False,
             True,
         )
+        self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"}
 
     def delete_files(self):
         if os.path.exists("data.html"):
@@ -60,9 +61,9 @@ class ImportExternalReferenceConnector:
             if url_to_import.endswith(".pdf"):
                 # Download file
                 file_name = url_to_import.split("/")[-1]
+                req = urllib.request.Request(url_to_import, headers=self.headers)
                 response = urllib.request.urlopen(
-                    url_to_import,
-                    context=ssl.create_default_context(cafile=certifi.where()),
+                    req, context=ssl.create_default_context(cafile=certifi.where())
                 )
                 data = response.read()
                 self.helper.api.external_reference.add_file(
@@ -84,6 +85,14 @@ class ImportExternalReferenceConnector:
         if self.import_as_md:
             if url_to_import.endswith(".pdf") and self.import_pdf_as_md:
                 try:
+                    req = urllib.request.Request(url_to_import, headers=self.headers)
+                    response = urllib.request.urlopen(
+                        req, context=ssl.create_default_context(cafile=certifi.where())
+                    )
+                    f = open("./data.pdf", "w")
+                    content = response.read()
+                    f.write(content)
+                    f.close()
                     urllib.request.urlretrieve(url_to_import, "./data.pdf")
                     outfp = open("./data.html", "w", encoding="utf-8")
                     rsrcmgr = PDFResourceManager(caching=True)
@@ -136,8 +145,11 @@ class ImportExternalReferenceConnector:
                 text_maker.ignore_images = False
                 text_maker.ignore_tables = False
                 text_maker.ignore_emphasis = False
-                handler = urllib.request.urlopen(url_to_import)
-                html = handler.read().decode("utf-8")
+                req = urllib.request.Request(url_to_import, headers=self.headers)
+                response = urllib.request.urlopen(
+                    req, context=ssl.create_default_context(cafile=certifi.where())
+                )
+                html = response.read().decode("utf-8")
                 data = text_maker.handle(html)
                 self.helper.api.external_reference.add_file(
                     id=external_reference["id"],
