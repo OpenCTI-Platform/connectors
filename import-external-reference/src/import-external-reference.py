@@ -1,4 +1,3 @@
-from time import sleep
 import yaml
 import os
 import urllib.request
