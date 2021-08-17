@@ -58,30 +58,33 @@ class ImportExternalReferenceConnector:
         url_to_import = external_reference["url"].strip("/")
         # If the URL is a PDF file, just download it
         if self.import_as_pdf:
-            if url_to_import.endswith(".pdf"):
-                # Download file
-                file_name = url_to_import.split("/")[-1]
-                req = urllib.request.Request(url_to_import, headers=self.headers)
-                response = urllib.request.urlopen(
-                    req, context=ssl.create_default_context(cafile=certifi.where())
-                )
-                data = response.read()
-                self.helper.api.external_reference.add_file(
-                    id=external_reference["id"],
-                    file_name=file_name,
-                    data=data,
-                    mime_type="application/pdf",
-                )
-            else:
-                file_name = url_to_import.split("/")[-1] + ".pdf"
-                options = {"javascript-delay": 10000, "no-stop-slow-scripts": None}
-                data = pdfkit.from_url(url_to_import, False, options=options)
-                self.helper.api.external_reference.add_file(
-                    id=external_reference["id"],
-                    file_name=file_name,
-                    data=data,
-                    mime_type="application/pdf",
-                )
+            try:
+                if url_to_import.endswith(".pdf"):
+                    # Download file
+                    file_name = url_to_import.split("/")[-1]
+                    req = urllib.request.Request(url_to_import, headers=self.headers)
+                    response = urllib.request.urlopen(
+                        req, context=ssl.create_default_context(cafile=certifi.where())
+                    )
+                    data = response.read()
+                    self.helper.api.external_reference.add_file(
+                        id=external_reference["id"],
+                        file_name=file_name,
+                        data=data,
+                        mime_type="application/pdf",
+                    )
+                else:
+                    file_name = url_to_import.split("/")[-1] + ".pdf"
+                    options = {"javascript-delay": 10000, "no-stop-slow-scripts": None}
+                    data = pdfkit.from_url(url_to_import, False, options=options)
+                    self.helper.api.external_reference.add_file(
+                        id=external_reference["id"],
+                        file_name=file_name,
+                        data=data,
+                        mime_type="application/pdf",
+                    )
+            except Exception as e:
+                self.helper.log_error(e)
         if self.import_as_md:
             if url_to_import.endswith(".pdf") and self.import_pdf_as_md:
                 try:
@@ -137,26 +140,29 @@ class ImportExternalReferenceConnector:
                     self.delete_files()
                 except Exception as e:
                     self.delete_files()
-                    raise ValueError(e)
+                    self.helper.log_error(e)
             else:
-                file_name = url_to_import.split("/")[-1] + ".md"
-                text_maker = html2text.HTML2Text()
-                text_maker.ignore_links = False
-                text_maker.ignore_images = False
-                text_maker.ignore_tables = False
-                text_maker.ignore_emphasis = False
-                req = urllib.request.Request(url_to_import, headers=self.headers)
-                response = urllib.request.urlopen(
-                    req, context=ssl.create_default_context(cafile=certifi.where())
-                )
-                html = response.read().decode("utf-8")
-                data = text_maker.handle(html)
-                self.helper.api.external_reference.add_file(
-                    id=external_reference["id"],
-                    file_name=file_name,
-                    data=data,
-                    mime_type="text/markdown",
-                )
+                try:
+                    file_name = url_to_import.split("/")[-1] + ".md"
+                    text_maker = html2text.HTML2Text()
+                    text_maker.ignore_links = False
+                    text_maker.ignore_images = False
+                    text_maker.ignore_tables = False
+                    text_maker.ignore_emphasis = False
+                    req = urllib.request.Request(url_to_import, headers=self.headers)
+                    response = urllib.request.urlopen(
+                        req, context=ssl.create_default_context(cafile=certifi.where())
+                    )
+                    html = response.read().decode("utf-8")
+                    data = text_maker.handle(html)
+                    self.helper.api.external_reference.add_file(
+                        id=external_reference["id"],
+                        file_name=file_name,
+                        data=data,
+                        mime_type="text/markdown",
+                    )
+                except Exception as e:
+                    self.helper.log_error(e)
         return "Import process is finished."
 
     def _process_message(self, data):
