@@ -52,29 +52,6 @@ class StixManager(object):
     def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
-        if is_update is True:
-            update_time: str = (
-                datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
-            )
-            try:
-                # Attempt to retreive existing document
-                logger.debug(f"Retrieving document id: {data['x_opencti_id']}")
-                _result = self.es_client.get(
-                    index=self.idx_pattern, id=data["x_opencti_id"], doc_type="_doc"
-                )
-
-            except NotFoundError:
-                logger.warn(
-                    f"Document not found to update at /{self.idx}/_doc/{data['x_opencti_id']}"
-                )
-                logger.warn("Skipping")
-                return {}
-
-            except RequestError as err:
-                logger.error(
-                    f"Unexpected error retreiving document at /{self.idx}/_doc/{data['x_opencti_id']}:",
-                    err.__dict__,
-                )
 
         try:
             # Submit to Elastic index
@@ -124,7 +101,7 @@ class IntelManager(object):
         self.idx: str = self.config.get("output.elasticsearch.index")
         self.idx_pattern: str = self.config.get("setup.template.pattern")
 
-        if self.config.get('setup.ilm.enabled', False):
+        if self.config.get("setup.ilm.enabled", False):
             self.idx = self.config.get("setup.template.name", "threatintel")
 
         self._setup_elasticsearch_index()
