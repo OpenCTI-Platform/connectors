@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from logging import getLogger
 
 from elasticsearch import Elasticsearch, NotFoundError, RequestError
-from elasticsearch.exceptions import TransportError
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 

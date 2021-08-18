@@ -40,4 +40,7 @@ addopts = "--black --isort --flake8"
 testpaths = ["."]
 
 [tool.flake8]
-ignore = "E,W"
+# Run with "pflake8"
+ignore = "E203,E266,E501,W503"
+max-line-length = 89
+select = "B,C,E,F,W,T4,B9"
