@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from logging import getLogger
 
 from elasticsearch import Elasticsearch, NotFoundError, RequestError
+from elasticsearch.exceptions import TransportError
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
@@ -117,14 +118,19 @@ class IntelManager(object):
             "setup.ilm.policy_name",
             self.config.get("setup.ilm.rollover_alias", "threatintel"),
         )
-        _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
+
+        _policy: str = None
+
+        try:
+            _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
+        except NotFoundError as err:
+            logger.warning(f"HTTP {err.status_code}: {err.info['error']['reason']}")
 
         # TODO: Check if xpack is available and skip ILM if not
         if self.config.get("setup.ilm.enabled", True) is True:
             # Create ILM policy if needed
-            if (_policy is None) or (
-                _policy is not None and self.config.get("setup.ilm.overwrite", None)
-            ):
+            if (_policy is None) or (self.config.get("setup.ilm.overwrite", None)):
+                logger.info(f"Creating ILM policy {_policy_name}")
                 with open(
                     os.path.join(self.datadir, "ecs-indicator-index-ilm.json")
                 ) as f:
