@@ -40,9 +40,8 @@ class StixManager(object):
         self.es_client: Elasticsearch = elasticsearch_client
         self.config: Cut = Cut(config)
         self.datadir: str = datadir
-
-        _alias: str = self.config.get("setup.template.name", "opencti")
-        self.idx: str = self.config.get("output.elasticsearch.index", _alias)
+        self.idx: str = self.config.get("output.elasticsearch.index")
+        self.idx_pattern: str = self.config.get("setup.template.pattern")
 
         self._setup_elasticsearch_index()
 
@@ -53,13 +52,37 @@ class StixManager(object):
     def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
+        if is_update is True:
+            update_time: str = (
+                datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+            )
+            try:
+                # Attempt to retreive existing document
+                logger.debug(f"Retrieving document id: {data['x_opencti_id']}")
+                _result = self.es_client.get(
+                    index=self.idx_pattern, id=data["x_opencti_id"], doc_type="_doc"
+                )
+
+            except NotFoundError:
+                logger.warn(
+                    f"Document not found to update at /{self.idx}/_doc/{data['x_opencti_id']}"
+                )
+                logger.warn("Skipping")
+                return {}
+
+            except RequestError as err:
+                logger.error(
+                    f"Unexpected error retreiving document at /{self.idx}/_doc/{data['x_opencti_id']}:",
+                    err.__dict__,
+                )
+
         try:
             # Submit to Elastic index
             logger.debug(f"Indexing document: {data}")
             _data = data
             _data["@timestamp"] = timestamp
             self.es_client.index(
-                index=self.idx,
+                index=self.idx.format(timestamp),
                 id=data["x_opencti_id"],
                 body=_data,
             )
@@ -73,9 +96,8 @@ class StixManager(object):
     def delete_cti_event(self, data: dict) -> None:
         _result: dict = {}
         try:
-            # TODO lookup based on ID
             _result = self.es_client.delete(
-                index=self.idx, id=data["x_opencti_id"], doc_type="_doc"
+                index=self.idx_pattern, id=data["x_opencti_id"], doc_type="_doc"
             )
         except NotFoundError:
             logger.warn(f"Document id {data['x_opencti_id']} not found in index")
@@ -98,7 +120,12 @@ class IntelManager(object):
         self.es_client: Elasticsearch = elasticsearch_client
         self.config: Cut = Cut(config)
         self.datadir: str = datadir
-        self.idx: str = self.config.get("setup.template.name", "threatintel")
+
+        self.idx: str = self.config.get("output.elasticsearch.index")
+        self.idx_pattern: str = self.config.get("setup.template.pattern")
+
+        if self.config.get('setup.ilm.enabled', False):
+            self.idx = self.config.get("setup.template.name", "threatintel")
 
         self._setup_elasticsearch_index()
 
@@ -122,24 +149,24 @@ class IntelManager(object):
                 _policy is not None and self.config.get("setup.ilm.overwrite", None)
             ):
                 with open(
-                    os.path.join(self.datadir, "threatintel-index-ilm.json")
+                    os.path.join(self.datadir, "ecs-indicator-index-ilm.json")
                 ) as f:
                     content = f.read()
                     self.es_client.ilm.put_lifecycle(policy=_policy_name, body=content)
 
         # Create index template
         if self.config.get("setup.template.enabled", True) is True:
-            _template_name: str = self.config.get("setup.template.name", "threatintel")
+            _template_name: str = self.config.get("setup.template.name", "opencti")
 
             values = {
                 "policy_name": _policy_name,
                 "rollover_alias": self.config.get(
-                    "setup.ilm.rollover_alias", "threatintel"
+                    "setup.ilm.rollover_alias", "opencti"
                 ),
-                "pattern": self.config.get("setup.template.pattern", "threatintel-*"),
+                "pattern": self.config.get("setup.template.pattern", "opencti-*"),
             }
             with open(
-                os.path.join(self.datadir, "threatintel-index-template.json")
+                os.path.join(self.datadir, "ecs-indicator-index-template.json")
             ) as f:
                 tpl = Template(f.read())
                 content = tpl.substitute(values)
@@ -181,7 +208,7 @@ class IntelManager(object):
                 # Attempt to retreive existing document
                 logger.debug(f"Retrieving document id: {data['x_opencti_id']}")
                 _result = self.es_client.get(
-                    index=self.idx, id=data["x_opencti_id"], doc_type="_doc"
+                    index=self.idx_pattern, id=data["x_opencti_id"], doc_type="_doc"
                 )
 
             except NotFoundError:
@@ -368,13 +395,13 @@ class IntelManager(object):
 
         if data["type"] != "indicator":
             logger.error(
-                f"Data type unsupported: {data['type']}. Only 'indicators are currently supported."
+                f"Data type unsupported: {data['type']}. Only 'indicator' types are currently supported."
             )
             return None
 
         try:
             _result = self.es_client.delete(
-                index=self.idx, id=data["x_opencti_id"], doc_type="_doc"
+                index=self.idx_pattern, id=data["x_opencti_id"], doc_type="_doc"
             )
         except NotFoundError:
             logger.warn(f"Document id {data['x_opencti_id']} not found in index")

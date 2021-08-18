@@ -1,8 +1,13 @@
 # Elastic Threat Intel Connector
 
-This connector allows organizations to feed their Elastic platform using OpenCTI knowledge for the purposes of using "[indicator match](https://www.elastic.co/guide/en/security/current/rules-ui-create.html#create-indicator-rule)" rules in the Detection Engine.
+This connector allows organizations to feed their Elastic platform using OpenCTI knowledge. It has two modes: `ecs` and `stix`.
 
-This connector uses the OpenCTI *events stream*, so it consumes knowledge in real time and updates `threatintel` documents in ECS format. It also creates a background thread to poll for matches and update the OpenCTI indicators with sightings.
+`ecs` mode writes indicator objects in ECS format to Elasticsearch for the purpose of using "[indicator match](https://www.elastic.co/guide/en/security/current/rules-ui-create.html#create-indicator-rule)"
+rules in the Detection Engine. It will also create a background thread to poll for matches in the `.siem-signals-*` indices and will record them in OpenCTI as Sightings.
+
+`stix` mode writes the raw STIX objects used internally by OpenCTI to the index specified.
+
+This connector uses the OpenCTI *events stream*, so it consumes knowledge in real time and updates `indicator` documents in ECS format. It also creates a background thread to poll for matches and update the OpenCTI indicators with sightings.
 
 ## Quick Start
 
@@ -10,13 +15,13 @@ We recommend running this connector from a container, when appropriate. If you b
 looks for a config at the path `/app/config.yml`. You should specify a different location if you need with the `-c` flag. Review the usage:
 
 ```shell
-docker run --rm -ti connector-elastic-threatintel:latest --help
+docker run --rm -ti elastic-connector:latest --help
 ```
 
 It's probably easiest to grab a copy of the reference config (`config.reference.yml`) and rename it `config.yml`. Make the necessary changes for your environment and pass it into the container.
 
 ```shell
-docker run --rm -ti --volume $(pwd)/config.yml:/app/config.yml connector-elastic-threatintel:latest
+docker run --rm -ti --volume $(pwd)/config.yml:/app/config.yml elastic-connector:latest
 ```
 
 ### Requirements
@@ -61,7 +66,7 @@ variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and
 To build the container to run on Docker, Kubernetes, or other OCI runtime, simply run the build from this directory.
 
 ```shell
-docker build -t connector-elastic-threatintel .
+docker build -t elastic-connector:latest .
 ```
 
 ## Building virtual environment
@@ -77,7 +82,7 @@ poetry install --no-dev
 cp config.reference.yml config.yml
 
 # Run main script, it was installed to your virtualenv bin/ dir.
-connector-elastic-threatintel
+elastic-connector
 ```
 
 If you want to run tests and do other development things use poetry to install those deps.

@@ -8,13 +8,13 @@ defaults: dict = {
     "connector": {
         "id": None,
         "type": "STREAM",
-        "name": "Elastic Threat Intel Connector",
+        "name": "Elastic CTI Connector",
         "scope": "elasticsearch",
         "mode": "ecs",
         "confidence_level": 80,
         "log_level": "INFO",
         "entity_description": "Elastic detection engine results via connector",
-        "entity_name": "Elastic ThreatIntel Cluster",
+        "entity_name": "Elastic CTI Cluster",
         "live_stream_id": "ChangeMe",
     },
     "elastic": {
@@ -34,7 +34,7 @@ defaults: dict = {
             "username": None,
             "password": None,
             "api_key": None,
-            "index": "threatintel-%{+yyyy.MM.dd}",
+            "index": "opencti-{:%Y.%m.%d}",
         }
     },
     "setup": {
@@ -42,14 +42,14 @@ defaults: dict = {
             "enabled": True,
             "overwrite": False,
             "pattern": "%{now/d}-000001",
-            "policy_name": "threatintel",
-            "rollover_alias": "threatintel",
+            "policy_name": "opencti",
+            "rollover_alias": "opencti",
         },
         "template": {
             "enabled": True,
-            "name": "threatintel",
+            "name": "opencti",
             "overwrite": False,
-            "pattern": "threatintel-*",
+            "pattern": "opencti-*",
         },
     },
 }
