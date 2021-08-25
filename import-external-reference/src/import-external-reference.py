@@ -145,16 +145,22 @@ class ImportExternalReferenceConnector:
                 try:
                     file_name = url_to_import.split("/")[-1] + ".md"
                     text_maker = html2text.HTML2Text()
+                    text_maker.body_width = 0
                     text_maker.ignore_links = False
                     text_maker.ignore_images = False
                     text_maker.ignore_tables = False
                     text_maker.ignore_emphasis = False
+                    text_maker.skip_internal_links = False
+                    text_maker.inline_links = True
+                    text_maker.protect_links = True
+                    text_maker.mark_code = True
                     req = urllib.request.Request(url_to_import, headers=self.headers)
                     response = urllib.request.urlopen(
                         req, context=ssl.create_default_context(cafile=certifi.where())
                     )
                     html = response.read().decode("utf-8")
                     data = text_maker.handle(html)
+                    data = data.replace("](//", "](https://")
                     self.helper.api.external_reference.add_file(
                         id=external_reference["id"],
                         file_name=file_name,
