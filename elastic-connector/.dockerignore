@@ -1,4 +1,4 @@
 config.yml
 __pycache__
-logs
-*.gql
+.vscode
+.pytest_cache

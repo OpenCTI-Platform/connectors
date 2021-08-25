@@ -1,0 +1,7 @@
+config.yml
+__pycache__
+logs
+*.gql
+.pytest_cache
+.python-version
+.vscode
