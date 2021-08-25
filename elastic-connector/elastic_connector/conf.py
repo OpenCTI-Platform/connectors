@@ -34,14 +34,14 @@ defaults: dict = {
             "username": None,
             "password": None,
             "api_key": None,
-            "index": "opencti-{:%Y.%m.%d}",
+            "index": "opencti-{now/d}",
         }
     },
     "setup": {
         "ilm": {
             "enabled": True,
             "overwrite": False,
-            "pattern": "%{now/d}-000001",
+            "pattern": "{now/d}-000001",
             "policy_name": "opencti",
             "rollover_alias": "opencti",
         },

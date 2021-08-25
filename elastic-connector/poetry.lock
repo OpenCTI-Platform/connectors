@@ -15,6 +15,17 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "arrow"
+version = "1.1.1"
+description = "Better dates & times for Python"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+python-dateutil = ">=2.7.0"
+
+[[package]]
 name = "atomicwrites"
 version = "1.4.0"
 description = "Atomic file writes."
@@ -383,6 +394,21 @@ isort = ">=4.0"
 tests = ["mock"]
 
 [[package]]
+name = "python-datemath"
+version = "1.5.5"
+description = "A python module to emulate the date math used in SOLR and Elasticsearch"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+arrow = "*"
+
+[package.extras]
+dev = ["check-manifest"]
+test = ["coverage"]
+
+[[package]]
 name = "python-dateutil"
 version = "2.8.1"
 description = "Extensions to the standard Python datetime module"
@@ -563,7 +589,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "2df2594f81687769c1979af8c3850e52f0b90368b473bbdcb44a8797a57d1225"
+content-hash = "f0108ef176348290cb59886540904d0b40b4decd3324f3db118f7b0739f74998"
 
 [metadata.files]
 antlr4-python3-runtime = [
@@ -572,6 +598,10 @@ antlr4-python3-runtime = [
 appdirs = [
     {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
     {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
+]
+arrow = [
+    {file = "arrow-1.1.1-py3-none-any.whl", hash = "sha256:77a60a4db5766d900a2085ce9074c5c7b8e2c99afeaa98ad627637ff6f292510"},
+    {file = "arrow-1.1.1.tar.gz", hash = "sha256:dee7602f6c60e3ec510095b5e301441bc56288cb8f51def14dcb3079f623823a"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
@@ -693,6 +723,10 @@ pytest-flake8 = [
 pytest-isort = [
     {file = "pytest-isort-2.0.0.tar.gz", hash = "sha256:821a8c5c9c4f3a3c52cfa9c541fbe89ac9e28728125125af53724c4c3f129117"},
     {file = "pytest_isort-2.0.0-py3-none-any.whl", hash = "sha256:ab949c593213dad38ba75db32a0ce361fcddd11d4152be4a2c93b85104cc4376"},
+]
+python-datemath = [
+    {file = "python-datemath-1.5.5.tar.gz", hash = "sha256:12f9863e4292acec51ce33ddfddc2eb0382e6f5459663d8d43d885439e5887ab"},
+    {file = "python_datemath-1.5.5-py2.py3-none-any.whl", hash = "sha256:2801b38bfb15d32e7ef26dfa1e7fa0fad6f2f0d169a1d2d045423512c0b51740"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},

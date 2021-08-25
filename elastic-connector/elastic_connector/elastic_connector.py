@@ -9,10 +9,11 @@ from elasticsearch import Elasticsearch
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
+from . import LOGGER_NAME
 from .import_manager import IntelManager, StixManager
 from .sightings_manager import SignalsManager
 
-logger = getLogger("elastic-connector")
+logger = getLogger(LOGGER_NAME)
 
 
 class ElasticConnector:

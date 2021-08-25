@@ -2,7 +2,7 @@
 
 This connector allows organizations to feed their Elastic platform using OpenCTI knowledge. It has two modes: `ecs` and `stix`.
 
-`ecs` mode writes indicator objects in ECS format to Elasticsearch for the purpose of using "[indicator match](https://www.elastic.co/guide/en/security/current/rules-ui-create.html#create-indicator-rule)"
+`ecs` mode writes indicator objects in ECS format to Elasticsearch for the purpose of using ECS-formatted "[indicator match](https://www.elastic.co/guide/en/security/current/rules-ui-create.html#create-indicator-rule)"
 rules in the Detection Engine. It will also create a background thread to poll for matches in the `.siem-signals-*` indices and will record them in OpenCTI as Sightings.
 
 `stix` mode writes the raw STIX objects used internally by OpenCTI to the index specified.
@@ -27,7 +27,7 @@ docker run --rm -ti --volume $(pwd)/config.yml:/app/config.yml elastic-connector
 ### Requirements
 
 - OpenCTI Platform >= 4.5.5
-- Elastic platform >= 7.13.0
+- Elastic platform >= 7.14.0
 - Python 3.9.x (may work with lower version 3.x, but it was developed with 3.9)
 
 ### Configuration
@@ -43,13 +43,13 @@ variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and
 | `opencti.token`                   | `OPENCTI_TOKEN`              | Yes       | The default admin token configured in the OpenCTI platform parameters file.                                                                                              |
 | `opencti.url`                     | `OPENCTI_URL`                | Yes       | The URL of the OpenCTI platform.                                                                                                                                         |
 | `opencti.ssl_verify`              | `OPENCTI_SSL_VERIFY`         | No        | Set to `False` to disable TLS certificate validation. Defaults to `True`                                                                                                 |
-| `connector.confidence_level`      | `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 1 and 4).                                                                                           |
+| `connector.confidence_level`      | `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 0 and 100).                                                                                         |
 | `connector.id`                    | `CONNECTOR_ID`               | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                                       |
 | `connector.log_level`             | `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                            |
+| `connector.mode`                  | `CONNECTOR_MODE`             | No        | Must be 'ecs' for ECS-formatted threat indicator documents or 'stix' for raw OpenCTI STIX documents. Defaults to 'ecs'.                                                  |
 | `connector.name`                  | `CONNECTOR_NAME`             | Yes       | The name of the Elastic instance, to identify it if you have multiple Elastic instances connectors.                                                                      |
 | `connector.scope`                 | `CONNECTOR_SCOPE`            | Yes       | Must be `elastic`, not used in this connector.                                                                                                                           |
 | `connector.type`                  | `CONNECTOR_TYPE`             | Yes       | Must be `STREAM` (this is the connector type).                                                                                                                           |
-| `connector.mode`                  | `CONNECTOR_MODE`             | No        | Must be 'ecs' for ECS-formatted threat indicator documents or 'stix' for raw OpenCTI STIX documents. Defaults to 'ecs'.                                                  |
 | `cloud.auth`                      | `CLOUD_AUTH`                 | No        | Auth info for cloud instance of Elasticsearch Cloud                                                                                                                      |
 | `cloud.id`                        | `CLOUD_ID`                   | No        | Cloud ID for cloud instance of Elasticsearch                                                                                                                             |
 | `output.elasticsearch.api_key`    | `ELASTICSEARCH_APIKEY`       | No        | The Elasticsearch ApiKey (recommended authentication, see [apikey docs](https://www.elastic.co/guide/en/elasticsearch/reference/master/security-api-create-api-key.html) |
@@ -57,8 +57,6 @@ variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and
 | `output.elasticsearch.password`   | `ELASTICSEARCH_PASSWORD`     | No        | The Elasticsearch password (ApiKey is recommended).                                                                                                                      |
 | `output.elasticsearch.username`   | `ELASTICSEARCH_USERNAME`     | No        | The Elasticsearch login user (ApiKey is recommended).                                                                                                                    |
 | `output.elasticsearch.ssl_verify` | `ELASTICSEARCH_SSL_VERIFY`   | No        | Set to `False` to disable TLS certificate validation. Defaults to `True`                                                                                                 |
-| `elastic_import_from_date`        | `ELASTIC_IMPORT_FROM_DATE`   | No        | At the very first run, ignore all knowledge events before this date. Defaults to `now()` minus one minute.                                                               |
-| `elastic.import_label`            | `ELASTIC_IMPORT_LABEL`       | No        | If this label is added or present to the indicator, the entity will be imported in Elasticsearch. Defaults to `*`, which imports everything.                             |
 |                                   | `CONNECTOR_JSON_CONFIG`      | No        | (Optional) environment variable allowing full configuration via a single environment variable using JSON. Helpful for some container deployment scenarios.               |
 
 ## Building Container
@@ -92,4 +90,85 @@ poetry install
 
 # Run all tests tests (flake8, black, isort, unit tests in tests/ dir)
 pytest
+```
+
+### Using a Constrained API key
+
+Especially for service-based accounts, such as this connector, it's highly recommended that you create an
+[API key](https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-create-api-key.html) with
+reduced permissions. This can be done via the Elasticsearch REST API or via the
+[Kibana UI](https://www.elastic.co/guide/en/kibana/master/api-keys.html). For the best fine-grained control, you can
+use "Dev Tools" in Kibana.
+
+Here's an example API request that creates credentials valid for 365 days (see `expiration` value) and allows
+the connector full management over indices and aliases matching `opencti*` and read-only access to the indices
+that the [Detection Engine](https://www.elastic.co/guide/en/security/current/detection-engine-overview.html)
+writes to. This could be further constrained since most of the cluster permissions are actually only needed
+during initial setup of index templates and ILM policy.
+
+
+```
+POST /_security/api_key?pretty
+{
+  "name": "opencti",
+  "expiration": "365d",
+  "role_descriptors": {
+    "opencti_privileges": {
+      "cluster": [
+        "monitor",
+        "cluster:admin/ilm/get",
+        "cluster:admin/ilm/put",
+        "manage_index_templates"
+      ],
+      "indices": [
+        {
+          "names": [
+            "opencti*"
+          ],
+          "privileges": [
+            "all",
+            "manage_follow_index"
+          ],
+          "field_security": {
+            "grant": [
+              "*"
+            ]
+          },
+          "allow_restricted_indices": false
+        }
+      ],
+      "run_as": []
+    },
+    "protections_privileges": {
+      "cluster": [],
+      "indices": [
+        {
+          "names": [
+            ".siem-signals-*"
+          ],
+          "privileges": [
+            "read"
+          ],
+          "field_security": {
+            "grant": [
+              "*"
+            ],
+            "except": []
+          },
+          "allow_restricted_indices": false
+        }
+      ],
+      "run_as": []
+    }
+  },
+  "metadata": {
+    "application": "opencti",
+    "environment": {
+      "tags": [
+        "dev",
+        "staging"
+      ]
+    }
+  }
+}
 ```

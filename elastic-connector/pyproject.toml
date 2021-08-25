@@ -14,12 +14,14 @@ elastic-connector = 'elastic_connector.console:main'
 
 [tool.poetry.dependencies]
 python = "^3.9"
-elasticsearch = "^7.13.0"
+elasticsearch = "^7.14.0"
 pycti = "^4.5.5"
 scalpl = "^0.4.2"
 docopt = "^0.6.2"
 python-json-logger = "^2.0.1"
 elasticsearch-dsl = ">=7.0.0,<8.0.0"
+python-datemath = "^1.5.5"
+arrow = "^1.1.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"

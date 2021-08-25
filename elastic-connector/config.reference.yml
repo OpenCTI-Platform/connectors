@@ -1,3 +1,4 @@
+---
 opencti:
   url: 'http://localhost:8080'
   token: 'ChangeMe'
@@ -6,11 +7,11 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'STREAM'
-  name: 'Elastic Threat Intel Connector'
+  name: 'OpenCTI Elastic Connector'
   scope: 'elastic'
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted). Used for Sightings reported to OpenCTI
   log_level: 'info'
-  entity_name: 'Elastic CTI Cluster'
+  entity_name: 'Elastic Detection Cluster'
   entity_description: 'Elasticsearch detection engine cluster'
   live_stream_id: 'ChangeMe'
   mode: ecs # Options are 'ecs' (indicators only) or 'stix' (raw STIX documents)
@@ -19,8 +20,9 @@ connector:
 # The cloud.id setting overwrites the `elastic.hosts`
 # You can find the `cloud.id` in the Elastic Cloud web UI.
 #cloud.id:
-# The cloud.auth setting overwrites the `elastic.username` and
-# `elastic.password` settings. The format is `<user>:<pass>`.
+# The cloud.auth setting overwrites the `output.elasticsearch.username` and
+# `output.elasticsearch.password` settings. The format is `<user>:<pass>`.
+# API key is recommended
 #cloud.auth:
 
 output.elasticsearch:
@@ -36,10 +38,10 @@ output.elasticsearch:
   #password: "changeme"
   ssl_verify: true
 
-  # Optional index name. The default is "opencti" plus the date. Uses python date
-  # format syntax. This is not used if ILM is enabled.  Be sure to update
+  # Optional index name. The default is "opencti" plus the date. Uses Elastic date math syntax.
+  # Custom index settings are ignored when ILM is enabled.  Be sure to update
   # `setup.template.pattern` if you change the output index.
-  #index: "opencti-{:%Y.%m.%d}"
+  #index: "opencti-{now/d}"
 
 # ====================== Index Lifecycle Management (ILM) ======================
 
@@ -52,7 +54,8 @@ setup:
     enabled: True
     policy_name: opencti
     rollover_alias: opencti
-    pattern: "%{now/d}-000001"
+    # This pattern uses datemath. See https://www.elastic.co/guide/en/beats/filebeat/current/ilm.html
+    pattern: "{now/d}-000001"
     overwrite: False
   template:
     enabled: True

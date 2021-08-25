@@ -8,9 +8,10 @@ from elasticsearch_dsl import Search
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
+from . import LOGGER_NAME
 from .utils import parse_duration
 
-logger = getLogger("elastic-threatintel-connector")
+logger = getLogger(LOGGER_NAME)
 
 DEFAULT_QUERY = """
 {

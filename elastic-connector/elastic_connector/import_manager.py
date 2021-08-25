@@ -1,14 +1,17 @@
+import re
 import urllib.parse
 from datetime import datetime, timezone
 from logging import getLogger
 
+from datemath import dm
 from elasticsearch import Elasticsearch, NotFoundError, RequestError
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
+from . import DM_DEFAULT_FMT, LOGGER_NAME, RE_DATEMATH
 from .utils import remove_nones
 
-logger = getLogger("elastic-threatintel-connector")
+logger = getLogger(LOGGER_NAME)
 
 entity_field_mapping = {
     "id": "threatintel.opencti.internal_id",
@@ -42,6 +45,7 @@ class StixManager(object):
         self.datadir: str = datadir
         self.idx: str = self.config.get("output.elasticsearch.index")
         self.idx_pattern: str = self.config.get("setup.template.pattern")
+        self.pattern: re.Pattern = re.compile(RE_DATEMATH)
 
         self._setup_elasticsearch_index()
 
@@ -55,14 +59,28 @@ class StixManager(object):
 
         try:
             # Submit to Elastic index
-            logger.debug(f"Indexing document: {data}")
-            _data = data
-            _data["@timestamp"] = timestamp
+
+            _document = data
+            _document["@timestamp"] = timestamp
+            _write_idx = self.idx
+            # Render date-specific index if we're using logstash style indices
+            m = self.pattern.search(_write_idx)
+            if m is not None:
+                m = m.groupdict()
+                if m.get("modulo", None) is not None:
+                    _fmt = m.get("format") or DM_DEFAULT_FMT
+                    logger.debug(f"{m['modulo']} -> {_fmt}")
+                    _val = dm(m.get("modulo"), now=timestamp).format(_fmt)
+                    _write_idx = self.pattern.sub(_val, _write_idx)
+
+            # Submit to Elastic index
+            logger.debug(f"Indexing doc to {_write_idx}:\n {_document}")
             self.es_client.index(
-                index=self.idx.format(timestamp),
+                index=_write_idx,
                 id=data["x_opencti_id"],
-                body=_data,
+                body=_document,
             )
+
         except RequestError as err:
             logger.error("Unexpected error:", err, data)
         except Exception as err:
@@ -100,9 +118,12 @@ class IntelManager(object):
 
         self.idx: str = self.config.get("output.elasticsearch.index")
         self.idx_pattern: str = self.config.get("setup.template.pattern")
+        self.write_idx: str = self.config.get("output.elasticsearch.index")
 
-        if self.config.get("setup.ilm.enabled", False):
-            self.idx = self.config.get("setup.template.name", "threatintel")
+        if self.config.get("setup.ilm.enabled", False) is True:
+            self.write_idx = self.config.get("setup.ilm.rollover_alias", "opencti")
+
+        self.pattern = re.compile(RE_DATEMATH)
 
         self._setup_elasticsearch_index()
 
@@ -110,14 +131,11 @@ class IntelManager(object):
         import os
         from string import Template
 
-        self.helper.log_info("Setting up Elasticsearch for threatintel")
+        logger.info("Setting up Elasticsearch for OpenCTI Connector")
         assert self.es_client.ping()
 
-        _policy_name: str = self.config.get(
-            "setup.ilm.policy_name",
-            self.config.get("setup.ilm.rollover_alias", "threatintel"),
-        )
-
+        _ilm_enabled: bool = self.config.get("setup.ilm.enabled", True)
+        _policy_name: str = self.config.get("setup.ilm.policy_name", "opencti")
         _policy: str = None
 
         try:
@@ -125,10 +143,11 @@ class IntelManager(object):
         except NotFoundError as err:
             logger.warning(f"HTTP {err.status_code}: {err.info['error']['reason']}")
 
-        # TODO: Check if xpack is available and skip ILM if not
-        if self.config.get("setup.ilm.enabled", True) is True:
+        if _ilm_enabled is True:
             # Create ILM policy if needed
-            if (_policy is None) or (self.config.get("setup.ilm.overwrite", None)):
+            if (_policy is None) or (
+                self.config.get("setup.ilm.overwrite", None) is True
+            ):
                 logger.info(f"Creating ILM policy {_policy_name}")
                 with open(
                     os.path.join(self.datadir, "ecs-indicator-index-ilm.json")
@@ -136,34 +155,87 @@ class IntelManager(object):
                     content = f.read()
                     self.es_client.ilm.put_lifecycle(policy=_policy_name, body=content)
 
+        values = {
+            "policy_name": _policy_name,
+            "rollover_alias": self.config.get("setup.ilm.rollover_alias", "opencti"),
+            "pattern": self.idx_pattern,
+        }
+
         # Create index template
         if self.config.get("setup.template.enabled", True) is True:
             _template_name: str = self.config.get("setup.template.name", "opencti")
 
-            values = {
-                "policy_name": _policy_name,
-                "rollover_alias": self.config.get(
-                    "setup.ilm.rollover_alias", "opencti"
-                ),
-                "pattern": self.config.get("setup.template.pattern", "opencti-*"),
-            }
             with open(
                 os.path.join(self.datadir, "ecs-indicator-index-template.json")
             ) as f:
                 tpl = Template(f.read())
                 content = tpl.substitute(values)
-                self.es_client.indices.put_index_template(_template_name, body=content)
 
-            if not self.es_client.indices.exists(index=f"{_template_name}-000001"):
-                self.es_client.indices.create(index=f"{_template_name}-000001")
+            logger.info(f"Installing index template: {_template_name}")
+            self.es_client.indices.put_index_template(_template_name, body=content)
 
-            if not self.es_client.indices.exists_alias(
-                index=f"{_template_name}-000001", name=f"{_template_name}"
-            ):
-                # Initialize time series index alias
-                self.es_client.indices.put_alias(
-                    index=f"{_template_name}-000001", name=f"{_template_name}"
+        # Create initial index, if needed
+        logger.debug(f"Checking if index pattern exists: {self.idx_pattern}")
+        if (
+            len(
+                self.es_client.indices.resolve_index(name=self.idx_pattern).get(
+                    "indices", []
                 )
+            )
+            < 1
+        ):
+            logger.debug("No indices matching pattern exist.")
+
+            if _ilm_enabled is True:
+                # Create ILM alias and initialize index
+                _alias = self.config.get("setup.ilm.rollover_alias", "opencti")
+                _ilm_pattern = self.config.get("setup.ilm.pattern", "{now/d}-000001")
+                _initial_idx = f"{_alias}-{_ilm_pattern}"
+            else:
+                _initial_idx = self.config.get(
+                    "output.elasticsearch.index", "opencti-{now/d}"
+                )
+
+            logger.info(f"Parsing index pattern: {_initial_idx}")
+            m = self.pattern.search(_initial_idx)
+            if m is not None:
+                _initial_idx = f"<{_initial_idx}>"
+                m = m.groupdict()
+
+            # logger.debug(f"Matches: {m}")
+            # if m.get("modulo", None) is not None:
+            #     _fmt = m.get("format") or DM_DEFAULT_FMT
+            #     logger.debug(f"{m['modulo']} -> {_fmt}")
+            #     _val = dm(m.get("modulo")).format(_fmt)
+            #     logger.debug(f"Timestamp string from arrow {_val}")
+            #     _initial_idx = self.pattern.sub(_val, _initial_idx)
+
+            logger.info(f"Initial index: {_initial_idx}\nAlias: {_alias}")
+
+            if _ilm_enabled is True and (
+                not self.es_client.indices.exists_alias(
+                    index=self.idx_pattern, name=_alias
+                )
+            ):
+                logger.info(f"Creating alias '{_alias}' to pattern '{_initial_idx}'")
+                _settings: str = f"""
+                {{
+                    "aliases": {{
+                        "{_alias}": {{ "is_write_index": true }}
+                    }}
+                }}
+                """
+
+                self.write_idx = _alias
+            else:
+                logger.info(f"Alias {_alias} already exists or not being used")
+                _settings = "{}"
+
+            self.es_client.index(index=_initial_idx, body=_settings)
+            logger.info(f"Initial index {_initial_idx} created.")
+
+        else:
+            logger.info("Index already exists")
 
     def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
@@ -208,6 +280,7 @@ class IntelManager(object):
 
             if _result["found"] is True:
                 _document = Cut(_result["_source"])
+                _write_idx = _result["_index"]
 
             if data.get("x_data_update", None):
                 if data["x_data_update"].get("replace", None):
@@ -260,10 +333,11 @@ class IntelManager(object):
                     _document = remove_nones(_document)
 
                     try:
+                        # Don't render timestamped index since this is an update
                         # Submit to Elastic index
-                        logger.debug(f"Indexing document: {_document}")
+                        logger.debug(f"Updating doc to {_write_idx}:\n {_document}")
                         self.es_client.index(
-                            index=self.idx,
+                            index=_write_idx,
                             id=data["x_opencti_id"],
                             body=_document,
                         )
@@ -356,10 +430,21 @@ class IntelManager(object):
         _document = remove_nones(_document)
 
         try:
+            # Render date-specific index, if we're doing logstash style indices
+            _write_idx = self.write_idx
+            m = self.pattern.search(_write_idx)
+            if m is not None:
+                m = m.groupdict()
+                if m.get("modulo", None) is not None:
+                    _fmt = m.get("format") or DM_DEFAULT_FMT
+                    logger.debug(f"{m['modulo']} -> {_fmt}")
+                    _val = dm(m.get("modulo"), now=timestamp).format(_fmt)
+                    _write_idx = self.pattern.sub(_val, _write_idx)
+
             # Submit to Elastic index
-            logger.debug(f"Indexing document: {_document}")
+            logger.debug(f"Indexing doc to {_write_idx}:\n {_document}")
             self.es_client.index(
-                index=self.idx,
+                index=_write_idx,
                 id=data["x_opencti_id"],
                 body=_document,
             )
