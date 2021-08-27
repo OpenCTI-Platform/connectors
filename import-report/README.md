@@ -32,6 +32,30 @@ OpenCTI data is coming from *import* connectors.
 
 After adding the connector, you should be able to extract information from a report.
 
+### Debugging ###
+
+In case the connector doesn't behave like it should, please change the `CONNECTOR_LOG_LEVEL` to `debug`.
+This way you will get a log entry for every parsing step to verify each step.
+Example
+
+```
+INFO:root:Parsing report TTest.pdf application/pdf
+DEBUG:root:Observable match: 1322
+DEBUG:root:Observable match: T1011.001
+DEBUG:root:Observable match: T1012
+DEBUG:root:Text: 'This group used T1011.001 and then continued on to further exploit the text which does not meet T1012, but everything went over the malicious AS 1322 since it covers many IPs.' -> extracts {1322: {'type': 'observable', 'category': 'Autonomous-System.number', 'match': 1322, 'range': (145, 149)}, 'T1011.001': {'type': 'observable', 'category': 'Attack-Pattern.x_mitre_id', 'match': 'T1011.001', 'range': (16, 25)}, 'T1012': {'type': 'observable', 'category': 'Attack-Pattern.x_mitre_id', 'match': 'T1012', 'range': (96, 101)}} 
+DEBUG:root:Observable match: arp.exe
+DEBUG:root:Observable match: cmd.exe
+DEBUG:root:Entity match: 'cmd.exe' of regex: '[re.compile('\\bcmd.exe\\b', re.IGNORECASE), re.compile('\\bcmd\\b', re.IGNORECASE)]'
+DEBUG:root:Entity match: 'cmd' of regex: '[re.compile('\\bcmd.exe\\b', re.IGNORECASE), re.compile('\\bcmd\\b', re.IGNORECASE)]'
+DEBUG:root:Value cmd.exe is also matched by entity tool
+DEBUG:root:Entity match: 'arp.exe' of regex: '[re.compile('\\barp.exe\\b', re.IGNORECASE), re.compile('\\bArp\\b', re.IGNORECASE)]'
+DEBUG:root:Entity match: 'arp' of regex: '[re.compile('\\barp.exe\\b', re.IGNORECASE), re.compile('\\bArp\\b', re.IGNORECASE)]'
+DEBUG:root:Value arp.exe is also matched by entity tool
+DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd': {'type': 'entity', 'category': 'tool', 'match': 'tool--01ad605b-5512-5046-997b-157c9f3ac378', 'range': (0, 0)}, 'arp': {'type': 'entity', 'category': 'tool', 'match': 'tool--14c7dce1-ff3b-5ed2-ab82-784e09c62bb1', 'range': (0, 0)}}
+[...]
+```
+
 ### Supported formats
 
 *Please open a feature requests in case the current implemention doesn't fit your needs*
