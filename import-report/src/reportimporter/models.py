@@ -1,7 +1,7 @@
 import json
 import os
 import re
-import ioc_finder.data
+from json import JSONDecodeError
 from typing import List, Optional, Dict, Pattern, Any
 from pycti import OpenCTIConnectorHelper
 from pydantic import BaseModel, validator
@@ -22,7 +22,6 @@ class Observable(BaseModel):
     regex: List[Pattern] = []
 
     # Further processing
-    defang: bool = False
     stix_target: str
 
     # Whitelisting options
@@ -61,9 +60,7 @@ class Observable(BaseModel):
 
     @validator("regex_patterns", "filter_config", pre=True)
     def pre_validate_transform_str_to_list(cls, field: str) -> Any:
-        if isinstance(field, str):
-            return list(filter(None, (x.strip() for x in field.splitlines())))
-        return field
+        return list(filter(None, (x.strip() for x in field.splitlines())))
 
     @staticmethod
     def _load_regex_pattern(regex_values: List[str]) -> List[Pattern]:
@@ -101,6 +98,7 @@ class Entity(BaseModel):
     stix_id: str
     values: List[str]
     regex: List[Pattern] = []
+    omit_match_in: List[str] = []
 
 
 class EntityConfig(BaseModel):
@@ -108,70 +106,59 @@ class EntityConfig(BaseModel):
     stix_class: str
     filter: Optional[Dict]
     fields: List[str]
-    exclude: List[str] = []
+    exclude_values: List[str] = []
     regex: List[Pattern] = []
+    omit_match_in: List[str] = []
 
-    @validator("fields", "exclude", pre=True)
-    def pre_validate_transform_str_to_list(cls, field: str) -> Any:
-        if isinstance(field, str):
-            return list(filter(None, (x.strip() for x in field.splitlines())))
-        return field
+    @validator("fields", "exclude_values", "omit_match_in", pre=True)
+    def pre_validate_transform_str_to_list(cls, field: str) -> List[str]:
+        return list(filter(None, (x.strip() for x in field.splitlines())))
 
     @validator("filter", pre=True)
-    def pre_validate_transform_str_to_json(cls, filter: str) -> Any:
-        if isinstance(filter, str):
-            return json.loads(filter)
-        return filter
+    def pre_validate_transform_str_to_json(cls, filter_string: str) -> Any:
+        try:
+            return json.loads(filter_string)
+        except JSONDecodeError as e:
+            raise ValueError(f"filter received an invalid json string: {e}")
 
     def convert_to_entity(
-        self, opencti_response: List, helper: OpenCTIConnectorHelper
+        self, opencti_response: List[Dict], helper: OpenCTIConnectorHelper
     ) -> List[Entity]:
         entities = []
         for item in opencti_response:
             _id = item.get("standard_id")
             item_values = set()
-            if (
-                item.get("externalReferences", None) is None
-                or len(item["externalReferences"]) == 0
-            ):
-                continue
 
             for relevant_field in self.fields:
-                elem = item.get(relevant_field, [])
+                elem = item.get(relevant_field, None)
                 if elem:
                     if type(elem) == list:
                         item_values.update(elem)
                     elif type(elem) == str:
                         item_values.add(elem)
 
-            # Exclude certain SDO names which are too generic for being used to automatically parse text
             indicators = []
             for value in item_values:
-                # Approach 1: Remove SDO names which are also TLDs
-                if value.lower() in ioc_finder.data.tlds:
-                    helper.log_debug(
-                        f"Entity: Discarding value '{value}' due to TLD match"
-                    )
-                    continue
-
-                # Approach 2: Remove SDO names which are defined to be excluded in the entity config
-                if value.lower() in self.exclude:
+                # Remove SDO names which are defined to be excluded in the entity config
+                if value.lower() in self.exclude_values:
                     helper.log_debug(
                         f"Entity: Discarding value '{value}' due to explicit exclusion"
                     )
                     continue
 
-                indicators.append(f"\\b{value}\\b")
+                value = f"\\b{value}\\b"
+                indicators.append(re.compile(value, re.IGNORECASE))
 
-            indicators = "|".join(indicators)
-            regex = re.compile(indicators, re.IGNORECASE)
+            if len(indicators) == 0:
+                continue
 
             entity = Entity(
                 name=self.name,
                 stix_class=self.stix_class,
                 stix_id=_id,
                 values=item_values,
-                regex=[regex],
+                regex=indicators,
+                omit_match_in=self.omit_match_in,
             )
             entities.append(entity)
 
