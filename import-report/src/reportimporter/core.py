@@ -68,7 +68,7 @@ class ReportImporter:
         # Retrieve entity set from OpenCTI
         entity_indicators = self._collect_stix_objects(self.entity_config)
 
-        # Parse peport
+        # Parse report
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
         parsed = parser.run_parser(file_name, data["file_mime"])
         os.remove(file_name)
