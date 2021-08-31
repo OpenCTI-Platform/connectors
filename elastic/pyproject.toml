@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "elastic"
-version = "0.4.0"
+version = "1.0.0"
 description = """
 Connector for OpenCTI that writes indicator objects to Elasticsearch in ECS format (when in 'ecs' mode), allowing
 Indicator Match rules. Successful matches found in the Elastic Detection Engine will be reported as sightings of
@@ -10,7 +10,7 @@ to the index configured.
 authors = ["Derek Ditch <dcode@elastic.co>"]
 
 [tool.poetry.scripts]
-elastic-connector = 'elastic_connector.console:main'
+elastic = 'elastic.console:main'
 
 [tool.poetry.dependencies]
 python = "^3.9"
