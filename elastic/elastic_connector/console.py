@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Usage:  elastic-connector [-v | -vv | -vvv | -q | --debug] [-c FILE] [-d DIR]
-        elastic-connector --version
+Usage:  elastic [-v | -vv | -vvv | -q | --debug] [-c FILE] [-d DIR]
+        elastic --version
 
 Runs OpenCTI connector using provided config.yml file. See config.yml.reference
 for full configuration options and optional environment variables.
@@ -118,7 +118,7 @@ def main() -> None:
     pycti_ver: str = version("pycti")
     elastic_ver: str = version("elasticsearch")
     my_version: str = (
-        f"elastic-connector  {__version__}\n"
+        f"elastic  {__version__}\n"
         f"pyopencti                      {pycti_ver}\n"
         f"elasticsearch                  {elastic_ver}\n"
     )

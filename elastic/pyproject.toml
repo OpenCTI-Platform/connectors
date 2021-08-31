@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "elastic-connector"
+name = "elastic"
 version = "0.4.0"
 description = """
 Connector for OpenCTI that writes indicator objects to Elasticsearch in ECS format (when in 'ecs' mode), allowing
