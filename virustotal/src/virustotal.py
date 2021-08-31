@@ -1,10 +1,9 @@
-from time import sleep
-import yaml
+import json
 import os
 import requests
-import json
-
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from time import sleep
 
 
 class VirusTotalConnector:
@@ -68,17 +67,20 @@ class VirusTotalConnector:
                     key="size",
                     value=str(attributes["size"]),
                 )
-            if observable["name"] is None and len(attributes["names"]) > 0:
-                self.helper.api.stix_cyber_observable.update_field(
-                    id=final_observable["id"], key="name", value=attributes["names"][0]
-                )
-                del attributes["names"][0]
-                if len(attributes["names"]) > 0:
+                if observable["name"] is None and len(attributes["names"]) > 0:
                     self.helper.api.stix_cyber_observable.update_field(
                         id=final_observable["id"],
-                        key="x_opencti_additional_names",
-                        value=attributes["names"],
+                        key="name",
+                        value=attributes["names"][0],
                     )
+                    del attributes["names"][0]
+
+            if len(attributes["names"]) > 0:
+                self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    key="x_opencti_additional_names",
+                    value=attributes["names"],
+                )
 
             # Create external reference
             external_reference = self.helper.api.external_reference.create(
