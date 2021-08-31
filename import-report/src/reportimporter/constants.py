@@ -4,6 +4,7 @@ MIME_TXT = "text/plain"
 RESULT_FORMAT_TYPE = "type"
 RESULT_FORMAT_CATEGORY = "category"
 RESULT_FORMAT_MATCH = "match"
+RESULT_FORMAT_RANGE = "range"
 
 ENTITY_CLASS = "entity"
 OBSERVABLE_CLASS = "observable"

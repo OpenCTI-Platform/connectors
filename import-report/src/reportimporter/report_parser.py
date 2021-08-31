@@ -1,7 +1,8 @@
 import logging
 import os
+from typing import Dict, List, Pattern, IO, Tuple
+
 import ioc_finder
-from typing import Dict, List, Pattern, IO
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 from pycti import OpenCTIConnectorHelper
@@ -11,6 +12,7 @@ from reportimporter.constants import (
     RESULT_FORMAT_MATCH,
     RESULT_FORMAT_TYPE,
     RESULT_FORMAT_CATEGORY,
+    RESULT_FORMAT_RANGE,
     MIME_PDF,
     MIME_TXT,
     OBSERVABLE_DETECTION_CUSTOM_REGEX,
@@ -52,95 +54,60 @@ class ReportParser(object):
             self.helper.log_debug(f"Filter regex '{regex}' for value '{ind_match}'")
             result = regex.search(ind_match)
             if result:
-                self.helper.log_debug(
-                    "Value {} is whitelisted with {}".format(ind_match, regex)
-                )
+                self.helper.log_debug(f"Value {ind_match} is whitelisted with {regex}")
                 return True
         return False
 
-    def _post_parse_observables(self, ind_match: str, observable: Observable) -> Dict:
-        self.helper.log_debug("Observable match {}".format(ind_match))
+    def _post_parse_observables(
+        self, ind_match: str, observable: Observable, match_range: Tuple
+    ) -> Dict:
+        self.helper.log_debug(f"Observable match: {ind_match}")
 
         if self._is_whitelisted(observable.filter_regex, ind_match):
             return {}
 
-        return self._format_match(OBSERVABLE_CLASS, observable.stix_target, ind_match)
+        return self._format_match(
+            OBSERVABLE_CLASS, observable.stix_target, ind_match, match_range
+        )
 
-    def _parse(self, data: str) -> List[Dict]:
-        list_matches = []
+    def _parse(self, data: str) -> Dict[str, Dict]:
+        list_matches = {}
 
         # Defang text
         data = ioc_finder.prepare_text(data)
 
         for observable in self.observable_list:
-            if observable.detection_option == OBSERVABLE_DETECTION_CUSTOM_REGEX:
-                for regex in observable.regex:
-                    matches = regex.findall(data)
-                    for ind_match in matches:
-                        if isinstance(ind_match, tuple):
-                            ind_match = ind_match[0]
-
-                        ind_match = self._post_parse_observables(ind_match, observable)
-                        if ind_match:
-                            list_matches.append(ind_match)
-
-            elif observable.detection_option == OBSERVABLE_DETECTION_LIBRARY:
-                lookup_function = self.library_lookup.get(observable.stix_target, None)
-                if not lookup_function:
-                    self.helper.log_error(
-                        "Selected library function is not implemented: {}".format(
-                            observable.iocfinder_function
-                        )
-                    )
-                    continue
-
-                matches = lookup_function(data)
-
-                for ind_match in matches:
-                    ind_match = self._post_parse_observables(ind_match, observable)
-                    if ind_match:
-                        list_matches.append(ind_match)
+            list_matches.update(self._extract_observable(observable, data))
 
         for entity in self.entity_list:
-            regex_list = entity.regex
-            for regex in regex_list:
-                matches = regex.findall(data)
+            list_matches = self._extract_entity(entity, list_matches, data)
 
-                if len(matches) > 0 and type(matches[0]) != tuple:
-                    list_matches.append(
-                        self._format_match(ENTITY_CLASS, entity.name, entity.stix_id)
-                    )
-
-        self.helper.log_debug("Text: {} -> extracts {}".format(data, list_matches))
+        self.helper.log_debug(f"Text: '{data}' -> extracts {list_matches}")
         return list_matches
 
-    def _parse_pdf(self, file_data: IO) -> List[Dict]:
-        parse_info = []
+    def _parse_pdf(self, file_data: IO) -> Dict[str, Dict]:
+        parse_info = {}
         try:
             for page_layout in extract_pages(file_data):
                 for element in page_layout:
                     if isinstance(element, LTTextContainer):
                         text = element.get_text()
-                        no_newline_text = text.replace("\n", "")
-                        parse_info += self._parse(no_newline_text)
                         # Parsing with newlines has been deprecated
+                        no_newline_text = text.replace("\n", "")
+                        parse_info.update(self._parse(no_newline_text))
 
                 # TODO also extract information from images/figures using OCR
                 # https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html#topic-pdf-to-text-layout
 
-            # output_string = io.StringIO()
-            # extract_text_to_fp(file_data, output_string)
-            # parse_info += self._parse(output_string.getvalue())
-
         except Exception as e:
-            logging.exception("Pdf Parsing Error: {}".format(e))
+            logging.exception(f"Pdf Parsing Error: {e}")
 
         return parse_info
 
-    def _parse_text(self, file_data: IO) -> List[Dict]:
-        parse_info = []
+    def _parse_text(self, file_data: IO) -> Dict[str, Dict]:
+        parse_info = {}
         for text in file_data.readlines():
-            parse_info += self._parse(text.decode("utf-8"))
+            parse_info.update(self._parse(text.decode("utf-8")))
         return parse_info
 
     def run_parser(self, file_path: str, file_type: str) -> List[Dict]:
@@ -148,63 +115,134 @@ class ReportParser(object):
 
         file_parser = self.supported_file_types.get(file_type, None)
         if not file_parser:
-            raise NotImplementedError(
-                "No parser available for file type {}".format(file_type)
-            )
+            raise NotImplementedError(f"No parser available for file type {file_type}")
 
         if not os.path.isfile(file_path):
-            raise IOError("File path is not a file: {}".format(file_path))
+            raise IOError(f"File path is not a file: {file_path}")
 
-        self.helper.log_info("Parsing report {} {}".format(file_path, file_type))
+        self.helper.log_info(f"Parsing report {file_path} {file_type}")
 
         try:
             with open(file_path, "rb") as file_data:
                 parsing_results = file_parser(file_data)
         except Exception as e:
-            logging.exception("Parsing Error: {}".format(e))
+            logging.exception(f"Parsing Error: {e}")
 
-        parsing_results = self._deduplicate(parsing_results)
-        parsing_results = self._remove_entities_from_observables(parsing_results)
+        parsing_results = list(parsing_results.values())
 
         return parsing_results
 
     @staticmethod
-    def _deduplicate(parsed_info: List):
-        unique_list = list()
-        for value in parsed_info:
-            if value not in unique_list:
-                unique_list.append(value)
-
-        return unique_list
-
-    @staticmethod
-    def _format_match(format_type: str, category: str, match: str) -> Dict:
+    def _format_match(
+        format_type: str, category: str, match: str, match_range: Tuple = (0, 0)
+    ) -> Dict:
         return {
             RESULT_FORMAT_TYPE: format_type,
             RESULT_FORMAT_CATEGORY: category,
             RESULT_FORMAT_MATCH: match,
+            RESULT_FORMAT_RANGE: match_range,
         }
 
-    def _remove_entities_from_observables(self, parsing_results: List) -> List:
-        unique_list = list()
-        for value in parsing_results:
-            if value[RESULT_FORMAT_TYPE] != OBSERVABLE_CLASS:
-                unique_list.append(value)
-            else:
-                match = False
-                for entity in self.entity_list:
-                    if self._is_whitelisted(
-                        entity.regex, str(value[RESULT_FORMAT_MATCH])
-                    ):
-                        match = True
-                        self.helper.log_debug(
-                            "Value {} is also matched by entity {}".format(
-                                value, entity.name
-                            )
-                        )
-                        break
+    @staticmethod
+    def _sco_present(
+        match_list: Dict, entity_range: Tuple, filter_sco_types: List
+    ) -> str:
+        for match_name, match_info in match_list.items():
+            if match_info[RESULT_FORMAT_CATEGORY] in filter_sco_types:
+                if (
+                    match_info[RESULT_FORMAT_RANGE][0] <= entity_range[0]
+                    and entity_range[1] <= match_info[RESULT_FORMAT_RANGE][1]
+                ):
+                    return match_name
 
-                if not match:
-                    unique_list.append(value)
+        return ""
 
-        return unique_list
+    def _extract_observable(self, observable: Observable, data: str) -> Dict:
+        list_matches = {}
+        if observable.detection_option == OBSERVABLE_DETECTION_CUSTOM_REGEX:
+            for regex in observable.regex:
+                for match in regex.finditer(data):
+                    match_value = match.group()
+
+                    ind_match = self._post_parse_observables(
+                        match_value, observable, match.span()
+                    )
+                    if ind_match:
+                        list_matches[match.group()] = ind_match
+
+        elif observable.detection_option == OBSERVABLE_DETECTION_LIBRARY:
+            lookup_function = self.library_lookup.get(observable.stix_target, None)
+            if not lookup_function:
+                self.helper.log_error(
+                    f"Selected library function is not implemented: {observable.iocfinder_function}"
+                )
+                return {}
+
+            matches = lookup_function(data)
+
+            for match in matches:
+                start = data.index(str(match))
+                ind_match = self._post_parse_observables(
+                    match, observable, (start, len(str(match)) + start)
+                )
+                if ind_match:
+                    list_matches[match] = ind_match
+
+        return list_matches
+
+    def _extract_entity(self, entity: Entity, list_matches: Dict, data: str) -> Dict:
+        regex_list = entity.regex
+
+        observable_keys = []
+        end_index = set()
+        match_dict = {}
+        match_key = ""
+
+        # Run all regexes for entity X
+        for regex in regex_list:
+            for match in regex.finditer(data):
+                match_key = match.group()
+                if match_key in match_dict:
+                    match_dict[match_key].append(match.span())
+                else:
+                    match_dict[match_key] = [match.span()]
+
+        # No maches for this entity
+        if len(match_dict) == 0:
+            return list_matches
+
+        # Run through all matches for entity X and check if they are part of a domain
+        # yes -> skip
+        # no -> add index to end_index
+        for match, match_indices in match_dict.items():
+            for match_index in match_indices:
+                skip_val = self._sco_present(
+                    list_matches, match_index, entity.omit_match_in
+                )
+                if skip_val:
+                    self.helper.log_debug(
+                        f"Skipping Entity '{match}', it is part of an omitted field '{entity.omit_match_in}' \"{skip_val}\""
+                    )
+                else:
+                    self.helper.log_debug(
+                        f"Entity match: '{match}' of regex: '{regex_list}'"
+                    )
+                    end_index.add(match_index)
+                    if match in list_matches.keys():
+                        observable_keys.append(match)
+
+        # Remove all observables which found the same information/Entity match
+        for observable_key in observable_keys:
+            del list_matches[observable_key]
+            self.helper.log_debug(
+                f"Value {observable_key} is also matched by entity {entity.name}"
+            )
+
+        # Check if entity was matched at least once in the text
+        # If yes, then add identity to match list
+        if end_index:
+            list_matches[match_key] = self._format_match(
+                ENTITY_CLASS, entity.name, entity.stix_id
+            )
+
+        return list_matches
