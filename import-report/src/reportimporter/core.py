@@ -19,6 +19,7 @@ from reportimporter.constants import (
 from reportimporter.models import Observable, EntityConfig, Entity
 from reportimporter.report_parser import ReportParser
 from reportimporter.util import MyConfigParser
+from stix2 import Report, Bundle
 
 
 class ReportImporter:
@@ -67,7 +68,7 @@ class ReportImporter:
         # Retrieve entity set from OpenCTI
         entity_indicators = self._collect_stix_objects(self.entity_config)
 
-        # Parse peport
+        # Parse report
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
         parsed = parser.run_parser(file_name, data["file_mime"])
         os.remove(file_name)
@@ -80,10 +81,13 @@ class ReportImporter:
         observables, entities = self._process_parsing_results(parsed)
         report = self.helper.api.report.read(id=entity_id)
         # Send results to OpenCTI
-        observable_cnt = self._process_observables(report, observables)
-        entity_cnt = self._process_entities(report, entities)
+        observable_cnt = self._process_parsed_objects(report, observables, entities)
+        entity_cnt = len(entities)
 
-        return f"Sent {observable_cnt} stix bundle(s) and {entity_cnt} entity connections for worker import"
+        return (
+            f"Sent {observable_cnt} observables, 1 report update and {entity_cnt} entity connections as stix "
+            f"bundle for worker import "
+        )
 
     def start(self) -> None:
         self.helper.listen(self._process_message)
@@ -118,7 +122,7 @@ class ReportImporter:
                 entries = custom_function.list(
                     getAll=True, filters=entity_config.filter
                 )
-                entity_list += entity_config.convert_to_entity(entries)
+                entity_list += entity_config.convert_to_entity(entries, self.helper)
             except AttributeError:
                 e = "Selected parser format is not supported: {}".format(func_format)
                 raise NotImplementedError(e)
@@ -145,42 +149,43 @@ class ReportImporter:
         entities = []
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
-                # Hardcoded exceptions since SimpleObservable doesn't support those types yet
                 if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
-                    observable = self.helper.api.vulnerability.read(
+                    entity = self.helper.api.vulnerability.read(
                         filters={"key": "name", "values": [match[RESULT_FORMAT_MATCH]]}
                     )
-                    if observable is None:
+                    if entity is None:
                         self.helper.log_info(
                             f"Vulnerability with name '{match[RESULT_FORMAT_MATCH]}' could not be "
                             f"found. Is the CVE Connector activated?"
                         )
                         continue
+
+                    entities.append(entity["standard_id"])
                 elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
-                    observable = self.helper.api.attack_pattern.read(
+                    entity = self.helper.api.attack_pattern.read(
                         filters={
                             "key": "x_mitre_id",
                             "values": [match[RESULT_FORMAT_MATCH]],
                         }
                     )
-                    if observable is None:
+                    if entity is None:
                         self.helper.log_info(
                             f"AttackPattern with MITRE ID '{match[RESULT_FORMAT_MATCH]}' could not be "
                             f"found. Is the MITRE Connector activated?"
                         )
                         continue
 
+                    entities.append(entity["standard_id"])
                 else:
-                    observable = self.helper.api.stix_cyber_observable.create(
-                        simple_observable_id=OpenCTIStix2Utils.generate_random_stix_id(
+                    observable = SimpleObservable(
+                        id=OpenCTIStix2Utils.generate_random_stix_id(
                             "x-opencti-simple-observable"
                         ),
-                        simple_observable_key=match[RESULT_FORMAT_CATEGORY],
-                        simple_observable_value=match[RESULT_FORMAT_MATCH],
-                        createIndicator=self.create_indicator,
+                        key=match[RESULT_FORMAT_CATEGORY],
+                        value=match[RESULT_FORMAT_MATCH],
+                        x_opencti_create_indicator=self.create_indicator,
                     )
-
-                observables.append(observable["id"])
+                    observables.append(observable)
 
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
                 entities.append(match[RESULT_FORMAT_MATCH])
@@ -189,36 +194,35 @@ class ReportImporter:
 
         return observables, entities
 
-    def _process_observables(self, report: Dict, observables: List) -> int:
+    def _process_parsed_objects(
+        self, report: Dict, observables: List, entities: List
+    ) -> int:
         if report is None:
             self.helper.log_error(
                 "No report found! This is a purely contextual connector and this should not happen"
             )
-
-        if len(observables) == 0:
             return 0
 
-        report = self.helper.api.report.create(
+        if len(observables) == 0 and len(entities) == 0:
+            return 0
+
+        report = Report(
             id=report["standard_id"],
             name=report["name"],
             description=report["description"],
             published=self.helper.api.stix2.format_date(report["created"]),
             report_types=report["report_types"],
-            update=True,
+            object_refs=observables + entities,
         )
+        observables.append(report)
 
-        for observable in observables:
-            self.helper.api.report.add_stix_object_or_stix_relationship(
-                id=report["id"], stixObjectOrStixRelationshipId=observable
+        bundles_sent = []
+        if len(observables) > 0:
+            bundle = Bundle(objects=observables).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(
+                bundle=bundle,
+                update=True,
             )
 
-        return len(observables)
-
-    def _process_entities(self, report: Dict, entities: List) -> int:
-        if report:
-            for stix_object in entities:
-                self.helper.api.report.add_stix_object_or_stix_relationship(
-                    id=report["id"], stixObjectOrStixRelationshipId=stix_object
-                )
-
-        return len(entities)
+        # len() - 1 because the report update increases the count by one
+        return len(bundles_sent) - 1
