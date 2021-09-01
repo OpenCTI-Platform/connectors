@@ -2,6 +2,7 @@ import yaml
 import os
 import requests
 
+from collections import defaultdict
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -99,33 +100,49 @@ class AbuseIPDBConnector:
             )
             return "IP found in AbuseIPDB WHITELIST."
         if len(data["reports"]) > 0:
+            found = []
+            cl = defaultdict(dict)
+
             for report in data["reports"]:
+                countryN = report["reporterCountryCode"]
+                if countryN in cl:
+                   cl[countryN]['count'] += 1
+                   cl[countryN]['firstseen'] = report["reportedAt"]
+                else:
+                   cl[countryN]['count'] = 1
+                   cl[countryN]['firstseen'] = report["reportedAt"]
+                   cl[countryN]['lastseen'] = report["reportedAt"]
+
+                for category in report["categories"]:
+                    if category not in found:
+                        found.append(category)
+                        category_text = self.extract_abuse_ipdb_category(category)
+                        label = self.helper.api.label.create(value=category_text)
+                        self.helper.api.stix_cyber_observable.add_label(
+                            id=observable_id, label_id=label["id"]
+                        )
+
+            for ckey in list(cl.keys()):
                 country = self.helper.api.location.read(
-                    filters=[
-                        {
-                            "key": "x_opencti_aliases",
-                            "values": [report["reporterCountryCode"]],
-                        }
-                    ],
-                    getAll=True,
-                )
+                        filters=[
+                            {
+                                "key": "x_opencti_aliases",
+                                "values": [ckey],
+                            }
+                        ],
+                        getAll=True,
+                    )
                 if country is None:
-                    self.helper.log_warning(
-                        f"No country found with Alpha 2 code {report['reporterCountryCode']}"
+                    self.helper.log_info(
+                        "No country found with Alpha 2 code " + ckey
                     )
                 else:
                     self.helper.api.stix_sighting_relationship.create(
                         fromId=observable_id,
                         toId=country["id"],
-                        count=1,
-                        first_seen=report["reportedAt"],
-                        last_seen=report["reportedAt"],
-                    )
-                for category in report["categories"]:
-                    category_text = self.extract_abuse_ipdb_category(category)
-                    label = self.helper.api.label.create(value=category_text)
-                    self.helper.api.stix_cyber_observable.add_label(
-                        id=observable_id, label_id=label["id"]
+                        count=cl[ckey]['count'],
+                        first_seen=cl[ckey]['firstseen'],
+                        last_seen=cl[ckey]['lastseen'],
                     )
             return "IP found in AbuseIPDB with reports, knowledge attached."
 
