@@ -346,7 +346,7 @@ jobs:
           name: Build Docker image opencti/connector-lastinfosec
           command: docker build -t opencti/connector-lastinfosec:rolling .
       - run:
-          working_directory: ~/opencti/external-import/alpedia
+          working_directory: ~/opencti/external-import/malpedia
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:rolling .
       - run:
