@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  name: 'BackupFiles'
+  scope: 'backup'
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+backup:
+  protocol: 'local' # Protocol for file copy (only `local` is supported for now).
+  path: '/tmp' # Path to be used to copy the data, can be relative or absolute.

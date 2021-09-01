@@ -368,7 +368,7 @@ jobs:
       - run:
           working_directory: ~/opencti/stream/synchronizer
           name: Build Docker image opencti/connector-synchronizer
-          command: docker build -t opencti/connector-synchronizer:rolling .          
+          command: docker build -t opencti/connector-synchronizer:rolling .
       - run:
           working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
@@ -430,7 +430,7 @@ jobs:
           name: Build Docker image opencti/connector-shodan
           command: docker build -t opencti/connector-shodan:rolling .
       - run:
-          working_directory: ~/opencti/import-external-reference
+          working_directory: ~/opencti/internal-enrichment/import-external-reference
           name: Build Docker image opencti/connector-import-external-reference
           command: docker build -t opencti/connector-import-external-reference:rolling .
       - run:
