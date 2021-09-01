@@ -3,17 +3,17 @@ services:
   connector-synchronizer:
     image: opencti/connector-synchronizer:4.5.5
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
+      - OPENCTI_URL=http://localhost # Local OpenCTI URL
+      - OPENCTI_TOKEN=ChangeMe # Local OpenCTI token
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=Synchronizer
       - CONNECTOR_SCOPE=synchronizer
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
-      - REMOTE_OPENCTI_URL=https://ChangeMe.com
+      - REMOTE_OPENCTI_URL=https://ChangeMe.com # Remote OpenCTI URL
+      - REMOTE_OPENCTI_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - REMOTE_OPENCTI_SSL_VERIFY=true
       - REMOTE_OPENCTI_TOKEN=ChangeMe
-      - REMOTE_OPENCTI_EVENTS=create,update,delete
-      - REMOTE_OPENCTI_START_TIMESTAMP=
+      - REMOTE_OPENCTI_START_TIMESTAMP= # Optional, start to synchronize from a specific date
     restart: always

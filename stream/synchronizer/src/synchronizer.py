@@ -6,7 +6,7 @@ import os
 import yaml
 import json
 
-from pycti import OpenCTIConnectorHelper, get_config_variable, StixCyberObservableTypes
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class SynchronizerConnector:
@@ -22,15 +22,17 @@ class SynchronizerConnector:
         self.remote_opencti_url = get_config_variable(
             "REMOTE_OPENCTI_URL", ["remote_opencti", "url"], config
         )
+        self.remote_opencti_live_stream_id = get_config_variable(
+            "REMOTE_OPENCTI_LIVE_STREAM_ID",
+            ["remote_opencti", "live_stream_id"],
+            config,
+        )
         self.remote_opencti_ssl_verify = get_config_variable(
             "REMOTE_OPENCTI_SSL_VERIFY", ["remote_opencti", "ssl_verify"], config
         )
         self.remote_opencti_token = get_config_variable(
             "REMOTE_OPENCTI_TOKEN", ["remote_opencti", "token"], config
         )
-        self.remote_opencti_events = get_config_variable(
-            "REMOTE_OPENCTI_EVENTS", ["remote_opencti", "events"], config
-        ).split(",")
         self.remote_opencti_start_timestamp = get_config_variable(
             "REMOTE_OPENCTI_START_TIMESTAMP",
             ["remote_opencti", "start_timestamp"],
@@ -38,23 +40,37 @@ class SynchronizerConnector:
         )
 
     def _process_message(self, msg):
-        data = json.loads(msg.data)
-        try:
-            if "create" in self.remote_opencti_events and msg.event == "create":
-                bundle = json.dumps({"objects": [data["data"]]})
-                self.helper.send_stix2_bundle(bundle, event_version=data["version"])
-            elif "update" in self.remote_opencti_events and msg.event == "update":
-                bundle = json.dumps({"objects": [data["data"]]})
-                self.helper.send_stix2_bundle(bundle, event_version=data["version"])
-            elif "delete" in self.remote_opencti_events and msg.event == "delete":
-                if data["data"]["type"] == "relationship":
-                    self.helper.api.stix_core_relationship.delete(id=data["data"]["id"])
-                elif StixCyberObservableTypes.has_value(data["data"]["type"]):
-                    self.helper.api.stix_cyber_observable.delete(id=data["data"]["id"])
-                else:
-                    self.helper.api.stix_domain_object.delete(id=data["data"]["id"])
-        except:
-            pass
+        print(msg)
+        if (
+            msg.event == "create"
+            or msg.event == "update"
+            or msg.event == "merge"
+            or msg.event == "delete"
+        ):
+            self.helper.log_info("Processing event " + msg.id)
+            data = json.loads(msg.data)
+            if msg.event == "create":
+                bundle = {
+                    "type": "bundle",
+                    "x_opencti_event_version": data["version"],
+                    "objects": [data["data"]],
+                }
+                self.helper.api.stix2.import_bundle(bundle)
+            elif msg.event == "update":
+                bundle = {
+                    "type": "bundle",
+                    "x_opencti_event_version": data["version"],
+                    "objects": [data["data"]],
+                }
+                self.helper.api.stix2.import_bundle(bundle, True)
+            elif msg.event == "merge":
+                sources = data["data"]["x_opencti_context"]["sources"]
+                object_ids = list(map(lambda element: element["id"], sources))
+                self.helper.api.stix_core_object.merge(
+                    id=data["data"]["id"], object_ids=object_ids
+                )
+            elif msg.event == "delete":
+                self.helper.api.stix.delete(id=data["data"]["id"])
 
     def start(self):
         self.helper.listen_stream(
@@ -63,6 +79,7 @@ class SynchronizerConnector:
             self.remote_opencti_token,
             self.remote_opencti_ssl_verify,
             self.remote_opencti_start_timestamp,
+            self.remote_opencti_live_stream_id,
         )
 
 

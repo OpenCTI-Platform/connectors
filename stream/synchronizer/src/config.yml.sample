@@ -11,8 +11,8 @@ connector:
   log_level: 'info'
 
 remote_opencti:
-  url: 'http://remote.opencti.io:8080'
+  url: 'https://ChangeMe.com' # Remote OpenCTI URL
+  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
   ssl_verify: true
   token: 'ChangeMe'
-  events: 'create,update,delete'
-  start_timestamp: ''
+  start_timestamp: '' # Optional, start to synchronize from a specific date
