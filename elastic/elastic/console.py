@@ -10,7 +10,7 @@ Options:
   -h --help                   show this help message and exit
   --version                   show version and exit
   -c FILE --config=FILE       path to configuration YAML [default: config.yml]
-  -d DIR --data-dir=DIR       path to data directory for Elasticsearch templates [default: ./data]
+  -d DIR --data-dir=DIR       path to data directory for Elasticsearch templates (uses module data by default)
   -v                          increase verbosity (can be used up to 3 times)
   -q                          quiet mode
   --debug                     enable debug logging for all Python modules
@@ -26,7 +26,7 @@ from typing import OrderedDict
 import yaml
 from docopt import docopt
 
-from . import LOGGER_NAME, __version__
+from . import LOGGER_NAME, __version__, __DATA_DIR__
 from .conf import defaults
 from .elastic_connector import ElasticConnector
 from .utils import add_branch, dict_merge, remove_nones, setup_logger
@@ -174,15 +174,20 @@ def main() -> None:
     logger.trace(json.dumps(config, sort_keys=True, indent=4))
 
     # This can be overridden by environment variables
-    datadir = None
-    if not os.path.exists(arguments["--data-dir"]):
-        logger.warn(f"""Data directory '{arguments["--data-dir"]}' does not exist.""")
-    elif not os.path.isdir(arguments["--data-dir"]):
-        logger.warn(
-            f"""'{arguments["--data-dir"]}' is not a valid directory for --data-dir"""
-        )
+    datadir = __DATA_DIR__
+    if "--data-dir" in arguments and arguments["--data-dir"] is not None:
+        if not os.path.exists(arguments["--data-dir"]):
+            logger.warn(
+                f"""Data directory '{arguments["--data-dir"]}' does not exist."""
+            )
+        elif not os.path.isdir(arguments["--data-dir"]):
+            logger.warn(
+                f"""'{arguments["--data-dir"]}' is not a valid directory for --data-dir"""
+            )
+        else:
+            datadir = arguments["--data-dir"]
     else:
-        datadir = arguments["--data-dir"]
+        logger.info(f"Using default data directory: {datadir}")
 
     if not arguments["-q"] is True:
         print(BANNER)

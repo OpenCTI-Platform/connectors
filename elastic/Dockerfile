@@ -13,7 +13,7 @@ ENV PYTHONFAULTHANDLER=1 \
   PATH="$PATH:/runtime/bin" \
   PYTHONPATH="$PYTHONPATH:/runtime/lib/python3.9/site-packages" \
   # Versions:
-  POETRY_VERSION=1.1.7
+  POETRY_VERSION=1.1.8
 
 # System deps:
 RUN apt-get update && apt-get install -y build-essential unzip wget python-dev
