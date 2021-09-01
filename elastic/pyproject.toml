@@ -8,6 +8,7 @@ the indicator in OpenCTI. The connector can also be run in 'stix' mode, which wr
 to the index configured.
 """
 authors = ["Derek Ditch <dcode@elastic.co>"]
+include = ["elastic/data/*.json"]
 
 [tool.poetry.scripts]
 elastic = 'elastic.console:main'
