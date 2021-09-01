@@ -106,12 +106,12 @@ class AbuseIPDBConnector:
             for report in data["reports"]:
                 countryN = report["reporterCountryCode"]
                 if countryN in cl:
-                   cl[countryN]['count'] += 1
-                   cl[countryN]['firstseen'] = report["reportedAt"]
+                    cl[countryN]["count"] += 1
+                    cl[countryN]["firstseen"] = report["reportedAt"]
                 else:
-                   cl[countryN]['count'] = 1
-                   cl[countryN]['firstseen'] = report["reportedAt"]
-                   cl[countryN]['lastseen'] = report["reportedAt"]
+                    cl[countryN]["count"] = 1
+                    cl[countryN]["firstseen"] = report["reportedAt"]
+                    cl[countryN]["lastseen"] = report["reportedAt"]
 
                 for category in report["categories"]:
                     if category not in found:
@@ -124,25 +124,23 @@ class AbuseIPDBConnector:
 
             for ckey in list(cl.keys()):
                 country = self.helper.api.location.read(
-                        filters=[
-                            {
-                                "key": "x_opencti_aliases",
-                                "values": [ckey],
-                            }
-                        ],
-                        getAll=True,
-                    )
+                    filters=[
+                        {
+                            "key": "x_opencti_aliases",
+                            "values": [ckey],
+                        }
+                    ],
+                    getAll=True,
+                )
                 if country is None:
-                    self.helper.log_info(
-                        "No country found with Alpha 2 code " + ckey
-                    )
+                    self.helper.log_info("No country found with Alpha 2 code " + ckey)
                 else:
                     self.helper.api.stix_sighting_relationship.create(
                         fromId=observable_id,
                         toId=country["id"],
-                        count=cl[ckey]['count'],
-                        first_seen=cl[ckey]['firstseen'],
-                        last_seen=cl[ckey]['lastseen'],
+                        count=cl[ckey]["count"],
+                        first_seen=cl[ckey]["firstseen"],
+                        last_seen=cl[ckey]["lastseen"],
                     )
             return "IP found in AbuseIPDB with reports, knowledge attached."
 
