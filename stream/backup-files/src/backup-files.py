@@ -38,7 +38,13 @@ class BackupFilesConnector:
             json.dump(bundle, file, indent=4)
 
     def delete_file(self, entity_type, entity_id):
-        path = self.backup_path + "/opencti_data/" + entity_type + "/" + entity_id.split("--")[1][0]
+        path = (
+            self.backup_path
+            + "/opencti_data/"
+            + entity_type
+            + "/"
+            + entity_id.split("--")[1][0]
+        )
         if not os.path.exists(path):
             return
         if os.path.isfile(path + "/" + entity_id + ".json"):
