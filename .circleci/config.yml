@@ -33,159 +33,159 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          working_directory: ~/opencti/import-file-stix
+          working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
           command: docker build -t opencti/connector-import-file-stix:latest . && docker tag opencti/connector-import-file-stix:latest opencti/connector-import-file-stix:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/import-report
+          working_directory: ~/opencti/internal-import-file/import-report
           name: Build Docker image opencti/connector-import-report
           command: docker build -t opencti/connector-import-report:latest . && docker tag opencti/connector-import-report:latest opencti/connector-import-report:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/export-file-stix
+          working_directory: ~/opencti/internal-export-file/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
           command: docker build -t opencti/connector-export-file-stix:latest . && docker tag opencti/connector-export-file-stix:latest opencti/connector-export-file-stix:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/export-file-csv
+          working_directory: ~/opencti/internal-export-file/export-file-csv
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/hygiene
+          working_directory: ~/opencti/internal-enrichment/hygiene
           name: Build Docker image opencti/connector-hygiene
           command: docker build -t opencti/connector-hygiene:latest . && docker tag opencti/connector-hygiene:latest opencti/connector-hygiene:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/alienvault
+          working_directory: ~/opencti/external-import/alienvault
           name: Build Docker image opencti/connector-alienvault
           command: docker build -t opencti/connector-alienvault:latest . && docker tag opencti/connector-alienvault:latest opencti/connector-alienvault:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/crowdstrike
+          working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:latest . && docker tag opencti/connector-crowdstrike:latest opencti/connector-crowdstrike:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/cryptolaemus
+          working_directory: ~/opencti/external-import/cryptolaemus
           name: Build Docker image opencti/connector-cryptolaemus
           command: docker build -t opencti/connector-cryptolaemus:latest . && docker tag opencti/connector-cryptolaemus:latest opencti/connector-cryptolaemus:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/cyber-threat-coalition
+          working_directory: ~/opencti/external-import/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
           command: docker build -t opencti/connector-cyber-threat-coalition:latest . && docker tag opencti/connector-cyber-threat-coalition:latest opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/misp
+          working_directory: ~/opencti/external-import/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/mitre
+          working_directory: ~/opencti/external-import/mitre
           name: Build Docker image opencti/connector-mitre
           command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/opencti
+          working_directory: ~/opencti/external-import/opencti
           name: Build Docker image opencti/connector-opencti
           command: docker build -t opencti/connector-opencti:latest . && docker tag opencti/connector-opencti:latest opencti/connector-opencti:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/cve
+          working_directory: ~/opencti/external-import/cve
           name: Build Docker image opencti/connector-cve
           command: docker build -t opencti/connector-cve:latest . && docker tag opencti/connector-cve:latest opencti/connector-cve:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/amitt
+          working_directory: ~/opencti/external-import/amitt
           name: Build Docker image opencti/connector-amitt
           command: docker build -t opencti/connector-amitt:latest . && docker tag opencti/connector-amitt:latest opencti/connector-amitt:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/ipinfo
+          working_directory: ~/opencti/internal-enrichment/ipinfo
           name: Build Docker image opencti/connector-ipinfo
           command: docker build -t opencti/connector-ipinfo:latest . && docker tag opencti/connector-ipinfo:latest opencti/connector-ipinfo:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/virustotal
+          working_directory: ~/opencti/internal-enrichment/virustotal
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:latest . && docker tag opencti/connector-virustotal:latest opencti/connector-virustotal:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/lastinfosec
+          working_directory: ~/opencti/external-import/lastinfosec
           name: Build Docker image opencti/connector-lastinfosec
           command: docker build -t opencti/connector-lastinfosec:latest . && docker tag opencti/connector-lastinfosec:latest opencti/connector-lastinfosec:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/malpedia
+          working_directory: ~/opencti/external-import/malpedia
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:latest . && docker tag opencti/connector-malpedia:latest opencti/connector-malpedia:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/valhalla
+          working_directory: ~/opencti/external-import/valhalla
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:latest . && docker tag opencti/connector-valhalla:latest opencti/connector-valhalla:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/cybercrime-tracker
+          working_directory: ~/opencti/external-import/cybercrime-tracker
           name: Build Docker image opencti/connector-cybercrime-tracker
           command: docker build -t opencti/connector-cybercrime-tracker:latest . && docker tag opencti/connector-cybercrime-tracker:latest opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/history
+          working_directory: ~/opencti/stream/history
           name: Build Docker image opencti/connector-history
           command: docker build -t opencti/connector-history:latest . && docker tag opencti/connector-history:latest opencti/connector-history:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/tanium
+          working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}          
       - run:
-          working_directory: ~/opencti/synchronizer
+          working_directory: ~/opencti/stream/synchronizer
           name: Build Docker image opencti/connector-synchronizer
           command: docker build -t opencti/connector-synchronizer:latest . && docker tag opencti/connector-synchronizer:latest opencti/connector-synchronizer:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/fireeye
+          working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
           command: docker build -t opencti/connector-fireeye:latest . && docker tag opencti/connector-fireeye:latest opencti/connector-fireeye:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/kaspersky
+          working_directory: ~/opencti/external-import/kaspersky
           name: Build Docker image opencti/connector-kaspersky
           command: docker build -t opencti/connector-kaspersky:latest . && docker tag opencti/connector-kaspersky:latest opencti/connector-kaspersky:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/greynoise
+          working_directory: ~/opencti/internal-enrichment/greynoise
           name: Build Docker image opencti/connector-greynoise
           command: docker build -t opencti/connector-greynoise:latest . && docker tag opencti/connector-greynoise:latest opencti/connector-greynoise:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/taxii2
+          working_directory: ~/opencti/external-import/taxii2
           name: Build Docker image opencti/connector-taxii2
           command: docker build -t opencti/connector-taxii2:latest . && docker tag opencti/connector-taxii2:latest opencti/connector-taxii2:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/thehive
+          working_directory: ~/opencti/external-import/thehive
           name: Build Docker image opencti/connector-thehive
           command: docker build -t opencti/connector-thehive:latest . && docker tag opencti/connector-thehive:latest opencti/connector-thehive:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/abuseipdb
+          working_directory: ~/opencti/internal-enrichment/abuseipdb
           name: Build Docker image opencti/connector-abuseipdb
           command: docker build -t opencti/connector-abuseipdb:latest . && docker tag opencti/connector-abuseipdb:latest opencti/connector-abuseipdb:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/urlhaus
+          working_directory: ~/opencti/external-import/urlhaus
           name: Build Docker image opencti/connector-urlhaus
           command: docker build -t opencti/connector-urlhaus:latest . && docker tag opencti/connector-urlhaus:latest opencti/connector-urlhaus:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/malbeacon
+          working_directory: ~/opencti/internal-enrichment/malbeacon
           name: Build Docker image opencti/connector-malbeacon
           command: docker build -t opencti/connector-malbeacon:latest . && docker tag opencti/connector-malbeacon:latest opencti/connector-malbeacon:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/sekoia
+          working_directory: ~/opencti/external-import/sekoia
           name: Build Docker image opencti/connector-sekoia
           command: docker build -t opencti/connector-sekoia:latest . && docker tag opencti/connector-sekoia:latest opencti/connector-sekoia:${CIRCLE_TAG}          
       - run:
-          working_directory: ~/opencti/threatbus
+          working_directory: ~/opencti/stream/threatbus
           name: Build Docker image opencti/connector-threatbus
           command: docker build -t opencti/connector-threatbus:latest . && docker tag opencti/connector-threatbus:latest opencti/connector-threatbus:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/hybrid-analysis-sandbox
+          working_directory: ~/opencti/internal-enrichment/hybrid-analysis-sandbox
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:latest . && docker tag opencti/connector-hybrid-analysis-sandbox:latest opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/splunk
+          working_directory: ~/opencti/stream/splunk
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/elastic
+          working_directory: ~/opencti/steam/elastic
           name: Build Docker image opencti/connector-elastic
           command: docker build -t opencti/connector-elastic:latest . && docker tag opencti/connector-elastic:latest opencti/connector-elastic:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/vxvault
+          working_directory: ~/opencti/external-import/vxvault
           name: Build Docker image opencti/connector-vxvault
           command: docker build -t opencti/connector-vxvault:latest . && docker tag opencti/connector-vxvault:latest opencti/connector-vxvault:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/shodan
+          working_directory: ~/opencti/internal-enrichment/shodan
           name: Build Docker image opencti/connector-shodan
           command: docker build -t opencti/connector-shodan:latest . && docker tag opencti/connector-shodan:latest opencti/connector-shodan:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/import-external-reference
+          working_directory: ~/opencti/internal-enrichment/import-external-reference
           name: Build Docker image opencti/connector-import-external-reference
           command: docker build -t opencti/connector-import-external-reference:latest . && docker tag opencti/connector-import-external-reference:latest opencti/connector-import-external-reference:${CIRCLE_TAG}
       - run:
@@ -278,155 +278,155 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          working_directory: ~/opencti/import-file-stix
+          working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
           command: docker build -t opencti/connector-import-file-stix:rolling .
       - run:
-          working_directory: ~/opencti/import-report
+          working_directory: ~/opencti/internal-import-file/import-report
           name: Build Docker image opencti/connector-import-report
           command: docker build -t opencti/connector-import-report:rolling .
       - run:
-          working_directory: ~/opencti/export-file-stix
+          working_directory: ~/opencti/internal-export-file/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
           command: docker build -t opencti/connector-export-file-stix:rolling .
       - run:
-          working_directory: ~/opencti/export-file-csv
+          working_directory: ~/opencti/internal-export-file/export-file-csv
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:rolling .
       - run:
-          working_directory: ~/opencti/hygiene
+          working_directory: ~/opencti/internal-enrichment/hygiene
           name: Build Docker image opencti/connector-hygiene
           command: docker build -t opencti/connector-hygiene:rolling .
       - run:
-          working_directory: ~/opencti/alienvault
+          working_directory: ~/opencti/external-import/alienvault
           name: Build Docker image opencti/connector-alienvault
           command: docker build -t opencti/connector-alienvault:rolling .
       - run:
-          working_directory: ~/opencti/crowdstrike
+          working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:rolling .
       - run:
-          working_directory: ~/opencti/cryptolaemus
+          working_directory: ~/opencti/external-import/cryptolaemus
           name: Build Docker image opencti/connector-cryptolaemus
           command: docker build -t opencti/connector-cryptolaemus:rolling .
       - run:
-          working_directory: ~/opencti/cyber-threat-coalition
+          working_directory: ~/opencti/external-import/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
           command: docker build -t opencti/connector-cyber-threat-coalition:rolling .
       - run:
-          working_directory: ~/opencti/misp
+          working_directory: ~/opencti/external-import/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:rolling .
       - run:
-          working_directory: ~/opencti/mitre
+          working_directory: ~/opencti/external-import/mitre
           name: Build Docker image opencti/connector-mitre
           command: docker build -t opencti/connector-mitre:rolling .
       - run:
-          working_directory: ~/opencti/opencti
+          working_directory: ~/opencti/external-import/opencti
           name: Build Docker image opencti/connector-opencti
           command: docker build -t opencti/connector-opencti:rolling .
       - run:
-          working_directory: ~/opencti/cve
+          working_directory: ~/opencti/external-import/cve
           name: Build Docker image opencti/connector-cve
           command: docker build -t opencti/connector-cve:rolling .
       - run:
-          working_directory: ~/opencti/amitt
+          working_directory: ~/opencti/external-import/amitt
           name: Build Docker image opencti/connector-amitt
           command: docker build -t opencti/connector-amitt:rolling .
       - run:
-          working_directory: ~/opencti/ipinfo
+          working_directory: ~/opencti/internal-enrichment/ipinfo
           name: Build Docker image opencti/connector-ipinfo
           command: docker build -t opencti/connector-ipinfo:rolling .
       - run:
-          working_directory: ~/opencti/virustotal
+          working_directory: ~/opencti/internal-enrichment/virustotal
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:rolling .
       - run:
-          working_directory: ~/opencti/lastinfosec
+          working_directory: ~/opencti/external-import/lastinfosec
           name: Build Docker image opencti/connector-lastinfosec
           command: docker build -t opencti/connector-lastinfosec:rolling .
       - run:
-          working_directory: ~/opencti/malpedia
+          working_directory: ~/opencti/external-import/alpedia
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:rolling .
       - run:
-          working_directory: ~/opencti/valhalla
+          working_directory: ~/opencti/external-import/valhalla
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:rolling .
       - run:
-          working_directory: ~/opencti/cybercrime-tracker
+          working_directory: ~/opencti/external-import/cybercrime-tracker
           name: Build Docker image opencti/connector-cybercrime-tracker
           command: docker build -t opencti/connector-cybercrime-tracker:rolling .
       - run:
-          working_directory: ~/opencti/history
+          working_directory: ~/opencti/stream/history
           name: Build Docker image opencti/connector-history
           command: docker build -t opencti/connector-history:rolling .
       - run:
-          working_directory: ~/opencti/tanium
+          working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:rolling .          
       - run:
-          working_directory: ~/opencti/synchronizer
+          working_directory: ~/opencti/stream/synchronizer
           name: Build Docker image opencti/connector-synchronizer
           command: docker build -t opencti/connector-synchronizer:rolling .          
       - run:
-          working_directory: ~/opencti/fireeye
+          working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
           command: docker build -t opencti/connector-fireeye:rolling .
       - run:
-          working_directory: ~/opencti/kaspersky
+          working_directory: ~/opencti/external-import/kaspersky
           name: Build Docker image opencti/connector-kaspersky
           command: docker build -t opencti/connector-kaspersky:rolling .
       - run:
-          working_directory: ~/opencti/greynoise
+          working_directory: ~/opencti/internal-enrichment/greynoise
           name: Build Docker image opencti/connector-greynoise
           command: docker build -t opencti/connector-greynoise:rolling .
       - run:
-          working_directory: ~/opencti/taxii2
+          working_directory: ~/opencti/external-import/taxii2
           name: Build Docker image opencti/connector-taxii2
           command: docker build -t opencti/connector-taxii2:rolling .
       - run:
-          working_directory: ~/opencti/thehive
+          working_directory: ~/opencti/external-import/thehive
           name: Build Docker image opencti/connector-thehive
           command: docker build -t opencti/connector-thehive:rolling .
       - run:
-          working_directory: ~/opencti/abuseipdb
+          working_directory: ~/opencti/internal-enrichment/abuseipdb
           name: Build Docker image opencti/connector-abuseipdb
           command: docker build -t opencti/connector-abuseipdb:rolling .
       - run:
-          working_directory: ~/opencti/urlhaus
+          working_directory: ~/opencti/external-import/urlhaus
           name: Build Docker image opencti/connector-urlhaus
           command: docker build -t opencti/connector-urlhaus:rolling .
       - run:
-          working_directory: ~/opencti/malbeacon
+          working_directory: ~/opencti/internal-enrichment/malbeacon
           name: Build Docker image opencti/connector-malbeacon
           command: docker build -t opencti/connector-malbeacon:rolling .
       - run:
-          working_directory: ~/opencti/sekoia
+          working_directory: ~/opencti/external-import/sekoia
           name: Build Docker image opencti/connector-sekoia
           command: docker build -t opencti/connector-sekoia:rolling . 
       - run:
-          working_directory: ~/opencti/threatbus
+          working_directory: ~/opencti/stream/threatbus
           name: Build Docker image opencti/connector-threatbus
           command: docker build -t opencti/connector-threatbus:rolling .
       - run:
-          working_directory: ~/opencti/hybrid-analysis-sandbox
+          working_directory: ~/opencti/internal-enrichment/hybrid-analysis-sandbox
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:rolling .
       - run:
-          working_directory: ~/opencti/splunk
+          working_directory: ~/opencti/stream/splunk
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:rolling .
       - run:
-          working_directory: ~/opencti/elastic
+          working_directory: ~/opencti/stream/elastic
           name: Build Docker image opencti/connector-elastic
           command: docker build -t opencti/connector-elastic:rolling .
       - run:
-          working_directory: ~/opencti/vxvault
+          working_directory: ~/opencti/external-import/vxvault
           name: Build Docker image opencti/connector-vxvault
           command: docker build -t opencti/connector-vxvault:rolling .
       - run:
-          working_directory: ~/opencti/shodan
+          working_directory: ~/opencti/internal-enrichment/shodan
           name: Build Docker image opencti/connector-shodan
           command: docker build -t opencti/connector-shodan:rolling .
       - run:
