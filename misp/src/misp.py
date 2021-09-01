@@ -18,6 +18,7 @@ from stix2 import (
     Relationship,
     ExternalReference,
     Sighting,
+    Location,
     TLP_WHITE,
     TLP_GREEN,
     TLP_AMBER,
@@ -60,11 +61,6 @@ OPENCTISTIX2 = {
     "registry-key": {"type": "windows-registry-key", "path": ["key"]},
     "registry-key-value": {"type": "windows-registry-value-type", "path": ["data"]},
     "pdb-path": {"type": "file", "path": ["name"]},
-    "windows-service-name": {"type": "windows-service-ext", "path": ["service_name"]},
-    "windows-service-display-name": {
-        "type": "windows-service-ext",
-        "path": ["display_name"],
-    },
     "x509-certificate-issuer": {"type": "x509-certificate", "path": ["issuer"]},
     "x509-certificate-serial-number": {
         "type": "x509-certificate",
@@ -453,7 +449,9 @@ class Misp:
                         )
 
                     object_observable = SimpleObservable(
-                        id="x-opencti-simple-observable--" + object["uuid"],
+                        id=OpenCTIStix2Utils.generate_random_stix_id(
+                            "x-opencti-simple-observable"
+                        ),
                         key="X-OpenCTI-Text.value",
                         value=object["name"] + unique_key,
                         description=object["description"],
@@ -501,6 +499,8 @@ class Misp:
                 + event_elements["malwares"]
                 + event_elements["tools"]
                 + event_elements["attack_patterns"]
+                + event_elements["sectors"]
+                + event_elements["countries"]
             )
             for event_element in all_event_elements:
                 if event_element["name"] not in added_object_refs:
@@ -547,6 +547,8 @@ class Misp:
                     + indicator["attribute_elements"]["malwares"]
                     + indicator["attribute_elements"]["tools"]
                     + indicator["attribute_elements"]["attack_patterns"]
+                    + indicator["attribute_elements"]["sectors"]
+                    + indicator["attribute_elements"]["countries"]
                 )
                 for attribute_element in all_attribute_elements:
                     if attribute_element["name"] not in added_object_refs:
@@ -1082,6 +1084,69 @@ class Misp:
                     #        object_marking_refs=attribute_markings,
                     #    )
                     #    relationships.append(relationship_indicates)
+            for sector in attribute_elements["sectors"]:
+                if indicator is not None:
+                    relationships.append(
+                        Relationship(
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "relationship"
+                            ),
+                            relationship_type="related-to",
+                            created_by_ref=author,
+                            source_ref=indicator.id,
+                            target_ref=sector.id,
+                            description=attribute["comment"],
+                            object_marking_refs=attribute_markings,
+                            confidence=self.helper.connect_confidence_level,
+                        )
+                    )
+                if observable is not None:
+                    relationships.append(
+                        Relationship(
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "relationship"
+                            ),
+                            relationship_type="related-to",
+                            created_by_ref=author,
+                            source_ref=observable.id,
+                            target_ref=sector.id,
+                            description=attribute["comment"],
+                            object_marking_refs=attribute_markings,
+                            confidence=self.helper.connect_confidence_level,
+                        )
+                    )
+
+            for country in attribute_elements["countries"]:
+                if indicator is not None:
+                    relationships.append(
+                        Relationship(
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "relationship"
+                            ),
+                            relationship_type="related-to",
+                            created_by_ref=author,
+                            source_ref=indicator.id,
+                            target_ref=country.id,
+                            description=attribute["comment"],
+                            object_marking_refs=attribute_markings,
+                            confidence=self.helper.connect_confidence_level,
+                        )
+                    )
+                if observable is not None:
+                    relationships.append(
+                        Relationship(
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "relationship"
+                            ),
+                            relationship_type="related-to",
+                            created_by_ref=author,
+                            source_ref=observable.id,
+                            target_ref=country.id,
+                            description=attribute["comment"],
+                            object_marking_refs=attribute_markings,
+                            confidence=self.helper.connect_confidence_level,
+                        )
+                    )
             return {
                 "indicator": indicator,
                 "observable": observable,
@@ -1098,8 +1163,11 @@ class Misp:
             "malwares": [],
             "tools": [],
             "attack_patterns": [],
+            "sectors": [],
+            "countries": [],
         }
         added_names = []
+        # TODO: process sector & countries from galaxies?
         for galaxy in galaxies:
             # Get the linked intrusion sets
             if (
@@ -1227,6 +1295,42 @@ class Misp:
                             )
                         )
                         added_names.append(name)
+            # Get the linked sectors
+            if galaxy["namespace"] == "misp" and galaxy["name"] == "Sector":
+                for galaxy_entity in galaxy["GalaxyCluster"]:
+                    name = galaxy_entity["value"]
+                    if name not in added_names:
+                        elements["sectors"].append(
+                            Identity(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "identity"
+                                ),
+                                name=name,
+                                identity_class="class",
+                                description=galaxy_entity["description"],
+                                created_by_ref=author,
+                                object_marking_refs=markings,
+                            )
+                        )
+                        added_names.append(name)
+            # Get the linked countries
+            if galaxy["namespace"] == "misp" and galaxy["name"] == "Country":
+                for galaxy_entity in galaxy["GalaxyCluster"]:
+                    name = galaxy_entity["description"]
+                    if name not in added_names:
+                        elements["countries"].append(
+                            Location(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "location"
+                                ),
+                                name=name,
+                                country=galaxy_entity["meta"]["ISO"],
+                                description="Imported from MISP tag",
+                                created_by_ref=author,
+                                object_marking_refs=markings,
+                            )
+                        )
+                        added_names.append(name)
         for tag in tags:
             # Get the linked intrusion sets
             if (
@@ -1334,6 +1438,22 @@ class Misp:
                         )
                     )
                     added_names.append(name)
+            # Get the linked sectors
+            if tag["name"].startswith("misp-galaxy:sector"):
+                tag_value_split = tag["name"].split('="')
+                name = tag_value_split[1][:-1].strip()
+                if name not in added_names:
+                    elements["sectors"].append(
+                        Identity(
+                            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
+                            name=name,
+                            description="Imported from MISP tag",
+                            identity_class="class",
+                            created_by_ref=author,
+                            object_marking_refs=markings,
+                        )
+                    )
+                    added_names.append(name)
         return elements
 
     def resolve_type(self, type, value):
@@ -1368,12 +1488,6 @@ class Misp:
             "email-src": [{"resolver": "email-address", "type": "Email-Addr"}],
             "email-dst": [{"resolver": "email-address", "type": "Email-Addr"}],
             "url": [{"resolver": "url", "type": "Url"}],
-            "windows-service-name": [
-                {"resolver": "windows-service-name", "type": "Process"}
-            ],
-            "windows-service-displayname": [
-                {"resolver": "windows-service-display-name", "type": "Process"}
-            ],
             "windows-scheduled-task": [
                 {"resolver": "windows-scheduled-task", "type": "X-OpenCTI-Text"}
             ],
@@ -1480,6 +1594,8 @@ class Misp:
                 and not tag["name"].startswith("misp-galaxy:tool")
                 and not tag["name"].startswith("misp-galaxy:ransomware")
                 and not tag["name"].startswith("misp-galaxy:malpedia")
+                and not tag["name"].startswith("misp-galaxy:sector")
+                and not tag["name"].startswith("misp-galaxy:country")
             ):
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
@@ -1501,13 +1617,13 @@ class Misp:
 
     def find_type_by_uuid(self, uuid, bundle_objects):
         # filter by uuid
-        l_find = lambda o: o.id.endswith("--" + uuid)
-        result = list(filter(l_find, bundle_objects))
+        i_find = lambda o: o.id.endswith("--" + uuid)
+        i_result = list(filter(i_find, bundle_objects))
 
-        if len(result) > 0:
-            uuid = result[0]["id"]
+        if len(i_result) > 0:
+            uuid = i_result[0]["id"]
             return {
-                "entity": result[0],
+                "entity": i_result[0],
                 "type": uuid[: uuid.index("--")],
             }
         return None
