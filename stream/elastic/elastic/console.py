@@ -28,7 +28,7 @@ from docopt import docopt
 
 from . import LOGGER_NAME, __version__, __DATA_DIR__
 from .conf import defaults
-from .elastic_connector import ElasticConnector
+from .elastic import ElasticConnector
 from .utils import add_branch, dict_merge, remove_nones, setup_logger
 
 BANNER = f"""

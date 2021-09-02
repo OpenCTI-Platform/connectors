@@ -40,7 +40,6 @@ class SynchronizerConnector:
         )
 
     def _process_message(self, msg):
-        print(msg)
         if (
             msg.event == "create"
             or msg.event == "update"

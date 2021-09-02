@@ -110,7 +110,7 @@ data = [
 
 @pytest.mark.parametrize("pattern,expected", data)
 def test_stix2ecs(pattern, expected) -> None:
-    from elastic_connector.stix2ecs import StixIndicator
+    from elastic.stix2ecs import StixIndicator
 
     item: StixIndicator = StixIndicator.parse_pattern(pattern)[0]
     result = item.get_ecs_indicator()

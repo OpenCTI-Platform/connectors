@@ -1,4 +1,4 @@
-from elastic_connector import __version__
+from elastic import __version__
 
 
 def test_version():
