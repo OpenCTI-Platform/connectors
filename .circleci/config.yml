@@ -189,6 +189,10 @@ jobs:
           name: Build Docker image opencti/connector-import-external-reference
           command: docker build -t opencti/connector-import-external-reference:latest . && docker tag opencti/connector-import-external-reference:latest opencti/connector-import-external-reference:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/connector-backup-files
+          name: Build Docker image opencti/connector-backup-files
+          command: docker build -t opencti/connector-backup-files:latest . && docker tag opencti/connector-backup-files:latest opencti/connector-backup-files:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -270,6 +274,8 @@ jobs:
             docker push opencti/connector-shodan:${CIRCLE_TAG}
             docker push opencti/connector-import-external-reference:latest
             docker push opencti/connector-import-external-reference:${CIRCLE_TAG}
+            docker push opencti/connector-backup-files:latest
+            docker push opencti/connector-backup-files:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -434,6 +440,10 @@ jobs:
           name: Build Docker image opencti/connector-import-external-reference
           command: docker build -t opencti/connector-import-external-reference:rolling .
       - run:
+          working_directory: ~/opencti/stream/backup-files
+          name: Build Docker image opencti/connector-backup-files
+          command: docker build -t opencti/connector-backup-files:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -476,6 +486,7 @@ jobs:
             docker push opencti/connector-vxvault:rolling
             docker push opencti/connector-shodan:rolling
             docker push opencti/connector-import-external-reference:rolling
+            docker push opencti/connector-backup-files:rolling
 workflows:
   version: 2
   opencti:
