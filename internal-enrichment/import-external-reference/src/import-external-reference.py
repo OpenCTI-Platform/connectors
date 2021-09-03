@@ -79,7 +79,7 @@ class ImportExternalReferenceConnector:
                         options = {
                             "javascript-delay": 10000,
                             "no-stop-slow-scripts": None,
-                            "load-error-handling": "ignore",
+                            "load-error-handling": "skip",
                         }
                         data = pdfkit.from_url(url_to_import, False, options=options)
                         self.helper.api.external_reference.add_file(
