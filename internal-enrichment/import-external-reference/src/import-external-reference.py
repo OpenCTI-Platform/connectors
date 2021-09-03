@@ -74,15 +74,23 @@ class ImportExternalReferenceConnector:
                         mime_type="application/pdf",
                     )
                 else:
-                    file_name = url_to_import.split("/")[-1] + ".pdf"
-                    options = {"javascript-delay": 10000, "no-stop-slow-scripts": None}
-                    data = pdfkit.from_url(url_to_import, False, options=options)
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=file_name,
-                        data=data,
-                        mime_type="application/pdf",
-                    )
+                    try:
+                        file_name = url_to_import.split("/")[-1] + ".pdf"
+                        options = {
+                            "javascript-delay": 10000,
+                            "no-stop-slow-scripts": None,
+                            "load-error-handling": "ignore",
+                        }
+                        data = pdfkit.from_url(url_to_import, False, options=options)
+                        self.helper.api.external_reference.add_file(
+                            id=external_reference["id"],
+                            file_name=file_name,
+                            data=data,
+                            mime_type="application/pdf",
+                        )
+                    except OSError as e:
+                        if "Done" not in str(e):
+                            raise e
             except Exception as e:
                 self.helper.log_error(e)
         if self.import_as_md:
