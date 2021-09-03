@@ -217,7 +217,8 @@ class ShodanConnector:
 
         # Update the current observable
         final_observable = self.helper.api.stix_cyber_observable.update_field(
-            id=observable["id"], key="x_opencti_description", value=Description
+            id=observable["id"],
+            input={"key": "x_opencti_description", "value": Description},
         )
         for tag in tags:
             self.helper.api.stix_cyber_observable.add_label(

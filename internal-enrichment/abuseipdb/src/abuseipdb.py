@@ -83,8 +83,10 @@ class AbuseIPDBConnector:
         data = data["data"]
         self.helper.api.stix_cyber_observable.update_field(
             id=observable_id,
-            key="x_opencti_score",
-            value=str(data["abuseConfidenceScore"]),
+            input={
+                "key": "x_opencti_score",
+                "value": str(data["abuseConfidenceScore"]),
+            },
         )
         if data["isWhitelisted"]:
             external_reference = self.helper.api.external_reference.create(

@@ -166,8 +166,7 @@ class YaraRuleUpdater:
     ) -> bool:
         updated = self.helper.api.stix_domain_object.update_field(
             id=indicator_id,
-            key=self._KEY_INDICATOR_PATTERN,
-            value=new_indicator_pattern,
+            input={"key": self._KEY_INDICATOR_PATTERN, "value": new_indicator_pattern},
         )
 
         if updated is None:

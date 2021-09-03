@@ -51,35 +51,36 @@ class VirusTotalConnector:
             attributes = data["attributes"]
             # Update the current observable
             final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=observable["id"], key="hashes.MD5", value=attributes["md5"]
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"], key="hashes.SHA-1", value=attributes["sha1"]
+                id=observable["id"],
+                input={"key": "hashes.MD5", "value": attributes["md5"]},
             )
             final_observable = self.helper.api.stix_cyber_observable.update_field(
                 id=final_observable["id"],
-                key="hashes.SHA-256",
-                value=attributes["sha256"],
+                input={"key": "hashes.SHA-1", "value": attributes["sha1"]},
+            )
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"],
+                input={"key": "hashes.SHA-256", "value": attributes["sha256"]},
             )
             if observable["entity_type"] == "StixFile":
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
-                    key="size",
-                    value=str(attributes["size"]),
+                    input={"key": "size", "value": str(attributes["size"])},
                 )
                 if observable["name"] is None and len(attributes["names"]) > 0:
                     self.helper.api.stix_cyber_observable.update_field(
                         id=final_observable["id"],
-                        key="name",
-                        value=attributes["names"][0],
+                        input={"key": "name", "value": attributes["names"][0]},
                     )
                     del attributes["names"][0]
 
             if len(attributes["names"]) > 0:
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
-                    key="x_opencti_additional_names",
-                    value=attributes["names"],
+                    input={
+                        "key": "x_opencti_additional_names",
+                        "value": attributes["names"],
+                    },
                 )
 
             # Create external reference
