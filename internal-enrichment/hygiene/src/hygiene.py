@@ -126,14 +126,16 @@ class HygieneConnector:
                     id=observable["id"], label_id=self.label_hygiene["id"]
                 )
                 self.helper.api.stix_cyber_observable.update_field(
-                    id=observable["id"], key="x_opencti_score", value=score
+                    id=observable["id"],
+                    input={"key": "x_opencti_score", "value": score},
                 )
                 for indicator_id in observable["indicatorsIds"]:
                     self.helper.api.stix_domain_object.add_label(
                         id=indicator_id, label_id=self.label_hygiene["id"]
                     )
                     self.helper.api.stix_domain_object.update_field(
-                        id=indicator_id, key="x_opencti_score", value=score
+                        id=indicator_id,
+                        input={"key": "x_opencti_score", "value": score},
                     )
 
                 # Create external references

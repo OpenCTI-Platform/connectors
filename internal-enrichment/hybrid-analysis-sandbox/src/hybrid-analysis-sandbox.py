@@ -61,33 +61,37 @@ class HybridAnalysis:
         final_observable = observable
         if observable["entity_type"] in ["StixFile", "Artifact"]:
             final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"], key="hashes.MD5", value=report["md5"]
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"], key="hashes.SHA-1", value=report["sha1"]
+                id=final_observable["id"],
+                input={"key": "hashes.MD5", "value": report["md5"]},
             )
             final_observable = self.helper.api.stix_cyber_observable.update_field(
                 id=final_observable["id"],
-                key="hashes.SHA-256",
-                value=report["sha256"],
+                input={"key": "hashes.SHA-1", "value": report["sha1"]},
+            )
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"],
+                input={
+                    "key": "hashes.SHA-256",
+                    "value": report["sha256"],
+                },
             )
             if "name" not in final_observable or final_observable["name"] is None:
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
-                    key="x_opencti_additional_names",
-                    value=report["submit_name"],
-                    operation="add",
+                    input={
+                        "key": "x_opencti_additional_names",
+                        "value": report["submit_name"],
+                        "operation": "add",
+                    },
                 )
             if final_observable["entity_type"] == "StixFile":
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
-                    key="size",
-                    value=str(report["size"]),
+                    input={"key": "size", "value": str(report["size"])},
                 )
         self.helper.api.stix_cyber_observable.update_field(
             id=final_observable["id"],
-            key="x_opencti_score",
-            value=str(report["threat_score"]),
+            input={"key": "x_opencti_score", "value": str(report["threat_score"])},
         )
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
