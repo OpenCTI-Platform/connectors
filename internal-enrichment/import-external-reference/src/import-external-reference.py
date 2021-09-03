@@ -84,7 +84,6 @@ class ImportExternalReferenceConnector:
                                     "User-Agent",
                                     "Mozilla/5.0 (Windows NT 6.1; Win64; x64)",
                                 ),
-                                ("Accept-Encoding", "gzip"),
                             ],
                         }
                         data = pdfkit.from_url(url_to_import, False, options=options)
