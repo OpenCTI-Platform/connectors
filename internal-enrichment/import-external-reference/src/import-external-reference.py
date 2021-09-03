@@ -78,7 +78,6 @@ class ImportExternalReferenceConnector:
                         file_name = url_to_import.split("/")[-1] + ".pdf"
                         options = {
                             "javascript-delay": 10000,
-                            "no-stop-slow-scripts": None,
                             "load-error-handling": "skip",
                             "custom-header": [
                                 (
