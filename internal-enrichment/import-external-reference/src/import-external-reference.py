@@ -101,14 +101,6 @@ class ImportExternalReferenceConnector:
         if self.import_as_md:
             if url_to_import.endswith(".pdf") and self.import_pdf_as_md:
                 try:
-                    req = urllib.request.Request(url_to_import, headers=self.headers)
-                    response = urllib.request.urlopen(
-                        req, context=ssl.create_default_context(cafile=certifi.where())
-                    )
-                    f = open("./data.pdf", "w")
-                    content = response.read()
-                    f.write(content)
-                    f.close()
                     urllib.request.urlretrieve(url_to_import, "./data.pdf")
                     outfp = open("./data.html", "w", encoding="utf-8")
                     rsrcmgr = PDFResourceManager(caching=True)
