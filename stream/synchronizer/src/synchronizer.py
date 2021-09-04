@@ -54,7 +54,7 @@ class SynchronizerConnector:
                     "x_opencti_event_version": data["version"],
                     "objects": [data["data"]],
                 }
-                self.helper.api.stix2.import_bundle(bundle)
+                self.helper.api.stix2.import_bundle(bundle, True)
             elif msg.event == "update":
                 bundle = {
                     "type": "bundle",
