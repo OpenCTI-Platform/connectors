@@ -181,9 +181,24 @@ class ReportParser(object):
             matches = lookup_function(data)
 
             for match in matches:
-                start = data.index(str(match))
+                match_str = str(match)
+                if match_str in data:
+                    start = data.index(match_str)
+                elif match_str in data.lower():
+                    self.helper.log_debug(
+                        f"External library manipulated the extracted value '{match_str}' from the "
+                        f"original text '{data}' to lower case"
+                    )
+                    start = data.lower().index(match_str)
+                else:
+                    self.helper.log_error(
+                        f"The extracted text '{match_str}' is not part of the original text '{data}'. "
+                        f"Please open a GitHub issue to report this problem!"
+                    )
+                    continue
+
                 ind_match = self._post_parse_observables(
-                    match, observable, (start, len(str(match)) + start)
+                    match, observable, (start, len(match_str) + start)
                 )
                 if ind_match:
                     list_matches[match] = ind_match
