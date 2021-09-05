@@ -42,6 +42,7 @@ class Sekoia(object):
             raise ValueError("API key is Missing")
 
         self._load_data_sets()
+        self.helper.log_info("All datasets has been loaded")
 
     def run(self):
         self.helper.log_info("Starting SEKOIA.IO connector")
