@@ -86,6 +86,8 @@ class LastInfoSec:
                         self.lastinfosec_url + self.lastinfosec_apikey,
                         proxies=proxy_dic,
                     ).json()
+                    if "message" in lastinfosec_data and "api key" in lastinfosec_data["message"]:
+                        raise ValueError(lastinfosec_data["message"])
                     self.push_data(lastinfosec_data, timestamp, work_id)
                 else:
                     self.helper.log_info("CTI Feed not configured")
