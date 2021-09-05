@@ -12,10 +12,18 @@ from stix2 import TLP_WHITE
 class GreyNoiseConnector:
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = yaml.load(open(config_file_path), Loader=yaml.FullLoader) if os.path.isfile(config_file_path) else {}
+        config = (
+            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            if os.path.isfile(config_file_path)
+            else {}
+        )
         self.helper = OpenCTIConnectorHelper(config)
-        self.greynoise_key = get_config_variable("GREYNOISE_KEY", ["greynoise", "key"], config)
-        self.max_tlp = get_config_variable("GREYNOISE_MAX_TLP", ["greynoise", "max_tlp"], config)
+        self.greynoise_key = get_config_variable(
+            "GREYNOISE_KEY", ["greynoise", "key"], config
+        )
+        self.max_tlp = get_config_variable(
+            "GREYNOISE_MAX_TLP", ["greynoise", "max_tlp"], config
+        )
         self.spoofable_confidence_level = get_config_variable(
             "GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL",
             ["greynoise", "spoofable_confidence_level"],
@@ -25,8 +33,12 @@ class GreyNoiseConnector:
             "GREYNOISE_SIGHTING_NOT_SEEN", ["greynoise", "sighting_not_seen"], config
         )
 
-        self.greynoise_ent_name = get_config_variable("GREYNOISE_NAME", ["greynoise", "name"], config)
-        self.greynoise_ent_desc = get_config_variable("GREYNOISE_DESCRIPTION", ["greynoise", "description"], config)
+        self.greynoise_ent_name = get_config_variable(
+            "GREYNOISE_NAME", ["greynoise", "name"], config
+        )
+        self.greynoise_ent_desc = get_config_variable(
+            "GREYNOISE_DESCRIPTION", ["greynoise", "description"], config
+        )
         self.api_url = "https://api.greynoise.io/v2/"
         self.headers = {
             "key": self.greynoise_key,
@@ -42,7 +54,9 @@ class GreyNoiseConnector:
         if self.greynoise_id is not None:
             return self.greynoise_id
 
-        greynoise_entity = self.helper.api.stix_domain_object.get_by_stix_id_or_name(name=self.greynoise_ent_name)
+        greynoise_entity = self.helper.api.stix_domain_object.get_by_stix_id_or_name(
+            name=self.greynoise_ent_name
+        )
         if not greynoise_entity:
             self.helper.log_info(f"Create {self.greynoise_ent_name}")
             self.greynoise_id = self.helper.api.identity.create(
@@ -64,14 +78,18 @@ class GreyNoiseConnector:
         json_data = response.json()
 
         if response.status_code == 429:
-            self.helper.log_info(f"Quota reached, waiting {self._CONNECTOR_RUN_INTERVAL_SEC} seconds.")
+            self.helper.log_info(
+                f"Quota reached, waiting {self._CONNECTOR_RUN_INTERVAL_SEC} seconds."
+            )
             sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
             self._call_api(observable)
             return "Observable processed after quota reached, waiting 1 hour."
         if response.status_code >= 400:
             raise ValueError(response.text)
 
-        self.helper.log_info(f'Start processing observable {observable["observable_value"]}')
+        self.helper.log_info(
+            f'Start processing observable {observable["observable_value"]}'
+        )
         if "ip" in json_data:
             external_reference = self.helper.api.external_reference.create(
                 source_name=self.greynoise_ent_name,
@@ -103,7 +121,9 @@ class GreyNoiseConnector:
             first_seen = parse(json_data["first_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
             last_seen = parse(json_data["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
             confidence = int(
-                self.spoofable_confidence_level if json_data["spoofable"] else self.helper.connect_confidence_level
+                self.spoofable_confidence_level
+                if json_data["spoofable"]
+                else self.helper.connect_confidence_level
             )
             # parse tags in response to create labels
             if "tags" in json_data:
@@ -121,7 +141,9 @@ class GreyNoiseConnector:
                             tag_details = item
                             break
                     # create red label when malicious intent and type not cat or activity
-                    if tag_details["intention"] == "malicious" and tag_details["category"] not in ["worm", "activity"]:
+                    if tag_details["intention"] == "malicious" and tag_details[
+                        "category"
+                    ] not in ["worm", "activity"]:
                         label = self.helper.api.label.create(
                             value=tag,
                             color="#ff8178",
@@ -137,7 +159,10 @@ class GreyNoiseConnector:
                             update=True,
                         )
                     # if malicous activty, create malware object
-                    elif tag_details["intention"] == "malicious" and tag_details["category"] == "activity":
+                    elif (
+                        tag_details["intention"] == "malicious"
+                        and tag_details["category"] == "activity"
+                    ):
                         malware = self.helper.api.malware.create(
                             name=tag,
                             description=tag_details["description"],
@@ -154,7 +179,9 @@ class GreyNoiseConnector:
 
                     # Add the tag or malware object
                     if label:
-                        self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=label["id"])
+                        self.helper.api.stix_cyber_observable.add_label(
+                            id=observable["id"], label_id=label["id"]
+                        )
                     if malware:
                         self.helper.api.stix_core_relationship.create(
                             fromId=observable["id"],
@@ -170,29 +197,49 @@ class GreyNoiseConnector:
             # add classification info in tags for clarity
             if json_data.get("classification") == "malicious":
                 label = self.helper.api.label.create(
-                    value="gn-classification: " + json_data["classification"], color="#ff8178"
+                    value="gn-classification: " + json_data["classification"],
+                    color="#ff8178",
                 )
-                self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=label["id"])
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable["id"], label_id=label["id"]
+                )
             elif json_data.get("classification") == "unknown":
                 label = self.helper.api.label.create(
-                    value="gn-classification: " + json_data["classification"], color="#a6a09f"
+                    value="gn-classification: " + json_data["classification"],
+                    color="#a6a09f",
                 )
-                self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=label["id"])
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable["id"], label_id=label["id"]
+                )
             elif json_data.get("classification") == "benign":
                 label = self.helper.api.label.create(
-                    value="gn-classification: " + json_data["classification"], color="#06c93a"
+                    value="gn-classification: " + json_data["classification"],
+                    color="#06c93a",
                 )
                 # include additional tag for benign actor for clarity
-                actor = self.helper.api.label.create(value="gn-benign-actor: " + json_data["actor"], color="#06c93a")
-                self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=label["id"])
-                self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=actor["id"])
+                actor = self.helper.api.label.create(
+                    value="gn-benign-actor: " + json_data["actor"], color="#06c93a"
+                )
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable["id"], label_id=label["id"]
+                )
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable["id"], label_id=actor["id"]
+                )
                 # set sighting to be FP since benign
                 x_opencti_negative = True
 
             # create threat actor for non-benign when known
-            if json_data["actor"] and json_data["actor"] != "unknown" and json_data["classification"] != "benign":
+            if (
+                json_data["actor"]
+                and json_data["actor"] != "unknown"
+                and json_data["classification"] != "benign"
+            ):
                 actor = self.helper.api.threat_actor.create(
-                    name=json_data["actor"], first_seen=first_seen, last_seen=last_seen, update=True
+                    name=json_data["actor"],
+                    first_seen=first_seen,
+                    last_seen=last_seen,
+                    update=True,
                 )
                 self.helper.api.stix_core_relationship.create(
                     fromId=observable["id"],
@@ -218,7 +265,9 @@ class GreyNoiseConnector:
                     )
             # add VPN tool and relationship
             if json_data.get("vpn"):
-                vpn = self.helper.api.tool.create(name="VPN: " + json_data["vpn_service"], update=True)
+                vpn = self.helper.api.tool.create(
+                    name="VPN: " + json_data["vpn_service"], update=True
+                )
                 self.helper.api.stix_core_relationship.create(
                     fromId=observable["id"],
                     toId=vpn["id"],
@@ -230,31 +279,47 @@ class GreyNoiseConnector:
                 )
             # add label for known bot activity
             if json_data.get("bot"):
-                label = self.helper.api.label.create(value="Known BOT Activity", color="#7e4ec2", update=True)
-                self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=label["id"])
+                label = self.helper.api.label.create(
+                    value="Known BOT Activity", color="#7e4ec2", update=True
+                )
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable["id"], label_id=label["id"]
+                )
             # add label for Tor Exit Node Status
             if json_data["metadata"].get("tor"):
-                label = self.helper.api.label.create(value="Known TOR Exit Node", color="#7e4ec2", update=True)
-                self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=label["id"])
+                label = self.helper.api.label.create(
+                    value="Known TOR Exit Node", color="#7e4ec2", update=True
+                )
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable["id"], label_id=label["id"]
+                )
 
             # create and update city/country objects and relationships
-            country = pycountry.countries.get(alpha_2=json_data["metadata"]["country_code"])
+            country = pycountry.countries.get(
+                alpha_2=json_data["metadata"]["country_code"]
+            )
             if country and json_data["metadata"]["city"]:
                 country_object = self.helper.api.location.create(
                     name=country.name,
                     type="Country",
-                    country=country.official_name if hasattr(country, "official_name") else country.name,
+                    country=country.official_name
+                    if hasattr(country, "official_name")
+                    else country.name,
                     custom_properties={
                         "x_opencti_location_type": "Country",
                         "x_opencti_aliases": [
-                            country.official_name if hasattr(country, "official_name") else country.name
+                            country.official_name
+                            if hasattr(country, "official_name")
+                            else country.name
                         ],
                     },
                 )
                 city_object = self.helper.api.location.create(
                     name=json_data["metadata"]["city"],
                     type="City",
-                    country=country.official_name if hasattr(country, "official_name") else country.name,
+                    country=country.official_name
+                    if hasattr(country, "official_name")
+                    else country.name,
                     custom_properties={"x_opencti_location_type": "City"},
                 )
                 self.helper.api.stix_core_relationship.create(
@@ -297,7 +362,9 @@ class GreyNoiseConnector:
                 tlp = marking_definition["definition"]
 
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
-            raise ValueError("Do not send any data, TLP of the observable is greater than MAX TLP")
+            raise ValueError(
+                "Do not send any data, TLP of the observable is greater than MAX TLP"
+            )
 
         if observable["entity_type"] == "IPv4-Addr":
             return self._call_api(observable)
