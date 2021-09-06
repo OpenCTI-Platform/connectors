@@ -40,36 +40,39 @@ class SynchronizerConnector:
         )
 
     def _process_message(self, msg):
-        if (
-            msg.event == "create"
-            or msg.event == "update"
-            or msg.event == "merge"
-            or msg.event == "delete"
-        ):
-            self.helper.log_info("Processing event " + msg.id)
-            data = json.loads(msg.data)
-            if msg.event == "create":
-                bundle = {
-                    "type": "bundle",
-                    "x_opencti_event_version": data["version"],
-                    "objects": [data["data"]],
-                }
-                self.helper.api.stix2.import_bundle(bundle, True)
-            elif msg.event == "update":
-                bundle = {
-                    "type": "bundle",
-                    "x_opencti_event_version": data["version"],
-                    "objects": [data["data"]],
-                }
-                self.helper.api.stix2.import_bundle(bundle, True)
-            elif msg.event == "merge":
-                sources = data["data"]["x_opencti_context"]["sources"]
-                object_ids = list(map(lambda element: element["id"], sources))
-                self.helper.api.stix_core_object.merge(
-                    id=data["data"]["id"], object_ids=object_ids
-                )
-            elif msg.event == "delete":
-                self.helper.api.stix.delete(id=data["data"]["id"])
+        try:
+            if (
+                msg.event == "create"
+                or msg.event == "update"
+                or msg.event == "merge"
+                or msg.event == "delete"
+            ):
+                self.helper.log_info("Processing event " + msg.id)
+                data = json.loads(msg.data)
+                if msg.event == "create":
+                    bundle = {
+                        "type": "bundle",
+                        "x_opencti_event_version": data["version"],
+                        "objects": [data["data"]],
+                    }
+                    self.helper.api.stix2.import_bundle(bundle, True)
+                elif msg.event == "update":
+                    bundle = {
+                        "type": "bundle",
+                        "x_opencti_event_version": data["version"],
+                        "objects": [data["data"]],
+                    }
+                    self.helper.api.stix2.import_bundle(bundle, True)
+                elif msg.event == "merge":
+                    sources = data["data"]["x_opencti_context"]["sources"]
+                    object_ids = list(map(lambda element: element["id"], sources))
+                    self.helper.api.stix_core_object.merge(
+                        id=data["data"]["id"], object_ids=object_ids
+                    )
+                elif msg.event == "delete":
+                    self.helper.api.stix.delete(id=data["data"]["id"])
+        except Exception as e:
+            self.helper.log_error(str(e))
 
     def start(self):
         self.helper.listen_stream(
