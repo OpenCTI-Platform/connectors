@@ -3,9 +3,10 @@ import requests
 from requests.exceptions import HTTPError
 
 
-#------------------------------------------------------------------
+# ------------------------------------------------------------------
 # This is a Class to serialize the Cuckoo API /tasks/Summary JSON
-#------------------------------------------------------------------
+# ------------------------------------------------------------------
+
 
 class cuckooMachine:
     def __init__(self, json):

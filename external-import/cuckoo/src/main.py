@@ -121,14 +121,16 @@ class cuckooConnector:
                     self.helper.log_info("Last Task ID (STATE): " + str(current_task))
                 else:
                     current_task = 0
-                
+
                 # Check If starting Task > last task
                 if self.start_id > current_task:
                     current_task = self.start_id
                     self.helper.set_state({"task": self.start_id})
 
             try:
-                CuckooTasks = self.cuckoo_api.getCuckooTasks() # Pull List of tasks from the Cuckoo API
+                CuckooTasks = (
+                    self.cuckoo_api.getCuckooTasks()
+                )  # Pull List of tasks from the Cuckoo API
             except Exception as err:
                 self.helper.log_error("Error connecting to Cuckoo API")
                 self.helper.log_error(str(err))
@@ -136,17 +138,19 @@ class cuckooConnector:
 
             for task in CuckooTasks:
                 if not task["status"] == "reported":
-                    continue        # If task Has not reported Skip
+                    continue  # If task Has not reported Skip
                 if not task["completed_on"]:
-                    continue        # If task Has not completed Skip
+                    continue  # If task Has not completed Skip
 
                 try:
                     if task["id"] > current_task:
-                        taskSummary = self.cuckoo_api.getTaskSummary(task["id"]) # Pull Cuckoo Report and Searilize 
+                        taskSummary = self.cuckoo_api.getTaskSummary(
+                            task["id"]
+                        )  # Pull Cuckoo Report and Searilize
                         if not taskSummary:
-                            continue        # If no report continue
+                            continue  # If no report continue
                         if not taskSummary.info:
-                            continue        # If no report.info continue - we really need this :)
+                            continue  # If no report.info continue - we really need this :)
 
                         self.helper.log_info(f"Processing Task {taskSummary.info.id}")
                         # Process and submit cuckoo task as stix bundle
@@ -161,14 +165,14 @@ class cuckooConnector:
                             self.EnableRegKeys,
                             self.report_score,
                         )
-                        #Update last task pulled
+                        # Update last task pulled
                         self.helper.set_state({"task": taskSummary.info.id})
 
                         self.helper.log_info(f"Synced task {task['id']}")
                 except Exception as e:
-                        self.helper.log_error(
-                            f"An error Occured fetching task {task['id']}; {str(e)}"
-                        )
+                    self.helper.log_error(
+                        f"An error Occured fetching task {task['id']}; {str(e)}"
+                    )
 
             self.helper.log_info("Finished grabbing Cuckoo Reports")
 

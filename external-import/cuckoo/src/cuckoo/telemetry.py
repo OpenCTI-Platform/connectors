@@ -45,11 +45,11 @@ class openCTIInterface:
         self.EnableRegKeys = EnableRegKeys
         self.ReportScore = ReportScore
         try:
-            self.octiLabels = self.API.label.list() # Get labels Once ;)
+            self.octiLabels = self.API.label.list()  # Get labels Once ;)
         except:
             self.octiLabels = self.API.label.list()
 
-        self.processAndSubmit() # This is where the magic happens
+        self.processAndSubmit()  # This is where the magic happens
 
     # Get and Return STIX Patterning
     def getStixPattern(self, IOC, TYPE):
@@ -108,8 +108,12 @@ class openCTIInterface:
         DNSRel = []
         for host in DNSOBJ:
             IP = IPv4Address(value=host["ip"])
-            DNS = DomainName(value=host["domain"])#, resolves_to_refs=IP.id) ref https://github.com/OpenCTI-Platform/client-python/issues/155
-            Rel =  Relationship(source_ref=DNS.id, target_ref=IP.id, relationship_type='resolves-to')
+            DNS = DomainName(
+                value=host["domain"]
+            )  # , resolves_to_refs=IP.id) ref https://github.com/OpenCTI-Platform/client-python/issues/155
+            Rel = Relationship(
+                source_ref=DNS.id, target_ref=IP.id, relationship_type="resolves-to"
+            )
 
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host["domain"], "FQDN")
@@ -364,7 +368,7 @@ class openCTIInterface:
         if self.report.network.domains:
             fqdns = self.createDNSObs(self.report.network.domains)
         else:
-            fqdns = [[],[]]
+            fqdns = [[], []]
 
         if self.report.process:
             processes = self.createProcessObs(self.report.process)
@@ -451,7 +455,9 @@ class openCTIInterface:
         if int(self.report.info.score) >= self.ReportScore:
             # Create Report and link All ATPs/Cyber Obs/Payload
             report = self.createCuckooReport(self.report, IDs, ext_ref)
-            b = Bundle(report, bundle_ids, payload_relations, fqdns[1])# fqdns[1] is the Resolves-to relations
+            b = Bundle(
+                report, bundle_ids, payload_relations, fqdns[1]
+            )  # fqdns[1] is the Resolves-to relations
         else:
             b = Bundle(bundle_ids, payload_relations, fqdns[1])
 
