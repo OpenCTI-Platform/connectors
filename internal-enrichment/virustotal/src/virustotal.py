@@ -1,18 +1,28 @@
+# -*- coding: utf-8 -*-
+"""VirusTotal enrichment module."""
+import datetime
 import json
-import os
-import requests
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pathlib import Path
 from time import sleep
+from typing import Optional
+import requests
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2 import Indicator
+import yaml
 
 
 class VirusTotalConnector:
+    """VirusTotal connector."""
+
+    _CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
+
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config_file_path = Path(__file__).parent.resolve() / "config.yml"
+
         config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
+            yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
+            if config_file_path.is_file()
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
@@ -28,7 +38,36 @@ class VirusTotalConnector:
             "accept": "application/json",
             "content-type": "application/json",
         }
-        self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
+
+    def _create_yara_indicator(
+        self, yara: dict, valid_from: Optional[int] = None
+    ) -> Indicator:
+        """Create an indicator containing the YARA results from VirusTotal."""
+        valid_from_date = (
+            datetime.datetime.min
+            if valid_from is None
+            else datetime.datetime.utcfromtimestamp(valid_from)
+        )
+        source = yara.get("source", "No source provided")
+        ruleset_id = yara.get("ruleset_id", "No ruleset id provided")
+        return self.helper.api.indicator.create(
+            name=yara.get("rule_name", "No rulename provided"),
+            description=json.dumps(
+                {
+                    "description": yara.get("description", "No description provided"),
+                    "author": yara.get("author", "No author provided"),
+                    "source": yara.get("source", "No source provided"),
+                    "ruleset_id": ruleset_id,
+                    "ruleset_name": yara.get(
+                        "ruleset_name", "No ruleset name provided"
+                    ),
+                }
+            ),
+            pattern=f"[YARA] {ruleset_id} full rule available on {source}",
+            pattern_type="virustotal-yara",
+            valid_from=self.helper.api.stix2.format_date(valid_from_date),
+            x_opencti_main_observable_type="StixFile",
+        )
 
     def _process_file(self, observable):
         response = requests.request(
@@ -102,6 +141,27 @@ class VirusTotalConnector:
                 external_reference_id=external_reference["id"],
             )
 
+            if "crowdsourced_yara_results" in attributes:
+                self.helper.log_info("[VirusTotal] adding yara results to file.")
+
+                # Add YARA results
+                yaras = [
+                    self._create_yara_indicator(
+                        yara, attributes.get("creation_date", None)
+                    )
+                    for yara in attributes["crowdsourced_yara_results"]
+                ]
+
+                self.helper.log_debug(f"[VirusTotal] Indicators created: {yaras}")
+
+                # Create the relationships (`related-to`) between the yaras and the file.
+                for yara in yaras:
+                    self.helper.api.stix_core_relationship.create(
+                        fromId=final_observable["id"],
+                        toId=yara["id"],
+                        relationship_type="related-to",
+                    )
+
             return "File found on VirusTotal, knowledge attached."
 
     def _process_message(self, data):
@@ -118,8 +178,8 @@ class VirusTotalConnector:
             )
         return self._process_file(observable)
 
-    # Start the main loop
     def start(self):
+        """Start the main loop."""
         self.helper.listen(self._process_message)
 
 
