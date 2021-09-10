@@ -1,9 +1,19 @@
+import datetime
 import json
 import os
 import requests
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+from stix2 import (
+    Bundle,
+    File,
+    Indicator,
+    Identity,
+    MarkingDefinition,
+    Relationship,
+)
 from time import sleep
+from typing import Optional
 
 
 class VirusTotalConnector:
@@ -30,6 +40,36 @@ class VirusTotalConnector:
         }
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
 
+    def _create_yara_indicator(
+        self, yara: dict, valid_from: Optional[int] = None
+    ) -> Indicator:
+        """Create an indicator containing the YARA results from VirusTotal."""
+        valid_from_date = (
+            datetime.datetime.min
+            if valid_from is None
+            else datetime.datetime.utcfromtimestamp(valid_from)
+        )
+        source = yara.get("source", "No source provided")
+        ruleset_id = yara.get("ruleset_id", "No ruleset id provided")
+        return self.helper.api.indicator.create(
+            name=yara.get("rule_name", "No rulename provided"),
+            description=json.dumps(
+                {
+                    "description": yara.get("description", "No description provided"),
+                    "author": yara.get("author", "No author provided"),
+                    "source": yara.get("source", "No source provided"),
+                    "ruleset_id": ruleset_id,
+                    "ruleset_name": yara.get(
+                        "ruleset_name", "No ruleset name provided"
+                    ),
+                }
+            ),
+            pattern=f"[YARA] {ruleset_id} full rule available on {source}",
+            pattern_type="virustotal-yara",
+            valid_from=self.helper.api.stix2.format_date(valid_from_date),
+            x_opencti_main_observable_type="StixFile",
+        )
+
     def _process_file(self, observable):
         response = requests.request(
             "GET",
@@ -51,36 +91,35 @@ class VirusTotalConnector:
             attributes = data["attributes"]
             # Update the current observable
             final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=observable["id"],
-                input={"key": "hashes.MD5", "value": attributes["md5"]},
+                id=observable["id"], key="hashes.MD5", value=attributes["md5"]
+            )
+            final_observable = self.helper.api.stix_cyber_observable.update_field(
+                id=final_observable["id"], key="hashes.SHA-1", value=attributes["sha1"]
             )
             final_observable = self.helper.api.stix_cyber_observable.update_field(
                 id=final_observable["id"],
-                input={"key": "hashes.SHA-1", "value": attributes["sha1"]},
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={"key": "hashes.SHA-256", "value": attributes["sha256"]},
+                key="hashes.SHA-256",
+                value=attributes["sha256"],
             )
             if observable["entity_type"] == "StixFile":
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
-                    input={"key": "size", "value": str(attributes["size"])},
+                    key="size",
+                    value=str(attributes["size"]),
                 )
                 if observable["name"] is None and len(attributes["names"]) > 0:
                     self.helper.api.stix_cyber_observable.update_field(
                         id=final_observable["id"],
-                        input={"key": "name", "value": attributes["names"][0]},
+                        key="name",
+                        value=attributes["names"][0],
                     )
                     del attributes["names"][0]
 
             if len(attributes["names"]) > 0:
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
-                    input={
-                        "key": "x_opencti_additional_names",
-                        "value": attributes["names"],
-                    },
+                    key="x_opencti_additional_names",
+                    value=attributes["names"],
                 )
 
             # Create external reference
@@ -101,6 +140,27 @@ class VirusTotalConnector:
                 id=final_observable["id"],
                 external_reference_id=external_reference["id"],
             )
+
+            if "crowdsourced_yara_results" in attributes:
+                self.helper.log_info("[VirusTotal] adding yara results to file.")
+
+                # Add YARA results
+                yaras = [
+                    self._create_yara_indicator(
+                        yara, attributes.get("creation_date", None)
+                    )
+                    for yara in attributes["crowdsourced_yara_results"]
+                ]
+
+                self.helper.log_debug(f"[VirusTotal] Indicators created: {yaras}")
+
+                # Create the relationships (`related-to`) between the yaras and the file.
+                for yara in yaras:
+                    self.helper.api.stix_core_relationship.create(
+                        fromId=final_observable["id"],
+                        toId=yara["id"],
+                        relationship_type="related-to",
+                    )
 
             return "File found on VirusTotal, knowledge attached."
 
