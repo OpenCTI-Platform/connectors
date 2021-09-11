@@ -125,10 +125,6 @@ jobs:
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}          
       - run:
-          working_directory: ~/opencti/stream/synchronizer
-          name: Build Docker image opencti/connector-synchronizer
-          command: docker build -t opencti/connector-synchronizer:latest . && docker tag opencti/connector-synchronizer:latest opencti/connector-synchronizer:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
           command: docker build -t opencti/connector-fireeye:latest . && docker tag opencti/connector-fireeye:latest opencti/connector-fireeye:${CIRCLE_TAG}
@@ -246,8 +242,6 @@ jobs:
             docker push opencti/connector-history:${CIRCLE_TAG}
             docker push opencti/connector-tanium:latest
             docker push opencti/connector-tanium:${CIRCLE_TAG}            
-            docker push opencti/connector-synchronizer:latest
-            docker push opencti/connector-synchronizer:${CIRCLE_TAG}
             docker push opencti/connector-fireeye:latest
             docker push opencti/connector-fireeye:${CIRCLE_TAG}
             docker push opencti/connector-kaspersky:latest
@@ -382,10 +376,6 @@ jobs:
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:rolling .          
       - run:
-          working_directory: ~/opencti/stream/synchronizer
-          name: Build Docker image opencti/connector-synchronizer
-          command: docker build -t opencti/connector-synchronizer:rolling .
-      - run:
           working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
           command: docker build -t opencti/connector-fireeye:rolling .
@@ -480,7 +470,6 @@ jobs:
             docker push opencti/connector-cybercrime-tracker:rolling
             docker push opencti/connector-history:rolling
             docker push opencti/connector-tanium:rolling
-            docker push opencti/connector-synchronizer:rolling
             docker push opencti/connector-fireeye:rolling
             docker push opencti/connector-kaspersky:rolling
             docker push opencti/connector-greynoise:rolling
