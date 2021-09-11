@@ -65,6 +65,10 @@ jobs:
           name: Build Docker image opencti/connector-cryptolaemus
           command: docker build -t opencti/connector-cryptolaemus:latest . && docker tag opencti/connector-cryptolaemus:latest opencti/connector-cryptolaemus:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/cuckoo
+          name: Build Docker image opencti/connector-cuckoo
+          command: docker build -t opencti/connector-cuckoo:latest . && docker tag opencti/connector-cuckoo:latest opencti/connector-cuckoo:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/external-import/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
           command: docker build -t opencti/connector-cyber-threat-coalition:latest . && docker tag opencti/connector-cyber-threat-coalition:latest opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
@@ -212,6 +216,8 @@ jobs:
             docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
             docker push opencti/connector-cryptolaemus:latest
             docker push opencti/connector-cryptolaemus:${CIRCLE_TAG}
+            docker push opencti/connector-cuckoo:latest
+            docker push opencti/connector-cuckoo:${CIRCLE_TAG}
             docker push opencti/connector-cyber-threat-coalition:latest
             docker push opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
@@ -315,6 +321,10 @@ jobs:
           working_directory: ~/opencti/external-import/cryptolaemus
           name: Build Docker image opencti/connector-cryptolaemus
           command: docker build -t opencti/connector-cryptolaemus:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/cuckoo
+          name: Build Docker image opencti/connector-cuckoo
+          command: docker build -t opencti/connector-cuckoo:rolling .
       - run:
           working_directory: ~/opencti/external-import/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
@@ -455,6 +465,7 @@ jobs:
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-crowdstrike:rolling
             docker push opencti/connector-cryptolaemus:rolling
+            docker push opencti/connector-cuckoo:rolling
             docker push opencti/connector-cyber-threat-coalition:rolling
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-mitre:rolling
