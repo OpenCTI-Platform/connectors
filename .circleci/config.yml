@@ -26,467 +26,459 @@ jobs:
           name: flake8
           command: flake8 --ignore=E,W ~/repo
   build:
-    working_directory: ~/opencti
-    docker:
-      - image: circleci/buildpack-deps:stretch
+    working_directory: ~/opencti_docker
+    machine:
+      image: ubuntu-1604:202007-01
+      resource_class: xlarge
+    environment:
+      DOCKER_BUILDKIT: 1
+      BUILDX_PLATFORMS: linux/amd64,linux/arm64,linux/ppc64le,linux/arm/v7
     steps:
       - checkout
-      - setup_remote_docker
+      - run:
+          name: Install buildx
+          command: |
+            BUILDX_BINARY_URL="https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64"
+            curl --output docker-buildx \
+              --silent --show-error --location --fail --retry 3 \
+              "$BUILDX_BINARY_URL"
+            mkdir -p ~/.docker/cli-plugins
+            mv docker-buildx ~/.docker/cli-plugins/
+            chmod a+x ~/.docker/cli-plugins/docker-buildx
+            docker buildx install
+            # Run binfmt
+            docker run --rm --privileged tonistiigi/binfmt:latest --install "$BUILDX_PLATFORMS"
+            docker buildx create --name mybuilder --use
+      - run:
+          name: Login
+          command: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
-          command: docker build -t opencti/connector-import-file-stix:latest . && docker tag opencti/connector-import-file-stix:latest opencti/connector-import-file-stix:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-import-file-stix:latest -t opencti/connector-import-file-stix:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-import-file/import-report
           name: Build Docker image opencti/connector-import-report
-          command: docker build -t opencti/connector-import-report:latest . && docker tag opencti/connector-import-report:latest opencti/connector-import-report:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-import-report:latest -t opencti/connector-import-report:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-export-file/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
-          command: docker build -t opencti/connector-export-file-stix:latest . && docker tag opencti/connector-export-file-stix:latest opencti/connector-export-file-stix:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-export-file-stix:latest -t opencti/connector-export-file-stix:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-export-file/export-file-csv
           name: Build Docker image opencti/connector-export-file-csv
-          command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-export-file-csv:latest -t opencti/connector-export-file-csv:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/hygiene
           name: Build Docker image opencti/connector-hygiene
-          command: docker build -t opencti/connector-hygiene:latest . && docker tag opencti/connector-hygiene:latest opencti/connector-hygiene:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-hygiene:latest -t opencti/connector-hygiene:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/alienvault
           name: Build Docker image opencti/connector-alienvault
-          command: docker build -t opencti/connector-alienvault:latest . && docker tag opencti/connector-alienvault:latest opencti/connector-alienvault:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-alienvault:latest -t opencti/connector-alienvault:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
-          command: docker build -t opencti/connector-crowdstrike:latest . && docker tag opencti/connector-crowdstrike:latest opencti/connector-crowdstrike:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-crowdstrike:latest -t opencti/connector-crowdstrike:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cryptolaemus
           name: Build Docker image opencti/connector-cryptolaemus
-          command: docker build -t opencti/connector-cryptolaemus:latest . && docker tag opencti/connector-cryptolaemus:latest opencti/connector-cryptolaemus:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cryptolaemus -t opencti/connector-cryptolaemus:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
-          command: docker build -t opencti/connector-cuckoo:latest . && docker tag opencti/connector-cuckoo:latest opencti/connector-cuckoo:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cuckoo:latest -t opencti/connector-cuckoo:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
-          command: docker build -t opencti/connector-cyber-threat-coalition:latest . && docker tag opencti/connector-cyber-threat-coalition:latest opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cyber-threat-coalition:latest -t opencti/connector-cyber-threat-coalition:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/misp
           name: Build Docker image opencti/connector-misp
-          command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-misp:latest -t opencti/connector-misp:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/mitre
           name: Build Docker image opencti/connector-mitre
-          command: docker build -t opencti/connector-mitre:latest . && docker tag opencti/connector-mitre:latest opencti/connector-mitre:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-mitre:latest -t opencti/connector-mitre:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/opencti
           name: Build Docker image opencti/connector-opencti
-          command: docker build -t opencti/connector-opencti:latest . && docker tag opencti/connector-opencti:latest opencti/connector-opencti:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-opencti:latest -t opencti/connector-opencti:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cve
           name: Build Docker image opencti/connector-cve
-          command: docker build -t opencti/connector-cve:latest . && docker tag opencti/connector-cve:latest opencti/connector-cve:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cve:latest -t opencti/connector-cve:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/amitt
           name: Build Docker image opencti/connector-amitt
-          command: docker build -t opencti/connector-amitt:latest . && docker tag opencti/connector-amitt:latest opencti/connector-amitt:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-amitt:latest -t opencti/connector-amitt:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/ipinfo
           name: Build Docker image opencti/connector-ipinfo
-          command: docker build -t opencti/connector-ipinfo:latest . && docker tag opencti/connector-ipinfo:latest opencti/connector-ipinfo:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-ipinfo:latest -t opencti/connector-ipinfo:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/virustotal
           name: Build Docker image opencti/connector-virustotal
-          command: docker build -t opencti/connector-virustotal:latest . && docker tag opencti/connector-virustotal:latest opencti/connector-virustotal:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-virustotal:latest -t opencti/connector-virustotal:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/lastinfosec
           name: Build Docker image opencti/connector-lastinfosec
-          command: docker build -t opencti/connector-lastinfosec:latest . && docker tag opencti/connector-lastinfosec:latest opencti/connector-lastinfosec:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-lastinfosec:latest -t opencti/connector-lastinfosec:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/malpedia
           name: Build Docker image opencti/connector-malpedia
-          command: docker build -t opencti/connector-malpedia:latest . && docker tag opencti/connector-malpedia:latest opencti/connector-malpedia:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-malpedia:latest -t opencti/connector-malpedia:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/valhalla
           name: Build Docker image opencti/connector-valhalla
-          command: docker build -t opencti/connector-valhalla:latest . && docker tag opencti/connector-valhalla:latest opencti/connector-valhalla:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-valhalla:latest -t opencti/connector-valhalla:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cybercrime-tracker
           name: Build Docker image opencti/connector-cybercrime-tracker
-          command: docker build -t opencti/connector-cybercrime-tracker:latest . && docker tag opencti/connector-cybercrime-tracker:latest opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cybercrime-tracker:latest -t opencti/connector-cybercrime-tracker:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/history
           name: Build Docker image opencti/connector-history
-          command: docker build -t opencti/connector-history:latest . && docker tag opencti/connector-history:latest opencti/connector-history:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-history:latest -t opencti/connector-history:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
-          command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}          
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-tanium:latest -t opencti/connector-tanium:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
-          command: docker build -t opencti/connector-fireeye:latest . && docker tag opencti/connector-fireeye:latest opencti/connector-fireeye:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-fireeye:latest -t opencti/connector-fireeye:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/kaspersky
           name: Build Docker image opencti/connector-kaspersky
-          command: docker build -t opencti/connector-kaspersky:latest . && docker tag opencti/connector-kaspersky:latest opencti/connector-kaspersky:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-kaspersky:latest -t opencti/connector-kaspersky:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/greynoise
           name: Build Docker image opencti/connector-greynoise
-          command: docker build -t opencti/connector-greynoise:latest . && docker tag opencti/connector-greynoise:latest opencti/connector-greynoise:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-greynoise:latest -t opencti/connector-greynoise:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/taxii2
           name: Build Docker image opencti/connector-taxii2
-          command: docker build -t opencti/connector-taxii2:latest . && docker tag opencti/connector-taxii2:latest opencti/connector-taxii2:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-taxii2:latest -t opencti/connector-taxii2:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/thehive
           name: Build Docker image opencti/connector-thehive
-          command: docker build -t opencti/connector-thehive:latest . && docker tag opencti/connector-thehive:latest opencti/connector-thehive:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-thehive:latest -t opencti/connector-thehive:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/abuseipdb
           name: Build Docker image opencti/connector-abuseipdb
-          command: docker build -t opencti/connector-abuseipdb:latest . && docker tag opencti/connector-abuseipdb:latest opencti/connector-abuseipdb:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-abuseipdb:latest -t opencti/connector-abuseipdb:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/urlhaus
           name: Build Docker image opencti/connector-urlhaus
-          command: docker build -t opencti/connector-urlhaus:latest . && docker tag opencti/connector-urlhaus:latest opencti/connector-urlhaus:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-urlhaus:latest -t opencti/connector-urlhaus:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/malbeacon
           name: Build Docker image opencti/connector-malbeacon
-          command: docker build -t opencti/connector-malbeacon:latest . && docker tag opencti/connector-malbeacon:latest opencti/connector-malbeacon:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-malbeacon:latest -t opencti/connector-malbeacon:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/sekoia
           name: Build Docker image opencti/connector-sekoia
-          command: docker build -t opencti/connector-sekoia:latest . && docker tag opencti/connector-sekoia:latest opencti/connector-sekoia:${CIRCLE_TAG}          
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-sekoia:latest -t opencti/connector-sekoia:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/threatbus
           name: Build Docker image opencti/connector-threatbus
-          command: docker build -t opencti/connector-threatbus:latest . && docker tag opencti/connector-threatbus:latest opencti/connector-threatbus:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-threatbus:latest -t opencti/connector-threatbus:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/hybrid-analysis-sandbox
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
-          command: docker build -t opencti/connector-hybrid-analysis-sandbox:latest . && docker tag opencti/connector-hybrid-analysis-sandbox:latest opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-hybrid-analysis-sandbox:latest -t opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/splunk
           name: Build Docker image opencti/connector-splunk
-          command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-splunk:latest -t opencti/connector-splunk:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/steam/elastic
           name: Build Docker image opencti/connector-elastic
-          command: docker build -t opencti/connector-elastic:latest . && docker tag opencti/connector-elastic:latest opencti/connector-elastic:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-elastic:latest -t opencti/connector-elastic:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/vxvault
           name: Build Docker image opencti/connector-vxvault
-          command: docker build -t opencti/connector-vxvault:latest . && docker tag opencti/connector-vxvault:latest opencti/connector-vxvault:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-vxvault:latest -t opencti/connector-vxvault:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/shodan
           name: Build Docker image opencti/connector-shodan
-          command: docker build -t opencti/connector-shodan:latest . && docker tag opencti/connector-shodan:latest opencti/connector-shodan:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-shodan:latest -t opencti/connector-shodan:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/import-external-reference
           name: Build Docker image opencti/connector-import-external-reference
-          command: docker build -t opencti/connector-import-external-reference:latest . && docker tag opencti/connector-import-external-reference:latest opencti/connector-import-external-reference:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-import-external-reference:latest -t opencti/connector-import-external-reference:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/connector-backup-files
           name: Build Docker image opencti/connector-backup-files
-          command: docker build -t opencti/connector-backup-files:latest . && docker tag opencti/connector-backup-files:latest opencti/connector-backup-files:${CIRCLE_TAG}
-      - run:
-          name: Publish Docker Image to Docker Hub
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker push opencti/connector-import-file-stix:latest
-            docker push opencti/connector-import-file-stix:${CIRCLE_TAG}
-            docker push opencti/connector-import-report:latest
-            docker push opencti/connector-import-report:${CIRCLE_TAG}
-            docker push opencti/connector-export-file-stix:latest
-            docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
-            docker push opencti/connector-export-file-csv:latest
-            docker push opencti/connector-export-file-csv:${CIRCLE_TAG}
-            docker push opencti/connector-hygiene:latest
-            docker push opencti/connector-hygiene:${CIRCLE_TAG}
-            docker push opencti/connector-alienvault:latest
-            docker push opencti/connector-alienvault:${CIRCLE_TAG}
-            docker push opencti/connector-crowdstrike:latest
-            docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
-            docker push opencti/connector-cryptolaemus:latest
-            docker push opencti/connector-cryptolaemus:${CIRCLE_TAG}
-            docker push opencti/connector-cuckoo:latest
-            docker push opencti/connector-cuckoo:${CIRCLE_TAG}
-            docker push opencti/connector-cyber-threat-coalition:latest
-            docker push opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
-            docker push opencti/connector-misp:latest
-            docker push opencti/connector-misp:${CIRCLE_TAG}
-            docker push opencti/connector-mitre:latest
-            docker push opencti/connector-mitre:${CIRCLE_TAG}
-            docker push opencti/connector-opencti:latest
-            docker push opencti/connector-opencti:${CIRCLE_TAG}
-            docker push opencti/connector-cve:latest
-            docker push opencti/connector-cve:${CIRCLE_TAG}
-            docker push opencti/connector-amitt:latest
-            docker push opencti/connector-amitt:${CIRCLE_TAG}
-            docker push opencti/connector-ipinfo:latest
-            docker push opencti/connector-ipinfo:${CIRCLE_TAG}
-            docker push opencti/connector-virustotal:latest
-            docker push opencti/connector-virustotal:${CIRCLE_TAG}
-            docker push opencti/connector-lastinfosec:latest
-            docker push opencti/connector-lastinfosec:${CIRCLE_TAG}
-            docker push opencti/connector-malpedia:latest
-            docker push opencti/connector-malpedia:${CIRCLE_TAG}
-            docker push opencti/connector-valhalla:latest
-            docker push opencti/connector-valhalla:${CIRCLE_TAG}
-            docker push opencti/connector-cybercrime-tracker:latest
-            docker push opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
-            docker push opencti/connector-history:latest
-            docker push opencti/connector-history:${CIRCLE_TAG}
-            docker push opencti/connector-tanium:latest
-            docker push opencti/connector-tanium:${CIRCLE_TAG}            
-            docker push opencti/connector-fireeye:latest
-            docker push opencti/connector-fireeye:${CIRCLE_TAG}
-            docker push opencti/connector-kaspersky:latest
-            docker push opencti/connector-kaspersky:${CIRCLE_TAG}
-            docker push opencti/connector-greynoise:latest
-            docker push opencti/connector-greynoise:${CIRCLE_TAG}
-            docker push opencti/connector-taxii2:latest
-            docker push opencti/connector-taxii2:${CIRCLE_TAG}
-            docker push opencti/connector-thehive:latest
-            docker push opencti/connector-thehive:${CIRCLE_TAG}
-            docker push opencti/connector-abuseipdb:latest
-            docker push opencti/connector-abuseipdb:${CIRCLE_TAG}
-            docker push opencti/connector-urlhaus:latest
-            docker push opencti/connector-urlhaus:${CIRCLE_TAG}
-            docker push opencti/connector-malbeacon:latest
-            docker push opencti/connector-malbeacon:${CIRCLE_TAG}
-            docker push opencti/connector-sekoia:latest
-            docker push opencti/connector-sekoia:${CIRCLE_TAG}            
-            docker push opencti/connector-threatbus:latest
-            docker push opencti/connector-threatbus:${CIRCLE_TAG}
-            docker push opencti/connector-hybrid-analysis-sandbox:latest
-            docker push opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
-            docker push opencti/connector-splunk:latest
-            docker push opencti/connector-splunk:${CIRCLE_TAG}
-            docker push opencti/connector-elastic:latest
-            docker push opencti/connector-elastic:${CIRCLE_TAG}
-            docker push opencti/connector-vxvault:latest
-            docker push opencti/connector-vxvault:${CIRCLE_TAG}
-            docker push opencti/connector-shodan:latest
-            docker push opencti/connector-shodan:${CIRCLE_TAG}
-            docker push opencti/connector-import-external-reference:latest
-            docker push opencti/connector-import-external-reference:${CIRCLE_TAG}
-            docker push opencti/connector-backup-files:latest
-            docker push opencti/connector-backup-files:${CIRCLE_TAG}
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-backup-files:latest -t opencti/connector-backup-files:${CIRCLE_TAG} --push .
+          no_output_timeout: 30m
   build_rolling:
     working_directory: ~/opencti
-    docker:
-      - image: circleci/buildpack-deps:stretch
+    machine:
+      image: ubuntu-1604:202007-01
+      resource_class: xlarge
+    environment:
+      DOCKER_BUILDKIT: 1
+      BUILDX_PLATFORMS: linux/amd64,linux/arm64
     steps:
       - checkout
-      - setup_remote_docker
+      - run:
+          name: Install buildx
+          command: |
+            BUILDX_BINARY_URL="https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64"
+            curl --output docker-buildx \
+              --silent --show-error --location --fail --retry 3 \
+              "$BUILDX_BINARY_URL"
+            mkdir -p ~/.docker/cli-plugins
+            mv docker-buildx ~/.docker/cli-plugins/
+            chmod a+x ~/.docker/cli-plugins/docker-buildx
+            docker buildx install
+            # Run binfmt
+            docker run --rm --privileged tonistiigi/binfmt:latest --install "$BUILDX_PLATFORMS"
+            docker buildx create --name mybuilder --use
+      - run:
+          name: Login
+          command: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
-          command: docker build -t opencti/connector-import-file-stix:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-import-file-stix:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-import-file/import-report
           name: Build Docker image opencti/connector-import-report
-          command: docker build -t opencti/connector-import-report:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-import-report:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-export-file/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
-          command: docker build -t opencti/connector-export-file-stix:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-export-file-stix:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-export-file/export-file-csv
           name: Build Docker image opencti/connector-export-file-csv
-          command: docker build -t opencti/connector-export-file-csv:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-export-file-csv:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/hygiene
           name: Build Docker image opencti/connector-hygiene
-          command: docker build -t opencti/connector-hygiene:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-hygiene:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/alienvault
           name: Build Docker image opencti/connector-alienvault
-          command: docker build -t opencti/connector-alienvault:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-alienvault:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
-          command: docker build -t opencti/connector-crowdstrike:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-crowdstrike:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cryptolaemus
           name: Build Docker image opencti/connector-cryptolaemus
-          command: docker build -t opencti/connector-cryptolaemus:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cryptolaemus:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
-          command: docker build -t opencti/connector-cuckoo:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cuckoo:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
-          command: docker build -t opencti/connector-cyber-threat-coalition:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cyber-threat-coalition:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/misp
           name: Build Docker image opencti/connector-misp
-          command: docker build -t opencti/connector-misp:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-misp:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/mitre
           name: Build Docker image opencti/connector-mitre
-          command: docker build -t opencti/connector-mitre:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-mitre:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/opencti
           name: Build Docker image opencti/connector-opencti
-          command: docker build -t opencti/connector-opencti:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-opencti:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cve
           name: Build Docker image opencti/connector-cve
-          command: docker build -t opencti/connector-cve:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cve:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/amitt
           name: Build Docker image opencti/connector-amitt
-          command: docker build -t opencti/connector-amitt:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-amitt:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/ipinfo
           name: Build Docker image opencti/connector-ipinfo
-          command: docker build -t opencti/connector-ipinfo:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-ipinfo:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/virustotal
           name: Build Docker image opencti/connector-virustotal
-          command: docker build -t opencti/connector-virustotal:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-virustotal:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/lastinfosec
           name: Build Docker image opencti/connector-lastinfosec
-          command: docker build -t opencti/connector-lastinfosec:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-lastinfosec:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/malpedia
           name: Build Docker image opencti/connector-malpedia
-          command: docker build -t opencti/connector-malpedia:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-malpedia:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/valhalla
           name: Build Docker image opencti/connector-valhalla
-          command: docker build -t opencti/connector-valhalla:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-valhalla:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/cybercrime-tracker
           name: Build Docker image opencti/connector-cybercrime-tracker
-          command: docker build -t opencti/connector-cybercrime-tracker:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-cybercrime-tracker:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/history
           name: Build Docker image opencti/connector-history
-          command: docker build -t opencti/connector-history:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-history:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
-          command: docker build -t opencti/connector-tanium:rolling .          
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-tanium:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
-          command: docker build -t opencti/connector-fireeye:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-fireeye:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/kaspersky
           name: Build Docker image opencti/connector-kaspersky
-          command: docker build -t opencti/connector-kaspersky:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-kaspersky:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/greynoise
           name: Build Docker image opencti/connector-greynoise
-          command: docker build -t opencti/connector-greynoise:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-greynoise:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/taxii2
           name: Build Docker image opencti/connector-taxii2
-          command: docker build -t opencti/connector-taxii2:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-taxii2:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/thehive
           name: Build Docker image opencti/connector-thehive
-          command: docker build -t opencti/connector-thehive:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-thehive:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/abuseipdb
           name: Build Docker image opencti/connector-abuseipdb
-          command: docker build -t opencti/connector-abuseipdb:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-abuseipdb:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/urlhaus
           name: Build Docker image opencti/connector-urlhaus
-          command: docker build -t opencti/connector-urlhaus:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-urlhaus:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/malbeacon
           name: Build Docker image opencti/connector-malbeacon
-          command: docker build -t opencti/connector-malbeacon:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-malbeacon:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/sekoia
           name: Build Docker image opencti/connector-sekoia
-          command: docker build -t opencti/connector-sekoia:rolling . 
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-sekoia:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/threatbus
           name: Build Docker image opencti/connector-threatbus
-          command: docker build -t opencti/connector-threatbus:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-threatbus:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/hybrid-analysis-sandbox
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
-          command: docker build -t opencti/connector-hybrid-analysis-sandbox:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-hybrid-analysis-sandbox:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/splunk
           name: Build Docker image opencti/connector-splunk
-          command: docker build -t opencti/connector-splunk:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-splunk:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/elastic
           name: Build Docker image opencti/connector-elastic
-          command: docker build -t opencti/connector-elastic:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-elastic:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/external-import/vxvault
           name: Build Docker image opencti/connector-vxvault
-          command: docker build -t opencti/connector-vxvault:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-vxvault:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/shodan
           name: Build Docker image opencti/connector-shodan
-          command: docker build -t opencti/connector-shodan:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-shodan:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/internal-enrichment/import-external-reference
           name: Build Docker image opencti/connector-import-external-reference
-          command: docker build -t opencti/connector-import-external-reference:rolling .
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-import-external-reference:rolling --push .
+          no_output_timeout: 30m
       - run:
           working_directory: ~/opencti/stream/backup-files
           name: Build Docker image opencti/connector-backup-files
-          command: docker build -t opencti/connector-backup-files:rolling .
-      - run:
-          name: Publish Docker Image to Docker Hub
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker push opencti/connector-import-file-stix:rolling
-            docker push opencti/connector-import-report:rolling
-            docker push opencti/connector-export-file-stix:rolling
-            docker push opencti/connector-export-file-csv:rolling
-            docker push opencti/connector-hygiene:rolling
-            docker push opencti/connector-alienvault:rolling
-            docker push opencti/connector-crowdstrike:rolling
-            docker push opencti/connector-cryptolaemus:rolling
-            docker push opencti/connector-cuckoo:rolling
-            docker push opencti/connector-cyber-threat-coalition:rolling
-            docker push opencti/connector-misp:rolling
-            docker push opencti/connector-mitre:rolling
-            docker push opencti/connector-opencti:rolling
-            docker push opencti/connector-cve:rolling
-            docker push opencti/connector-amitt:rolling
-            docker push opencti/connector-ipinfo:rolling
-            docker push opencti/connector-virustotal:rolling
-            docker push opencti/connector-lastinfosec:rolling
-            docker push opencti/connector-malpedia:rolling
-            docker push opencti/connector-valhalla:rolling
-            docker push opencti/connector-cybercrime-tracker:rolling
-            docker push opencti/connector-history:rolling
-            docker push opencti/connector-tanium:rolling
-            docker push opencti/connector-fireeye:rolling
-            docker push opencti/connector-kaspersky:rolling
-            docker push opencti/connector-greynoise:rolling
-            docker push opencti/connector-taxii2:rolling
-            docker push opencti/connector-thehive:rolling
-            docker push opencti/connector-abuseipdb:rolling
-            docker push opencti/connector-urlhaus:rolling
-            docker push opencti/connector-malbeacon:rolling
-            docker push opencti/connector-sekoia:rolling
-            docker push opencti/connector-threatbus:rolling
-            docker push opencti/connector-hybrid-analysis-sandbox:rolling
-            docker push opencti/connector-splunk:rolling
-            docker push opencti/connector-elastic:rolling
-            docker push opencti/connector-vxvault:rolling
-            docker push opencti/connector-shodan:rolling
-            docker push opencti/connector-import-external-reference:rolling
-            docker push opencti/connector-backup-files:rolling
+          command: docker buildx build --platform $BUILDX_PLATFORMS -t opencti/connector-backup-files:rolling --push .
+          no_output_timeout: 30m
 workflows:
   version: 2
   opencti:
