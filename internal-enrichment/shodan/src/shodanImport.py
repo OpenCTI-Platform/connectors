@@ -308,7 +308,7 @@ class ShodanConnector:
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
 
-        TLPs = []
+        TLPs = ['TLP:WHITE']
         if "objectMarking" in observable:
             for marking_definition in observable["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
