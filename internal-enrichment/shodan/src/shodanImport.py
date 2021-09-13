@@ -216,7 +216,7 @@ class ShodanConnector:
         )
 
         # Update the current observable
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
+        self.helper.api.stix_cyber_observable.update_field(
             id=observable["id"],
             input={"key": "x_opencti_description", "value": Description},
         )
