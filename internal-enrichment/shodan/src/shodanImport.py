@@ -249,7 +249,7 @@ class ShodanConnector:
 
         # Link ASN to Observable
         self.helper.api.stix_cyber_observable_relationship.create(
-            fromId=final_observable["id"],
+            fromId=observable["id"],
             toId=asn["id"],
             relationship_type="obs_belongs-to",
             update=True,
@@ -300,7 +300,7 @@ class ShodanConnector:
         )
 
         self.helper.api.stix_cyber_observable.add_external_reference(
-            id=final_observable["id"],
+            id=observable["id"],
             external_reference_id=external_reference["id"],
         )
 
