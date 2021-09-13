@@ -307,19 +307,20 @@ class ShodanConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        # Extract TLP
-        tlp = "TLP:WHITE"
+
+        TLPs = []
         if "objectMarking" in observable:
             for marking_definition in observable["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
-                    tlp = marking_definition["definition"]
+                    TLPs.append(marking_definition["definition"])
         else:
-            tlp = "TLP:WHITE"
+            TLPs = []
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
-            raise ValueError(
-                "Do not send any data, TLP of the observable is greater than MAX TLP"
-            )
+        for TLPx in TLPs:
+            if not OpenCTIConnectorHelper.check_max_tlp(TLPx, self.max_tlp):
+                raise ValueError(
+                    "Do not send any data, TLP of the observable is greater than MAX TLP"
+                )
 
         # Extract IP from entity data
         observable_value = observable["value"]
