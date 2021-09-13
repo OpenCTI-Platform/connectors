@@ -1,1 +1,2 @@
-pycti==4.5.5
+# pycti==4.5.5
+git+git://github.com/Sqooba/client-python@master#egg=pycti
