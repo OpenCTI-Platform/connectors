@@ -309,9 +309,12 @@ class ShodanConnector:
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         # Extract TLP
         tlp = "TLP:WHITE"
-        for marking_definition in observable["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        if "objectMarking" in observable:
+            for marking_definition in observable["objectMarking"]:
+                if marking_definition["definition_type"] == "TLP":
+                    tlp = marking_definition["definition"]
+        else:
+            tlp = "TLP:WHITE"
 
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
