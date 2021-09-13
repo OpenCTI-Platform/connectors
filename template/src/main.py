@@ -4,7 +4,7 @@ import time
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
-class Template:
+class TemplateConnector:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -27,8 +27,8 @@ class Template:
 
 if __name__ == "__main__":
     try:
-        connectorTemplate = Template()
-        connectorTemplate.run()
+        template_connector = TemplateConnector()
+        template_connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)
