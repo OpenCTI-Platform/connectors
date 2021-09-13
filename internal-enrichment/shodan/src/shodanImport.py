@@ -308,13 +308,11 @@ class ShodanConnector:
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
 
-        TLPs = ['TLP:WHITE']
+        TLPs = ["TLP:WHITE"]
         if "objectMarking" in observable:
             for marking_definition in observable["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
                     TLPs.append(marking_definition["definition"])
-        else:
-            TLPs = []
 
         for TLPx in TLPs:
             if not OpenCTIConnectorHelper.check_max_tlp(TLPx, self.max_tlp):
