@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-shodan:
-    image: opencti/connector-shodan:4.5.5
+    image: opencti/connector-shodan:5.0.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

@@ -46,7 +46,7 @@ class HybridAnalysis:
         self.api_url = "https://www.hybrid-analysis.com/api/v2"
         self.headers = {
             "api-key": self.api_key,
-            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 4.5.5",
+            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 5.0.0",
             "accept": "application/json",
         }
         self.identity = self.helper.api.identity.create(
