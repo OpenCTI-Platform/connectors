@@ -21,14 +21,14 @@ class TemplateConnector:
     ####
     # TODO add your code according to your connector type
     # For details: see
-    # https://www.notion.so/Development-06b2690697404b5ebc6e3556a1385940#b5ba1e7e077448af91aad3180e7e1f06
+    # https://www.notion.so/luatix/Connector-Development-06b2690697404b5ebc6e3556a1385940
     ####
 
 
 if __name__ == "__main__":
     try:
-        template_connector = TemplateConnector()
-        template_connector.run()
+        connector = TemplateConnector()
+        connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)
