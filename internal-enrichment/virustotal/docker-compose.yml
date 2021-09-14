@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-virustotal:
-    image: opencti/connector-virustotal:4.5.5
+    image: opencti/connector-virustotal:5.0.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
