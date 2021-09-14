@@ -10,3 +10,6 @@ connector:
   auto: true # Enable/disable auto-enrichment of observables
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
+
+hygiene:
+  warninglists_slow_search: false  # Enable warning lists slow search mode
