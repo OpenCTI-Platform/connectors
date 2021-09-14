@@ -27,7 +27,9 @@ file of OpenCTI.
 
 ## Configuration
 
-No special configuration is needed.
+| Parameter            	     | Docker envvar                      | Mandatory | Description                                                                                                                           |
+| -------------------------- | ---------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `warninglists_slow_search` | `HYGIENE_WARNINGLISTS_SLOW_SEARCH` | No        | Enable slow search mode for the warning lists. If true, uses the most appropriate search method. Can be slower. Default: exact match. |
 
 ## Behavior
 
