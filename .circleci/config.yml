@@ -189,7 +189,7 @@ jobs:
           name: Build Docker image opencti/connector-import-external-reference
           command: docker build -t opencti/connector-import-external-reference:latest . && docker tag opencti/connector-import-external-reference:latest opencti/connector-import-external-reference:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/connector-backup-files
+          working_directory: ~/opencti/stream/backup-files
           name: Build Docker image opencti/connector-backup-files
           command: docker build -t opencti/connector-backup-files:latest . && docker tag opencti/connector-backup-files:latest opencti/connector-backup-files:${CIRCLE_TAG}
       - run:
