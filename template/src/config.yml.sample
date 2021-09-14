@@ -1,0 +1,11 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'Template_Type'
+  name: 'Template'
+  scope: 'Template_Scope' # MIME type or SCO
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
