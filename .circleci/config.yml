@@ -173,7 +173,7 @@ jobs:
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/steam/elastic
+          working_directory: ~/opencti/stream/elastic
           name: Build Docker image opencti/connector-elastic
           command: docker build -t opencti/connector-elastic:latest . && docker tag opencti/connector-elastic:latest opencti/connector-elastic:${CIRCLE_TAG}
       - run:
