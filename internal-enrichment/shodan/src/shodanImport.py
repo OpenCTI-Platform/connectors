@@ -216,7 +216,7 @@ class ShodanConnector:
         )
 
         # Update the current observable
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
+        self.helper.api.stix_cyber_observable.update_field(
             id=observable["id"],
             input={"key": "x_opencti_description", "value": Description},
         )
@@ -249,7 +249,7 @@ class ShodanConnector:
 
         # Link ASN to Observable
         self.helper.api.stix_cyber_observable_relationship.create(
-            fromId=final_observable["id"],
+            fromId=observable["id"],
             toId=asn["id"],
             relationship_type="obs_belongs-to",
             update=True,
@@ -300,23 +300,25 @@ class ShodanConnector:
         )
 
         self.helper.api.stix_cyber_observable.add_external_reference(
-            id=final_observable["id"],
+            id=observable["id"],
             external_reference_id=external_reference["id"],
         )
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        # Extract TLP
-        tlp = "TLP:WHITE"
-        for marking_definition in observable["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
-            raise ValueError(
-                "Do not send any data, TLP of the observable is greater than MAX TLP"
-            )
+        TLPs = ["TLP:WHITE"]
+        if "objectMarking" in observable:
+            for marking_definition in observable["objectMarking"]:
+                if marking_definition["definition_type"] == "TLP":
+                    TLPs.append(marking_definition["definition"])
+
+        for TLPx in TLPs:
+            if not OpenCTIConnectorHelper.check_max_tlp(TLPx, self.max_tlp):
+                raise ValueError(
+                    "Do not send any data, TLP of the observable is greater than MAX TLP"
+                )
 
         # Extract IP from entity data
         observable_value = observable["value"]
