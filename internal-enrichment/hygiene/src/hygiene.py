@@ -2,7 +2,7 @@ import os
 import yaml
 
 from pymispwarninglists import WarningLists
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 # At the moment it is not possible to map lists to their upstream path.
 # Thus we need to have our own mapping here.
@@ -83,7 +83,19 @@ class HygieneConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        self.warninglists = WarningLists()
+
+        warninglists_slow_search = bool(
+            get_config_variable(
+                "HYGIENE_WARNINGLISTS_SLOW_SEARCH",
+                ["hygiene", "warninglists_slow_search"],
+                config,
+                default=False,
+            )
+        )
+
+        self.helper.log_info(f"Warning lists slow search: {warninglists_slow_search}")
+
+        self.warninglists = WarningLists(slow_search=warninglists_slow_search)
 
         # Create Hygiene Tag
         self.label_hygiene = self.helper.api.label.create(
