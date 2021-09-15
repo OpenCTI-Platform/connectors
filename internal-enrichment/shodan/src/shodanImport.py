@@ -19,6 +19,9 @@ class ShodanConnector:
         self.max_tlp = get_config_variable(
             "SHODAN_MAX_TLP", ["shodan", "max_tlp"], config
         )
+        self.create_indicators = get_config_variable(
+            "SHODAN_CREATE_INDICATORS", ["shodan", "create_indicators"], config
+        )
         self.shodanAPI = shodan.Shodan(self.token)
 
     def _generate_host_description(self, shodanHostResponse):
@@ -201,20 +204,6 @@ class ShodanConnector:
         #  STIX Objects
         # --------------------------------------------------------------------
 
-        # Create Indicator
-        final_indicator = self.helper.api.indicator.create(
-            name=shodanHostResponse["ip_str"],
-            description=Description,
-            pattern_type="stix",
-            pattern=f"[ipv4-addr:value = '{shodanHostResponse['ip_str']}']",
-            x_opencti_main_observable_type="IPv4-Addr",
-            valid_from=now,
-            update=True,
-            objectLabel=tags,
-            confidence=self.helper.connect_confidence_level,
-            x_opencti_detection=True,
-        )
-
         # Update the current observable
         self.helper.api.stix_cyber_observable.update_field(
             id=observable["id"],
@@ -238,14 +227,28 @@ class ShodanConnector:
             confidence=self.helper.connect_confidence_level,
         )
 
-        # Link Indicator to Observable
-        self.helper.api.stix_core_relationship.create(
-            fromId=final_indicator["id"],
-            toId=observable["id"],
-            relationship_type="based-on",
-            update=True,
-            confidence=self.helper.connect_confidence_level,
-        )
+        # Create Indicator
+        if self.create_indicators:
+            final_indicator = self.helper.api.indicator.create(
+                name=shodanHostResponse["ip_str"],
+                description=Description,
+                pattern_type="stix",
+                pattern=f"[ipv4-addr:value = '{shodanHostResponse['ip_str']}']",
+                x_opencti_main_observable_type="IPv4-Addr",
+                valid_from=now,
+                update=True,
+                objectLabel=tags,
+                confidence=self.helper.connect_confidence_level,
+                x_opencti_detection=True,
+            )
+            # Link Indicator to Observable
+            self.helper.api.stix_core_relationship.create(
+                fromId=final_indicator["id"],
+                toId=observable["id"],
+                relationship_type="based-on",
+                update=True,
+                confidence=self.helper.connect_confidence_level,
+            )
 
         # Link ASN to Observable
         self.helper.api.stix_cyber_observable_relationship.create(
