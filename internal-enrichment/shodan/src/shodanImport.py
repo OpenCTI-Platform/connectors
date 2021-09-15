@@ -20,7 +20,11 @@ class ShodanConnector:
             "SHODAN_MAX_TLP", ["shodan", "max_tlp"], config
         )
         self.create_indicators = get_config_variable(
-            "SHODAN_CREATE_INDICATORS", ["shodan", "create_indicators"], config
+            "SHODAN_CREATE_INDICATORS",
+            ["shodan", "create_indicators"],
+            config,
+            False,
+            True,
         )
         self.shodanAPI = shodan.Shodan(self.token)
 
