@@ -11,5 +11,5 @@ RUN apk --no-cache add build-base git libmagic libxml2 libxml2-dev libxslt libxs
 
 # Copy the connector
 COPY src entrypoint.sh ./
-
+RUN chmod +x ./entrypoint.sh
 ENTRYPOINT ["/bin/sh", "-c", "/opt/opencti-connector-cybercrime-tracker/entrypoint.sh"]
