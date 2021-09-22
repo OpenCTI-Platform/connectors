@@ -10,6 +10,7 @@ connector:
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: True
   log_level: 'info'
+  expose_metrics: False
 
 mitre:
   enterprise_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json'
