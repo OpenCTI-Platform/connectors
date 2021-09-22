@@ -193,6 +193,10 @@ jobs:
           name: Build Docker image opencti/connector-backup-files
           command: docker build -t opencti/connector-backup-files:latest . && docker tag opencti/connector-backup-files:latest opencti/connector-backup-files:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/threatmatch
+          name: Build Docker image opencti/connector-threatmatch
+          command: docker build -t opencti/connector-threatmatch:latest . && docker tag opencti/connector-threatmatch:latest opencti/connector-threatmatch:${CIRCLE_TAG}          
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -276,6 +280,8 @@ jobs:
             docker push opencti/connector-import-external-reference:${CIRCLE_TAG}
             docker push opencti/connector-backup-files:latest
             docker push opencti/connector-backup-files:${CIRCLE_TAG}
+            docker push opencti/connector-threatmatch:latest
+            docker push opencti/connector-threatmatch:${CIRCLE_TAG}            
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -444,6 +450,10 @@ jobs:
           name: Build Docker image opencti/connector-backup-files
           command: docker build -t opencti/connector-backup-files:rolling .
       - run:
+          working_directory: ~/opencti/external-import/threatmatch
+          name: Build Docker image opencti/connector-threatmatch
+          command: docker build -t opencti/connector-threatmatch:rolling .          
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -487,6 +497,7 @@ jobs:
             docker push opencti/connector-shodan:rolling
             docker push opencti/connector-import-external-reference:rolling
             docker push opencti/connector-backup-files:rolling
+            docker push opencti/connector-threatmatch:rolling
 workflows:
   version: 2
   opencti:
