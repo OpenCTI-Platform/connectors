@@ -10,6 +10,7 @@ connector:
   confidence_level: 15 # 0 (Unknown) or from 1 to 100
   update_existing_data: False
   log_level: 'info'
+  expose_metrics: False
 
 misp:
   url: 'http://localhost' # Required
