@@ -17,7 +17,9 @@ JSONType = dict[str, Any]
 class VirusTotalClient:
     """VirusTotal client."""
 
-    def __init__(self, base_url: str, token: str) -> None:
+    def __init__(
+        self, base_url: str, token: str, metrics: Optional[dict[str, Any]] = None
+    ) -> None:
         """Initialize Virustotal client."""
         # Drop the ending slash if present.
         self.url = base_url[:-1] if base_url[-1] == "/" else base_url
@@ -27,6 +29,7 @@ class VirusTotalClient:
             "accept": "application/json",
             "content-type": "application/json",
         }
+        self.metrics = metrics
 
     def _query(self, url: str) -> Optional[JSONType]:
         """
@@ -56,17 +59,22 @@ class VirusTotalClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
         http.mount("https://", adapter)
+        error = False
         try:
             response = http.get(url, headers=self.headers)
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             logger.error(f"[VirusTotal] Http error: {errh}")
+            error = True
         except requests.exceptions.ConnectionError as errc:
             logger.error(f"[VirusTotal] Error connecting: {errc}")
+            error = True
         except requests.exceptions.Timeout as errt:
             logger.error(f"[VirusTotal] Timeout error: {errt}")
+            error = True
         except requests.exceptions.RequestException as err:
             logger.error(f"[VirusTotal] Something else happened: {err}")
+            error = True
         else:
             try:
                 return response.json()
@@ -74,6 +82,11 @@ class VirusTotalClient:
                 logger.error(
                     f"[VirusTotal] Error decoding the json: {err} - {response.text}"
                 )
+                if self.metrics is not None:
+                    self.metrics["client_error_count"].inc()
+        finally:
+            if error and self.metrics is not None:
+                self.metrics["client_error_count"].inc()
         return None
 
     def get_file_info(self, hash_256: str) -> Optional[JSONType]:

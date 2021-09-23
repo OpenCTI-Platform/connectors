@@ -1,3 +1,4 @@
-pycti==5.0.2
+pycti==5.0.3
 stix2==2.1.0
 plyara~=2.1.1
+
