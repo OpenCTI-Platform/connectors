@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'RiskIQ'
+  scope: 'riskiq'
+  confidence_level: 15  # 0 (Unknown) or from 1 to 100 (Fully trusted)
+  update_existing_data: False
+  log_level: 'info'
+
+riskiq:
+  base_url: "https://api.riskiq.net/pt/v2/"
+  user: 'ChangeMe'
+  password: 'ChangeMe'
+  interval_sec: 86400
