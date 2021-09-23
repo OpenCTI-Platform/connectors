@@ -147,7 +147,13 @@ class EntityConfig(BaseModel):
                     continue
 
                 value = f"\\b{value}\\b"
-                indicators.append(re.compile(value, re.IGNORECASE))
+                try:
+                    compiled_re = re.compile(value, re.IGNORECASE)
+                    indicators.append(compiled_re)
+                except re.error as e:
+                    helper.log_error(
+                        f"Entity {self.name}: Unable to create regex from value '{value}' ({e})"
+                    )
 
             if len(indicators) == 0:
                 continue
