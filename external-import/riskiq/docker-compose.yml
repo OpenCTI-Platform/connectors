@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-riskiq:
+    image: opencti/connector-riskiq:5.0.0
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=RISKIQ
+      - CONNECTOR_SCOPE=riskiq
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - RISKIQ_BASE_URL=https://api.riskiq.net/pt/v2
+      - RISKIQ_USER=ChangeMe
+      - RISKIQ_PASSWORD=ChangeMe
+      - RISKIQ_INTERVAL_SEC=86400
+    restart: always
