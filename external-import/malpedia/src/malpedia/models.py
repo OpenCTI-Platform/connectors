@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia connector models."""
 
-import re
-import dateutil.parser as dp
 from datetime import datetime, date
+import re
 from typing import Optional, List
 
+import dateutil.parser as dp
 from pydantic import BaseModel
 
 
@@ -39,8 +39,7 @@ class Family(BaseModel):
         """Malpedia names list."""
         if self.common_name == "":
             return self.malpedia_name
-        else:
-            return self.common_name
+        return self.common_name
 
 
 class YaraRule(BaseModel):
@@ -56,11 +55,10 @@ class YaraRule(BaseModel):
         extract = re.search(r"([0-9]{4}\-[0-9]{2}\-[0-9]{2})", self.raw_rule)
         if extract is None:
             return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
-        else:
-            try:
-                return dp.isoparse(extract.group(1)).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-            except Exception:
-                return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        try:
+            return dp.isoparse(extract.group(1)).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        except Exception:
+            return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
 class Sample(BaseModel):
