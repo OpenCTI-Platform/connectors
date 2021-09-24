@@ -92,7 +92,7 @@ DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd
 | File | File.name, File.hashes (MD5, SHA-1, SHA-256) | :heavy_plus_sign: | |
 | IPv4 Address | IPv4-Addr.value| :heavy_check_mark: ||  
 | IPv6 Address | IPv6-Addr.value| :heavy_check_mark: ||
-| MAC Address | - | :x: | |
+| MAC Address | Mac-Addr.value| :heavy_check_mark: | |
 | Mutex | - |:x: | |
 | Network Traffic | - | :x: | |
 | Process | - | :x: | |
