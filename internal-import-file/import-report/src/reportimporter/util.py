@@ -34,6 +34,7 @@ def library_mapping() -> Dict:
         "Email-Addr.value": ioc_finder.parse_email_addresses,
         "IPv4-Addr.value": ioc_finder.parse_ipv4_addresses,
         "IPv6-Addr.value": ioc_finder.parse_ipv6_addresses,
+        "Mac-Addr.value": ioc_finder.parse_mac_addresses,
         "File.hashes.MD5": ioc_finder.parse_md5s,
         "File.hashes.SHA-1": ioc_finder.parse_sha1s,
         "File.hashes.SHA-256": ioc_finder.parse_sha256s,
