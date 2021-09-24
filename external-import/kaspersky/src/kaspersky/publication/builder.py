@@ -147,7 +147,7 @@ class PublicationBundleBuilder:
         )
 
         # TODO: Ignore reports without any references or not?
-        # Hack, the report must have at least on object reference.
+        # Hack, the report must have at least one object reference.
         if not object_refs:
             dummy_object = self._create_dummy_object()
 

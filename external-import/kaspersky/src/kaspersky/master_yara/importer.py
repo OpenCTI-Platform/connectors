@@ -191,6 +191,7 @@ class MasterYaraImporter(BaseImporter):
         try:
             return bundle_builder.build()
         except STIXError as e:
+            self.helper.metric_inc("error_count")
             self._error(
                 "Failed to build YARA rule bundle for '{0}': {1}",
                 yara_rule_group[0],

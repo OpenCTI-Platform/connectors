@@ -10,6 +10,7 @@ connector:
   confidence_level: 15  # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: false
   log_level: 'info'
+  expose_metrics: false
 
 kaspersky:
   base_url: 'https://tip.kaspersky.com'

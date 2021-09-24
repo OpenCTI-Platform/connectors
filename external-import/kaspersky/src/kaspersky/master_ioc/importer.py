@@ -253,6 +253,7 @@ class MasterIOCImporter(BaseImporter):
         try:
             return bundle_builder.build()
         except STIXError as e:
+            self.helper.metric_inc("error_count")
             self._error(
                 "Failed to build indicator group bundle for '{0}': {1}",
                 indicator_group[0],

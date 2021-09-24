@@ -21,8 +21,6 @@ log = logging.getLogger(__name__)
 class KasperskyClientException(Exception):
     """Kaspersky client exception."""
 
-    pass
-
 
 class KasperskyClient:
     """Kaspersky client."""
@@ -57,10 +55,16 @@ class KasperskyClient:
     _PUBLICATIONS_FIELD_PUBLICATIONS = "publications"
 
     def __init__(
-        self, base_url: str, user: str, password: str, certificate_path: str
+        self,
+        base_url: str,
+        user: str,
+        password: str,
+        certificate_path: str,
+        metrics: Optional[dict[str, Any]] = None,
     ) -> None:
         """Initialize Kaspersky client."""
         self.base_url = base_url if not base_url.endswith("/") else base_url[:-1]
+        self.metrics = metrics
 
         self.session = requests.Session()
         self.session.auth = (user, password)
@@ -108,8 +112,11 @@ class KasperskyClient:
                 self._duration_ms(start_time_ms),
             )
 
-    @staticmethod
-    def _raise_client_exception(message: str, log_stacktrace: bool = False) -> NoReturn:
+    def _raise_client_exception(
+        self, message: str, log_stacktrace: bool = False
+    ) -> NoReturn:
+        if self.metrics is not None:
+            self.metrics["client_error_count"].inc()
         if log_stacktrace:
             log.exception(message)
         else:
