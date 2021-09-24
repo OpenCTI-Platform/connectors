@@ -84,7 +84,7 @@ DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd
 | Extractable Observable/SCO | Stix Reference fields | Supported | Note |
 |-----------------------------|------------------|------|---|
 | Artifact | - | :x: | |
-| AutonomousSystem        | AutonomousSystem.number| :x: | Currently not working due to https://github.com/OpenCTI-Platform/client-python/issues/186 | 
+| AutonomousSystem        | AutonomousSystem.number| :heavy_check_mark: | | 
 | Directory | - | :x: | |
 | Domain Name | DomainName.value| :heavy_check_mark: | |
 | EMail Address | EMail-Addr.value | :heavy_check_mark: ||
