@@ -23,7 +23,6 @@ class ExportFileStix:
         export_type = data["export_type"]  # Simple or Full
         max_marking = data["max_marking"]
         entity_type = data["entity_type"]
-
         if export_scope == "single":
             entity_id = data["entity_id"]
             self.helper.log_info(
