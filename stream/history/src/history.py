@@ -79,6 +79,9 @@ class HistoryConnector:
                     else None,
                     "message": event_json["message"],
                     "commit": event_json["commit"] if "commit" in event_json else None,
+                    "references": event_json["references"]
+                    if "references" in event_json
+                    else None,
                 },
             }
             self.elasticsearch.index(
