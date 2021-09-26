@@ -2,3 +2,4 @@ config.yml
 __pycache__
 logs
 *.gql
+test

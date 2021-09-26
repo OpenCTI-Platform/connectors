@@ -6,7 +6,7 @@ import os
 import yaml
 import json
 
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable, StixMetaTypes
 
 
 class BackupFilesConnector:
@@ -26,7 +26,35 @@ class BackupFilesConnector:
             "BACKUP_PATH", ["backup", "path"], config
         )
 
-    def write_file(self, entity_type, entity_id, bundle):
+    def _enrich_with_files(self, current):
+        entity = current
+        files = []
+        if entity["type"] != "relationship" and not StixMetaTypes.has_value(
+            entity["type"]
+        ):
+            files = self.helper.api.stix_core_object.list_files(id=entity["id"])
+        elif entity["type"] == "external-reference":
+            files = self.helper.api.external_reference.list_files(id=entity["id"])
+        if len(files) > 0:
+            entity["x_opencti_files"] = []
+            for file in files:
+                url = (
+                    self.helper.api.api_url.replace("graphql", "storage/get/")
+                    + file["id"]
+                )
+                data = self.helper.api.fetch_opencti_file(
+                    url, binary=True, serialize=True
+                )
+                entity["x_opencti_files"].append(
+                    {
+                        "name": file["name"],
+                        "data": data,
+                        "mime_type": file["metaData"]["mimetype"],
+                    }
+                )
+        return entity
+
+    def write_files(self, entity_type, entity_id, bundle):
         path = self.backup_path + "/opencti_data"
         if not os.path.exists(path + "/" + entity_type):
             os.mkdir(path + "/" + entity_type)
@@ -60,14 +88,16 @@ class BackupFilesConnector:
                     "x_opencti_event_version": data["version"],
                     "objects": [data["data"]],
                 }
-                self.write_file(data["data"]["type"], data["data"]["id"], bundle)
+                data["data"] = self._enrich_with_files(data["data"])
+                self.write_files(data["data"]["type"], data["data"]["id"], bundle)
             elif msg.event == "update":
                 bundle = {
                     "type": "bundle",
                     "x_opencti_event_version": data["version"],
                     "objects": [data["data"]],
                 }
-                self.write_file(data["data"]["type"], data["data"]["id"], bundle)
+                data["data"] = self._enrich_with_files(data["data"])
+                self.write_files(data["data"]["type"], data["data"]["id"], bundle)
             elif msg.event == "delete":
                 self.delete_file(data["data"]["type"], data["data"]["id"])
 
