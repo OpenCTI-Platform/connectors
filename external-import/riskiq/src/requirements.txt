@@ -1,3 +1,4 @@
-pycti==5.0.2
+#pycti==5.0.3
+git+git://github.com/Sqooba/client-python@feature/client-metrics#egg=pycti
 stix2==2.1.0
 urllib3==1.26.6

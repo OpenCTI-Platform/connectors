@@ -238,3 +238,6 @@ class ArticleImporter:
     def _send_bundle(self, bundle: Bundle) -> None:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)
+        if self.helper.metrics is not None:
+            self.helper.metrics["record_send"].inc(len(bundle.objects))
+            self.helper.metrics["bundle_send"].inc()

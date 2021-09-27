@@ -47,7 +47,12 @@ class RiskIQConnector:
             "RISKIQ_PASSWORD", ["riskiq", "password"], config
         )
         # Initialization of the client
-        self.client = RiskIQClient(self.base_url, user, password)
+        self.client = RiskIQClient(
+            self.base_url,
+            user,
+            password,
+            self.helper.metrics if self.helper.metrics else None,
+        )
 
     @staticmethod
     def _current_unix_timestamp() -> int:
@@ -128,6 +133,9 @@ class RiskIQConnector:
                     current_state, self._STATE_LATEST_RUN_TIMESTAMP
                 )
                 if self._is_scheduled(last_run, timestamp):
+                    if self.helper.metrics is not None:
+                        self.helper.metrics["run_count"].inc()
+                        self.helper.metrics["state"].state("running")
                     work_id = self._initiate_work(timestamp)
                     new_state = current_state.copy()
                     last_article = self._get_state_value(
@@ -174,9 +182,13 @@ class RiskIQConnector:
                     self.helper.log_info(
                         f"[RiskIQ] Connector will not run, next run in {run_interval} seconds"
                     )
-
+                # Set the state as `idle` before sleeping.
+                if self.helper.metrics is not None:
+                    self.helper.metrics["state"].state("idle")
                 self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
+                if self.helper.metrics is not None:
+                    self.helper.metrics["state"].state("stopped")
                 self.helper.log_info("RiskIQ connector stop")
                 sys.exit(0)
             except Exception as e:

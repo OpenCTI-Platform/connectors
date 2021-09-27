@@ -11,6 +11,7 @@ services:
       - CONNECTOR_SCOPE=riskiq
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_EXPOSE_METRICS=false
       - RISKIQ_BASE_URL=https://api.riskiq.net/pt/v2
       - RISKIQ_USER=ChangeMe
       - RISKIQ_PASSWORD=ChangeMe
