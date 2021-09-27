@@ -17,13 +17,20 @@ JSONType = dict[str, Any]
 class RiskIQClient:
     """Risk IQ client."""
 
-    def __init__(self, base_url: str, user: str, password: str) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        user: str,
+        password: str,
+        metrics: Optional[dict[str, Any]] = None,
+    ) -> None:
         """Initialize RiskIQ client."""
         # Drop the ending slash if present.
         self.url = base_url[:-1] if base_url[-1] == "/" else base_url
         logger.info(f"URL: {self.url}")
         self.user = user
         self.password = password
+        self.metrics = metrics
 
     def _query(self, url: str) -> Optional[JSONType]:
         """
@@ -54,17 +61,22 @@ class RiskIQClient:
         http = requests.Session()
         http.mount("https://", adapter)
         http.mount("http://", adapter)
+        error = False
         try:
             response = http.get(url, auth=(self.user, self.password))
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             logger.error(f"[RiskIQ] Http error: {errh}")
+            error = True
         except requests.exceptions.ConnectionError as errc:
             logger.error(f"[RiskIQ] Error connecting: {errc}")
+            error = True
         except requests.exceptions.Timeout as errt:
             logger.error(f"[RiskIQ] Timeout error: {errt}")
+            error = True
         except requests.exceptions.RequestException as err:
             logger.error(f"[RiskIQ] Something else happened: {err}")
+            error = True
         else:
             try:
                 return response.json()
@@ -72,6 +84,11 @@ class RiskIQClient:
                 logger.error(
                     f"[RiskIQ] Error decoding the json: {err} - {response.text}"
                 )
+                if self.metrics is not None:
+                    self.metrics["client_error_count"].inc()
+        finally:
+            if error and self.metrics is not None:
+                self.metrics["client_error_count"].inc()
         return None
 
     def get_articles(
