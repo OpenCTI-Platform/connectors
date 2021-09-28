@@ -143,12 +143,12 @@ class ReportImporter:
     ) -> (List[SimpleObservable], List[str]):
         observables = []
         entities = []
-        object_markings = [x['standard_id'] for x in report.get('objectMarking', [])]
+        object_markings = [x["standard_id"] for x in report.get("objectMarking", [])]
         # external_references = [x['standard_id'] for x in report.get('externalReferences', [])]
         # labels = [x['standard_id'] for x in report.get('objectLabel', [])]
-        author = report.get('createdBy')
+        author = report.get("createdBy")
         if author:
-            author = author.get('standard_id', None)
+            author = author.get("standard_id", None)
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
                 if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
