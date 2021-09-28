@@ -2,8 +2,6 @@
 
 OpenCTI LastInfoSec connector will use the `/v2/stix21/search_hash/{hash}` and `/v2/stix21/search_host/{host}` API.
 
-This LastInfosec's Threat Feed contains STIXv2.1 reports update hourly with URLs, Hashs, Domains Indicators.  
-
 Requirement : if you want to use LastInfoSec's intelligence, you need an API key. You could contact LastInfoSec's team here https://info.gatewatcher.com/en/lp/opencti
 
 LastInfosec has been acquired by Gatewatcher. 
