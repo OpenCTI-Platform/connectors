@@ -79,7 +79,7 @@ class ReportImporter:
 
         # Process parsing results
         self.helper.log_debug("Results: {}".format(parsed))
-        observables, entities = self._process_parsing_results(parsed)
+        observables, entities = self._process_parsing_results(parsed, report)
         # Send results to OpenCTI
         observable_cnt = self._process_parsed_objects(report, observables, entities)
         entity_cnt = len(entities)
@@ -139,10 +139,16 @@ class ReportImporter:
         return config_list
 
     def _process_parsing_results(
-        self, parsed: List[Dict]
+        self, parsed: List[Dict], report: Dict
     ) -> (List[SimpleObservable], List[str]):
         observables = []
         entities = []
+        object_markings = [x['standard_id'] for x in report.get('objectMarking', [])]
+        # external_references = [x['standard_id'] for x in report.get('externalReferences', [])]
+        # labels = [x['standard_id'] for x in report.get('objectLabel', [])]
+        author = report.get('createdBy')
+        if author:
+            author = author.get('standard_id', None)
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
                 if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
@@ -180,6 +186,10 @@ class ReportImporter:
                         key=match[RESULT_FORMAT_CATEGORY],
                         value=match[RESULT_FORMAT_MATCH],
                         x_opencti_create_indicator=self.create_indicator,
+                        object_marking_refs=object_markings,
+                        created_by_ref=author,
+                        # labels=labels,
+                        # external_references=external_references
                     )
                     observables.append(observable)
 
