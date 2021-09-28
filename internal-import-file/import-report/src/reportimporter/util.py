@@ -34,7 +34,7 @@ def library_mapping() -> Dict:
         "Email-Addr.value": ioc_finder.parse_email_addresses,
         "IPv4-Addr.value": ioc_finder.parse_ipv4_addresses,
         "IPv6-Addr.value": ioc_finder.parse_ipv6_addresses,
-        "Mac-Addr.value": ioc_finder.parse_mac_addresses,
+        "Mac-Addr.value": custom_mac_addr_parse,
         "File.hashes.MD5": ioc_finder.parse_md5s,
         "File.hashes.SHA-1": ioc_finder.parse_sha1s,
         "File.hashes.SHA-256": ioc_finder.parse_sha256s,
@@ -69,3 +69,8 @@ def custom_dateparse(text: str) -> List:
         return []
     else:
         return [value[1].isoformat(timespec="seconds") for value in result]
+
+
+def custom_mac_addr_parse(text: str) -> List:
+    mac_addresses = ioc_finder.parse_mac_addresses(text)
+    return [x.lower() for x in mac_addresses]
