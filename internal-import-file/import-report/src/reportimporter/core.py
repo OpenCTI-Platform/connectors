@@ -32,7 +32,9 @@ class ReportImporter:
             if os.path.isfile(config_file_path)
             else {}
         )
+        config["connector"]["only_contextual"] = True
         self.helper = OpenCTIConnectorHelper(config)
+        self.helper.log_info(config)
         self.create_indicator = get_config_variable(
             "IMPORT_REPORT_CREATE_INDICATOR",
             ["import_report", "create_indicator"],
@@ -60,10 +62,9 @@ class ReportImporter:
     def _process_message(self, data: Dict) -> str:
         file_name = self._download_import_file(data)
         entity_id = data.get("entity_id", None)
-        if self._check_context(entity_id):
-            raise ValueError(
-                "No context defined, connector is get_only_contextual true"
-            )
+        report = self.helper.api.report.read(id=entity_id)
+        if report is None:
+            return "The report's context is not a Stix Report. Note or Opinion maybe? Nothing was imported"
 
         # Retrieve entity set from OpenCTI
         entity_indicators = self._collect_stix_objects(self.entity_config)
@@ -78,8 +79,7 @@ class ReportImporter:
 
         # Process parsing results
         self.helper.log_debug("Results: {}".format(parsed))
-        observables, entities = self._process_parsing_results(parsed)
-        report = self.helper.api.report.read(id=entity_id)
+        observables, entities = self._process_parsing_results(parsed, report)
         # Send results to OpenCTI
         observable_cnt = self._process_parsed_objects(report, observables, entities)
         entity_cnt = len(entities)
@@ -105,10 +105,6 @@ class ReportImporter:
             f.write(file_content)
 
         return file_name
-
-    def _check_context(self, entity_id: str) -> bool:
-        is_context = entity_id and len(entity_id) > 0
-        return self.helper.get_only_contextual() and not is_context
 
     def _collect_stix_objects(
         self, entity_config_list: List[EntityConfig]
@@ -143,10 +139,16 @@ class ReportImporter:
         return config_list
 
     def _process_parsing_results(
-        self, parsed: List[Dict]
+        self, parsed: List[Dict], report: Dict
     ) -> (List[SimpleObservable], List[str]):
         observables = []
         entities = []
+        object_markings = [x["standard_id"] for x in report.get("objectMarking", [])]
+        # external_references = [x['standard_id'] for x in report.get('externalReferences', [])]
+        # labels = [x['standard_id'] for x in report.get('objectLabel', [])]
+        author = report.get("createdBy")
+        if author:
+            author = author.get("standard_id", None)
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
                 if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
@@ -184,6 +186,10 @@ class ReportImporter:
                         key=match[RESULT_FORMAT_CATEGORY],
                         value=match[RESULT_FORMAT_MATCH],
                         x_opencti_create_indicator=self.create_indicator,
+                        object_marking_refs=object_markings,
+                        created_by_ref=author,
+                        # labels=labels,
+                        # external_references=external_references
                     )
                     observables.append(observable)
 
@@ -197,11 +203,6 @@ class ReportImporter:
     def _process_parsed_objects(
         self, report: Dict, observables: List, entities: List
     ) -> int:
-        if report is None:
-            self.helper.log_error(
-                "No report found! This is a purely contextual connector and this should not happen"
-            )
-            return 0
 
         if len(observables) == 0 and len(entities) == 0:
             return 0

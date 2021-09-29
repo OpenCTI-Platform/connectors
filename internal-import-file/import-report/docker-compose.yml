@@ -10,7 +10,6 @@ services:
       - CONNECTOR_NAME=ImportReport
       - CONNECTOR_SCOPE=application/pdf,text/plain
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-      - CONNECTOR_ONLY_CONTEXTUAL=true # Only extract data related to an entity (a report, a threat actor, etc.)
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - IMPORT_REPORT_CREATE_INDICATOR=False

@@ -146,6 +146,7 @@ class EntityConfig(BaseModel):
                     )
                     continue
 
+                value = re.escape(value)
                 value = f"\\b{value}\\b"
                 try:
                     compiled_re = re.compile(value, re.IGNORECASE)
