@@ -24,7 +24,6 @@ OpenCTI data is coming from *import* connectors.
 | `connector_type`                     | `CONNECTOR_TYPE`                    | Yes          | Must be `INTERNAL_IMPORT_FILE` (this is the connector type).                                                                                               |
 | `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | Option `ImportFilePdfObservables`                                                                                                                          |
 | `connector_auto`                     | `CONNCETOR_AUTO`                    | Yes          | `false` Enable/disable auto import of report file                                                                                                          |
-| `connector_only_contextual`          | `CONNCETOR_ONLY_CONTEXTUAL`         | Yes          | `true` Only extract data related to an entity (a report, a threat actor, etc.)                                                                             |
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported file types: `'application/pdf','text/plain'`                                                                                                     |
 | `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 4).                                                                             |
 | `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
@@ -85,7 +84,7 @@ DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd
 | Extractable Observable/SCO | Stix Reference fields | Supported | Note |
 |-----------------------------|------------------|------|---|
 | Artifact | - | :x: | |
-| AutonomousSystem        | AutonomousSystem.number| :x: | Currently not working due to https://github.com/OpenCTI-Platform/client-python/issues/186 | 
+| AutonomousSystem        | AutonomousSystem.number| :heavy_check_mark: | | 
 | Directory | - | :x: | |
 | Domain Name | DomainName.value| :heavy_check_mark: | |
 | EMail Address | EMail-Addr.value | :heavy_check_mark: ||
@@ -93,7 +92,7 @@ DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd
 | File | File.name, File.hashes (MD5, SHA-1, SHA-256) | :heavy_plus_sign: | |
 | IPv4 Address | IPv4-Addr.value| :heavy_check_mark: ||  
 | IPv6 Address | IPv6-Addr.value| :heavy_check_mark: ||
-| MAC Address | - | :x: | |
+| MAC Address | Mac-Addr.value| :heavy_check_mark: | |
 | Mutex | - |:x: | |
 | Network Traffic | - | :x: | |
 | Process | - | :x: | |
