@@ -57,7 +57,7 @@ class ArticleImporter:
         """
         indicator_type = indicator["type"]
         values = indicator["values"]
-        tlp_marking = TLP_AMBER if indicator["source"] != "public" else TLP_WHITE
+        tlp_marking = TLP_WHITE if indicator["source"] == "public" else TLP_AMBER
 
         if indicator_type == "hash_md5":
             return [
@@ -198,6 +198,11 @@ class ArticleImporter:
 
         self.helper.log_debug(f"Number of indicators: {len(indicators)}")
 
+        # Check if all indicators' TLP marking are `TLP_WHITE`.
+        report_tlp = TLP_WHITE
+        if TLP_AMBER in [i["object_marking_refs"][0] for i in indicators]:
+            report_tlp = TLP_AMBER
+
         report = Report(
             type="report",
             name=self.article.get("title", "RiskIQ Threat Report"),
@@ -209,7 +214,7 @@ class ArticleImporter:
             lang="en",
             labels=self.article["tags"],
             object_refs=indicators,
-            object_marking_refs=TLP_AMBER,
+            object_marking_refs=report_tlp,
             external_references=[
                 {
                     "source_name": "riskiq",
