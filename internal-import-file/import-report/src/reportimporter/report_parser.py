@@ -1,8 +1,10 @@
 import logging
 import os
+import io
 from typing import Dict, List, Pattern, IO, Tuple
 
 import ioc_finder
+from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 from pycti import OpenCTIConnectorHelper
@@ -15,6 +17,7 @@ from reportimporter.constants import (
     RESULT_FORMAT_RANGE,
     MIME_PDF,
     MIME_TXT,
+    MIME_HTML,
     OBSERVABLE_DETECTION_CUSTOM_REGEX,
     OBSERVABLE_DETECTION_LIBRARY,
 )
@@ -45,6 +48,7 @@ class ReportParser(object):
         self.supported_file_types = {
             MIME_PDF: self._parse_pdf,
             MIME_TXT: self._parse_text,
+            MIME_HTML: self._parse_html,
         }
 
         self.library_lookup = library_mapping()
@@ -108,6 +112,14 @@ class ReportParser(object):
         parse_info = {}
         for text in file_data.readlines():
             parse_info.update(self._parse(text.decode("utf-8")))
+        return parse_info
+
+    def _parse_html(self, file_data: IO) -> Dict[str, Dict]:
+        parse_info = {}
+        soup = BeautifulSoup(file_data, 'html.parser')
+        buf = io.StringIO(soup.get_text())
+        for text in buf.readlines():
+            parse_info.update(self._parse(text))
         return parse_info
 
     def run_parser(self, file_path: str, file_type: str) -> List[Dict]:
