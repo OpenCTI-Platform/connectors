@@ -62,14 +62,19 @@ class Observable(BaseModel):
     def pre_validate_transform_str_to_list(cls, field: str) -> Any:
         return list(filter(None, (x.strip() for x in field.splitlines())))
 
-    @staticmethod
-    def _load_regex_pattern(regex_values: List[str]) -> List[Pattern]:
+    def _load_regex_pattern(self, regex_values: List[str]) -> List[Pattern]:
         regexes = []
         if len(regex_values) == 0:
             return []
 
         for regex_value in regex_values:
-            regexes.append(re.compile(regex_value, re.IGNORECASE))
+            try:
+                compiled_re = re.compile(regex_value, re.IGNORECASE)
+                regexes.append(compiled_re)
+            except re.error as e:
+                raise ValueError(
+                    f"Observable {self.name}: Unable to create regex from value '{regex_value}' ({e})"
+                )
 
         return regexes
 
@@ -140,9 +145,9 @@ class EntityConfig(BaseModel):
             indicators = []
             for value in item_values:
                 # Remove SDO names which are defined to be excluded in the entity config
-                if value.lower() in self.exclude_values:
+                if value.lower() in self. exclude_values:
                     helper.log_debug(
-                        f"Entity: Discarding value '{value}' due to explicit exclusion"
+                        f"Entity: Discarding value '{value}' due to explicit exclusion as defined in {self.exclude_values}"
                     )
                     continue
 
