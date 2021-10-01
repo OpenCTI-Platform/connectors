@@ -145,7 +145,7 @@ class EntityConfig(BaseModel):
             indicators = []
             for value in item_values:
                 # Remove SDO names which are defined to be excluded in the entity config
-                if value.lower() in self. exclude_values:
+                if value.lower() in self.exclude_values:
                     helper.log_debug(
                         f"Entity: Discarding value '{value}' due to explicit exclusion as defined in {self.exclude_values}"
                     )
