@@ -109,6 +109,10 @@ jobs:
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:latest . && docker tag opencti/connector-malpedia:latest opencti/connector-malpedia:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/riskiq
+          name: Build Docker image opencti/connector-riskiq
+          command: docker build -t opencti/connector-riskiq:latest . && docker tag opencti/connector-riskiq:latest opencti/connector-riskiq:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/external-import/valhalla
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:latest . && docker tag opencti/connector-valhalla:latest opencti/connector-valhalla:${CIRCLE_TAG}
@@ -123,7 +127,7 @@ jobs:
       - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
-          command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
@@ -159,7 +163,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/sekoia
           name: Build Docker image opencti/connector-sekoia
-          command: docker build -t opencti/connector-sekoia:latest . && docker tag opencti/connector-sekoia:latest opencti/connector-sekoia:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-sekoia:latest . && docker tag opencti/connector-sekoia:latest opencti/connector-sekoia:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/stream/threatbus
           name: Build Docker image opencti/connector-threatbus
@@ -192,6 +196,10 @@ jobs:
           working_directory: ~/opencti/stream/backup-files
           name: Build Docker image opencti/connector-backup-files
           command: docker build -t opencti/connector-backup-files:latest . && docker tag opencti/connector-backup-files:latest opencti/connector-backup-files:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/threatmatch
+          name: Build Docker image opencti/connector-threatmatch
+          command: docker build -t opencti/connector-threatmatch:latest . && docker tag opencti/connector-threatmatch:latest opencti/connector-threatmatch:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -234,6 +242,8 @@ jobs:
             docker push opencti/connector-lastinfosec:${CIRCLE_TAG}
             docker push opencti/connector-malpedia:latest
             docker push opencti/connector-malpedia:${CIRCLE_TAG}
+            docker push opencti/connector-riskiq:latest
+            docker push opencti/connector-riskiq:${CIRCLE_TAG}
             docker push opencti/connector-valhalla:latest
             docker push opencti/connector-valhalla:${CIRCLE_TAG}
             docker push opencti/connector-cybercrime-tracker:latest
@@ -241,7 +251,7 @@ jobs:
             docker push opencti/connector-history:latest
             docker push opencti/connector-history:${CIRCLE_TAG}
             docker push opencti/connector-tanium:latest
-            docker push opencti/connector-tanium:${CIRCLE_TAG}            
+            docker push opencti/connector-tanium:${CIRCLE_TAG}
             docker push opencti/connector-fireeye:latest
             docker push opencti/connector-fireeye:${CIRCLE_TAG}
             docker push opencti/connector-kaspersky:latest
@@ -259,7 +269,7 @@ jobs:
             docker push opencti/connector-malbeacon:latest
             docker push opencti/connector-malbeacon:${CIRCLE_TAG}
             docker push opencti/connector-sekoia:latest
-            docker push opencti/connector-sekoia:${CIRCLE_TAG}            
+            docker push opencti/connector-sekoia:${CIRCLE_TAG}
             docker push opencti/connector-threatbus:latest
             docker push opencti/connector-threatbus:${CIRCLE_TAG}
             docker push opencti/connector-hybrid-analysis-sandbox:latest
@@ -276,6 +286,8 @@ jobs:
             docker push opencti/connector-import-external-reference:${CIRCLE_TAG}
             docker push opencti/connector-backup-files:latest
             docker push opencti/connector-backup-files:${CIRCLE_TAG}
+            docker push opencti/connector-threatmatch:latest
+            docker push opencti/connector-threatmatch:${CIRCLE_TAG}           
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -360,6 +372,10 @@ jobs:
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:rolling .
       - run:
+          working_directory: ~/opencti/external-import/riskiq
+          name: Build Docker image opencti/connector-riskiq
+          command: docker build -t opencti/connector-riskiq:rolling .
+      - run:
           working_directory: ~/opencti/external-import/valhalla
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:rolling .
@@ -374,7 +390,7 @@ jobs:
       - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
-          command: docker build -t opencti/connector-tanium:rolling .          
+          command: docker build -t opencti/connector-tanium:rolling .
       - run:
           working_directory: ~/opencti/external-import/fireeye
           name: Build Docker image opencti/connector-fireeye
@@ -410,7 +426,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/sekoia
           name: Build Docker image opencti/connector-sekoia
-          command: docker build -t opencti/connector-sekoia:rolling . 
+          command: docker build -t opencti/connector-sekoia:rolling .
       - run:
           working_directory: ~/opencti/stream/threatbus
           name: Build Docker image opencti/connector-threatbus
@@ -444,6 +460,10 @@ jobs:
           name: Build Docker image opencti/connector-backup-files
           command: docker build -t opencti/connector-backup-files:rolling .
       - run:
+          working_directory: ~/opencti/external-import/threatmatch
+          name: Build Docker image opencti/connector-threatmatch
+          command: docker build -t opencti/connector-threatmatch:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -466,6 +486,7 @@ jobs:
             docker push opencti/connector-virustotal:rolling
             docker push opencti/connector-lastinfosec:rolling
             docker push opencti/connector-malpedia:rolling
+            docker push opencti/connector-riskiq:rolling
             docker push opencti/connector-valhalla:rolling
             docker push opencti/connector-cybercrime-tracker:rolling
             docker push opencti/connector-history:rolling
@@ -487,6 +508,7 @@ jobs:
             docker push opencti/connector-shodan:rolling
             docker push opencti/connector-import-external-reference:rolling
             docker push opencti/connector-backup-files:rolling
+            docker push opencti/connector-threatmatch:rolling
 workflows:
   version: 2
   opencti:

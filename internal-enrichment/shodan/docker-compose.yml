@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-shodan:
-    image: opencti/connector-shodan:5.0.0
+    image: opencti/connector-shodan:5.0.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -14,4 +14,5 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - SHODAN_TOKEN=ChangeMe
       - SHODAN_MAX_TLP=TLP:AMBER
+      - SHODAN_CREATE_INDICATORS=true
     restart: always

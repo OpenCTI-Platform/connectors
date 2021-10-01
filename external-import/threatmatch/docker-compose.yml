@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-threatmatch:
+    image: opencti/connector-threatmatch:5.0.1
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=ThreatMatch
+      - CONNECTOR_SCOPE=threatmatch
+      - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_LOG_LEVEL=info
+      - THREATMATCH_URL=https://eu.threatmatch.com
+      - THREATMATCH_CLIENT_ID=ChangeMe
+      - THREATMATCH_CLIENT_SECRET=ChangeMe
+      - THREATMATCH_INTERVAL=5 # In minutes
+      - "THREATMATCH_IMPORT_FROM_DATE=2010-01-01 00:00"
+      - THREATMATCH_IMPORT_PROFILES=true # Import profiles
+      - THREATMATCH_IMPORT_ALERTS=true # Import alerts
+      - THREATMATCH_IMPORT_REPORTS=true # Import reports
+    restart: always
