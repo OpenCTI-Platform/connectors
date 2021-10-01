@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-virustotal
 
 # Launch the worker
-python3 virustotal.py
+python3 main.py
