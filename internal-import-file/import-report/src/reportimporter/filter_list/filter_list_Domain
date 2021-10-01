@@ -9,7 +9,7 @@ eset\.com
 trendmicro\.com
 welivesecurity\.com
 securelist\.com
-*.\.zip
+\.zip$
 
 # Other
 wikipedia\.com
