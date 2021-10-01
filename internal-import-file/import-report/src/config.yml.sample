@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_IMPORT_FILE'
   name: 'ImportReport'
-  scope: 'application/pdf,text/plain'
+  scope: 'application/pdf,text/plain,text/html'
   auto: false # Enable/disable auto-import of file
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'

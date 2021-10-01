@@ -1,5 +1,6 @@
 MIME_PDF = "application/pdf"
 MIME_TXT = "text/plain"
+MIME_HTML = "text/html"
 
 RESULT_FORMAT_TYPE = "type"
 RESULT_FORMAT_CATEGORY = "category"
