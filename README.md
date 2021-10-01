@@ -12,7 +12,7 @@ This repository is used to host connectors that are supported by the core develo
 
 ## Contributing
 
-We welcome your **[contributions for new connectors](https://www.notion.so/luatix/Connectors-70637122e18442a88ae666897f959023)**. We encourage you to look at the source of existing connector before developing your own. If you want to make your connector available to the community, **please create a Pull Request on this repository**, then we will integrate it to the CI and in the [OpenCTI ecosystem](https://www.notion.so/luatix/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+If you want to help use improve or develop new connector, please check out **[development documentation for new connectors](https://www.notion.so/Connector-Development-06b2690697404b5ebc6e3556a1385940)**. If you want to make your connector available to the community, **please create a Pull Request on this repository**, then we will integrate it to the CI and in the [OpenCTI ecosystem](https://www.notion.so/luatix/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
 
 ## License
 
