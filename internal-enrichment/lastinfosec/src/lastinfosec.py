@@ -6,14 +6,10 @@ import requests
 import time
 import json
 
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable
-)
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class LastInfoSecEnrichment:
-
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -33,7 +29,7 @@ class LastInfoSecEnrichment:
         self.proxy_https = get_config_variable(
             "PROXY_HTTPS", ["opencti", "proxy_https"], config
         )
-    
+
     def _send_knowledge(self, observable, report, value):
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
@@ -46,11 +42,11 @@ class LastInfoSecEnrichment:
             external_reference_id=external_reference["id"],
         )
         # Send bundle
-        bundle = json.dumps(report)  # Python uses single quotes and STIX2.1 needs double quotes
+        bundle = json.dumps(
+            report
+        )  # Python uses single quotes and STIX2.1 needs double quotes
         bundles_sent = self.helper.send_stix2_bundle(bundle)
-        return (
-            "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
-        )
+        return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
@@ -68,10 +64,14 @@ class LastInfoSecEnrichment:
         if self.proxy_https is not None:
             proxy_dic["https"] = self.proxy_https
 
-        if observable["entity_type"] == 'StixFile':
-            url = "{}/stix21/search_hash/{}?api_key={}".format(self.api_url, value, self.lastinfosec_apikey)
-        if observable["entity_type"] == 'Domain-Name':
-            url = "{}/stix21/search_host/{}?api_key={}".format(self.api_url, value, self.lastinfosec_apikey)
+        if observable["entity_type"] == "StixFile":
+            url = "{}/stix21/search_hash/{}?api_key={}".format(
+                self.api_url, value, self.lastinfosec_apikey
+            )
+        if observable["entity_type"] == "Domain-Name":
+            url = "{}/stix21/search_host/{}?api_key={}".format(
+                self.api_url, value, self.lastinfosec_apikey
+            )
         response = requests.get(url, proxies=proxy_dic)
 
         if response.status_code == 422:
@@ -80,7 +80,7 @@ class LastInfoSecEnrichment:
             response.raise_for_status()
 
         json_resp = response.json()
-        return self._send_knowledge(observable, json_resp['message'][0], value)
+        return self._send_knowledge(observable, json_resp["message"][0], value)
 
     # Start the main loop
     def start(self):
