@@ -92,15 +92,8 @@ class VirusTotalConnector:
 
     def _process_file(self, observable):
         json_data = self.client.get_file_info(observable["observable_value"])
-        if "error" in json_data:
-            if json_data["error"]["message"] == "Quota exceeded":
-                self.helper.log_info("Quota reached, waiting 1 hour.")
-                sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
-            elif "not found" in json_data["error"]["message"]:
-                self.helper.log_info("File not found on VirusTotal.")
-                return "File not found on VirusTotal."
-            else:
-                raise ValueError(json_data["error"]["message"])
+        if json_data is None:
+            raise ValueError("File not found in VT")
         if "data" in json_data:
             data = json_data["data"]
             attributes = data["attributes"]
