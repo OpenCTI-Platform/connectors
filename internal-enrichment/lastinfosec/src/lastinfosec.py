@@ -65,11 +65,11 @@ class LastInfoSecEnrichment:
             proxy_dic["https"] = self.proxy_https
 
         if observable["entity_type"] == "StixFile":
-            url = "{}/stix21/search_hash/{}?api_key={}".format(
+            url = "{}/stix21/search_hash/{}?api_key={}&platform=opencti".format(
                 self.api_url, value, self.lastinfosec_apikey
             )
         if observable["entity_type"] == "Domain-Name":
-            url = "{}/stix21/search_host/{}?api_key={}".format(
+            url = "{}/stix21/search_host/{}?api_key={}&platform=opencti".format(
                 self.api_url, value, self.lastinfosec_apikey
             )
         response = requests.get(url, proxies=proxy_dic)
