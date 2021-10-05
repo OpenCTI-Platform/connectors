@@ -1,12 +1,19 @@
 ################################
 # OpenCTI Backup Files         #
 ################################
-
+import datetime
 import os
 import yaml
 import json
 
 from pycti import OpenCTIConnectorHelper, get_config_variable, StixMetaTypes
+from dateutil import parser
+
+
+def round_time(dt, round_to=60):
+    seconds = (dt.replace(tzinfo=None) - dt.min).seconds
+    rounding = (seconds + round_to / 2) // round_to * round_to
+    return dt + datetime.timedelta(0, rounding - seconds, -dt.microsecond)
 
 
 class BackupFilesConnector:
@@ -50,29 +57,21 @@ class BackupFilesConnector:
                         "name": file["name"],
                         "data": data,
                         "mime_type": file["metaData"]["mimetype"],
+                        "version": file["metaData"]["version"],
                     }
                 )
         return entity
 
-    def write_files(self, entity_type, entity_id, bundle):
+    def write_files(self, date_range, entity_id, bundle):
         path = self.backup_path + "/opencti_data"
-        if not os.path.exists(path + "/" + entity_type):
-            os.mkdir(path + "/" + entity_type)
-        path = path + "/" + entity_type
-        if not os.path.exists(path + "/" + entity_id.split("--")[1][0]):
-            os.mkdir(path + "/" + entity_id.split("--")[1][0])
-        path = path + "/" + entity_id.split("--")[1][0]
+        if not os.path.exists(path + "/" + date_range):
+            os.mkdir(path + "/" + date_range)
+        path = path + "/" + date_range
         with open(path + "/" + entity_id + ".json", "w") as file:
             json.dump(bundle, file, indent=4)
 
-    def delete_file(self, entity_type, entity_id):
-        path = (
-            self.backup_path
-            + "/opencti_data/"
-            + entity_type
-            + "/"
-            + entity_id.split("--")[1][0]
-        )
+    def delete_file(self, date_range, entity_id):
+        path = self.backup_path + "/opencti_data/" + date_range
         if not os.path.exists(path):
             return
         if os.path.isfile(path + "/" + entity_id + ".json"):
@@ -82,6 +81,8 @@ class BackupFilesConnector:
         if msg.event == "create" or msg.event == "update" or msg.event == "delete":
             self.helper.log_info("Processing event " + msg.id)
             data = json.loads(msg.data)
+            created_at = parser.parse(data["data"]["created_at"])
+            date_range = round_time(created_at).strftime("%Y%m%dT%H%M%SZ")
             if msg.event == "create":
                 bundle = {
                     "type": "bundle",
@@ -89,7 +90,7 @@ class BackupFilesConnector:
                     "objects": [data["data"]],
                 }
                 data["data"] = self._enrich_with_files(data["data"])
-                self.write_files(data["data"]["type"], data["data"]["id"], bundle)
+                self.write_files(date_range, data["data"]["id"], bundle)
             elif msg.event == "update":
                 bundle = {
                     "type": "bundle",
@@ -97,9 +98,9 @@ class BackupFilesConnector:
                     "objects": [data["data"]],
                 }
                 data["data"] = self._enrich_with_files(data["data"])
-                self.write_files(data["data"]["type"], data["data"]["id"], bundle)
+                self.write_files(date_range, data["data"]["id"], bundle)
             elif msg.event == "delete":
-                self.delete_file(data["data"]["type"], data["data"]["id"])
+                self.delete_file(date_range, data["data"]["id"])
 
     def start(self):
         # Check if the directory exists
