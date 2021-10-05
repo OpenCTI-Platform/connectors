@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: RestoreFiles'
+  scope: 'restore'
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+backup:
+  protocol: 'local' # Protocol for file copy (only `local` is supported for now).
+  path: '/tmp' # Path to be used to copy the data, can be relative or absolute.
