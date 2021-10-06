@@ -96,11 +96,14 @@ class VirusTotalConnector:
 
         json_data = self.client.get_file_info(observable["observable_value"])
         if json_data is None:
-            raise ValueError("An error has occurred")
+            self.helper.metric_inc("client_error_count")
+            return "File not found on VirusTotal."
         if "error" in json_data:
             self.helper.metric_inc("client_error_count")
             if json_data["error"]["message"] == "Quota exceeded":
-                self.helper.log_info("Quota reached, waiting 1 hour.")
+                self.helper.log_info(
+                    f"Quota reached, waiting {self._CONNECTOR_RUN_INTERVAL_SEC} minutes."
+                )
                 sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
             elif "not found" in json_data["error"]["message"]:
                 self.helper.log_info("File not found on VirusTotal.")
