@@ -5,6 +5,7 @@ import os
 import yaml
 import json
 import datetime
+import sys
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -35,15 +36,21 @@ def date_convert(name):
 
 
 class RestoreFilesConnector:
-    def __init__(self):
+    def __init__(self, conf_data):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
-            else {}
+            else conf_data
         )
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
+        self.direct_creation = get_config_variable(
+            "DIRECT_CREATION",
+            ["backup", "direct_creation"],
+            config,
+            default=False,
+        )
         self.backup_protocol = get_config_variable(
             "BACKUP_PROTOCOL", ["backup", "protocol"], config
         )
@@ -80,7 +87,6 @@ class RestoreFilesConnector:
         )
         path = self.backup_path + "/opencti_data"
         obj = os.scandir(path)
-        print("Files and Directories in '% s':" % path)
         # cache_ids = {}
         for entry in obj:
             if entry.is_dir():
@@ -119,9 +125,15 @@ class RestoreFilesConnector:
                     "type": "bundle",
                     "objects": objects_with_missing,
                 }
-                self.helper.send_stix2_bundle(json.dumps(stix_bundle))
+                if self.direct_creation:
+                    self.helper.log_info("restore dir (direct creation):" + entry.name)
+                    self.helper.api.stix2.import_bundle_from_json(json.dumps(stix_bundle), True)
+                else:
+                    self.helper.log_info("restore dir (worker bundles):" + entry.name)
+                    self.helper.send_stix2_bundle(json.dumps(stix_bundle))
                 # 06 - Save the state
                 self.helper.set_state({"current": entry.name})
+        self.helper.log_info("restore run completed")
 
     def start(self):
         # Check if the directory exists
@@ -131,5 +143,7 @@ class RestoreFilesConnector:
 
 
 if __name__ == "__main__":
-    RestoreFilesInstance = RestoreFilesConnector()
+    json_conf = sys.argv[1] if len(sys.argv) > 1 else None
+    conf = json.loads(json_conf) if json_conf is not None else {}
+    RestoreFilesInstance = RestoreFilesConnector(conf)
     RestoreFilesInstance.start()

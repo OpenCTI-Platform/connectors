@@ -5,6 +5,7 @@ import datetime
 import os
 import yaml
 import json
+import sys
 
 from pycti import OpenCTIConnectorHelper, get_config_variable, StixMetaTypes
 from dateutil import parser
@@ -17,12 +18,12 @@ def round_time(dt, round_to=60):
 
 
 class BackupFilesConnector:
-    def __init__(self):
+    def __init__(self, conf_data):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
-            else {}
+            else conf_data
         )
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
@@ -36,7 +37,7 @@ class BackupFilesConnector:
     def _enrich_with_files(self, current):
         entity = current
         files = []
-        if entity["type"] != "relationship" and not StixMetaTypes.has_value(
+        if entity["type"] != "relationship" and entity["type"] != "sighting" and not StixMetaTypes.has_value(
             entity["type"]
         ):
             files = self.helper.api.stix_core_object.list_files(id=entity["id"])
@@ -79,7 +80,6 @@ class BackupFilesConnector:
 
     def _process_message(self, msg):
         if msg.event == "create" or msg.event == "update" or msg.event == "delete":
-            self.helper.log_info("Processing event " + msg.id)
             data = json.loads(msg.data)
             created_at = parser.parse(data["data"]["created_at"])
             date_range = round_time(created_at).strftime("%Y%m%dT%H%M%SZ")
@@ -101,6 +101,7 @@ class BackupFilesConnector:
                 self.write_files(date_range, data["data"]["id"], bundle)
             elif msg.event == "delete":
                 self.delete_file(date_range, data["data"]["id"])
+            self.helper.log_info("Backup processed event " + msg.id + " / " + data["data"]["id"])
 
     def start(self):
         # Check if the directory exists
@@ -112,5 +113,7 @@ class BackupFilesConnector:
 
 
 if __name__ == "__main__":
-    BackupFilesInstance = BackupFilesConnector()
+    json_conf = sys.argv[1] if len(sys.argv) > 1 else None
+    conf = json.loads(json_conf) if json_conf is not None else {}
+    BackupFilesInstance = BackupFilesConnector(conf)
     BackupFilesInstance.start()
