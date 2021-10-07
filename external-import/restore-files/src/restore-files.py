@@ -93,6 +93,11 @@ class RestoreFilesConnector:
                 dir_date = date_convert(entry.name)
                 if start_date is not None and dir_date <= start_date:
                     continue
+                # Create the work
+                friendly_name = "Restore run directory @ " + entry.name
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
                 # 00 - Create a bundle for the directory
                 files_data = []
                 element_ids = []
@@ -130,11 +135,19 @@ class RestoreFilesConnector:
                     self.helper.api.stix2.import_bundle_from_json(
                         json.dumps(stix_bundle), True
                     )
+                    # 06 - Save the state
+                    self.helper.set_state({"current": entry.name})
                 else:
                     self.helper.log_info("restore dir (worker bundles):" + entry.name)
-                    self.helper.send_stix2_bundle(json.dumps(stix_bundle))
-                # 06 - Save the state
-                self.helper.set_state({"current": entry.name})
+                    self.helper.send_stix2_bundle(
+                        json.dumps(stix_bundle), work_id=work_id
+                    )
+                    message = "Restore dir run, storing last_run as {0}".format(
+                        entry.name
+                    )
+                    self.helper.api.work.to_processed(work_id, message)
+                    # 06 - Save the state
+                    self.helper.set_state({"current": entry.name})
         self.helper.log_info("restore run completed")
 
     def start(self):
