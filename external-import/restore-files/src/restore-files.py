@@ -127,7 +127,9 @@ class RestoreFilesConnector:
                 }
                 if self.direct_creation:
                     self.helper.log_info("restore dir (direct creation):" + entry.name)
-                    self.helper.api.stix2.import_bundle_from_json(json.dumps(stix_bundle), True)
+                    self.helper.api.stix2.import_bundle_from_json(
+                        json.dumps(stix_bundle), True
+                    )
                 else:
                     self.helper.log_info("restore dir (worker bundles):" + entry.name)
                     self.helper.send_stix2_bundle(json.dumps(stix_bundle))

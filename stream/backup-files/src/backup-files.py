@@ -37,8 +37,10 @@ class BackupFilesConnector:
     def _enrich_with_files(self, current):
         entity = current
         files = []
-        if entity["type"] != "relationship" and entity["type"] != "sighting" and not StixMetaTypes.has_value(
-            entity["type"]
+        if (
+            entity["type"] != "relationship"
+            and entity["type"] != "sighting"
+            and not StixMetaTypes.has_value(entity["type"])
         ):
             files = self.helper.api.stix_core_object.list_files(id=entity["id"])
         elif entity["type"] == "external-reference":
@@ -101,7 +103,9 @@ class BackupFilesConnector:
                 self.write_files(date_range, data["data"]["id"], bundle)
             elif msg.event == "delete":
                 self.delete_file(date_range, data["data"]["id"])
-            self.helper.log_info("Backup processed event " + msg.id + " / " + data["data"]["id"])
+            self.helper.log_info(
+                "Backup processed event " + msg.id + " / " + data["data"]["id"]
+            )
 
     def start(self):
         # Check if the directory exists
