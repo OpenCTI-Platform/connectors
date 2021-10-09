@@ -104,7 +104,7 @@ class BackupFilesConnector:
             elif msg.event == "delete":
                 self.delete_file(date_range, data["data"]["id"])
             self.helper.log_info(
-                "Backup processed event " + msg.id + " / " + data["data"]["id"]
+                "Backup processed event " + msg.id + " in " + date_range + " / " + data["data"]["id"]
             )
 
     def start(self):
