@@ -8,6 +8,7 @@ import datetime
 import sys
 
 from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIStix2Splitter
+from pathlib import Path
 
 
 def ref_extractors(objects):
@@ -87,45 +88,45 @@ class RestoreFilesConnector:
             date_convert(start_directory) if start_directory is not None else None
         )
         path = self.backup_path + "/opencti_data"
-        obj = os.scandir(path)
-        # cache_ids = {}
-        for entry in obj:
-            if entry.is_dir():
-                dir_date = date_convert(entry.name)
-                if start_date is not None and dir_date <= start_date:
-                    continue
+        dirs = sorted(Path(path).iterdir(), key=lambda d: date_convert(d.name))
+        for entry in dirs:
+            friendly_name = "Restore run directory @ " + entry.name
+            self.helper.log_info(friendly_name)
+            dir_date = date_convert(entry.name)
+            if start_date is not None and dir_date <= start_date:
+                continue
+            # 00 - Create a bundle for the directory
+            files_data = []
+            element_ids = []
+            # 01 - build all _ref / _refs contained in the bundle
+            element_refs = []
+            for file in os.scandir(entry):
+                if file.is_file():
+                    objects = fetch_stix_data(file)
+                    object_ids = set(map(lambda x: x["id"], objects))
+                    element_refs.extend(ref_extractors(objects))
+                    files_data.extend(objects)
+                    element_ids.extend(object_ids)
+            # Ensure the bundle is consistent (include meta elements)
+            # 02 - Scan bundle to detect missing elements
+            acc = []
+            ids = set(element_ids)
+            refs = set(element_refs)
+            for ref in refs:
+                if ref not in ids:
+                    # 03 - If missing, scan the other dir/files to find the elements
+                    missing_element = self.find_element(dir_date, ref)
+                    if missing_element is not None:
+                        acc.insert(0, missing_element)
+                        # 04 - Restart the process to handle recursive resolution
+                        self.resolve_missing(dir_date, ids, missing_element, acc)
+            # 05 - Add elements to the bundle
+            objects_with_missing = acc + files_data
+            if len(objects_with_missing) > 0:
                 # Create the work
-                friendly_name = "Restore run directory @ " + entry.name
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-                # 00 - Create a bundle for the directory
-                files_data = []
-                element_ids = []
-                # 01 - build all _ref / _refs contained in the bundle
-                element_refs = []
-                for file in os.scandir(entry):
-                    if file.is_file():
-                        objects = fetch_stix_data(file)
-                        object_ids = set(map(lambda x: x["id"], objects))
-                        element_refs.extend(ref_extractors(objects))
-                        files_data.extend(objects)
-                        element_ids.extend(object_ids)
-                # Ensure the bundle is consistent (include meta elements)
-                # 02 - Scan bundle to detect missing elements
-                acc = []
-                ids = set(element_ids)
-                refs = set(element_refs)
-                for ref in refs:
-                    if ref not in ids:
-                        # 03 - If missing, scan the other dir/files to find the elements
-                        missing_element = self.find_element(dir_date, ref)
-                        if missing_element is not None:
-                            acc.insert(0, missing_element)
-                            # 04 - Restart the process to handle recursive resolution
-                            self.resolve_missing(dir_date, ids, missing_element, acc)
-                # 05 - Add elements to the bundle
-                objects_with_missing = acc + files_data
                 # 06 - Send the bundle to the worker queue
                 stix_bundle = {
                     "type": "bundle",
