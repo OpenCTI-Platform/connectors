@@ -25,4 +25,6 @@ assignees: ''
 
 ## If the feature request is approved, would you be willing to submit a PR?
 
+<!-- A PR is a shortcut for a "pull request". Here more details on the idea behind a PR https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests -->
+
 Yes / No (Help can be provided if you need assistance submitting a PR)
