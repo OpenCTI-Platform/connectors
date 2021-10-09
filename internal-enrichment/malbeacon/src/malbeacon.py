@@ -92,7 +92,7 @@ class MalBeaconConnector:
 
         reference = self.helper.api.external_reference.create(
             source_name="Malbeacon C2 Domains",
-            url="https://malbeacon.com/illuminate",
+            url="https://portal.malbeacon.com/illuminate",
             description="Found in Malbeacon C2 Domains",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
