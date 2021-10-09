@@ -7,7 +7,7 @@ import json
 import datetime
 import sys
 
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIStix2Splitter
 
 
 def ref_extractors(objects):
@@ -80,6 +80,7 @@ class RestoreFilesConnector:
                     self.resolve_missing(dir_date, element_ids, missing_element, acc)
 
     def restore_files(self):
+        stix2_splitter = OpenCTIStix2Splitter()
         state = self.helper.get_state()
         start_directory = state["current"] if state is not None else None
         start_date = (
@@ -131,10 +132,19 @@ class RestoreFilesConnector:
                     "objects": objects_with_missing,
                 }
                 if self.direct_creation:
-                    self.helper.log_info("restore dir (direct creation):" + entry.name)
-                    self.helper.api.stix2.import_bundle_from_json(
-                        json.dumps(stix_bundle), True
+                    # Bundle must be split for reordering
+                    bundles = stix2_splitter.split_bundle(stix_bundle, False)
+                    self.helper.log_info(
+                        "restore dir "
+                        + entry.name
+                        + " with "
+                        + str(len(bundles))
+                        + " bundles (direct creation)"
                     )
+                    for bundle in bundles:
+                        self.helper.api.stix2.import_bundle_from_json(
+                            json.dumps(bundle), True
+                        )
                     # 06 - Save the state
                     self.helper.set_state({"current": entry.name})
                 else:
