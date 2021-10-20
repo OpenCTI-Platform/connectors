@@ -1,6 +1,6 @@
 version: "3"
 services:
-  connector-backup-files:
+  connector-restore-files:
     image: opencti/connector-restore-files:5.0.2
     environment:
       - OPENCTI_URL=http://localhost # Local OpenCTI URL
