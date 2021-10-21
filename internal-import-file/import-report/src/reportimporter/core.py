@@ -32,9 +32,8 @@ class ReportImporter:
             if os.path.isfile(config_file_path)
             else {}
         )
-        config["connector"]["only_contextual"] = True
+
         self.helper = OpenCTIConnectorHelper(config)
-        self.helper.log_info(config)
         self.create_indicator = get_config_variable(
             "IMPORT_REPORT_CREATE_INDICATOR",
             ["import_report", "create_indicator"],
