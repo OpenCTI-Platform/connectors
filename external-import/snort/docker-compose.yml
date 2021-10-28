@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-template:
+    image: opencti/connector-snort:1.0.0
+    volumes:
+      - snortdata:/opt/opencti-connector-snort/import
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=6b2e01c4-059e-4766-9e4f-47719116413d
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Import Snort Alert
+      - CONNECTOR_SCOPE=attack-pattern,intrusion-set,malware # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_MIN_SNORT_PRIORITY=2 # From 1 to 100.  Connector will post alerts at this priority or higher.
+      - CONNECTOR_PROCESS_INTERVAL=60 # In seconds.  How often to look for new alert logs.
+    restart: always
+volumes:
+  snortdata:

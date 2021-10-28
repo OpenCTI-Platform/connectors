@@ -240,6 +240,12 @@ class IntelManager(object):
     def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
+        if data["type"] != "indicator":
+            # logger.debug(
+            #     f"Data type unsupported: {data['type']}. Only 'indicators are currently supported."
+            # )
+            return {}
+
         logger.debug(f"Querying indicator: { data['x_opencti_id']}")
         entity = self.helper.api.indicator.read(id=data["x_opencti_id"])
 
@@ -248,11 +254,7 @@ class IntelManager(object):
         _result: dict = {}
         _document: Cut = {}
 
-        if data["type"] != "indicator":
-            logger.error(
-                f"Data type unsupported: {data['type']}. Only 'indicators are currently supported."
-            )
-            return None
+
 
         if is_update is True:
             update_time: str = (
@@ -353,7 +355,7 @@ class IntelManager(object):
         )
 
         _document: dict = {
-            "@timestamp": timestamp,
+            "@timestamp": timestamp.isoformat().replace("+00:00", ".000000Z"),
             "event": {
                 "created": creation_time,
                 "kind": "enrichment",
@@ -382,13 +384,13 @@ class IntelManager(object):
 
         _document["threatintel"]["opencti"] = {
             "internal_id": entity.get("id", None),
-            "valid_from": entity.get("valid_from", None),
-            "valid_until": entity.get("valid_until", None),
+            "valid_from": entity.get("valid_from", None).replace("Z", "000Z"),
+            "valid_until": entity.get("valid_until", None).replace("Z", "000Z"),
             "enable_detection": entity.get("x_opencti_detection", None),
             "original_pattern": entity.get("pattern", None),
             "pattern_type": entity.get("pattern_type", None),
-            "created_at": entity.get("created_at", None),
-            "updated_at": entity.get("created_at", None),
+            "created_at": entity.get("created_at", None).replace("Z", "000Z"),
+            "updated_at": entity.get("created_at", None).replace("Z", "000Z"),
             "revoked": entity.get("revoked", None),
         }
 
@@ -422,9 +424,9 @@ class IntelManager(object):
             _document["threatintel"]["indicator"] = _indicator
 
         else:
-            logger.warning(
-                f"Unsupported indicator pattern type: {entity['pattern_type']}. Skipping."
-            )
+            # logger.warning(
+            #     f"Unsupported indicator pattern type: {entity['pattern_type']}. Skipping."
+            # )
             return {}
 
         _document = remove_nones(_document)
@@ -461,9 +463,9 @@ class IntelManager(object):
         _result: dict = {}
 
         if data["type"] != "indicator":
-            logger.error(
-                f"Data type unsupported: {data['type']}. Only 'indicator' types are currently supported."
-            )
+            # logger.debug(
+            #     f"Data type unsupported: {data['type']}. Only 'indicator' types are currently supported."
+            # )
             return None
 
         try:
@@ -484,7 +486,7 @@ class IntelManager(object):
         try:
             item = StixIndicator.parse_pattern(entity["pattern"])[0]
         except NotImplementedError as e:
-            logger.warning(e)
+            # logger.warning(e)
             return {}
 
         _indicator = item.get_ecs_indicator()

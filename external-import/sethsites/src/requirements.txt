@@ -1,0 +1,8 @@
+pycti==5.0.3
+urllib3==1.26.5
+certifi==2020.6.20
+elasticsearch==7.15.0
+elasticsearch-dsl==7.4.0
+ciso8601==2.2.0
+scalpl==0.4.2
+stix-pattern-translator==0.2.0

@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-dreamvalley:
+    image: onesites/connector-sethsites:5.0.1
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - OPENCTI_VERIFY_SSL=False
+      - CONNECTOR_ID=c3ee80ae-b796-4907-b1ef-171302548875
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=DreamValley OpenCTI Connector
+      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,tool,report,malware,location
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=debug
+      - CONNECTOR_INTERVAL=60
+      - DREAMVALLEY_ELASTICSEARCH_URL=https://connector:duck2021@192.168.0.4:9200
+      - SETHSITES_CLOUD_ID=OpenCTI_Injestion_Stack:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyQ3YWJkNTkxMjVhNTg0YzY0YjEzODVlZjcwMjgwZjVlZSQwMTQwOWFjYTFiOGY0NzEzYmFiMzIyNGMzY2Y5MGRlNA==
+      - SETHSITES_CLOUD_AUTH=connector:duck2021
+      - PING_SWEEP_TIME_SENSITIVITY=300
+      - PING_SWEEP_TARGET_SENSITIVITY=1
+    restart: always

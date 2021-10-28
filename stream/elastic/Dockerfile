@@ -31,6 +31,7 @@ FROM base as runtime
 RUN apt-get update && apt-get install -y libmagic1 && apt-get clean
 COPY --from=builder /runtime /runtime
 
+COPY elastic/config.yml /runtime/bin/config.yml
 # Expose and entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh

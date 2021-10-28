@@ -14,15 +14,7 @@ from .utils import parse_duration
 logger = getLogger(LOGGER_NAME)
 
 DEFAULT_QUERY = """
-{
-  "query": {
-    "bool": {
-      "must": {
-        "match": { "signal.rule.type": "threat_match" }
-      }
-    }
-  }
-}
+{"query": {"bool": {"must": {"match": { "signal.rule.type": "threat_match" }}}}}
 """
 
 DEFAULT_LOOKBACK = "5m"

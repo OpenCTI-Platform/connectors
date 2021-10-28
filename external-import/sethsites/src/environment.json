@@ -1,0 +1,344 @@
+{
+  "author": {
+    "id": "identity--cd89900f-fa90-5b71-adbd-3282ca110371",
+    "name": "SethSites OpenCTI Connector"
+  },
+  "report": {
+    "id": "report--51becfd7-ecaf-5e97-bd42-96fb3055394d",
+    "name": "APT777 at DreamValley",
+    "description": ""
+  },
+  "cities": [{
+    "name": "DreamValley",
+    "id": "location--22a91047-8dff-5b0b-85d2-3f4fac7a2299",
+    "longitude": 30.7542,
+    "latitude": 86.5728,
+    "networks": [
+      {
+        "id": "ipv4-addr--917982a3-e26b-5ac0-801b-e08d3c581573",
+        "ip_range": "192.168.51.0/24",
+        "public": "true",
+        "internet": "true",
+        "wifi": "FREE_PUBLIC_WIFI",
+        "ignore": "false"
+      },
+      {
+        "id": "ipv4-addr--cf0964ea-3282-5eea-940a-0a047bfbb66b",
+        "ip_range": "192.168.50.0/24",
+        "public": "false",
+        "internet": "true",
+        "wifi": "",
+        "ignore": "false",
+        "sectors": ["DreamValley Information Technology"]
+      },
+      {
+        "id": "ipv4-addr--6e2b6bfc-a048-511f-a85a-724fff023465",
+        "ip_range": "192.168.60.0/24",
+        "public": "false",
+        "internet": "true",
+        "wifi": "",
+        "ignore": "false",
+        "sectors": ["DreamValley Critical Manufacturing"]
+      },
+      {
+        "id": "ipv4-addr--f3e85cb3-ce2e-5b1c-84c5-11ac4fe68e16",
+        "ip_range": "192.168.127.0/24",
+        "public": "false",
+        "internet": "true",
+        "wifi": "PORTAUTHORITY",
+        "ignore": "false",
+        "sectors": ["DreamValley Government Facilities"]
+      },
+      {
+        "id": "ipv4-addr--75692e6b-a1c3-5dd1-aed7-969d0ff6aa6e",
+        "ip_range": "10.3.141.0/24",
+        "public": "false",
+        "internet": "true",
+        "wifi": "FRENEMYDPW_OPS",
+        "ignore": "false",
+        "sectors": ["DreamValley Commercial Facilities"]
+      },
+      {
+        "id": "ipv4-addr--a60df3d7-3816-529e-b647-6b47d63f7976",
+        "ip_range": "10.15.0.0/24",
+        "public": "false",
+        "internet": "true",
+        "ignore": "false",
+        "sectors": ["DreamValley Information Technology"]
+      },
+      {
+        "id": "ipv4-addr--9486b3e5-ebcf-537d-807d-710feff3ef50",
+        "ip_range": "10.112.0.0/24",
+        "public": "false",
+        "internet": "true",
+        "ignore": "false",
+        "sectors": ["DreamValley Information Technology"]
+      },
+      {
+        "id": "ipv4-addr--a4920a41-d6c9-5076-9c39-821534ae5294",
+        "ip_range": "10.113.0.0/24",
+        "public": "false",
+        "internet": "true",
+        "ignore": "false",
+        "sectors": ["DreamValley Information Technology"]
+      },
+      {
+        "id": "ipv4-addr--7e37e337-cdd0-55cc-a6a5-88efafa6b2f3",
+        "ip_range": "192.168.40.0/24",
+        "public": "false",
+        "internet": "true",
+        "ignore": "true"
+      },
+      {
+        "id": "ipv4-addr--4351ea92-6d12-587e-9a70-3efbd5f683be",
+        "ip_range": "172.16.31.0/24",
+        "public": "false",
+        "internet": "true",
+        "ignore": "true"
+      }
+    ],
+    "sectors": [
+      {
+        "name": "DreamValley Chemical",
+        "id": "identity--ee716e03-0b33-506c-ae38-460e11d1ca4c",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Commercial Facilities",
+        "id": "identity--818f712e-f9a3-5e24-89bc-27283cadd14f",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Critical Manufacturing",
+        "id": "identity--a18a3229-3a7b-50a8-ad50-1383dee7e1fc",
+        "hosts": [
+          {
+            "desc": "DoBot Conveyor",
+            "id": "ipv4-addr--c49b48c7-9bc0-561b-8123-3e96203abffb",
+            "ip_address": "192.168.60.90",
+            "roles": ["http", "https"]
+          },
+          {
+            "desc": "Water Tank Controller",
+            "id": "ipv4-addr--657f2461-763d-5745-a279-a546b0d5ff19",
+            "ip_address": "192.168.60.60",
+            "roles": ["http", "ftp"]
+          },
+          {
+            "desc": "Siemens S7 1200 Conveyor/Sorting",
+            "id": "ipv4-addr--b5b1cbdd-5ec3-5832-836e-1010de10673b",
+            "ip_address": "192.168.60.201",
+            "roles": []
+          },
+          {
+            "desc": "Siemens Simatic HMI",
+            "id": "ipv4-addr--2aae1830-d5c4-5a4c-b30c-84f89d4e4257",
+            "ip_address": "192.168.60.202",
+            "roles": ["http", "https"]
+          },
+          {
+            "desc": "Siemens Simatic HMI (Totalfactory.io)",
+            "id": "ipv4-addr--b2f13199-8a22-5e22-ac9e-e704267d3e75",
+            "ip_address": "192.168.60.102",
+            "roles": ["http", "https"]
+          },
+          {
+            "desc": "Totalfactory.io Windows 10",
+            "id": "ipv4-addr--26a79f48-7d37-5ab3-8f1d-207d7b2c2b29",
+            "ip_address": "192.168.60.117",
+            "roles": []
+          },
+          {
+            "desc": "Log (Kibana) Server",
+            "id": "ipv4-addr--da10ec52-53e5-5dec-b055-5ad5720695c9",
+            "ip_address": "192.168.60.6",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "name": "DreamValley Dams",
+        "id": "identity--2db2abae-2cf0-5aa5-8a76-f9fc8899ac5e",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Defense Industrial Base",
+        "id": "identity--e47a4eb2-7d7a-5a6a-83c2-d2e3ab4b74f7",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Emergency Services",
+        "id": "identity--54e5768f-608a-5363-a951-5cd37983714e",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Energy",
+        "id": "identity--8dbc667f-e696-5b38-92e6-482cd3d9ee0e",
+        "hosts": [
+          {
+            "desc": "Mitsubishi FX3GE-24M Electric Grid",
+            "id": "ipv4-addr--865dbf92-ff5d-5f01-bead-d3beffb521cd",
+            "ip_address": "192.168.50.225",
+            "roles": ["melsec", "http"]
+          }
+        ]
+      },
+      {
+        "name": "DreamValley Financial Services",
+        "id": "identity--0a85943c-2934-5b3a-9464-d0741e36d3d7",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Food and Agriculture",
+        "id": "identity--288a2b88-9d0c-5e1f-9025-2886969a2e3e",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Government Facilities",
+        "id": "identity--171cb82c-87e7-598e-a8be-dd1494819e1e",
+        "hosts": [
+          {
+            "desc": "SATS",
+            "id": "ipv4-addr--66a2b6aa-e0cd-596e-a2ea-25bbb26a3c2b",
+            "ip_address": "192.168.127.67",
+            "roles": ["http"]
+          },
+          {
+            "desc": "Crane PLC",
+            "id": "ipv4-addr--628d766d-d533-59cc-a474-910ec9abbb44",
+            "ip_address": "192.168.127.82",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "name": "DreamValley Healthcare and Public Health",
+        "id": "identity--66b616c1-2417-556d-bd57-7f068e369a3f",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Information Technology",
+        "id": "identity--1b8927ed-9afe-55a7-ac2b-a2cd637f4e9d",
+        "hosts": [
+          {
+            "desc": "Windows Event Collector",
+            "id": "ipv4-addr--d9a7d040-dbf7-598e-aede-a154366156a7",
+            "hostname": "winevtcollector.doc.renemydpw.com",
+            "ip_address": "10.113.0.200",
+            "roles": ["syslog"]
+          },
+          {
+            "desc": "DNSMASQ (DNS) - Raspbian10",
+            "id": "ipv4-addr--b6668a25-1b0f-5f3c-adbd-b45174e41ae1",
+            "ip_address": "192.168.51.205",
+            "roles": ["dns"]
+          },
+          {
+            "desc": "City Ops Wifi hostapd",
+            "id": "ipv4-addr--ab0c5e15-896b-50cc-a9af-b13bfd19f164",
+            "ip_address": "10.3.141.254",
+            "roles": ["wifi"]
+          },
+          {
+            "desc": "Cisco IE3300 Industrial Switch",
+            "id": "ipv4-addr--e9052229-b434-5696-bb64-e1b9f3721383",
+            "ip_address": "192.168.50.1",
+            "roles": []
+          },
+          {
+            "desc": "Operator Workstation",
+            "id": "ipv4-addr--ff47808a-dc15-51b8-accc-a154d2550fb5",
+            "ip_address": "192.168.50.45",
+            "roles": ["rdp"]
+          },
+          {
+            "desc": "Kepware OPCUAQNet",
+            "id": "ipv4-addr--92e4dc55-131c-5ca1-9d3e-7a42b706e344",
+            "ip_address": "192.168.50.148",
+            "roles": ["modbus master"]
+          },
+          {
+            "desc": "Kepware OPCUAQNet Historian",
+            "id": "ipv4-addr--46d1137e-af6c-52bc-a45c-bb793e1ed62e",
+            "ip_address": "192.168.50.248",
+            "roles": ["modbus master"]
+          },
+          {
+            "desc": "Weintek CMT-SRV-102 HMI",
+            "id": "ipv4-addr--4429faa4-3fc7-54d5-8e05-a271df116a4c",
+            "ip_address": "192.168.50.249",
+            "roles": ["ping master"]
+          }
+        ]
+      },
+      {
+        "name": "DreamValley Nuclear Reactors, Materials, and Waste",
+        "id": "identity--c2946188-43ed-514c-ac8f-bad65198c4d6",
+        "hosts": []
+      },
+      {
+        "name": "DreamValley Transportation Systems",
+        "id": "identity--bb3f3eaa-5a9d-5f8b-8e4b-dd7fe92f854e",
+        "hosts": [
+          {
+            "desc": "Allen Bradley MicroLogix 1100 - Self driving beltway",
+            "id": "ipv4-addr--69e1a6b6-af9d-5309-aa9f-5732971b30a0",
+            "ip_address": "192.168.50.59",
+            "roles": ["modbus server"]
+          },
+          {
+            "desc": "Allen Bradley MicroLogix 1100 - Traffic Light Controller #2",
+            "id": "ipv4-addr--efbd5752-790d-5a42-b668-403607888935",
+            "ip_address": "192.168.50.58",
+            "roles": ["modbus server"]
+          },
+          {
+            "desc": "Schneider M221 TM221CE-16R - Traffic Light Controller #1",
+            "id": "ipv4-addr--ac4d3131-5b04-57b4-8b1b-39b8f7f6b637",
+            "ip_address": "192.168.50.228",
+            "roles": ["modbus server"]
+          },
+          {
+            "desc": "Schneider M221 TM221CE-16R - Traffic Light Controller #3",
+            "id": "ipv4-addr--cd3ae255-96f9-5ebb-959a-50de5a576245",
+            "ip_address": "192.168.50.223",
+            "roles": ["modbus server"]
+          }
+        ]
+      },
+      {
+        "name": "DreamValley Water and Wastewater Systems",
+        "id": "identity--e97d6ed5-2d42-5a58-9141-d39d45ab0556",
+        "hosts": [
+          {
+            "desc": "UniPi Axon 5205 Sewage Controller",
+            "id": "ipv4-addr--6a015fdc-44a1-5a72-acf2-2bc9c22ef03b",
+            "ip_address": "192.168.50.106",
+            "roles": ["modbus server"]
+          },
+          {
+            "desc": "UniPi Lake Controller & Ferris Wheel",
+            "id": "ipv4-addr--dcf4c9d1-4eab-5f04-9ca2-cf0ecd5c42e0",
+            "ip_address": "192.168.50.237",
+            "roles": ["modbus server"]
+          }
+        ]
+      }
+    ]
+
+  }],
+  "threats": [
+    {
+      "id": "threat-actor--e2e7a58e-b57a-5832-b0e3-aab6f4d93c41",
+      "name": "DreadRiver",
+      "description": "DreadRiver",
+      "intrusion_sets": [
+        {
+          "id": "intrusion-set--e15bbb83-5e7b-56e5-a1cc-6f3a1948b432",
+          "name": "APT777",
+          "description": "APT777 is a threat group that has been attributed to DreadRiver.  DreadRiver has reportedly been attacking multiple cities."
+        }
+      ]
+    }
+  ]
+}

@@ -8,30 +8,33 @@ defaults: dict = {
     "connector": {
         "id": None,
         "type": "EXTERNAL_IMPORT",
-        "name": "SethSites OpenCTI Connector",
-        "scope": "identity,attack-pattern,course-of-action,intrusion-set,tool,report,malware,location",
+        "name": "Elastic CTI Connector",
+        "scope": "elasticsearch",
         "confidence_level": 80,
         "log_level": "INFO",
         "entity_description": "Elastic detection engine results via connector",
         "entity_name": "Elastic CTI Cluster",
-        "reload_environment": False,
-        "interval": 300
     },
     "client": {
-        "name": "",
+        "name": None,
         "cloud": {"auth": None, "id": None},
         "elasticsearch": {
             "hosts": ["localhost:9200"],
             "ssl_verify": True,
             "username": None,
             "password": None,
-            "api_key": None
+            "api_key": None,
         }
     },
     "scanner": {
         "ping": {
             "time_sensitivity": 300,
-            "target_sensitivity": 2
+            "target_sensitivity": 2,
+        }
+    },
+    "manager": {
+        "incident": {
+            "buffer_time": 60,
         }
     }
 }

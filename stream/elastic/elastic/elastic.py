@@ -111,10 +111,11 @@ class ElasticConnector:
             )
             self.elasticsearch = Elasticsearch(
                 hosts=self.config.get("output.elasticsearch.hosts", ["localhost:9200"]),
-                verify_certs=self.config.get("output.elasticsearch.ssl_verify", True),
+                verify_certs=False,
                 http_auth=_httpauth,
                 api_key=_apikey,
             )
+            # verify_certs=self.config.get("output.elasticsearch.ssl_verify", True),
 
         logger.info("Connected to Elasticsearch")
 
@@ -140,9 +141,12 @@ class ElasticConnector:
 
     def _process_message(self, msg) -> None:
         logger.debug("_process_message")
+        logger.debug(f"{msg}")
 
         try:
             event_id = msg.id
+            if event_id is None:
+                return
             timestamp = datetime.fromtimestamp(
                 round(int(event_id.split("-")[0]) / 1000), tz=timezone.utc
             )

@@ -1,0 +1,22 @@
+{
+  "public-private": [
+    {
+      "name": "Ping from public to private",
+      "id": "",
+      "pattern": "[network-traffic:dst_ref.type = 'ipv4-addr' AND network-traffic:src_ref.type = 'ipv4-addr' AND network-traffic:src_ref.value = '{public_range}' AND network-traffic:dst_ref.value = '{private_range}' AND network-traffic:protocols[*] = 'icmp'"
+    }
+  ],
+  "public": [
+    {
+      "id": "",
+      "pattern": ""
+    }
+  ],
+  "private": [
+    {
+      "name": "Unauthorized modbus traffic",
+      "id": "",
+      "pattern": "[network-traffic:dst_port = '502' AND network-traffic:protocols[*] = 'tcp' AND network-traffic:src_ref.value != '{modbus_master}']"
+    }
+  ]
+}

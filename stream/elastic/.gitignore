@@ -1,4 +1,4 @@
-config.yml
+elastic/config.yml
 __pycache__
 logs
 *.gql
