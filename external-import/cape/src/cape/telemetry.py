@@ -1,3 +1,5 @@
+import sentry_sdk
+from sentry_sdk.api import capture_exception, capture_message
 from stix2.v21.bundle import Bundle
 from stix2.v21.common import ExternalReference
 from stix2.v21.observables import File, NetworkTraffic, WindowsRegistryKey
@@ -22,6 +24,7 @@ from stix2.v21 import (
     DomainName,
     Process,
     Relationship,
+    Malware
 )
 
 
@@ -55,13 +58,15 @@ class openCTIInterface:
 
         self.processAndSubmit()  # This is where the magic happens
 
-    def get_or_create_label(self, label):
+    def get_or_create_label(self, labelValue):
         labels = self.octiLabels
         for labelX in labels:
-            if label.lower() == labelX["value"].lower():
+            if labelValue.lower() == labelX["value"].lower():
                 return labelX["id"]
+
         try:
-            label = self.API.label.create(value=label)
+            self.helper.log_error("[+] CREATING LABEL " + labelValue)
+            label = self.API.label.create(value=labelValue)
         except:
             return None
         return label["id"]
@@ -354,8 +359,8 @@ class openCTIInterface:
             reportLabels.append(report.detections)
 
         labelIDs = []
-        for label in reportLabels:
-            labelIDs.append(self.get_or_create_label(label))
+        for labelx in reportLabels:
+            labelIDs.append(self.get_or_create_label(labelx))
 
         report = Report(
             name=name,
@@ -378,7 +383,8 @@ class openCTIInterface:
                     "values": [TTP.ttp],
                 }
             )
-        except:
+        except Exception as e:
+            capture_exception(e)
             return None
 
         return ATP
@@ -389,22 +395,26 @@ class openCTIInterface:
             TTP: cuckooReportTTP
             TTPX = self.Get_TTP(TTP)
             if TTPX:
-                ATPs.append(self.Get_TTP(TTPX))
+                ATPs.append(TTPX)
 
         return ATPs
 
     def Get_Malware(self, Detection: str):
         try:
-            Malware = self.API.malware.read(
+            MalwareX = self.API.malware.read(
                 filters={
                     "key": "name",
                     "values": [Detection],
                 }
             )
-        except:
+        except Exception as e:
+            capture_exception(e)
             return None
 
-        return Malware
+        if not MalwareX:
+            MalwareX = Malware(name=Detection, is_family=False)
+        
+        return MalwareX
 
     def get_related(
         self,
@@ -419,7 +429,11 @@ class openCTIInterface:
     ):
         IDs = []
 
-        IDs.append(Malware)
+        if Malware:
+            if isinstance(Malware,dict):
+                IDs.append(Malware["standard_id"])
+            else:
+                IDs.append(Malware)
 
         for ip in ips:
             IDs.append(ip)
@@ -435,7 +449,7 @@ class openCTIInterface:
 
         for ATP in AttackPatterns:
             if ATP:
-                IDs.append(ATP)
+                IDs.append(ATP['standard_id'])
 
         if reg_keys:
             for key in reg_keys:
@@ -533,6 +547,12 @@ class openCTIInterface:
                 except:
                     IDx = ID
                 if IDx:
+                    sentry_sdk.set_context("ID Data",
+                        {
+                            "IDx": IDx,
+                            "ID": ID
+                        }
+                    )
                     payload_relations.append(
                         Relationship(
                             relationship_type="related-to",
@@ -545,14 +565,19 @@ class openCTIInterface:
                     Relationship(
                         relationship_type="related-to",
                         source_ref=payload[0].id,
-                        target_ref=ATP,
+                        target_ref=ATP["standard_id"],
                     )
                 )
             if Malware:
+                if 'standard_id' in Malware:
+                    ID = Malware['standard_id']
+                else:
+                    ID = Malware['id']
+
                 Relationship(
                     relationship_type="related-to",
                     source_ref=payload[0].id,
-                    target_ref=Malware.id,
+                    target_ref=ID,
                 )
 
             IDs.append(payload[0])  # Add Observeable
@@ -561,7 +586,7 @@ class openCTIInterface:
             bundle_ids.append(payload[1])
             payload_relations.append(payload[2])
 
-        if int(self.report.info.score) >= self.ReportScore:
+        if int(self.report.malscore) >= self.ReportScore:
             # Create Report and link All ATPs/Cyber Obs/Payload
             report = self.createCuckooReport(self.report, IDs, ext_ref)
             b = Bundle(
