@@ -13,6 +13,7 @@ from cape.cape import (
     cuckooReportTCPUDP,
     cuckooReportTarget,
     cuckooReportTTP,
+    cuckooTarget,
 )
 from datetime import datetime
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
@@ -106,7 +107,7 @@ class openCTIInterface:
         return f"[{IOCTypes[TYPE.upper()]['prefix']}='{IOC.upper()}']"
 
     # STIX-erize IP info
-    def createIPObs(self, hosts) -> list(IPv4Address):
+    def createIPObs(self, hosts):
         IPObs = []
         for host in hosts:
             host: cuckooReportHost
@@ -140,7 +141,7 @@ class openCTIInterface:
                 DNSind = Indicator(
                     name=host.domain, pattern=STIXPattern, pattern_type="stix"
                 )
-                STIXPattern = self.getStixPattern(host["ip"], "ipv4")
+                STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
                     name=host.ip, pattern=STIXPattern, pattern_type="stix"
                 )
@@ -234,7 +235,7 @@ class openCTIInterface:
 
     def createNetTrafficBlock(
         self, traffic: cuckooReportTCPUDP, protocol
-    ) -> NetworkTraffic:
+    ):
         srcIP = IPv4Address(value=traffic.src)
         dstIP = IPv4Address(value=traffic.dst)
         traffic = NetworkTraffic(
@@ -269,13 +270,13 @@ class openCTIInterface:
 
         return {"TCP": TCPCons, "UDP": UDPCons, "ICMP": ICMPCons}
 
-    def createPrimaryBinary(self, file: cuckooReportTarget, external_references):
+    def createPrimaryBinary(self, file:cuckooTarget, external_references):
         hashes = {
-            "MD5": file.file.md5.upper(),
-            "SHA-1": file.file.sha1.upper(),
-            "SHA-256": file.file.sha256.upper(),
-            "SHA-512": file.file.sha512.upper(),
-            "SSDEEP": file.file.ssdeep.upper(),
+            "MD5": file.md5.upper(),
+            "SHA-1": file.sha1.upper(),
+            "SHA-256": file.sha256.upper(),
+            "SHA-512": file.sha512.upper(),
+            "SSDEEP": file.ssdeep.upper(),
         }
 
         STIXPattern = self.getStixPattern(file.sha256, "sha256")
@@ -289,7 +290,7 @@ class openCTIInterface:
 
         Filex = File(hashes=hashes, size=size, name=file.name, mime_type=file.type)
         ind = Indicator(
-            name=file.file.name,
+            name=file.name,
             pattern=STIXPattern,
             pattern_type="stix",
             external_references=external_references,
@@ -433,7 +434,8 @@ class openCTIInterface:
             IDs.append(db)
 
         for ATP in AttackPatterns:
-            IDs.append(ATP)
+            if ATP:
+                IDs.append(ATP)
 
         if reg_keys:
             for key in reg_keys:
@@ -517,45 +519,47 @@ class openCTIInterface:
             Malware,
         )
 
-        # Create Main binary and link All ATPs/Cyber Obs
-        payload = self.createPrimaryBinary(self.report.target.file, ext_ref)
-        payload_relations = []
-        bundle_ids = []
-        for ID in IDs:
-            try:
-                IDx = ID.id
-                bundle_ids.append(
-                    ID
-                )  # Get list for bundle w/o Attack Patterns that exisit
-            except:
-                IDx = ID
-            payload_relations.append(
+        if self.report.target.file:
+            # Create Main binary and link All ATPs/Cyber Obs
+            payload = self.createPrimaryBinary(self.report.target.file, ext_ref)
+            payload_relations = []
+            bundle_ids = []
+            for ID in IDs:
+                try:
+                    IDx = ID.id
+                    bundle_ids.append(
+                        ID
+                    )  # Get list for bundle w/o Attack Patterns that exisit
+                except:
+                    IDx = ID
+                if IDx:
+                    payload_relations.append(
+                        Relationship(
+                            relationship_type="related-to",
+                            source_ref=payload[0].id,
+                            target_ref=IDx,
+                        )
+                    )
+            for ATP in AttackPatterns:
+                payload_relations.append(
+                    Relationship(
+                        relationship_type="related-to",
+                        source_ref=payload[0].id,
+                        target_ref=ATP,
+                    )
+                )
+            if Malware:
                 Relationship(
                     relationship_type="related-to",
                     source_ref=payload[0].id,
-                    target_ref=IDx,
+                    target_ref=Malware.id,
                 )
-            )
-        for ATP in AttackPatterns:
-            payload_relations.append(
-                Relationship(
-                    relationship_type="related-to",
-                    source_ref=payload[0].id,
-                    target_ref=ATP,
-                )
-            )
-        if Malware:
-            Relationship(
-                relationship_type="related-to",
-                source_ref=payload[0].id,
-                target_ref=Malware,
-            )
 
-        IDs.append(payload[0])  # Add Observeable
-        IDs.append(payload[1])  # Add Indicator
-        bundle_ids.append(payload[0])
-        bundle_ids.append(payload[1])
-        payload_relations.append(payload[2])
+            IDs.append(payload[0])  # Add Observeable
+            IDs.append(payload[1])  # Add Indicator
+            bundle_ids.append(payload[0])
+            bundle_ids.append(payload[1])
+            payload_relations.append(payload[2])
 
         if int(self.report.info.score) >= self.ReportScore:
             # Create Report and link All ATPs/Cyber Obs/Payload

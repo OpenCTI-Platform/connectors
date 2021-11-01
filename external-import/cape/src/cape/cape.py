@@ -801,7 +801,7 @@ class cuckoo:
         EP = "tasks/list"
         Method = "GET"
         response = self._make_request(Method, EP)
-        return response.json()["tasks"]
+        return response.json()["data"]
 
     def getTaskIOCs(self, TaskID):
         EP = f"tasks/get/iocs/{TaskID}"

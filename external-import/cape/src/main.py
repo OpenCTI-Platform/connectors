@@ -1,11 +1,21 @@
 import os
 import time
 from datetime import datetime
+from sentry_sdk.api import capture_exception
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from cape.cape import cuckoo
+from cape.cape import cuckoo, cuckooReport
 from cape.telemetry import openCTIInterface
 
+import sentry_sdk
+sentry_sdk.init(
+    "https://eff449c4ca3e449c86df8de099352113@sentry.infosec-ops.com:8443/3",
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=1.0
+)
 
 class capeConnector:
     """Connector object"""
@@ -140,37 +150,38 @@ class capeConnector:
                 if not task["completed_on"]:
                     continue  # If task Has not completed Skip
 
-                try:
-                    if task["id"] > current_task:
-                        taskSummary = self.cape_api.getTaskReport(
-                            task["id"]
-                        )  # Pull Cape Report and Searilize
-                        if not taskSummary:
-                            continue  # If no report continue
-                        if not taskSummary.info:
-                            continue  # If no report.info continue - we really need this :)
+                #try:
+                if task["id"] > current_task:
+                    taskSummary = cuckooReport(self.cape_api.getTaskReport(
+                        task["id"]
+                    ))  # Pull Cape Report and Searilize
+                    if not taskSummary:
+                        continue  # If no report continue
+                    if not taskSummary.info:
+                        continue  # If no report.info continue - we really need this :)
 
-                        self.helper.log_info(f"Processing Task {taskSummary.info.id}")
-                        # Process and submit cape task as stix bundle
-                        openCTIInterface(
-                            taskSummary,
-                            self.helper,
-                            self.update_existing_data,
-                            [],
-                            self.create_indicators,
-                            self.cape_url,
-                            self.EnableNetTraffic,
-                            self.EnableRegKeys,
-                            self.report_score,
-                        )
-                        # Update last task pulled
-                        self.helper.set_state({"task": taskSummary.info.id})
-
-                        self.helper.log_info(f"Synced task {task['id']}")
-                except Exception as e:
-                    self.helper.log_error(
-                        f"An error Occured fetching task {task['id']}; {str(e)}"
+                    self.helper.log_info(f"Processing Task {taskSummary.info.id}")
+                    # Process and submit cape task as stix bundle
+                    openCTIInterface(
+                        taskSummary,
+                        self.helper,
+                        self.update_existing_data,
+                        [],
+                        self.create_indicators,
+                        self.cape_url,
+                        self.EnableNetTraffic,
+                        self.EnableRegKeys,
+                        self.report_score,
                     )
+                    # Update last task pulled
+                    self.helper.set_state({"task": taskSummary.info.id})
+
+                    self.helper.log_info(f"Synced task {task['id']}")
+                # except Exception as e:
+                #     capture_exception(e)
+                #     self.helper.log_error(
+                #         f"An error Occured fetching task {task['id']}; {str(e)}"
+                #     )
 
             self.helper.log_info("Finished grabbing Cape Reports")
 
