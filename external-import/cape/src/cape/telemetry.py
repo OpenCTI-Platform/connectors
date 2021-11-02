@@ -1,7 +1,7 @@
 import sentry_sdk
 from sentry_sdk.api import capture_exception, capture_message
 from stix2.v21.bundle import Bundle
-from stix2.v21.common import ExternalReference
+from stix2.v21.common import TLP_WHITE, ExternalReference
 from stix2.v21.observables import File, NetworkTraffic, WindowsRegistryKey
 from stix2.v21.sdo import Indicator, Report
 from cape.cape import (
@@ -24,7 +24,11 @@ from stix2.v21 import (
     DomainName,
     Process,
     Relationship,
-    Malware
+    Malware,
+    TLP_AMBER,
+    TLP_GREEN,
+    TLP_RED,
+    TLP_WHITE
 )
 
 
@@ -293,7 +297,7 @@ class openCTIInterface:
         except:
             pass
 
-        Filex = File(hashes=hashes, size=size, name=file.name, mime_type=file.type)
+        Filex = File(hashes=hashes, size=size, name=file.name, mime_type=file.type, )
         ind = Indicator(
             name=file.name,
             pattern=STIXPattern,
@@ -347,7 +351,7 @@ class openCTIInterface:
             desc = f"CAPE Sandbox Report {str(report.info.id)} - {report.target.file.name}\nAnalyzied File:\n  SHA256: {report.target.file.sha256}\n  SHA1:{report.target.file.sha1}\n  MD5:{report.target.file.md5}"
 
         conf = int(report.malscore * 100)
-        reportLabels = ["sandbox"]
+        reportLabels = ["sandbox", f"Score: {str(report.malscore)}"]
 
         if conf > 100:
             conf = 100
@@ -362,6 +366,18 @@ class openCTIInterface:
         for labelx in reportLabels:
             labelIDs.append(self.get_or_create_label(labelx))
 
+        tlps = []
+
+        if report.info.tlp:
+            if "GREEN" in report.info.tlp:
+                tlps.append(TLP_GREEN['id'])
+            elif "WHITE" in report.info.tlp:
+                tlps.append(TLP_WHITE['id'])
+            elif "AMBER" in report.info.tlp:
+                tlps.append(TLP_AMBER['id'])
+            elif "RED" in report.info.tlp:
+                tlps.append(TLP_RED['id'])
+        
         report = Report(
             name=name,
             report_types="sandbox-report",
@@ -370,7 +386,7 @@ class openCTIInterface:
             description=desc,
             external_references=external_refs,
             confidence=conf,
-            labels=labelIDs,
+            labels=reportLabels,
         )
 
         return report

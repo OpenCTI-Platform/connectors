@@ -12,7 +12,10 @@ class cuckooMachine:
     def __init__(self, json):
         self.json = json
         # Get Basic info
-        self.label = self.json["label"]
+        if "label" in self.json:
+            self.label = self.json["label"]
+        else:
+            self.label = ""
         self.manager = self.json["manager"]
         self.name = self.json["name"]
         self.shutdown_on = self.json["shutdown_on"]
