@@ -3,4 +3,4 @@
 
 from cape.cape import cuckoo
 
-__all__ = ["cape"]
+__all__ = ["cuckoo"]

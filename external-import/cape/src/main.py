@@ -1,21 +1,20 @@
-import os
-import time
+import os, time, yaml
 from datetime import datetime
 from sentry_sdk.api import capture_exception
-import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from cape.cape import cuckoo, cuckooReport
 from cape.telemetry import openCTIInterface
 
 import sentry_sdk
+
 sentry_sdk.init(
     "https://eff449c4ca3e449c86df8de099352113@sentry.infosec-ops.com:8443/3",
-
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for performance monitoring.
     # We recommend adjusting this value in production.
-    traces_sample_rate=1.0
+    traces_sample_rate=1.0,
 )
+
 
 class capeConnector:
     """Connector object"""
@@ -152,9 +151,9 @@ class capeConnector:
 
                 try:
                     if task["id"] > current_task:
-                        taskSummary = cuckooReport(self.cape_api.getTaskReport(
-                            task["id"]
-                        ))  # Pull Cape Report and Searilize
+                        taskSummary = cuckooReport(
+                            self.cape_api.getTaskReport(task["id"])
+                        )  # Pull Cape Report and Searilize
                         if not taskSummary:
                             continue  # If no report continue
                         if not taskSummary.info:

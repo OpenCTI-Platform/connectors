@@ -1,9 +1,7 @@
 import sentry_sdk
-from sentry_sdk.api import capture_exception, capture_message
-from stix2.v21.bundle import Bundle
-from stix2.v21.common import TLP_WHITE, ExternalReference
-from stix2.v21.observables import File, NetworkTraffic, WindowsRegistryKey
-from stix2.v21.sdo import Indicator, Report
+from sentry_sdk.api import capture_exception
+from datetime import datetime
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from cape.cape import (
     cuckooPayload,
     cuckooReport,
@@ -13,22 +11,26 @@ from cape.cape import (
     cuckooReportNetwork,
     cuckooReportProcess,
     cuckooReportTCPUDP,
-    cuckooReportTarget,
     cuckooReportTTP,
     cuckooTarget,
 )
-from datetime import datetime
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import (
     IPv4Address,
     DomainName,
     Process,
     Relationship,
     Malware,
+    ExternalReference,
+    Bundle,
+    File,
+    NetworkTraffic,
+    WindowsRegistryKey,
+    Indicator,
+    Report,
     TLP_AMBER,
     TLP_GREEN,
     TLP_RED,
-    TLP_WHITE
+    TLP_WHITE,
 )
 
 
@@ -69,7 +71,6 @@ class openCTIInterface:
                 return labelX["id"]
 
         try:
-            self.helper.log_error("[+] CREATING LABEL " + labelValue)
             label = self.API.label.create(value=labelValue)
         except:
             return None
@@ -130,9 +131,7 @@ class openCTIInterface:
         return IPObs
 
     # STIX-erize DNS info
-    def createDNSObs(
-        self, DNSOBJ
-    ):
+    def createDNSObs(self, DNSOBJ):
         DNSObs = []
         DNSRel = []
         for host in DNSOBJ:
@@ -242,9 +241,7 @@ class openCTIInterface:
 
         return [grand, someObsecurechildren]
 
-    def createNetTrafficBlock(
-        self, traffic: cuckooReportTCPUDP, protocol
-    ):
+    def createNetTrafficBlock(self, traffic: cuckooReportTCPUDP, protocol):
         srcIP = IPv4Address(value=traffic.src)
         dstIP = IPv4Address(value=traffic.dst)
         traffic = NetworkTraffic(
@@ -264,9 +261,7 @@ class openCTIInterface:
         )
         return traffic
 
-    def createNetTrafficObs(
-        self, traffic: cuckooReportNetwork
-    ):
+    def createNetTrafficObs(self, traffic: cuckooReportNetwork):
         TCPCons, UDPCons, ICMPCons = [], [], []
         for packet in traffic.tcp:
             TCPCons.append(self.createNetTrafficBlock(packet, "tcp"))
@@ -279,7 +274,7 @@ class openCTIInterface:
 
         return {"TCP": TCPCons, "UDP": UDPCons, "ICMP": ICMPCons}
 
-    def createPrimaryBinary(self, file:cuckooTarget, external_references):
+    def createPrimaryBinary(self, file: cuckooTarget, external_references):
         hashes = {
             "MD5": file.md5.upper(),
             "SHA-1": file.sha1.upper(),
@@ -297,7 +292,12 @@ class openCTIInterface:
         except:
             pass
 
-        Filex = File(hashes=hashes, size=size, name=file.name, mime_type=file.type, )
+        Filex = File(
+            hashes=hashes,
+            size=size,
+            name=file.name,
+            mime_type=file.type,
+        )
         ind = Indicator(
             name=file.name,
             pattern=STIXPattern,
@@ -370,14 +370,14 @@ class openCTIInterface:
 
         if report.info.tlp:
             if "GREEN" in report.info.tlp:
-                tlps.append(TLP_GREEN['id'])
+                tlps.append(TLP_GREEN["id"])
             elif "WHITE" in report.info.tlp:
-                tlps.append(TLP_WHITE['id'])
+                tlps.append(TLP_WHITE["id"])
             elif "AMBER" in report.info.tlp:
-                tlps.append(TLP_AMBER['id'])
+                tlps.append(TLP_AMBER["id"])
             elif "RED" in report.info.tlp:
-                tlps.append(TLP_RED['id'])
-        
+                tlps.append(TLP_RED["id"])
+
         report = Report(
             name=name,
             report_types="sandbox-report",
@@ -429,7 +429,7 @@ class openCTIInterface:
 
         if not MalwareX:
             MalwareX = Malware(name=Detection, is_family=False)
-        
+
         return MalwareX
 
     def get_related(
@@ -446,7 +446,7 @@ class openCTIInterface:
         IDs = []
 
         if Malware:
-            if isinstance(Malware,dict):
+            if isinstance(Malware, dict):
                 IDs.append(Malware["standard_id"])
             else:
                 IDs.append(Malware)
@@ -465,7 +465,7 @@ class openCTIInterface:
 
         for ATP in AttackPatterns:
             if ATP:
-                IDs.append(ATP['standard_id'])
+                IDs.append(ATP["standard_id"])
 
         if reg_keys:
             for key in reg_keys:
@@ -563,12 +563,6 @@ class openCTIInterface:
                 except:
                     IDx = ID
                 if IDx:
-                    sentry_sdk.set_context("ID Data",
-                        {
-                            "IDx": IDx,
-                            "ID": ID
-                        }
-                    )
                     payload_relations.append(
                         Relationship(
                             relationship_type="related-to",
@@ -585,10 +579,10 @@ class openCTIInterface:
                     )
                 )
             if Malware:
-                if 'standard_id' in Malware:
-                    ID = Malware['standard_id']
+                if "standard_id" in Malware:
+                    ID = Malware["standard_id"]
                 else:
-                    ID = Malware['id']
+                    ID = Malware["id"]
 
                 Relationship(
                     relationship_type="related-to",
