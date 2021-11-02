@@ -1,5 +1,3 @@
-import sentry_sdk
-from sentry_sdk.api import capture_exception
 from datetime import datetime
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from cape.cape import (
@@ -399,8 +397,7 @@ class openCTIInterface:
                     "values": [TTP.ttp],
                 }
             )
-        except Exception as e:
-            capture_exception(e)
+        except:
             return None
 
         return ATP
@@ -423,8 +420,7 @@ class openCTIInterface:
                     "values": [Detection],
                 }
             )
-        except Exception as e:
-            capture_exception(e)
+        except:
             return None
 
         if not MalwareX:
