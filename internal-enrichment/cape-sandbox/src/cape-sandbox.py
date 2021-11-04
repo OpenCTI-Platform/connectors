@@ -566,7 +566,9 @@ class CapeSandboxConnector:
             "enforce_timeout": self.enforce_timeout,
         }
 
-        response_dict = self._create_file(files=files, analysis_options=analysis_options)
+        response_dict = self._create_file(
+            files=files, analysis_options=analysis_options
+        )
 
         task_id = response_dict["data"]["task_ids"][0]
         self.helper.log_info(f"Analysis {task_id} has started...")
@@ -680,7 +682,6 @@ class CapeSandboxConnector:
     def _is_ipv4_address(self, ip):
         m = re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)
         return bool(m) and all(map(lambda n: 0 <= int(n) <= 255, m.groups()))
-
 
     # Start the main loop
     def start(self):
