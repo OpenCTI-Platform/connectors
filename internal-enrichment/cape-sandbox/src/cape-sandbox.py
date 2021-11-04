@@ -9,6 +9,7 @@ import json
 import re
 import pyzipper
 import magic
+from urllib.parse import urlparse
 from retrying import retry
 
 from stix2 import Bundle, AttackPattern, Relationship, TLP_WHITE, Note
@@ -352,7 +353,7 @@ class CapeSandboxConnector:
                     address_list = config_dict[detection_name]["address"]
                     for address in address_list:
                         parsed = address.rsplit(":", 1)[0]
-                        if self._is_ipv4_address(address):
+                        if self._is_ipv4_address(parsed):
                             host_stix = SimpleObservable(
                                 id=OpenCTIStix2Utils.generate_random_stix_id(
                                     "x-opencti-simple-observable"
@@ -374,13 +375,14 @@ class CapeSandboxConnector:
                             bundle_objects.append(host_stix)
                             bundle_objects.append(relationship)
                         else:
+                            domain = urlparse(address).hostname
                             domain_stix = SimpleObservable(
                                 id=OpenCTIStix2Utils.generate_random_stix_id(
                                     "x-opencti-simple-observable"
                                 ),
                                 labels=[detection_name, "c2 server"],
-                                key="Url.value",
-                                value=address,
+                                key="Domain-Name.value",
+                                value=domain,
                                 created_by_ref=self.identity,
                                 object_marking_refs=[TLP_WHITE],
                             )
