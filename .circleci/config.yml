@@ -69,6 +69,10 @@ jobs:
           name: Build Docker image opencti/connector-cuckoo
           command: docker build -t opencti/connector-cuckoo:latest . && docker tag opencti/connector-cuckoo:latest opencti/connector-cuckoo:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/cape
+          name: Build Docker image opencti/connector-cape
+          command: docker build -t opencti/connector-cape:latest . && docker tag opencti/connector-cape:latest opencti/connector-cape:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/external-import/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
           command: docker build -t opencti/connector-cyber-threat-coalition:latest . && docker tag opencti/connector-cyber-threat-coalition:latest opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
@@ -226,6 +230,8 @@ jobs:
             docker push opencti/connector-cryptolaemus:${CIRCLE_TAG}
             docker push opencti/connector-cuckoo:latest
             docker push opencti/connector-cuckoo:${CIRCLE_TAG}
+            docker push opencti/connector-cape:latest
+            docker push opencti/connector-cape:${CIRCLE_TAG}
             docker push opencti/connector-cyber-threat-coalition:latest
             docker push opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
@@ -337,6 +343,10 @@ jobs:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
           command: docker build -t opencti/connector-cuckoo:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/cape
+          name: Build Docker image opencti/connector-cape
+          command: docker build -t opencti/connector-cape:rolling .
       - run:
           working_directory: ~/opencti/external-import/cyber-threat-coalition
           name: Build Docker image opencti/connector-cyber-threat-coalition
@@ -486,6 +496,7 @@ jobs:
             docker push opencti/connector-crowdstrike:rolling
             docker push opencti/connector-cryptolaemus:rolling
             docker push opencti/connector-cuckoo:rolling
+            docker push opencti/connector-cape:rolling
             docker push opencti/connector-cyber-threat-coalition:rolling
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-mitre:rolling
