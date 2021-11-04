@@ -200,7 +200,7 @@ class CapeSandboxConnector:
         if "procdump" in report and report["procdump"]:
 
             # Download the zip archive of procdump files
-            zip_contents = self.get_procdump_zip(task_id)
+            zip_contents = self._get_procdump_zip(task_id)
             zip_obj = io.BytesIO(zip_contents)
 
             # Extract with "infected" password
@@ -352,7 +352,7 @@ class CapeSandboxConnector:
                     address_list = config_dict[detection_name]["address"]
                     for address in address_list:
                         parsed = address.rsplit(":", 1)[0]
-                        if self.is_ipv4_address(address):
+                        if self._is_ipv4_address(address):
                             host_stix = SimpleObservable(
                                 id=OpenCTIStix2Utils.generate_random_stix_id(
                                     "x-opencti-simple-observable"
@@ -446,7 +446,7 @@ class CapeSandboxConnector:
         ):
 
             # Download the zip archive of payloads
-            zip_contents = self.get_payloads_zip(task_id)
+            zip_contents = self._get_payloads_zip(task_id)
             zip_obj = io.BytesIO(zip_contents)
 
             # Extract with "infected" password
@@ -566,7 +566,7 @@ class CapeSandboxConnector:
             "enforce_timeout": self.enforce_timeout,
         }
 
-        response_dict = self.create_file(files=files, analysis_options=analysis_options)
+        response_dict = self._create_file(files=files, analysis_options=analysis_options)
 
         task_id = response_dict["data"]["task_ids"][0]
         self.helper.log_info(f"Analysis {task_id} has started...")
@@ -577,7 +577,7 @@ class CapeSandboxConnector:
         while True:
 
             # Get the task's status
-            response_dict = self.get_status(task_id)
+            response_dict = self._get_status(task_id)
             status = response_dict["data"]
             error = response_dict["error"]
 
@@ -590,7 +590,7 @@ class CapeSandboxConnector:
             time.sleep(20)
 
         # Analysis is finished, process the report
-        response_dict = self.get_report(task_id)
+        response_dict = self._get_report(task_id)
 
         self.helper.log_info(f"Analysis {task_id} finished, processing report...")
         return self._send_knowledge(observable, response_dict)
@@ -628,7 +628,7 @@ class CapeSandboxConnector:
 
     # API helper methods with retry wrapping
     @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
-    def get_procdump_zip(self, task_id):
+    def _get_procdump_zip(self, task_id):
         response = requests.get(
             f"{self.cape_api_url}/tasks/get/procdumpfiles/{task_id}/",
             headers=self.headers,
@@ -638,7 +638,7 @@ class CapeSandboxConnector:
         return response_contents
 
     @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
-    def get_payloads_zip(self, task_id):
+    def _get_payloads_zip(self, task_id):
         response = requests.get(
             f"{self.cape_api_url}/tasks/get/payloadfiles/{task_id}/",
             headers=self.headers,
@@ -648,7 +648,7 @@ class CapeSandboxConnector:
         return response_contents
 
     @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
-    def get_report(self, task_id):
+    def _get_report(self, task_id):
         response = requests.get(
             f"{self.cape_api_url}/tasks/get/report/{task_id}/", headers=self.headers
         )
@@ -657,7 +657,7 @@ class CapeSandboxConnector:
         return response_dict
 
     @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
-    def get_status(self, task_id):
+    def _get_status(self, task_id):
         response = requests.get(
             f"{self.cape_api_url}/tasks/status/{task_id}/", headers=self.headers
         )
@@ -666,7 +666,7 @@ class CapeSandboxConnector:
         return response_dict
 
     @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
-    def create_file(self, files, analysis_options):
+    def _create_file(self, files, analysis_options):
         response = requests.post(
             f"{self.cape_api_url}/tasks/create/file/",
             headers=self.headers,
@@ -677,13 +677,14 @@ class CapeSandboxConnector:
         response_dict = response.json()
         return response_dict
 
+    def _is_ipv4_address(self, ip):
+        m = re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)
+        return bool(m) and all(map(lambda n: 0 <= int(n) <= 255, m.groups()))
+
+
     # Start the main loop
     def start(self):
         self.helper.listen(self._process_message)
-
-    def is_ipv4_address(self, ip):
-        m = re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)
-        return bool(m) and all(map(lambda n: 0 <= int(n) <= 255, m.groups()))
 
 
 if __name__ == "__main__":
