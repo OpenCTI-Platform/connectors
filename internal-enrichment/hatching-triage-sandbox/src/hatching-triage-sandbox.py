@@ -8,7 +8,6 @@ import json
 import re
 import magic
 import ipaddress
-from urllib.parse import urlparse
 from triage import Client
 
 from stix2 import (
@@ -133,9 +132,7 @@ class HatchingTriageSandboxConnector:
         extracted_label = self.helper.api.label.create(
             value="extracted", color=self.default_tag_color
         )
-        dropper_label = self.helper.api.label.create(
-            value="dropper", color=self.default_tag_color
-        )
+        self.helper.api.label.create(value="dropper", color=self.default_tag_color)
 
         # Process extracted key
         extracted_list = overview_dict.get("extracted", [])
@@ -209,7 +206,9 @@ class HatchingTriageSandboxConnector:
                         )
 
                         relationship = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "relationship"
+                            ),
                             relationship_type="related-to",
                             created_by_ref=self.identity,
                             source_ref=observable["standard_id"],
@@ -232,7 +231,9 @@ class HatchingTriageSandboxConnector:
                         )
 
                         relationship = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "relationship"
+                            ),
                             relationship_type="related-to",
                             created_by_ref=self.identity,
                             source_ref=observable["standard_id"],
@@ -275,7 +276,9 @@ class HatchingTriageSandboxConnector:
                     "mime_type": mime_type,
                     "x_opencti_description": f"Extracted file from sample ID {sample_id} and task ID {task_id}.",
                 }
-                response = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
+                response = self.helper.api.stix_cyber_observable.upload_artifact(
+                    **kwargs
+                )
 
                 # Create Relationship between original Observable and the extracted
                 relationship = Relationship(
@@ -313,7 +316,7 @@ class HatchingTriageSandboxConnector:
                         ),
                         labels=[dropper_type],
                         key="Url.value",
-                        value=url_dict["url"],
+                        value=url,
                         created_by_ref=self.identity,
                         object_marking_refs=[TLP_WHITE],
                     )
@@ -333,7 +336,10 @@ class HatchingTriageSandboxConnector:
                     )
 
         # Attach domains
-        domains = [task_dict.get("iocs").get("domains", []) for task_dict in overview_dict["targets"]]
+        domains = [
+            task_dict.get("iocs").get("domains", [])
+            for task_dict in overview_dict["targets"]
+        ]
         for domain in domains[0]:
             domain_stix = SimpleObservable(
                 id=OpenCTIStix2Utils.generate_random_stix_id(
