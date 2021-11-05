@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-hatching-triage-sandbox
 
 # Launch the worker
-python3 cape-sandbox.py
+python3 hatching-triage-sandbox.py
