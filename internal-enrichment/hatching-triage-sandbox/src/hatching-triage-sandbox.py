@@ -11,7 +11,13 @@ import ipaddress
 from urllib.parse import urlparse
 from triage import Client
 
-from stix2 import Bundle, AttackPattern, Relationship, TLP_WHITE, Note
+from stix2 import (
+    Bundle,
+    AttackPattern,
+    Relationship,
+    TLP_WHITE,
+    Note,
+)
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
@@ -122,130 +128,218 @@ class HatchingTriageSandboxConnector:
 
         # Create default labels
         self.helper.api.label.create(value="c2 server", color=self.default_tag_color)
+        self.helper.api.label.create(value="credentials", color=self.default_tag_color)
+        self.helper.api.label.create(value="dynamic", color=self.default_tag_color)
         extracted_label = self.helper.api.label.create(
             value="extracted", color=self.default_tag_color
         )
+        dropper_label = self.helper.api.label.create(
+            value="dropper", color=self.default_tag_color
+        )
 
-        # Process each malware config
-        # 1. Create Note
-        # 2. Attach IPs/Domains
-        extracted_configs = overview_dict["extracted"]
-        for config_dict in extracted_configs:
+        # Process extracted key
+        extracted_list = overview_dict.get("extracted", [])
+        for extracted_dict in extracted_list:
 
-            # Skip extracted files that don't have a config
-            if "config" not in config_dict:
-                self.helper.api.log_info("config key not found, skipping...")
-                continue
+            # Handle config
+            if "config" in extracted_dict:
 
-            if "rule" not in config_dict["config"]:
-                self.helper.api.log_info("rule key not found, skipping...")
-                continue
-
-            # Create a Note
-            config_json = json.dumps(config_dict, indent=2)
-            config_rule = config_dict["config"]["rule"]
-            note = Note(
-                abstract=f"{config_rule} Config",
-                content=f"```\n{config_json}\n```",
-                created_by_ref=self.identity,
-                object_refs=[observable["standard_id"]],
-            )
-            bundle_objects.append(note)
-
-            # Create Relationships for C2s
-            c2_list = config_dict["config"]["c2"]
-            for c2 in c2_list:
-                # Differentiate between C2 IP and URL
-                parsed = c2.split(":")[0]
-                key = "Domain-Name"
-                if self._is_ipv4_address(parsed):
-                    key = "IPv4-Addr"
-                else:
-                    parsed = urlparse(c2).hostname
-                host_stix = SimpleObservable(
-                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                        "x-opencti-simple-observable"
-                    ),
-                    labels=[config_rule, "c2 server"],
-                    key=f"{key}.value",
-                    value=parsed,
-                    created_by_ref=self.identity,
-                )
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
-                    relationship_type="communicates-with",
-                    created_by_ref=self.identity,
-                    source_ref=observable["standard_id"],
-                    target_ref=host_stix.id,
-                )
-                bundle_objects.append(host_stix)
-                bundle_objects.append(relationship)
-
-            # Download task file, wait for it to become available
-            # Give up after 5 tries
-            task_id = config_dict["tasks"][0]
-            filename = config_dict["dumped_file"]
-            file_contents = self.triage_client.sample_task_file(
-                sample_id, task_id, filename
-            )
-
-            for x in range(5):
-                # Sample not yet available, sleep
-                if b"NOT_AVAILABLE" in file_contents[:30]:
-                    time.sleep(10)
+                if "rule" not in extracted_dict["config"]:
+                    self.helper.api.log_info("rule key not found, skipping...")
                     continue
 
+                # Create a Note
+                config_json = json.dumps(extracted_dict, indent=2)
+                config_rule = extracted_dict["config"]["rule"]
+                note = Note(
+                    abstract=f"{config_rule} Config",
+                    content=f"```\n{config_json}\n```",
+                    created_by_ref=self.identity,
+                    object_refs=[observable["standard_id"]],
+                )
+                bundle_objects.append(note)
+
+                # Create Observables and Relationships for C2s
+                c2_list = extracted_dict.get("config").get("c2", [])
+                for c2 in c2_list:
+                    # Differentiate between C2 IP and URL
+                    parsed = c2.split(":")[0]
+                    key = "Url"
+                    relationship_type = "communicates-with"
+                    if self._is_ipv4_address(parsed):
+                        key = "IPv4-Addr"
+                    else:
+                        parsed = c2
+                        relationship_type = "related-to"
+                    host_stix = SimpleObservable(
+                        id=OpenCTIStix2Utils.generate_random_stix_id(
+                            "x-opencti-simple-observable"
+                        ),
+                        labels=[config_rule, "c2 server"],
+                        key=f"{key}.value",
+                        value=parsed,
+                        created_by_ref=self.identity,
+                    )
+                    relationship = Relationship(
+                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                        relationship_type=relationship_type,
+                        created_by_ref=self.identity,
+                        source_ref=observable["standard_id"],
+                        target_ref=host_stix.id,
+                    )
+                    bundle_objects.append(host_stix)
+                    bundle_objects.append(relationship)
+
+                # Create Observables and Relationships for credentials
+                creds_list = extracted_dict.get("config").get("credentials", [])
+                for cred_dict in creds_list:
+                    host = cred_dict.get("host", None)
+                    username = cred_dict.get("username")
+                    protocol = cred_dict.get("protocol")
+
+                    if host:
+                        host_stix = SimpleObservable(
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "x-opencti-simple-observable"
+                            ),
+                            labels=[config_rule, "credentials"],
+                            key="X-OpenCTI-Hostname.value",
+                            value=host,
+                            created_by_ref=self.identity,
+                        )
+
+                        relationship = Relationship(
+                            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                            relationship_type="related-to",
+                            created_by_ref=self.identity,
+                            source_ref=observable["standard_id"],
+                            target_ref=host_stix.id,
+                        )
+
+                        bundle_objects.append(host_stix)
+                        bundle_objects.append(relationship)
+
+                    if protocol == "smtp":
+                        # Add Email Address Observable
+                        host_stix = SimpleObservable(
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "x-opencti-simple-observable"
+                            ),
+                            labels=[config_rule, "credentials"],
+                            key="Email-Addr.value",
+                            value=username,
+                            created_by_ref=self.identity,
+                        )
+
+                        relationship = Relationship(
+                            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                            relationship_type="related-to",
+                            created_by_ref=self.identity,
+                            source_ref=observable["standard_id"],
+                            target_ref=host_stix.id,
+                        )
+
+                        bundle_objects.append(host_stix)
+                        bundle_objects.append(relationship)
+
+                # Download task file, wait for it to become available
+                # Give up after 5 tries
+                task_id = extracted_dict["tasks"][0]
+                filename = extracted_dict["dumped_file"]
                 file_contents = self.triage_client.sample_task_file(
                     sample_id, task_id, filename
                 )
 
-            if b"NOT_AVAILABLE" in file_contents[:30]:
-                self.helper.api.log_info(
-                    "Maximum attempts tried to obtain extracted file, skipping..."
+                for x in range(5):
+                    # Sample not yet available, sleep
+                    if b"NOT_AVAILABLE" in file_contents[:30]:
+                        time.sleep(10)
+                        continue
+
+                    file_contents = self.triage_client.sample_task_file(
+                        sample_id, task_id, filename
+                    )
+
+                if b"NOT_AVAILABLE" in file_contents[:30]:
+                    self.helper.api.log_info(
+                        "Maximum attempts tried to obtain extracted file, skipping..."
+                    )
+                    continue
+
+                # Upload task file to OpenCTI
+                mime_type = magic.from_buffer(file_contents, mime=True)
+
+                kwargs = {
+                    "file_name": f"{sample_id}_{filename}",
+                    "data": file_contents,
+                    "mime_type": mime_type,
+                    "x_opencti_description": f"Extracted file from sample ID {sample_id} and task ID {task_id}.",
+                }
+                response = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
+
+                # Create Relationship between original Observable and the extracted
+                relationship = Relationship(
+                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                    relationship_type="related-to",
+                    created_by_ref=self.identity,
+                    source_ref=response["standard_id"],
+                    target_ref=observable["standard_id"],
                 )
-                continue
+                bundle_objects.append(relationship)
 
-            # Upload task file to OpenCTI
-            mime_type = magic.from_buffer(file_contents, mime=True)
+                # Create and apply labels to extracted file
+                label = self.helper.api.label.create(
+                    value=config_rule, color=self.family_color
+                )
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=response["id"], label_id=label["id"]
+                )
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=response["id"], label_id=extracted_label["id"]
+                )
 
-            kwargs = {
-                "file_name": f"{sample_id}_{filename}",
-                "data": file_contents,
-                "mime_type": mime_type,
-                "x_opencti_description": f"Extracted file from sample ID {sample_id} and task ID {task_id}.",
-            }
-            response = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
+            # Handle dropper
+            if "dropper" in extracted_dict:
+                dropper_dict = extracted_dict["dropper"]
 
-            # Create Relationship between original Observable and the extracted
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
-                relationship_type="related-to",
-                created_by_ref=self.identity,
-                source_ref=response["standard_id"],
-                target_ref=observable["standard_id"],
-            )
-            bundle_objects.append(relationship)
+                # Create Url Observables and Relationships
+                dropper_urls = dropper_dict["urls"]
+                for url_dict in dropper_urls:
+                    dropper_type = url_dict["type"]
+                    url = url_dict["url"]
+                    url_stix = SimpleObservable(
+                        id=OpenCTIStix2Utils.generate_random_stix_id(
+                            "x-opencti-simple-observable"
+                        ),
+                        labels=[dropper_type],
+                        key="Url.value",
+                        value=url_dict["url"],
+                        created_by_ref=self.identity,
+                        object_marking_refs=[TLP_WHITE],
+                    )
+                    relationship = Relationship(
+                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                        relationship_type="related-to",
+                        created_by_ref=self.identity,
+                        source_ref=observable["standard_id"],
+                        target_ref=url_stix.id,
+                    )
+                    bundle_objects.append(url_stix)
+                    bundle_objects.append(relationship)
 
-            # Create and apply labels to extracted file
-            label = self.helper.api.label.create(
-                value=config_rule, color=self.family_color
-            )
-            self.helper.api.stix_cyber_observable.add_label(
-                id=response["id"], label_id=label["id"]
-            )
-            self.helper.api.stix_cyber_observable.add_label(
-                id=response["id"], label_id=extracted_label["id"]
-            )
+                    # Create dropper type label
+                    self.helper.api.label.create(
+                        value=dropper_type, color=self.default_tag_color
+                    )
 
         # Attach domains
-        domains = [
-            task_dict["iocs"]["domains"] for task_dict in overview_dict["targets"]
-        ]
+        domains = [task_dict.get("iocs").get("domains", []) for task_dict in overview_dict["targets"]]
         for domain in domains[0]:
             domain_stix = SimpleObservable(
                 id=OpenCTIStix2Utils.generate_random_stix_id(
                     "x-opencti-simple-observable"
                 ),
+                labels=["dynamic"],
                 key="Domain-Name.value",
                 value=domain,
                 created_by_ref=self.identity,
@@ -275,6 +369,7 @@ class HatchingTriageSandboxConnector:
                 id=OpenCTIStix2Utils.generate_random_stix_id(
                     "x-opencti-simple-observable"
                 ),
+                labels=["dynamic"],
                 key="IPv4-Addr.value",
                 value=ip,
                 created_by_ref=self.identity,
