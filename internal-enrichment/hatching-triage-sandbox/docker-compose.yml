@@ -12,12 +12,11 @@ services:
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
-
       - HATCHING_TRIAGE_SANDBOX_BASE_URL=https://api.tria.ge # Public URL, see https://tria.ge/docs/
       - HATCHING_TRIAGE_SANDBOX_TOKEN=ChangeMe # See https://tria.ge/account
-      - HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR # Label color for family
-      - HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR # Label color for botnet
-      - HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR # Label color for campaign
-      - HATCHING_TRIAGE_SANDBOX_TAG_COLOR # Label color for all other labels
+      - HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR=#0059f7 # Label color for family
+      - HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR=#f79e00 # Label color for botnet
+      - HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR=#7a01e5 # Label color for campaign
+      - HATCHING_TRIAGE_SANDBOX_TAG_COLOR=#54483b # Label color for all other labels
       - HATCHING_TRIAGE_SANDBOX_MAX_TLP=TLP:AMBER
     restart: always
