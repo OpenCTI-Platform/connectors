@@ -4,7 +4,6 @@ import os
 import yaml
 import time
 import magic
-import json
 from unpac_me_api_client import UnpacMeApi, UnpacMeStatus
 
 
@@ -16,7 +15,6 @@ from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     get_config_variable,
-    SimpleObservable,
 )
 
 
@@ -57,10 +55,7 @@ class UnpacMeConnector:
             ["unpac_me", "private"],
             config,
         )
-        self.unpacme_client = UnpacMeApi(
-            api_key=api_key,
-            user_agent=user_agent
-        )
+        self.unpacme_client = UnpacMeApi(api_key=api_key, user_agent=user_agent)
 
         # Other config settings
         self.family_color = get_config_variable(
@@ -102,8 +97,7 @@ class UnpacMeConnector:
 
         # Create default labels
         extracted_label = self.helper.api.label.create(
-            value="extracted",
-            color=self.default_tag_color
+            value="extracted", color=self.default_tag_color
         )
 
         # Parse the results
@@ -113,15 +107,15 @@ class UnpacMeConnector:
 
             # If less noise, check to ensure the files were identified as malware
             if self.less_noise:
-                self.helper.log_info(f"Less noise is enabled.")
+                self.helper.log_info("Less noise is enabled.")
                 if not result_dict["malware_id"]:
-                    self.helper.log_info(f"Skipping upload of {sha256} as it had no matching family.")
+                    self.helper.log_info(
+                        f"Skipping upload of {sha256} as it had no matching family."
+                    )
                     continue
 
             # Download the file
-            file_contents = self.unpacme_client.download(
-                sha256=sha256
-            )
+            file_contents = self.unpacme_client.download(sha256=sha256)
 
             # Upload as Artifact to OpenCTI
             mime_type = magic.from_buffer(file_contents, mime=True)
@@ -132,15 +126,11 @@ class UnpacMeConnector:
                 "mime_type": mime_type,
                 "x_opencti_description": "UnpacMe extracted file.",
             }
-            response = self.helper.api.stix_cyber_observable.upload_artifact(
-                **kwargs
-            )
+            response = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
 
             # Create Relationship between original and newly uploaded Artifact
             relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "relationship"
-                ),
+                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                 relationship_type="related-to",
                 created_by_ref=self.identity,
                 source_ref=response["standard_id"],
@@ -170,7 +160,6 @@ class UnpacMeConnector:
                 id=observable["id"], label_id=family_label["id"]
             )
 
-
         # Serialize and send all bundles
         if bundle_objects:
             bundle = Bundle(objects=bundle_objects).serialize()
@@ -185,16 +174,12 @@ class UnpacMeConnector:
             raise ValueError(f"No files found for {observable['observable_value']}")
 
         # Build the URI to download the file
-        file_name = observable["importFiles"][0]["name"]
         file_id = observable["importFiles"][0]["id"]
         file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
 
         # Submit sample for analysis
-        upload = self.unpacme_client.upload(
-            data=file_content,
-            private=self.private
-        )
+        upload = self.unpacme_client.upload(data=file_content, private=self.private)
 
         # Wait for the analysis to finish
         while True:
