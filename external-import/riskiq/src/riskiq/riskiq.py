@@ -46,6 +46,15 @@ class RiskIQConnector:
         password = get_config_variable(
             "RISKIQ_PASSWORD", ["riskiq", "password"], config
         )
+        # Create the author for all reports.
+        self.author = Identity(
+            name=self._DEFAULT_AUTHOR,
+            identity_class="organization",
+            description=" RiskIQ is a cyber security company based in San Francisco, California."
+            " It provides cloud - based software as a service(SaaS) for organizations"
+            " to detect phishing, fraud, malware, and other online security threats.",
+            confidence=self.helper.connect_confidence_level,
+        )
         # Initialization of the client
         self.client = RiskIQClient(self.base_url, user, password)
 
@@ -104,15 +113,6 @@ class RiskIQConnector:
     def run(self):
         """Run RiskIQ connector."""
         self.helper.log_info("Starting RiskIQ connector...")
-        # Create the author for all reports.
-        # Creating it as a member of the class does not seem to work...
-        author = Identity(
-            name=self._DEFAULT_AUTHOR,
-            identity_class="organization",
-            description=" RiskIQ is a cyber security company based in San Francisco, California."
-            " It provides cloud - based software as a service(SaaS) for organizations"
-            " to detect phishing, fraud, malware, and other online security threats.",
-        )
 
         while True:
             self.helper.log_info("Running RiskIQ connector...")
@@ -145,7 +145,9 @@ class RiskIQConnector:
 
                     if self.client.is_correct(response):
                         for article in response["articles"]:
-                            importer = ArticleImporter(self.helper, article, author)
+                            importer = ArticleImporter(
+                                self.helper, article, self.author
+                            )
                             importer_state = importer.run(work_id, current_state)
                             if importer_state:
                                 self.helper.log_info(
