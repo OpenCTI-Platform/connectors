@@ -1,0 +1,21 @@
+opencti:
+  url: 'ChangeMe'
+  token: 'ChangeMe'
+
+connector:
+  id: 'Intezer_Sandbox'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'IntezerSandbox'
+  scope: 'Artifact'
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+intezer_sandbox:
+  api_key: 'ChangeMe' # See https://analyze.intezer.com/account-details
+  family_color: '#0059f7' # Label color for malware family
+  malicious_color: '#d90e18' # Label color for malicious verdict
+  trusted_color: '#34a56f' # And so on...
+  unknown_color: '#ffff00'
+  suspicious_color: '#f79e00'
+  max_tlp: 'TLP:AMBER'

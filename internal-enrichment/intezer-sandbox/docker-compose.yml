@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-intezer-sandbox:
+    image: opencti/connector-intezer-sandbox:1.0.0
+    environment:
+      - OPENCTI_URL=ChangeMe
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=Intezer_Sandbox
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - "CONNECTOR_NAME=IntezerSandbox"
+      - CONNECTOR_SCOPE=Artifact
+      - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
+      - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - INTEZER_SANDBOX_API_KEY=ChangeMe # See https://analyze.intezer.com/account-details
+      - INTEZER_SANDBOX_FAMILY_COLOR=#0059f7 # Label color for family
+      - INTEZER_SANDBOX_MALICIOUS_COLOR=#d90e18 # Label color for malicious verdict
+      - INTEZER_SANDBOX_TRUSTED_COLOR=#d90e18 # And so on...
+      - INTEZER_SANDBOX_UNKNOWN_COLOR=#ffff00
+      - INTEZER_SANDBOX_SUSPICIOUS_COLOR=#f79e00
+      - INTEZER_SANDBOX_MAX_TLP=TLP:AMBER
+    restart: always
