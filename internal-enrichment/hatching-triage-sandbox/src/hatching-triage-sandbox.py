@@ -462,10 +462,14 @@ class HatchingTriageSandboxConnector:
                 existing_status = search["status"]
                 if existing_status == "reported":
                     sample_id = search["id"]
-                    self.helper.log_info(f'Found existing analysis with id {sample_id} and status {existing_status}.')
+                    self.helper.log_info(
+                        f"Found existing analysis with id {sample_id} and status {existing_status}."
+                    )
                 elif existing_status == "pending":
                     sample_id = search["id"]
-                    self.helper.log_info(f'Found existing analysis with id {sample_id} and status {existing_status}.')
+                    self.helper.log_info(
+                        f"Found existing analysis with id {sample_id} and status {existing_status}."
+                    )
                     self._wait_for_analysis(sample_id)
                 # Don't paginate, just get the first result
                 break
@@ -475,7 +479,9 @@ class HatchingTriageSandboxConnector:
             sample_json = self.triage_client.submit_sample_file(file_name, file_obj)
             sample_id = sample_json["id"]
             sample_status = sample_json["status"]
-            self.helper.log_info(f'Started new analysis {sample_id}, has status "{sample_status}".')
+            self.helper.log_info(
+                f'Started new analysis {sample_id}, has status "{sample_status}".'
+            )
             self._wait_for_analysis(sample_id)
 
         # Get the Overview report
