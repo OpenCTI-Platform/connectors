@@ -72,6 +72,10 @@ class CapeSandboxConnector:
             "CAPE_SANDBOX_ROUTE", ["cape_sandbox", "route"], config
         )
 
+        self.try_extract = get_config_variable(
+            "CAPE_SANDBOX_TRY_EXTRACT", ["cape_sandbox", "try_extract"], config
+        )
+
         self.options = get_config_variable(
             "CAPE_SANDBOX_OPTIONS", ["cape_sandbox", "options"], config
         )
@@ -399,7 +403,7 @@ class CapeSandboxConnector:
                             bundle_objects.append(relationship)
 
         # Attach the domains
-        for domain_dict in report["network"]["domains"]:
+        for domain_dict in report.get("network", {}).get("domains", []):
             domain_stix = SimpleObservable(
                 id=OpenCTIStix2Utils.generate_random_stix_id(
                     "x-opencti-simple-observable"
@@ -420,7 +424,7 @@ class CapeSandboxConnector:
             bundle_objects.append(relationship)
 
         # Attach the IP addresses
-        for host_dict in report["network"]["hosts"]:
+        for host_dict in report.get("network", {}).get("hosts", []):
             host = host_dict["ip"]
             host_stix = SimpleObservable(
                 id=OpenCTIStix2Utils.generate_random_stix_id(
@@ -560,6 +564,7 @@ class CapeSandboxConnector:
 
         # Upload file for analysis
         files = {"file": (file_name, file_obj)}
+
         analysis_options = {
             "options": self.options,
             "route": self.route,
@@ -568,13 +573,16 @@ class CapeSandboxConnector:
             "enforce_timeout": self.enforce_timeout,
         }
 
+        # Try and extract statically first, if enabled in config
+        if self.try_extract:
+            analysis_options["static"] = True
+
         response_dict = self._create_file(
             files=files, analysis_options=analysis_options
         )
 
-        task_id = response_dict["data"]["task_ids"][0]
+        task_id = response_dict["data"]["task_ids"][0][0]
         self.helper.log_info(f"Analysis {task_id} has started...")
-        time.sleep(20)
 
         # Wait until analysis is finished
         status = None
@@ -663,7 +671,7 @@ class CapeSandboxConnector:
     @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
     def _get_status(self, task_id):
         response = requests.get(
-            f"{self.cape_api_url}/tasks/status/{task_id}/", headers=self.headers
+            f"{self.cape_api_url}/tasks/status/{task_id}/?format=json", headers=self.headers
         )
         response.raise_for_status()
         response_dict = response.json()
@@ -676,6 +684,17 @@ class CapeSandboxConnector:
             headers=self.headers,
             files=files,
             data=analysis_options,
+        )
+        response.raise_for_status()
+        response_dict = response.json()
+        return response_dict
+
+    @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=2)
+    def _create_static(self, files):
+        response = requests.post(
+            f"{self.cape_api_url}/tasks/create/static/",
+            headers=self.headers,
+            files=files
         )
         response.raise_for_status()
         response_dict = response.json()

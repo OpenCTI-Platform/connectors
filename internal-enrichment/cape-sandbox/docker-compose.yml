@@ -18,6 +18,7 @@ services:
       - CAPE_SANDBOX_TIMEOUT=300 # Maximum amount of seconds to run the analysis for
       - CAPE_SANDBOX_ENFORCE_TIMEOUT=false # Enforce analysis to run for the full timeout period
       - CAPE_SANDBOX_PRIORITY=1 # Set priority for submitted samples, 1-3, where 3 is highest priority
+      - CAPE_SANDBOX_TRY_EXTRACT=true # Try and extract configs statically without a VM first
       - CAPE_SANDBOX_OPTIONS=procmemdump=1,import_reconstruction=1 # List of options to be passed to the analysis package
       - CAPE_SANDBOX_LESS_NOISE=true # Only upload Artifacts associated with Yara rule matches
       - CAPE_SANDBOX_COOLDOWN_TIME=20 # Set the amount of seconds to wait between retries of the API
