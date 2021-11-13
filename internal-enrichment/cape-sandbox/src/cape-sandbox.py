@@ -689,17 +689,6 @@ class CapeSandboxConnector:
         response_dict = response.json()
         return response_dict
 
-    @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=2)
-    def _create_static(self, files):
-        response = requests.post(
-            f"{self.cape_api_url}/tasks/create/static/",
-            headers=self.headers,
-            files=files
-        )
-        response.raise_for_status()
-        response_dict = response.json()
-        return response_dict
-
     def _is_ipv4_address(self, ip):
         m = re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)
         return bool(m) and all(map(lambda n: 0 <= int(n) <= 255, m.groups()))
