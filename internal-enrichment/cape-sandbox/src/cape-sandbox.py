@@ -671,7 +671,8 @@ class CapeSandboxConnector:
     @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
     def _get_status(self, task_id):
         response = requests.get(
-            f"{self.cape_api_url}/tasks/status/{task_id}/?format=json", headers=self.headers
+            f"{self.cape_api_url}/tasks/status/{task_id}/?format=json",
+            headers=self.headers,
         )
         response.raise_for_status()
         response_dict = response.json()
