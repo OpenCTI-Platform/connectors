@@ -401,37 +401,38 @@ class HatchingTriageSandboxConnector:
             bundle_objects.append(relationship)
 
         # Attach the TTPs
-        for signature_dict in overview_dict["signatures"]:
+        if "signatures" in overview_dict:
+            for signature_dict in overview_dict["signatures"]:
 
-            # Skip any dicts without a ttps key
-            if "ttp" not in signature_dict:
-                continue
+                # Skip any dicts without a ttps key
+                if "ttp" not in signature_dict:
+                    continue
 
-            name = signature_dict["name"]
-            ttps = signature_dict["ttp"]
+                name = signature_dict["name"]
+                ttps = signature_dict["ttp"]
 
-            for ttp in ttps:
+                for ttp in ttps:
 
-                attack_pattern = AttackPattern(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("attack-pattern"),
-                    created_by_ref=self.identity,
-                    name=name,
-                    custom_properties={
-                        "x_mitre_id": ttp,
-                    },
-                    object_marking_refs=[TLP_WHITE],
-                )
+                    attack_pattern = AttackPattern(
+                        id=OpenCTIStix2Utils.generate_random_stix_id("attack-pattern"),
+                        created_by_ref=self.identity,
+                        name=name,
+                        custom_properties={
+                            "x_mitre_id": ttp,
+                        },
+                        object_marking_refs=[TLP_WHITE],
+                    )
 
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
-                    relationship_type="uses",
-                    created_by_ref=self.identity,
-                    source_ref=observable["standard_id"],
-                    target_ref=attack_pattern.id,
-                    object_marking_refs=[TLP_WHITE],
-                )
-                bundle_objects.append(attack_pattern)
-                bundle_objects.append(relationship)
+                    relationship = Relationship(
+                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                        relationship_type="uses",
+                        created_by_ref=self.identity,
+                        source_ref=observable["standard_id"],
+                        target_ref=attack_pattern.id,
+                        object_marking_refs=[TLP_WHITE],
+                    )
+                    bundle_objects.append(attack_pattern)
+                    bundle_objects.append(relationship)
 
         # Serialize and send all bundles
         if bundle_objects:
