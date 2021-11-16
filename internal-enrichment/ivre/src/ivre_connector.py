@@ -340,13 +340,23 @@ class IvreConnector:
                     new_ids[fld] = self.link_domain_parent(val, obs_name, obs_id)
                 else:
                     new_ids[fld] = self.add_domain(val)
-            self.link_cyber(
-                new_ids["value"],
-                new_ids["targetval"],
-                firstseen,
-                lastseen,
-                rel_type="resolves-to",
-            )
+            try:
+                self.link_cyber(
+                    new_ids["value"],
+                    new_ids["targetval"],
+                    firstseen,
+                    lastseen,
+                    rel_type="resolves-to",
+                )
+            except ValueError:
+                # Workaround for a bug fixed in
+                # e38bf150ab70b145bafcdea77351bf4199078401 (GH#1692)
+                self.link_cyber(
+                    new_ids["value"],
+                    new_ids["targetval"],
+                    firstseen,
+                    lastseen,
+                )
             return
         addr_id = self.add_addr(record["addr"])
         if obs_type == TYPE_AS:
