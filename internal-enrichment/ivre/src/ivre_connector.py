@@ -12,6 +12,7 @@ about IVRE.
 """
 
 import os
+import re
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 import yaml
@@ -33,6 +34,8 @@ TYPES_IP_ADDR = {TYPE_IPV4_ADDR, TYPE_IPV6_ADDR}
 TYPE_MAC_ADDR = "Mac-Addr"
 TYPE_CERT = "X509-Certificate"
 TYPE_AS = "Autonomous-System"
+
+TOR_CERT_SUBJECT = re.compile("^commonName=www\\.[a-z2-7]{8,20}\\.(net|com)$", flags=0)
 
 
 class IvreConnector:
@@ -223,11 +226,29 @@ class IvreConnector:
                 data["subject_public_key_exponent"] = pubkey["exponent"]
             if "modulus" in pubkey:
                 data["subject_public_key_modulus"] = pubkey["modulus"]
-        cert_object = self.helper.api.stix_cyber_observable.create(
+        cert_id = self.helper.api.stix_cyber_observable.create(
             observableData=data,
             update=True,
-        )
-        self.link_cyber(obs_id, cert_object["id"], firstseen, lastseen)
+        )["id"]
+        self.link_cyber(obs_id, cert_id, firstseen, lastseen)
+        if all(
+            TOR_CERT_SUBJECT.search(cert.get(f"{fld}_text", ""))
+            for fld in ["issuer", "subject"]
+        ):
+            self.add_and_link_label(
+                "Possible TOR Node",
+                obs_id,
+                color="#7e4ec2",
+            )
+            self.add_and_link_label(
+                "Possible TOR Certificate",
+                cert_id,
+                color="#7e4ec2",
+            )
+
+    def add_and_link_label(self, value, obs_id, color="#ffffff"):
+        label_id = self.helper.api.label.create(value=value, color=color)["id"]
+        self.helper.api.stix_cyber_observable.add_label(id=obs_id, label_id=label_id)
 
     def link_cyber(
         self, from_id, to_id, firstseen, lastseen, rel_type="x_opencti_linked-to"
@@ -411,6 +432,20 @@ class IvreConnector:
                 rel_type="resolves-to",
             )
             return
+        if record.get("infos", {}).get("service_name") == "scanner":
+            # if record["recontype"] == "UDP_HONEYPOT_HIT":  # spoofable
+            self.add_and_link_label(
+                f"Scanner {record['infos'].get('service_product', '(unknown)')}",
+                addr_id,
+                color="#ff8178",
+            )
+        elif record["recontype"] in {
+            "HTTP_HONEYPOT_REQUEST",
+            "DNS_HONEYPOT_QUERY",
+            "TCP_HONEYPOT_HIT",
+            "UDP_HONEYPOT_HIT",
+        }:
+            self.add_and_link_label("Scanner (unknown)", addr_id, color="#ff8178")
 
     def process_data_observable(self, observable):
         if observable["entity_type"] not in TYPES_IP_ADDR:
