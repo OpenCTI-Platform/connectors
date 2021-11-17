@@ -40,6 +40,10 @@ class ArticleImporter:
         self.article = article
         self.author = author
         self.work_id: Optional[str] = None
+        # Use custom properties to set the author and the confidence level of the object.
+        self.custom_props = {
+            "x_opencti_created_by_ref": self.author["id"],
+        }
 
     def _process_indicator(self, indicator: Indicator) -> list[_Observable]:
         """
@@ -65,6 +69,7 @@ class ArticleImporter:
                     type="file",
                     hashes={"MD5": v},
                     object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
@@ -75,6 +80,7 @@ class ArticleImporter:
                     type="file",
                     hashes={"SHA-1": v},
                     object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
@@ -85,46 +91,74 @@ class ArticleImporter:
                     type="file",
                     hashes={"SHA-256": v},
                     object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
 
         if indicator_type == "domain":
             return [
-                DomainName(type="domain-name", value=v, object_marking_refs=tlp_marking)
+                DomainName(
+                    type="domain-name",
+                    value=v,
+                    object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
+                )
                 for v in values
             ]
 
         if indicator_type in ["email", "emails"]:
             return [
                 EmailAddress(
-                    type="email-addr", value=v, object_marking_refs=tlp_marking
+                    type="email-addr",
+                    value=v,
+                    object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
 
         if indicator_type in ["filename", "filepath"]:
             return [
-                File(type="file", name=v, object_marking_refs=tlp_marking)
+                File(
+                    type="file",
+                    name=v,
+                    object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
+                )
                 for v in values
             ]
 
         if indicator_type == "ip":
             return [
-                IPv4Address(type="ipv4-addr", value=v, object_marking_refs=tlp_marking)
+                IPv4Address(
+                    type="ipv4-addr",
+                    value=v,
+                    object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
+                )
                 for v in values
             ]
 
         if indicator_type in ["proces_mutex", "process_mutex", "mutex"]:
             return [
-                Mutex(type="mutex", name=v, object_marking_refs=tlp_marking)
+                Mutex(
+                    type="mutex",
+                    name=v,
+                    object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
+                )
                 for v in values
             ]
 
         if indicator_type == "url":
             return [
                 URL(
-                    type="url", value=v, object_marking_refs=tlp_marking, defanged=False
+                    type="url",
+                    value=v,
+                    object_marking_refs=tlp_marking,
+                    defanged=False,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
@@ -135,6 +169,7 @@ class ArticleImporter:
                     type="x509-certificate",
                     hashes={"SHA-1": v},
                     object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
@@ -145,7 +180,10 @@ class ArticleImporter:
         ]:
             return [
                 X509Certificate(
-                    type="x509-certificate", issuer=v, object_marking_refs=tlp_marking
+                    type="x509-certificate",
+                    issuer=v,
+                    object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
@@ -157,7 +195,10 @@ class ArticleImporter:
         ]:
             return [
                 X509Certificate(
-                    type="x509-certificate", subject=v, object_marking_refs=tlp_marking
+                    type="x509-certificate",
+                    subject=v,
+                    object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
@@ -168,6 +209,7 @@ class ArticleImporter:
                     type="x509-certificate",
                     serial_number=v,
                     object_marking_refs=tlp_marking,
+                    custom_properties=self.custom_props,
                 )
                 for v in values
             ]
@@ -225,7 +267,7 @@ class ArticleImporter:
         )
         self.helper.log_debug(f"[RiskIQ] Report = {report}")
 
-        bundle = Bundle(objects=indicators + [report, self.author])
+        bundle = Bundle(objects=indicators + [report, self.author], allow_custom=True)
         self.helper.log_info("[RiskIQ] Sending report STIX2 bundle")
         self._send_bundle(bundle)
 
