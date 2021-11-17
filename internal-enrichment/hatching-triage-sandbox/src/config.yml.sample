@@ -14,6 +14,7 @@ connector:
 hatching_triage_sandbox:
   base_url: 'https://api.tria.ge' # See https://tria.ge/docs/
   token: 'ChangeMe' # See https://tria.ge/account
+  use_existing_analysis: true # If true, get existing analysis if any
   family_color: '#0059f7' # Label color for family
   botnet_color: '#f79e00' # Label color for botnet
   campaign_color: '#7a01e5' # Label color for campaign
