@@ -12,6 +12,16 @@ See [IVRE's web site](https://ivre.rocks/) and [some use
 cases](https://doc.ivre.rocks/en/latest/usage/use-cases.html) to learn
 more about IVRE.
 
+## Examples
+
+The connector creates relationships between observables, and adds new
+observables.
+
+Here are two graphs from fictitious investigations based on data from IVRE:
+
+![Investigation graph from ivre scans results](screenshot-scans.png)
+![Investigation graph from ivre passive results](screenshot-passive.png)
+
 ## Installation
 
 ### Requirements
