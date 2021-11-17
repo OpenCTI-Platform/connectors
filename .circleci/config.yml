@@ -209,6 +209,30 @@ jobs:
           name: Build Docker image opencti/connector-restore-files
           command: docker build -t opencti/connector-restore-files:latest . && docker tag opencti/connector-restore-files:latest opencti/connector-restore-files:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/virustotal-livehunt-notifications
+          name: Build Docker image opencti/connector-virustotal-livehunt-notifications
+          command: docker build -t opencti/connector-virustotal-livehunt-notifications:latest . && docker tag opencti/connector-virustotal-livehunt-notifications:latest opencti/connector-virustotal-livehunt-notifications:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/cape-sandbox
+          name: Build Docker image opencti/connector-cape-sandbox
+          command: docker build -t opencti/connector-cape-sandbox:latest . && docker tag opencti/connector-cape-sandbox:latest opencti/connector-cape-sandbox:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/intezer-sandbox
+          name: Build Docker image opencti/connector-intezer-sandbox
+          command: docker build -t opencti/connector-intezer-sandbox:latest . && docker tag opencti/connector-intezer-sandbox:latest opencti/connector-intezer-sandbox:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
+          name: Build Docker image opencti/connector-hatching-triage-sandbox
+          command: docker build -t opencti/connector-hatching-triage-sandbox:latest . && docker tag opencti/connector-hatching-triage-sandbox:latest opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/unpac-me
+          name: Build Docker image opencti/connector-unpac-me
+          command: docker build -t opencti/connector-unpac-me:latest . && docker tag opencti/connector-unpac-me:latest opencti/connector-unpac-me:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/ivre
+          name: Build Docker image opencti/connector-ivre
+          command: docker build -t opencti/connector-ivre:latest . && docker tag opencti/connector-ivre:latest opencti/connector-ivre:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -300,6 +324,18 @@ jobs:
             docker push opencti/connector-threatmatch:${CIRCLE_TAG}
             docker push opencti/connector-restore-files:latest
             docker push opencti/connector-restore-files:${CIRCLE_TAG}
+            docker push opencti/connector-virustotal-livehunt-notifications:latest
+            docker push opencti/connector-virustotal-livehunt-notifications:${CIRCLE_TAG}
+            docker push opencti/connector-cape-sandbox:latest
+            docker push opencti/connector-cape-sandbox:${CIRCLE_TAG}
+            docker push opencti/connector-intezer-sandbox:latest
+            docker push opencti/connector-intezer-sandbox:${CIRCLE_TAG}
+            docker push opencti/connector-hatching-triage-sandbox:latest
+            docker push opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
+            docker push opencti/connector-unpac-me:latest
+            docker push opencti/connector-unpac-me:${CIRCLE_TAG}
+            docker push opencti/connector-ivre:latest
+            docker push opencti/connector-ivre:${CIRCLE_TAG}
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -484,6 +520,30 @@ jobs:
           name: Build Docker image opencti/connector-restore-files
           command: docker build -t opencti/connector-restore-files:rolling .
       - run:
+          working_directory: ~/opencti/external-import/virustotal-livehunt-notifications
+          name: Build Docker image opencti/connector-virustotal-livehunt-notifications
+          command: docker build -t opencti/connector-virustotal-livehunt-notifications:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/cape-sandbox
+          name: Build Docker image opencti/connector-cape-sandbox
+          command: docker build -t opencti/connector-cape-sandbox:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/intezer-sandbox
+          name: Build Docker image opencti/connector-intezer-sandbox
+          command: docker build -t opencti/connector-intezer-sandbox:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
+          name: Build Docker image opencti/connector-hatching-triage-sandbox
+          command: docker build -t opencti/connector-hatching-triage-sandbox:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/unpac-me
+          name: Build Docker image opencti/connector-unpac-me
+          command: docker build -t opencti/connector-unpac-me:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/ivre
+          name: Build Docker image opencti/connector-ivre
+          command: docker build -t opencti/connector-ivre:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -531,6 +591,12 @@ jobs:
             docker push opencti/connector-backup-files:rolling
             docker push opencti/connector-threatmatch:rolling
             docker push opencti/connector-restore-files:rolling
+            docker push opencti/connector-virustotal-livehunt-notifications:rolling
+            docker push opencti/connector-cape-sandbox:rolling
+            docker push opencti/connector-intezer-sandbox:rolling
+            docker push opencti/connector-hatching-triage-sandbox:rolling
+            docker push opencti/connector-unpac-me:rolling
+            docker push opencti/connector-ivre:rolling
 workflows:
   version: 2
   opencti:
