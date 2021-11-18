@@ -10,7 +10,6 @@ import re
 import pyzipper
 import magic
 from urllib.parse import urlparse
-from retrying import retry
 
 from stix2 import Bundle, AttackPattern, Relationship, TLP_WHITE, Note
 from pycti import (
@@ -22,9 +21,6 @@ from pycti import (
 
 
 class CapeSandboxConnector:
-    _cooldown_time = None
-    _max_retries = None
-
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -57,7 +53,7 @@ class CapeSandboxConnector:
         self.less_noise = get_config_variable(
             "CAPE_SANDBOX_LESS_NOISE", ["cape_sandbox", "less_noise"], config
         )
-        self._cooldown_time = 1000 * get_config_variable(
+        self._cooldown_time = get_config_variable(
             "CAPE_SANDBOX_COOLDOWN_TIME", ["cape_sandbox", "cooldown_time"], config
         )
         self._max_retries = get_config_variable(
@@ -638,8 +634,33 @@ class CapeSandboxConnector:
             )
         return self._process_observable(observable)
 
+    def retry():
+        def decorator(func):
+            def f2(self, *args, **kwargs):
+                attempts = reversed(range(self._max_retries))
+                for attempts_remaining in attempts:
+                    try:
+                        return func(self, *args, **kwargs)
+                    except Exception as e:
+                        if attempts_remaining > 0:
+                            self.helper.log_info(
+                                f"Attempts remaining {attempts_remaining}, re-trying after receiving exception: {e}"
+                            )
+                            time.sleep(self._cooldown_time)
+                        else:
+                            self.helper.log_info(
+                                f"Failed after re-trying {self._max_retries} times with exception: {e}"
+                            )
+                            raise
+                    else:
+                        break
+
+            return f2
+
+        return decorator
+
     # API helper methods with retry wrapping
-    @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
+    @retry()
     def _get_procdump_zip(self, task_id):
         response = requests.get(
             f"{self.cape_api_url}/tasks/get/procdumpfiles/{task_id}/",
@@ -649,7 +670,7 @@ class CapeSandboxConnector:
         response_contents = response.content
         return response_contents
 
-    @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
+    @retry()
     def _get_payloads_zip(self, task_id):
         response = requests.get(
             f"{self.cape_api_url}/tasks/get/payloadfiles/{task_id}/",
@@ -659,7 +680,7 @@ class CapeSandboxConnector:
         response_contents = response.content
         return response_contents
 
-    @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
+    @retry()
     def _get_report(self, task_id):
         response = requests.get(
             f"{self.cape_api_url}/tasks/get/report/{task_id}/", headers=self.headers
@@ -668,7 +689,7 @@ class CapeSandboxConnector:
         response_dict = response.json()
         return response_dict
 
-    @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
+    @retry()
     def _get_status(self, task_id):
         response = requests.get(
             f"{self.cape_api_url}/tasks/status/{task_id}/?format=json",
@@ -678,7 +699,7 @@ class CapeSandboxConnector:
         response_dict = response.json()
         return response_dict
 
-    @retry(wait_fixed=_cooldown_time, stop_max_attempt_number=_max_retries)
+    @retry()
     def _create_file(self, files, analysis_options):
         response = requests.post(
             f"{self.cape_api_url}/tasks/create/file/",
