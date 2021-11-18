@@ -577,7 +577,11 @@ class CapeSandboxConnector:
             files=files, analysis_options=analysis_options
         )
 
-        task_id = response_dict["data"]["task_ids"][0][0]
+        self.helper.log_info(response_dict)
+
+        task_id = response_dict["data"]["task_ids"][0]
+        if isinstance(task_id, list):
+            task_id = response_dict["data"]["task_ids"][0][0]
         self.helper.log_info(f"Analysis {task_id} has started...")
 
         # Wait until analysis is finished
