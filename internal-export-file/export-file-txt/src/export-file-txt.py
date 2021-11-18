@@ -1,12 +1,10 @@
 import yaml
 import os
 import json
-import io
-import csv
 import time
 
 from pycti import OpenCTIConnectorHelper
-from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
+from pycti.utils.constants import StixCyberObservableTypes
 
 
 class ExportFileTxt:
@@ -22,11 +20,8 @@ class ExportFileTxt:
 
     def _process_message(self, data):
         file_name = data["file_name"]
-        export_scope = data["export_scope"]  # single or list
-        export_type = data["export_type"]  # Simple or Full
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
         entity_type = data["entity_type"]
-
 
         list_params = data["list_params"]
         self.helper.log_info(data)
@@ -80,10 +75,8 @@ class ExportFileTxt:
             getAll=True,
         )
         observable_values = [f["observable_value"] for f in entities_list]
-        observable_values_bytes = '\n'.join(observable_values)
-        self.helper.log_info(
-            "Uploading: " + entity_type + "/" + export_type + " to " + file_name
-        )
+        observable_values_bytes = "\n".join(observable_values)
+        self.helper.log_info("Uploading: " + entity_type + " to " + file_name)
         if entity_type != "Stix-Cyber-Observable":
             self.helper.api.stix_domain_object.push_list_export(
                 entity_type, file_name, observable_values_bytes, json.dumps(list_params)
@@ -92,9 +85,7 @@ class ExportFileTxt:
             self.helper.api.stix_cyber_observable.push_list_export(
                 file_name, observable_values_bytes, json.dumps(list_params)
             )
-        self.helper.log_info(
-            "Export done: " + entity_type + "/" + export_type + " to " + file_name
-        )
+        self.helper.log_info("Export done: " + entity_type + " to " + file_name)
         return "Export done"
 
     # Start the main loop
