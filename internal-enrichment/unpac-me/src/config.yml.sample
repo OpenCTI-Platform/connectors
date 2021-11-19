@@ -1,9 +1,9 @@
 opencti:
-  url: 'http://localhost:4000'
-  token: 'eecfa1e0-593f-4e0c-92c2-73455e48ea3f'
+  url: 'ChangeMe'
+  token: 'ChangeMe'
 
 connector:
-  id: 'UnpacMe'
+  id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'UnpacMe'
   scope: 'Artifact'
@@ -12,7 +12,7 @@ connector:
   log_level: 'info'
 
 unpac_me:
-  api_key: 'eyJpZCI6IjVmMDRiY2FhOTI4ODJjMDAxMzYwYTNiYSIsInNpZyI6ImY4YmIzZWY1MGE3MzU3MWYyZDg1ODc2ODk4M2NhODEyZDlhZTg3YzAxZDMzNTFlMWI4ZjJkYTgxMzRhNWE4ODgifQ==' # See https://www.unpac.me/account
+  api_key: 'ChangeMe' # See https://www.unpac.me/account
   private: false # Mark samples are private (only available to PRO users)
   user_agent: 'UnpacMe OpenCTI Connector v1.0.0' # User agent for UnpacMeApi instantiation
   less_noise: false # Only upload unpacked samples if they matched a malware family
