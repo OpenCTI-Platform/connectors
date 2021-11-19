@@ -1,2 +1,2 @@
-pycti==4.5.5
+pycti==5.0.3
 hatching-triage==0.1.4
