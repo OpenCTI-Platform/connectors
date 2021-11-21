@@ -367,7 +367,7 @@ class Misp:
             # Elements
             event_elements = self.prepare_elements(
                 event["Event"]["Galaxy"],
-                event["Event"]get.("Tag", []),
+                event["Event"].get("Tag", []),
                 author,
                 event_markings,
             )
