@@ -295,6 +295,7 @@ class Misp:
             # Check against filter
             if (
                 import_creator_orgs is not None
+                and not import_creator_orgs
                 and event["Event"]["Orgc"]["name"] not in import_creator_orgs
             ):
                 self.helper.log_info(
@@ -305,6 +306,7 @@ class Misp:
                 continue
             if (
                 import_owner_orgs is not None
+                and not import_owner_orgs
                 and event["Event"]["Org"]["name"] not in import_owner_orgs
             ):
                 self.helper.log_info(
@@ -365,7 +367,7 @@ class Misp:
             # Elements
             event_elements = self.prepare_elements(
                 event["Event"]["Galaxy"],
-                event["Event"]["Tag"] if "Tags" in event["Event"] else [],
+                event["Event"]get.("Tag", []),
                 author,
                 event_markings,
             )
