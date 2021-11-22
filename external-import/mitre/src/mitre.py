@@ -6,6 +6,7 @@ import sys
 import time
 from typing import Optional
 import urllib
+import json
 
 import certifi
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -45,6 +46,11 @@ class Mitre:
             ["connector", "update_existing_data"],
             config,
         )
+        self.confidence_level = get_config_variable(
+            "CONNECTOR_CONFIDENCE_LEVEL",
+            ["connector", "confidence_level"],
+            config,
+        )
 
     def get_interval(self):
         return int(self.mitre_interval) * 60 * 60 * 24
@@ -80,6 +86,28 @@ class Mitre:
             self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
         return None
 
+    # Add confidence to every object in a bundle
+    def add_confidence_to_bundle_objects(self, serialized_bundle: str) -> str:
+        # the list of object types for which the confidence has to be added
+        # (skip marking-definition, identity, external-reference-as-report)
+        object_types_with_confidence = [
+            "attack-pattern",
+            "course-of-action",
+            "intrusion-set",
+            "campaign",
+            "malware",
+            "tool",
+            "report",
+            "relationship",
+        ]
+        stix_bundle = json.loads(serialized_bundle)
+        for obj in stix_bundle["objects"]:
+            object_type = obj["type"]
+            if object_type in object_types_with_confidence:
+                # self.helper.log_info(f"Adding confidence to {object_type} object")
+                obj["confidence"] = int(self.confidence_level)
+        return json.dumps(stix_bundle)
+
     def run(self):
         self.helper.log_info("Fetching MITRE datasets...")
         while True:
@@ -112,21 +140,33 @@ class Mitre:
                     )
                     # Mitre enterprise file url
                     enterprise_data = self.retrieve_data(self.mitre_enterprise_file_url)
-                    self.send_bundle(work_id, enterprise_data)
+                    enterprise_data_with_confidence = (
+                        self.add_confidence_to_bundle_objects(enterprise_data)
+                    )
+                    self.send_bundle(work_id, enterprise_data_with_confidence)
 
                     # Mitre pre attack file url
                     pre_attack_data = self.retrieve_data(self.mitre_pre_attack_file_url)
-                    self.send_bundle(work_id, pre_attack_data)
+                    pre_attack_data_with_confidence = (
+                        self.add_confidence_to_bundle_objects(pre_attack_data)
+                    )
+                    self.send_bundle(work_id, pre_attack_data_with_confidence)
 
                     # Mitre mobile attack file url
                     mobile_attack_data = self.retrieve_data(
                         self.mitre_mobile_attack_file_url
                     )
-                    self.send_bundle(work_id, mobile_attack_data)
+                    mobile_attack_data_with_confidence = (
+                        self.add_confidence_to_bundle_objects(mobile_attack_data)
+                    )
+                    self.send_bundle(work_id, mobile_attack_data_with_confidence)
 
                     # Mitre ics attack file url
                     ics_attack_data = self.retrieve_data(self.mitre_ics_attack_file_url)
-                    self.send_bundle(work_id, ics_attack_data)
+                    ics_attack_data_with_confidence = (
+                        self.add_confidence_to_bundle_objects(ics_attack_data)
+                    )
+                    self.send_bundle(work_id, ics_attack_data_with_confidence)
 
                     # Store the current timestamp as a last run
                     message = "Connector successfully run, storing last_run as " + str(
