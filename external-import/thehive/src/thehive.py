@@ -7,7 +7,6 @@ from dateutil.parser import parse
 from pycti import (
     OpenCTIConnectorHelper,
     get_config_variable,
-    StixIncident,
     OpenCTIStix2Utils,
     SimpleObservable,
 )
@@ -17,6 +16,7 @@ from thehive4py.query import Gt, Or, Child
 from stix2 import (
     Bundle,
     Relationship,
+    Incident,
     Sighting,
     TLP_WHITE,
     TLP_GREEN,
@@ -103,16 +103,10 @@ class TheHive:
         if len(markings) == 0:
             markings.append(TLP_WHITE)
         bundle_objects = []
-        incident = StixIncident(
+        incident = Incident(
             id=OpenCTIStix2Utils.generate_random_stix_id("incident"),
             name=case["title"],
             description=case["description"],
-            first_seen=datetime.utcfromtimestamp(
-                int(case["createdAt"]) / 1000
-            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            last_seen=datetime.utcfromtimestamp(int(case["updatedAt"]) / 1000).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            ),
             object_marking_refs=markings,
             labels=case["tags"] if "tags" in case else [],
             created_by_ref=self.identity["standard_id"],
