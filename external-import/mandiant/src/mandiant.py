@@ -16,27 +16,27 @@ searchable_types = [
     "malware",
     "autonomous-system",
     "email-message",
-    "x-fireeye-com-cpe",
+    "x-mandiant-com-cpe",
     "ipv4-addr",
     "vulnerability",
     "indicator",
     "artifact",
-    "x-fireeye-com-exploit",
+    "x-mandiant-com-exploit",
     "domain-name",
     "url",
     "email-addr",
     "windows-registry-key",
-    "x-fireeye-com-weakness",
+    "x-mandiant-com-weakness",
     "location",
     "file",
     "report",
-    "x-fireeye-com-exploitation",
+    "x-mandiant-com-exploitation",
     "identity",
     "all",
 ]
 
 
-class FireEye:
+class Mandiant:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -47,42 +47,42 @@ class FireEye:
         )
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
-        self.fireeye_api_url = get_config_variable(
-            "FIREEYE_API_URL", ["fireeye", "api_url"], config
+        self.mandiant_api_url = get_config_variable(
+            "MANDIANT_API_URL", ["mandiant", "api_url"], config
         )
-        self.fireeye_api_v3_public = get_config_variable(
-            "FIREEYE_API_V3_PUBLIC", ["fireeye", "api_v3_public"], config
+        self.mandiant_api_v3_public = get_config_variable(
+            "MANDIANT_API_V3_PUBLIC", ["mandiant", "api_v3_public"], config
         )
-        self.fireeye_api_v3_secret = get_config_variable(
-            "FIREEYE_API_V3_SECRET", ["fireeye", "api_v3_secret"], config
+        self.mandiant_api_v3_secret = get_config_variable(
+            "MANDIANT_API_V3_SECRET", ["mandiant", "api_v3_secret"], config
         )
-        self.fireeye_collections = get_config_variable(
-            "FIREEYE_COLLECTIONS", ["fireeye", "collections"], config
+        self.mandiant_collections = get_config_variable(
+            "MANDIANT_COLLECTIONS", ["mandiant", "collections"], config
         ).split(",")
-        self.fireeye_import_start_date = get_config_variable(
-            "FIREEYE_IMPORT_START_DATE",
-            ["fireeye", "import_start_date"],
+        self.mandiant_import_start_date = get_config_variable(
+            "MANDIANT_IMPORT_START_DATE",
+            ["mandiant", "import_start_date"],
             config,
         )
-        self.fireeye_interval = get_config_variable(
-            "FIREEYE_INTERVAL", ["fireeye", "interval"], config, True
+        self.mandiant_interval = get_config_variable(
+            "MANDIANT_INTERVAL", ["mandiant", "interval"], config, True
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
             config,
         )
-        self.added_after = parse(self.fireeye_import_start_date).timestamp()
+        self.added_after = parse(self.mandiant_import_start_date).timestamp()
 
         self.identity = self.helper.api.identity.create(
             type="Organization",
-            name="FireEye, Inc.",
-            description="FireEye is a publicly traded cybersecurity company headquartered in Milpitas, California. It has been involved in the detection and prevention of major cyber attacks. It provides hardware, software, and services to investigate cybersecurity attacks, protect against malicious software, and analyze IT security risks. FireEye was founded in 2004.",
+            name="Mandiant",
+            description="Mandiant is recognized by enterprises, governments and law enforcement agencies worldwide as the market leader in threat intelligence and expertise gained on the frontlines of cyber security. ",
         )
 
         self.marking = self.helper.api.marking_definition.create(
             definition_type="COMMERCIAL",
-            definition="FIREEYE",
+            definition="MANDIANT",
             x_opencti_order=99,
             x_opencti_color="#a01526",
         )
@@ -92,16 +92,18 @@ class FireEye:
         self._get_token()
 
     def get_interval(self):
-        return int(self.fireeye_interval) * 60
+        return int(self.mandiant_interval) * 60
 
     def _get_token(self):
         r = requests.post(
-            self.fireeye_api_url + "/token",
-            auth=HTTPBasicAuth(self.fireeye_api_v3_public, self.fireeye_api_v3_secret),
+            self.mandiant_api_url + "/token",
+            auth=HTTPBasicAuth(
+                self.mandiant_api_v3_public, self.mandiant_api_v3_secret
+            ),
             data={"grant_type": "client_credentials"},
         )
         if r.status_code != 200:
-            raise ValueError("FireEye Authentication failed")
+            raise ValueError("Mandiant Authentication failed")
         data = r.json()
         self.auth_token = data.get("access_token")
 
@@ -129,7 +131,7 @@ class FireEye:
             return None
         body = body.replace("ENTITY_TYPE", entity_type).replace("ENTITY_ID", stix_id)
         r = requests.post(
-            self.fireeye_api_url + "/collections/search", data=body, headers=headers
+            self.mandiant_api_url + "/collections/search", data=body, headers=headers
         )
         if r.status_code == 200:
             return r
@@ -197,7 +199,7 @@ class FireEye:
             if url is None:
                 if last_id_modified_timestamp is not None:
                     url = (
-                        self.fireeye_api_url
+                        self.mandiant_api_url
                         + "/collections/"
                         + collection
                         + "/objects"
@@ -209,7 +211,7 @@ class FireEye:
                     )
                 else:
                     url = (
-                        self.fireeye_api_url
+                        self.mandiant_api_url
                         + "/collections/"
                         + collection
                         + "/objects"
@@ -243,18 +245,18 @@ class FireEye:
                                 )
                                 # If the entity is not found
                                 if opencti_entity is None:
-                                    # Search the entity in FireEye
-                                    fireeye_entity = self._search(
+                                    # Search the entity in Mandiant
+                                    mandiant_entity = self._search(
                                         stix_object["source_ref"]
                                     )
                                     # If the entity is found
-                                    if fireeye_entity is not None:
-                                        fireeye_entity_decoded = json.loads(
-                                            fireeye_entity.text
+                                    if mandiant_entity is not None:
+                                        mandiant_entity_decoded = json.loads(
+                                            mandiant_entity.text
                                         )
                                         # Send the entity before this bundle
                                         self._send_entity(
-                                            fireeye_entity_decoded, work_id
+                                            mandiant_entity_decoded, work_id
                                         )
                             stix_object["source_ref"] = stix_object[
                                 "source_ref"
@@ -267,15 +269,15 @@ class FireEye:
                                     )
                                 )
                                 if opencti_entity is None:
-                                    fireeye_entity = self._search(
+                                    mandiant_entity = self._search(
                                         stix_object["target_ref"]
                                     )
-                                    if fireeye_entity is not None:
-                                        fireeye_entity_decoded = json.loads(
-                                            fireeye_entity.text
+                                    if mandiant_entity is not None:
+                                        mandiant_entity_decoded = json.loads(
+                                            mandiant_entity.text
                                         )
                                         self._send_entity(
-                                            fireeye_entity_decoded, work_id
+                                            mandiant_entity_decoded, work_id
                                         )
                             stix_object["target_ref"] = stix_object[
                                 "target_ref"
@@ -292,13 +294,13 @@ class FireEye:
                                         )
                                     )
                                     if opencti_entity is None:
-                                        fireeye_entity = self._search(object_ref)
-                                        if fireeye_entity is not None:
-                                            fireeye_entity_decoded = json.loads(
-                                                fireeye_entity.text
+                                        mandiant_entity = self._search(object_ref)
+                                        if mandiant_entity is not None:
+                                            mandiant_entity_decoded = json.loads(
+                                                mandiant_entity.text
                                             )
                                             self._send_entity(
-                                                fireeye_entity_decoded, work_id
+                                                mandiant_entity_decoded, work_id
                                             )
                         if "created_by_ref" not in stix_object:
                             stix_object["created_by_ref"] = self.identity["standard_id"]
@@ -336,10 +338,10 @@ class FireEye:
     def run(self):
         while True:
             try:
-                self.helper.log_info("Synchronizing with FireEye API...")
+                self.helper.log_info("Synchronizing with Mandiant API...")
                 timestamp = int(time.time())
                 now = datetime.datetime.utcfromtimestamp(timestamp)
-                friendly_name = "FireEye run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                friendly_name = "Mandiant run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
@@ -363,7 +365,7 @@ class FireEye:
                     current_state = self.helper.get_state()
                 last_id_modified_timestamp = current_state["last_id_modified_timestamp"]
                 last_id = current_state["last_id"]
-                if "indicators" in self.fireeye_collections:
+                if "indicators" in self.mandiant_collections:
                     self.helper.log_info(
                         "Get indicators created after "
                         + str(last_id_modified_timestamp["indicators"])
@@ -391,7 +393,7 @@ class FireEye:
                             },
                         }
                     )
-                if "reports" in self.fireeye_collections:
+                if "reports" in self.mandiant_collections:
                     self.helper.log_info(
                         "Get reports created after "
                         + str(last_id_modified_timestamp["reports"])
@@ -431,8 +433,8 @@ class FireEye:
 
 if __name__ == "__main__":
     try:
-        fireeyeConnector = FireEye()
-        fireeyeConnector.run()
+        mandiantConnector = Mandiant()
+        mandiantConnector.run()
     except Exception as e:
         print(e)
         time.sleep(10)

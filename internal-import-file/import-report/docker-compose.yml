@@ -13,5 +13,5 @@ services:
       - CONNECTOR_ONLY_CONTEXTUAL=true # Only extract data related to an entity (a report, a threat actor, etc.)
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
-      - IMPORT_REPORT_CREATE_INDICATOR=False
+      - IMPORT_REPORT_CREATE_INDICATOR=false
     restart: always

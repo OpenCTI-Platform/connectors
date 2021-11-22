@@ -1,12 +1,12 @@
 FROM python:3.9-alpine
 
 # Copy the connector
-COPY src /opt/opencti-connector-fireeye
+COPY src /opt/opencti-connector-mandiant
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-connector-fireeye && \
+    cd /opt/opencti-connector-mandiant && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
