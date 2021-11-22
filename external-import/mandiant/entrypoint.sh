@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Correct working directory
-cd /opt/opencti-connector-fireeye
+cd /opt/opencti-connector-mandiant
 
 # Start the connector
-python3 fireeye.py
+python3 mandiant.py

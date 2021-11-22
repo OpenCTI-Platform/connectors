@@ -133,9 +133,9 @@ jobs:
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/fireeye
-          name: Build Docker image opencti/connector-fireeye
-          command: docker build -t opencti/connector-fireeye:latest . && docker tag opencti/connector-fireeye:latest opencti/connector-fireeye:${CIRCLE_TAG}
+          working_directory: ~/opencti/external-import/mandiant
+          name: Build Docker image opencti/connector-mandiant
+          command: docker build -t opencti/connector-mandiant:latest . && docker tag opencti/connector-mandiant:latest opencti/connector-mandiant:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/kaspersky
           name: Build Docker image opencti/connector-kaspersky
@@ -286,8 +286,8 @@ jobs:
             docker push opencti/connector-history:${CIRCLE_TAG}
             docker push opencti/connector-tanium:latest
             docker push opencti/connector-tanium:${CIRCLE_TAG}
-            docker push opencti/connector-fireeye:latest
-            docker push opencti/connector-fireeye:${CIRCLE_TAG}
+            docker push opencti/connector-mandiant:latest
+            docker push opencti/connector-mandiant:${CIRCLE_TAG}
             docker push opencti/connector-kaspersky:latest
             docker push opencti/connector-kaspersky:${CIRCLE_TAG}
             docker push opencti/connector-greynoise:latest
@@ -444,9 +444,9 @@ jobs:
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:rolling .
       - run:
-          working_directory: ~/opencti/external-import/fireeye
-          name: Build Docker image opencti/connector-fireeye
-          command: docker build -t opencti/connector-fireeye:rolling .
+          working_directory: ~/opencti/external-import/mandiant
+          name: Build Docker image opencti/connector-mandiant
+          command: docker build -t opencti/connector-mandiant:rolling .
       - run:
           working_directory: ~/opencti/external-import/kaspersky
           name: Build Docker image opencti/connector-kaspersky
@@ -572,7 +572,7 @@ jobs:
             docker push opencti/connector-cybercrime-tracker:rolling
             docker push opencti/connector-history:rolling
             docker push opencti/connector-tanium:rolling
-            docker push opencti/connector-fireeye:rolling
+            docker push opencti/connector-mandiant:rolling
             docker push opencti/connector-kaspersky:rolling
             docker push opencti/connector-greynoise:rolling
             docker push opencti/connector-taxii2:rolling

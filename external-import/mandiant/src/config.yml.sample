@@ -5,14 +5,14 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'FireEye'
+  name: 'Mandiant'
   scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report'
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: True
   log_level: 'info'
 
-fireeye:
-  api_url: 'https://api.intelligence.fireeye.com'
+mandiant:
+  api_url: 'https://api.intelligence.mandiant.com'
   api_v3_public: 'ChangeMe'
   api_v3_secret: 'ChangeMe'
   collections: 'reports,indicators'

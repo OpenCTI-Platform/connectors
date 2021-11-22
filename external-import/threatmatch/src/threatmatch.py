@@ -98,18 +98,6 @@ class ThreatMatch:
             if "objects" in bundle and len(bundle) > 0:
                 final_objects = []
                 for stix_object in bundle["objects"]:
-                    if stix_object["type"] == "threat-actor":
-                        stix_object["type"] = "intrusion-set"
-                        stix_object["id"] = stix_object["id"].replace(
-                            "threat-actor", "intrusion-set"
-                        )
-                    if stix_object["type"] == "relationship":
-                        stix_object["source_ref"] = stix_object["source_ref"].replace(
-                            "threat-actor", "intrusion-set"
-                        )
-                        stix_object["target_ref"] = stix_object["target_ref"].replace(
-                            "threat-actor", "intrusion-set"
-                        )
                     if "created_by_ref" not in stix_object:
                         stix_object["created_by_ref"] = self.identity["standard_id"]
                     if "object_refs" in stix_object and stix_object["type"] not in [
