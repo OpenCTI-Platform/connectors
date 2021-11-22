@@ -167,11 +167,6 @@ class Mandiant:
         if "objects" in bundle and len(bundle) > 0:
             final_objects = []
             for stix_object in bundle["objects"]:
-                if stix_object["type"] == "threat-actor":
-                    stix_object["type"] = "intrusion-set"
-                    stix_object["id"] = stix_object["id"].replace(
-                        "threat-actor", "intrusion-set"
-                    )
                 if "created_by_ref" not in stix_object:
                     stix_object["created_by_ref"] = self.identity["standard_id"]
                 if stix_object["type"] != "marking-definition":
@@ -229,11 +224,6 @@ class Mandiant:
                 if last_object["id"] != last_id:
                     final_objects = []
                     for stix_object in parsed_result["objects"]:
-                        if stix_object["type"] == "threat-actor":
-                            stix_object["type"] = "intrusion-set"
-                            stix_object["id"] = stix_object["id"].replace(
-                                "threat-actor", "intrusion-set"
-                            )
                         if stix_object["type"] == "relationship":
                             # If the source_ref is not in the current bundle
                             if stix_object["source_ref"] not in object_ids:
@@ -258,9 +248,6 @@ class Mandiant:
                                         self._send_entity(
                                             mandiant_entity_decoded, work_id
                                         )
-                            stix_object["source_ref"] = stix_object[
-                                "source_ref"
-                            ].replace("threat-actor", "intrusion-set")
                             # Search if the entity is not in bundle
                             if stix_object["target_ref"] not in object_ids:
                                 opencti_entity = (
@@ -279,9 +266,6 @@ class Mandiant:
                                         self._send_entity(
                                             mandiant_entity_decoded, work_id
                                         )
-                            stix_object["target_ref"] = stix_object[
-                                "target_ref"
-                            ].replace("threat-actor", "intrusion-set")
                         if (
                             "object_refs" in stix_object
                             and len(stix_object["object_refs"]) > 0
