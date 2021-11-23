@@ -69,6 +69,8 @@ class Mitre:
         str
             A string with the content or None in case of failure.
         """
+        if url is None or len(url) == 0:
+            return None
         try:
             return (
                 urllib.request.urlopen(
@@ -139,34 +141,46 @@ class Mitre:
                         self.helper.connect_id, friendly_name
                     )
                     # Mitre enterprise file url
-                    enterprise_data = self.retrieve_data(self.mitre_enterprise_file_url)
-                    enterprise_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(enterprise_data)
-                    )
-                    self.send_bundle(work_id, enterprise_data_with_confidence)
+                    try:
+                        enterprise_data = self.retrieve_data(self.mitre_enterprise_file_url)
+                        enterprise_data_with_confidence = (
+                            self.add_confidence_to_bundle_objects(enterprise_data)
+                        )
+                        self.send_bundle(work_id, enterprise_data_with_confidence)
+                    except Exception as e:
+                        self.helper.log_error(str(e))
 
                     # Mitre pre attack file url
-                    pre_attack_data = self.retrieve_data(self.mitre_pre_attack_file_url)
-                    pre_attack_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(pre_attack_data)
-                    )
-                    self.send_bundle(work_id, pre_attack_data_with_confidence)
+                    try:
+                        pre_attack_data = self.retrieve_data(self.mitre_pre_attack_file_url)
+                        pre_attack_data_with_confidence = (
+                            self.add_confidence_to_bundle_objects(pre_attack_data)
+                        )
+                        self.send_bundle(work_id, pre_attack_data_with_confidence)
+                    except Exception as e:
+                        self.helper.log_error(str(e))
 
                     # Mitre mobile attack file url
-                    mobile_attack_data = self.retrieve_data(
-                        self.mitre_mobile_attack_file_url
-                    )
-                    mobile_attack_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(mobile_attack_data)
-                    )
-                    self.send_bundle(work_id, mobile_attack_data_with_confidence)
+                    try:
+                        mobile_attack_data = self.retrieve_data(
+                            self.mitre_mobile_attack_file_url
+                        )
+                        mobile_attack_data_with_confidence = (
+                            self.add_confidence_to_bundle_objects(mobile_attack_data)
+                        )
+                        self.send_bundle(work_id, mobile_attack_data_with_confidence)
+                    except Exception as e:
+                        self.helper.log_error(str(e))
 
                     # Mitre ics attack file url
-                    ics_attack_data = self.retrieve_data(self.mitre_ics_attack_file_url)
-                    ics_attack_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(ics_attack_data)
-                    )
-                    self.send_bundle(work_id, ics_attack_data_with_confidence)
+                    try:
+                        ics_attack_data = self.retrieve_data(self.mitre_ics_attack_file_url)
+                        ics_attack_data_with_confidence = (
+                            self.add_confidence_to_bundle_objects(ics_attack_data)
+                        )
+                        self.send_bundle(work_id, ics_attack_data_with_confidence)
+                    except Exception as e:
+                        self.helper.log_error(str(e))
 
                     # Store the current timestamp as a last run
                     message = "Connector successfully run, storing last_run as " + str(
