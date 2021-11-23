@@ -231,7 +231,7 @@ class IvreConnector:
             update=True,
         )["id"]
         self.link_cyber(obs_id, cert_id, firstseen, lastseen)
-        if all(
+        if not cert.get("self_signed") and all(
             TOR_CERT_SUBJECT.search(cert.get(f"{fld}_text", ""))
             for fld in ["issuer", "subject"]
         ):
