@@ -142,7 +142,9 @@ class Mitre:
                     )
                     # Mitre enterprise file url
                     try:
-                        enterprise_data = self.retrieve_data(self.mitre_enterprise_file_url)
+                        enterprise_data = self.retrieve_data(
+                            self.mitre_enterprise_file_url
+                        )
                         enterprise_data_with_confidence = (
                             self.add_confidence_to_bundle_objects(enterprise_data)
                         )
@@ -152,7 +154,9 @@ class Mitre:
 
                     # Mitre pre attack file url
                     try:
-                        pre_attack_data = self.retrieve_data(self.mitre_pre_attack_file_url)
+                        pre_attack_data = self.retrieve_data(
+                            self.mitre_pre_attack_file_url
+                        )
                         pre_attack_data_with_confidence = (
                             self.add_confidence_to_bundle_objects(pre_attack_data)
                         )
@@ -174,7 +178,9 @@ class Mitre:
 
                     # Mitre ics attack file url
                     try:
-                        ics_attack_data = self.retrieve_data(self.mitre_ics_attack_file_url)
+                        ics_attack_data = self.retrieve_data(
+                            self.mitre_ics_attack_file_url
+                        )
                         ics_attack_data_with_confidence = (
                             self.add_confidence_to_bundle_objects(ics_attack_data)
                         )
