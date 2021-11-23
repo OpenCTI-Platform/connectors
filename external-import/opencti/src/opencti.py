@@ -36,86 +36,89 @@ class OpenCTI:
     def get_interval(self):
         return int(self.opencti_interval) * 60 * 60 * 24
 
+    def process_data(self):
+        try:
+            # Get the current timestamp and check
+            timestamp = int(time.time())
+            current_state = self.helper.get_state()
+            if current_state is not None and "last_run" in current_state:
+                last_run = current_state["last_run"]
+                self.helper.log_info(
+                    "Connector last run: "
+                    + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                )
+            else:
+                last_run = None
+                self.helper.log_info("Connector has never run")
+            # If the last_run is more than interval-1 day
+            if last_run is None or (
+                (timestamp - last_run)
+                > ((int(self.opencti_interval) - 1) * 60 * 60 * 24)
+            ):
+                now = datetime.utcfromtimestamp(timestamp)
+                friendly_name = "OpenCTI datasets run @ " + now.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
+                try:
+                    sectors_data = urllib.request.urlopen(
+                        self.opencti_sectors_file_url
+                    ).read()
+                    self.helper.send_stix2_bundle(
+                        sectors_data.decode("utf-8"),
+                        entities_types=self.helper.connect_scope,
+                        update=self.update_existing_data,
+                        work_id=work_id,
+                    )
+                except Exception as e:
+                    self.helper.log_error(str(e))
+                try:
+                    geography_data = urllib.request.urlopen(
+                        self.opencti_geography_file_url
+                    ).read()
+                    self.helper.send_stix2_bundle(
+                        geography_data.decode("utf-8"),
+                        entities_types=self.helper.connect_scope,
+                        update=self.update_existing_data,
+                        work_id=work_id,
+                    )
+                except Exception as e:
+                    self.helper.log_error(str(e))
+                # Store the current timestamp as a last run
+                message = "Connector successfully run, storing last_run as " + str(
+                    timestamp
+                )
+                self.helper.log_info(message)
+                self.helper.set_state({"last_run": timestamp})
+                self.helper.api.work.to_processed(work_id, message)
+                self.helper.log_info(
+                    "Last_run stored, next run in: "
+                    + str(round(self.get_interval() / 60 / 60 / 24, 2))
+                    + " days"
+                )
+            else:
+                new_interval = self.get_interval() - (timestamp - last_run)
+                self.helper.log_info(
+                    "Connector will not run, next run in: "
+                    + str(round(new_interval / 60 / 60 / 24, 2))
+                    + " days"
+                )
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.log_info("Connector stop")
+            exit(0)
+        except Exception as e:
+            self.helper.log_error(str(e))
+
     def run(self):
         self.helper.log_info("Fetching OpenCTI datasets...")
-        while True:
-            try:
-                # Get the current timestamp and check
-                timestamp = int(time.time())
-                current_state = self.helper.get_state()
-                if current_state is not None and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    self.helper.log_info(
-                        "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-                    )
-                else:
-                    last_run = None
-                    self.helper.log_info("Connector has never run")
-                # If the last_run is more than interval-1 day
-                if last_run is None or (
-                    (timestamp - last_run)
-                    > ((int(self.opencti_interval) - 1) * 60 * 60 * 24)
-                ):
-                    now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "OpenCTI datasets run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-                    try:
-                        sectors_data = urllib.request.urlopen(
-                            self.opencti_sectors_file_url
-                        ).read()
-                        self.helper.send_stix2_bundle(
-                            sectors_data.decode("utf-8"),
-                            entities_types=self.helper.connect_scope,
-                            update=self.update_existing_data,
-                            work_id=work_id,
-                        )
-                    except Exception as e:
-                        self.helper.log_error(str(e))
-                    try:
-                        geography_data = urllib.request.urlopen(
-                            self.opencti_geography_file_url
-                        ).read()
-                        self.helper.send_stix2_bundle(
-                            geography_data.decode("utf-8"),
-                            entities_types=self.helper.connect_scope,
-                            update=self.update_existing_data,
-                            work_id=work_id,
-                        )
-                    except Exception as e:
-                        self.helper.log_error(str(e))
-                    # Store the current timestamp as a last run
-                    message = "Connector successfully run, storing last_run as " + str(
-                        timestamp
-                    )
-                    self.helper.log_info(message)
-                    self.helper.set_state({"last_run": timestamp})
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(
-                        "Last_run stored, next run in: "
-                        + str(round(self.get_interval() / 60 / 60 / 24, 2))
-                        + " days"
-                    )
-                    time.sleep(60)
-                else:
-                    new_interval = self.get_interval() - (timestamp - last_run)
-                    self.helper.log_info(
-                        "Connector will not run, next run in: "
-                        + str(round(new_interval / 60 / 60 / 24, 2))
-                        + " days"
-                    )
-                    time.sleep(60)
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
-                exit(0)
-            except Exception as e:
-                self.helper.log_error(str(e))
+        if self.helper.get_run_and_terminate():
+            self.process_data()
+            self.helper.force_ping()
+        else:
+            while True:
+                self.process_data()
                 time.sleep(60)
 
 

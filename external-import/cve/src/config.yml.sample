@@ -8,7 +8,8 @@ connector:
   name: 'Common Vulnerabilities and Exposures'
   scope: 'identity,vulnerability'
   confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: True
+  update_existing_data: true
+  run_and_terminate: false
   log_level: 'info'
 
 cve:
