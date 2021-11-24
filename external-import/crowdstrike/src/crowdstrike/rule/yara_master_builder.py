@@ -112,7 +112,7 @@ class YaraRuleBundleBuilder:
         reports = self._create_reports(object_refs)
         bundle_objects.extend(reports)
 
-        return Bundle(objects=bundle_objects)
+        return Bundle(objects=bundle_objects, allow_custom=True)
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
         rule_actors = self.rule.actors

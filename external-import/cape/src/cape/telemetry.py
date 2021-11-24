@@ -596,10 +596,19 @@ class openCTIInterface:
             # Create Report and link All ATPs/Cyber Obs/Payload
             report = self.createCuckooReport(self.report, IDs, ext_ref)
             b = Bundle(
-                report, bundle_ids, payload_relations, fqdns[1]
+                report,
+                bundle_ids,
+                payload_relations,
+                fqdns[1],
+                allow_custom=True,
             )  # fqdns[1] is the Resolves-to relations
         else:
-            b = Bundle(bundle_ids, payload_relations, fqdns[1])
+            b = Bundle(
+                bundle_ids,
+                payload_relations,
+                fqdns[1],
+                allow_custom=True,
+            )
 
         self.helper.send_stix2_bundle(b.serialize())
 

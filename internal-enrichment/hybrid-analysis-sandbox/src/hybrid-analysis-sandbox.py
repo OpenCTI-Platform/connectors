@@ -224,7 +224,7 @@ class HybridAnalysis:
                 bundle_objects.append(attack_pattern)
                 bundle_objects.append(relationship)
         if len(bundle_objects) > 0:
-            bundle = Bundle(objects=bundle_objects).serialize()
+            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"

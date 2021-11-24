@@ -170,7 +170,7 @@ class TheHive:
                         },
                     )
                     bundle_objects.append(stix_sighting)
-        bundle = Bundle(objects=bundle_objects).serialize()
+        bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
         return bundle
 
     def run(self):

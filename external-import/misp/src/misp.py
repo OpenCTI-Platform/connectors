@@ -653,7 +653,7 @@ class Misp:
                         object_refs=[report],
                     )
                     bundle_objects.append(note)
-            bundle = Bundle(objects=bundle_objects).serialize()
+            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
             self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, update=self.update_existing_data

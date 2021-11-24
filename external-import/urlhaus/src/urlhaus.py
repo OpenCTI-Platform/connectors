@@ -130,7 +130,9 @@ class URLhaus:
                                 )
                                 bundle_objects.append(stix_observable)
                         fp.close()
-                        bundle = Bundle(objects=bundle_objects).serialize()
+                        bundle = Bundle(
+                            objects=bundle_objects, allow_custom=True
+                        ).serialize()
                         self.helper.send_stix2_bundle(
                             bundle,
                             update=self.update_existing_data,

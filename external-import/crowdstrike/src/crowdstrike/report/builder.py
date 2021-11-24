@@ -317,4 +317,4 @@ class ReportBundleBuilder:
         report = self._create_report(object_refs)
         bundle_objects.append(report)
 
-        return Bundle(objects=bundle_objects)
+        return Bundle(objects=bundle_objects, allow_custom=True)

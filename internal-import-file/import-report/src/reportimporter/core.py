@@ -218,7 +218,7 @@ class ReportImporter:
 
         bundles_sent = []
         if len(observables) > 0:
-            bundle = Bundle(objects=observables).serialize()
+            bundle = Bundle(objects=observables, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle=bundle,
                 update=True,
