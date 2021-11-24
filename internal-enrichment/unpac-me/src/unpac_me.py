@@ -162,7 +162,7 @@ class UnpacMeConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects).serialize()
+            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:

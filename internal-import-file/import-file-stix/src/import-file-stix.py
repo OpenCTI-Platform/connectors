@@ -42,7 +42,7 @@ class ImportFileStix:
                 self.helper.log_debug("No Report in Stix file. Updating current report")
                 bundle = self._update_report(bundle, entity_id)
 
-            file_content = Bundle(objects=bundle).serialize()
+            file_content = Bundle(objects=bundle, allow_custom=True).serialize()
 
         bundles_sent = self.helper.send_stix2_bundle(file_content)
         return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"

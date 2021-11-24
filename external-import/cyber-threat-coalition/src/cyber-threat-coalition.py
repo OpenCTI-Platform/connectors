@@ -211,7 +211,7 @@ class CyberThreatCoalition:
             bundle_objects.append(stix_report)
 
         # create stix bundle
-        bundle = stix2.Bundle(objects=bundle_objects)
+        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True)
 
         # send data
         self.helper.send_stix2_bundle(

@@ -297,4 +297,4 @@ class ActorBundleBuilder:
         )
         bundle_objects.extend(intrusion_sets_target_sectors)
 
-        return Bundle(objects=bundle_objects)
+        return Bundle(objects=bundle_objects, allow_custom=True)

@@ -69,7 +69,8 @@ class IpInfoConnector:
                 city_location,
                 city_to_country,
                 observable_to_city,
-            ]
+            ],
+            allow_custom=True,
         ).serialize()
 
     def _process_message(self, data):
