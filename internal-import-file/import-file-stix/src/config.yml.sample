@@ -6,6 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_IMPORT_FILE'
   name: 'ImportFileStix'
+  validate_before_import: false # Validate any bundle before import
   scope: 'application/json,text/xml'
   auto: false # Enable/disable auto-import of file
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)

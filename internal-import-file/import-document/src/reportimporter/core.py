@@ -59,11 +59,17 @@ class ReportImporter:
             raise FileNotFoundError(f"{entity_config_file} was not found")
 
     def _process_message(self, data: Dict) -> str:
+        self.helper.log_info("Processing new message")
         file_name = self._download_import_file(data)
         entity_id = data.get("entity_id", None)
-        report = self.helper.api.report.read(id=entity_id)
-        if report is None:
-            return "The report's context is not a Stix Report. Note or Opinion maybe? Nothing was imported"
+        bypass_validation = data.get("bypass_validation", False)
+        entity = (
+            self.helper.api.stix_domain_object.read(id=entity_id)
+            if entity_id is not None
+            else None
+        )
+        if self.helper.get_only_contextual() and entity is None:
+            return "Connector is only contextual and entity is not defined. Nothing was imported"
 
         # Retrieve entity set from OpenCTI
         entity_indicators = self._collect_stix_objects(self.entity_config)
@@ -78,15 +84,20 @@ class ReportImporter:
 
         # Process parsing results
         self.helper.log_debug("Results: {}".format(parsed))
-        observables, entities = self._process_parsing_results(parsed, report)
+        observables, entities = self._process_parsing_results(parsed, entity)
         # Send results to OpenCTI
-        observable_cnt = self._process_parsed_objects(report, observables, entities)
+        observable_cnt = self._process_parsed_objects(
+            entity, observables, entities, bypass_validation, file_name
+        )
         entity_cnt = len(entities)
 
-        return (
-            f"Sent {observable_cnt} observables, 1 report update and {entity_cnt} entity connections as stix "
-            f"bundle for worker import "
-        )
+        if self.helper.get_validate_before_import() and not bypass_validation:
+            return "Generated bundle sent for validation"
+        else:
+            return (
+                f"Sent {observable_cnt} observables, 1 report update and {entity_cnt} entity connections as stix "
+                f"bundle for worker import "
+            )
 
     def start(self) -> None:
         self.helper.listen(self._process_message)
@@ -138,15 +149,21 @@ class ReportImporter:
         return config_list
 
     def _process_parsing_results(
-        self, parsed: List[Dict], report: Dict
+        self, parsed: List[Dict], context_entity: Dict
     ) -> (List[SimpleObservable], List[str]):
         observables = []
         entities = []
-        object_markings = [x["standard_id"] for x in report.get("objectMarking", [])]
-        # external_references = [x['standard_id'] for x in report.get('externalReferences', [])]
-        # labels = [x['standard_id'] for x in report.get('objectLabel', [])]
-        author = report.get("createdBy")
-        if author:
+        if context_entity is not None:
+            object_markings = [
+                x["standard_id"] for x in context_entity.get("objectMarking", [])
+            ]
+            # external_references = [x['standard_id'] for x in report.get('externalReferences', [])]
+            # labels = [x['standard_id'] for x in report.get('objectLabel', [])]
+            author = context_entity.get("createdBy")
+        else:
+            object_markings = []
+            author = None
+        if author is not None:
             author = author.get("standard_id", None)
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
@@ -200,21 +217,33 @@ class ReportImporter:
         return observables, entities
 
     def _process_parsed_objects(
-        self, report: Dict, observables: List, entities: List
+        self,
+        entity: Dict,
+        observables: List,
+        entities: List,
+        bypass_validation: bool,
+        file_name: str,
     ) -> int:
 
         if len(observables) == 0 and len(entities) == 0:
             return 0
 
-        report = Report(
-            id=report["standard_id"],
-            name=report["name"],
-            description=report["description"],
-            published=self.helper.api.stix2.format_date(report["created"]),
-            report_types=report["report_types"],
-            object_refs=observables + entities,
-        )
-        observables.append(report)
+        if entity is not None and entity["entity_type"] == "Report":
+            report = Report(
+                id=entity["standard_id"],
+                name=entity["name"],
+                description=entity["description"],
+                published=self.helper.api.stix2.format_date(entity["created"]),
+                report_types=entity["report_types"],
+                object_refs=observables + entities,
+            )
+            observables.append(report)
+        elif entity is not None:
+            # TODO, relate all object to the entity
+            entity_stix_bundle = self.helper.api.stix2.export_entity(
+                entity["entity_type"], entity["id"]
+            )
+            observables = observables + entity_stix_bundle["objects"]
 
         bundles_sent = []
         if len(observables) > 0:
@@ -222,6 +251,8 @@ class ReportImporter:
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle=bundle,
                 update=True,
+                bypass_validation=bypass_validation,
+                file_name=file_name,
             )
 
         # len() - 1 because the report update increases the count by one

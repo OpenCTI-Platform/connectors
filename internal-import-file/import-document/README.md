@@ -1,8 +1,8 @@
-# OpenCTI Report Import Connector
+# OpenCTI Document Import Connector
 
-This connector allows organizations to feed information from report to OpenCTI.
+This connector allows organizations to feed information from document to OpenCTI.
 
-This connector extracts the information in the report files and then matches it against regular expressions for Entities from the OpenCTI knowledge base or new Observables.
+This connector extracts the information in the document files and then matches it against regular expressions for Entities from the OpenCTI knowledge base or new Observables.
 
 ## General overview
 
@@ -28,7 +28,7 @@ OpenCTI data is coming from *import* connectors.
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported file types: `'application/pdf','text/plain','text/html'`                                                                                                     |
 | `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 4).                                                                             |
 | `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
-| `import_report_create_indicator`     | `IMPORT_REPORT_CREATE_INDICATOR`    | Yes          | Create an indicator for each extracted observable                                                                                                         |
+| `import_document_create_indicator`   | `IMPORT_DOCUMENT_CREATE_INDICATOR`    | Yes          | Create an indicator for each extracted observable                                                                                                         |
 
 After adding the connector, you should be able to extract information from a report.
 
@@ -63,6 +63,7 @@ DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd
 **File input format**
 - PDF file
 - Text file
+- HTML file
 
 **Extractable Entities/Stix Domain Objects**
 
