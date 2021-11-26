@@ -46,7 +46,10 @@ class ImportFileStix:
             file_content = Bundle(objects=bundle, allow_custom=True).serialize()
 
         bundles_sent = self.helper.send_stix2_bundle(
-            file_content, bypass_validation=bypass_validation, file_name=data["file_id"]
+            file_content,
+            bypass_validation=bypass_validation,
+            file_name=data["file_id"],
+            entity_id=entity_id,
         )
         if self.helper.get_validate_before_import() and not bypass_validation:
             return "Generated bundle sent for validation"
