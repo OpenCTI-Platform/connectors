@@ -37,9 +37,9 @@ jobs:
           name: Build Docker image opencti/connector-import-file-stix
           command: docker build -t opencti/connector-import-file-stix:latest . && docker tag opencti/connector-import-file-stix:latest opencti/connector-import-file-stix:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/internal-import-file/import-report
-          name: Build Docker image opencti/connector-import-report
-          command: docker build -t opencti/connector-import-report:latest . && docker tag opencti/connector-import-report:latest opencti/connector-import-report:${CIRCLE_TAG}
+          working_directory: ~/opencti/internal-import-file/import-document
+          name: Build Docker image opencti/connector-import-document
+          command: docker build -t opencti/connector-import-document:latest . && docker tag opencti/connector-import-document:latest opencti/connector-import-document:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/internal-export-file/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
@@ -238,8 +238,8 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-import-file-stix:latest
             docker push opencti/connector-import-file-stix:${CIRCLE_TAG}
-            docker push opencti/connector-import-report:latest
-            docker push opencti/connector-import-report:${CIRCLE_TAG}
+            docker push opencti/connector-import-document:latest
+            docker push opencti/connector-import-document:${CIRCLE_TAG}
             docker push opencti/connector-export-file-stix:latest
             docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
             docker push opencti/connector-export-file-csv:latest
@@ -348,9 +348,9 @@ jobs:
           name: Build Docker image opencti/connector-import-file-stix
           command: docker build -t opencti/connector-import-file-stix:rolling .
       - run:
-          working_directory: ~/opencti/internal-import-file/import-report
-          name: Build Docker image opencti/connector-import-report
-          command: docker build -t opencti/connector-import-report:rolling .
+          working_directory: ~/opencti/internal-import-file/import-document
+          name: Build Docker image opencti/connector-import-document
+          command: docker build -t opencti/connector-import-document:rolling .
       - run:
           working_directory: ~/opencti/internal-export-file/export-file-stix
           name: Build Docker image opencti/connector-export-file-stix
@@ -548,7 +548,7 @@ jobs:
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-import-file-stix:rolling
-            docker push opencti/connector-import-report:rolling
+            docker push opencti/connector-import-document:rolling
             docker push opencti/connector-export-file-stix:rolling
             docker push opencti/connector-export-file-csv:rolling
             docker push opencti/connector-hygiene:rolling

@@ -206,7 +206,8 @@ class Mitre:
 
     def run(self):
         self.helper.log_info("Fetching MITRE datasets...")
-        if self.helper.get_run_and_terminate():
+        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
+        if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
             self.process_data()
             self.helper.force_ping()
         else:
