@@ -236,6 +236,7 @@ class ReportImporter:
                 published=self.helper.api.stix2.format_date(entity["created"]),
                 report_types=entity["report_types"],
                 object_refs=observables + entities,
+                allow_custom=True,
             )
             observables.append(report)
         elif entity is not None:

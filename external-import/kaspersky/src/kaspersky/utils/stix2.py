@@ -566,6 +566,7 @@ def create_report(
             X_OPENCTI_REPORT_STATUS: x_opencti_report_status,
             X_OPENCTI_FILES: x_opencti_files,
         },
+        allow_custom=True,
     )
 
 

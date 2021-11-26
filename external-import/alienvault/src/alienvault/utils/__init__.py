@@ -526,4 +526,5 @@ def create_report(
         external_references=external_references,
         object_marking_refs=object_markings,
         custom_properties={X_OPENCTI_REPORT_STATUS: x_opencti_report_status},
+        allow_custom=True,
     )

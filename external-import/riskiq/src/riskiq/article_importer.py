@@ -264,6 +264,7 @@ class ArticleImporter:
                     "external_id": self.article["guid"],
                 }
             ],
+            allow_custom=True,
         )
         self.helper.log_debug(f"[RiskIQ] Report = {report}")
 

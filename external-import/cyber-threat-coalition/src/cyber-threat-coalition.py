@@ -206,6 +206,7 @@ class CyberThreatCoalition:
                 labels=labels,
                 external_references=[report_external_reference],
                 object_refs=report_object_refs,
+                allow_custom=True,
             )
             # add report in bundle
             bundle_objects.append(stix_report)
