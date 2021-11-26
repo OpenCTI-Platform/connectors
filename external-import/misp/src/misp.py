@@ -634,6 +634,7 @@ class Misp:
                         "x_opencti_report_status": 2,
                         "x_opencti_files": added_files,
                     },
+                    allow_custom=True,
                 )
                 bundle_objects.append(report)
                 for note in event["Event"]["EventReport"]:

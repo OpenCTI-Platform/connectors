@@ -272,6 +272,7 @@ class openCTIInterface:
             description=desc,
             external_references=external_refs,
             confidence=conf,
+            allow_custom=True,
         )
 
         return report

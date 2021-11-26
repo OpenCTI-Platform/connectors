@@ -385,6 +385,7 @@ class openCTIInterface:
             external_references=external_refs,
             confidence=conf,
             labels=reportLabels,
+            allow_custom=True,
         )
 
         return report

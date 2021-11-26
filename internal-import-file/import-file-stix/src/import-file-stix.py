@@ -48,7 +48,7 @@ class ImportFileStix:
         bundles_sent = self.helper.send_stix2_bundle(
             file_content,
             bypass_validation=bypass_validation,
-            file_name=data["file_id"],
+            file_name=data["file_id"] + ".json",
             entity_id=entity_id,
         )
         if self.helper.get_validate_before_import() and not bypass_validation:
@@ -78,6 +78,7 @@ class ImportFileStix:
                 published=self.helper.api.stix2.format_date(report["created"]),
                 report_types=report["report_types"],
                 object_refs=bundle,
+                allow_custom=True,
             )
             bundle.append(report)
         return bundle

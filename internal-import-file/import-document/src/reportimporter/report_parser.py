@@ -260,10 +260,11 @@ class ReportParser(object):
 
         # Remove all observables which found the same information/Entity match
         for observable_key in observable_keys:
-            del list_matches[observable_key]
-            self.helper.log_debug(
-                f"Value {observable_key} is also matched by entity {entity.name}"
-            )
+            if observable_key in list_matches:
+                del list_matches[observable_key]
+                self.helper.log_debug(
+                    f"Value {observable_key} is also matched by entity {entity.name}"
+                )
 
         # Check if entity was matched at least once in the text
         # If yes, then add identity to match list
