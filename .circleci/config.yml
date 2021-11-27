@@ -49,6 +49,10 @@ jobs:
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-export-file/export-file-txt
+          name: Build Docker image opencti/connector-export-file-txt
+          command: docker build -t opencti/connector-export-file-txt:latest . && docker tag opencti/connector-export-file-txt:latest opencti/connector-export-file-txt:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/internal-enrichment/hygiene
           name: Build Docker image opencti/connector-hygiene
           command: docker build -t opencti/connector-hygiene:latest . && docker tag opencti/connector-hygiene:latest opencti/connector-hygiene:${CIRCLE_TAG}
@@ -244,6 +248,8 @@ jobs:
             docker push opencti/connector-export-file-stix:${CIRCLE_TAG}
             docker push opencti/connector-export-file-csv:latest
             docker push opencti/connector-export-file-csv:${CIRCLE_TAG}
+            docker push opencti/connector-export-file-txt:latest
+            docker push opencti/connector-export-file-txt:${CIRCLE_TAG}
             docker push opencti/connector-hygiene:latest
             docker push opencti/connector-hygiene:${CIRCLE_TAG}
             docker push opencti/connector-alienvault:latest
@@ -359,6 +365,10 @@ jobs:
           working_directory: ~/opencti/internal-export-file/export-file-csv
           name: Build Docker image opencti/connector-export-file-csv
           command: docker build -t opencti/connector-export-file-csv:rolling .
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-txt
+          name: Build Docker image opencti/connector-export-file-txt
+          command: docker build -t opencti/connector-export-file-txt:rolling .
       - run:
           working_directory: ~/opencti/internal-enrichment/hygiene
           name: Build Docker image opencti/connector-hygiene
@@ -551,6 +561,7 @@ jobs:
             docker push opencti/connector-import-document:rolling
             docker push opencti/connector-export-file-stix:rolling
             docker push opencti/connector-export-file-csv:rolling
+            docker push opencti/connector-export-file-txt:rolling
             docker push opencti/connector-hygiene:rolling
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-crowdstrike:rolling
