@@ -253,7 +253,7 @@ class ReportImporter:
                 bundle=bundle,
                 update=True,
                 bypass_validation=bypass_validation,
-                file_name=file_name,
+                file_name=file_name + ".json",
                 entity_id=entity["id"] if entity is not None else None,
             )
 
