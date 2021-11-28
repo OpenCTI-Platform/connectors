@@ -1,2 +1,2 @@
-git+git://github.com/OpenCTI-Platform/client-python
+pycti==5.1.0
 hatching-triage==0.1.4
