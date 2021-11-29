@@ -358,6 +358,7 @@ def create_relationship(
         stop_time=stop_time,
         confidence=confidence,
         object_marking_refs=object_markings,
+        allow_custom=True,
     )
 
 

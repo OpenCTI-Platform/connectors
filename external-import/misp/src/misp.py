@@ -593,6 +593,7 @@ class Misp:
                                     + ref["comment"],
                                     source_ref=src_result["entity"]["id"],
                                     target_ref=target_result["entity"]["id"],
+                                    allow_custom=True,
                                 )
                             )
             # Add object_relationships
@@ -886,6 +887,7 @@ class Misp:
                         created_by_ref=author,
                         source_ref=indicator.id,
                         target_ref=observable.id,
+                        allow_custom=True,
                     )
                 )
             ### Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
@@ -901,6 +903,7 @@ class Misp:
                         target_ref=observable.id
                         if (observable is not None)
                         else indicator.id,
+                        allow_custom=True,
                     )
                 )
             # Event threats
@@ -924,6 +927,7 @@ class Misp:
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
+                            allow_custom=True,
                         )
                     )
                 if observable is not None:
@@ -939,6 +943,7 @@ class Misp:
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
+                            allow_custom=True,
                         )
                     )
 
@@ -965,6 +970,7 @@ class Misp:
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
+                            allow_custom=True,
                         )
                     )
                 if observable is not None:
@@ -980,6 +986,7 @@ class Misp:
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
+                            allow_custom=True,
                         )
                     )
             # Event Attack Patterns
@@ -1004,6 +1011,7 @@ class Misp:
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
                         confidence=self.helper.connect_confidence_level,
+                        allow_custom=True,
                     )
                     relationships.append(relationship_uses)
                     # if indicator is not None:
@@ -1057,6 +1065,7 @@ class Misp:
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
+                        allow_custom=True,
                     )
                     relationships.append(relationship_uses)
                     # if indicator is not None:
@@ -1101,6 +1110,7 @@ class Misp:
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
+                            allow_custom=True,
                         )
                     )
                 if observable is not None:
@@ -1116,6 +1126,7 @@ class Misp:
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
+                            allow_custom=True,
                         )
                     )
 
@@ -1133,6 +1144,7 @@ class Misp:
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
+                            allow_custom=True,
                         )
                     )
                 if observable is not None:
@@ -1148,6 +1160,7 @@ class Misp:
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
                             confidence=self.helper.connect_confidence_level,
+                            allow_custom=True,
                         )
                     )
             return {

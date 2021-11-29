@@ -252,6 +252,7 @@ class Cybercrimetracker:
                                     created=parsed_entry["date"],
                                     modified=parsed_entry["date"],
                                     external_references=[external_reference],
+                                    allow_custom=True,
                                 )
                                 bundle_objects.append(relation)
                             if self.create_observables:
@@ -303,6 +304,7 @@ class Cybercrimetracker:
                                         created_by_ref=organization.id,
                                         source_ref=indicator.id,
                                         target_ref=observable_url.id,
+                                        allow_custom=True,
                                     )
                                     bundle_objects.append(relationship_1)
                                     relationship_2 = stix2.Relationship(
@@ -313,6 +315,7 @@ class Cybercrimetracker:
                                         created_by_ref=organization.id,
                                         source_ref=indicator.id,
                                         target_ref=observable_ip.id,
+                                        allow_custom=True,
                                     )
                                     bundle_objects.append(relationship_2)
                                     if observable_domain is not None:
@@ -324,6 +327,7 @@ class Cybercrimetracker:
                                             created_by_ref=organization.id,
                                             source_ref=indicator.id,
                                             target_ref=observable_domain.id,
+                                            allow_custom=True,
                                         )
                                         bundle_objects.append(relationship_3)
 

@@ -148,6 +148,7 @@ class TheHive:
                     source_ref=stix_observable.id,
                     target_ref=incident.id,
                     object_marking_refs=markings,
+                    allow_custom=True,
                 )
                 bundle_objects.append(stix_observable)
                 bundle_objects.append(stix_observable_relation)

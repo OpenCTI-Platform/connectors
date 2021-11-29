@@ -139,7 +139,10 @@ class openCTIInterface:
                 value=host.domain
             )  # , resolves_to_refs=IP.id) ref https://github.com/OpenCTI-Platform/client-python/issues/155
             Rel = Relationship(
-                source_ref=DNS.id, target_ref=IP.id, relationship_type="resolves-to"
+                source_ref=DNS.id,
+                target_ref=IP.id,
+                relationship_type="resolves-to",
+                allow_custom=True,
             )
 
             if self.CreateIndicator:
@@ -304,7 +307,10 @@ class openCTIInterface:
         )
 
         rel = Relationship(
-            source_ref=Filex.id, relationship_type="based-on", target_ref=ind.id
+            source_ref=Filex.id,
+            relationship_type="based-on",
+            target_ref=ind.id,
+            allow_custom=True,
         )
 
         return [Filex, ind, rel]
@@ -565,6 +571,7 @@ class openCTIInterface:
                             relationship_type="related-to",
                             source_ref=payload[0].id,
                             target_ref=IDx,
+                            allow_custom=True,
                         )
                     )
             for ATP in AttackPatterns:
@@ -573,6 +580,7 @@ class openCTIInterface:
                         relationship_type="related-to",
                         source_ref=payload[0].id,
                         target_ref=ATP["standard_id"],
+                        allow_custom=True,
                     )
                 )
             if Malware:
@@ -585,6 +593,7 @@ class openCTIInterface:
                     relationship_type="related-to",
                     source_ref=payload[0].id,
                     target_ref=ID,
+                    allow_custom=True,
                 )
 
             IDs.append(payload[0])  # Add Observeable
