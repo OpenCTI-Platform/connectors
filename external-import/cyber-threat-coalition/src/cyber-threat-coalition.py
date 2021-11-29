@@ -183,6 +183,7 @@ class CyberThreatCoalition:
                                 created_by_ref=organization,
                                 source_ref=indicator.id,
                                 target_ref=observable.id,
+                                allow_custom=True,
                             )
                             bundle_objects.append(relationship)
                             report_object_refs.append(relationship["id"])
