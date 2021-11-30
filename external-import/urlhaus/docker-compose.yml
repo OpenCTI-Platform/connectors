@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-urlhaus:
-    image: opencti/connector-urlhaus:5.1.0
+    image: opencti/connector-urlhaus:5.1.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
