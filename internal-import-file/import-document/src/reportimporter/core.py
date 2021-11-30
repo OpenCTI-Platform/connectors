@@ -1,4 +1,7 @@
 import os
+import time
+
+from datetime import datetime
 from typing import Dict, List, Callable
 
 import yaml
@@ -245,7 +248,18 @@ class ReportImporter:
                 entity["entity_type"], entity["id"]
             )
             observables = observables + entity_stix_bundle["objects"]
-
+        else:
+            timestamp = int(time.time())
+            now = datetime.utcfromtimestamp(timestamp)
+            report = Report(
+                name=file_name,
+                description="Automatic import",
+                published=now,
+                report_types=["threat-report"],
+                object_refs=observables + entities,
+                allow_custom=True,
+            )
+            observables.append(report)
         bundles_sent = []
         if len(observables) > 0:
             bundle = Bundle(objects=observables, allow_custom=True).serialize()

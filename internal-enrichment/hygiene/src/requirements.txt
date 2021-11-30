@@ -1,2 +1,2 @@
-pycti==5.1.0
+pycti==5.1.1
 git+git://github.com/MISP/PyMISPWarningLists.git@main#egg=pymispwarninglists
