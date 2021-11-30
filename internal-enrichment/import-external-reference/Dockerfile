@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM python:3.9-alpine3.14
 
 # Copy the connector
 COPY src /opt/opencti-connector-import-external-reference
