@@ -74,12 +74,12 @@ class SignalsManager(Thread):
         logger.info("Signals manager thread initialized")
 
     def _get_elastic_entity(self) -> str:
-        """Get or create a Elastic Threatintel Connector entity if not exists"""
+        """Get or create a Elastic Connector entity if not exists"""
         if self.author_id is not None:
             return self.author_id
 
         _entity_name = self.config.get(
-            "connector.entity_name", "Elastic ThreatIntel Connector"
+            "connector.entity_name", "Elastic Detection Cluster"
         )
         _entity_desc = self.config.get("connector.entity_description", "")
 
@@ -89,8 +89,7 @@ class SignalsManager(Thread):
         if not elastic_entity:
             logger.info(f"Creating {_entity_name} STIX identity")
             self.author_id = self.helper.api.identity.create(
-                # NOTE: This should maybe be `system` See https://github.com/OpenCTI-Platform/opencti/issues/1322
-                type="Organization",
+                type="System",
                 name=_entity_name,
                 description=_entity_desc,
             )["id"]
@@ -117,7 +116,8 @@ class SignalsManager(Thread):
 
             # Parse the results
             for hit in results["hits"]["hits"]:
-                for indicator in hit["_source"]["threat"]["indicator"]:
+                # This depends on ECS mappings >= 1.11
+                for indicator in hit["_source"]["threat"]["enrichments"]:
                     # Get original threatintel document
                     try:
                         _doc = self.es_client.get(
@@ -142,11 +142,33 @@ class SignalsManager(Thread):
                             "internal_id"
                         ]
                     else:
-                        logger.warn(
-                            "Signal for threatintel document doesn't have opencti reference. Skipping"
+                        logger.info(
+                            "Signal for threatintel document doesn't have opencti reference. Searching for matched indicator"
                         )
-                        # XXX Optionally, could look up via OpenCTI API for an indicator that matches
-                        continue
+                        # This probably isn't perfect, but should get us close-ish
+                        _filters = [
+                            {
+                                "key": "pattern_type",
+                                "operator": "match",
+                                "values": ["STIX"],
+                            },
+                            {
+                                "key": "pattern",
+                                "operator": "match",
+                                "values": [indicator["matched"]["atomic"]],
+                            },
+                        ]
+
+                        _cti_indicator = self.helper.api.indicator.read(
+                            filters=_filters
+                        )
+                        if _cti_indicator:
+                            _opencti_id = _cti_indicator["id"]
+                        else:
+                            logger.warn(
+                                f"Unable to find matching indicator in OpenCTI for: {indicator['matched']['atomic']}"
+                            )
+                            continue
 
                     _timestamp = hit["_source"]["signal"]["original_time"]
                     if _opencti_id not in ids_dict:

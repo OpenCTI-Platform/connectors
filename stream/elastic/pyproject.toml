@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "elastic"
-version = "5.1.1"
+version = "0" # Will be overridden by __version__ field in __init__.py
 description = """
 Connector for OpenCTI that writes indicator objects to Elasticsearch in ECS format (when in 'ecs' mode), allowing
 Indicator Match rules. Successful matches found in the Elastic Detection Engine will be reported as sightings of
@@ -9,6 +9,10 @@ to the index configured.
 """
 authors = ["Derek Ditch <dcode@elastic.co>"]
 include = ["elastic/data/*.json"]
+
+# This plugin allows use of __version__ field in __init__.py
+[tool.poetry-version-plugin]
+source = "init"
 
 [tool.poetry.scripts]
 elastic = 'elastic.console:main'
@@ -23,6 +27,7 @@ python-json-logger = "^2.0.1"
 elasticsearch-dsl = ">=7.0.0,<8.0.0"
 python-datemath = "^1.5.5"
 arrow = "^1.1.1"
+PyYAML = "^6.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"
