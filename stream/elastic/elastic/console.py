@@ -26,7 +26,7 @@ from typing import OrderedDict
 import yaml
 from docopt import docopt
 
-from . import LOGGER_NAME, __version__, __DATA_DIR__
+from . import __DATA_DIR__, LOGGER_NAME, __version__
 from .conf import defaults
 from .elastic import ElasticConnector
 from .utils import add_branch, dict_merge, remove_nones, setup_logger
