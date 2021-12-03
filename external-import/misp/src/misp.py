@@ -188,13 +188,39 @@ class Misp:
                 self.helper.connect_id, friendly_name
             )
             current_state = self.helper.get_state()
-            if current_state is not None and "last_run" in current_state:
+            if (
+                current_state is not None
+                and "last_run" in current_state
+                and "latest_event_timestamp" in current_state
+            ):
                 last_run = datetime.utcfromtimestamp(current_state["last_run"])
+                latest_event_timestamp = current_state["latest_event_timestamp"]
                 self.helper.log_info(
                     "Connector last run: " + last_run.strftime("%Y-%m-%d %H:%M:%S")
                 )
+                self.helper.log_info(
+                    "Connector latest event timestamp: "
+                    + datetime.utcfromtimestamp(latest_event_timestamp).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                )
+            elif current_state is not None and "last_run" in current_state:
+                last_run = datetime.utcfromtimestamp(current_state["last_run"])
+                latest_event_timestamp = current_state["last_run"]
+                self.helper.log_info(
+                    "State was incomplete. Using last_run for latest_event_timestamp"
+                )
+                self.helper.log_info(
+                    "Connector last run: " + last_run.strftime("%Y-%m-%d %H:%M:%S")
+                )
+                self.helper.log_info(
+                    "Connector latest event timestamp: "
+                    + datetime.utcfromtimestamp(latest_event_timestamp).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                )
             else:
-                last_run = None
+                latest_event_timestamp = None
                 self.helper.log_info("Connector has never run")
 
             # If import with tags
@@ -226,8 +252,9 @@ class Misp:
             kwargs = dict()
             if complex_query_tag is not None:
                 kwargs["tags"] = complex_query_tag
-            if last_run is not None:
-                kwargs[self.misp_datetime_attribute] = int(last_run.timestamp())
+            if latest_event_timestamp is not None:
+                next_event_timestamp = latest_event_timestamp + 1
+                kwargs[self.misp_datetime_attribute] = next_event_timestamp
             elif import_from_date is not None:
                 kwargs["date_from"] = import_from_date.strftime("%Y-%m-%d")
 
@@ -261,25 +288,39 @@ class Misp:
                 if len(events) == 0:
                     break
 
-                self.process_events(work_id, events)
+                event_timestamp = self.process_events(work_id, events)
+                if event_timestamp is not None:
+                    if latest_event_timestamp is None or (
+                        latest_event_timestamp is not None
+                        and event_timestamp > latest_event_timestamp
+                    ):
+                        latest_event_timestamp = event_timestamp
                 current_page += 1
             message = (
                 "Connector successfully run ("
                 + str(number_events)
                 + " events have been processed), storing last_run as "
                 + str(timestamp)
+                + ", and latest_event_timestamp as "
+                + str(latest_event_timestamp)
             )
             self.helper.log_info(message)
-            self.helper.set_state({"last_run": timestamp})
+            self.helper.set_state(
+                {
+                    "last_run": timestamp,
+                    "latest_event_timestamp": latest_event_timestamp,
+                }
+            )
             self.helper.api.work.to_processed(work_id, message)
             time.sleep(self.get_interval())
 
-    def process_events(self, work_id, events):
+    def process_events(self, work_id, events) -> int:
         # Prepare filters
         import_creator_orgs = None
         import_owner_orgs = None
         import_distribution_levels = None
         import_threat_levels = None
+        latest_event_timestamp = None
         if self.import_creator_orgs is not None:
             import_creator_orgs = self.import_creator_orgs.split(",")
         if self.import_owner_orgs is not None:
@@ -291,7 +332,14 @@ class Misp:
 
         for event in events:
             self.helper.log_info("Processing event " + event["Event"]["uuid"])
-
+            event_timestamp = int(event["Event"]["timestamp"])
+            # need to check if timestamp is more recent than the previous event since
+            # events are not ordered by timestamp in API response
+            if (
+                latest_event_timestamp is None
+                or event_timestamp > latest_event_timestamp
+            ):
+                latest_event_timestamp = event_timestamp
             # Check against filter
             if (
                 import_creator_orgs is not None
@@ -660,6 +708,8 @@ class Misp:
             self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, update=self.update_existing_data
             )
+
+        return latest_event_timestamp
 
     def _get_pdf_file(self, attribute):
         if not self.import_with_attachments:
