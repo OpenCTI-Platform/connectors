@@ -90,6 +90,7 @@ class Mandiant:
         # Init variables
         self.auth_token = None
         self._get_token()
+        self.cache = {}
 
     def get_interval(self):
         return int(self.mandiant_interval) * 60
@@ -217,7 +218,13 @@ class Mandiant:
             result = self._query(url)
             parsed_result = json.loads(result.text)
             if "objects" in parsed_result and len(parsed_result) > 0:
-                last_object = parsed_result["objects"][-1]
+                relevant_objects = []
+                for object in parsed_result["objects"]:
+                    if (
+                        collection == "indicators" and object["type"] == "indicator"
+                    ) or (collection == "reports" and object["type"] == "report"):
+                        relevant_objects.append(object)
+                last_object = relevant_objects[-1]
                 object_ids = [
                     stix_object["id"] for stix_object in parsed_result["objects"]
                 ]
@@ -227,12 +234,21 @@ class Mandiant:
                         if stix_object["type"] == "relationship":
                             # If the source_ref is not in the current bundle
                             if stix_object["source_ref"] not in object_ids:
-                                # Search entity in OpenCTI
-                                opencti_entity = (
-                                    self.helper.api.stix_domain_object.read(
-                                        id=stix_object["source_ref"]
+                                if stix_object["source_ref"] not in self.cache:
+                                    # Search entity in OpenCTI
+                                    opencti_entity = (
+                                        self.helper.api.stix_domain_object.read(
+                                            id=stix_object["source_ref"]
+                                        )
                                     )
-                                )
+                                    if opencti_entity is not None:
+                                        self.cache[
+                                            stix_object["source_ref"]
+                                        ] = opencti_entity
+                                else:
+                                    opencti_entity = self.cache[
+                                        stix_object["source_ref"]
+                                    ]
                                 # If the entity is not found
                                 if opencti_entity is None:
                                     # Search the entity in Mandiant
@@ -250,11 +266,20 @@ class Mandiant:
                                         )
                             # Search if the entity is not in bundle
                             if stix_object["target_ref"] not in object_ids:
-                                opencti_entity = (
-                                    self.helper.api.stix_domain_object.read(
-                                        id=stix_object["target_ref"]
+                                if stix_object["target_ref"] not in self.cache:
+                                    opencti_entity = (
+                                        self.helper.api.stix_domain_object.read(
+                                            id=stix_object["target_ref"]
+                                        )
                                     )
-                                )
+                                    if opencti_entity is not None:
+                                        self.cache[
+                                            stix_object["target_ref"]
+                                        ] = opencti_entity
+                                else:
+                                    opencti_entity = self.cache[
+                                        stix_object["target_ref"]
+                                    ]
                                 if opencti_entity is None:
                                     mandiant_entity = self._search(
                                         stix_object["target_ref"]
@@ -272,11 +297,16 @@ class Mandiant:
                         ):
                             for object_ref in stix_object["object_refs"]:
                                 if object_ref not in object_ids:
-                                    opencti_entity = (
-                                        self.helper.api.stix_domain_object.read(
-                                            id=object_ref
+                                    if object_ref not in self.cache:
+                                        opencti_entity = (
+                                            self.helper.api.stix_domain_object.read(
+                                                id=object_ref
+                                            )
                                         )
-                                    )
+                                        if opencti_entity is not None:
+                                            self.cache[object_ref] = opencti_entity
+                                    else:
+                                        opencti_entity = self.cache[object_ref]
                                     if opencti_entity is None:
                                         mandiant_entity = self._search(object_ref)
                                         if mandiant_entity is not None:
