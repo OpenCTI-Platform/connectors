@@ -44,7 +44,8 @@ class VirustotalLivehuntNotifications:
         self.cooldown_seconds = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_COOLDOWN_SECONDS",
             ["virustotal_livehunt_notifications", "cooldown_seconds"],
-            config, True
+            config,
+            True
         )
         self.rulename_color = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_RULENAME_COLOR",
@@ -66,22 +67,26 @@ class VirustotalLivehuntNotifications:
         self.min_file_size = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_FILE_SIZE",
             ["virustotal_livehunt_notifications", "min_file_size"],
-            config, True
+            config,
+            True
         )
         self.max_file_size = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_FILE_SIZE",
             ["virustotal_livehunt_notifications", "max_file_size"],
-            config, True
+            config,
+            True
         )
         self.max_age = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE",
             ["virustotal_livehunt_notifications", "max_age"],
-            config, True
+            config,
+            True
         )
         self.min_positives = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_POSITIVES",
             ["virustotal_livehunt_notifications", "min_positives"],
-            config, True
+            config,
+            True
         )
         labels = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LABELS",
