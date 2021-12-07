@@ -100,7 +100,7 @@ def convert(filename, output="output.json"):
             # Adding the vulnerability to the list of vulnerabilities
             vulnerabilities_bundle.append(vuln)
     # Creating the bundle from the list of vulnerabilities
-    bundle = Bundle(vulnerabilities_bundle)
+    bundle = Bundle(vulnerabilities_bundle, allow_custom=True)
     bundle_json = bundle.serialize()
 
     # Write to file
