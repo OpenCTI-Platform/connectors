@@ -45,6 +45,7 @@ class VirustotalLivehuntNotifications:
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_COOLDOWN_SECONDS",
             ["virustotal_livehunt_notifications", "cooldown_seconds"],
             config,
+            True
         )
         self.rulename_color = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_RULENAME_COLOR",
@@ -67,21 +68,25 @@ class VirustotalLivehuntNotifications:
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_FILE_SIZE",
             ["virustotal_livehunt_notifications", "min_file_size"],
             config,
+            True
         )
         self.max_file_size = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_FILE_SIZE",
             ["virustotal_livehunt_notifications", "max_file_size"],
             config,
+            True
         )
         self.max_age = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE",
             ["virustotal_livehunt_notifications", "max_age"],
             config,
+            True
         )
         self.min_positives = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_POSITIVES",
             ["virustotal_livehunt_notifications", "min_positives"],
             config,
+            True
         )
         labels = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LABELS",
@@ -91,11 +96,12 @@ class VirustotalLivehuntNotifications:
 
         # Create default labels
         self.label_ids = []
-        for label in labels.split(","):
-            created_label = self.helper.api.label.create(
-                value=label, color=self.labels_color
-            )
-            self.label_ids.append(created_label["id"])
+        if labels:
+            for label in labels.split(","):
+                created_label = self.helper.api.label.create(
+                    value=label, color=self.labels_color
+                )
+                self.label_ids.append(created_label["id"])
 
     def run(self):
         self.helper.log_info("Starting Virustotal Livehunt Notifications Connector")
