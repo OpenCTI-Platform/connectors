@@ -74,5 +74,8 @@ class BaseImporter(ABC):
     def _send_bundle(self, bundle: Bundle) -> None:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(
-            serialized_bundle, work_id=self.work_id, update=self.update_existing_data
+            serialized_bundle,
+            work_id=self.work_id,
+            update=self.update_existing_data,
+            bypass_split=True,
         )
