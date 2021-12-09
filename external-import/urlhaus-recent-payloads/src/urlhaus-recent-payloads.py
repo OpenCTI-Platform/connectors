@@ -1,9 +1,7 @@
 import os
 import yaml
 import time
-import io
 import magic
-import pyzipper
 import requests
 import datetime
 from pycti import (
@@ -113,7 +111,9 @@ class URLHausRecentPayloads:
                 last_first_seen_datetime = None
                 if current_state is not None and "last_first_seen" in current_state:
                     last_first_seen = current_state["last_first_seen"]
-                    last_first_seen_datetime = datetime.datetime.strptime(last_first_seen, '%Y-%m-%d %H:%M:%S')
+                    last_first_seen_datetime = datetime.datetime.strptime(
+                        last_first_seen, "%Y-%m-%d %H:%M:%S"
+                    )
                     self.helper.log_info(
                         f"Connector last processed a file that was first seen at: {last_first_seen}"
                     )
@@ -130,14 +130,16 @@ class URLHausRecentPayloads:
                     download_url = recent_payload_dict["urlhaus_download"]
 
                     if last_first_seen_datetime is not None:
-                        new_first_seen_datetime = datetime.datetime.strptime(first_seen, '%Y-%m-%d %H:%M:%S')
+                        new_first_seen_datetime = datetime.datetime.strptime(
+                            first_seen, "%Y-%m-%d %H:%M:%S"
+                        )
                         if new_first_seen_datetime < last_first_seen_datetime:
                             self.helper.log_info(
                                 f"Skipping {sha256} seen at {first_seen} as it is older than {last_first_seen}."
                             )
                             continue
 
-                    if self.skip_unknown_filetypes and file_type == 'unknown':
+                    if self.skip_unknown_filetypes and file_type == "unknown":
                         self.helper.log_info(
                             f"Skipping {sha256} as it was an unknown file type."
                         )
@@ -190,8 +192,7 @@ class URLHausRecentPayloads:
 
                     # Attach file type as label
                     label = self.helper.api.label.create(
-                        value=file_type,
-                        color=self.filetype_label_color
+                        value=file_type, color=self.filetype_label_color
                     )
                     self.helper.api.stix_cyber_observable.add_label(
                         id=response["id"], label_id=label["id"]
@@ -229,7 +230,7 @@ class URLHausRecentPayloads:
                  payloads collected by URLHaus.
         """
 
-        url = self.api_url + 'payloads/recent/'
+        url = self.api_url + "payloads/recent/"
         resp = requests.get(url)
 
         # Handle the response data
