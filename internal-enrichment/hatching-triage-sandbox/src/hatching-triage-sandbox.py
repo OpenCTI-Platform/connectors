@@ -191,6 +191,7 @@ class HatchingTriageSandboxConnector:
                         created_by_ref=self.identity,
                         source_ref=observable["standard_id"],
                         target_ref=host_stix.id,
+                        allow_custom=True,
                     )
                     bundle_objects.append(host_stix)
                     bundle_objects.append(relationship)
@@ -222,6 +223,7 @@ class HatchingTriageSandboxConnector:
                             created_by_ref=self.identity,
                             source_ref=observable["standard_id"],
                             target_ref=host_stix.id,
+                            allow_custom=True,
                         )
 
                         bundle_objects.append(host_stix)
@@ -293,6 +295,7 @@ class HatchingTriageSandboxConnector:
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
                     target_ref=observable["standard_id"],
+                    allow_custom=True,
                 )
                 bundle_objects.append(relationship)
 
@@ -332,6 +335,7 @@ class HatchingTriageSandboxConnector:
                         created_by_ref=self.identity,
                         source_ref=observable["standard_id"],
                         target_ref=url_stix.id,
+                        allow_custom=True,
                     )
                     bundle_objects.append(url_stix)
                     bundle_objects.append(relationship)
@@ -363,6 +367,7 @@ class HatchingTriageSandboxConnector:
                 created_by_ref=self.identity,
                 source_ref=observable["standard_id"],
                 target_ref=domain_stix.id,
+                allow_custom=True,
             )
             bundle_objects.append(domain_stix)
             bundle_objects.append(relationship)
@@ -395,6 +400,7 @@ class HatchingTriageSandboxConnector:
                 created_by_ref=self.identity,
                 source_ref=observable["standard_id"],
                 target_ref=host_stix.id,
+                allow_custom=True,
             )
             bundle_objects.append(host_stix)
             bundle_objects.append(relationship)
@@ -429,6 +435,7 @@ class HatchingTriageSandboxConnector:
                         source_ref=observable["standard_id"],
                         target_ref=attack_pattern.id,
                         object_marking_refs=[TLP_WHITE],
+                        allow_custom=True,
                     )
                     bundle_objects.append(attack_pattern)
                     bundle_objects.append(relationship)
