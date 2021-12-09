@@ -175,6 +175,7 @@ class HatchingTriageSandboxConnector:
                     else:
                         parsed = c2
                         relationship_type = "related-to"
+
                     host_stix = SimpleObservable(
                         id=OpenCTIStix2Utils.generate_random_stix_id(
                             "x-opencti-simple-observable"
@@ -202,6 +203,7 @@ class HatchingTriageSandboxConnector:
                     protocol = cred_dict.get("protocol")
 
                     if host:
+                        # Add Host Observable
                         host_stix = SimpleObservable(
                             id=OpenCTIStix2Utils.generate_random_stix_id(
                                 "x-opencti-simple-observable"
@@ -225,12 +227,10 @@ class HatchingTriageSandboxConnector:
                         bundle_objects.append(host_stix)
                         bundle_objects.append(relationship)
 
-                    if protocol == "smtp":
+                    if protocol == "smtp" and username:
                         # Add Email Address Observable
-                        host_stix = SimpleObservable(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "x-opencti-simple-observable"
-                            ),
+                        email_stix = SimpleObservable(
+                            id=OpenCTIStix2Utils.generate_random_stix_id("x-opencti-simple-observable"),
                             labels=[config_rule, "credentials"],
                             key="Email-Addr.value",
                             value=username,
@@ -238,16 +238,15 @@ class HatchingTriageSandboxConnector:
                         )
 
                         relationship = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
+                            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                             relationship_type="related-to",
                             created_by_ref=self.identity,
                             source_ref=observable["standard_id"],
-                            target_ref=host_stix.id,
+                            target_ref=email_stix.id,
+                            allow_custom=True,
                         )
 
-                        bundle_objects.append(host_stix)
+                        bundle_objects.append(email_stix)
                         bundle_objects.append(relationship)
 
                 # Download task file, wait for it to become available
