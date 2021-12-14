@@ -325,7 +325,7 @@ class HatchingTriageSandboxConnector:
                         ),
                         labels=[dropper_type],
                         key="Url.value",
-                        value=url,
+                        value=url.rstrip(),
                         created_by_ref=self.identity,
                         object_marking_refs=[TLP_WHITE],
                     )
