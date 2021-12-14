@@ -232,7 +232,9 @@ class HatchingTriageSandboxConnector:
                     if protocol == "smtp" and username:
                         # Add Email Address Observable
                         email_stix = SimpleObservable(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("x-opencti-simple-observable"),
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "x-opencti-simple-observable"
+                            ),
                             labels=[config_rule, "credentials"],
                             key="Email-Addr.value",
                             value=username,
@@ -240,7 +242,9 @@ class HatchingTriageSandboxConnector:
                         )
 
                         relationship = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                            id=OpenCTIStix2Utils.generate_random_stix_id(
+                                "relationship"
+                            ),
                             relationship_type="related-to",
                             created_by_ref=self.identity,
                             source_ref=observable["standard_id"],
