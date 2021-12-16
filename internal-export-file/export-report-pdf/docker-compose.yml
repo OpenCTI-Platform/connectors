@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-export-report-pdf:
+    image: opencti/connector-export-report-pdf:5.1.2
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
+      - CONNECTOR_NAME=ExportReportPdf
+      - CONNECTOR_SCOPE=application/pdf
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - EXPORT_REPORT_PDF_PRIMARY_COLOR=#ff8c00 # The primary color for the output pdf
+      - EXPORT_REPORT_PDF_SECONDARY_COLOR=#000000 # The secondary color for the output pdf
+      - EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_1=Example Name # The first line of your company address
+      - EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_2=123 Main Street
+      - EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_3=Miami, FL 33101 USA
+      - EXPORT_REPORT_PDF_COMPANY_PHONE_NUMBER=888.888.8888 # The phone number of your company
+      - EXPORT_REPORT_PDF_COMPANY_EMAIL=intelligence_reports@example.com # The email of your company
+      - EXPORT_REPORT_PDF_COMPANY_WEBSITE=https://example.com # The website of your company
+      - EXPORT_REPORT_PDF_INDICATORS_ONLY=false # Whether or not to only include Observables that are Indicators in the report
+      - EXPORT_REPORT_PDF_DEFANG_URLS=false # Replace http in Url observables with hxxp
+    restart: always
