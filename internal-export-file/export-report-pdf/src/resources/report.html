@@ -8,15 +8,6 @@
 
   <body>
     <article id="cover">
-      {% if report_marking == 'TLP:WHITE' %}
-      <div id="report-marking" class="white">{{ report_marking }}</div>
-      {% elif report_marking == 'TLP:GREEN' %}
-      <div id="report-marking" class="green">{{ report_marking }}</div>
-      {% elif report_marking == 'TLP:AMBER' %}
-      <div id="report-marking" class="amber">{{ report_marking }}</div>
-      {% elif report_marking == 'TLP:RED' %}
-      <div id="report-marking" class="red">{{ report_marking }}</div>
-      {% endif %}
       <div id="report-date">{{ report_date }}</div>
       <h1>Intelligence Report</h1>
       <div id="report-name">{{ report_name }}</div>
@@ -40,24 +31,30 @@
         <li><a href="#confidence-title"></a></li>
       </ul>
 
+      {% if entities %}
       <h3>Entities</h3>
       <ul>
         {% for entity_type in entities %}
         <li><a href="#{{ entity_type }}-title"></a></li>
         {% endfor %}
       </ul>
+      {% endif %}
 
+      {% if observables %}
       <h3>Observables</h3>
       <ul>
         {% for observable_type in observables %}
         <li><a href="#{{ observable_type }}-title"></a></li>
         {% endfor %}
       </ul>
+      {% endif %}
 
+      {% if report_external_refs %}
       <h3>External References</h3>
       <ul>
         <li><a href="#External-References-title"></a></li>
       </ul>
+      {% endif %}
     </article>
 
     <article id="columns">
