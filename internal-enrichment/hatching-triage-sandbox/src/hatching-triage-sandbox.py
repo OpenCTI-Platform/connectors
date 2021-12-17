@@ -175,6 +175,7 @@ class HatchingTriageSandboxConnector:
                     else:
                         parsed = c2
                         relationship_type = "related-to"
+
                     host_stix = SimpleObservable(
                         id=OpenCTIStix2Utils.generate_random_stix_id(
                             "x-opencti-simple-observable"
@@ -190,6 +191,7 @@ class HatchingTriageSandboxConnector:
                         created_by_ref=self.identity,
                         source_ref=observable["standard_id"],
                         target_ref=host_stix.id,
+                        allow_custom=True,
                     )
                     bundle_objects.append(host_stix)
                     bundle_objects.append(relationship)
@@ -202,6 +204,7 @@ class HatchingTriageSandboxConnector:
                     protocol = cred_dict.get("protocol")
 
                     if host:
+                        # Add Host Observable
                         host_stix = SimpleObservable(
                             id=OpenCTIStix2Utils.generate_random_stix_id(
                                 "x-opencti-simple-observable"
@@ -220,14 +223,15 @@ class HatchingTriageSandboxConnector:
                             created_by_ref=self.identity,
                             source_ref=observable["standard_id"],
                             target_ref=host_stix.id,
+                            allow_custom=True,
                         )
 
                         bundle_objects.append(host_stix)
                         bundle_objects.append(relationship)
 
-                    if protocol == "smtp":
+                    if protocol == "smtp" and username:
                         # Add Email Address Observable
-                        host_stix = SimpleObservable(
+                        email_stix = SimpleObservable(
                             id=OpenCTIStix2Utils.generate_random_stix_id(
                                 "x-opencti-simple-observable"
                             ),
@@ -244,10 +248,11 @@ class HatchingTriageSandboxConnector:
                             relationship_type="related-to",
                             created_by_ref=self.identity,
                             source_ref=observable["standard_id"],
-                            target_ref=host_stix.id,
+                            target_ref=email_stix.id,
+                            allow_custom=True,
                         )
 
-                        bundle_objects.append(host_stix)
+                        bundle_objects.append(email_stix)
                         bundle_objects.append(relationship)
 
                 # Download task file, wait for it to become available
@@ -294,6 +299,7 @@ class HatchingTriageSandboxConnector:
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
                     target_ref=observable["standard_id"],
+                    allow_custom=True,
                 )
                 bundle_objects.append(relationship)
 
@@ -323,7 +329,7 @@ class HatchingTriageSandboxConnector:
                         ),
                         labels=[dropper_type],
                         key="Url.value",
-                        value=url,
+                        value=url.rstrip(),
                         created_by_ref=self.identity,
                         object_marking_refs=[TLP_WHITE],
                     )
@@ -333,6 +339,7 @@ class HatchingTriageSandboxConnector:
                         created_by_ref=self.identity,
                         source_ref=observable["standard_id"],
                         target_ref=url_stix.id,
+                        allow_custom=True,
                     )
                     bundle_objects.append(url_stix)
                     bundle_objects.append(relationship)
@@ -364,6 +371,7 @@ class HatchingTriageSandboxConnector:
                 created_by_ref=self.identity,
                 source_ref=observable["standard_id"],
                 target_ref=domain_stix.id,
+                allow_custom=True,
             )
             bundle_objects.append(domain_stix)
             bundle_objects.append(relationship)
@@ -396,6 +404,7 @@ class HatchingTriageSandboxConnector:
                 created_by_ref=self.identity,
                 source_ref=observable["standard_id"],
                 target_ref=host_stix.id,
+                allow_custom=True,
             )
             bundle_objects.append(host_stix)
             bundle_objects.append(relationship)
@@ -430,6 +439,7 @@ class HatchingTriageSandboxConnector:
                         source_ref=observable["standard_id"],
                         target_ref=attack_pattern.id,
                         object_marking_refs=[TLP_WHITE],
+                        allow_custom=True,
                     )
                     bundle_objects.append(attack_pattern)
                     bundle_objects.append(relationship)
