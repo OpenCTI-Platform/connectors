@@ -1,0 +1,160 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link href="report.css" rel="stylesheet">
+    <title>{{ report_name }}_{{ report_date }}</title>
+    <meta name="description" content="{{ report_name }}_{{ report_date }}">
+  </head>
+
+  <body>
+    <article id="cover">
+      <div id="report-marking">{{ report_marking }}</div>
+      <div id="report-date">{{ report_date }}</div>
+      <h1>Intelligence Report</h1>
+      <div id="report-name">{{ report_name }}</div>
+      <address>
+        {{ company_address_line_1 }}
+        {{ company_address_line_2 }}
+        {{ company_address_line_3 }}
+        {{ company_phone_number }}
+      </address>
+      <address>
+        {{ company_email }}
+        {{ company_website }}
+      </address>
+    </article>
+
+    <article id="contents">
+      <h2>Table of contents</h2>
+      <h3>Overview</h3>
+      <ul>
+        <li><a href="#description-title"></a></li>
+        <li><a href="#confidence-title"></a></li>
+      </ul>
+
+      {% if entities %}
+      <h3>Entities</h3>
+      <ul>
+        {% for entity_type in entities %}
+        <li><a href="#{{ entity_type }}-title"></a></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if observables %}
+      <h3>Observables</h3>
+      <ul>
+        {% for observable_type in observables %}
+        <li><a href="#{{ observable_type }}-title"></a></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if report_external_refs %}
+      <h3>External References</h3>
+      <ul>
+        <li><a href="#External-References-title"></a></li>
+      </ul>
+      {% endif %}
+    </article>
+
+    <article id="columns">
+      <h2>Overview</h2>
+      <section>
+        <h3 id="description-title">
+          Description
+        </h3>
+        <p>
+          {{ report_description }}
+        </p>
+      </section>
+      <section>
+        <h3 id="confidence-title">
+          Confidence
+        </h3>
+        <p>
+          <em>
+            This value represents the confidence in the correctness of the data contained within this report.
+          </em>
+        </p>
+        <p>
+          {{ report_confidence }} / 100
+        </p>
+      </section>
+    </article>
+    <article id="entities">
+      {% for entity_type in entities %}
+        <h2 id="{{ entity_type }}-title">{{ entity_type }}</h2>
+        <section id="{{ entity_type }}">
+          <table>
+            <tr>
+              {% if entity_type == 'Attack-Pattern' %}
+              <th>ID</th>
+              {% endif %}
+              <th>Name</th>
+              <th>Description</th>
+              {% if entity_type == 'Indicator' %}
+              <th>Pattern Type</th>
+              <th>Pattern</th>
+              {% endif %}
+            </tr>
+            {% for entity in entities[entity_type] %}
+            <tr>
+            <td>
+              {{ entity.name }}
+            </td>
+            {% if entity_type == 'Attack-Pattern' %}
+            <td>
+              {{ entity.x_mitre_id }}
+            </td>
+            {% endif %}
+            <td>
+              {% if entity.description %}
+              {{ entity.description }}
+              {% endif %}
+            </td>
+              {% if entity_type == 'Indicator' %}
+            <td>
+              {{ entity.pattern_type }}
+            </td>
+            <td>
+              {{ entity.pattern }}
+            </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </table>
+        </section>
+      {% endfor %}
+    </article>
+    <article id="observables">
+      {% for observable_type in observables %}
+        <h2 id="{{ observable_type }}-title">{{ observable_type }}</h2>
+        <section id="{{ observable_type }}">
+          <table>
+            <tr>
+              <th>Value</th>
+            </tr>
+            {% for observable in observables[observable_type] %}
+            <tr>
+            <td>
+              {{ observable.observable_value }}
+            </td>
+            </tr>
+            {% endfor %}
+          </table>
+        </section>
+      {% endfor %}
+    </article>
+    <article id="external-references">
+      {% for external_ref in report_external_refs %}
+        <h2 id="External-References-title">External References</h2>
+        <section>
+          <ul>
+            <li><a href="{{ external_ref }}" target="_blank">{{ external_ref }}</a></li>
+          </ul>
+        </section>
+      {% endfor %}
+    </article>
+  </body>
+</html>
