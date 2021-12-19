@@ -3,4 +3,4 @@ urllib3==1.26.5
 python-dateutil==2.8.1
 feedparser==6.0.2
 beautifulsoup4==4.9.3
-lxml==4.6.3
+lxml==4.7.1
