@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'TAXII2_Import' # Required
+  scope:'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: True
+  log_level: 'info'
+
+taxii2:
+  discovery_url: 'CHANGEME' # Required
+  username: CHANGEME
+  password: CHANGEME
+  v2.1: True
+  collections: '*.*'
+  initial_history: 24 #required, in hours
+  interval: 1000 # Required, in hours
+  verify_ssl: True
