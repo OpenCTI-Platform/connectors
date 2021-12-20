@@ -36,7 +36,7 @@ Please refer to [these](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f
 
 
 ### Docker
-Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t opencti-taxii2-import:latest`. Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`
+Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t opencti-obstracts-import:latest`. Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`
 ### Manual/VM Deployment
 Create a file `config.yml` based off the provided `config.yml.sample`. Replace the configuration variables (especially the "ChangeMe" variables) with the appropriate configurations for you environment. Install the required python dependencies (preferably in a virtual environment) with `pip3 install -r requirements.txt` Then, run the `python3 rf_feeds.py` command to start the connector
 ## Usage
