@@ -6,7 +6,7 @@ connector:
   id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
   name: 'OBSTRACTS'
-  scope:'=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool'
+  scope:'=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software'
   confidence_level: 70
   update_existing_data: True
   log_level: 'info'
