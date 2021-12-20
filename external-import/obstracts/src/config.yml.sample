@@ -12,7 +12,7 @@ connector:
   log_level: 'info'
 
 taxii2:
-  discovery_url: 'CHANGEME'
+  discovery_url: 'https://app.obstracts.com/taxii/taxii2'
   username: CHANGEME
   password: CHANGEME
   v2.1: True
