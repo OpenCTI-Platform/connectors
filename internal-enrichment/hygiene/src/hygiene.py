@@ -3,6 +3,7 @@ import yaml
 
 from pymispwarninglists import WarningLists
 from pycti import OpenCTIConnectorHelper, get_config_variable
+import tldextract
 
 # At the moment it is not possible to map lists to their upstream path.
 # Thus we need to have our own mapping here.
@@ -93,6 +94,15 @@ class HygieneConnector:
             )
         )
 
+        self.enrich_subdomains = bool(
+            get_config_variable(
+                "HYGIENE_ENRICH_SUBDOMAINS",
+                ["hygiene", "enrich_subdomains"],
+                config,
+                default=False,
+            )
+        )
+
         self.helper.log_info(f"Warning lists slow search: {warninglists_slow_search}")
 
         self.warninglists = WarningLists(slow_search=warninglists_slow_search)
@@ -102,12 +112,27 @@ class HygieneConnector:
             value="Hygiene", color="#fc0341"
         )
 
+        if self.enrich_subdomains:
+            self.label_hygiene_parent = self.helper.api.label.create(
+                value="Hygiene_parent", color="#fc0341"
+            )
+
     def _process_observable(self, observable) -> str:
         # Extract IPv4, IPv6 and Domain from entity data
         observable_value = observable["observable_value"]
+        observable_type = observable["entity_type"]
 
         # Search in warninglist
         result = self.warninglists.search(observable_value)
+
+        # If not found and the domain is a subdomain, search with the parent.
+        use_parent = False
+        if not result and self.enrich_subdomains == True:
+            if observable_type == "Domain-Name":
+                ext = tldextract.extract(observable_value)
+                if observable_value != ext.domain + "." + ext.suffix:
+                    result = self.warninglists.search(ext.domain + "." + ext.suffix)
+                    use_parent = True
 
         # Iterate over the hits
         if result:
@@ -135,7 +160,10 @@ class HygieneConnector:
                     f"number of hits ({len(result)}) setting score to {score}"
                 )
                 self.helper.api.stix_cyber_observable.add_label(
-                    id=observable["id"], label_id=self.label_hygiene["id"]
+                    id=observable["id"],
+                    label_id=self.label_hygiene["id"]
+                    if use_parent == False
+                    else self.label_hygiene_parent["id"],
                 )
                 self.helper.api.stix_cyber_observable.update_field(
                     id=observable["id"],
@@ -143,7 +171,10 @@ class HygieneConnector:
                 )
                 for indicator_id in observable["indicatorsIds"]:
                     self.helper.api.stix_domain_object.add_label(
-                        id=indicator_id, label_id=self.label_hygiene["id"]
+                        id=indicator_id,
+                        label_id=self.label_hygiene["id"]
+                        if use_parent == False
+                        else self.label_hygiene_parent["id"],
                     )
                     self.helper.api.stix_domain_object.update_field(
                         id=indicator_id,
