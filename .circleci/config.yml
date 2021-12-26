@@ -244,10 +244,10 @@ jobs:
           working_directory: ~/opencti/external-import/urlhaus-recent-payloads
           name: Build Docker image opencti/connector-urlhaus-recent-payloads
           command: docker build -t opencti/connector-urlhaus-recent-payloads:latest . && docker tag opencti/connector-urlhaus-recent-payloads:latest opencti/connector-urlhaus-recent-payloads:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/internal-export-file/export-report-pdf
-          name: Build Docker image opencti/connector-export-report-pdf
-          command: docker build -t opencti/connector-export-report-pdf:latest . && docker tag opencti/connector-export-report-pdf:latest opencti/connector-export-report-pdf:${CIRCLE_TAG}
+      #- run:
+      #    working_directory: ~/opencti/internal-export-file/export-report-pdf
+      #    name: Build Docker image opencti/connector-export-report-pdf
+      #    command: docker build -t opencti/connector-export-report-pdf:latest . && docker tag opencti/connector-export-report-pdf:latest opencti/connector-export-report-pdf:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/obstracts
           name: Build Docker image opencti/connector-obstracts
@@ -374,8 +374,8 @@ jobs:
             docker push opencti/connector-malwarebazaar-recent-additions:${CIRCLE_TAG}
             docker push opencti/connector-urlhaus-recent-payloads:latest
             docker push opencti/connector-urlhaus-recent-payloads:${CIRCLE_TAG}
-            docker push opencti/connector-export-report-pdf:latest
-            docker push opencti/connector-export-report-pdf:${CIRCLE_TAG}
+            #docker push opencti/connector-export-report-pdf:latest
+            #docker push opencti/connector-export-report-pdf:${CIRCLE_TAG}
             docker push opencti/connector-obstracts:latest
             docker push opencti/connector-obstracts:${CIRCLE_TAG}
             docker push opencti/connector-stixify:latest
@@ -603,10 +603,10 @@ jobs:
           working_directory: ~/opencti/external-import/urlhaus-recent-payloads
           name: Build Docker image opencti/connector-urlhaus-recent-payloads
           command: docker build -t opencti/connector-urlhaus-recent-payloads:rolling .
-      - run:
-          working_directory: ~/opencti/internal-export-file/export-report-pdf
-          name: Build Docker image opencti/export-report-pdf
-          command: docker build -t opencti/export-report-pdf:rolling .
+      # - run:
+      #   working_directory: ~/opencti/internal-export-file/export-report-pdf
+      #   name: Build Docker image opencti/export-report-pdf
+      #   command: docker build -t opencti/export-report-pdf:rolling .
       - run:
           working_directory: ~/opencti/external-import/obstracts
           name: Build Docker image opencti/obstracts
@@ -680,7 +680,7 @@ jobs:
             docker push opencti/connector-ivre:rolling
             docker push opencti/connector-malwarebazaar-recent-additions:rolling
             docker push opencti/connector-urlhaus-recent-payloads:rolling
-            docker push opencti/export-report-pdf:rolling
+            #docker push opencti/export-report-pdf:rolling
             docker push opencti/obstracts:rolling
             docker push opencti/stixify:rolling
             docker push opencti/vulmatch:rolling
