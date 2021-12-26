@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'STIXIFY'
+  scope:'=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software'
+  confidence_level: 70
+  update_existing_data: True
+  log_level: 'info'
+
+taxii2:
+  discovery_url: 'https://app.stixify.com/taxii/taxii2'
+  username: CHANGEME
+  password: CHANGEME
+  v2.1: True
+  collections: '*.*'
+  initial_history: 24
+  interval: 24
+  verify_ssl: True
