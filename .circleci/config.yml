@@ -251,7 +251,19 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/obstracts
           name: Build Docker image opencti/connector-obstracts
-          command: docker build -t opencti/connector-obstracts:latest . && docker tag opencti/connector-obstracts:latest opencti/connector-obstracts:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-obstracts:latest . && docker tag opencti/connector-obstracts:latest opencti/connector-obstracts:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/stixify
+          name: Build Docker image opencti/connector-stixify
+          command: docker build -t opencti/connector-stixify:latest . && docker tag opencti/connector-stixify:latest opencti/connector-stixify:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/siemrules
+          name: Build Docker image opencti/connector-siemrules
+          command: docker build -t opencti/connector-siemrules:latest . && docker tag opencti/connector-siemrules:latest opencti/connector-siemrules:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/vulmatch
+          name: Build Docker image opencti/connector-vulmatch
+          command: docker build -t opencti/connector-vulmatch:latest . && docker tag opencti/connector-vulmatch:latest opencti/connector-vulmatch:${CIRCLE_TAG}          
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -365,7 +377,13 @@ jobs:
             docker push opencti/connector-export-report-pdf:latest
             docker push opencti/connector-export-report-pdf:${CIRCLE_TAG}
             docker push opencti/connector-obstracts:latest
-            docker push opencti/connector-obstracts:${CIRCLE_TAG}                
+            docker push opencti/connector-obstracts:${CIRCLE_TAG}
+            docker push opencti/connector-stixify:latest
+            docker push opencti/connector-stixify:${CIRCLE_TAG}
+            docker push opencti/connector-siemrules:latest
+            docker push opencti/connector-siemrules:${CIRCLE_TAG}
+            docker push opencti/connector-vulmatch:latest
+            docker push opencti/connector-vulmatch:${CIRCLE_TAG}            
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -594,6 +612,18 @@ jobs:
           name: Build Docker image opencti/obstracts
           command: docker build -t opencti/obstracts:rolling .
       - run:
+          working_directory: ~/opencti/external-import/stixify
+          name: Build Docker image opencti/stixify
+          command: docker build -t opencti/stixify:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/vulmatch
+          name: Build Docker image opencti/vulmatch
+          command: docker build -t opencti/vulmatch:rolling .   
+      - run:
+          working_directory: ~/opencti/external-import/siemrules
+          name: Build Docker image opencti/siemrules
+          command: docker build -t opencti/siemrules:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -652,6 +682,9 @@ jobs:
             docker push opencti/connector-urlhaus-recent-payloads:rolling
             docker push opencti/export-report-pdf:rolling
             docker push opencti/obstracts:rolling
+            docker push opencti/stixify:rolling
+            docker push opencti/vulmatch:rolling
+            docker push opencti/siemrules:rolling
 workflows:
   version: 2
   opencti:
