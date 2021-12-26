@@ -74,12 +74,15 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "chardet"
-version = "4.0.0"
-description = "Universal encoding detector for Python 2 and 3"
+name = "charset-normalizer"
+version = "2.0.9"
+description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
 category = "main"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+python-versions = ">=3.5.0"
+
+[package.extras]
+unicode_backport = ["unicodedata2"]
 
 [[package]]
 name = "click"
@@ -127,7 +130,7 @@ python-versions = "*"
 
 [[package]]
 name = "elasticsearch"
-version = "7.15.2"
+version = "7.16.1"
 description = "Python client for Elasticsearch"
 category = "main"
 optional = false
@@ -174,11 +177,11 @@ pyflakes = ">=2.3.0,<2.4.0"
 
 [[package]]
 name = "idna"
-version = "2.10"
+version = "3.3"
 description = "Internationalized Domain Names in Applications (IDNA)"
 category = "main"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+python-versions = ">=3.5"
 
 [[package]]
 name = "iniconfig"
@@ -252,11 +255,11 @@ twisted = ["twisted"]
 
 [[package]]
 name = "platformdirs"
-version = "2.4.0"
+version = "2.4.1"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.extras]
 docs = ["Sphinx (>=4)", "furo (>=2021.7.5b38)", "proselint (>=0.10.2)", "sphinx-autodoc-typehints (>=1.12)"]
@@ -305,12 +308,12 @@ python-json-logger = ">=2.0.2,<2.1.0"
 python-magic = {version = ">=0.4.24,<0.5.0", markers = "sys_platform == \"linux\" or sys_platform == \"darwin\""}
 python-magic-bin = {version = ">=0.4.14,<0.5.0", markers = "sys_platform == \"win32\""}
 PyYAML = ">=6.0,<7.0"
-requests = ">=2.25.1,<2.26.0"
+requests = ">=2.26.0,<2.27.0"
 sseclient = ">=0.0.27,<0.1.0"
 stix2 = ">=3.0.1,<3.1.0"
 
 [package.extras]
-dev = ["pytest-randomly (>=3.8,<4.0)", "black (==20.8b1)", "pre-commit (>=2.13,<3.0)", "wheel (>=0.36,<1.0)", "pytest (>=6.2,<7.0)", "pytest-cov (>=2.12,<3.0)", "pytest-cases (>=3.6,<4.0)", "requests (>=2.25.1,<2.26.0)", "PyYAML (>=6.0,<7.0)", "setuptools (>=59.2.0,<59.3.0)", "datefinder (>=0.7,<1.0)", "stix2 (>=3.0.1,<3.1.0)", "pika (>=1.2,<2.0)", "sseclient (>=0.0.27,<0.1.0)", "python-json-logger (>=2.0.2,<2.1.0)", "python-magic (>=0.4.24,<0.5.0)", "python-magic-bin (>=0.4.14,<0.5.0)"]
+dev = ["pytest-randomly (>=3.8,<4.0)", "black (==20.8b1)", "pre-commit (>=2.13,<3.0)", "wheel (>=0.36,<1.0)", "pytest (>=6.2,<7.0)", "pytest-cov (>=2.12,<3.0)", "pytest-cases (>=3.6,<4.0)", "requests (>=2.26.0,<2.27.0)", "PyYAML (>=6.0,<7.0)", "setuptools (>=60.1.0,<60.2.0)", "datefinder (>=0.7,<1.0)", "stix2 (>=3.0.1,<3.1.0)", "pika (>=1.2,<2.0)", "sseclient (>=0.0.27,<0.1.0)", "python-json-logger (>=2.0.2,<2.1.0)", "python-magic (>=0.4.24,<0.5.0)", "python-magic-bin (>=0.4.14,<0.5.0)"]
 doc = ["autoapi", "sphinx-rtd-theme", "sphinx-autodoc-typehints"]
 
 [[package]]
@@ -480,21 +483,21 @@ python-versions = "*"
 
 [[package]]
 name = "requests"
-version = "2.25.1"
+version = "2.26.0"
 description = "Python HTTP for Humans."
 category = "main"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 
 [package.dependencies]
 certifi = ">=2017.4.17"
-chardet = ">=3.0.2,<5"
-idna = ">=2.5,<3"
+charset-normalizer = {version = ">=2.0.0,<2.1.0", markers = "python_version >= \"3\""}
+idna = {version = ">=2.5,<4", markers = "python_version >= \"3\""}
 urllib3 = ">=1.21.1,<1.27"
 
 [package.extras]
-security = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)"]
 socks = ["PySocks (>=1.5.6,!=1.5.7)", "win-inet-pton"]
+use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
 
 [[package]]
 name = "scalpl"
@@ -577,7 +580,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "tomli"
-version = "1.2.2"
+version = "1.2.3"
 description = "A lil' TOML parser"
 category = "dev"
 optional = false
@@ -607,7 +610,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "05de4eaa716d49fd0c68df82dfcada7cbd05405575028999eaf19cde4d5a1253"
+content-hash = "18b19e961e903bf8d063c34d2eb14696d80fda09c2600a9e9fc903449428a703"
 
 [metadata.files]
 antlr4-python3-runtime = [
@@ -633,9 +636,9 @@ certifi = [
     {file = "certifi-2021.10.8-py2.py3-none-any.whl", hash = "sha256:d62a0163eb4c2344ac042ab2bdf75399a71a2d8c7d47eac2e2ee91b9d6339569"},
     {file = "certifi-2021.10.8.tar.gz", hash = "sha256:78884e7c1d4b00ce3cea67b44566851c4343c120abd683433ce934a68ea58872"},
 ]
-chardet = [
-    {file = "chardet-4.0.0-py2.py3-none-any.whl", hash = "sha256:f864054d66fd9118f2e67044ac8981a54775ec5b67aed0441892edb553d21da5"},
-    {file = "chardet-4.0.0.tar.gz", hash = "sha256:0d6f53a15db4120f2b08c94f11e7d93d2c911ee118b6b30a04ec3ee8310179fa"},
+charset-normalizer = [
+    {file = "charset-normalizer-2.0.9.tar.gz", hash = "sha256:b0b883e8e874edfdece9c28f314e3dd5badf067342e42fb162203335ae61aa2c"},
+    {file = "charset_normalizer-2.0.9-py3-none-any.whl", hash = "sha256:1eecaa09422db5be9e29d7fc65664e6c33bd06f9ced7838578ba40d58bdf3721"},
 ]
 click = [
     {file = "click-8.0.3-py3-none-any.whl", hash = "sha256:353f466495adaeb40b6b5f592f9f91cb22372351c84caeb068132442a4518ef3"},
@@ -652,8 +655,8 @@ docopt = [
     {file = "docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"},
 ]
 elasticsearch = [
-    {file = "elasticsearch-7.15.2-py2.py3-none-any.whl", hash = "sha256:83c299a08fc8737c72454e6d3b2a01ba1b194e4f4d9e4f8bae7058cec326f39f"},
-    {file = "elasticsearch-7.15.2.tar.gz", hash = "sha256:436f871848a5020bf9b47495812b229b59bd0c5d7e40adbd5e3c89896b311704"},
+    {file = "elasticsearch-7.16.1-py2.py3-none-any.whl", hash = "sha256:97e9d62db71a571c540d6dfa2a51bc2263b5c0d7b9f9896eb7116ba02373c69b"},
+    {file = "elasticsearch-7.16.1.tar.gz", hash = "sha256:c024ee2e7e2509c842c4e3c5e2b99a92ceecfde06d6dac2d32a19bf566c3e175"},
 ]
 elasticsearch-dsl = [
     {file = "elasticsearch-dsl-7.4.0.tar.gz", hash = "sha256:c4a7b93882918a413b63bed54018a1685d7410ffd8facbc860ee7fd57f214a6d"},
@@ -664,8 +667,8 @@ flake8 = [
     {file = "flake8-3.9.2.tar.gz", hash = "sha256:07528381786f2a6237b061f6e96610a4167b226cb926e2aa2b6b1d78057c576b"},
 ]
 idna = [
-    {file = "idna-2.10-py2.py3-none-any.whl", hash = "sha256:b97d804b1e9b523befed77c48dacec60e6dcb0b5391d57af6a65a312a90648c0"},
-    {file = "idna-2.10.tar.gz", hash = "sha256:b307872f855b18632ce0c21c5e45be78c0ea7ae4c15c828c20788b26921eb3f6"},
+    {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},
+    {file = "idna-3.3.tar.gz", hash = "sha256:9d643ff0a55b762d5cdb124b8eaa99c66322e2157b69160bc32796e824360e6d"},
 ]
 iniconfig = [
     {file = "iniconfig-1.1.1-py2.py3-none-any.whl", hash = "sha256:011e24c64b7f47f6ebd835bb12a743f2fbe9a26d4cecaa7f53bc4f35ee9da8b3"},
@@ -696,8 +699,8 @@ pika = [
     {file = "pika-1.2.0.tar.gz", hash = "sha256:f023d6ac581086b124190cb3dc81dd581a149d216fa4540ac34f9be1e3970b89"},
 ]
 platformdirs = [
-    {file = "platformdirs-2.4.0-py3-none-any.whl", hash = "sha256:8868bbe3c3c80d42f20156f22e7131d2fb321f5bc86a2a345375c6481a67021d"},
-    {file = "platformdirs-2.4.0.tar.gz", hash = "sha256:367a5e80b3d04d2428ffa76d33f124cf11e8fff2acdaa9b43d545f5c7d661ef2"},
+    {file = "platformdirs-2.4.1-py3-none-any.whl", hash = "sha256:1d7385c7db91728b83efd0ca99a5afb296cab9d0ed8313a45ed8ba17967ecfca"},
+    {file = "platformdirs-2.4.1.tar.gz", hash = "sha256:440633ddfebcc36264232365d7840a970e75e1018d15b4327d11f91909045fda"},
 ]
 pluggy = [
     {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
@@ -712,8 +715,8 @@ pycodestyle = [
     {file = "pycodestyle-2.7.0.tar.gz", hash = "sha256:c389c1d06bf7904078ca03399a4816f974a1d590090fecea0c63ec26ebaf1cef"},
 ]
 pycti = [
-    {file = "pycti-5.1.3-py3-none-any.whl", hash = "sha256:621fec4eef4995801065c4717b9018934c494fe18476e2e4b19edd86e66e9752"},
-    {file = "pycti-5.1.3.tar.gz", hash = "sha256:79a6b674820a7b521e3497af86aead763c19f8a9d4c3a9ca4d76c09325e1f3a2"},
+    {file = "pycti-5.1.3-py3-none-any.whl", hash = "sha256:0adc1a459a38a53f7d7cccd32fdadc42409a42929017f9a62a71371e39118d77"},
+    {file = "pycti-5.1.3.tar.gz", hash = "sha256:97d49e8fc49598ac97a1056f2da7d66f86966ea72f0757c1e132f4365ae38410"},
 ]
 pyflakes = [
     {file = "pyflakes-2.3.1-py2.py3-none-any.whl", hash = "sha256:7893783d01b8a89811dd72d7dfd4d84ff098e5eed95cfa8905b22bbffe52efc3"},
@@ -879,8 +882,8 @@ regex = [
     {file = "regex-2021.11.10.tar.gz", hash = "sha256:f341ee2df0999bfdf7a95e448075effe0db212a59387de1a70690e4acb03d4c6"},
 ]
 requests = [
-    {file = "requests-2.25.1-py2.py3-none-any.whl", hash = "sha256:c210084e36a42ae6b9219e00e48287def368a26d03a048ddad7bfee44f75871e"},
-    {file = "requests-2.25.1.tar.gz", hash = "sha256:27973dd4a904a4f13b263a19c866c13b92a39ed1c964655f025f3f8d3d75b804"},
+    {file = "requests-2.26.0-py2.py3-none-any.whl", hash = "sha256:6c1246513ecd5ecd4528a0906f910e8f0f9c6b8ec72030dc9fd154dc1a6efd24"},
+    {file = "requests-2.26.0.tar.gz", hash = "sha256:b8aa58f8cf793ffd8782d3d8cb19e66ef36f7aba4353eec859e74678b01b07a7"},
 ]
 scalpl = [
     {file = "scalpl-0.4.2-py3-none-any.whl", hash = "sha256:3a7a963b9b3639108722008cc2b5a42ae576b48c74fcd0f17baf7b1c9792ab7b"},
@@ -969,8 +972,8 @@ toml = [
     {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
 ]
 tomli = [
-    {file = "tomli-1.2.2-py3-none-any.whl", hash = "sha256:f04066f68f5554911363063a30b108d2b5a5b1a010aa8b6132af78489fe3aade"},
-    {file = "tomli-1.2.2.tar.gz", hash = "sha256:c6ce0015eb38820eaf32b5db832dbc26deb3dd427bd5f6556cf0acac2c214fee"},
+    {file = "tomli-1.2.3-py3-none-any.whl", hash = "sha256:e3069e4be3ead9668e21cb9b074cd948f7b3113fd9c8bba083f48247aab8b11c"},
+    {file = "tomli-1.2.3.tar.gz", hash = "sha256:05b6166bff487dc068d322585c7ea4ef78deed501cc124060e0f238e89a9231f"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.0.1-py3-none-any.whl", hash = "sha256:7f001e5ac290a0c0401508864c7ec868be4e701886d5b573a9528ed3973d9d3b"},
