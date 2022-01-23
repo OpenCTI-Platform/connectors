@@ -64,6 +64,7 @@ DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd
 - PDF file
 - Text file
 - HTML file
+- CSV file
 
 **Extractable Entities/Stix Domain Objects**
 
