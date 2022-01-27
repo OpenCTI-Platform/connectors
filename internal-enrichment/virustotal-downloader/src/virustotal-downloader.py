@@ -7,17 +7,9 @@ import io
 import magic
 import vt
 
-from stix2 import (
-    Bundle,
-    Relationship
-)
+from stix2 import Bundle, Relationship
 
-from pycti import (
-    OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    get_config_variable,
-    SimpleObservable,
-)
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 
 
 class VirustotalDownloaderConnector:
@@ -32,9 +24,7 @@ class VirustotalDownloaderConnector:
         self.helper = OpenCTIConnectorHelper(config)
 
         self.identity = self.helper.api.identity.create(
-            type="Organization",
-            name="Virustotal",
-            description="Virustotal",
+            type="Organization", name="Virustotal", description="Virustotal"
         )["standard_id"]
 
         # Get other config values
@@ -47,7 +37,7 @@ class VirustotalDownloaderConnector:
 
     def _process_hash(self, observable):
 
-        hash_value = observable['observable_value']
+        hash_value = observable["observable_value"]
         artifact_id = None
         bundle_objects = []
 
@@ -66,23 +56,23 @@ class VirustotalDownloaderConnector:
                 "file_name": hash_value,
                 "data": file_contents,
                 "mime_type": mime_type,
-                "x_opencti_description": f"Downloaded from Virustotal via hash {hash_value}"
+                "x_opencti_description": f"Downloaded from Virustotal via hash {hash_value}",
             }
-            response = self.helper.api.stix_cyber_observable.upload_artifact(
-                **kwargs
-            )
+            response = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
 
             self.helper.log_info(response)
 
-            artifact_id = response['standard_id']
+            artifact_id = response["standard_id"]
 
         except Exception as e:
-            raise Exception(f"Failed to download/upload Artifact with hash {hash_value}, exception: {e}")
+            raise Exception(
+                f"Failed to download/upload Artifact with hash {hash_value}, exception: {e}"
+            )
 
         # Create a relationship between the StixFile and the new Artifact
         relationship = Relationship(
             id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
-            relationship_type='related-to',
+            relationship_type="related-to",
             created_by_ref=self.identity,
             source_ref=observable["standard_id"],
             target_ref=artifact_id,
@@ -102,7 +92,7 @@ class VirustotalDownloaderConnector:
             "Processing the observable " + observable["observable_value"]
         )
 
-        if observable["entity_type"] == 'StixFile':
+        if observable["entity_type"] == "StixFile":
             return self._process_hash(observable)
         else:
             raise ValueError(
