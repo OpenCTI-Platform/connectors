@@ -59,7 +59,7 @@ class AbuseIPDBConnector:
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         # Extract TLP
         tlp = "TLP:WHITE"
-        for marking_definition in observable["objectMarking"]:
+        for marking_definition in observable.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
