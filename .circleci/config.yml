@@ -224,10 +224,10 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/intezer-sandbox
           name: Build Docker image opencti/connector-intezer-sandbox
           command: docker build -t opencti/connector-intezer-sandbox:latest . && docker tag opencti/connector-intezer-sandbox:latest opencti/connector-intezer-sandbox:${CIRCLE_TAG}
-      #- run:
-      #    working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
-      #    name: Build Docker image opencti/connector-hatching-triage-sandbox
-      #    command: docker build -t opencti/connector-hatching-triage-sandbox:latest . && docker tag opencti/connector-hatching-triage-sandbox:latest opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
+      - run:
+         working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
+         name: Build Docker image opencti/connector-hatching-triage-sandbox
+         command: docker build -t opencti/connector-hatching-triage-sandbox:latest . && docker tag opencti/connector-hatching-triage-sandbox:latest opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/internal-enrichment/unpac-me
           name: Build Docker image opencti/connector-unpac-me
@@ -364,8 +364,8 @@ jobs:
             docker push opencti/connector-cape-sandbox:${CIRCLE_TAG}
             docker push opencti/connector-intezer-sandbox:latest
             docker push opencti/connector-intezer-sandbox:${CIRCLE_TAG}
-            #docker push opencti/connector-hatching-triage-sandbox:latest
-            #docker push opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
+            docker push opencti/connector-hatching-triage-sandbox:latest
+            docker push opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
             docker push opencti/connector-unpac-me:latest
             docker push opencti/connector-unpac-me:${CIRCLE_TAG}
             docker push opencti/connector-ivre:latest
