@@ -603,7 +603,7 @@ jobs:
           working_directory: ~/opencti/external-import/urlhaus-recent-payloads
           name: Build Docker image opencti/connector-urlhaus-recent-payloads
           command: docker build -t opencti/connector-urlhaus-recent-payloads:rolling .
-       - run:
+      - run:
          working_directory: ~/opencti/internal-export-file/export-report-pdf
          name: Build Docker image opencti/export-report-pdf
          command: docker build -t opencti/export-report-pdf:rolling .
