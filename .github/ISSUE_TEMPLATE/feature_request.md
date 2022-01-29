@@ -2,7 +2,7 @@
 name: Feature request
 about: Ask for a new feature/connector to be implemented in OpenCTI
 title: ''
-labels: 'feature'
+labels: ''
 assignees: ''
 
 ---
