@@ -213,7 +213,7 @@ class Taxii2Connector:
         """
 
         self.helper.log_info(
-            f"Sending Bundle to server with " f'{len(bundle["objects"])} objects'
+            f"Sending Bundle to server with '{len(bundle.get('objects', []))}' objects"
         )
         try:
             self.helper.send_stix2_bundle(
