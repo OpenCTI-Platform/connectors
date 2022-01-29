@@ -2,7 +2,7 @@
 name: Question
 about: Ask a question concerning OpenCTI connectors
 title: ''
-labels: 'question'
+labels: ''
 assignees: ''
 
 ---
