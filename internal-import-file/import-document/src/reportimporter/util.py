@@ -2,6 +2,7 @@ import configparser
 import re
 from typing import List, Dict
 import ioc_finder
+import iocextract
 from dateparser.search import search_dates
 
 
@@ -30,6 +31,7 @@ def library_mapping() -> Dict:
     return {
         "Autonomous-System.number": custom_asnparse,
         #        'Date.foo': custom_dateparse,
+        "Indicator.pattern": custom_yara_parse,
         "Domain-Name.value": ioc_finder.parse_domain_names,
         "Email-Addr.value": ioc_finder.parse_email_addresses,
         "IPv4-Addr.value": ioc_finder.parse_ipv4_addresses,
@@ -74,3 +76,8 @@ def custom_dateparse(text: str) -> List:
 def custom_mac_addr_parse(text: str) -> List:
     mac_addresses = ioc_finder.parse_mac_addresses(text)
     return [x.lower() for x in mac_addresses]
+
+
+def custom_yara_parse(text: str) -> List:
+    yara_rules = iocextract.extract_yara_rules(text)
+    return [x for x in yara_rules]
