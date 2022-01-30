@@ -605,24 +605,24 @@ jobs:
           command: docker build -t opencti/connector-urlhaus-recent-payloads:rolling .
       - run:
          working_directory: ~/opencti/internal-export-file/export-report-pdf
-         name: Build Docker image opencti/export-report-pdf
-         command: docker build -t opencti/export-report-pdf:rolling .
+         name: Build Docker image opencti/connector-export-report-pdf
+         command: docker build -t opencti/connector-export-report-pdf:rolling .
       - run:
           working_directory: ~/opencti/external-import/obstracts
-          name: Build Docker image opencti/obstracts
-          command: docker build -t opencti/obstracts:rolling .
+          name: Build Docker image opencti/connector-obstracts
+          command: docker build -t opencti/connector-obstracts:rolling .
       - run:
           working_directory: ~/opencti/external-import/stixify
-          name: Build Docker image opencti/stixify
-          command: docker build -t opencti/stixify:rolling .
+          name: Build Docker image opencti/connector-stixify
+          command: docker build -t opencti/connector-stixify:rolling .
       - run:
           working_directory: ~/opencti/external-import/vulmatch
-          name: Build Docker image opencti/vulmatch
-          command: docker build -t opencti/vulmatch:rolling .   
+          name: Build Docker image opencti/connector-vulmatch
+          command: docker build -t opencti/connector-vulmatch:rolling .   
       - run:
           working_directory: ~/opencti/external-import/siemrules
-          name: Build Docker image opencti/siemrules
-          command: docker build -t opencti/siemrules:rolling .
+          name: Build Docker image opencti/connector-siemrules
+          command: docker build -t opencti/connector-siemrules:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -680,11 +680,11 @@ jobs:
             docker push opencti/connector-ivre:rolling
             docker push opencti/connector-malwarebazaar-recent-additions:rolling
             docker push opencti/connector-urlhaus-recent-payloads:rolling
-            docker push opencti/export-report-pdf:rolling
-            docker push opencti/obstracts:rolling
-            docker push opencti/stixify:rolling
-            docker push opencti/vulmatch:rolling
-            docker push opencti/siemrules:rolling
+            docker push opencti/connector-export-report-pdf:rolling
+            docker push opencti/connector-obstracts:rolling
+            docker push opencti/connector-stixify:rolling
+            docker push opencti/connector-vulmatch:rolling
+            docker push opencti/connector-siemrules:rolling
 workflows:
   version: 2
   opencti:
