@@ -109,6 +109,10 @@ jobs:
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:latest . && docker tag opencti/connector-virustotal:latest opencti/connector-virustotal:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/virustotal-downloader
+          name: Build Docker image opencti/connector-virustotal-virustotal-downloader
+          command: docker build -t opencti/connector-virustotal-downloader:latest . && docker tag opencti/connector-virustotal-downloader:latest opencti/connector-virustotal-downloader:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/external-import/lastinfosec
           name: Build Docker image opencti/connector-lastinfosec
           command: docker build -t opencti/connector-lastinfosec:latest . && docker tag opencti/connector-lastinfosec:latest opencti/connector-lastinfosec:${CIRCLE_TAG}
@@ -306,6 +310,8 @@ jobs:
             docker push opencti/connector-ipinfo:${CIRCLE_TAG}
             docker push opencti/connector-virustotal:latest
             docker push opencti/connector-virustotal:${CIRCLE_TAG}
+            docker push opencti/connector-virustotal-downloader:latest
+            docker push opencti/connector-virustotal-downloader:${CIRCLE_TAG}
             docker push opencti/connector-lastinfosec:latest
             docker push opencti/connector-lastinfosec:${CIRCLE_TAG}
             docker push opencti/connector-malpedia:latest
@@ -646,6 +652,7 @@ jobs:
             docker push opencti/connector-amitt:rolling
             docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-virustotal:rolling
+            docker push opencti/connector-virustotal-downloader:rolling
             docker push opencti/connector-lastinfosec:rolling
             docker push opencti/connector-malpedia:rolling
             docker push opencti/connector-riskiq:rolling
