@@ -222,8 +222,14 @@ class ArticleImporter:
     def run(self, work_id: str, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run the importation of the article."""
         self.work_id = work_id
-        published = parser.parse(self.article["publishedDate"])
         created = parser.parse(self.article["createdDate"])
+        # RisIQ API does not always provide the `publishedDate`.
+        # If it does not exist, take the value of the `createdDate` instead.
+        published = (
+            parser.parse(self.article["publishedDate"])
+            if self.article["publishedDate"] is not None
+            else created
+        )
 
         indicators = itertools.chain(
             *[
