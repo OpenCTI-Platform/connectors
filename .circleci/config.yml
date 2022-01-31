@@ -110,7 +110,7 @@ jobs:
           command: docker build -t opencti/connector-virustotal:latest . && docker tag opencti/connector-virustotal:latest opencti/connector-virustotal:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/internal-enrichment/virustotal-downloader
-          name: Build Docker image opencti/connector-virustotal-virustotal-downloader
+          name: Build Docker image opencti/connector-virustotal-downloader
           command: docker build -t opencti/connector-virustotal-downloader:latest . && docker tag opencti/connector-virustotal-downloader:latest opencti/connector-virustotal-downloader:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/lastinfosec
@@ -473,6 +473,10 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/virustotal
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/virustotal-downloader
+          name: Build Docker image opencti/connector-virustotal-downloader
+          command: docker build -t opencti/connector-virustotal-downloader:rolling .
       - run:
           working_directory: ~/opencti/external-import/lastinfosec
           name: Build Docker image opencti/connector-lastinfosec
