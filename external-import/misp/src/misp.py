@@ -91,7 +91,11 @@ class Misp:
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
         )
         self.misp_datetime_attribute = get_config_variable(
-            "MISP_DATETIME_ATTRIBUTE", ["misp", "datetime_attribute"], config
+            "MISP_DATETIME_ATTRIBUTE",
+            ["misp", "datetime_attribute"],
+            config,
+            False,
+            "timestamp",
         )
         self.misp_create_report = get_config_variable(
             "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
@@ -192,6 +196,7 @@ class Misp:
                 current_state is not None
                 and "last_run" in current_state
                 and "latest_event_timestamp" in current_state
+                and current_state["latest_event_timestamp"] is not None
             ):
                 last_run = datetime.utcfromtimestamp(current_state["last_run"])
                 latest_event_timestamp = current_state["latest_event_timestamp"]
