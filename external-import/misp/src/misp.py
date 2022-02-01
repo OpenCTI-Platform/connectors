@@ -337,7 +337,7 @@ class Misp:
 
         for event in events:
             self.helper.log_info("Processing event " + event["Event"]["uuid"])
-            event_timestamp = int(event["Event"]["timestamp"])
+            event_timestamp = int(event["Event"][self.misp_datetime_attribute])
             # need to check if timestamp is more recent than the previous event since
             # events are not ordered by timestamp in API response
             if (
