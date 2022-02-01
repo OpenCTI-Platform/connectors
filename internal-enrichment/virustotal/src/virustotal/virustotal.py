@@ -96,8 +96,12 @@ class VirusTotalConnector:
             raise ValueError("An error has occurred")
         if "error" in json_data:
             if json_data["error"]["code"] == "QuotaExceededError":
-                self.helper.log_error("Quota limit reached, dropping the query to avoid queuing")
-                raise ValueError("Quota limit reached, dropping the query to avoid queuing")
+                self.helper.log_error(
+                    "Quota limit reached, dropping the query to avoid queuing"
+                )
+                raise ValueError(
+                    "Quota limit reached, dropping the query to avoid queuing"
+                )
             elif json_data["error"]["code"] == "NotFoundError":
                 self.helper.log_info("File not found on VirusTotal.")
                 return "File not found on VirusTotal."

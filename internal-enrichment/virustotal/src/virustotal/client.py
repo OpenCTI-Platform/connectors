@@ -69,9 +69,7 @@ class VirusTotalClient:
         except requests.exceptions.RequestException as err:
             logger.error(f"[VirusTotal] Something else happened: {err}")
         except Exception as err:
-            logger.error(
-                f"[VirusTotal] Unknown error {err}"
-            )
+            logger.error(f"[VirusTotal] Unknown error {err}")
         try:
             return response.json()
         except json.JSONDecodeError as err:
