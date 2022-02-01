@@ -3,7 +3,6 @@
 import datetime
 import json
 from pathlib import Path
-from time import sleep
 from typing import Optional
 
 import plyara
