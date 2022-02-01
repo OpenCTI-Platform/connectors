@@ -56,6 +56,7 @@ class VirusTotalClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
         http.mount("https://", adapter)
+        response = None
         try:
             response = http.get(url, headers=self.headers)
             response.raise_for_status()
@@ -67,22 +68,25 @@ class VirusTotalClient:
             logger.error(f"[VirusTotal] Timeout error: {errt}")
         except requests.exceptions.RequestException as err:
             logger.error(f"[VirusTotal] Something else happened: {err}")
-        else:
-            try:
-                return response.json()
-            except json.JSONDecodeError as err:
-                logger.error(
-                    f"[VirusTotal] Error decoding the json: {err} - {response.text}"
-                )
-        return None
+        except Exception as err:
+            logger.error(
+                f"[VirusTotal] Unknown error {err}"
+            )
+        try:
+            return response.json()
+        except json.JSONDecodeError as err:
+            logger.error(
+                f"[VirusTotal] Error decoding the json: {err} - {response.text}"
+            )
+            return None
 
-    def get_file_info(self, hash_256: str) -> Optional[JSONType]:
+    def get_file_info(self, hash: str) -> Optional[JSONType]:
         """
         Retrieve file information based on the given hash-256.
 
         Parameters
         ----------
-        hash_256 : str
+        hash : str
             Hash of the file to retrieve.
 
         Returns
@@ -90,7 +94,7 @@ class VirusTotalClient:
         JSON
             File information, as JSON.
         """
-        url = f"{self.url}/files/{hash_256}"
+        url = f"{self.url}/files/{hash}"
         return self._query(url)
 
     def get_yara_ruleset(self, ruleset_id: str) -> Optional[JSONType]:
