@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Intel471'
+  scope:'malware,vulnerability,indicator'
+  confidence_level: 70
+  update_existing_data: True
+  log_level: 'info'
+
+intel471:
+  api_username: CHANGEME
+  api_key: CHANGEME
+  interval_indicators: 60
+  interval_cves: 120
