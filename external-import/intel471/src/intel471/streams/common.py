@@ -1,3 +1,4 @@
+import datetime
 from abc import ABC, abstractmethod
 from typing import Iterator
 
@@ -9,9 +10,13 @@ from pycti import OpenCTIConnectorHelper
 
 class Intel471Stream(ABC):
 
-    def __init__(self, helper: OpenCTIConnectorHelper, api_username: str, api_key: str) -> None:
+    def __init__(self, helper: OpenCTIConnectorHelper, api_username: str, api_key: str, lookback: int = None) -> None:
         self.helper = helper
         self.api_config = titan_client.Configuration(username=api_username, password=api_key)
+        if lookback:
+            self.lookback = lookback
+        else:
+            self.lookback = int((datetime.datetime.utcnow() - datetime.timedelta(days=1)).timestamp() * 1000)
 
     def run(self) -> None:
         for bundle in self.get_bundle():
@@ -22,7 +27,7 @@ class Intel471Stream(ABC):
         raise NotImplemented
 
     def send_to_server(self, bundle: Bundle) -> None:
-        self.helper.log_info(f"Sending Bundle to server with " f'{len(bundle.objects)} objects')
+        self.helper.log_info(f"{self.__class__.__name__} sends bundle with {len(bundle.objects)} objects")
         work_id = self.helper.api.work.initiate_work(self.helper.connect_id, self.__class__.__name__)
         # TODO: read 'update' from env vars
         self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id, update=False)
