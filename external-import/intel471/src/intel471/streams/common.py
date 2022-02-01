@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import Iterator
-from uuid import uuid4
 
 from stix2 import Bundle
 
@@ -23,11 +22,8 @@ class Intel471Stream(ABC):
         raise NotImplemented
 
     def send_to_server(self, bundle: Bundle) -> None:
-        """
-        Sends a STIX2 bundle to OpenCTI Server
-        Args:
-            bundle (list(dict)): STIX2 bundle represented as a list of dicts
-        """
         self.helper.log_info(f"Sending Bundle to server with " f'{len(bundle.objects)} objects')
+        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, self.__class__.__name__)
         # TODO: read 'update' from env vars
-        self.helper.send_stix2_bundle(bundle.serialize(), work_id=str(uuid4()), update=False)
+        self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id, update=False)
+        self.helper.api.work.to_processed(work_id, "Done")
