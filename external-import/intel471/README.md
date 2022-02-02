@@ -25,7 +25,9 @@ Configuration options can be set either in `docker-compose.yml` or in `config.ym
 | INTEL471_API_USERNAME | api_username    | Titan API username
 | INTEL471_API_KEY      | api_key         | Titan API key
 | INTEL471_INTERVAL_INDICATORS     | interval_indicators     | Interval for malware indicators in minutes. If not set indicators won't be pulled.
+| INTEL471_INITIAL_HISTORY_INDICATORS     | initial_history_indicators     | Interval for malware indicators in minutes. If not set indicators won't be pulled.
 | INTEL471_INTERVAL_CVES     | interval_cves     | Ditto.
+| INTEL471_INITIAL_HISTORY_CVES     | initial_history_cves     | Ditto.
 
 
 ## Installation

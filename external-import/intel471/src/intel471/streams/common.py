@@ -10,18 +10,24 @@ from pycti import OpenCTIConnectorHelper
 
 class Intel471Stream(ABC):
 
+    ref = None
+
     def __init__(self, helper: OpenCTIConnectorHelper,
                  api_username: str,
                  api_key: str,
-                 lookback: int = None,
+                 initial_history: int = None,
                  update_existing_data: bool = False) -> None:
         self.helper = helper
         self.api_config = titan_client.Configuration(username=api_username, password=api_key)
         self.update_existing_data = update_existing_data
-        if lookback:
-            self.lookback = lookback
+        if initial_history:
+            self.initial_history = initial_history
         else:
-            self.lookback = int((datetime.datetime.utcnow() - datetime.timedelta(days=1)).timestamp() * 1000)
+            self.initial_history = int((datetime.datetime.utcnow()).timestamp() * 1000)
+
+    @property
+    def cursor_name(self):
+        return f"{self.ref}_cursor"
 
     def run(self) -> None:
         for bundle in self.get_bundle():
