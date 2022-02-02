@@ -25,11 +25,16 @@ class Intel471Connector:
             "INTEL471_API_KEY", ["intel471", "api_username"], config
         )
 
+        update_existing_data = bool(get_config_variable(
+            "CONNECTOR_UPDATE_EXISTING_DATA", ["connector", "update_existing_data"], config,
+        ))
+
         for stream_class, env_var, config_var in (
                 (Intel471IndicatorsStream, "INTEL471_INTERVAL_INDICATORS", "interval_indicators"),
                 (Intel471CVEsStream, "INTEL471_INTERVAL_CVES", "interval_cves")):
             if interval := get_config_variable(env_var, ["intel471", config_var], config, True, 0):
-                self.add_job(stream_class(self.helper, api_username, api_key), interval)
+                stream_instance = stream_class(self.helper, api_username, api_key, update_existing_data)
+                self.add_job(stream_instance, interval)
 
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)

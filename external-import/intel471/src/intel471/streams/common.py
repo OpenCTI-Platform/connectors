@@ -10,9 +10,14 @@ from pycti import OpenCTIConnectorHelper
 
 class Intel471Stream(ABC):
 
-    def __init__(self, helper: OpenCTIConnectorHelper, api_username: str, api_key: str, lookback: int = None) -> None:
+    def __init__(self, helper: OpenCTIConnectorHelper,
+                 api_username: str,
+                 api_key: str,
+                 lookback: int = None,
+                 update_existing_data: bool = False) -> None:
         self.helper = helper
         self.api_config = titan_client.Configuration(username=api_username, password=api_key)
+        self.update_existing_data = update_existing_data
         if lookback:
             self.lookback = lookback
         else:
@@ -29,6 +34,5 @@ class Intel471Stream(ABC):
     def send_to_server(self, bundle: Bundle) -> None:
         self.helper.log_info(f"{self.__class__.__name__} sends bundle with {len(bundle.objects)} objects")
         work_id = self.helper.api.work.initiate_work(self.helper.connect_id, self.__class__.__name__)
-        # TODO: read 'update' from env vars
-        self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id, update=False)
+        self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id, update=self.update_existing_data)
         self.helper.api.work.to_processed(work_id, "Done")
