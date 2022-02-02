@@ -1,4 +1,3 @@
-import datetime
 from typing import Iterator
 
 from stix2 import Bundle
@@ -30,7 +29,7 @@ class Intel471IndicatorsStream(Intel471Stream):
                 break
             cursor = api_response.cursor_next
             state[self.cursor_name] = cursor
-            self.helper.set_state(state)  # TODO: not thread safe
+            self.helper.set_state(state)
             try:
                 bundle = api_response.to_stix()
             except EmptyBundle:

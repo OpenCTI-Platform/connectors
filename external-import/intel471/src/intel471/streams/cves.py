@@ -3,6 +3,7 @@ from typing import Iterator
 from stix2 import Bundle
 
 import titan_client
+from titan_client.titan_stix.exceptions import EmptyBundle
 from .common import Intel471Stream
 
 
@@ -28,5 +29,10 @@ class Intel471CVEsStream(Intel471Stream):
                 break
             cursor = api_response.cve_reports[-1].activity.last + 1
             state[self.cursor_name] = cursor
-            self.helper.set_state(state)  # TODO: not thread safe
-            yield api_response.to_stix()
+            self.helper.set_state(state)
+            try:
+                bundle = api_response.to_stix()
+            except EmptyBundle:
+                self.helper.log_info(f"{self.__class__.__name__} got empty bundle from STIX converter.")
+            else:
+                yield bundle
