@@ -74,7 +74,7 @@ class Intel471Stream(ABC):
 
     def _fetch_cursor(self) -> Union[str, None]:
         self.helper.log_debug("Sending task to helper handler to get the state")
-        self.out_queue.put(HelperRequest(stream=self.label, operation=HelperRequest.Operation.GET))
+        self.out_queue.put(HelperRequest(operation=HelperRequest.Operation.GET, stream=self.label))
         self.helper.log_debug("Waiting for helper handler to get state")
         cursor = self.in_queue.get().get(self.cursor_name)
         self.helper.log_debug("Got data from helper handler")
@@ -82,7 +82,7 @@ class Intel471Stream(ABC):
 
     def _update_cursor(self, value: str) -> None:
         self.helper.log_debug("Sending task to helper handler to save state")
-        self.out_queue.put(HelperRequest(stream=self.label, operation=HelperRequest.Operation.UPDATE, data={self.cursor_name: value}))
+        self.out_queue.put(HelperRequest(operation=HelperRequest.Operation.UPDATE, stream=self.label, data={self.cursor_name: value}))
         self.helper.log_debug("Waiting for ACK from helper handler to save state")
         self.in_queue.get()
         self.helper.log_debug("Got ack for save state, proceeding")

@@ -17,7 +17,6 @@ from . import HelperRequest
 
 class Intel471Connector:
     def __init__(self) -> None:
-        self.is_running = False
         config: dict = self._init_config()
         self.scheduler: BaseScheduler = self._init_scheduler()
         self.helper = OpenCTIConnectorHelper(config)
@@ -66,7 +65,6 @@ class Intel471Connector:
         signal.signal(signal.SIGINT, self._signal_handler)
 
     def run(self) -> None:
-        self.is_running = True
         self.scheduler.start()
         self.handle_helper_state()  # main loop
 
@@ -79,8 +77,10 @@ class Intel471Connector:
         simple ACK that the state was updated) is being communicated back using a separate queue dedicated for
         the specific stream.
         """
-        while self.is_running:
+        while True:
             request: HelperRequest = self.in_queue.get()
+            if request.operation == HelperRequest.Operation.KILL:
+                return
             out_queue: Queue = self.out_queues[request.stream]
             self.helper.log_debug(f"Got task {str(request)}")
             state = self.helper.get_state() or {}
@@ -116,4 +116,4 @@ class Intel471Connector:
         self.helper.log_info("Shutting down")
         self.scheduler.shutdown()
         self.helper.stop()
-        self.is_running = False
+        self.in_queue.put(HelperRequest(operation=HelperRequest.Operation.KILL))
