@@ -1,2 +1,3 @@
-pycti==5.1.3
+pycti~=5.1.3
+stix2~=3.0.1
 Titan-Client==1.18.0

@@ -7,8 +7,9 @@ from stix2 import Bundle
 
 import titan_client
 from pycti import OpenCTIConnectorHelper
-from titan_client.titan_stix.exceptions import EmptyBundle
+from ..mappers.exceptions import EmptyBundle
 from .. import HelperRequest
+from ..mappers import StixMapper
 
 
 class Intel471Stream(ABC):
@@ -30,6 +31,7 @@ class Intel471Stream(ABC):
         self.out_queue = out_queue
         self.api_config = titan_client.Configuration(username=api_username, password=api_key)
         self.update_existing_data = update_existing_data
+        self.stix_mapper = StixMapper()
         if initial_history:
             self.initial_history = initial_history
         else:
@@ -60,7 +62,7 @@ class Intel471Stream(ABC):
             cursor = self._get_cursor_value(api_response)
             self._update_cursor(cursor)
             try:
-                bundle = api_response.to_stix()
+                bundle = self.stix_mapper.map(api_response.to_dict(serialize=True))
             except EmptyBundle:
                 self.helper.log_info(f"{self.__class__.__name__} got empty bundle from STIX converter.")
             else:
