@@ -33,3 +33,8 @@ Configuration options can be set either in `docker-compose.yml` or in `config.ym
 ## Installation
 
 Please refer to [OpenCTI's documentation on connectors](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8).
+
+### Docker
+
+Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t opencti-intel471:latest`.
+Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`

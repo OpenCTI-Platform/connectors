@@ -100,12 +100,13 @@ class Intel471Connector:
     def _init_scheduler() -> BaseScheduler:
         return BackgroundScheduler(
             jobstores={"default": MemoryJobStore()},
-            job_defaults={"coalesce": True}
+            job_defaults={"coalesce": True},
+            timezone="UTC"
         )
 
     @staticmethod
     def _init_config() -> dict:
-        config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yml")
+        config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config.yml")
         try:
             with open(config_file_path) as fh:
                 return yaml.load(fh, Loader=yaml.FullLoader)
