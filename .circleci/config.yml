@@ -745,8 +745,6 @@ workflows:
                 - master
       - notify_rolling:
           requires:
-            - ensure_formatting
-            - linter
             - build_rolling
       - notify:
           requires:
