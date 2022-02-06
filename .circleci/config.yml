@@ -1,5 +1,6 @@
 version: 2.1
-
+orbs: 
+  slack: circleci/slack@4.7.1
 jobs:
   ensure_formatting:
     docker:
@@ -16,6 +17,9 @@ jobs:
       - run:
           name: run black check
           command: black --check .
+      - slack/notify:
+          event: fail
+          template: basic_fail_1          
   linter:
     docker:
       - image: alpine/flake8
@@ -25,6 +29,9 @@ jobs:
       - run:
           name: flake8
           command: flake8 --ignore=E,W ~/repo
+      - slack/notify:
+          event: fail
+          template: basic_fail_1          
   build:
     working_directory: ~/opencti
     docker:
@@ -389,7 +396,10 @@ jobs:
             docker push opencti/connector-siemrules:latest
             docker push opencti/connector-siemrules:${CIRCLE_TAG}
             docker push opencti/connector-vulmatch:latest
-            docker push opencti/connector-vulmatch:${CIRCLE_TAG}            
+            docker push opencti/connector-vulmatch:${CIRCLE_TAG}
+      - slack/notify:
+          event: fail
+          template: basic_fail_1                   
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -696,6 +706,23 @@ jobs:
             docker push opencti/connector-stixify:rolling
             docker push opencti/connector-vulmatch:rolling
             docker push opencti/connector-siemrules:rolling
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+  notify_rolling:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - slack/notify:
+          event: pass
+          template: basic_success_1                
+  notify:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - slack/notify:
+          event: pass
+          template: basic_success_1                    
 workflows:
   version: 2
   opencti:
@@ -716,3 +743,11 @@ workflows:
             branches:
               only:
                 - master
+      - notify_rolling:
+          requires:
+            - ensure_formatting
+            - linter
+            - build_rolling
+      - notify:
+          requires:
+            - build
