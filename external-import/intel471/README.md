@@ -11,6 +11,7 @@ Intel 471 Website: [https://www.intel471.com](https://www.intel471.com)
 At the moment this connector runs two streams:
 
 - `Intel471IndicatorsStream` - fetches malware indicators from `/indicators` API endpoint and produces `Indicator` and `Malware` SDOs related using `Relationship` object.
+- `Intel471YARAStream` - fetches YARA rules from `/yara` API endpoint and produces `Indicator` and `Malware` SDOs related using `Relationship` object.
 - `Intel471CVEsStream` - fetches CVE reports from `/cve/reports` API endpoint and produces `Vulnerability` SDOs.
 
 Each stream can be enabled/disabled and configured separately. For more details see Configuration section.
@@ -33,6 +34,8 @@ Configuration options can be set either as environment variables (also in `docke
 | INTEL471_INITIAL_HISTORY_INDICATORS | initial_history_indicators | Initial date (in epoch milliseconds UTC, e.g. 1643989649000) from which the indicators should be fetched on connector's first run or restart. If not set they will be fetched from connector's start date (no historical ones).
 | INTEL471_INTERVAL_CVES              | interval_cves              | Ditto, but for CVE reports.
 | INTEL471_INITIAL_HISTORY_CVES       | initial_history_cves       | Ditto, but for CVE reports.
+| INTEL471_INTERVAL_YARA              | interval_yara              | Ditto, but for YARA rules.
+| INTEL471_INITIAL_HISTORY_YARA       | initial_history_yara       | Ditto, but for YARA rules.
 
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other Connector.   
 For more information regarding variables please refer to 

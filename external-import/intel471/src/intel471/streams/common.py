@@ -13,6 +13,23 @@ from ..mappers import StixMapper
 
 
 class Intel471Stream(ABC):
+    """
+    Base class for all streams. When creating new stream, inherit from this class and provide following class vars:
+
+    - label - this is a unique name which will be used as part of the config variables names and a part of cursor's name
+              for example: label=cves, env var=INTEL471_INTERVAL_CVES, config var=intel471.interval_cves, etc.
+    - api_payload_objects_key - property of the object from API's response under which the objects to process are stored
+                                for example for /cve/reports endpoint cves are stored under "cve_reports" key (snake_case always)
+    - api_class_name, api_method_name - name of the class and the method from `titan_client` for fetching the objects
+                                        for example for CVEs it'll be "VulnerabilitiesApi" and "cve_reports_get"
+
+    And implement following methods, if default implementation is not sufficient (mostly for stream endpoints):
+
+    - def _get_api_kwargs(self, cursor: Union[None, str]) -> dict:
+      implement the logic for building arguments for the API call, including initial history and cursor handling
+    - def _get_cursor_value(self, api_response: Any) -> Union[None, str, int]:
+      implement the logic for extracting value used for cursor from the API's response.
+    """
 
     label = None
     api_payload_objects_key = None
@@ -93,6 +110,6 @@ class Intel471Stream(ABC):
     def _get_api_kwargs(self, cursor: Union[None, str]) -> dict:
         raise NotImplemented
 
-    @abstractmethod
     def _get_cursor_value(self, api_response: Any) -> Union[None, str, int]:
-        raise NotImplemented
+        return str(getattr(api_response, self.api_payload_objects_key)[-1].activity.last + 1)
+

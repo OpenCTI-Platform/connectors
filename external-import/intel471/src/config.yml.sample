@@ -16,5 +16,7 @@ intel471:
   api_key: CHANGEME
   interval_indicators: 60
   initial_history_indicators: 0
+  interval_yara: 60
+  initial_history_yara: 0
   interval_cves: 120
   initial_history_cves: 0

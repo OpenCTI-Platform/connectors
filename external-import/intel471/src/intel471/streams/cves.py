@@ -1,4 +1,4 @@
-from typing import Union, Any
+from typing import Union
 
 from .common import Intel471Stream
 
@@ -14,6 +14,3 @@ class Intel471CVEsStream(Intel471Stream):
         if cursor:
             kwargs["_from"] = cursor
         return kwargs
-
-    def _get_cursor_value(self, api_response: Any) -> Union[None, str, int]:
-        return str(api_response.cve_reports[-1].activity.last + 1)
