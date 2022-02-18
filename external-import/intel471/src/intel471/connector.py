@@ -11,6 +11,7 @@ from yaml.parser import ParserError
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from .streams.common import Intel471Stream
 from .streams.indicators import Intel471IndicatorsStream
+from .streams.iocs import Intel471IOCsStream
 from .streams.cves import Intel471CVEsStream
 from .streams.yara import Intel471YARAStream
 from . import HelperRequest
@@ -36,7 +37,11 @@ class Intel471Connector:
             "INTEL471_API_KEY", ["intel471", "api_username"], config
         )
 
-        for stream_class in (Intel471IndicatorsStream, Intel471CVEsStream, Intel471YARAStream):
+        for stream_class in (
+                Intel471IndicatorsStream,
+                Intel471CVEsStream,
+                Intel471YARAStream,
+                Intel471IOCsStream):
             if interval := get_config_variable(
                     f"INTEL471_INTERVAL_{stream_class.label}".upper(),
                     ["intel471", f"interval_{stream_class.label}"],

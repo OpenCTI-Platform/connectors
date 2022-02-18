@@ -31,7 +31,9 @@ Configuration options can be set either as environment variables (also in `docke
 | INTEL471_API_USERNAME               | api_username               | Titan API username
 | INTEL471_API_KEY                    | api_key                    | Titan API key
 | INTEL471_INTERVAL_INDICATORS        | interval_indicators        | How often should malware indicators be fetched (in minutes). If not set the stream won't be enabled.
-| INTEL471_INITIAL_HISTORY_INDICATORS | initial_history_indicators | Initial date (in epoch milliseconds UTC, e.g. 1643989649000) from which the indicators should be fetched on connector's first run or restart. If not set they will be fetched from connector's start date (no historical ones).
+| INTEL471_INITIAL_HISTORY_INDICATORS | initial_history_indicators | Initial date (in epoch milliseconds UTC, e.g. 1643989649000) from which the malware indicators should be fetched on connector's first run or restart. If not set they will be fetched from connector's start date (no historical ones).
+| INTEL471_INTERVAL_IOCS              | interval_iocs              | Ditto, but for IOCs (Indicators of compromise).
+| INTEL471_INITIAL_HISTORY_IOCS       | initial_history_iocs       | Ditto, but for IOCs.
 | INTEL471_INTERVAL_CVES              | interval_cves              | Ditto, but for CVE reports.
 | INTEL471_INITIAL_HISTORY_CVES       | initial_history_cves       | Ditto, but for CVE reports.
 | INTEL471_INTERVAL_YARA              | interval_yara              | Ditto, but for YARA rules.

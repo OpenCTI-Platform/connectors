@@ -20,3 +20,5 @@ intel471:
   initial_history_yara: 0
   interval_cves: 120
   initial_history_cves: 0
+  interval_iocs: 120
+  initial_history_iocs: 0
