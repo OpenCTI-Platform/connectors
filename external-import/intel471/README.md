@@ -8,9 +8,10 @@ This connector ingests STIX 2.1 objects from the Intel 471's Titan platform.
 
 Intel 471 Website: [https://www.intel471.com](https://www.intel471.com)
 
-At the moment this connector runs two streams:
+At the moment this connector runs four streams:
 
 - `Intel471IndicatorsStream` - fetches malware indicators from `/indicators` API endpoint and produces `Indicator` and `Malware` SDOs related using `Relationship` object.
+- `Intel471IOCsStream` - fetches IOCs from `/iocs` API endpoint and produces `Indicator` and `Report` SDOs related using `Report`'s internal property `object_refs`.
 - `Intel471YARAStream` - fetches YARA rules from `/yara` API endpoint and produces `Indicator` and `Malware` SDOs related using `Relationship` object.
 - `Intel471CVEsStream` - fetches CVE reports from `/cve/reports` API endpoint and produces `Vulnerability` SDOs.
 
@@ -31,7 +32,7 @@ Configuration options can be set either as environment variables (also in `docke
 | INTEL471_API_USERNAME               | api_username               | Titan API username
 | INTEL471_API_KEY                    | api_key                    | Titan API key
 | INTEL471_INTERVAL_INDICATORS        | interval_indicators        | How often should malware indicators be fetched (in minutes). If not set the stream won't be enabled.
-| INTEL471_INITIAL_HISTORY_INDICATORS | initial_history_indicators | Initial date (in epoch milliseconds UTC, e.g. 1643989649000) from which the malware indicators should be fetched on connector's first run or restart. If not set they will be fetched from connector's start date (no historical ones).
+| INTEL471_INITIAL_HISTORY_INDICATORS | initial_history_indicators | Initial date (in epoch milliseconds UTC, e.g. 1643989649000) from which the malware indicators should be fetched on connector's first run. If not set they will be fetched from connector's start date (no historical ones).
 | INTEL471_INTERVAL_IOCS              | interval_iocs              | Ditto, but for IOCs (Indicators of compromise).
 | INTEL471_INITIAL_HISTORY_IOCS       | initial_history_iocs       | Ditto, but for IOCs.
 | INTEL471_INTERVAL_CVES              | interval_cves              | Ditto, but for CVE reports.
@@ -65,8 +66,13 @@ Then, start the docker container with the provided `docker-compose.yml` or integ
 Navigate to **Data->Connectors->Intel471** and observe completed works and works in progress. They should start appearing after 
 configured intervals (if new data was available in Titan).
 
-To see the indicators created by `Intel471IndicatorsStream` navigate to **Observations->Indicators** and search for `Intel 471`.
+To see the indicators created by `Intel471IndicatorsStream`, `Intel471IOCsStream` and `Intel471YARAStream` navigate to **Observations->Indicators**.
 
-To see the CVEs created by `Intel471CVEsStream` navigate to **Arsenal->Vulnerabilities** and search for `Intel 471`.
+To see the malware objects created by `Intel471IndicatorsStream` and `Intel471YARAStream` navigate to **Arsenal->Malwares**.
+
+To see the Reports created by `Intel471IOCsStream` navigate to **Analysis->Reports**.
+
+To see the CVEs created by `Intel471CVEsStream` navigate to **Arsenal->Vulnerabilities**.
+
 
 **Pro-tip**: Creating a new user and API Token for the Connector can help you more easily track which STIX2 objects were created by the Connector.
