@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-taxii2:
+    image: opencti/connector-obstracts:5.1.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=OBSTRACTS
+      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software
+      - CONNECTOR_CONFIDENCE_LEVEL=70
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_LOG_LEVEL=info
+      - TAXII2_DISCOVERY_URL=https://app.obstracts.com/taxii/taxii2
+      - TAXII2_USERNAME=CHANGEME
+      - TAXII2_PASSWORD=CHANGEME
+      - TAXII2_V21=true
+      - TAXII2_COLLECTIONS=CHANGEME
+      - TAXII2_INITIAL_HISTORY=24
+      - TAXII2_INTERVAL=24
+      - VERIFY_SSL=true
+    restart: always

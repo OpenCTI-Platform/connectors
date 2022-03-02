@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'SIEMRULES'
+  scope:'identity,report,indicator'
+  confidence_level: 70
+  update_existing_data: True
+  log_level: 'info'
+
+taxii2:
+  discovery_url: 'https://app.siemrules.com/taxii/taxii2'
+  username: CHANGEME
+  password: CHANGEME
+  v2.1: True
+  collections: CHANGEME
+  initial_history: 24
+  interval: 24
+  verify_ssl: True

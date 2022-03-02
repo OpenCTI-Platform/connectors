@@ -1,0 +1,32 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CrowdStrike'
+  scope: 'crowdstrike'
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  log_level: 'info'
+
+crowdstrike:
+  base_url: 'https://api.crowdstrike.com'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  tlp: 'Amber'
+  create_observables: true
+  create_indicators: true
+  scopes: 'actor,report,indicator,yara_master'
+  actor_start_timestamp: 0                                          # BEWARE! All the actors!
+  report_start_timestamp: 0                                         # BEWARE! All the reports!
+  report_status: 'New'
+  report_include_types: 'notice,tipper,intelligence report,periodic report'
+  report_type: 'threat-report'
+  report_guess_malware: false                                       # Use report tags to guess malware
+  indicator_start_timestamp: 0                                      # BEWARE! All the indicators!
+  indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'
+  indicator_low_score: 40
+  indicator_low_score_labels: 'MaliciousConfidence/Low'
+  interval_sec: 1800                                                # Seconds

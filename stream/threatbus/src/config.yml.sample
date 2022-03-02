@@ -1,0 +1,19 @@
+opencti:
+  url: http://localhost:8080
+  token: ChangeMe
+
+connector:
+  id: ChangeMe
+  type: STREAM
+  name: Threat Bus
+  scope: threatbus
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: info
+  entity_name: ChangeMe
+  entity_description: ChangeMe
+  forward_all_iocs: false
+
+threatbus:
+  zmq_host: localhost
+  zmq_port: 13370
+  snapshot: 30

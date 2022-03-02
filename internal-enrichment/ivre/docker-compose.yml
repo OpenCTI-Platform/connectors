@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector-ivre:
+    image: opencti/connector-ivre:5.1.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=ivre
+      - CONNECTOR_SCOPE=autonomous-system,domain-name,ipv4-addr,ipv6-addr,mac-addr,x509-certificate
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - IVRE_MAX_TLP=TLP:AMBER
+    restart: always

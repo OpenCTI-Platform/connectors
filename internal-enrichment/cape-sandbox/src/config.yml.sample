@@ -1,0 +1,49 @@
+# Pre-requisites:
+
+# 1. Enable procdumps and CAPE payloads API
+#    See: [procdumpfiles] and [payloadfiles] in CAPEv2/conf/api.conf
+
+# 2. Increase API rate limits in conf/api.conf for the following:
+#    [procdumpfiles]
+#    [payloadfiles]
+#    [taskstatus]
+#    [taskreport]
+#    Note: Alternatively if you don't wish to increase these limits,
+#          you can adjust the values for cape_sandbox:cooldown_time
+#          and cape_sandbox:max_retries to suit your needs.
+
+# 3: (Optional) Enable authentication
+#    See: https://capev2.readthedocs.io/en/latest/usage/api.html?highlight=auth#rest-api-v2
+#    Update CAPEv2/conf/api.conf:token_auth_enabled = yes
+#    and set auth_only for [procdumpfiles] and [payloadfiles]
+#    and restart cape services
+#    Afterwards change the value for cape_sandbox:token
+#    Note: If you run into SQL table errors after enabling auth, try running:
+#          sudo python3 /opt/CAPEv2/web/manage.py migrate
+
+opencti:
+  url: 'ChangeMe'
+  token: 'ChangeMe'
+
+connector:
+  id: 'CAPEv2_Sandbox'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'CAPEv2 Sandbox'
+  scope: 'StixFile,Artifact'
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+cape_sandbox:
+  url: 'ChangeMe' # Base URL
+  token: 'ChangeMe' # Change if using auth
+  route: 'tor' # Network routing, other examples include: none, internet, vpn0
+  timeout: 300 # Maximum amount of seconds to run the analysis for
+  enforce_timeout: false # Enforce analysis to run for the full timeout period
+  priority: 1 # Set priority for submitted samples, 1-3, where 3 is highest priority
+  try_extract: false # Try and extract configs statically without a VM first (this is currently buggy on CAPEv2 side)
+  options: 'procmemdump=1,import_reconstruction=1,fake-rdtsc=1' # List of options to be passed to the analysis package
+  less_noise: true # Only upload Artifacts associated with Yara rule matches
+  cooldown_time: 20 # Set the amount of seconds to wait between retries of the API
+  max_retries: 10 # Set the amount of maximum retries for the API before failing
+  max_tlp: 'TLP:AMBER'

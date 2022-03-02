@@ -1,0 +1,14 @@
+version: '3'
+services:
+  connector-template:
+    image: opencti/connector-template:5.1.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=Template_Type
+      - CONNECTOR_NAME=Template
+      - CONNECTOR_SCOPE=Template_Scope # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+    restart: always

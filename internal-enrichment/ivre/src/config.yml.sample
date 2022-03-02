@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'IVRE-ChangeMeInstanceName'
+  auto: true
+  scope: 'autonomous-system,domain-name,ipv4-addr,ipv6-addr,mac-addr,x509-certificate'
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+ivre:
+  max_tlp: 'TLP:AMBER'

@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'VX Vault URL list'
+  scope: 'vxvault'
+  confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
+  create_indicator: False
+  update_existing_data: True
+  log_level: 'info'
+
+vxvault:
+  url: 'http://vxvault.net/URL_List.php'
+  create_indicators: True
+  interval: 3 # In days, must be strictly greater than 1

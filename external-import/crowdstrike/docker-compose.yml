@@ -1,0 +1,33 @@
+version: '3'
+services:
+  connector-crowdstrike:
+    image: opencti/connector-crowdstrike:5.1.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=CrowdStrike
+      - CONNECTOR_SCOPE=crowdstrike
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_LOG_LEVEL=info
+      - CROWDSTRIKE_BASE_URL=https://api.crowdstrike.com
+      - CROWDSTRIKE_CLIENT_ID=ChangeMe
+      - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
+      - CROWDSTRIKE_TLP=Amber
+      - CROWDSTRIKE_CREATE_OBSERVABLES=true
+      - CROWDSTRIKE_CREATE_INDICATORS=true
+      - CROWDSTRIKE_SCOPES=actor,report,indicator,yara_master
+      - CROWDSTRIKE_ACTOR_START_TIMESTAMP=0
+      - CROWDSTRIKE_REPORT_START_TIMESTAMP=0 # BEWARE! A lot of reports!
+      - CROWDSTRIKE_REPORT_STATUS=New
+      - CROWDSTRIKE_REPORT_INCLUDE_TYPES=notice,tipper,intelligence report,periodic report
+      - CROWDSTRIKE_REPORT_TYPE=threat-report
+      - CROWDSTRIKE_REPORT_GUESS_MALWARE=false # Use report tags to guess malware
+      - CROWDSTRIKE_INDICATOR_START_TIMESTAMP=0 # BEWARE! A lot of indicators!
+      - CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES=hash_ion,hash_md5,hash_sha1
+      - CROWDSTRIKE_INDICATOR_LOW_SCORE=40
+      - CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS=MaliciousConfidence/Low
+      - CROWDSTRIKE_INTERVAL_SEC=1800
+    restart: always
