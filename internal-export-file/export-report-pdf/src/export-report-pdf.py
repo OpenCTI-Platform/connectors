@@ -4,10 +4,7 @@ import time
 import datetime
 from pycti.utils.constants import StixCyberObservableTypes
 from weasyprint import HTML
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -186,7 +183,9 @@ class ExportReportPdf:
         return "Export done"
 
     def set_colors(self):
-        with open(os.path.join(self.current_dir, "resources/report.css.template"), "r") as f:
+        with open(
+            os.path.join(self.current_dir, "resources/report.css.template"), "r"
+        ) as f:
             new_css = f.read()
             new_css = new_css.replace("<primary_color>", self.primary_color)
             new_css = new_css.replace("<secondary_color>", self.secondary_color)
