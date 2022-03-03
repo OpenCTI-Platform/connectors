@@ -33,7 +33,11 @@ class ArticleImporter:
     _LATEST_ARTICLE_TIMESTAMP = "latest_article_timestamp"
 
     def __init__(
-        self, helper: OpenCTIConnectorHelper, article: dict[str, Any], author: Identity
+        self,
+        helper: OpenCTIConnectorHelper,
+        article: dict[str, Any],
+        author: Identity,
+        create_indicators: bool,
     ):
         """Initialization of the article importer."""
         self.helper = helper
@@ -43,6 +47,7 @@ class ArticleImporter:
         # Use custom properties to set the author and the confidence level of the object.
         self.custom_props = {
             "x_opencti_created_by_ref": self.author["id"],
+            "x_opencti_create_indicator": create_indicators,
         }
 
     def _process_indicator(self, indicator: Indicator) -> list[_Observable]:
@@ -222,8 +227,14 @@ class ArticleImporter:
     def run(self, work_id: str, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run the importation of the article."""
         self.work_id = work_id
-        published = parser.parse(self.article["publishedDate"])
         created = parser.parse(self.article["createdDate"])
+        # RisIQ API does not always provide the `publishedDate`.
+        # If it does not exist, take the value of the `createdDate` instead.
+        published = (
+            parser.parse(self.article["publishedDate"])
+            if self.article["publishedDate"] is not None
+            else created
+        )
 
         indicators = itertools.chain(
             *[
