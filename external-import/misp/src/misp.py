@@ -91,7 +91,11 @@ class Misp:
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
         )
         self.misp_datetime_attribute = get_config_variable(
-            "MISP_DATETIME_ATTRIBUTE", ["misp", "datetime_attribute"], config
+            "MISP_DATETIME_ATTRIBUTE",
+            ["misp", "datetime_attribute"],
+            config,
+            False,
+            "timestamp",
         )
         self.misp_create_report = get_config_variable(
             "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
@@ -192,6 +196,7 @@ class Misp:
                 current_state is not None
                 and "last_run" in current_state
                 and "latest_event_timestamp" in current_state
+                and current_state["latest_event_timestamp"] is not None
             ):
                 last_run = datetime.utcfromtimestamp(current_state["last_run"])
                 latest_event_timestamp = current_state["latest_event_timestamp"]
@@ -332,7 +337,7 @@ class Misp:
 
         for event in events:
             self.helper.log_info("Processing event " + event["Event"]["uuid"])
-            event_timestamp = int(event["Event"]["timestamp"])
+            event_timestamp = int(event["Event"][self.misp_datetime_attribute])
             # need to check if timestamp is more recent than the previous event since
             # events are not ordered by timestamp in API response
             if (
@@ -403,7 +408,6 @@ class Misp:
             ### Pre-process
             # Author
             author = Identity(
-                id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
                 name=event["Event"]["Orgc"]["name"],
                 identity_class="organization",
             )
@@ -553,12 +557,12 @@ class Misp:
                 + event_elements["countries"]
             )
             for event_element in all_event_elements:
-                if event_element["name"] not in added_object_refs:
+                if event_element["id"] not in added_object_refs:
                     object_refs.append(event_element)
-                    added_object_refs.append(event_element["name"])
-                if event_element["name"] not in added_entities:
+                    added_object_refs.append(event_element["id"])
+                if event_element["id"] not in added_entities:
                     bundle_objects.append(event_element)
-                    added_entities.append(event_element["name"])
+                    added_entities.append(event_element["id"])
             # Add indicators
             for indicator in indicators:
                 if indicator["indicator"] is not None:
@@ -601,12 +605,12 @@ class Misp:
                     + indicator["attribute_elements"]["countries"]
                 )
                 for attribute_element in all_attribute_elements:
-                    if attribute_element["name"] not in added_object_refs:
+                    if attribute_element["id"] not in added_object_refs:
                         object_refs.append(attribute_element)
-                        added_object_refs.append(attribute_element["name"])
-                    if attribute_element["name"] not in added_entities:
+                        added_object_refs.append(attribute_element["id"])
+                    if attribute_element["id"] not in added_entities:
                         bundle_objects.append(attribute_element)
-                        added_entities.append(attribute_element["name"])
+                        added_entities.append(attribute_element["id"])
                 # Add attribute relationships
                 for relationship in indicator["relationships"]:
                     indicators_relationships.append(relationship)
@@ -701,6 +705,7 @@ class Misp:
                         abstract=note["name"],
                         content=self.process_note(note["content"], bundle_objects),
                         object_refs=[report],
+                        allow_custom=True,
                     )
                     bundle_objects.append(note)
             bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
@@ -898,7 +903,6 @@ class Misp:
 
                     if indicator is not None:
                         sighting = Sighting(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("sighting"),
                             sighting_of_ref=indicator["id"],
                             first_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"])
@@ -932,7 +936,6 @@ class Misp:
             if indicator is not None and observable is not None:
                 relationships.append(
                     Relationship(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                         relationship_type="based-on",
                         created_by_ref=author,
                         source_ref=indicator.id,
@@ -946,7 +949,6 @@ class Misp:
             ):
                 relationships.append(
                     Relationship(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                         relationship_type="related-to",
                         created_by_ref=author,
                         source_ref=object_observable.id,
@@ -967,9 +969,6 @@ class Misp:
                 if indicator is not None:
                     relationships.append(
                         Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
                             relationship_type="indicates",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -983,9 +982,6 @@ class Misp:
                 if observable is not None:
                     relationships.append(
                         Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1010,9 +1006,6 @@ class Misp:
                 if indicator is not None:
                     relationships.append(
                         Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
                             relationship_type="indicates",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1026,9 +1019,6 @@ class Misp:
                 if observable is not None:
                     relationships.append(
                         Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1053,7 +1043,6 @@ class Misp:
                     else:
                         threat_id = threat.id
                     relationship_uses = Relationship(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                         relationship_type="uses",
                         created_by_ref=author,
                         source_ref=threat_id,
@@ -1107,7 +1096,6 @@ class Misp:
                     else:
                         threat_id = threat.id
                     relationship_uses = Relationship(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                         relationship_type="uses",
                         confidence=self.helper.connect_confidence_level,
                         created_by_ref=author,
@@ -1150,9 +1138,6 @@ class Misp:
                 if indicator is not None:
                     relationships.append(
                         Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1166,9 +1151,6 @@ class Misp:
                 if observable is not None:
                     relationships.append(
                         Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1184,9 +1166,6 @@ class Misp:
                 if indicator is not None:
                     relationships.append(
                         Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1200,9 +1179,6 @@ class Misp:
                 if observable is not None:
                     relationships.append(
                         Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
-                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1261,9 +1237,6 @@ class Misp:
                     if name not in added_names:
                         elements["intrusion_sets"].append(
                             IntrusionSet(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "intrusion-set"
-                                ),
                                 name=name,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
@@ -1287,13 +1260,13 @@ class Misp:
                     if name not in added_names:
                         elements["tools"].append(
                             Tool(
-                                id=OpenCTIStix2Utils.generate_random_stix_id("tool"),
                                 name=name,
                                 labels=["tool"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
                                 object_marking_refs=markings,
                                 custom_properties={"x_opencti_aliases": aliases},
+                                allow_custom=True,
                             )
                         )
                         added_names.append(name)
@@ -1317,7 +1290,6 @@ class Misp:
                     if name not in added_names:
                         elements["malwares"].append(
                             Malware(
-                                id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
                                 name=name,
                                 is_family=True,
                                 aliases=aliases,
@@ -1325,6 +1297,7 @@ class Misp:
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
                                 object_marking_refs=markings,
+                                allow_custom=True,
                             )
                         )
                         added_names.append(name)
@@ -1345,9 +1318,6 @@ class Misp:
                     if name not in added_names:
                         elements["attack_patterns"].append(
                             AttackPattern(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "attack-pattern"
-                                ),
                                 name=name,
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
@@ -1358,6 +1328,7 @@ class Misp:
                                     ],
                                     "x_opencti_aliases": aliases,
                                 },
+                                allow_custom=True,
                             )
                         )
                         added_names.append(name)
@@ -1368,14 +1339,12 @@ class Misp:
                     if name not in added_names:
                         elements["sectors"].append(
                             Identity(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "identity"
-                                ),
                                 name=name,
                                 identity_class="class",
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
                                 object_marking_refs=markings,
+                                allow_custom=True,
                             )
                         )
                         added_names.append(name)
@@ -1386,14 +1355,12 @@ class Misp:
                     if name not in added_names:
                         elements["countries"].append(
                             Location(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "location"
-                                ),
                                 name=name,
                                 country=galaxy_entity["meta"]["ISO"],
                                 description="Imported from MISP tag",
                                 created_by_ref=author,
                                 object_marking_refs=markings,
+                                allow_custom=True,
                             )
                         )
                         added_names.append(name)
@@ -1425,13 +1392,11 @@ class Misp:
                 if name not in added_names:
                     elements["intrusion_sets"].append(
                         IntrusionSet(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "intrusion-set"
-                            ),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
+                            allow_custom=True,
                         )
                     )
                     added_names.append(name)
@@ -1448,11 +1413,11 @@ class Misp:
                 if name not in added_names:
                     elements["tools"].append(
                         Tool(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("tool"),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
+                            allow_custom=True,
                         )
                     )
                     added_names.append(name)
@@ -1474,12 +1439,12 @@ class Misp:
                 if name not in added_names:
                     elements["malwares"].append(
                         Malware(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
                             name=name,
                             is_family=True,
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
+                            allow_custom=True,
                         )
                     )
                     added_names.append(name)
@@ -1494,13 +1459,11 @@ class Misp:
                 if name not in added_names:
                     elements["attack_patterns"].append(
                         AttackPattern(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "attack-pattern"
-                            ),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
                             object_marking_refs=markings,
+                            allow_custom=True,
                         )
                     )
                     added_names.append(name)
@@ -1511,12 +1474,12 @@ class Misp:
                 if name not in added_names:
                     elements["sectors"].append(
                         Identity(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
                             name=name,
                             description="Imported from MISP tag",
                             identity_class="class",
                             created_by_ref=author,
                             object_marking_refs=markings,
+                            allow_custom=True,
                         )
                     )
                     added_names.append(name)

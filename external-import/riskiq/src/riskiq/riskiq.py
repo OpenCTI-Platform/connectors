@@ -46,6 +46,13 @@ class RiskIQConnector:
         password = get_config_variable(
             "RISKIQ_PASSWORD", ["riskiq", "password"], config
         )
+        self.create_indicators = get_config_variable(
+            "RISKIQ_CREATE_INDICATORS",
+            ["riskiq", "create_indicators"],
+            config,
+            False,
+            True,
+        )
         # Create the author for all reports.
         self.author = Identity(
             name=self._DEFAULT_AUTHOR,
@@ -146,7 +153,10 @@ class RiskIQConnector:
                     if self.client.is_correct(response):
                         for article in response["articles"]:
                             importer = ArticleImporter(
-                                self.helper, article, self.author
+                                self.helper,
+                                article,
+                                self.author,
+                                self.create_indicators,
                             )
                             importer_state = importer.run(work_id, current_state)
                             if importer_state:
