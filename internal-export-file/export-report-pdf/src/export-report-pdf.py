@@ -33,6 +33,7 @@ class ExportReportPdf:
             ["export_report_pdf", "secondary_color"],
             config,
         )
+        self.current_dir = os.path.abspath(os.path.dirname(__file__))
         self.set_colors()
         self.company_address_line_1 = get_config_variable(
             "EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_1",
@@ -167,12 +168,12 @@ class ExportReportPdf:
                 context["entities"][obj_entity_type].append(entity_dict)
 
         # Render html with input variables
-        env = Environment(loader=FileSystemLoader(os.path.abspath(os.getcwd())))
-        template = env.get_template("src/resources/report.html")
+        env = Environment(loader=FileSystemLoader(self.current_dir))
+        template = env.get_template("resources/report.html")
         html_string = template.render(context)
 
         # Generate pdf from html string
-        pdf_contents = HTML(string=html_string, base_url="src/resources").write_pdf()
+        pdf_contents = HTML(string=html_string, base_url="resources").write_pdf()
 
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
@@ -185,12 +186,12 @@ class ExportReportPdf:
         return "Export done"
 
     def set_colors(self):
-        with open("src/resources/report.css.template", "r") as f:
+        with open(os.path.join(self.current_dir, "resources/report.css.template"), "r") as f:
             new_css = f.read()
             new_css = new_css.replace("<primary_color>", self.primary_color)
             new_css = new_css.replace("<secondary_color>", self.secondary_color)
 
-        with open("src/resources/report.css", "w") as f:
+        with open(os.path.join(self.current_dir, "resources/report.css"), "w") as f:
             f.write(new_css)
 
     def get_reader(self, entity_type):
