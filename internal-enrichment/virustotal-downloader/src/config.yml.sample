@@ -3,9 +3,9 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'Virustotal_Downloader'
+  id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
-  name: 'Virustotal Downloader'
+  name: 'VirusTotal Downloader'
   scope: 'StixFile'
   auto: true # Enable/disable auto-enrichment of observables
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)

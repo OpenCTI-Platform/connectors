@@ -277,7 +277,7 @@ class ShodanConnector:
             self.helper.api.stix_cyber_observable_relationship.create(
                 fromId=domain["id"],
                 toId=observable["id"],
-                relationship_type="resolves-to",
+                relationship_type="obs_resolves-to",
                 update=True,
                 confidence=self.helper.connect_confidence_level,
             )
