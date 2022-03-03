@@ -61,6 +61,8 @@ class CyberThreatCoalition:
             "CYBER_THREAT_COALITION_CREATE_INDICATORS",
             ["cyber-threat-coalition", "create_indicators"],
             config,
+            False,
+            True,
         )
         self.cyber_threat_coalition_create_observables = get_config_variable(
             "CYBER_THREAT_COALITION_CREATE_OBSERVABLES",

@@ -47,7 +47,11 @@ class RiskIQConnector:
             "RISKIQ_PASSWORD", ["riskiq", "password"], config
         )
         self.create_indicators = get_config_variable(
-            "RISKIQ_CREATE_INDICATORS", ["riskiq", "create_indicators"], config, True
+            "RISKIQ_CREATE_INDICATORS",
+            ["riskiq", "create_indicators"],
+            config,
+            False,
+            True,
         )
         # Create the author for all reports.
         self.author = Identity(
