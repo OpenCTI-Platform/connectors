@@ -1,3 +1,4 @@
+import yaml
 from stix2 import Bundle, Vulnerability, ExternalReference
 
 from .common import BaseMapper, StixMapper, generate_id, author_identity
@@ -7,14 +8,21 @@ from .common import BaseMapper, StixMapper, generate_id, author_identity
 @StixMapper.register("cve", lambda x: "cve_report" in x.get("data", {}))
 class CveMapper(BaseMapper):
 
-    def map(self, source: dict) -> Bundle:
+    def map(self, source: dict, girs_names: dict = None) -> Bundle:
         container = {}
         items = source.get("cveReports") or [] if "cveReportsTotalCount" in source else [source]
         for item in items:
             uid = item["uid"]
             name = item["data"]["cve_report"]["name"]
-            summary = "{}\n{}".format(item["data"]["cve_report"]["summary"],
-                                      item["data"]["cve_report"]["underground_activity_summary"])
+            summary = item["data"]["cve_report"]["summary"]
+            underground_activity_summary = item["data"]["cve_report"]["underground_activity_summary"]
+            extras = yaml.dump({k: v for k, v in item["data"]["cve_report"].items() if k in (
+                "vendor_name", "product_name", "patch_status", "interest_level", "activity_location", "exploit_status")})
+            girs_paths = item["classification"]["intel_requirements"]
+            girs_names = girs_names or {}
+            girs = [{"path": i, "name": girs_names.get(i)} for i in girs_paths]
+            description = f"{summary}\n\n{underground_activity_summary}\n\n### Properties\n\n```yaml\n{extras}```" \
+                          f"\n\n### Intel requirements\n\n```yaml\n{yaml.dump(girs)}```"
             cvss3_score = (item["data"]["cve_report"].get("cvss_score") or {}).get("v3")
             external_references = []
             for link_type, key in (("Titan URL", "titan_links"), ("PoC", "poc_links"), ("Patch", "patch_links")):
@@ -30,7 +38,7 @@ class CveMapper(BaseMapper):
                 custom_properties["x_opencti_base_score"] = cvss3_score
             vulnerability = Vulnerability(id=generate_id(Vulnerability, name=name.strip().lower()),
                                           name=name,
-                                          description=summary,
+                                          description=description,
                                           created_by_ref=author_identity,
                                           external_references=external_references,
                                           custom_properties=custom_properties)

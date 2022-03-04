@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 @StixMapper.register("iocs", lambda x: "iocTotalCount" in x)
 class IOCMapper(BaseMapper):
 
-    def map(self, source: dict) -> Bundle:
+    def map(self, source: dict, girs_names: dict = None) -> Bundle:
         container = {}
         items = source.get("iocs") or [] if "iocTotalCount" in source else [source]
         for item in items:

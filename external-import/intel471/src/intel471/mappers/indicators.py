@@ -1,5 +1,6 @@
 import datetime
 
+import yaml
 from stix2 import Indicator, Bundle, Relationship, Malware, KillChainPhase
 
 from .common import StixMapper, BaseMapper, generate_id, author_identity
@@ -9,7 +10,7 @@ from .patterning import STIXPatterningMapper
 @StixMapper.register("indicators", lambda x: "indicatorTotalCount" in x)
 class IndicatorsMapper(BaseMapper):
 
-    def map(self, source: dict) -> Bundle:
+    def map(self, source: dict, girs_names: dict = None) -> Bundle:
         container = {}
         items = source.get("indicators") or [] if "indicatorTotalCount" in source else [source]
         for item in items:
@@ -17,12 +18,16 @@ class IndicatorsMapper(BaseMapper):
             malware_family_uid = item["data"]["threat"]["data"]["malware_family_profile_uid"]
             valid_from = datetime.datetime.fromtimestamp(item["activity"]["first"] / 1000)
             valid_until = datetime.datetime.fromtimestamp(item["data"]["expiration"] / 1000)
-            description = item["data"]["context"]["description"]
             tactics = self.map_tactic(item["data"]["mitre_tactics"])
             indicator_id = item["uid"]
             indicator_type = item["data"]["indicator_type"]
             indicator_data = item["data"]["indicator_data"]
             confidence = self.map_confidence(item["data"]["confidence"])
+            girs_paths = item["data"]["intel_requirements"]
+            girs_names = girs_names or {}
+            girs = [{"path": i, "name": girs_names.get(i)} for i in girs_paths]
+            description_main = item["data"]["context"]["description"]
+            description = f"{description_main}\n\n### Intel requirements\n\n```yaml\n{yaml.dump(girs)}```"
 
             if pattern_mapper := getattr(STIXPatterningMapper, f"map_{indicator_type}", None):
                 stix_pattern = pattern_mapper(indicator_data)

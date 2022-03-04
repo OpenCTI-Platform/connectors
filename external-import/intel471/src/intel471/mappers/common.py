@@ -62,13 +62,13 @@ class StixMapper:
         return inner_wrapper
 
     @classmethod
-    def map(cls, source: dict, stix_version: str = "2.1") -> Bundle:
+    def map(cls, source: dict, stix_version: str = "2.1", girs_names: dict = None) -> Bundle:
         log.info(f"Initializing converter. STIX version {stix_version}.")
         for name, (condition, mapper_class) in cls.mappers.items():
             if condition(source):
                 log.info(f"Mapping Titan payload for {name}.")
                 mapper = mapper_class()
-                if bundle := mapper.map(source):
+                if bundle := mapper.map(source, girs_names):
                     return bundle
                 else:
                     raise EmptyBundle("STIX Mapper produced an empty bundle.")

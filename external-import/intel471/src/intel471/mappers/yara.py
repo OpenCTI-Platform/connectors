@@ -1,5 +1,6 @@
 import datetime
 
+import yaml
 from stix2 import Indicator, Bundle, Relationship, Malware
 from .common import StixMapper, BaseMapper, generate_id, author_identity
 
@@ -7,7 +8,7 @@ from .common import StixMapper, BaseMapper, generate_id, author_identity
 @StixMapper.register("yara", lambda x: "yaraTotalCount" in x)
 class YaraMapper(BaseMapper):
 
-    def map(self, source: dict) -> Bundle:
+    def map(self, source: dict, girs_names: dict = None) -> Bundle:
         container = {}
         items = source.get("yaras") or [] if "yaraTotalCount" in source else [source]
         for item in items:
@@ -17,6 +18,10 @@ class YaraMapper(BaseMapper):
             malware_family_uid = item["data"]["threat"]["data"]["malware_family_profile_uid"]
             valid_from = datetime.datetime.fromtimestamp(item["activity"]["first"] / 1000)
             confidence = self.map_confidence(item["data"]["confidence"])
+            girs_paths = item["data"]["intel_requirements"]
+            girs_names = girs_names or {}
+            girs = [{"path": i, "name": girs_names.get(i)} for i in girs_paths]
+            description = f"### Intel requirements\n\n```yaml\n{yaml.dump(girs)}```"
 
             malware = Malware(id=generate_id(Malware, name=malware_family_name.strip().lower()),
                               name=malware_family_name,
@@ -25,6 +30,7 @@ class YaraMapper(BaseMapper):
                               custom_properties={"x_intel471_com_uid": malware_family_uid})
 
             indicator = Indicator(id=generate_id(Indicator, pattern=yara_signature),
+                                  description=description,
                                   indicator_types=["malicious-activity"],
                                   pattern_type="yara",
                                   pattern=yara_signature,
