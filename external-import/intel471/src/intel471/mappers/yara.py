@@ -1,7 +1,7 @@
 import datetime
 
 import yaml
-from stix2 import Indicator, Bundle, Relationship, Malware
+from stix2 import Indicator, Bundle, Relationship, Malware, TLP_AMBER
 from .common import StixMapper, BaseMapper, generate_id, author_identity
 
 
@@ -27,6 +27,7 @@ class YaraMapper(BaseMapper):
                               name=malware_family_name,
                               is_family=True,
                               created_by_ref=author_identity,
+                              object_marking_refs=[TLP_AMBER],
                               custom_properties={"x_intel471_com_uid": malware_family_uid})
 
             indicator = Indicator(id=generate_id(Indicator, pattern=yara_signature),
@@ -37,12 +38,14 @@ class YaraMapper(BaseMapper):
                                   valid_from=valid_from,
                                   created_by_ref=author_identity,
                                   confidence=confidence,
+                                  object_marking_refs=[TLP_AMBER],
                                   custom_properties={"x_intel471_com_uid": yara_uid})
             relationship = Relationship(indicator, "indicates", malware, created_by_ref=author_identity)
             container[malware.id] = malware
             container[indicator.id] = indicator
             container[author_identity.id] = author_identity
             container[relationship.id] = relationship
+            container[TLP_AMBER.id] = TLP_AMBER
         if container:
             bundle = Bundle(*container.values(), allow_custom=True)
             return bundle

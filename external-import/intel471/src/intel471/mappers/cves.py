@@ -1,5 +1,5 @@
 import yaml
-from stix2 import Bundle, Vulnerability, ExternalReference
+from stix2 import Bundle, Vulnerability, ExternalReference, TLP_AMBER
 
 from .common import BaseMapper, StixMapper, generate_id, author_identity
 
@@ -41,9 +41,11 @@ class CveMapper(BaseMapper):
                                           description=description,
                                           created_by_ref=author_identity,
                                           external_references=external_references,
+                                          object_marking_refs=[TLP_AMBER],
                                           custom_properties=custom_properties)
             container[vulnerability.id] = vulnerability
             container[author_identity.id] = author_identity
+            container[TLP_AMBER.id] = TLP_AMBER
         if container:
             bundle = Bundle(*container.values(), allow_custom=True)
             return bundle

@@ -1,7 +1,7 @@
 import datetime
 
 import yaml
-from stix2 import Indicator, Bundle, Relationship, Malware, KillChainPhase
+from stix2 import Indicator, Bundle, Relationship, Malware, KillChainPhase, TLP_AMBER
 
 from .common import StixMapper, BaseMapper, generate_id, author_identity
 from .patterning import STIXPatterningMapper
@@ -36,6 +36,7 @@ class IndicatorsMapper(BaseMapper):
                                   name=malware_family_name,
                                   is_family=True,
                                   created_by_ref=author_identity,
+                                  object_marking_refs=[TLP_AMBER],
                                   custom_properties={"x_intel471_com_uid": malware_family_uid})
                 indicator = Indicator(id=generate_id(Indicator, pattern=stix_pattern),
                                       description=description,
@@ -47,9 +48,10 @@ class IndicatorsMapper(BaseMapper):
                                       kill_chain_phases=[KillChainPhase(kill_chain_name="mitre-attack", phase_name=tactics)],
                                       created_by_ref=author_identity,
                                       confidence=confidence,
+                                      object_marking_refs=[TLP_AMBER],
                                       custom_properties={"x_intel471_com_uid": indicator_id})
                 r1 = Relationship(indicator, "indicates", malware, created_by_ref=author_identity)
-                for stix_object in [malware, indicator, author_identity, r1]:
+                for stix_object in [malware, indicator, author_identity, r1, TLP_AMBER]:
                     container[stix_object.id] = stix_object
         if container:
             bundle = Bundle(*container.values(), allow_custom=True)

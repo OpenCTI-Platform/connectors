@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from stix2 import Bundle, Report, Malware, ExternalReference
+from stix2 import Bundle, Report, Malware, ExternalReference, TLP_AMBER
 
 from .common import StixMapper, BaseMapper, generate_id, author_identity
 
@@ -135,6 +135,7 @@ class ReportMapper(AbstractReportMapper):
                                 object_refs=collected_object_refs.values(),
                                 external_references=[ExternalReference(source_name="Titan URL", url=report_url)],
                                 created_by_ref=author_identity,
+                                object_marking_refs=[TLP_AMBER],
                                 custom_properties={"x_intel471_com_uid": report_uid})
                 container[report.id] = report
                 container[author_identity.id] = author_identity

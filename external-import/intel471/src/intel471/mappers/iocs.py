@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from stix2 import Bundle, Indicator, Report
+from stix2 import Bundle, Indicator, Report, TLP_AMBER
 
 from .patterning import STIXPatterningMapper
 from .reports import ReportMapper
@@ -35,9 +35,11 @@ class IOCMapper(BaseMapper):
                                       valid_from=valid_from,
                                       valid_until=valid_until,
                                       created_by_ref=author_identity,
+                                      object_marking_refs=[TLP_AMBER],
                                       custom_properties={"x_intel471_com_uid": ioc_id})
 
                 container[indicator.id] = indicator
+                container[TLP_AMBER.id] = TLP_AMBER
                 for uid, stix_object in self.map_reports(report_sources, indicator).items():
                     if isinstance(stix_object, Report) and uid in container:
                         stix_object.object_refs.extend(container[uid].object_refs)
