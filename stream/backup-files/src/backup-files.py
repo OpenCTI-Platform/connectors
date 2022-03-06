@@ -85,8 +85,8 @@ class BackupFilesConnector:
             data = json.loads(msg.data)
             # created_at will be removed in next version
             creation_date = (
-                data["data"]["created"]
-                if "created" in data["data"] is not None
+                data["data"]["x_opencti_created_at"]
+                if "x_opencti_created_at" in data["data"] is not None
                 else data["data"]["created_at"]
             )
             created_at = parser.parse(creation_date)
