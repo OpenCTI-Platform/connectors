@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-tanium:
-    image: opencti/connector-tanium:5.2.0
+    image: opencti/connector-tanium:5.2.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
