@@ -68,7 +68,7 @@ class Cve:
                 file.write(image)
             # Unzipping the file
             self.helper.log_info("Unzipping the file")
-            with gzip.open(os.path.dirname(os.path.abspath(__file__)) + "data.json.gz", "rb") as f_in:
+            with gzip.open(os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz", "rb") as f_in:
                 with open("data.json", "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
             # Converting the file to stix2
