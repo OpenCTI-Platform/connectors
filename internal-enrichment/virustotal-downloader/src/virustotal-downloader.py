@@ -3,7 +3,6 @@
 import os
 import yaml
 import time
-import io
 import magic
 import urllib.request
 
@@ -32,7 +31,7 @@ class VirustotalDownloaderConnector:
             ["virustotal_downloader", "api_key"],
             config,
         )
-        self.headers = {"x-apikey": api_key}
+        self.headers = { 'x-apikey': api_key }
 
     def _process_hash(self, observable):
 
@@ -41,11 +40,8 @@ class VirustotalDownloaderConnector:
         bundle_objects = []
 
         try:
-
             # Attempt to download the file using the private V3 API method
-            request_url = (
-                f"https://www.virustotal.com/api/v3/files/{hash_value}/download"
-            )
+            request_url = f'https://www.virustotal.com/api/v3/files/{hash_value}/download'
             req = urllib.request.Request(request_url, headers=self.headers)
             response = urllib.request.urlopen(req)
             file_contents = response.read()
