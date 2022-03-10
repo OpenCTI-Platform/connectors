@@ -1318,7 +1318,8 @@ class Misp:
                     if name not in added_names:
                         x_mitre_id = None
                         if "external_id" in galaxy_entity["meta"]:
-                            x_mitre_id = galaxy_entity["meta"]["external_id"][0]
+                            if len(galaxy_entity["meta"]["external_id"]) > 0:
+                                x_mitre_id = galaxy_entity["meta"]["external_id"][0]
                         elements["attack_patterns"].append(
                             AttackPattern(
                                 name=name,
