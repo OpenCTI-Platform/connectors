@@ -3,12 +3,10 @@
 import os
 import yaml
 import time
-import io
 import magic
-import vt
+import urllib.request
 
 from stix2 import Bundle, Relationship
-
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 
 
@@ -33,7 +31,7 @@ class VirustotalDownloaderConnector:
             ["virustotal_downloader", "api_key"],
             config,
         )
-        self.api_client = vt.Client(api_key)
+        self.headers = {"x-apikey": api_key}
 
     def _process_hash(self, observable):
 
@@ -42,13 +40,16 @@ class VirustotalDownloaderConnector:
         bundle_objects = []
 
         try:
+            # Attempt to download the file using the private V3 API method
+            request_url = (
+                f"https://www.virustotal.com/api/v3/files/{hash_value}/download"
+            )
+            req = urllib.request.Request(request_url, headers=self.headers)
+            response = urllib.request.urlopen(req)
+            file_contents = response.read()
+            assert file_contents is not None
 
-            # Attempt to source the file contents from the hash
-            bytes_obj = io.BytesIO()
-            response = self.api_client.download_file(hash_value, bytes_obj)
-            bytes_obj.seek(0)
-            file_contents = bytes_obj.read()
-
+            # Get the mime type for the file
             mime_type = magic.from_buffer(file_contents, mime=True)
 
             # Upload the file as an Artifact
@@ -56,7 +57,7 @@ class VirustotalDownloaderConnector:
                 "file_name": hash_value,
                 "data": file_contents,
                 "mime_type": mime_type,
-                "x_opencti_description": f"Downloaded from Virustotal via hash {hash_value}",
+                "x_opencti_description": f"Downloaded from Virustotal using hash {hash_value}",
             }
             response = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
 
@@ -100,6 +101,7 @@ class VirustotalDownloaderConnector:
             )
 
     def _process_message(self, data):
+
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:
