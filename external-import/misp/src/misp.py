@@ -1316,6 +1316,10 @@ class Misp:
                     else:
                         aliases = [name]
                     if name not in added_names:
+                        x_mitre_id = None
+                        if "external_id" in galaxy_entity["meta"]:
+                            if len(galaxy_entity["meta"]["external_id"]) > 0:
+                                x_mitre_id = galaxy_entity["meta"]["external_id"][0]
                         elements["attack_patterns"].append(
                             AttackPattern(
                                 name=name,
@@ -1323,9 +1327,7 @@ class Misp:
                                 created_by_ref=author,
                                 object_marking_refs=markings,
                                 custom_properties={
-                                    "x_mitre_id": galaxy_entity["meta"]["external_id"][
-                                        0
-                                    ],
+                                    "x_mitre_id": x_mitre_id,
                                     "x_opencti_aliases": aliases,
                                 },
                                 allow_custom=True,
