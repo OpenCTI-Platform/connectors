@@ -1,12 +1,7 @@
 [tool.poetry]
 name = "elastic"
 version = "0" # Will be overridden by __version__ field in __init__.py
-description = """
-Connector for OpenCTI that writes indicator objects to Elasticsearch in ECS format (when in 'ecs' mode), allowing
-Indicator Match rules. Successful matches found in the Elastic Detection Engine will be reported as sightings of
-the indicator in OpenCTI. The connector can also be run in 'stix' mode, which writes raw OpenCTI STIX documents
-to the index configured.
-"""
+description = "Connector for OpenCTI that writes indicator objects to Elasticsearch in ECS format."
 authors = ["Derek Ditch <dcode@elastic.co>"]
 include = ["elastic/data/*.json"]
 
