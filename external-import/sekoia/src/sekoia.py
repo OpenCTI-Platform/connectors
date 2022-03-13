@@ -139,7 +139,9 @@ class Sekoia(object):
         try:
             self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
         except RecursionError:
-            self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id, bypass_split=True)
+            self.helper.send_stix2_bundle(
+                bundle, update=True, work_id=work_id, bypass_split=True
+            )
 
         self.helper.set_state({"last_cursor": next_cursor})
         if len(items) < self.limit:
