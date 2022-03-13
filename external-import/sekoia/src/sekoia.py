@@ -136,7 +136,10 @@ class Sekoia(object):
         items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
         bundle = self.helper.stix2_create_bundle(items)
-        self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+        try:
+            self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+        except RecursionError:
+            self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id, bypass_split=True)
 
         self.helper.set_state({"last_cursor": next_cursor})
         if len(items) < self.limit:
