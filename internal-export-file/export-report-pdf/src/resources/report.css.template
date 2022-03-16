@@ -102,7 +102,7 @@ html {
 h1 {
   color: <primary_color>;
   font-size: 38pt;
-  margin: 5cm 2cm 0 2cm;
+  margin: 4cm 0 0 2cm;
   @page: no-chapter;
   width: 100%;
 }
@@ -131,33 +131,35 @@ h4 {
 }
 
 #cover {
-  align-content: space-between;
-  display: flex;
-  flex-wrap: wrap;
   height: 297mm;
+  position: relative;
 }
 #cover #report-date {
   color: #ffffff;
   font-size: 12pt;
   font-weight: 500;
   margin: 0 18px 0 auto;
+  float: right;
 }
 #cover #report-name {
   color: #ffffff;
   font-size: 38pt;
   font-weight: 700;
-  margin: 0 2cm 12cm 2cm;
+  margin: 0 2cm;
+  overflow-wrap: break-word;
+}
+#cover #report-address {
+  background: <primary_color>;
+  position: absolute;
+  bottom: 0;
   width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 2cm 0;
 }
 #cover address {
-  background: <primary_color>;
-  flex: 1 50%;
-  margin: 0 -2cm;
-  padding: 1cm 0;
-  white-space: pre-wrap;
-}
-#cover address:first-of-type {
-  padding-left: 3cm;
+  overflow-wrap: break-word;
+  white-space: pre;
 }
 #contents h2 {
   font-size: 33pt;
@@ -209,12 +211,8 @@ section {
   padding-top: 1cm;
 }
 
-#columns section {
-  columns: 2;
-  column-gap: 1cm;
-}
 #columns section p {
-  text-align: justify;
+  text-align: left;
 }
 
 #observables h3 {
@@ -225,22 +223,24 @@ section {
 }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: auto;
+  margin: auto 0;
   caption-side: top;
   empty-cells: show;
   table-layout: auto;
+  width: 100%;
+}
+tr,
+td {
+  word-break: break-all;
+}
+td {
+  padding: 15px;
 }
 th {
   background-color: <secondary_color>;
   color: <primary_color>;
-}
-th,
-td {
-  padding: 15px;
   text-align: left;
-  overflow-wrap: break-word;
+  padding: 15px;
 }
 tr:nth-child(even) {
   background-color: #f2f2f2;
