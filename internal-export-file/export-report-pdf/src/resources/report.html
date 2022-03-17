@@ -12,16 +12,18 @@
       <div id="report-date">{{ report_date }}</div>
       <h1>Intelligence Report</h1>
       <div id="report-name">{{ report_name }}</div>
-      <address>
-        {{ company_address_line_1 }}
-        {{ company_address_line_2 }}
-        {{ company_address_line_3 }}
-        {{ company_phone_number }}
-      </address>
-      <address>
-        {{ company_email }}
-        {{ company_website }}
-      </address>
+      <div id="report-address">
+        <address>
+          {{ company_address_line_1 }}
+          {{ company_address_line_2 }}
+          {{ company_address_line_3 }}
+          {{ company_phone_number }}
+        </address>
+        <address>
+          {{ company_email }}
+          {{ company_website }}
+        </address>
+      </div>
     </article>
 
     <article id="contents">
@@ -86,43 +88,62 @@
       {% for entity_type in entities %}
         <h2 id="{{ entity_type }}-title">{{ entity_type }}</h2>
         <section id="{{ entity_type }}">
+          <div style="clear:both;"><div> 
           <table>
-            <tr>
-              {% if entity_type == 'Attack-Pattern' %}
-              <th>ID</th>
-              {% endif %}
-              <th>Name</th>
-              <th>Description</th>
-              {% if entity_type == 'Indicator' %}
-              <th>Pattern Type</th>
-              <th>Pattern</th>
-              {% endif %}
-            </tr>
+          <tbody>
             {% for entity in entities[entity_type] %}
+
             <tr>
-            <td>
-              {{ entity.name }}
-            </td>
-            {% if entity_type == 'Attack-Pattern' %}
-            <td>
-              {{ entity.x_mitre_id }}
-            </td>
-            {% endif %}
-            <td>
-              {% if entity.description %}
-              {{ entity.description }}
-              {% endif %}
-            </td>
-              {% if entity_type == 'Indicator' %}
-            <td>
-              {{ entity.pattern_type }}
-            </td>
-            <td>
-              {{ entity.pattern }}
-            </td>
-              {% endif %}
+             <th>Name</th>
             </tr>
+            <tr>
+              <td>
+                {{ entity.name }}
+              </td>
+            </tr>
+
+            {% if entity_type == 'Attack-Pattern' %}
+            <tr>
+              <th>ID</th>
+            </tr>
+            <tr>
+              <td>
+                {{ entity.x_mitre_id }}
+              </td>
+            </tr>
+            {% endif %}
+
+            {% if entity.description %}
+            <tr>
+              <th>Description</th>
+            </tr>
+            <tr>
+              <td>
+                {{ entity.description }}
+              </td>
+            </tr>
+            {% endif %}
+
+            {% if entity_type == 'Indicator' %}
+            <tr>
+              <th>Pattern Type</th>
+            </tr>
+            <tr>
+              <td>
+                {{ entity.pattern_type }}
+              </td>
+            </tr>
+            <tr>
+              <th>Pattern</th>
+            </tr>
+            <tr>
+              <td>
+                {{ entity.pattern }}
+              </td>
+            </tr>
+            {% endif %}
             {% endfor %}
+          </tbody>
           </table>
         </section>
       {% endfor %}
@@ -147,14 +168,14 @@
       {% endfor %}
     </article>
     <article id="external-references">
+    <h2 id="External-References-title">External References</h2>
+      <section>
+      <ul>
       {% for external_ref in report_external_refs %}
-        <h2 id="External-References-title">External References</h2>
-        <section>
-          <ul>
-            <li><a href="{{ external_ref }}" target="_blank">{{ external_ref }}</a></li>
-          </ul>
-        </section>
+        <li><a href="{{ external_ref }}" target="_blank">{{ external_ref }}</a></li>
       {% endfor %}
+      </ul>
+      </section>
     </article>
   </body>
 </html>
