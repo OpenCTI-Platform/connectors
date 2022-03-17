@@ -10,7 +10,7 @@ jobs:
       - checkout
       - run:
           name: install dependencies
-          command: sudo pip3 install black
+          command: pip install black --user
       - run:
           name: confirm black version
           command: black --version
