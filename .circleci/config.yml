@@ -4,7 +4,7 @@ orbs:
 jobs:
   ensure_formatting:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
     working_directory: ~/repo
     steps:
       - checkout
@@ -35,7 +35,7 @@ jobs:
   build:
     working_directory: ~/opencti
     docker:
-      - image: circleci/buildpack-deps:stretch
+      - image: cimg/base:stable-20.04
     steps:
       - checkout
       - setup_remote_docker
@@ -403,7 +403,7 @@ jobs:
   build_rolling:
     working_directory: ~/opencti
     docker:
-      - image: circleci/buildpack-deps:stretch
+      - image: cimg/base:stable-20.04
     steps:
       - checkout
       - setup_remote_docker
