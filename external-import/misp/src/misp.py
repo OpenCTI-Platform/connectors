@@ -656,13 +656,30 @@ class Misp:
                             )
             # Add object_relationships
             for object_relationship in objects_relationships:
-                print(object_relationship["source_ref"] + object_relationship["target_ref"])
-                if object_relationship["source_ref"] + object_relationship["target_ref"] not in added_object_refs:
+                print(
+                    object_relationship["source_ref"]
+                    + object_relationship["target_ref"]
+                )
+                if (
+                    object_relationship["source_ref"]
+                    + object_relationship["target_ref"]
+                    not in added_object_refs
+                ):
                     object_refs.append(object_relationship)
-                    added_object_refs.append(object_relationship["source_ref"] + object_relationship["target_ref"])
-                if object_relationship["source_ref"] + object_relationship["target_ref"] not in added_relationships:
+                    added_object_refs.append(
+                        object_relationship["source_ref"]
+                        + object_relationship["target_ref"]
+                    )
+                if (
+                    object_relationship["source_ref"]
+                    + object_relationship["target_ref"]
+                    not in added_relationships
+                ):
                     bundle_objects.append(object_relationship)
-                    added_relationships.append(object_relationship["source_ref"] + object_relationship["target_ref"])
+                    added_relationships.append(
+                        object_relationship["source_ref"]
+                        + object_relationship["target_ref"]
+                    )
 
             # Create the report if needed
             # Report in STIX must have at least one object_refs
