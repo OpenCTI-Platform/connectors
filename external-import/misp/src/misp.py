@@ -404,6 +404,8 @@ class Misp:
             added_object_refs = []
             added_sightings = []
             added_files = []
+            added_observables = []
+            added_relationships = []
 
             ### Pre-process
             # Author
@@ -620,8 +622,12 @@ class Misp:
                 objects_relationships.append(indicator_relationship)
             # Add MISP objects_observables
             for object_observable in objects_observables:
-                object_refs.append(object_observable)
-                bundle_objects.append(object_observable)
+                if object_observable["id"] not in added_object_refs:
+                    object_refs.append(object_observable)
+                    added_object_refs.append(object_observable["id"])
+                if object_observable["id"] not in added_observables:
+                    bundle_objects.append(object_observable)
+                    added_observables.append(object_observable["id"])
 
             # Link all objects with each other, now so we can find the correct entity type prefix in bundle_objects
             for object in event["Event"]["Object"]:
@@ -650,8 +656,13 @@ class Misp:
                             )
             # Add object_relationships
             for object_relationship in objects_relationships:
-                object_refs.append(object_relationship)
-                bundle_objects.append(object_relationship)
+                print(object_relationship["source_ref"] + object_relationship["target_ref"])
+                if object_relationship["source_ref"] + object_relationship["target_ref"] not in added_object_refs:
+                    object_refs.append(object_relationship)
+                    added_object_refs.append(object_relationship["source_ref"] + object_relationship["target_ref"])
+                if object_relationship["source_ref"] + object_relationship["target_ref"] not in added_relationships:
+                    bundle_objects.append(object_relationship)
+                    added_relationships.append(object_relationship["source_ref"] + object_relationship["target_ref"])
 
             # Create the report if needed
             # Report in STIX must have at least one object_refs
