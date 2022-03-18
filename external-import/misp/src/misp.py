@@ -656,10 +656,6 @@ class Misp:
                             )
             # Add object_relationships
             for object_relationship in objects_relationships:
-                print(
-                    object_relationship["source_ref"]
-                    + object_relationship["target_ref"]
-                )
                 if (
                     object_relationship["source_ref"]
                     + object_relationship["target_ref"]
