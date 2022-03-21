@@ -404,6 +404,8 @@ class Misp:
             added_object_refs = []
             added_sightings = []
             added_files = []
+            added_observables = []
+            added_relationships = []
 
             ### Pre-process
             # Author
@@ -620,8 +622,12 @@ class Misp:
                 objects_relationships.append(indicator_relationship)
             # Add MISP objects_observables
             for object_observable in objects_observables:
-                object_refs.append(object_observable)
-                bundle_objects.append(object_observable)
+                if object_observable["id"] not in added_object_refs:
+                    object_refs.append(object_observable)
+                    added_object_refs.append(object_observable["id"])
+                if object_observable["id"] not in added_observables:
+                    bundle_objects.append(object_observable)
+                    added_observables.append(object_observable["id"])
 
             # Link all objects with each other, now so we can find the correct entity type prefix in bundle_objects
             for object in event["Event"]["Object"]:
@@ -650,8 +656,26 @@ class Misp:
                             )
             # Add object_relationships
             for object_relationship in objects_relationships:
-                object_refs.append(object_relationship)
-                bundle_objects.append(object_relationship)
+                if (
+                    object_relationship["source_ref"]
+                    + object_relationship["target_ref"]
+                    not in added_object_refs
+                ):
+                    object_refs.append(object_relationship)
+                    added_object_refs.append(
+                        object_relationship["source_ref"]
+                        + object_relationship["target_ref"]
+                    )
+                if (
+                    object_relationship["source_ref"]
+                    + object_relationship["target_ref"]
+                    not in added_relationships
+                ):
+                    bundle_objects.append(object_relationship)
+                    added_relationships.append(
+                        object_relationship["source_ref"]
+                        + object_relationship["target_ref"]
+                    )
 
             # Create the report if needed
             # Report in STIX must have at least one object_refs
@@ -710,10 +734,18 @@ class Misp:
                     bundle_objects.append(note)
             bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
-            self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, update=self.update_existing_data
-            )
-
+            try:
+                self.helper.send_stix2_bundle(
+                    bundle, work_id=work_id, update=self.update_existing_data
+                )
+            except:
+                time.sleep(60)
+                try:
+                    self.helper.send_stix2_bundle(
+                        bundle, work_id=work_id, update=self.update_existing_data
+                    )
+                except:
+                    return latest_event_timestamp
         return latest_event_timestamp
 
     def _get_pdf_file(self, attribute):
@@ -1316,6 +1348,10 @@ class Misp:
                     else:
                         aliases = [name]
                     if name not in added_names:
+                        x_mitre_id = None
+                        if "external_id" in galaxy_entity["meta"]:
+                            if len(galaxy_entity["meta"]["external_id"]) > 0:
+                                x_mitre_id = galaxy_entity["meta"]["external_id"][0]
                         elements["attack_patterns"].append(
                             AttackPattern(
                                 name=name,
@@ -1323,9 +1359,7 @@ class Misp:
                                 created_by_ref=author,
                                 object_marking_refs=markings,
                                 custom_properties={
-                                    "x_mitre_id": galaxy_entity["meta"]["external_id"][
-                                        0
-                                    ],
+                                    "x_mitre_id": x_mitre_id,
                                     "x_opencti_aliases": aliases,
                                 },
                                 allow_custom=True,

@@ -1,13 +1,13 @@
 version: '3'
 services:
   connector-mitre:
-    image: opencti/connector-mitre:5.1.4
+    image: opencti/connector-mitre:5.2.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - "CONNECTOR_NAME=MITRE ATT&CK"
+      - CONNECTOR_NAME=MITRE ATT&CK
       - CONNECTOR_SCOPE=marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,external-reference-as-report
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=true

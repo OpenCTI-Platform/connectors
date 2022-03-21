@@ -1,2 +1,2 @@
-pycti==5.1.4
+pycti==5.2.1
 pycountry==20.7.3

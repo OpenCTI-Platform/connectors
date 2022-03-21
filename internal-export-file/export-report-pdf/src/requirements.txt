@@ -1,4 +1,3 @@
-pycti==5.1.4
-weasyprint==53.4
+pycti==5.2.1
+weasyprint==54.2
 Jinja2==3.0.3
-

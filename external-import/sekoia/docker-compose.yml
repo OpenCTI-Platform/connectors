@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-sekoia:
-    image: opencti/connector-sekoia:5.1.4
+    image: opencti/connector-sekoia:5.2.1
     environment:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe

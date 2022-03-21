@@ -33,7 +33,11 @@ class ArticleImporter:
     _LATEST_ARTICLE_TIMESTAMP = "latest_article_timestamp"
 
     def __init__(
-        self, helper: OpenCTIConnectorHelper, article: dict[str, Any], author: Identity
+        self,
+        helper: OpenCTIConnectorHelper,
+        article: dict[str, Any],
+        author: Identity,
+        create_indicators: bool,
     ):
         """Initialization of the article importer."""
         self.helper = helper
@@ -43,6 +47,7 @@ class ArticleImporter:
         # Use custom properties to set the author and the confidence level of the object.
         self.custom_props = {
             "x_opencti_created_by_ref": self.author["id"],
+            "x_opencti_create_indicator": create_indicators,
         }
 
     def _process_indicator(self, indicator: Indicator) -> list[_Observable]:

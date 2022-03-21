@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-riskiq:
-    image: opencti/connector-riskiq:5.1.4
+    image: opencti/connector-riskiq:5.2.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -14,5 +14,6 @@ services:
       - RISKIQ_BASE_URL=https://api.riskiq.net/pt/v2
       - RISKIQ_USER=ChangeMe
       - RISKIQ_PASSWORD=ChangeMe
+      - RISKIQ_CREATE_INDICATORS=true
       - RISKIQ_INTERVAL_SEC=86400
     restart: always
