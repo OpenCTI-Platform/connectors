@@ -193,6 +193,10 @@ class VirusTotalConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        if observable is None:
+            raise ValueError(
+                "Observable not found (or the connectors does not has access to this observable)"
+            )
         # Extract TLP
         tlp = "TLP:WHITE"
         for marking_definition in observable.get("objectMarking", []):
