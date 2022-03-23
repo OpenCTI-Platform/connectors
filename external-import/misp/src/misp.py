@@ -1522,6 +1522,7 @@ class Misp:
     def resolve_type(self, type, value):
         types = {
             "yara": [{"resolver": "yara"}],
+            "sigma": [{"resolver": "sigma"}],
             "md5": [{"resolver": "file-md5", "type": "File"}],
             "sha1": [{"resolver": "file-sha1", "type": "File"}],
             "sha256": [{"resolver": "file-sha256", "type": "File"}],
