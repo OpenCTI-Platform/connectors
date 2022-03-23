@@ -1541,7 +1541,19 @@ class Misp:
             ],
             "ip-src": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
             "ip-dst": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
+            "ip-src|port": [
+                {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
+                {"resolver": "text", "type": "X-OpenCTI-Text"},
+            ],
+            "ip-dst|port": [
+                {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
+                {"resolver": "text", "type": "X-OpenCTI-Text"},
+            ],
             "hostname": [{"resolver": "hostname", "type": "X-OpenCTI-Hostname"}],
+            "hostname|port": [
+                {"resolver": "hostname", "type": "X-OpenCTI-Hostname"},
+                {"resolver": "text", "type": "X-OpenCTI-Text"},
+            ],
             "domain": [{"resolver": "domain", "type": "Domain-Name"}],
             "domain|ip": [
                 {"resolver": "domain", "type": "Domain-Name"},
