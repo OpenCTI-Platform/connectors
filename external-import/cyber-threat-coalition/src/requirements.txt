@@ -1,2 +1,2 @@
-pycti==5.2.1
+pycti==5.2.2
 feedparser==6.0.2

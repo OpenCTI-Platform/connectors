@@ -830,7 +830,7 @@ class Misp:
             observable_value = resolved_attribute["value"]
             name = resolved_attribute["value"]
             pattern_type = "stix"
-            # observable type is yara for instance
+            # observable type is yara or sigma for instance
             if observable_resolver in PATTERNTYPES:
                 pattern_type = observable_resolver
                 pattern = observable_value
