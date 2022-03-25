@@ -314,7 +314,10 @@ class ShodanConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-
+        if observable is None:
+            raise ValueError(
+                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
+            )
         TLPs = ["TLP:WHITE"]
         if "objectMarking" in observable:
             for marking_definition in observable["objectMarking"]:
