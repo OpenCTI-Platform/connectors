@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-opencti:
-    image: opencti/connector-opencti:5.2.2
+    image: opencti/connector-opencti:5.2.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
