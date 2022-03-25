@@ -38,7 +38,11 @@ class VXVault:
             "VXVAULT_INTERVAL", ["vxvault", "interval"], config, True
         )
         self.create_indicators = get_config_variable(
-            "VXVAULT_CREATE_INDICATORS", ["vxvault", "create_indicators"], config, True
+            "VXVAULT_CREATE_INDICATORS",
+            ["vxvault", "create_indicators"],
+            config,
+            False,
+            True,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",

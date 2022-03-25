@@ -3,7 +3,6 @@
 import datetime
 import json
 from pathlib import Path
-from time import sleep
 from typing import Optional
 
 import plyara
@@ -95,10 +94,14 @@ class VirusTotalConnector:
         if json_data is None:
             raise ValueError("An error has occurred")
         if "error" in json_data:
-            if json_data["error"]["message"] == "Quota exceeded":
-                self.helper.log_info("Quota reached, waiting 1 hour.")
-                sleep(self._CONNECTOR_RUN_INTERVAL_SEC)
-            elif "not found" in json_data["error"]["message"]:
+            if json_data["error"]["code"] == "QuotaExceededError":
+                self.helper.log_error(
+                    "Quota limit reached, dropping the query to avoid queuing"
+                )
+                raise ValueError(
+                    "Quota limit reached, dropping the query to avoid queuing"
+                )
+            elif json_data["error"]["code"] == "NotFoundError":
                 self.helper.log_info("File not found on VirusTotal.")
                 return "File not found on VirusTotal."
             else:
@@ -190,9 +193,13 @@ class VirusTotalConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        if observable is None:
+            raise ValueError(
+                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
+            )
         # Extract TLP
         tlp = "TLP:WHITE"
-        for marking_definition in observable["objectMarking"]:
+        for marking_definition in observable.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):

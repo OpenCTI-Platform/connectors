@@ -41,6 +41,8 @@ class ExportFileCsv:
                                 rrow.append(r["name"])
                             elif "definition" in r:
                                 rrow.append(r["definition"])
+                            elif "value" in r:
+                                rrow.append(r["value"])
                         row.append(",".join(rrow))
                     else:
                         row.append("")

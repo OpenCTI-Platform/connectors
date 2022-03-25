@@ -21,7 +21,7 @@ class TemplateConnector:
     ####
     # TODO add your code according to your connector type
     # For details: see
-    # https://www.notion.so/luatix/Connector-Development-06b2690697404b5ebc6e3556a1385940
+    # https://luatix.notion.site/luatix/Connector-Development-06b2690697404b5ebc6e3556a1385940
     ####
 
 

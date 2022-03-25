@@ -33,6 +33,7 @@ OBSERVABLES_MAPPING = {
     "file_sha256": "File.hashes.SHA-256",
     "filename": "File.name",
     "fqdn": "X-OpenCTI-Hostname.value",
+    "hostname": "X-OpenCTI-Hostname.value",
     "hash": None,
     "ip": "IPv4-Addr.value",
     "mail": "Email-Message.body",

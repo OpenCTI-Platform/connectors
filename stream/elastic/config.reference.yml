@@ -14,6 +14,7 @@ connector:
   entity_name: 'Elastic Detection Cluster'
   entity_description: 'Elasticsearch detection engine cluster'
   live_stream_id: 'live'
+  live_stream_listen_delete: true
   mode: ecs # Options are 'ecs' (indicators only) or 'stix' (raw STIX documents)
 
 # =============================== Elastic Cloud ================================

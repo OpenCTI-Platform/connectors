@@ -31,7 +31,7 @@ There are a number of configuration options, which are set either in `docker-com
 | TAXXI2_PASSWORD     | password        | Your SIEM Rules API key (NOT password). Can be obtained on the Integration page here: [https://app.siemrules.com/integrations](https://app.siemrules.com/integrations)
 | TAXII2_COLLECTIONS  | collections     | Specify what `<API Root>.<Collection Name>` you want to poll. Syntax Detailed below
 
-_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as any other Connector. You should consult the OpenCTI Connector documentation for questions about these values here: [https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as any other Connector. You should consult the OpenCTI Connector documentation for questions about these values here: [https://luatix.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8](https://luatix.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
 
 ### Collections and API roots
 
@@ -66,7 +66,7 @@ collections: '58267908-8861-4bfe-81c4-0f6ec4bf1c8.*'
 
 ## Installation
 
-Please refer to [these](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://www.notion.so/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://www.notion.so/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
+Please refer to [these](https://luatix.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://luatix.notion.site/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://luatix.notion.site/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
 
 ### Docker
 

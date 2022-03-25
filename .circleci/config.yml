@@ -1,21 +1,25 @@
 version: 2.1
-
+orbs: 
+  slack: circleci/slack@4.8.3
 jobs:
   ensure_formatting:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
     working_directory: ~/repo
     steps:
       - checkout
       - run:
           name: install dependencies
-          command: sudo pip3 install black
+          command: pip install black --user
       - run:
           name: confirm black version
           command: black --version
       - run:
           name: run black check
           command: black --check .
+      - slack/notify:
+          event: fail
+          template: basic_fail_1          
   linter:
     docker:
       - image: alpine/flake8
@@ -25,10 +29,13 @@ jobs:
       - run:
           name: flake8
           command: flake8 --ignore=E,W ~/repo
+      - slack/notify:
+          event: fail
+          template: basic_fail_1          
   build:
     working_directory: ~/opencti
     docker:
-      - image: circleci/buildpack-deps:stretch
+      - image: cimg/base:stable-20.04
     steps:
       - checkout
       - setup_remote_docker
@@ -108,6 +115,10 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/virustotal
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:latest . && docker tag opencti/connector-virustotal:latest opencti/connector-virustotal:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/virustotal-downloader
+          name: Build Docker image opencti/connector-virustotal-downloader
+          command: docker build -t opencti/connector-virustotal-downloader:latest . && docker tag opencti/connector-virustotal-downloader:latest opencti/connector-virustotal-downloader:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/lastinfosec
           name: Build Docker image opencti/connector-lastinfosec
@@ -224,10 +235,10 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/intezer-sandbox
           name: Build Docker image opencti/connector-intezer-sandbox
           command: docker build -t opencti/connector-intezer-sandbox:latest . && docker tag opencti/connector-intezer-sandbox:latest opencti/connector-intezer-sandbox:${CIRCLE_TAG}
-      #- run:
-      #    working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
-      #    name: Build Docker image opencti/connector-hatching-triage-sandbox
-      #    command: docker build -t opencti/connector-hatching-triage-sandbox:latest . && docker tag opencti/connector-hatching-triage-sandbox:latest opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
+      - run:
+         working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
+         name: Build Docker image opencti/connector-hatching-triage-sandbox
+         command: docker build -t opencti/connector-hatching-triage-sandbox:latest . && docker tag opencti/connector-hatching-triage-sandbox:latest opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/internal-enrichment/unpac-me
           name: Build Docker image opencti/connector-unpac-me
@@ -306,6 +317,8 @@ jobs:
             docker push opencti/connector-ipinfo:${CIRCLE_TAG}
             docker push opencti/connector-virustotal:latest
             docker push opencti/connector-virustotal:${CIRCLE_TAG}
+            docker push opencti/connector-virustotal-downloader:latest
+            docker push opencti/connector-virustotal-downloader:${CIRCLE_TAG}
             docker push opencti/connector-lastinfosec:latest
             docker push opencti/connector-lastinfosec:${CIRCLE_TAG}
             docker push opencti/connector-malpedia:latest
@@ -364,8 +377,8 @@ jobs:
             docker push opencti/connector-cape-sandbox:${CIRCLE_TAG}
             docker push opencti/connector-intezer-sandbox:latest
             docker push opencti/connector-intezer-sandbox:${CIRCLE_TAG}
-            #docker push opencti/connector-hatching-triage-sandbox:latest
-            #docker push opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
+            docker push opencti/connector-hatching-triage-sandbox:latest
+            docker push opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
             docker push opencti/connector-unpac-me:latest
             docker push opencti/connector-unpac-me:${CIRCLE_TAG}
             docker push opencti/connector-ivre:latest
@@ -383,11 +396,14 @@ jobs:
             docker push opencti/connector-siemrules:latest
             docker push opencti/connector-siemrules:${CIRCLE_TAG}
             docker push opencti/connector-vulmatch:latest
-            docker push opencti/connector-vulmatch:${CIRCLE_TAG}            
+            docker push opencti/connector-vulmatch:${CIRCLE_TAG}
+      - slack/notify:
+          event: fail
+          template: basic_fail_1                   
   build_rolling:
     working_directory: ~/opencti
     docker:
-      - image: circleci/buildpack-deps:stretch
+      - image: cimg/base:stable-20.04
     steps:
       - checkout
       - setup_remote_docker
@@ -467,6 +483,10 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/virustotal
           name: Build Docker image opencti/connector-virustotal
           command: docker build -t opencti/connector-virustotal:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/virustotal-downloader
+          name: Build Docker image opencti/connector-virustotal-downloader
+          command: docker build -t opencti/connector-virustotal-downloader:rolling .
       - run:
           working_directory: ~/opencti/external-import/lastinfosec
           name: Build Docker image opencti/connector-lastinfosec
@@ -583,10 +603,10 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/intezer-sandbox
           name: Build Docker image opencti/connector-intezer-sandbox
           command: docker build -t opencti/connector-intezer-sandbox:rolling .
-      #- run:
-      #    working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
-      #    name: Build Docker image opencti/connector-hatching-triage-sandbox
-      #    command: docker build -t opencti/connector-hatching-triage-sandbox:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
+          name: Build Docker image opencti/connector-hatching-triage-sandbox
+          command: docker build -t opencti/connector-hatching-triage-sandbox:rolling .
       - run:
           working_directory: ~/opencti/internal-enrichment/unpac-me
           name: Build Docker image opencti/connector-unpac-me
@@ -605,24 +625,24 @@ jobs:
           command: docker build -t opencti/connector-urlhaus-recent-payloads:rolling .
       - run:
          working_directory: ~/opencti/internal-export-file/export-report-pdf
-         name: Build Docker image opencti/export-report-pdf
-         command: docker build -t opencti/export-report-pdf:rolling .
+         name: Build Docker image opencti/connector-export-report-pdf
+         command: docker build -t opencti/connector-export-report-pdf:rolling .
       - run:
           working_directory: ~/opencti/external-import/obstracts
-          name: Build Docker image opencti/obstracts
-          command: docker build -t opencti/obstracts:rolling .
+          name: Build Docker image opencti/connector-obstracts
+          command: docker build -t opencti/connector-obstracts:rolling .
       - run:
           working_directory: ~/opencti/external-import/stixify
-          name: Build Docker image opencti/stixify
-          command: docker build -t opencti/stixify:rolling .
+          name: Build Docker image opencti/connector-stixify
+          command: docker build -t opencti/connector-stixify:rolling .
       - run:
           working_directory: ~/opencti/external-import/vulmatch
-          name: Build Docker image opencti/vulmatch
-          command: docker build -t opencti/vulmatch:rolling .   
+          name: Build Docker image opencti/connector-vulmatch
+          command: docker build -t opencti/connector-vulmatch:rolling .   
       - run:
           working_directory: ~/opencti/external-import/siemrules
-          name: Build Docker image opencti/siemrules
-          command: docker build -t opencti/siemrules:rolling .
+          name: Build Docker image opencti/connector-siemrules
+          command: docker build -t opencti/connector-siemrules:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -646,6 +666,7 @@ jobs:
             docker push opencti/connector-amitt:rolling
             docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-virustotal:rolling
+            docker push opencti/connector-virustotal-downloader:rolling
             docker push opencti/connector-lastinfosec:rolling
             docker push opencti/connector-malpedia:rolling
             docker push opencti/connector-riskiq:rolling
@@ -675,16 +696,33 @@ jobs:
             docker push opencti/connector-virustotal-livehunt-notifications:rolling
             docker push opencti/connector-cape-sandbox:rolling
             docker push opencti/connector-intezer-sandbox:rolling
-            #docker push opencti/connector-hatching-triage-sandbox:rolling
+            docker push opencti/connector-hatching-triage-sandbox:rolling
             docker push opencti/connector-unpac-me:rolling
             docker push opencti/connector-ivre:rolling
             docker push opencti/connector-malwarebazaar-recent-additions:rolling
             docker push opencti/connector-urlhaus-recent-payloads:rolling
-            docker push opencti/export-report-pdf:rolling
-            docker push opencti/obstracts:rolling
-            docker push opencti/stixify:rolling
-            docker push opencti/vulmatch:rolling
-            docker push opencti/siemrules:rolling
+            docker push opencti/connector-export-report-pdf:rolling
+            docker push opencti/connector-obstracts:rolling
+            docker push opencti/connector-stixify:rolling
+            docker push opencti/connector-vulmatch:rolling
+            docker push opencti/connector-siemrules:rolling
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+  notify_rolling:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - slack/notify:
+          event: pass
+          template: basic_success_1                
+  notify:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - slack/notify:
+          event: pass
+          template: basic_success_1                    
 workflows:
   version: 2
   opencti:
@@ -705,3 +743,14 @@ workflows:
             branches:
               only:
                 - master
+      - notify_rolling:
+          requires:
+            - build_rolling
+      - notify:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/            

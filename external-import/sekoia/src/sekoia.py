@@ -121,30 +121,33 @@ class Sekoia(object):
             yield items[i : i + chunk_size]
 
     def _run(self, cursor, work_id):
-        params = {"limit": self.limit, "cursor": cursor}
+        while True:
+            params = {"limit": self.limit, "cursor": cursor}
 
-        data = self._send_request(self.get_collection_url(), params)
-        if not data:
-            return cursor
+            data = self._send_request(self.get_collection_url(), params)
+            if not data:
+                return cursor
 
-        next_cursor = data["next_cursor"] or cursor  # In case next_cursor is None
-        items = data["items"]
-        if not items:
-            return next_cursor
+            cursor = data["next_cursor"] or cursor  # In case next_cursor is None
+            items = data["items"]
+            if not items:
+                return cursor
 
-        items = self._retrieve_references(items)
-        items = self._clean_ic_fields(items)
-        self._add_files_to_items(items)
-        bundle = self.helper.stix2_create_bundle(items)
-        self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+            items = self._retrieve_references(items)
+            items = self._clean_ic_fields(items)
+            self._add_files_to_items(items)
+            bundle = self.helper.stix2_create_bundle(items)
+            try:
+                self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+            except RecursionError:
+                self.helper.send_stix2_bundle(
+                    bundle, update=True, work_id=work_id, bypass_split=True
+                )
 
-        self.helper.set_state({"last_cursor": next_cursor})
-        if len(items) < self.limit:
-            # We got the last results
-            return next_cursor
-
-        # More results to fetch
-        return self._run(next_cursor, work_id)
+            self.helper.set_state({"last_cursor": cursor})
+            if len(items) < self.limit:
+                # We got the last results
+                return cursor
 
     def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
         """

@@ -83,7 +83,13 @@ class BackupFilesConnector:
     def _process_message(self, msg):
         if msg.event == "create" or msg.event == "update" or msg.event == "delete":
             data = json.loads(msg.data)
-            created_at = parser.parse(data["data"]["created_at"])
+            # created_at will be removed in next version
+            creation_date = (
+                data["data"]["x_opencti_created_at"]
+                if "x_opencti_created_at" in data["data"] is not None
+                else data["data"]["created_at"]
+            )
+            created_at = parser.parse(creation_date)
             date_range = round_time(created_at).strftime("%Y%m%dT%H%M%SZ")
             if msg.event == "create":
                 bundle = {

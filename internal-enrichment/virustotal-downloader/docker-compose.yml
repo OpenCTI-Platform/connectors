@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector-virustotal-downloader:
+    image: opencti/connector-virustotal-downloader:5.2.3
+    environment:
+      - OPENCTI_URL=ChangeMe
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - "CONNECTOR_NAME=VirusTotal Downloader"
+      - CONNECTOR_SCOPE=StixFile
+      - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables
+      - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - VIRUSTOTAL_DOWNLOADER_API_KEY=ChangeMe
+    restart: always
