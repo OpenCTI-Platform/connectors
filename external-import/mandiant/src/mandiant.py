@@ -114,7 +114,7 @@ class Mandiant:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-5.2.2",
+            "x-app-name": "opencti-connector-5.2.3",
         }
         body = """
             {
@@ -151,7 +151,7 @@ class Mandiant:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-5.2.2",
+            "x-app-name": "opencti-connector-5.2.3",
         }
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
