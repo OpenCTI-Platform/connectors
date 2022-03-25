@@ -14,8 +14,8 @@ services:
       - CUCKOO_CREATE_INDICATORS=true
       - CUCKOO_ENABLE_NETWORK_TRAFFIC=false # enable creation of net Traffic (Very Loud)
       - CUCKOO_ENABLE_REGISTRY_KEYS=false # enable creation of Created registry Keys (Very Loud)
-      - CUCKOO_API_URL=https://sandbox.no/api/ # Cuckoo API EP
-      - CUCKOO_BASE_URL=https://sandbox.no/ # Cuckoo Web UI URL
+      - CUCKOO_API_URL=https://<CHANGEME>/api/ # Cuckoo API EP
+      - CUCKOO_BASE_URL=https://<CHANGEME>/ # Cuckoo Web UI URL
       - CUCKOO_INTERVAL=30 #in Min
       - CUCKOO_START_TASK_ID=0 #in Min
       - CUCKOO_REPORT_SCORE=7
