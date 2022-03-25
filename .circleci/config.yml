@@ -1,6 +1,6 @@
 version: 2.1
 orbs: 
-  slack: circleci/slack@4.7.1
+  slack: circleci/slack@4.8.3
 jobs:
   ensure_formatting:
     docker:
@@ -749,3 +749,8 @@ workflows:
       - notify:
           requires:
             - build
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/            
