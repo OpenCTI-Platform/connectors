@@ -610,7 +610,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "4c26f4d7cc4d1721007cf82a165c39d9303e40fa1b9523632ff87bb23b3dfb5e"
+content-hash = "fe066217c788db223715385e57f90719106c0907242b71bdb1573a70a0f1f38c"
 
 [metadata.files]
 antlr4-python3-runtime = [
@@ -715,8 +715,8 @@ pycodestyle = [
     {file = "pycodestyle-2.7.0.tar.gz", hash = "sha256:c389c1d06bf7904078ca03399a4816f974a1d590090fecea0c63ec26ebaf1cef"},
 ]
 pycti = [
-    {file = "pycti-5.2.3-py3-none-any.whl", hash = "sha256:38db2d0cc207f4ba39c3f01d57d4b37b5d48cfa143d6fc563f588c02ded75d54"},
-    {file = "pycti-5.2.3.tar.gz", hash = "sha256:98585ac43af78e8162785bb0ef0f18c460a68ccf191ffdffb0c51eaa308482f7"},
+    {file = "pycti-5.2.3-py3-none-any.whl", hash = "sha256:8c2289927233ef386bea4723deab5a71c2460bca41846a34d536958b98051039"},
+    {file = "pycti-5.2.3.tar.gz", hash = "sha256:ca0540b5b0c4cb43b1c1569343bf70b04e0c9eea3505e2e68be80dcc273c64d0"},
 ]
 pyflakes = [
     {file = "pyflakes-2.3.1-py2.py3-none-any.whl", hash = "sha256:7893783d01b8a89811dd72d7dfd4d84ff098e5eed95cfa8905b22bbffe52efc3"},
