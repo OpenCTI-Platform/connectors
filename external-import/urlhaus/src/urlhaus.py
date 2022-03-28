@@ -133,7 +133,7 @@ class URLhaus:
                                     + row[3],
                                     x_opencti_score=80,
                                     object_marking_refs=[TLP_WHITE],
-                                    labels=row[6].split(","),
+                                    labels=[x for x in row[6].split(",") if x],
                                     created_by_ref=self.identity["standard_id"],
                                     x_opencti_create_indicator=self.create_indicators,
                                     external_references=[external_reference],
