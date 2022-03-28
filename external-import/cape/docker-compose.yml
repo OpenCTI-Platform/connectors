@@ -14,8 +14,8 @@ services:
       - CAPE_CREATE_INDICATORS=true
       - CAPE_ENABLE_NETWORK_TRAFFIC=false # enable creation of net Traffic (Very Loud)
       - CAPE_ENABLE_REGISTRY_KEYS=false # enable creation of Created registry Keys (Very Loud)
-      - CAPE_API_URL=https://sandbox.no/apiv2/ # CAPE API EP
-      - CAPE_BASE_URL=https://sandbox.no/ # CAPE Web UI URL
+      - CAPE_API_URL=https://<CHANGEME>/apiv2/ # CAPE API EP
+      - CAPE_BASE_URL=https://<CHANGEME>/ # CAPE Web UI URL
       - CAPE_INTERVAL=30 #in Min
       - CAPE_START_TASK_ID=0 #in Min
       - CAPE_REPORT_SCORE=7
