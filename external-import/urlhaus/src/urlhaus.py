@@ -111,11 +111,12 @@ class URLhaus:
                         )
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
+                        # id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
                         for row in rdr:
                             if row[3] == "online" or self.urlhaus_import_offline:
                                 external_reference = ExternalReference(
                                     source_name="Abuse.ch URLhaus",
-                                    url=row[6],
+                                    url=row[7],
                                     description="URLhaus repository URL",
                                 )
                                 stix_observable = SimpleObservable(
@@ -124,10 +125,15 @@ class URLhaus:
                                     ),
                                     key="Url.value",
                                     value=row[2],
-                                    description=row[4],
+                                    description="Threat: "
+                                    + row[5]
+                                    + " - Reporter: "
+                                    + row[8]
+                                    + " - Status: "
+                                    + row[3],
                                     x_opencti_score=80,
                                     object_marking_refs=[TLP_WHITE],
-                                    labels=row[5].split(","),
+                                    labels=row[6].split(","),
                                     created_by_ref=self.identity["standard_id"],
                                     x_opencti_create_indicator=self.create_indicators,
                                     external_references=[external_reference],
