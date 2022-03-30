@@ -102,6 +102,8 @@ class IpInfoConnector:
             headers={"accept": "application/json", "content-type": "application/json"},
         )
         json_data = response.json()
+        if "status" in json_data and json_data["status"] == 429:
+            raise ValueError("IpInfo Rate limit exceeded")
         country = pycountry.countries.get(alpha_2=json_data["country"])
         if country is None:
             raise ValueError(
