@@ -33,8 +33,8 @@ class YaraRule(BaseModel):
     @property
     def cti_date(self) -> str:
         # Valhalla date format: 2020-04-27 13:28:41
-        d = datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
-        return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        return datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
+        # return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
     @property
     def cti_description(self) -> str:
@@ -63,8 +63,8 @@ class ApiResponse(BaseModel):
     @property
     def cti_date(self) -> str:
         # Valhalla date format: 2020-04-27 13:28:41
-        d = datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
-        return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        return datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
+        # return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
 class ExternalReference(BaseModel):
