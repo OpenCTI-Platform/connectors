@@ -7,6 +7,7 @@ import requests
 from datetime import datetime
 from typing import Any, Mapping
 from urllib.parse import urlparse
+from dateutil.relativedelta import relativedelta
 
 from .models import ApiResponse, StixEnterpriseAttack
 from stix2 import Bundle, Identity, Indicator, ExternalReference, Relationship
@@ -77,16 +78,15 @@ class KnowledgeImporter:
             if yr.reference is not None and yr.reference != "" and yr.reference != "-":
                 try:
                     san_url = urlparse(yr.reference)
+                    ref = ExternalReference(
+                        source_name="Nextron Systems Valhalla API",
+                        url=san_url.geturl(),
+                        description="Rule Reference: " + san_url.geturl(),
+                    )
+                    refs.append(ref)
                 except Exception:
                     self.helper.log_error(f"error parsing ref url: {yr.reference}")
                     continue
-
-                ref = ExternalReference(
-                    source_name="Nextron Systems Valhalla API",
-                    url=san_url.geturl(),
-                    description="Rule Reference: " + san_url.geturl(),
-                )
-                refs.append(ref)
 
             indicator = Indicator(
                 name=yr.name,
@@ -95,6 +95,7 @@ class KnowledgeImporter:
                 pattern=yr.content,
                 labels=yr.tags,
                 valid_from=yr.cti_date,
+                valid_until=datetime.utcnow() + relativedelta(years=2),
                 object_marking_refs=[self.default_marking],
                 created_by_ref=self.organization,
                 confidence=self.confidence_level,
