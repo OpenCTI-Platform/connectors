@@ -68,7 +68,8 @@ class StixMapper:
             if condition(source):
                 log.info(f"Mapping Titan payload for {name}.")
                 mapper = mapper_class()
-                if bundle := mapper.map(source, girs_names):
+                bundle = mapper.map(source, girs_names)
+                if bundle:
                     return bundle
                 else:
                     raise EmptyBundle("STIX Mapper produced an empty bundle.")

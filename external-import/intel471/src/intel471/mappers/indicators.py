@@ -1,6 +1,7 @@
 import datetime
 
 import yaml
+from pytz import UTC
 from stix2 import Indicator, Bundle, Relationship, Malware, KillChainPhase, TLP_AMBER
 
 from .common import StixMapper, BaseMapper, generate_id, author_identity
@@ -16,8 +17,8 @@ class IndicatorsMapper(BaseMapper):
         for item in items:
             malware_family_name = item["data"]["threat"]["data"]["family"]
             malware_family_uid = item["data"]["threat"]["data"]["malware_family_profile_uid"]
-            valid_from = datetime.datetime.fromtimestamp(item["activity"]["first"] / 1000)
-            valid_until = datetime.datetime.fromtimestamp(item["data"]["expiration"] / 1000)
+            valid_from = datetime.datetime.fromtimestamp(item["activity"]["first"] / 1000, UTC)
+            valid_until = datetime.datetime.fromtimestamp(item["data"]["expiration"] / 1000, UTC)
             tactics = self.map_tactic(item["data"]["mitre_tactics"])
             indicator_id = item["uid"]
             indicator_type = item["data"]["indicator_type"]
@@ -29,7 +30,8 @@ class IndicatorsMapper(BaseMapper):
             description_main = item["data"]["context"]["description"]
             description = f"{description_main}\n\n### Intel requirements\n\n```yaml\n{yaml.dump(girs)}```"
 
-            if pattern_mapper := getattr(STIXPatterningMapper, f"map_{indicator_type}", None):
+            pattern_mapper = getattr(STIXPatterningMapper, f"map_{indicator_type}", None)
+            if pattern_mapper:
                 stix_pattern = pattern_mapper(indicator_data)
 
                 malware = Malware(id=generate_id(Malware, name=malware_family_name.strip().lower()),

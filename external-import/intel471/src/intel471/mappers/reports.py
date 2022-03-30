@@ -1,7 +1,9 @@
 import datetime
 import logging
+from typing import List
 
-from stix2 import Bundle, Report, Malware, ExternalReference, TLP_AMBER
+from pytz import UTC
+from stix2 import Bundle, Report, ExternalReference, TLP_AMBER
 
 from .common import StixMapper, BaseMapper, generate_id, author_identity
 
@@ -69,8 +71,9 @@ class AbstractReportMapper(BaseMapper):
         "vulnerabilities & exploits": "vulnerability",
     }
 
-    def map(self, source: dict) -> Bundle:
-        if container := self.map_reports(source):
+    def map(self, source: dict, girs_names: dict = None) -> Bundle:
+        container = self.map_reports(source)
+        if container:
             bundle = Bundle(*container.values(), allow_custom=True)
             return bundle
 
@@ -85,10 +88,11 @@ class AbstractReportMapper(BaseMapper):
             name = subject
         return self.shorten(name, 128)
 
-    def map_report_types(self, tags: list[str]) -> list[str]:
+    def map_report_types(self, tags: List[str]) -> List[str]:
         types = set()
         for tag in tags:
-            if ov_type := self.report_type_ov.get(tag.lower()):
+            ov_type = self.report_type_ov.get(tag.lower())
+            if ov_type:
                 types.add(ov_type)
         if not types:
             types.add("miscellaneous")
@@ -115,16 +119,18 @@ class ReportMapper(AbstractReportMapper):
             report_subject = item["subject"]
             report_url = item["portalReportUrl"]
             report_types = self.map_report_types(item.get("tags") or [])
-            created = datetime.datetime.fromtimestamp(item.get("released", item.get("created")) / 1000)
+            created = datetime.datetime.fromtimestamp(item.get("released", item.get("created")) / 1000, UTC)
 
             collected_object_refs = {}
             if object_refs:
                 collected_object_refs.update(object_refs)
             for entity_source in item.get("entities") or []:
-                if entity := self.map_entity(entity_source["type"], entity_source["value"]):
+                entity = self.map_entity(entity_source["type"], entity_source["value"])
+                if entity:
                     collected_object_refs[entity.id] = entity
             for location_source in item.get("locations") or []:
-                if location := self.map_location(location_source.get("region"), location_source.get("country")):
+                location = self.map_location(location_source.get("region"), location_source.get("country"))
+                if location:
                     collected_object_refs[location.id] = location
             if collected_object_refs:
                 name = self.get_name(report_subject, report_family, report_type)
@@ -139,6 +145,7 @@ class ReportMapper(AbstractReportMapper):
                                 custom_properties={"x_intel471_com_uid": report_uid})
                 container[report.id] = report
                 container[author_identity.id] = author_identity
+                container[TLP_AMBER.id] = TLP_AMBER
                 container.update(collected_object_refs)
             else:
                 log.warning(f"Can't map any entities from report {report_uid}")

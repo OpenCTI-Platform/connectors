@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+from pytz import UTC
 from stix2 import Bundle, Indicator, Report, TLP_AMBER
 
 from .patterning import STIXPatterningMapper
@@ -21,12 +22,13 @@ class IOCMapper(BaseMapper):
             ioc_value = item["value"]
             ioc_id = item["uid"]
             report_sources = item["links"].get("reports") or []
-            valid_from = datetime.datetime.fromtimestamp(item["activeFrom"] / 1000)
-            valid_until = datetime.datetime.fromtimestamp(item["activeTill"] / 1000)
+            valid_from = datetime.datetime.fromtimestamp(item["activeFrom"] / 1000, UTC)
+            valid_until = datetime.datetime.fromtimestamp(item["activeTill"] / 1000, UTC)
             if valid_from == valid_until:
                 valid_until = None
 
-            if pattern_mapper := getattr(STIXPatterningMapper, f"map_{ioc_type}", None):
+            pattern_mapper = getattr(STIXPatterningMapper, f"map_{ioc_type}", None)
+            if pattern_mapper:
                 stix_pattern = pattern_mapper(ioc_value)
                 indicator = Indicator(id=generate_id(Indicator, pattern=stix_pattern),
                                       indicator_types=["malicious-activity"],

@@ -1,6 +1,7 @@
 import datetime
 
 import yaml
+from pytz import UTC
 from stix2 import Indicator, Bundle, Relationship, Malware, TLP_AMBER
 from .common import StixMapper, BaseMapper, generate_id, author_identity
 
@@ -16,7 +17,7 @@ class YaraMapper(BaseMapper):
             yara_signature = item["data"]["yara_data"]["signature"]
             malware_family_name = item["data"]["threat"]["data"]["family"]
             malware_family_uid = item["data"]["threat"]["data"]["malware_family_profile_uid"]
-            valid_from = datetime.datetime.fromtimestamp(item["activity"]["first"] / 1000)
+            valid_from = datetime.datetime.fromtimestamp(item["activity"]["first"] / 1000, UTC)
             confidence = self.map_confidence(item["data"]["confidence"])
             girs_paths = item["data"]["intel_requirements"]
             girs_names = girs_names or {}
