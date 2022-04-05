@@ -237,7 +237,7 @@ class KasperskyClient:
         :return: a publication
         :rtype: Publication
         """
-        log.info(
+        log.debug(
             "Getting publication details for ID '%s' include '%s' info with language '%s'.",  # noqa: E501
             publication_id,
             include_info,
