@@ -9,7 +9,7 @@ from typing import Any, Iterable, List, Set, Dict
 from dateutil.parser import parse, ParserError
 import requests
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIStix2Utils
 from requests import RequestException
 
 
@@ -34,6 +34,7 @@ class Sekoia(object):
         self.collection = self.get_config(
             "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
         )
+        self.create_observables = self.get_config("create_observables", config, True)
 
         self.helper.log_info("Setting up api key")
         self.api_key = self.get_config("api_key", config)
@@ -134,6 +135,9 @@ class Sekoia(object):
                 return cursor
 
             items = self._retrieve_references(items)
+            self._add_main_observable_type_to_indicators(items)
+            if self.create_observables:
+                self._add_create_observables_to_indicators(items)
             items = self._clean_ic_fields(items)
             self._add_files_to_items(items)
             bundle = self.helper.stix2_create_bundle(items)
@@ -173,6 +177,25 @@ class Sekoia(object):
             (field.startswith("x_ic") or field.startswith("x_inthreat"))
             and (field.endswith("ref") or field.endswith("refs"))
         ) or field in to_ignore
+
+    @staticmethod
+    def _add_create_observables_to_indicators(items: List[Dict]):
+        for item in items:
+            if item.get("type") == "indicator":
+                item["x_opencti_create_observables"] = True
+
+    @staticmethod
+    def _add_main_observable_type_to_indicators(items: List[Dict]):
+        for item in items:
+            if (
+                item.get("type") == "indicator"
+                and item.get("x_ic_observable_types") is not None
+                and len(item.get("x_ic_observable_types")) > 0
+            ):
+                stix_type = item.get("x_ic_observable_types")[0]
+                item[
+                    "x_opencti_main_observable_type"
+                ] = OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
