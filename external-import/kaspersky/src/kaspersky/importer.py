@@ -61,6 +61,10 @@ class BaseImporter(ABC):
         fmt_msg = msg.format(*args)
         self.helper.log_info(fmt_msg)
 
+    def _debug(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_debug(fmt_msg)
+
     def _error(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
         self.helper.log_error(fmt_msg)
