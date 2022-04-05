@@ -135,7 +135,7 @@ class YaraRuleUpdater:
                 self._error("Rule '{0}' ({1}) not updated", new_rule_name, indicator_id)
             return updated
         else:
-            self._info("Not updating rule '{0}' ({1})", new_rule_name, indicator_id)
+            self._debug("Not updating rule '{0}' ({1})", new_rule_name, indicator_id)
             return False
 
     def _needs_updating(self, current_rule: YaraRule, new_rule: YaraRule) -> bool:
@@ -147,7 +147,7 @@ class YaraRuleUpdater:
             )
             return False
 
-        self._info(
+        self._debug(
             "Current rule last modified '{0}', new rule last modified '{1}'",
             current_rule.last_modified,
             new_rule.last_modified,
@@ -177,6 +177,10 @@ class YaraRuleUpdater:
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
         self.helper.log_info(fmt_msg)
+
+    def _debug(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_debug(fmt_msg)
 
     def _error(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
@@ -281,11 +285,11 @@ def _parse_yara_rule(yara_rule: str) -> Optional[Mapping[str, Any]]:
 
     report = _get_report(yara_rule)
     if report is None:
-        log.info("No report for rule: %s", name)
+        log.debug("No report for rule: %s", name)
 
     last_modified = _get_last_modified(yara_rule)
     if last_modified is None:
-        log.info("No last modified for rule: %s", name)
+        log.debug("No last modified for rule: %s", name)
 
     return {
         "name": name,
