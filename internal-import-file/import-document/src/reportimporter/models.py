@@ -114,6 +114,7 @@ class EntityConfig(BaseModel):
     exclude_values: List[str] = []
     regex: List[Pattern] = []
     omit_match_in: List[str] = []
+    custom_attributes: str
 
     @validator("fields", "exclude_values", "omit_match_in", pre=True)
     def pre_validate_transform_str_to_list(cls, field: str) -> List[str]:
