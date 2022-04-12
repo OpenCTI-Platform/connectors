@@ -129,7 +129,9 @@ class ReportImporter:
             try:
                 custom_function = getattr(base_func, func_format)
                 entries = custom_function.list(
-                    getAll=True, filters=entity_config.filter
+                    getAll=True,
+                    filters=entity_config.filter,
+                    customAttributes=entity_config.custom_attributes,
                 )
                 entity_list += entity_config.convert_to_entity(entries, self.helper)
             except AttributeError:
