@@ -159,9 +159,7 @@ class SentinelOneThreats:
 
                         # If skip false positives and verdict was false_positive
                         if self.skip_false_positives and verdict == "false_positive":
-                            self.helper.log_info(
-                                "Skipping as it was a false positive."
-                            )
+                            self.helper.log_info("Skipping as it was a false positive.")
                             continue
 
                         if self.skip_suspicious and confidence == "suspicious":
