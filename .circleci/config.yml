@@ -108,6 +108,10 @@ jobs:
           name: Build Docker image opencti/connector-amitt
           command: docker build -t opencti/connector-amitt:latest . && docker tag opencti/connector-amitt:latest opencti/connector-amitt:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/sentinelone-threats
+          name: Build Docker image opencti/connector-sentinelone-threats
+          command: docker build -t opencti/connector-sentinelone-threats:latest . && docker tag opencti/connector-sentinelone-threats:latest opencti/connector-sentinelone-threats:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/internal-enrichment/ipinfo
           name: Build Docker image opencti/connector-ipinfo
           command: docker build -t opencti/connector-ipinfo:latest . && docker tag opencti/connector-ipinfo:latest opencti/connector-ipinfo:${CIRCLE_TAG}
@@ -313,6 +317,8 @@ jobs:
             docker push opencti/connector-cve:${CIRCLE_TAG}
             docker push opencti/connector-amitt:latest
             docker push opencti/connector-amitt:${CIRCLE_TAG}
+            docker push opencti/connector-sentinelone-threats:latest
+            docker push opencti/connector-sentinelone-threats:${CIRCLE_TAG}
             docker push opencti/connector-ipinfo:latest
             docker push opencti/connector-ipinfo:${CIRCLE_TAG}
             docker push opencti/connector-virustotal:latest
