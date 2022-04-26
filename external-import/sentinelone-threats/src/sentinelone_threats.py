@@ -2,14 +2,8 @@ import os
 import yaml
 import time
 import magic
-import requests
-import datetime
 
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    OpenCTIStix2Utils
-)
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from s1api import SentinelOneApi
 
 
@@ -41,9 +35,7 @@ class SentinelOneThreats:
         )
 
         base_url = get_config_variable(
-            "SENTINELONE_THREATS_BASE_URL",
-            ["sentinelone_threats", "base_url"],
-            config,
+            "SENTINELONE_THREATS_BASE_URL", ["sentinelone_threats", "base_url"], config
         )
 
         api_token = get_config_variable(
@@ -52,10 +44,7 @@ class SentinelOneThreats:
             config,
         )
 
-        self.s1 = SentinelOneApi(
-            api_url=base_url,
-            api_token=api_token
-        )
+        self.s1 = SentinelOneApi(api_url=base_url, api_token=api_token)
 
         self.cooldown_seconds = get_config_variable(
             "SENTINELONE_THREATS_COOLDOWN_SECONDS",
@@ -76,9 +65,7 @@ class SentinelOneThreats:
         )
 
         self.skip_pua = get_config_variable(
-            "SENTINELONE_THREATS_SKIP_PUA",
-            ["sentinelone_threats", "skip_pua"],
-            config,
+            "SENTINELONE_THREATS_SKIP_PUA", ["sentinelone_threats", "skip_pua"], config
         )
 
         self.include_file_extensions = get_config_variable(
@@ -115,27 +102,22 @@ class SentinelOneThreats:
         )
 
         labels = get_config_variable(
-            "SENTINELONE_THREATS_LABELS",
-            ["sentinelone_threats", "labels"],
-            config,
-        )
-
-        if labels:
-            labels = labels.split(",")
-
-        labels_color = get_config_variable(
-            "SENTINELONE_THREATS_LABELS_COLOR",
-            ["sentinelone_threats", "labels_color"],
-            config,
+            "SENTINELONE_THREATS_LABELS", ["sentinelone_threats", "labels"], config
         )
 
         # Create default labels
         self.label_ids = []
-        for label in labels:
-            created_label = self.helper.api.label.create(
-                value=label, color=labels_color
+        if labels:
+            labels_color = get_config_variable(
+                "SENTINELONE_THREATS_LABELS_COLOR",
+                ["sentinelone_threats", "labels_color"],
+                config,
             )
-            self.label_ids.append(created_label["id"])
+            for label in labels.split(","):
+                created_label = self.helper.api.label.create(
+                    value=label, color=labels_color
+                )
+                self.label_ids.append(created_label["id"])
 
     def run(self):
         self.helper.log_info("Starting SentinelOne Threats Connector")
@@ -152,25 +134,27 @@ class SentinelOneThreats:
                 else:
                     self.helper.log_info("Connector has never run")
 
-
                 # Call the Get Threats API, using the last cursor if it was in the state
                 # s1.get_threats() returns a generator/list, loop it
                 for threat_list in self.s1.get_threats(created_at_gt=last_created_at):
-                    for threat_dict in threat_list['data']:
+                    for threat_dict in threat_list["data"]:
                         threat_info_dict = threat_dict.get("threatInfo")
-                        threat_id        = threat_info_dict.get("threatId")
-                        threat_name      = threat_info_dict.get("threatName")
-                        sha1             = threat_info_dict.get("sha1")
-                        classification   = threat_info_dict.get("classification")
-                        classification_source = threat_info_dict.get("classificationSource")
-                        confidence_level = threat_info_dict.get("confidenceLevel")
-                        file_ext         = threat_info_dict.get("fileExtension")
-                        verdict          = threat_info_dict.get("analystVerdict")
-                        file_path        = threat_info_dict.get("filePath", threat_name)
-                        confidence       = threat_info_dict.get("confidenceLevel")
-                        created_at       = threat_info_dict.get("createdAt")
+                        threat_id = threat_info_dict.get("threatId")
+                        threat_name = threat_info_dict.get("threatName")
+                        sha1 = threat_info_dict.get("sha1")
+                        classification = threat_info_dict.get("classification")
+                        classification_source = threat_info_dict.get(
+                            "classificationSource"
+                        )
+                        file_ext = threat_info_dict.get("fileExtension")
+                        verdict = threat_info_dict.get("analystVerdict")
+                        file_path = threat_info_dict.get("filePath", threat_name)
+                        confidence = threat_info_dict.get("confidenceLevel")
+                        created_at = threat_info_dict.get("createdAt")
 
-                        self.helper.log_info(f"Processing threat name {threat_name} with sha1 {sha1} created at {created_at}")
+                        self.helper.log_info(
+                            f"Processing threat name {threat_name} with sha1 {sha1} created at {created_at}"
+                        )
                         self.helper.set_state({"last_created_at": created_at})
 
                         # If skip false positives and verdict was false_positive
@@ -188,9 +172,7 @@ class SentinelOneThreats:
 
                         # If skip PUA and classification is PUA
                         if self.skip_pua and classification == "PUA":
-                            self.helper.log_info(
-                                f"Skipping as it was a PUA."
-                            )
+                            self.helper.log_info(f"Skipping as it was a PUA.")
                             continue
 
                         # If include certain extensions and not in the list, skip processing
@@ -204,16 +186,14 @@ class SentinelOneThreats:
                         # If the artifact already exists in OpenCTI skip it
                         if sha1 and self.artifact_exists_opencti(sha1):
                             self.helper.log_info(
-                                f'Skipping Artifact as it already exists in OpenCTI.'
+                                f"Skipping Artifact as it already exists in OpenCTI."
                             )
                             continue
 
                         # Download the artifact
                         file_contents = self.s1.download_threat(threat_id)
                         if not file_contents:
-                            self.helper.log_info(
-                                f"Skipping as the download failed."
-                            )
+                            self.helper.log_info(f"Skipping as the download failed.")
                             continue
 
                         # Upload the artifact to OpenCTI
@@ -241,12 +221,12 @@ class SentinelOneThreats:
                         # Attach classification as label
                         if self.classification_label and classification:
                             label = self.helper.api.label.create(
-                                value=classification, color=self.classification_label_color
+                                value=classification,
+                                color=self.classification_label_color,
                             )
                             self.helper.api.stix_cyber_observable.add_label(
                                 id=response["id"], label_id=label["id"]
                             )
-
 
                 self.helper.log_info(
                     f"Re-checking for new threats in {self.cooldown_seconds} seconds..."

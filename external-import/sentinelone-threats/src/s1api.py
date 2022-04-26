@@ -1,4 +1,5 @@
 import json
+import argparse
 import urllib.parse
 import io
 import zipfile
@@ -17,9 +18,7 @@ class SentinelOneApi:
         """
         self._api_url = api_url
         # TODO the api token automatically re-generates after 6 months
-        self._headers = {
-            'Authorization': f'ApiToken {api_token}'
-        }
+        self._headers = {"Authorization": f"ApiToken {api_token}"}
 
     def get_threats(self, created_at_gt=None):
         """
@@ -30,36 +29,33 @@ class SentinelOneApi:
         returns: a generator that yeilds each json dict response
         """
 
-        url = f'{self._api_url}/web/api/v2.1/threats'
+        url = f"{self._api_url}/web/api/v2.1/threats"
         params = {}
         if created_at_gt:
-            params['createdAt__gt'] = created_at_gt
+            params["createdAt__gt"] = created_at_gt
 
         last_cursor = None
         while True:
             try:
 
                 if last_cursor:
-                    params.pop('createdAt__gt', None)
-                    params['cursor'] = last_cursor
+                    params.pop("createdAt__gt", None)
+                    params["cursor"] = last_cursor
 
                 query_string = urllib.parse.urlencode(params)
                 threats_url = f"{url}?{query_string}"
 
-                req = Request(
-                    threats_url,
-                    headers=self._headers
-                )
+                req = Request(threats_url, headers=self._headers)
                 resp = urlopen(req).read().decode()
                 threats_list = json.loads(resp)
-                last_cursor = threats_list.get('pagination').get('nextCursor', None)
-                if not last_cursor or not threats_list.get('data'):
+                last_cursor = threats_list.get("pagination").get("nextCursor", None)
+                if not last_cursor or not threats_list.get("data"):
                     break
 
                 yield threats_list
 
             except Exception as e:
-                print(f'Failed to get threats, exception: {e}')
+                print(f"Failed to get threats, exception: {e}")
 
     def download_threat(self, threat_id):
         """
@@ -70,14 +66,14 @@ class SentinelOneApi:
                    acquired by calling get_threats() and passing the "id" key's value
         returns: a bytes object with the file contents
         """
-        url = f'{self._api_url}/web/api/v2.1/threats/{threat_id}/download-from-cloud'
-        file_contents = b''
+        url = f"{self._api_url}/web/api/v2.1/threats/{threat_id}/download-from-cloud"
+        file_contents = b""
 
         try:
             req = Request(url, headers=self._headers)
             resp = urlopen(req).read()
             resp_dict = json.loads(resp)
-            download_url = resp_dict['data']['downloadUrl']
+            download_url = resp_dict["data"]["downloadUrl"]
             req = Request(download_url)
 
             # Process password protected zip archive
@@ -88,13 +84,13 @@ class SentinelOneApi:
             for filename in zf.namelist():
                 # The threat file is stored in the zip at
                 # C/ProgramData/Sentinel/AFUCache/<threat>
-                if 'C/ProgramData/Sentinel/AFUCache/' in filename:
+                if "C/ProgramData/Sentinel/AFUCache/" in filename:
                     with zf.open(filename) as f:
                         file_contents = f.read()
                         break
 
         except Exception as e:
-            print(f'Failed to download threat, exception: {e}')
+            print(f"Failed to download threat, exception: {e}")
 
         return file_contents
 
@@ -103,30 +99,26 @@ if __name__ == "__main__":
     """
     For local testing purposes
     """
-    import argparse
-    import json
-    parser = argparse.ArgumentParser(description='For local testing purposes.')
+
+    parser = argparse.ArgumentParser(description="For local testing purposes.")
     parser.add_argument(
-        '-a',
-        '--api-url',
-        help='The base URL for SentinelOne, e.g. https://xxxxxx.sentinelone.net',
-        required=True
+        "-a",
+        "--api-url",
+        help="The base URL for SentinelOne, e.g. https://xxxxxx.sentinelone.net",
+        required=True,
     )
     parser.add_argument(
-        '-t',
-        '--token',
-        help='The API token with threats view and threats download file permissions',
-        required=True
+        "-t",
+        "--token",
+        help="The API token with threats view and threats download file permissions",
+        required=True,
     )
     args = parser.parse_args()
 
     api_url = args.api_url
     api_token = args.token
 
-    s1 = SentinelOneApi(
-        api_url=api_url,
-        api_token=api_token
-    )
+    s1 = SentinelOneApi(api_url=api_url, api_token=api_token)
 
     for threats_list in s1.get_threats():
         print(json.dumps(threats_list, indent=4, sort_keys=True))
