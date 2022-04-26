@@ -160,19 +160,19 @@ class SentinelOneThreats:
                         # If skip false positives and verdict was false_positive
                         if self.skip_false_positives and verdict == "false_positive":
                             self.helper.log_info(
-                                f"Skipping as it was a false positive."
+                                "Skipping as it was a false positive."
                             )
                             continue
 
                         if self.skip_suspicious and confidence == "suspicious":
                             self.helper.log_info(
-                                f"Skipping as confidence level for the threat is suspicious."
+                                "Skipping as confidence level for the threat is suspicious."
                             )
                             continue
 
                         # If skip PUA and classification is PUA
                         if self.skip_pua and classification == "PUA":
-                            self.helper.log_info(f"Skipping as it was a PUA.")
+                            self.helper.log_info("Skipping as it was a PUA.")
                             continue
 
                         # If include certain extensions and not in the list, skip processing
@@ -186,14 +186,14 @@ class SentinelOneThreats:
                         # If the artifact already exists in OpenCTI skip it
                         if sha1 and self.artifact_exists_opencti(sha1):
                             self.helper.log_info(
-                                f"Skipping Artifact as it already exists in OpenCTI."
+                                "Skipping Artifact as it already exists in OpenCTI."
                             )
                             continue
 
                         # Download the artifact
                         file_contents = self.s1.download_threat(threat_id)
                         if not file_contents:
-                            self.helper.log_info(f"Skipping as the download failed.")
+                            self.helper.log_info("Skipping as the download failed.")
                             continue
 
                         # Upload the artifact to OpenCTI
