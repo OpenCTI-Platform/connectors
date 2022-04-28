@@ -99,13 +99,9 @@ class ExportReportPdf:
             self._process_report(entity_id, file_name)
         elif entity_type == "Intrusion-Set":
             self._process_intrusion_set(entity_id, file_name)
-        elif entity_type == "Threat-Actor":
-            self._process_threat_actor(entity_id, file_name)
-        elif entity_type == "Malware":
-            self._process_malware(entity_id, file_name)
         else:
             raise ValueError(
-                f'This Connector currently only handles the entities types: "Report", "Threat-Actor", "Malware", not "{entity_type}".'
+                f'This Connector currently only handles the entity types: "Report" and "Intrusion-Set", not "{entity_type}".'
             )
 
         return "Export done"
