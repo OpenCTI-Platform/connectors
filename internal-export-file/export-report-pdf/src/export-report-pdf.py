@@ -196,14 +196,15 @@ class ExportReportPdf:
 
         # Render html with input variables
         env = Environment(
-            loader=FileSystemLoader(self.current_dir),
-            finalize=self._finalize
+            loader=FileSystemLoader(self.current_dir), finalize=self._finalize
         )
         template = env.get_template("resources/report.html")
         html_string = template.render(context)
 
         # Generate pdf from html string
-        pdf_contents = HTML(string=html_string, base_url=f"{self.current_dir}/resources").write_pdf()
+        pdf_contents = HTML(
+            string=html_string, base_url=f"{self.current_dir}/resources"
+        ).write_pdf()
 
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
@@ -231,9 +232,8 @@ class ExportReportPdf:
             "company_address_line_3": self.company_address_line_3,
             "company_phone_number": self.company_phone_number,
             "company_email": self.company_email,
-            "company_website": self.company_website
+            "company_website": self.company_website,
         }
-
 
         # Get a bundle of all objects affiliated with the intrusion set
         intrusion_set_objs = self.helper.api.stix2.export_entity(
@@ -251,7 +251,7 @@ class ExportReportPdf:
                 )
                 continue
 
-            time.sleep(.3)
+            time.sleep(0.3)
             entity_dict = reader_func(id=obj_id)
 
             obj_entity_type = obj_entity_type.replace("-", "_")
@@ -262,13 +262,16 @@ class ExportReportPdf:
 
         # Generate the svg img contents for the targets map
         if "relationship" in context["entities"]:
-  
+
             # Create world map
             world_map = World()
-            world_map.title = 'Targeted Countries'
+            world_map.title = "Targeted Countries"
             targeted_countries = []
             for relationship in context["entities"]["relationship"]:
-                if relationship["relationship_type"] != "targets" and relationship["to"]["entity_type"] != "Country":
+                if (
+                    relationship["relationship_type"] != "targets"
+                    and relationship["to"]["entity_type"] != "Country"
+                ):
                     continue
 
                 country_name = relationship["to"]["name"]
@@ -291,14 +294,15 @@ class ExportReportPdf:
 
         # Render html with input variables
         env = Environment(
-            loader=FileSystemLoader(self.current_dir),
-            finalize=self._finalize
+            loader=FileSystemLoader(self.current_dir), finalize=self._finalize
         )
         template = env.get_template("resources/intrusion-set.html")
         html_string = template.render(context)
 
         # Generate pdf from html string
-        pdf_contents = HTML(string=html_string, base_url=f"{self.current_dir}/resources").write_pdf()
+        pdf_contents = HTML(
+            string=html_string, base_url=f"{self.current_dir}/resources"
+        ).write_pdf()
 
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
@@ -316,7 +320,9 @@ class ExportReportPdf:
                     with open(os.path.join(root, file_name), "r") as f:
                         new_css = f.read()
                         new_css = new_css.replace("<primary_color>", self.primary_color)
-                        new_css = new_css.replace("<secondary_color>", self.secondary_color)
+                        new_css = new_css.replace(
+                            "<secondary_color>", self.secondary_color
+                        )
 
                     file_name = file_name.replace(".template", "")
                     with open(os.path.join(root, file_name), "w") as f:
@@ -326,12 +332,12 @@ class ExportReportPdf:
         for code, name in COUNTRIES.items():
             if country_name.lower() in name.lower():
                 return code
- 
+
     def _finalize(self, data):
         """
         Used for rendering jinja2 template to supress None
         """
-        return data if data is not None else 'N/A'
+        return data if data is not None else "N/A"
 
     def _get_reader(self, entity_type):
         """
@@ -368,7 +374,7 @@ class ExportReportPdf:
             "region": self.helper.api.location.read,
             "position": self.helper.api.location.read,
             "location": self.helper.api.location.read,
-            "relationship": self.helper.api.stix_core_relationship.read
+            "relationship": self.helper.api.stix_core_relationship.read,
         }
         return reader.get(entity_type.lower(), None)
 
