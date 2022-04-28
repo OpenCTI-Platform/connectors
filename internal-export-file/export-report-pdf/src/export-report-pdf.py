@@ -250,6 +250,7 @@ class ExportReportPdf:
             time.sleep(0.3)
             entity_dict = reader_func(id=obj_id)
 
+            # Key names cannot have - in them for jinja2 templating
             obj_entity_type = obj_entity_type.replace("-", "_")
             if obj_entity_type not in context["entities"]:
                 context["entities"][obj_entity_type] = []
