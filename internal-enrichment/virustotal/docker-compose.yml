@@ -14,4 +14,17 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - VIRUSTOTAL_TOKEN=ChangeMe
       - VIRUSTOTAL_MAX_TLP=TLP:AMBER
+      # IP specific config settings
+      - VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES=1 # Create an indicator for IPv4 based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+      - VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
+      - VIRUSTOTAL_IP_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+      # Domain specific config settings
+      - VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES=1 # Create an indicator for Domain based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+      - VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
+      - VIRUSTOTAL_DOMAIN_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+        # URL specific config settings
+      - VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES=1 # Create an indicator for Url based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+      - VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
+      - VIRUSTOTAL_URL_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+
     restart: always

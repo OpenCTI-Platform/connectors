@@ -3,14 +3,11 @@
 import datetime
 import json
 from pathlib import Path
-from typing import Optional
-
 import plyara
 import plyara.utils
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Indicator
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+from stix2.v21 import Bundle, Relationship, AutonomousSystem, Location, Note
 import yaml
-
 from .client import VirusTotalClient
 
 
@@ -34,15 +31,71 @@ class VirusTotalConnector:
         self.max_tlp = get_config_variable(
             "VIRUSTOTAL_MAX_TLP", ["virustotal", "max_tlp"], config
         )
+        self.identity = self.helper.api.identity.create(
+            type="Organization", name="VirusTotal", description="VirusTotal"
+        )["standard_id"]
 
         self.client = VirusTotalClient(self._API_URL, token)
 
         # Cache to store YARA rulesets.
         self.yara_cache = {}
 
-    def _create_yara_indicator(
-        self, yara: dict, valid_from: Optional[int] = None
-    ) -> Optional[Indicator]:
+        self.confidence_level = get_config_variable(
+            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config
+        )
+
+        # IP specific settings
+        self.ip_indicator_create_positives = get_config_variable(
+            "VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES",
+            ["virustotal", "ip_indicator_create_positives"],
+            config,
+        )
+        self.ip_indicator_valid_minutes = get_config_variable(
+            "VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES",
+            ["virustotal", "ip_indicator_valid_minutes"],
+            config,
+        )
+        self.ip_indicator_detect = get_config_variable(
+            "VIRUSTOTAL_IP_INDICATOR_DETECT",
+            ["virustotal", "ip_indicator_detect"],
+            config,
+        )
+
+        # Domain specific settings
+        self.domain_indicator_create_positives = get_config_variable(
+            "VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES",
+            ["virustotal", "domain_indicator_create_positives"],
+            config,
+        )
+        self.domain_indicator_valid_minutes = get_config_variable(
+            "VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES",
+            ["virustotal", "domain_indicator_valid_minutes"],
+            config,
+        )
+        self.domain_indicator_detect = get_config_variable(
+            "VIRUSTOTAL_DOMAIN_INDICATOR_DETECT",
+            ["virustotal", "domain_indicator_detect"],
+            config,
+        )
+
+        # Url specific settings
+        self.url_indicator_create_positives = get_config_variable(
+            "VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES",
+            ["virustotal", "url_indicator_create_positives"],
+            config,
+        )
+        self.url_indicator_valid_minutes = get_config_variable(
+            "VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES",
+            ["virustotal", "url_indicator_valid_minutes"],
+            config,
+        )
+        self.url_indicator_detect = get_config_variable(
+            "VIRUSTOTAL_URL_INDICATOR_DETECT",
+            ["virustotal", "url_indicator_detect"],
+            config,
+        )
+
+    def _create_yara_indicator(self, yara, valid_from):
         """Create an indicator containing the YARA rule from VirusTotal."""
         valid_from_date = (
             datetime.datetime.min
@@ -190,6 +243,363 @@ class VirusTotalConnector:
 
             return "File found on VirusTotal, knowledge attached."
 
+    def _process_ip(self, observable):
+        json_data = self.client.get_ip_info(observable["observable_value"])
+        assert json_data
+        if "error" in json_data:
+            raise ValueError(json_data["error"]["message"])
+        elif "data" not in json_data or "attributes" not in json_data["data"]:
+            raise ValueError("An error has occurred.")
+
+        bundle_objects = []
+        attributes = json_data["data"]["attributes"]
+        country_code = attributes["country"]
+        malicious_count = attributes["last_analysis_stats"]["malicious"]
+        harmless_count = (
+            attributes["last_analysis_stats"]["harmless"]
+            + attributes["last_analysis_stats"]["undetected"]
+        )
+        score = round((malicious_count / (harmless_count + malicious_count)) * 100)
+        country_name = self._country_code_to_country_name(country_code)
+        ip_address = observable["observable_value"]
+        now_time = datetime.datetime.utcnow()
+
+        # Create AutonomousSystem and Relationship between the observable
+        as_stix = AutonomousSystem(
+            number=attributes["asn"],
+            name=attributes["as_owner"],
+            rir=attributes["regional_internet_registry"],
+        )
+        relationship = Relationship(
+            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship_type="belongs-to",
+            created_by_ref=self.identity,
+            source_ref=observable["standard_id"],
+            target_ref=as_stix.id,
+            confidence=self.confidence_level,
+            allow_custom=True,
+        )
+        bundle_objects.append(as_stix)
+        bundle_objects.append(relationship)
+
+        # Create/attach external reference
+        external_reference = self.helper.api.external_reference.create(
+            source_name="VirusTotal",
+            url=f"https://www.virustotal.com/gui/ip-address/{ip_address}",
+            description="VirusTotal Report",
+        )
+        self.helper.api.stix_cyber_observable.add_external_reference(
+            id=observable["id"], external_reference_id=external_reference["id"]
+        )
+
+        # Update the score for the observable
+        self.helper.api.stix_cyber_observable.update_field(
+            id=observable["id"], input={"key": "x_opencti_score", "value": str(score)}
+        )
+
+        # Create a Location and Relationship between the observable
+        location_stix = Location(
+            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
+            created_by_ref=self.identity,
+            name=country_name,
+            country=country_code,
+        )
+        relationship = Relationship(
+            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship_type="located-at",
+            created_by_ref=self.identity,
+            source_ref=observable["standard_id"],
+            target_ref=location_stix.id,
+            confidence=self.confidence_level,
+            allow_custom=True,
+        )
+        bundle_objects.append(location_stix)
+        bundle_objects.append(relationship)
+
+        # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
+        if (
+            self.ip_indicator_create_positives
+            and malicious_count >= self.ip_indicator_create_positives
+        ):
+
+            valid_until = now_time + datetime.timedelta(
+                minutes=self.ip_indicator_valid_minutes
+            )
+
+            indicator = self.helper.api.indicator.create(
+                name=ip_address,
+                description=f"Created by VirusTotal connector as the positive count was >= {self.ip_indicator_create_positives}",
+                confidence=self.confidence_level,
+                pattern_type="stix",
+                pattern=f"[ipv4-addr:value = '{ip_address}']",
+                valid_from=self.helper.api.stix2.format_date(now_time),
+                valid_until=self.helper.api.stix2.format_date(valid_until),
+                created_by_ref=self.identity,
+                external_references=[external_reference],
+                x_opencti_main_observable_type="IPv4-Addr",
+                x_opencti_detection=self.ip_indicator_detect,
+                x_opencti_score=score,
+            )
+            relationship = Relationship(
+                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship_type="based-on",
+                created_by_ref=self.identity,
+                source_ref=indicator["standard_id"],
+                target_ref=observable["standard_id"],
+                confidence=self.confidence_level,
+                allow_custom=True,
+            )
+            bundle_objects.append(relationship)
+
+        # Create a Note with the analysis results if malicious count > 0
+        if malicious_count != 0:
+            malicious_results = list(
+                filter(
+                    lambda x: x["category"] == "malicious",
+                    attributes["last_analysis_results"].values(),
+                )
+            )
+            note_stix = Note(
+                abstract="VirusTotal Positives",
+                content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
+                created_by_ref=self.identity,
+                object_refs=[observable["standard_id"]],
+            )
+            bundle_objects.append(note_stix)
+
+        # Serialize and send all bundles
+        if bundle_objects:
+            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+        else:
+            return "Nothing to attach"
+
+    def _process_domain(self, observable):
+        json_data = self.client.get_domain_info(observable["observable_value"])
+        assert json_data
+        if "error" in json_data:
+            raise ValueError(json_data["error"]["message"])
+        elif "data" not in json_data or "attributes" not in json_data["data"]:
+            raise ValueError("An error has occurred.")
+
+        bundle_objects = []
+        attributes = json_data["data"]["attributes"]
+        malicious_count = attributes["last_analysis_stats"]["malicious"]
+        harmless_count = (
+            attributes["last_analysis_stats"]["harmless"]
+            + attributes["last_analysis_stats"]["undetected"]
+        )
+        dns_records = attributes["last_dns_records"]
+        score = round((malicious_count / (harmless_count + malicious_count)) * 100)
+        domain = observable["observable_value"]
+        now_time = datetime.datetime.utcnow()
+
+        # Create/attach external reference
+        external_reference = self.helper.api.external_reference.create(
+            source_name="VirusTotal",
+            url=f"https://www.virustotal.com/gui/domain/{domain}",
+            description="VirusTotal Report",
+        )
+        self.helper.api.stix_cyber_observable.add_external_reference(
+            id=observable["id"], external_reference_id=external_reference["id"]
+        )
+
+        # Update the score for the observable
+        self.helper.api.stix_cyber_observable.update_field(
+            id=observable["id"], input={"key": "x_opencti_score", "value": str(score)}
+        )
+
+        # Create IPv4 address observables for each A record
+        # And a Relationship between them and the observable
+        ip_addresses = [
+            record["value"] for record in dns_records if record["type"] == "A"
+        ]
+        for ip in ip_addresses:
+            # Have the use the API for these, see:
+            # https://github.com/OpenCTI-Platform/client-python/blob/master/examples/create_ip_domain_resolution.py
+            ipv4_stix = self.helper.api.stix_cyber_observable.create(
+                observableData={"type": "ipv4-addr", "value": ip}
+            )
+            self.helper.api.stix_cyber_observable_relationship.create(
+                fromId=observable["standard_id"],
+                toId=ipv4_stix["standard_id"],
+                createdBy=self.identity,
+                relationship_type="resolves-to",
+                update=True,
+                confidence=self.confidence_level,
+            )
+
+        # Create an Indicator if positive hits >= domain_indicator_create_positives specified in config
+        if (
+            self.domain_indicator_create_positives
+            and malicious_count >= self.domain_indicator_create_positives
+        ):
+
+            valid_until = now_time + datetime.timedelta(
+                minutes=self.domain_indicator_valid_minutes
+            )
+
+            indicator = self.helper.api.indicator.create(
+                name=domain,
+                description=f"Created by VirusTotal connector as the positive count was >= {self.domain_indicator_create_positives}",
+                confidence=self.confidence_level,
+                pattern_type="stix",
+                pattern=f"[domain-name:value = '{domain}']",
+                valid_from=self.helper.api.stix2.format_date(now_time),
+                valid_until=self.helper.api.stix2.format_date(valid_until),
+                created_by_ref=self.identity,
+                external_references=[external_reference],
+                x_opencti_main_observable_type="Domain-Name",
+                x_opencti_detection=self.domain_indicator_detect,
+                x_opencti_score=score,
+            )
+            relationship = Relationship(
+                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship_type="based-on",
+                created_by_ref=self.identity,
+                source_ref=indicator["standard_id"],
+                target_ref=observable["standard_id"],
+                confidence=self.confidence_level,
+                allow_custom=True,
+            )
+            bundle_objects.append(relationship)
+
+        # Create Notes with the analysis results and categories
+        if malicious_count != 0:
+            malicious_results = list(
+                filter(
+                    lambda x: x["category"] == "malicious",
+                    attributes["last_analysis_results"].values(),
+                )
+            )
+            note = Note(
+                abstract="VirusTotal Positives",
+                content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
+                created_by_ref=self.identity,
+                object_refs=[observable["standard_id"]],
+            )
+            bundle_objects.append(note)
+
+        if attributes["categories"]:
+            note = Note(
+                abstract="VirusTotal Categories",
+                content=f'```\n{json.dumps(attributes["categories"], indent=2)}\n```',
+                created_by_ref=self.identity,
+                object_refs=[observable["standard_id"]],
+            )
+            bundle_objects.append(note)
+
+        # Serialize and send all bundles
+        if bundle_objects:
+            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+        else:
+            return "Nothing to attach"
+
+    def _process_url(self, observable):
+        url = observable["observable_value"]
+        json_data = self.client.get_url_info(url)
+        assert json_data
+        if "error" in json_data:
+            raise ValueError(json_data["error"]["message"])
+        elif "data" not in json_data or "attributes" not in json_data["data"]:
+            raise ValueError("An error has occurred.")
+
+        bundle_objects = []
+        attributes = json_data["data"]["attributes"]
+        malicious_count = attributes["last_analysis_stats"]["malicious"]
+        harmless_count = (
+            attributes["last_analysis_stats"]["harmless"]
+            + attributes["last_analysis_stats"]["undetected"]
+        )
+        score = round((malicious_count / (harmless_count + malicious_count)) * 100)
+        now_time = datetime.datetime.utcnow()
+
+        # Create/attach external reference
+        external_reference = self.helper.api.external_reference.create(
+            source_name="VirusTotal",
+            url=f"https://www.virustotal.com/gui/url/{self.client.base64_encode_no_padding(url)}",
+            description="VirusTotal Report",
+        )
+        self.helper.api.stix_cyber_observable.add_external_reference(
+            id=observable["id"], external_reference_id=external_reference["id"]
+        )
+
+        # Update the score for the observable
+        self.helper.api.stix_cyber_observable.update_field(
+            id=observable["id"], input={"key": "x_opencti_score", "value": str(score)}
+        )
+
+        # Create an Indicator if positive hits >= url_indicator_create_positives specified in config
+        if (
+            self.url_indicator_create_positives
+            and malicious_count >= self.url_indicator_create_positives
+        ):
+
+            valid_until = now_time + datetime.timedelta(
+                minutes=self.url_indicator_valid_minutes
+            )
+
+            indicator = self.helper.api.indicator.create(
+                name=url,
+                description=f"Created by VirusTotal connector as the positive count was >= {self.url_indicator_create_positives}",
+                confidence=self.confidence_level,
+                pattern_type="stix",
+                pattern=f"[url:value = '{url}']",
+                valid_from=self.helper.api.stix2.format_date(now_time),
+                valid_until=self.helper.api.stix2.format_date(valid_until),
+                created_by_ref=self.identity,
+                external_references=[external_reference],
+                x_opencti_main_observable_type="Url",
+                x_opencti_detection=self.url_indicator_detect,
+                x_opencti_score=score,
+            )
+            relationship = Relationship(
+                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship_type="based-on",
+                created_by_ref=self.identity,
+                source_ref=indicator["standard_id"],
+                target_ref=observable["standard_id"],
+                confidence=self.confidence_level,
+                allow_custom=True,
+            )
+            bundle_objects.append(relationship)
+
+        # Create Notes with the analysis results and categories
+        if malicious_count != 0:
+            malicious_results = list(
+                filter(
+                    lambda x: x["category"] == "malicious",
+                    attributes["last_analysis_results"].values(),
+                )
+            )
+            note = Note(
+                abstract="VirusTotal Positives",
+                content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
+                created_by_ref=self.identity,
+                object_refs=[observable["standard_id"]],
+            )
+            bundle_objects.append(note)
+
+        if attributes["categories"]:
+            note = Note(
+                abstract="VirusTotal Categories",
+                content=f'```\n{json.dumps(attributes["categories"], indent=2)}\n```',
+                created_by_ref=self.identity,
+                object_refs=[observable["standard_id"]],
+            )
+            bundle_objects.append(note)
+
+        # Serialize and send all bundles
+        if bundle_objects:
+            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+        else:
+            return "Nothing to attach"
+
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
@@ -206,7 +616,280 @@ class VirusTotalConnector:
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-        return self._process_file(observable)
+
+        if observable["entity_type"] == "StixFile":
+            return self._process_file(observable)
+        elif observable["entity_type"] == "IPv4-Addr":
+            return self._process_ip(observable)
+        elif observable["entity_type"] == "Domain-Name":
+            return self._process_domain(observable)
+        elif observable["entity_type"] == "Url":
+            return self._process_url(observable)
+        else:
+            raise ValueError(
+                f'{observable["entity_type"]} is not a supported entity type.'
+            )
+
+    def _country_code_to_country_name(self, code):
+        """
+        Convert country code to country name
+        """
+        country_map = {
+            "Afghanistan": "AF",
+            "Albania": "AL",
+            "Algeria": "DZ",
+            "American Samoa": "AS",
+            "Andorra": "AD",
+            "Angola": "AO",
+            "Anguilla": "AI",
+            "Antarctica": "AQ",
+            "Antigua and Barbuda": "AG",
+            "Argentina": "AR",
+            "Armenia": "AM",
+            "Aruba": "AW",
+            "Australia": "AU",
+            "Austria": "AT",
+            "Azerbaijan": "AZ",
+            "Bahamas": "BS",
+            "Bahrain": "BH",
+            "Bangladesh": "BD",
+            "Barbados": "BB",
+            "Belarus": "BY",
+            "Belgium": "BE",
+            "Belize": "BZ",
+            "Benin": "BJ",
+            "Bermuda": "BM",
+            "Bhutan": "BT",
+            "Bolivia, Plurinational State of": "BO",
+            "Bonaire, Sint Eustatius and Saba": "BQ",
+            "Bosnia and Herzegovina": "BA",
+            "Botswana": "BW",
+            "Bouvet Island": "BV",
+            "Brazil": "BR",
+            "British Indian Ocean Territory": "IO",
+            "Brunei Darussalam": "BN",
+            "Bulgaria": "BG",
+            "Burkina Faso": "BF",
+            "Burundi": "BI",
+            "Cambodia": "KH",
+            "Cameroon": "CM",
+            "Canada": "CA",
+            "Cape Verde": "CV",
+            "Cayman Islands": "KY",
+            "Central African Republic": "CF",
+            "Chad": "TD",
+            "Chile": "CL",
+            "China": "CN",
+            "Christmas Island": "CX",
+            "Cocos (Keeling) Islands": "CC",
+            "Colombia": "CO",
+            "Comoros": "KM",
+            "Congo": "CG",
+            "Congo, the Democratic Republic of the": "CD",
+            "Cook Islands": "CK",
+            "Costa Rica": "CR",
+            "Country name": "Code",
+            "Croatia": "HR",
+            "Cuba": "CU",
+            "Curaçao": "CW",
+            "Cyprus": "CY",
+            "Czech Republic": "CZ",
+            "Côte d'Ivoire": "CI",
+            "Denmark": "DK",
+            "Djibouti": "DJ",
+            "Dominica": "DM",
+            "Dominican Republic": "DO",
+            "Ecuador": "EC",
+            "Egypt": "EG",
+            "El Salvador": "SV",
+            "Equatorial Guinea": "GQ",
+            "Eritrea": "ER",
+            "Estonia": "EE",
+            "Ethiopia": "ET",
+            "Falkland Islands (Malvinas)": "FK",
+            "Faroe Islands": "FO",
+            "Fiji": "FJ",
+            "Finland": "FI",
+            "France": "FR",
+            "French Guiana": "GF",
+            "French Polynesia": "PF",
+            "French Southern Territories": "TF",
+            "Gabon": "GA",
+            "Gambia": "GM",
+            "Georgia": "GE",
+            "Germany": "DE",
+            "Ghana": "GH",
+            "Gibraltar": "GI",
+            "Greece": "GR",
+            "Greenland": "GL",
+            "Grenada": "GD",
+            "Guadeloupe": "GP",
+            "Guam": "GU",
+            "Guatemala": "GT",
+            "Guernsey": "GG",
+            "Guinea": "GN",
+            "Guinea-Bissau": "GW",
+            "Guyana": "GY",
+            "Haiti": "HT",
+            "Heard Island and McDonald Islands": "HM",
+            "Holy See (Vatican City State)": "VA",
+            "Honduras": "HN",
+            "Hong Kong": "HK",
+            "Hungary": "HU",
+            "ISO 3166-2:GB": "(.uk)",
+            "Iceland": "IS",
+            "India": "IN",
+            "Indonesia": "ID",
+            "Iran, Islamic Republic of": "IR",
+            "Iraq": "IQ",
+            "Ireland": "IE",
+            "Isle of Man": "IM",
+            "Israel": "IL",
+            "Italy": "IT",
+            "Jamaica": "JM",
+            "Japan": "JP",
+            "Jersey": "JE",
+            "Jordan": "JO",
+            "Kazakhstan": "KZ",
+            "Kenya": "KE",
+            "Kiribati": "KI",
+            "Korea, Democratic People's Republic of": "KP",
+            "Korea, Republic of": "KR",
+            "Kuwait": "KW",
+            "Kyrgyzstan": "KG",
+            "Lao People's Democratic Republic": "LA",
+            "Latvia": "LV",
+            "Lebanon": "LB",
+            "Lesotho": "LS",
+            "Liberia": "LR",
+            "Libya": "LY",
+            "Liechtenstein": "LI",
+            "Lithuania": "LT",
+            "Luxembourg": "LU",
+            "Macao": "MO",
+            "Macedonia, the former Yugoslav Republic of": "MK",
+            "Madagascar": "MG",
+            "Malawi": "MW",
+            "Malaysia": "MY",
+            "Maldives": "MV",
+            "Mali": "ML",
+            "Malta": "MT",
+            "Marshall Islands": "MH",
+            "Martinique": "MQ",
+            "Mauritania": "MR",
+            "Mauritius": "MU",
+            "Mayotte": "YT",
+            "Mexico": "MX",
+            "Micronesia, Federated States of": "FM",
+            "Moldova, Republic of": "MD",
+            "Monaco": "MC",
+            "Mongolia": "MN",
+            "Montenegro": "ME",
+            "Montserrat": "MS",
+            "Morocco": "MA",
+            "Mozambique": "MZ",
+            "Myanmar": "MM",
+            "Namibia": "NA",
+            "Nauru": "NR",
+            "Nepal": "NP",
+            "Netherlands": "NL",
+            "New Caledonia": "NC",
+            "New Zealand": "NZ",
+            "Nicaragua": "NI",
+            "Niger": "NE",
+            "Nigeria": "NG",
+            "Niue": "NU",
+            "Norfolk Island": "NF",
+            "Northern Mariana Islands": "MP",
+            "Norway": "NO",
+            "Oman": "OM",
+            "Pakistan": "PK",
+            "Palau": "PW",
+            "Palestine, State of": "PS",
+            "Panama": "PA",
+            "Papua New Guinea": "PG",
+            "Paraguay": "PY",
+            "Peru": "PE",
+            "Philippines": "PH",
+            "Pitcairn": "PN",
+            "Poland": "PL",
+            "Portugal": "PT",
+            "Puerto Rico": "PR",
+            "Qatar": "QA",
+            "Romania": "RO",
+            "Russian Federation": "RU",
+            "Rwanda": "RW",
+            "Réunion": "RE",
+            "Saint Barthélemy": "BL",
+            "Saint Helena, Ascension and Tristan da Cunha": "SH",
+            "Saint Kitts and Nevis": "KN",
+            "Saint Lucia": "LC",
+            "Saint Martin (French part)": "MF",
+            "Saint Pierre and Miquelon": "PM",
+            "Saint Vincent and the Grenadines": "VC",
+            "Samoa": "WS",
+            "San Marino": "SM",
+            "Sao Tome and Principe": "ST",
+            "Saudi Arabia": "SA",
+            "Senegal": "SN",
+            "Serbia": "RS",
+            "Seychelles": "SC",
+            "Sierra Leone": "SL",
+            "Singapore": "SG",
+            "Sint Maarten (Dutch part)": "SX",
+            "Slovakia": "SK",
+            "Slovenia": "SI",
+            "Solomon Islands": "SB",
+            "Somalia": "SO",
+            "South Africa": "ZA",
+            "South Georgia and the South Sandwich Islands": "GS",
+            "South Sudan": "SS",
+            "Spain": "ES",
+            "Sri Lanka": "LK",
+            "Sudan": "SD",
+            "Suriname": "SR",
+            "Svalbard and Jan Mayen": "SJ",
+            "Swaziland": "SZ",
+            "Sweden": "SE",
+            "Switzerland": "CH",
+            "Syrian Arab Republic": "SY",
+            "Taiwan, Province of China": "TW",
+            "Tajikistan": "TJ",
+            "Tanzania, United Republic of": "TZ",
+            "Thailand": "TH",
+            "Timor-Leste": "TL",
+            "Togo": "TG",
+            "Tokelau": "TK",
+            "Tonga": "TO",
+            "Trinidad and Tobago": "TT",
+            "Tunisia": "TN",
+            "Turkey": "TR",
+            "Turkmenistan": "TM",
+            "Turks and Caicos Islands": "TC",
+            "Tuvalu": "TV",
+            "Uganda": "UG",
+            "Ukraine": "UA",
+            "United Arab Emirates": "AE",
+            "United Kingdom": "GB",
+            "United States": "US",
+            "United States Minor Outlying Islands": "UM",
+            "Uruguay": "UY",
+            "Uzbekistan": "UZ",
+            "Vanuatu": "VU",
+            "Venezuela, Bolivarian Republic of": "VE",
+            "Viet Nam": "VN",
+            "Virgin Islands, British": "VG",
+            "Virgin Islands, U.S.": "VI",
+            "Wallis and Futuna": "WF",
+            "Western Sahara": "EH",
+            "Yemen": "YE",
+            "Zambia": "ZM",
+            "Zimbabwe": "ZW",
+            "Åland Islands": "AX",
+        }
+        for country in country_map:
+            if country_map[country] == code.upper():
+                return country
 
     def start(self):
         """Start the main loop."""
