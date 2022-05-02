@@ -2,7 +2,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'VirusTotal'
-  scope: 'StixFile,Artifact'
+  scope: 'StixFile,Artifact,IPv4-Addr,Domain-Name,Url'
   auto: true # Enable/disable auto-enrichment of observables
   confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
