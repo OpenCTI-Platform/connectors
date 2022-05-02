@@ -44,6 +44,28 @@ class VirusTotalConnector:
             "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config
         )
 
+        # File/Artifact specific settings
+        self.file_create_note_full_report = get_config_variable(
+            "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT",
+            ["virustotal", "file_create_note_full_report"],
+            config,
+        )
+        self.file_indicator_create_positives = get_config_variable(
+            "VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES",
+            ["virustotal", "file_indicator_create_positives"],
+            config,
+        )
+        self.file_indicator_valid_minutes = get_config_variable(
+            "VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES",
+            ["virustotal", "file_indicator_valid_minutes"],
+            config,
+        )
+        self.file_indicator_detect = get_config_variable(
+            "VIRUSTOTAL_FILE_INDICATOR_DETECT",
+            ["virustotal", "file_indicator_detect"],
+            config,
+        )
+
         # IP specific settings
         self.ip_indicator_create_positives = get_config_variable(
             "VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES",
@@ -144,104 +166,159 @@ class VirusTotalConnector:
 
     def _process_file(self, observable):
         json_data = self.client.get_file_info(observable["observable_value"])
-        if json_data is None:
-            raise ValueError("An error has occurred")
+        assert json_data
         if "error" in json_data:
-            if json_data["error"]["code"] == "QuotaExceededError":
-                self.helper.log_error(
-                    "Quota limit reached, dropping the query to avoid queuing"
-                )
-                raise ValueError(
-                    "Quota limit reached, dropping the query to avoid queuing"
-                )
-            elif json_data["error"]["code"] == "NotFoundError":
-                self.helper.log_info("File not found on VirusTotal.")
-                return "File not found on VirusTotal."
-            else:
-                raise ValueError(json_data["error"]["message"])
-        if "data" in json_data:
-            data = json_data["data"]
-            attributes = data["attributes"]
-            # Update the current observable
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=observable["id"],
-                input={"key": "hashes.MD5", "value": attributes["md5"]},
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
+            raise ValueError(json_data["error"]["message"])
+        elif "data" not in json_data or "attributes" not in json_data["data"]:
+            raise ValueError("An error has occurred.")
+
+        bundle_objects = []
+        now_time = datetime.datetime.utcnow()
+        attributes = json_data["data"]["attributes"]
+        malicious_count = attributes["last_analysis_stats"]["malicious"]
+        harmless_count = (
+            attributes["last_analysis_stats"]["harmless"]
+            + attributes["last_analysis_stats"]["undetected"]
+        )
+        score = round((malicious_count / (harmless_count + malicious_count)) * 100)
+        file_sha256 = attributes["sha256"]
+
+        # Update the hashes for the current observable
+        final_observable = self.helper.api.stix_cyber_observable.update_field(
+            id=observable["id"], input={"key": "hashes.MD5", "value": attributes["md5"]}
+        )
+        final_observable = self.helper.api.stix_cyber_observable.update_field(
+            id=final_observable["id"],
+            input={"key": "hashes.SHA-1", "value": attributes["sha1"]},
+        )
+        final_observable = self.helper.api.stix_cyber_observable.update_field(
+            id=final_observable["id"],
+            input={"key": "hashes.SHA-256", "value": file_sha256},
+        )
+
+        # Set the size and file name
+        if observable["entity_type"] == "StixFile":
+            self.helper.api.stix_cyber_observable.update_field(
                 id=final_observable["id"],
-                input={"key": "hashes.SHA-1", "value": attributes["sha1"]},
+                input={"key": "size", "value": str(attributes["size"])},
             )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={"key": "hashes.SHA-256", "value": attributes["sha256"]},
-            )
-            if observable["entity_type"] == "StixFile":
+            if observable["name"] is None and len(attributes["names"]) > 0:
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
-                    input={"key": "size", "value": str(attributes["size"])},
+                    input={"key": "name", "value": attributes["names"][0]},
                 )
-                if observable["name"] is None and len(attributes["names"]) > 0:
-                    self.helper.api.stix_cyber_observable.update_field(
-                        id=final_observable["id"],
-                        input={"key": "name", "value": attributes["names"][0]},
-                    )
-                    del attributes["names"][0]
+                del attributes["names"][0]
 
-            if len(attributes["names"]) > 0:
-                self.helper.api.stix_cyber_observable.update_field(
-                    id=final_observable["id"],
-                    input={
-                        "key": "x_opencti_additional_names",
-                        "value": attributes["names"],
-                    },
-                )
+        # Set the score
+        self.helper.api.stix_cyber_observable.update_field(
+            id=observable["id"], input={"key": "x_opencti_score", "value": str(score)}
+        )
 
-            # Create external reference
-            external_reference = self.helper.api.external_reference.create(
-                source_name="VirusTotal",
-                url="https://www.virustotal.com/gui/file/" + attributes["sha256"],
-                description=attributes["magic"],
-            )
-
-            # Create tags
-            for tag in attributes["tags"]:
-                tag_vt = self.helper.api.label.create(value=tag, color="#0059f7")
-                self.helper.api.stix_cyber_observable.add_label(
-                    id=final_observable["id"], label_id=tag_vt["id"]
-                )
-
-            self.helper.api.stix_cyber_observable.add_external_reference(
+        # Add additional file names
+        if attributes["names"]:
+            self.helper.api.stix_cyber_observable.update_field(
                 id=final_observable["id"],
-                external_reference_id=external_reference["id"],
+                input={
+                    "key": "x_opencti_additional_names",
+                    "value": attributes["names"],
+                },
             )
 
-            if "crowdsourced_yara_results" in attributes:
-                self.helper.log_info("[VirusTotal] adding yara results to file.")
+        # Create/attach external reference
+        external_reference = self.helper.api.external_reference.create(
+            source_name="VirusTotal",
+            url="https://www.virustotal.com/gui/file/" + file_sha256,
+            description=attributes["magic"],
+        )
+        self.helper.api.stix_cyber_observable.add_external_reference(
+            id=observable["id"], external_reference_id=external_reference["id"]
+        )
 
-                # Add YARA rules (only if a rule is given).
-                yaras = list(
-                    filter(
-                        None,
-                        [
-                            self._create_yara_indicator(
-                                yara, attributes.get("creation_date", None)
-                            )
-                            for yara in attributes["crowdsourced_yara_results"]
-                        ],
-                    )
+        # Create an Indicator if positive hits >= file_indicator_create_positives specified in config
+        if (
+            self.file_indicator_create_positives
+            and malicious_count >= self.file_indicator_create_positives
+        ):
+
+            valid_until = now_time + datetime.timedelta(
+                minutes=self.file_indicator_valid_minutes
+            )
+
+            indicator = self.helper.api.indicator.create(
+                name=file_sha256,
+                description=f"Created by VirusTotal connector as the positive count was >= {self.file_indicator_create_positives}",
+                confidence=self.confidence_level,
+                pattern_type="stix",
+                pattern=f"[file:hashes.'SHA-256' = '{file_sha256}']",
+                valid_from=self.helper.api.stix2.format_date(now_time),
+                valid_until=self.helper.api.stix2.format_date(valid_until),
+                created_by_ref=self.identity,
+                external_references=[external_reference],
+                x_opencti_main_observable_type=observable["entity_type"],
+                x_opencti_detection=self.ip_indicator_detect,
+                x_opencti_score=score,
+            )
+            relationship = Relationship(
+                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship_type="based-on",
+                created_by_ref=self.identity,
+                source_ref=indicator["standard_id"],
+                target_ref=observable["standard_id"],
+                confidence=self.confidence_level,
+                allow_custom=True,
+            )
+            bundle_objects.append(relationship)
+
+        # Create labels from tags
+        for tag in attributes["tags"]:
+            tag_vt = self.helper.api.label.create(value=tag, color="#0059f7")
+            self.helper.api.stix_cyber_observable.add_label(
+                id=final_observable["id"], label_id=tag_vt["id"]
+            )
+
+        if "crowdsourced_yara_results" in attributes:
+            self.helper.log_info("[VirusTotal] adding yara results to file.")
+
+            # Add YARA rules (only if a rule is given).
+            yaras = list(
+                filter(
+                    None,
+                    [
+                        self._create_yara_indicator(
+                            yara, attributes.get("creation_date", None)
+                        )
+                        for yara in attributes["crowdsourced_yara_results"]
+                    ],
+                )
+            )
+
+            self.helper.log_debug(f"[VirusTotal] Indicators created: {yaras}")
+
+            # Create the relationships (`related-to`) between the yaras and the file.
+            for yara in yaras:
+                self.helper.api.stix_core_relationship.create(
+                    fromId=final_observable["id"],
+                    toId=yara["id"],
+                    relationship_type="related-to",
                 )
 
-                self.helper.log_debug(f"[VirusTotal] Indicators created: {yaras}")
+        # Create a Note with the full report
+        if self.file_create_note_full_report:
+            note_stix = Note(
+                abstract="VirusTotal Report",
+                content=f"```\n{json.dumps(json_data, indent=2)}\n```",
+                created_by_ref=self.identity,
+                object_refs=[observable["standard_id"]],
+            )
+            bundle_objects.append(note_stix)
 
-                # Create the relationships (`related-to`) between the yaras and the file.
-                for yara in yaras:
-                    self.helper.api.stix_core_relationship.create(
-                        fromId=final_observable["id"],
-                        toId=yara["id"],
-                        relationship_type="related-to",
-                    )
-
-            return "File found on VirusTotal, knowledge attached."
+        # Serialize/send all bundled objects
+        if bundle_objects:
+            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+        else:
+            return "Nothing to attach"
 
     def _process_ip(self, observable):
         json_data = self.client.get_ip_info(observable["observable_value"])
@@ -617,7 +694,10 @@ class VirusTotalConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
-        if observable["entity_type"] == "StixFile":
+        if (
+            observable["entity_type"] == "StixFile"
+            or observable["entity_type"] == "Artifact"
+        ):
             return self._process_file(observable)
         elif observable["entity_type"] == "IPv4-Addr":
             return self._process_ip(observable)

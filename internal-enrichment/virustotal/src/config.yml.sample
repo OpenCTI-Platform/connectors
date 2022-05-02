@@ -1,5 +1,9 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
 connector:
-  id: 'ChangeMe'
+  id: 'VirusTotal'
   type: 'INTERNAL_ENRICHMENT'
   name: 'VirusTotal'
   scope: 'StixFile,Artifact,IPv4-Addr,Domain-Name,Url'
@@ -11,17 +15,23 @@ virustotal:
   token: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
 
+  # File/Artifact specific config settings
+  file_create_note_full_report: true # Whether or not to include the full report as a Note
+  file_indicator_create_positives: 0 # Create an indicator for File/Artifact based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+  file_indicator_valid_minutes: 2880 # How long the indicator is valid for in minutes
+  file_indicator_detect: true # Whether or not to set detection for the indicator to true
+
   # IP specific config settings
-  ip_indicator_create_positives: 10 # Create an indicator for IPv4 based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+  ip_indicator_create_positives: 0 # Create an indicator for IPv4 based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
   ip_indicator_valid_minutes: 2880 # How long the indicator is valid for in minutes
   ip_indicator_detect: true # Whether or not to set detection for the indicator to true
 
   # Domain specific config settings
-  domain_indicator_create_positives: 10 # Create an indicator for Domain based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+  domain_indicator_create_positives: 0 # Create an indicator for Domain based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
   domain_indicator_valid_minutes: 2880 # How long the indicator is valid for in minutes
   domain_indicator_detect: true # Whether or not to set detection for the indicator to true
 
   # URL specific config settings
-  url_indicator_create_positives: 10 # Create an indicator for Url based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+  url_indicator_create_positives: 0 # Create an indicator for Url based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
   url_indicator_valid_minutes: 2880 # How long the indicator is valid for in minutes
   url_indicator_detect: true # Whether or not to set detection for the indicator to true
