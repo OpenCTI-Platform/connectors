@@ -25,7 +25,7 @@ OpenCTI data is coming from *import* connectors.
 | `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | Option `ImportReport`                                                                                                                          |
 | `connector_only_contextual`          | `CONNCETOR_ONLY_CONTEXTUAL`         | Yes          | `true` Only extract data related to an entity (a report, a threat actor, etc.)                                                                             |
 | `connector_auto`                     | `CONNCETOR_AUTO`                    | Yes          | `false` Enable/disable auto import of report file                                                                                                          |
-| `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported file types: `'application/pdf','text/plain','text/html', 'text/csv`                                                                                                     |
+| `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported file types: `'application/pdf','text/plain','text/html', 'text/csv,'text/markdown'`                                                                                                     |
 | `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 4).                                                                             |
 | `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
 | `import_document_create_indicator`   | `IMPORT_DOCUMENT_CREATE_INDICATOR`    | Yes          | Create an indicator for each extracted observable                                                                                                         |
@@ -65,6 +65,7 @@ DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd
 - Text file
 - HTML file
 - CSV file
+- MD file
 
 **Extractable Entities/Stix Domain Objects**
 
