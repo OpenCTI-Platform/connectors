@@ -2,6 +2,7 @@ MIME_PDF = "application/pdf"
 MIME_TXT = "text/plain"
 MIME_HTML = "text/html"
 MIME_CSV = "text/csv"
+MIME_MD = "text/markdown"
 
 RESULT_FORMAT_TYPE = "type"
 RESULT_FORMAT_CATEGORY = "category"

@@ -19,6 +19,7 @@ from reportimporter.constants import (
     MIME_TXT,
     MIME_HTML,
     MIME_CSV,
+    MIME_MD,
     OBSERVABLE_DETECTION_CUSTOM_REGEX,
     OBSERVABLE_DETECTION_LIBRARY,
 )
@@ -51,6 +52,7 @@ class ReportParser(object):
             MIME_TXT: self._parse_text,
             MIME_HTML: self._parse_html,
             MIME_CSV: self._parse_text,
+            MIME_MD: self._parse_text,
         }
 
         self.library_lookup = library_mapping()
