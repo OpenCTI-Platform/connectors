@@ -85,7 +85,7 @@ def create_observable_domain_name(properties: ObservableProperties) -> DomainNam
 
 
 @CustomObservable(
-    "x-opencti-hostname",
+    "hostname",
     [
         ("value", StringProperty(required=True)),
         ("spec_version", StringProperty(fixed="2.1")),
@@ -198,7 +198,7 @@ def create_observable_mutex(properties: ObservableProperties) -> Mutex:
 
 
 @CustomObservable(
-    "x-opencti-cryptocurrency-wallet",
+    "cryptocurrency-wallet",
     [
         ("value", StringProperty(required=True)),
         ("spec_version", StringProperty(fixed="2.1")),

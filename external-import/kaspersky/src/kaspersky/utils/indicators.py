@@ -15,16 +15,16 @@ from kaspersky.utils.common import is_ip_address, is_ipv4_address
 _OBJECT_TYPE_IPV4_ADDR = "ipv4-addr"
 _OBJECT_TYPE_IPV6_ADDR = "ipv6-addr"
 _OBJECT_TYPE_DOMAIN_NAME = "domain-name"
-_OBJECT_TYPE_HOSTNAME = "x-opencti-hostname"
+_OBJECT_TYPE_HOSTNAME = "hostname"
 _OBJECT_TYPE_EMAIL_ADDR = "email-addr"
 _OBJECT_TYPE_EMAIL_MESSAGE = "email-message"
 _OBJECT_TYPE_URL = "url"
 _OBJECT_TYPE_FILE = "file"
 _OBJECT_TYPE_MUTEX = "mutex"
-_OBJECT_TYPE_CRYPTOCURRENCY_WALLET = "x-opencti-cryptocurrency-wallet"
+_OBJECT_TYPE_CRYPTOCURRENCY_WALLET = "cryptocurrency-wallet"
 _OBJECT_TYPE_PROCESS = "process"
 _OBJECT_TYPE_X509_CERTIFICATE = "x509-certificate"
-_OBJECT_TYPE_USER_AGENT = "x-opencti-user-agent"
+_OBJECT_TYPE_USER_AGENT = "user-agent"
 
 _HASH_MD5 = "MD5"
 _HASH_SHA1 = "SHA-1"
@@ -34,16 +34,16 @@ _OBJECT_TYPE_TO_OBSERVABLE_TYPE_MAP = {
     _OBJECT_TYPE_IPV4_ADDR: "IPv4-Addr",
     _OBJECT_TYPE_IPV6_ADDR: "IPv6-Addr",
     _OBJECT_TYPE_DOMAIN_NAME: "Domain-Name",
-    _OBJECT_TYPE_HOSTNAME: "X-OpenCTI-Hostname",
+    _OBJECT_TYPE_HOSTNAME: "Hostname",
     _OBJECT_TYPE_EMAIL_ADDR: "Email-Addr",
     _OBJECT_TYPE_EMAIL_MESSAGE: "Email-Message",
     _OBJECT_TYPE_URL: "Url",
     _OBJECT_TYPE_FILE: "StixFile",
     _OBJECT_TYPE_MUTEX: "Mutex",
-    _OBJECT_TYPE_CRYPTOCURRENCY_WALLET: "X-OpenCTI-Cryptocurrency-Wallet",
+    _OBJECT_TYPE_CRYPTOCURRENCY_WALLET: "Cryptocurrency-Wallet",
     _OBJECT_TYPE_PROCESS: "Process",
     _OBJECT_TYPE_X509_CERTIFICATE: "X509-Certificate",
-    _OBJECT_TYPE_USER_AGENT: "X-OpenCTI-User-Agent",
+    _OBJECT_TYPE_USER_AGENT: "User-Agent",
 }
 
 

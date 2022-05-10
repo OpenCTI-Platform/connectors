@@ -333,7 +333,7 @@ class TaniumApiHandler:
             "ipv4-addr",
             "ipv6-addr",
             "domain-name",
-            "x-opencti-hostname",
+            "hostname",
         ]:
             intel_type = "ip_or_host"
             value = entity["value"]
@@ -390,7 +390,7 @@ class TaniumApiHandler:
             "ipv4-addr",
             "ipv6-addr",
             "domain-name",
-            "x-opencti-hostname",
+            "hostname",
         ]:
             intel_type = "ip_or_host"
             value = entity["value"]
