@@ -325,8 +325,6 @@ jobs:
             docker push opencti/connector-valhalla:${CIRCLE_TAG}
             docker push opencti/connector-cybercrime-tracker:latest
             docker push opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
-            docker push opencti/connector-history:latest
-            docker push opencti/connector-history:${CIRCLE_TAG}
             docker push opencti/connector-tanium:latest
             docker push opencti/connector-tanium:${CIRCLE_TAG}
             docker push opencti/connector-mandiant:latest
@@ -504,10 +502,6 @@ jobs:
           name: Build Docker image opencti/connector-cybercrime-tracker
           command: docker build -t opencti/connector-cybercrime-tracker:rolling .
       - run:
-          working_directory: ~/opencti/stream/history
-          name: Build Docker image opencti/connector-history
-          command: docker build -t opencti/connector-history:rolling .
-      - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:rolling .
@@ -668,7 +662,6 @@ jobs:
             docker push opencti/connector-riskiq:rolling
             docker push opencti/connector-valhalla:rolling
             docker push opencti/connector-cybercrime-tracker:rolling
-            docker push opencti/connector-history:rolling
             docker push opencti/connector-tanium:rolling
             docker push opencti/connector-mandiant:rolling
             docker push opencti/connector-kaspersky:rolling
