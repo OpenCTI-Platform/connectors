@@ -140,10 +140,6 @@ jobs:
           name: Build Docker image opencti/connector-cybercrime-tracker
           command: docker build -t opencti/connector-cybercrime-tracker:latest . && docker tag opencti/connector-cybercrime-tracker:latest opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/history
-          name: Build Docker image opencti/connector-history
-          command: docker build -t opencti/connector-history:latest . && docker tag opencti/connector-history:latest opencti/connector-history:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}
