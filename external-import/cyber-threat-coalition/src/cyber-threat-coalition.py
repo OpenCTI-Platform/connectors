@@ -164,7 +164,7 @@ class CyberThreatCoalition:
                     if self.cyber_threat_coalition_create_observables:
                         observable = SimpleObservable(
                             id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "x-opencti-simple-observable"
+                                "simple-observable"
                             ),
                             key=observable_type
                             + "."

@@ -339,7 +339,7 @@ class HybridAnalysis:
             self.helper.log_info("Already found in HA, attaching knowledge...")
             return self._send_knowledge(observable, result[0])
         # If URL
-        if observable["entity_type"] in ["Url", "Domain-Name", "X-OpenCTI-Hostname"]:
+        if observable["entity_type"] in ["Url", "Domain-Name", "Hostname"]:
             return self._submit_url(observable)
         # If no file
         if "importFiles" not in observable or len(observable["importFiles"]) == 0:

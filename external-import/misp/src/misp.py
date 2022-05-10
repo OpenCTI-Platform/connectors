@@ -44,7 +44,7 @@ OPENCTISTIX2 = {
         "transform": {"operation": "remove_string", "value": "AS"},
     },
     "mac-addr": {"type": "mac-addr", "path": ["value"]},
-    "hostname": {"type": "x-opencti-hostname", "path": ["value"]},
+    "hostname": {"type": "hostname", "path": ["value"]},
     "domain": {"type": "domain-name", "path": ["value"]},
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
@@ -66,7 +66,7 @@ OPENCTISTIX2 = {
         "type": "x509-certificate",
         "path": ["serial_number"],
     },
-    "text": {"type": "x-opencti-text", "path": ["value"]},
+    "text": {"type": "text", "path": ["value"]},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
@@ -508,7 +508,7 @@ class Misp:
                         id=OpenCTIStix2Utils.generate_random_stix_id(
                             "x-opencti-simple-observable"
                         ),
-                        key="X-OpenCTI-Text.value",
+                        key="Text.value",
                         value=object["name"] + unique_key,
                         description=object["description"],
                         x_opencti_score=self.threat_level_to_score(event_threat_level),
@@ -1544,16 +1544,16 @@ class Misp:
             "ip-dst": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
             "ip-src|port": [
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "text", "type": "Text"},
             ],
             "ip-dst|port": [
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "text", "type": "Text"},
             ],
-            "hostname": [{"resolver": "hostname", "type": "X-OpenCTI-Hostname"}],
+            "hostname": [{"resolver": "hostname", "type": "Hostname"}],
             "hostname|port": [
-                {"resolver": "hostname", "type": "X-OpenCTI-Hostname"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "hostname", "type": "Hostname"},
+                {"resolver": "text", "type": "Text"},
             ],
             "domain": [{"resolver": "domain", "type": "Domain-Name"}],
             "domain|ip": [
@@ -1565,7 +1565,7 @@ class Misp:
             "email-dst": [{"resolver": "email-address", "type": "Email-Addr"}],
             "url": [{"resolver": "url", "type": "Url"}],
             "windows-scheduled-task": [
-                {"resolver": "windows-scheduled-task", "type": "X-OpenCTI-Text"}
+                {"resolver": "windows-scheduled-task", "type": "Text"}
             ],
         }
         if type in types:
@@ -1605,7 +1605,7 @@ class Misp:
             return [
                 {
                     "resolver": "text",
-                    "type": "X-OpenCTI-Text",
+                    "type": "Text",
                     "value": value + " (type=" + type + ")",
                 }
             ]

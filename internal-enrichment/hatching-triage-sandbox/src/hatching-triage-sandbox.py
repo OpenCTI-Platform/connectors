@@ -210,7 +210,7 @@ class HatchingTriageSandboxConnector:
                                 "x-opencti-simple-observable"
                             ),
                             labels=[config_rule, "credentials"],
-                            key="X-OpenCTI-Hostname.value",
+                            key="Hostname.value",
                             value=host,
                             created_by_ref=self.identity,
                         )

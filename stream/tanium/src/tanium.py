@@ -98,7 +98,7 @@ class TaniumConnector:
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
-                "x-opencti-hostname",
+                "hostname",
                 "process",
             ]:
                 self.helper.log_info(
@@ -122,7 +122,7 @@ class TaniumConnector:
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
-                "x-opencti-hostname",
+                "hostname",
                 "file",
                 "artifact",
                 "process",
@@ -140,7 +140,7 @@ class TaniumConnector:
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
-                "x-opencti-hostname",
+                "hostname",
             ]:
                 self.import_manager.delete_intel(data)
             elif data["type"] in ["file", "artifact"]:
