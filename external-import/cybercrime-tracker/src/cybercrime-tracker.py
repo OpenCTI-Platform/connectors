@@ -311,6 +311,9 @@ class Cybercrimetracker:
 
                                 if indicator is not None:
                                     relationship_1 = stix2.Relationship(
+                                        id=StixCoreRelationship.generate_id(
+                                            "based-on", indicator.id, observable_url.id
+                                        ),
                                         relationship_type="based-on",
                                         created_by_ref=organization.id,
                                         source_ref=indicator.id,
@@ -319,6 +322,9 @@ class Cybercrimetracker:
                                     )
                                     bundle_objects.append(relationship_1)
                                     relationship_2 = stix2.Relationship(
+                                        id=StixCoreRelationship.generate_id(
+                                            "based-on", indicator.id, observable_ip.id
+                                        ),
                                         relationship_type="based-on",
                                         created_by_ref=organization.id,
                                         source_ref=indicator.id,
@@ -328,6 +334,11 @@ class Cybercrimetracker:
                                     bundle_objects.append(relationship_2)
                                     if observable_domain is not None:
                                         relationship_3 = stix2.Relationship(
+                                            id=StixCoreRelationship.generate_id(
+                                                "based-on",
+                                                indicator.id,
+                                                observable_domain.id,
+                                            ),
                                             relationship_type="based-on",
                                             created_by_ref=organization.id,
                                             source_ref=indicator.id,
