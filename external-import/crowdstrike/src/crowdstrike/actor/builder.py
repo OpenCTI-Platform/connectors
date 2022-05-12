@@ -18,10 +18,10 @@ from crowdstrike.utils import (
 )
 from crowdstrike_client.api.models.actor import Actor
 from crowdstrike_client.api.models.base import Entity
+from stix2 import Identity  # type: ignore
 from stix2 import (
     Bundle,
     ExternalReference,
-    Identity,  # type: ignore
     IntrusionSet,
     Location,
     MarkingDefinition,

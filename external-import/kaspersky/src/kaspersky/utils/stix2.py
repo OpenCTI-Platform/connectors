@@ -1,10 +1,10 @@
 """Kaspersky STIX2 utilities module."""
 
 import base64
-import stix2
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Union
 
+import stix2
 from kaspersky.utils.common import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_FILES,
@@ -59,10 +59,10 @@ from kaspersky.utils.observables import (
 )
 from pycti import (
     Identity,
-    Location,
-    IntrusionSet,
-    Report,
     Indicator,
+    IntrusionSet,
+    Location,
+    Report,
     StixCoreRelationship,
 )
 from pycti.utils.constants import LocationTypes  # type: ignore

@@ -10,15 +10,15 @@ from urllib.parse import urlparse
 import magic
 import pyzipper
 import requests
-import yaml
 import stix2
+import yaml
 from pycti import (
+    AttackPattern,
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,
-    get_config_variable,
-    AttackPattern,
     StixCoreRelationship,
+    get_config_variable,
 )
 
 

@@ -5,13 +5,9 @@ import time
 import urllib.request
 
 import magic
-import yaml
 import stix2
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    StixCoreRelationship,
-)
+import yaml
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 
 
 class VirustotalDownloaderConnector:

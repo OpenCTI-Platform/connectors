@@ -2,10 +2,10 @@
 """OpenCTI AlienVault importer module."""
 
 import re
-import stix2
 from datetime import datetime
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Set
 
+import stix2
 from alienvault.builder import PulseBundleBuilder, PulseBundleBuilderConfig
 from alienvault.client import AlienVaultClient
 from alienvault.models import Pulse

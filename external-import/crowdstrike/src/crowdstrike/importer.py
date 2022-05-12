@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike importer module."""
 
-import stix2
-
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+import stix2
 from pycti import OpenCTIConnectorHelper  # type: ignore
 
 

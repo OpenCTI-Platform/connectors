@@ -6,9 +6,8 @@ import os
 import time
 from typing import Any, Dict, List, Mapping, Optional
 
-import yaml
 import stix2
-
+import yaml
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter, PulseImporterConfig
 from alienvault.utils import (

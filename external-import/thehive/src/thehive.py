@@ -2,16 +2,16 @@ import os
 import time
 from datetime import datetime
 
-import yaml
 import stix2
+import yaml
 from dateutil.parser import parse
 from pycti import (
+    Incident,
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,
-    Incident,
-    StixSightingRelationship,
     StixCoreRelationship,
+    StixSightingRelationship,
     get_config_variable,
 )
 from thehive4py.api import TheHiveApi

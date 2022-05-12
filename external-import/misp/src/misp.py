@@ -4,42 +4,38 @@ import re
 import time
 from datetime import datetime
 
-import yaml
 import stix2
-
+import yaml
 from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    IntrusionSet,
-    Malware,
-    Tool,
-    Identity,
-    Location,
-    StixCoreRelationship,
     AttackPattern,
+    Identity,
+    IntrusionSet,
+    Location,
+    Malware,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    Tool,
+    get_config_variable,
 )
+from pymisp import ExpandedPyMISP
 from stix2 import (
-    CustomObservable,
-    IPv4Address,
-    IPv6Address,
-    DomainName,
     URL,
-    MACAddress,
     AutonomousSystem,
+    CustomObservable,
+    Directory,
+    DomainName,
     EmailAddress,
     EmailMessage,
     File,
+    IPv4Address,
+    IPv6Address,
+    MACAddress,
     Mutex,
-    Directory,
     WindowsRegistryKey,
     WindowsRegistryValueType,
 )
-from stix2.properties import (
-    ListProperty,  # type: ignore # noqa: E501
-    ReferenceProperty,
-    StringProperty,
-)
-from pymisp import ExpandedPyMISP
+from stix2.properties import ListProperty  # type: ignore # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
 
 
 @CustomObservable(

@@ -5,8 +5,6 @@ import base64
 import calendar
 import functools
 import logging
-import stix2
-
 from datetime import datetime, timedelta, timezone
 from typing import (
     Any,
@@ -21,6 +19,7 @@ from typing import (
     Union,
 )
 
+import stix2
 from crowdstrike.utils.constants import (
     DEFAULT_X_OPENCTI_SCORE,
     TLP_MARKING_DEFINITION_MAPPING,
@@ -78,12 +77,12 @@ from crowdstrike_client.api.models.report import Entity, Report
 from lxml.html import fromstring  # type: ignore
 from pycti import (
     Identity,
+    Indicator,
+    IntrusionSet,
     Location,
     Malware,
-    IntrusionSet,
-    Vulnerability,
-    Indicator,
     StixCoreRelationship,
+    Vulnerability,
 )
 from pycti.utils.constants import LocationTypes  # type: ignore
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore

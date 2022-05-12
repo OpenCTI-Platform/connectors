@@ -6,16 +6,16 @@ from urllib.parse import quote, urlparse
 import feedparser
 import stix2
 import yaml
-from stix2 import DomainName, URL, IPv4Address
 from pycti import (
     Identity,
     Indicator,
     Malware,
-    StixCoreRelationship,
     OpenCTIConnectorHelper,
+    StixCoreRelationship,
     get_config_variable,
 )
 from pygrok import Grok
+from stix2 import URL, DomainName, IPv4Address
 
 
 class Cybercrimetracker:

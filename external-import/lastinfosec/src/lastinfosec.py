@@ -47,7 +47,9 @@ class LastInfoSec:
             "OPENCTI_TOKEN", ["opencti", "token"], config
         )
         self.update_existing_data = get_config_variable(
-            "OPENCTI_UPDATE_EXISTING_DATA", ["connector", "update_existing_data"], config
+            "OPENCTI_UPDATE_EXISTING_DATA",
+            ["connector", "update_existing_data"],
+            config,
         )
         self.proxy_http = get_config_variable(
             "PROXY_HTTP", ["opencti", "proxy_http"], config
@@ -83,18 +85,29 @@ class LastInfoSec:
     def process_data(self):
         time_to_sleep = 0
         try:
-            if (self.lastinfosec_cti_enabled and self.lastinfosec_cti_url is not None
-                    and self.lastinfosec_apikey is not None):
-                url = self.lastinfosec_cti_url.format(self.lastinfosec_cti_interval, self.lastinfosec_apikey)
+            if (
+                self.lastinfosec_cti_enabled
+                and self.lastinfosec_cti_url is not None
+                and self.lastinfosec_apikey is not None
+            ):
+                url = self.lastinfosec_cti_url.format(
+                    self.lastinfosec_cti_interval, self.lastinfosec_apikey
+                )
                 run_interval = self.lastinfosec_cti_interval * 60
                 time_to_sleep = self.fetch_data(url, run_interval)
-            elif (self.lastinfosec_cve_enabled and self.lastinfosec_cve_url is not None
-                  and self.lastinfosec_apikey is not None):
+            elif (
+                self.lastinfosec_cve_enabled
+                and self.lastinfosec_cve_url is not None
+                and self.lastinfosec_apikey is not None
+            ):
                 url = self.lastinfosec_cve_url.format(self.lastinfosec_apikey)
                 run_interval = 3600  # 1h in second
                 time_to_sleep = self.fetch_data(url, run_interval)
-            elif (self.lastinfosec_tactic_enabled and self.lastinfosec_tactic_url is not None
-                  and self.lastinfosec_apikey is not None):
+            elif (
+                self.lastinfosec_tactic_enabled
+                and self.lastinfosec_tactic_url is not None
+                and self.lastinfosec_apikey is not None
+            ):
                 url = self.lastinfosec_tactic_url.format(self.lastinfosec_apikey)
                 run_interval = 86400  # 24h in second
                 time_to_sleep = self.fetch_data(url, run_interval)
