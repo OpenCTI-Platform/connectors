@@ -53,6 +53,7 @@ from pycti import (
     Malware,
     StixCoreRelationship,
     Vulnerability,
+    Report,
 )
 from pycti.utils.constants import LocationTypes  # type: ignore
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore

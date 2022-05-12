@@ -9,8 +9,6 @@ import stix2
 
 from pycti import (
     OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    SimpleObservable,
     get_config_variable,
     IntrusionSet,
     Malware,
@@ -20,7 +18,89 @@ from pycti import (
     StixCoreRelationship,
     AttackPattern,
 )
+from stix2 import (
+    CustomObservable,
+    IPv4Address,
+    IPv6Address,
+    DomainName,
+    URL,
+    MACAddress,
+    AutonomousSystem,
+    EmailAddress,
+    EmailMessage,
+    File,
+    Mutex,
+    Directory,
+    WindowsRegistryKey,
+    WindowsRegistryValueType,
+)
+from stix2.properties import (
+    ListProperty,  # type: ignore # noqa: E501
+    ReferenceProperty,
+    StringProperty,
+)
 from pymisp import ExpandedPyMISP
+
+
+@CustomObservable(
+    "cryptocurrency-wallet",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class CryptocurrencyWallet:
+    """Cryptocurrency wallet observable."""
+
+    pass
+
+
+@CustomObservable(
+    "hostname",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Hostname:
+    """Hostname observable."""
+
+    pass
+
+
+@CustomObservable(
+    "text",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Text:
+    """Text observable."""
+
+    pass
+
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -489,19 +569,18 @@ class Misp:
                             + object["Attribute"][0]["value"]
                             + ")"
                         )
-
-                    object_observable = SimpleObservable(
-                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                            "x-opencti-simple-observable"
-                        ),
-                        key="Text.value",
+                    object_observable = Text(
                         value=object["name"] + unique_key,
-                        description=object["description"],
-                        x_opencti_score=self.threat_level_to_score(event_threat_level),
-                        labels=event_tags,
-                        created_by_ref=author,
                         object_marking_refs=event_markings,
-                        external_references=attribute_external_references,
+                        custom_properties={
+                            "description": object["description"],
+                            "x_opencti_score": self.threat_level_to_score(
+                                event_threat_level
+                            ),
+                            "labels": event_tags,
+                            "created_by_ref": author,
+                            "external_references": attribute_external_references,
+                        },
                     )
                     objects_observables.append(object_observable)
                 object_attributes = []
@@ -890,19 +969,131 @@ class Misp:
             observable = None
             if self.misp_create_observables and observable_type is not None:
                 try:
-                    observable = SimpleObservable(
-                        id="x-opencti-simple-observable--" + attribute["uuid"],
-                        key=observable_type
-                        + "."
-                        + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
-                        value=observable_value,
-                        description=attribute["comment"],
-                        x_opencti_score=score,
-                        labels=attribute_tags,
-                        created_by_ref=author,
-                        object_marking_refs=attribute_markings,
-                        external_references=attribute_external_references,
-                    )
+                    custom_properties = {
+                        "description": attribute["comment"],
+                        "x_opencti_score": score,
+                        "labels": attribute_tags,
+                        "created_by_ref": author,
+                        "external_references": attribute_external_references,
+                    }
+                    observable = None
+                    if observable_type == "autonomous-system":
+                        observable = AutonomousSystem(
+                            number=observable_value.replace("AS", ""),
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "mac-addr":
+                        observable = MACAddress(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "hostname":
+                        observable = Hostname(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "domain-name":
+                        observable = DomainName(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "ipv4-addr":
+                        observable = IPv4Address(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "ipv6-addr":
+                        observable = IPv6Address(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "url":
+                        observable = URL(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "email-address":
+                        observable = EmailAddress(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "email-message":
+                        observable = EmailMessage(
+                            subject=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "mutex":
+                        observable = Mutex(
+                            name=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "file":
+                        if OPENCTISTIX2[observable_resolver]["path"][0] == "name":
+                            observable = File(
+                                name=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                        elif OPENCTISTIX2[observable_resolver]["path"][1] == "hashes":
+                            hashes = {}
+                            hashes[
+                                OPENCTISTIX2[observable_resolver]["path"][1]
+                            ] = observable_value
+                            observable = File(
+                                hashes=hashes,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                    elif observable_type == "directory":
+                        observable = Directory(
+                            path=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "windows-registry-key":
+                        observable = WindowsRegistryKey(
+                            key=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "ewindows-registry-value-type":
+                        observable = WindowsRegistryValueType(
+                            data=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "x509-certificate":
+                        if OPENCTISTIX2[observable_resolver]["path"][0] == "issuer":
+                            observable = File(
+                                issuer=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                        elif (
+                            OPENCTISTIX2[observable_resolver]["path"][1]
+                            == "serial_number"
+                        ):
+                            observable = File(
+                                serial_number=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                    elif observable_type == "text":
+                        observable = Text(
+                            data=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
                 except Exception as e:
                     self.helper.log_error(str(e))
             sightings = []

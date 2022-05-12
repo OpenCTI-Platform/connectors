@@ -21,8 +21,8 @@ class PulseImporterConfig(NamedTuple):
 
     helper: OpenCTIConnectorHelper
     client: AlienVaultClient
-    author: Identity
-    tlp_marking: MarkingDefinition
+    author: stix2.Identity
+    tlp_marking: stix2.MarkingDefinition
     create_observables: bool
     create_indicators: bool
     update_existing_data: bool

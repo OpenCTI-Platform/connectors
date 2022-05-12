@@ -3,23 +3,16 @@ import time
 from datetime import datetime
 
 import yaml
+import stix2
 from dateutil.parser import parse
 from pycti import (
-    Incident,
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,
-    get_config_variable,
-)
-from stix2 import (
-    TLP_AMBER,
-    TLP_GREEN,
-    TLP_RED,
-    TLP_WHITE,
-    Bundle,
     Incident,
-    Relationship,
-    Sighting,
+    StixSightingRelationship,
+    StixCoreRelationship,
+    get_config_variable,
 )
 from thehive4py.api import TheHiveApi
 from thehive4py.query import Child, Gt, Or
@@ -94,17 +87,17 @@ class TheHive:
     def generate_case_bundle(self, case):
         markings = []
         if case["tlp"] == 0:
-            markings.append(TLP_WHITE)
+            markings.append(stix2.TLP_WHITE)
         if case["tlp"] == 1:
-            markings.append(TLP_GREEN)
+            markings.append(stix2.TLP_GREEN)
         if case["tlp"] == 2:
-            markings.append(TLP_AMBER)
+            markings.append(stix2.TLP_AMBER)
         if case["tlp"] == 3:
-            markings.append(TLP_RED)
+            markings.append(stix2.TLP_RED)
         if len(markings) == 0:
-            markings.append(TLP_WHITE)
+            markings.append(stix2.TLP_WHITE)
         bundle_objects = []
-        incident = Incident(
+        incident = stix2.Incident(
             id=Incident.generate_id(case["title"]),
             name=case["title"],
             description=case["description"],
@@ -142,7 +135,10 @@ class TheHive:
                     created_by_ref=self.identity["standard_id"],
                     x_opencti_create_indicator=observable["ioc"],
                 )
-                stix_observable_relation = Relationship(
+                stix_observable_relation = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_observable.id, incident.id
+                    ),
                     relationship_type="related-to",
                     created_by_ref=self.identity["standard_id"],
                     source_ref=stix_observable.id,
@@ -156,7 +152,17 @@ class TheHive:
                     fake_indicator_id = (
                         "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
                     )
-                    stix_sighting = Sighting(
+                    stix_sighting = stix2.Sighting(
+                        id=StixSightingRelationship.generate_id(
+                            fake_indicator_id,
+                            self.identity["standard_id"],
+                            datetime.utcfromtimestamp(
+                                int(observable["startDate"] / 1000)
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            datetime.utcfromtimestamp(
+                                int(observable["startDate"] / 1000 + 3600)
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        ),
                         first_seen=datetime.utcfromtimestamp(
                             int(observable["startDate"] / 1000)
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -170,7 +176,7 @@ class TheHive:
                         },
                     )
                     bundle_objects.append(stix_sighting)
-        bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
         return bundle
 
     def run(self):

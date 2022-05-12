@@ -15,7 +15,6 @@ from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,
-    Identity,
     AttackPattern,
     StixCoreRelationship,
     get_config_variable,

@@ -8,7 +8,6 @@ from crowdstrike.utils.constants import (
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
 )
-from pycti import OpenCTIStix2Utils  # type: ignore
 from stix2 import (
     URL,
     CustomObservable,
