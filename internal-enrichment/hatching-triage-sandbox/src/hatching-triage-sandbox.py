@@ -10,13 +10,16 @@ from hashlib import sha256
 
 import magic
 import yaml
+import stix2
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,
+    Identity,
+    AttackPattern,
+    StixCoreRelationship,
     get_config_variable,
 )
-from stix2 import TLP_WHITE, AttackPattern, Bundle, Note, Relationship
 from triage import Client
 
 
@@ -149,7 +152,7 @@ class HatchingTriageSandboxConnector:
                 # Create a Note
                 config_json = json.dumps(extracted_dict, indent=2)
                 config_rule = extracted_dict["config"]["rule"]
-                note = Note(
+                note = stix2.Note(
                     abstract=f"{config_rule} Config",
                     content=f"```\n{config_json}\n```",
                     created_by_ref=self.identity,
@@ -179,8 +182,10 @@ class HatchingTriageSandboxConnector:
                         value=parsed,
                         created_by_ref=self.identity,
                     )
-                    relationship = Relationship(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                    relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            relationship_type, observable["standard_id"], host_stix.id
+                        ),
                         relationship_type=relationship_type,
                         created_by_ref=self.identity,
                         source_ref=observable["standard_id"],
@@ -209,9 +214,9 @@ class HatchingTriageSandboxConnector:
                             created_by_ref=self.identity,
                         )
 
-                        relationship = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
+                        relationship = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable["standard_id"], host_stix.id
                             ),
                             relationship_type="related-to",
                             created_by_ref=self.identity,
@@ -235,9 +240,9 @@ class HatchingTriageSandboxConnector:
                             created_by_ref=self.identity,
                         )
 
-                        relationship = Relationship(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "relationship"
+                        relationship = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable["standard_id"], email_stix.id
                             ),
                             relationship_type="related-to",
                             created_by_ref=self.identity,
@@ -287,8 +292,10 @@ class HatchingTriageSandboxConnector:
                 )
 
                 # Create Relationship between original Observable and the extracted
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", response["standard_id"], observable["standard_id"]
+                    ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
@@ -325,10 +332,12 @@ class HatchingTriageSandboxConnector:
                         key="Url.value",
                         value=url.rstrip(),
                         created_by_ref=self.identity,
-                        object_marking_refs=[TLP_WHITE],
+                        object_marking_refs=[stix2.TLP_WHITE],
                     )
-                    relationship = Relationship(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                    relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", observable["standard_id"], url_stix.id
+                        ),
                         relationship_type="related-to",
                         created_by_ref=self.identity,
                         source_ref=observable["standard_id"],
@@ -357,10 +366,12 @@ class HatchingTriageSandboxConnector:
                 key="Domain-Name.value",
                 value=domain,
                 created_by_ref=self.identity,
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "communicates-with", observable["standard_id"], domain_stix.id
+                ),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
                 source_ref=observable["standard_id"],
@@ -392,8 +403,10 @@ class HatchingTriageSandboxConnector:
                 value=ip,
                 created_by_ref=self.identity,
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "communicates-with", observable["standard_id"], host_stix.id
+                ),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
                 source_ref=observable["standard_id"],
@@ -416,23 +429,25 @@ class HatchingTriageSandboxConnector:
 
                 for ttp in ttps:
 
-                    attack_pattern = AttackPattern(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("attack-pattern"),
+                    attack_pattern = stix2.AttackPattern(
+                        id=AttackPattern.generate_id(name, ttp),
                         created_by_ref=self.identity,
                         name=name,
                         custom_properties={
                             "x_mitre_id": ttp,
                         },
-                        object_marking_refs=[TLP_WHITE],
+                        object_marking_refs=[stix2.TLP_WHITE],
                     )
 
-                    relationship = Relationship(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                    relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "uses", observable["standard_id"], attack_pattern.id
+                        ),
                         relationship_type="uses",
                         created_by_ref=self.identity,
                         source_ref=observable["standard_id"],
                         target_ref=attack_pattern.id,
-                        object_marking_refs=[TLP_WHITE],
+                        object_marking_refs=[stix2.TLP_WHITE],
                         allow_custom=True,
                     )
                     bundle_objects.append(attack_pattern)
@@ -440,7 +455,7 @@ class HatchingTriageSandboxConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:

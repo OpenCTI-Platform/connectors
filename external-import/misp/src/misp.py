@@ -5,35 +5,22 @@ import time
 from datetime import datetime
 
 import yaml
+import stix2
+
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,
     get_config_variable,
+    IntrusionSet,
+    Malware,
+    Tool,
+    Identity,
+    Location,
+    StixCoreRelationship,
+    AttackPattern,
 )
 from pymisp import ExpandedPyMISP
-from stix2 import (
-    TLP_AMBER,
-    TLP_GREEN,
-    TLP_RED,
-    TLP_WHITE,
-    AttackPattern,
-    Bundle,
-    EqualityComparisonExpression,
-    ExternalReference,
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Location,
-    Malware,
-    Note,
-    ObjectPath,
-    ObservationExpression,
-    Relationship,
-    Report,
-    Sighting,
-    Tool,
-)
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -408,7 +395,7 @@ class Misp:
 
             ### Pre-process
             # Author
-            author = Identity(
+            author = stix2.Identity(
                 name=event["Event"]["Orgc"]["name"],
                 identity_class="organization",
             )
@@ -416,7 +403,7 @@ class Misp:
             if "Tag" in event["Event"]:
                 event_markings = self.resolve_markings(event["Event"]["Tag"])
             else:
-                event_markings = [TLP_WHITE]
+                event_markings = [stix2.TLP_WHITE]
             # Elements
             event_elements = self.prepare_elements(
                 event["Event"]["Galaxy"],
@@ -433,7 +420,7 @@ class Misp:
                 url = self.misp_reference_url + "/events/view/" + event["Event"]["uuid"]
             else:
                 url = self.misp_url + "/events/view/" + event["Event"]["uuid"]
-            event_external_reference = ExternalReference(
+            event_external_reference = stix2.ExternalReference(
                 source_name=self.helper.connect_name,
                 description=event["Event"]["info"],
                 external_id=event["Event"]["uuid"],
@@ -457,7 +444,7 @@ class Misp:
                 )
                 if attribute["type"] == "link":
                     event_external_references.append(
-                        ExternalReference(
+                        stix2.ExternalReference(
                             source_name=attribute["category"],
                             external_id=attribute["uuid"],
                             url=attribute["value"],
@@ -480,7 +467,7 @@ class Misp:
                 for attribute in object["Attribute"]:
                     if attribute["type"] == "link":
                         attribute_external_references.append(
-                            ExternalReference(
+                            stix2.ExternalReference(
                                 source_name=attribute["category"],
                                 external_id=attribute["uuid"],
                                 url=attribute["value"],
@@ -640,7 +627,7 @@ class Misp:
                         )
                         if src_result is not None and target_result is not None:
                             objects_relationships.append(
-                                Relationship(
+                                stix2.Relationship(
                                     id="relationship--" + ref["uuid"],
                                     relationship_type="related-to",
                                     created_by_ref=author,
@@ -679,7 +666,7 @@ class Misp:
             # Create the report if needed
             # Report in STIX must have at least one object_refs
             if self.misp_create_report and len(object_refs) > 0:
-                report = Report(
+                report = stix2.Report(
                     id="report--" + event["Event"]["uuid"],
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
@@ -714,7 +701,7 @@ class Misp:
                 )
                 bundle_objects.append(report)
                 for note in event["Event"]["EventReport"]:
-                    note = Note(
+                    note = stix2.Note(
                         id="note--" + note["uuid"],
                         confidence=self.helper.connect_confidence_level,
                         created=datetime.utcfromtimestamp(
@@ -731,7 +718,7 @@ class Misp:
                         allow_custom=True,
                     )
                     bundle_objects.append(note)
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
             try:
                 self.helper.send_stix2_bundle(
@@ -852,13 +839,13 @@ class Misp:
                             OPENCTISTIX2[observable_resolver]["transform"]["value"],
                             "",
                         )
-                lhs = ObjectPath(
+                lhs = stix2.ObjectPath(
                     OPENCTISTIX2[observable_resolver]["type"],
                     OPENCTISTIX2[observable_resolver]["path"],
                 )
                 genuine_pattern = str(
-                    ObservationExpression(
-                        EqualityComparisonExpression(lhs, observable_value)
+                    stix2.ObservationExpression(
+                        stix2.EqualityComparisonExpression(lhs, observable_value)
                     )
                 )
                 pattern = genuine_pattern
@@ -872,7 +859,7 @@ class Misp:
             indicator = None
             if self.misp_create_indicators:
                 try:
-                    indicator = Indicator(
+                    indicator = stix2.Indicator(
                         id="indicator--" + attribute["uuid"],
                         name=name,
                         description=attribute["comment"],
@@ -923,7 +910,7 @@ class Misp:
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
                     if "Organisation" in misp_sighting:
-                        sighted_by = Identity(
+                        sighted_by = stix2.Identity(
                             id="identity--" + misp_sighting["Organisation"]["uuid"],
                             name=misp_sighting["Organisation"]["name"],
                             identity_class="organization",
@@ -933,7 +920,7 @@ class Misp:
                         sighted_by = None
 
                     if indicator is not None:
-                        sighting = Sighting(
+                        sighting = stix2.Sighting(
                             sighting_of_ref=indicator["id"],
                             first_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"])
@@ -966,7 +953,10 @@ class Misp:
             relationships = []
             if indicator is not None and observable is not None:
                 relationships.append(
-                    Relationship(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "based-on", indicator.id, observable.id
+                        ),
                         relationship_type="based-on",
                         created_by_ref=author,
                         source_ref=indicator.id,
@@ -979,7 +969,10 @@ class Misp:
                 indicator is not None or observable is not None
             ):
                 relationships.append(
-                    Relationship(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", object_observable.id, observable.id
+                        ),
                         relationship_type="related-to",
                         created_by_ref=author,
                         source_ref=object_observable.id,
@@ -999,7 +992,10 @@ class Misp:
                 threat_names[threat.name] = threat.id
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "indicates", indicator.id, threat.id
+                            ),
                             relationship_type="indicates",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1012,7 +1008,10 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, threat.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1036,7 +1035,10 @@ class Misp:
                     threat_id = threat.id
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "indicates", indicator.id, threat_id
+                            ),
                             relationship_type="indicates",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1049,7 +1051,10 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, threat_id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1073,7 +1078,10 @@ class Misp:
                         threat_id = threat_names[threat.name]
                     else:
                         threat_id = threat.id
-                    relationship_uses = Relationship(
+                    relationship_uses = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "uses", threat_id, attack_pattern.id
+                        ),
                         relationship_type="uses",
                         created_by_ref=author,
                         source_ref=threat_id,
@@ -1126,7 +1134,10 @@ class Misp:
                         threat_id = threat_names[threat.name]
                     else:
                         threat_id = threat.id
-                    relationship_uses = Relationship(
+                    relationship_uses = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "uses", threat_id, attack_pattern.id
+                        ),
                         relationship_type="uses",
                         confidence=self.helper.connect_confidence_level,
                         created_by_ref=author,
@@ -1168,7 +1179,10 @@ class Misp:
             for sector in attribute_elements["sectors"]:
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", indicator.id, sector.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1181,7 +1195,10 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, sector.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1196,7 +1213,10 @@ class Misp:
             for country in attribute_elements["countries"]:
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", indicator.id, country.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1209,7 +1229,10 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, country.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1267,7 +1290,8 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["intrusion_sets"].append(
-                            IntrusionSet(
+                            stix2.IntrusionSet(
+                                id=IntrusionSet.generate_id(name),
                                 name=name,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
@@ -1290,7 +1314,8 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["tools"].append(
-                            Tool(
+                            stix2.Tool(
+                                id=Tool.generate_id(name),
                                 name=name,
                                 labels=["tool"],
                                 description=galaxy_entity["description"],
@@ -1320,7 +1345,8 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["malwares"].append(
-                            Malware(
+                            stix2.Malware(
+                                id=Malware.generate_id(name),
                                 name=name,
                                 is_family=True,
                                 aliases=aliases,
@@ -1352,7 +1378,8 @@ class Misp:
                             if len(galaxy_entity["meta"]["external_id"]) > 0:
                                 x_mitre_id = galaxy_entity["meta"]["external_id"][0]
                         elements["attack_patterns"].append(
-                            AttackPattern(
+                            stix2.AttackPattern(
+                                id=AttackPattern.generate_id(name, x_mitre_id),
                                 name=name,
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
@@ -1371,7 +1398,8 @@ class Misp:
                     name = galaxy_entity["value"]
                     if name not in added_names:
                         elements["sectors"].append(
-                            Identity(
+                            stix2.Identity(
+                                id=Identity.generate_id(name, "class"),
                                 name=name,
                                 identity_class="class",
                                 description=galaxy_entity["description"],
@@ -1387,7 +1415,8 @@ class Misp:
                     name = galaxy_entity["description"]
                     if name not in added_names:
                         elements["countries"].append(
-                            Location(
+                            stix2.Location(
+                                id=Location.generate_id(name, "Country"),
                                 name=name,
                                 country=galaxy_entity["meta"]["ISO"],
                                 description="Imported from MISP tag",
@@ -1424,7 +1453,8 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["intrusion_sets"].append(
-                        IntrusionSet(
+                        stix2.IntrusionSet(
+                            id=IntrusionSet.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
@@ -1445,7 +1475,8 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["tools"].append(
-                        Tool(
+                        stix2.Tool(
+                            id=Tool.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
@@ -1471,7 +1502,8 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["malwares"].append(
-                        Malware(
+                        stix2.Malware(
+                            id=Malware.generate_id(name),
                             name=name,
                             is_family=True,
                             description="Imported from MISP tag",
@@ -1491,7 +1523,8 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["attack_patterns"].append(
-                        AttackPattern(
+                        stix2.AttackPattern(
+                            id=AttackPattern.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
@@ -1506,7 +1539,8 @@ class Misp:
                 name = tag_value_split[1][:-1].strip()
                 if name not in added_names:
                     elements["sectors"].append(
-                        Identity(
+                        stix2.Identity(
+                            id=Identity.generate_id(name, "class"),
                             name=name,
                             description="Imported from MISP tag",
                             identity_class="class",
@@ -1625,15 +1659,15 @@ class Misp:
         markings = []
         for tag in tags:
             if tag["name"] == "tlp:white":
-                markings.append(TLP_WHITE)
+                markings.append(stix2.TLP_WHITE)
             if tag["name"] == "tlp:green":
-                markings.append(TLP_GREEN)
+                markings.append(stix2.TLP_GREEN)
             if tag["name"] == "tlp:amber":
-                markings.append(TLP_AMBER)
+                markings.append(stix2.TLP_AMBER)
             if tag["name"] == "tlp:red":
-                markings.append(TLP_RED)
+                markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
-            markings.append(TLP_WHITE)
+            markings.append(stix2.TLP_WHITE)
         return markings
 
     def resolve_tags(self, tags):

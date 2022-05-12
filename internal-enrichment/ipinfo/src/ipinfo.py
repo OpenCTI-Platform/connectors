@@ -3,8 +3,14 @@ import os
 import pycountry
 import requests
 import yaml
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
-from stix2 import Bundle, Location, Relationship
+import stix2
+from pycti import (
+    OpenCTIConnectorHelper,
+    OpenCTIStix2Utils,
+    Location,
+    StixCoreRelationship,
+    get_config_variable,
+)
 
 
 class IpInfoConnector:
@@ -24,8 +30,8 @@ class IpInfoConnector:
 
     def _generate_stix_bundle(self, country, city, loc, observable_id):
         # Generate stix bundle
-        country_location = Location(
-            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
+        country_location = stix2.Location(
+            id=Location.generate_id(country.name, "Country"),
             name=country.name,
             country=country.official_name
             if hasattr(country, "official_name")
@@ -40,8 +46,8 @@ class IpInfoConnector:
             },
         )
         loc_split = loc.split(",")
-        city_location = Location(
-            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
+        city_location = stix2.Location(
+            id=Location.generate_id(city, "City"),
             name=city,
             country=country.official_name
             if hasattr(country, "official_name")
@@ -50,20 +56,24 @@ class IpInfoConnector:
             longitude=loc_split[1],
             custom_properties={"x_opencti_location_type": "City"},
         )
-        city_to_country = Relationship(
-            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+        city_to_country = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "located-at", city_location.id, country_location.id
+            ),
             relationship_type="located-at",
             source_ref=city_location.id,
             target_ref=country_location.id,
         )
-        observable_to_city = Relationship(
-            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+        observable_to_city = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "located-at", observable_id, city_location.id
+            ),
             relationship_type="located-at",
             source_ref=observable_id,
             target_ref=city_location.id,
             confidence=self.helper.connect_confidence_level,
         )
-        return Bundle(
+        return stix2.Bundle(
             objects=[
                 country_location,
                 city_location,

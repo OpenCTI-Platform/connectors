@@ -10,7 +10,13 @@ from typing import Any, Dict, Mapping, Optional
 import requests
 import stix2
 import yaml
-from pycti import Identity, Indicator, OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    Identity,
+    Indicator,
+    StixCoreRelationship,
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils, SimpleObservable
 
 
@@ -183,8 +189,8 @@ class CyberThreatCoalition:
                         report_object_refs.append(observable["id"])
                         if indicator is not None:
                             relationship = stix2.Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                                id=StixCoreRelationship.generate_id(
+                                    "based-on", indicator.id, observable.id
                                 ),
                                 relationship_type="based-on",
                                 created_by_ref=organization,

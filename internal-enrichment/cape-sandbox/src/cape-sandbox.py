@@ -11,14 +11,16 @@ import magic
 import pyzipper
 import requests
 import yaml
+import stix2
 from pycti import (
     AttackPattern,
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,
     get_config_variable,
+    AttackPattern,
+    StixCoreRelationship,
 )
-from stix2 import TLP_WHITE, AttackPattern, Bundle, Note, Relationship
 
 
 class CapeSandboxConnector:
@@ -163,7 +165,7 @@ class CapeSandboxConnector:
 
         # Create a Note containing the TrID results
         trid_json = json.dumps(report["trid"], indent=2)
-        note = Note(
+        note = stix2.Note(
             abstract="TrID Analysis",
             content=f"```\n{trid_json}\n```",
             created_by_ref=self.identity,
@@ -177,22 +179,25 @@ class CapeSandboxConnector:
             attack_id = tactic_dict["ttp"]
             signature = tactic_dict["signature"]
 
-            attack_pattern = AttackPattern(
+            attack_pattern = stix2.AttackPattern(
                 id=AttackPattern.generate_id(signature, attack_id),
                 created_by_ref=self.identity,
                 name=signature,
                 custom_properties={
                     "x_mitre_id": attack_id,
                 },
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
             )
 
-            relationship = Relationship(
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "uses", final_observable["standard_id"], attack_pattern.id
+                ),
                 relationship_type="uses",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
                 target_ref=attack_pattern.id,
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
             )
             bundle_objects.append(attack_pattern)
             bundle_objects.append(relationship)
@@ -277,7 +282,12 @@ class CapeSandboxConnector:
                 )
 
                 # Create relationship between uploaded procdump Artifact and original
-                relationship = Relationship(
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        response["standard_id"],
+                        final_observable["standard_id"],
+                    ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
@@ -291,22 +301,25 @@ class CapeSandboxConnector:
                     for tactic in attck_dict:
                         tp_list = attck_dict[tactic]
                         for tp in tp_list:
-                            attack_pattern = AttackPattern(
+                            attack_pattern = stix2.AttackPattern(
                                 id=AttackPattern.generate_id(tactic, tp),
                                 created_by_ref=self.identity,
                                 name=tactic,
                                 custom_properties={
                                     "x_mitre_id": tp,
                                 },
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
 
-                            relationship = Relationship(
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "uses", response["standard_id"], attack_pattern.id
+                                ),
                                 relationship_type="uses",
                                 created_by_ref=self.identity,
                                 source_ref=response["standard_id"],
                                 target_ref=attack_pattern.id,
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
                             bundle_objects.append(attack_pattern)
                             bundle_objects.append(relationship)
@@ -330,7 +343,7 @@ class CapeSandboxConnector:
             for config_dict in configs_list:
                 for detection_name in config_dict:
                     # Create a Note containing the config
-                    note = Note(
+                    note = stix2.Note(
                         abstract=f"{detection_name} Config",
                         content=f"```\n{json.dumps(config_dict, indent=2)}\n```",
                         created_by_ref=self.identity,
@@ -357,9 +370,11 @@ class CapeSandboxConnector:
                                 value=parsed,
                                 created_by_ref=self.identity,
                             )
-                            relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "communicates-with",
+                                    final_observable["standard_id"],
+                                    host_stix.id,
                                 ),
                                 relationship_type="communicates-with",
                                 created_by_ref=self.identity,
@@ -378,11 +393,13 @@ class CapeSandboxConnector:
                                 key="Domain-Name.value",
                                 value=domain,
                                 created_by_ref=self.identity,
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
-                            relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "communicates-with",
+                                    final_observable["standard_id"],
+                                    domain_stix.id,
                                 ),
                                 relationship_type="communicates-with",
                                 created_by_ref=self.identity,
@@ -401,10 +418,12 @@ class CapeSandboxConnector:
                 key="Domain-Name.value",
                 value=domain_dict["domain"],
                 created_by_ref=self.identity,
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "communicates-with", final_observable["standard_id"], domain_stix.id
+                ),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
@@ -424,8 +443,10 @@ class CapeSandboxConnector:
                 value=host,
                 created_by_ref=self.identity,
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "communicates-with", final_observable["standard_id"], host_stix.id
+                ),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
@@ -478,8 +499,12 @@ class CapeSandboxConnector:
                 )
 
                 # Create relationship between uploaded payload Artifact and original
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        response["standard_id"],
+                        final_observable["standard_id"],
+                    ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
@@ -492,27 +517,25 @@ class CapeSandboxConnector:
                     attck_dict = payload_dict["flare_capa"]["ATTCK"]
                     for tactic in attck_dict:
                         for tp in attck_dict[tactic]:
-                            attack_pattern = AttackPattern(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "attack-pattern"
-                                ),
+                            attack_pattern = stix2.AttackPattern(
+                                id=AttackPattern.generate_id(tactic, tp),
                                 created_by_ref=self.identity,
                                 name=tactic,
                                 custom_properties={
                                     "x_mitre_id": tp,
                                 },
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
 
-                            relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "uses", response["standard_id"], attack_pattern.id
                                 ),
                                 relationship_type="uses",
                                 created_by_ref=self.identity,
                                 source_ref=response["standard_id"],
                                 target_ref=attack_pattern.id,
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
                             bundle_objects.append(attack_pattern)
                             bundle_objects.append(relationship)
@@ -531,7 +554,7 @@ class CapeSandboxConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
