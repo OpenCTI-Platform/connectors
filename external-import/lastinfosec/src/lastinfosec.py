@@ -1,11 +1,11 @@
-import os
-import yaml
-import time
-import requests
-import json
 import datetime
+import json
+import os
+import time
 
-from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIApiClient
+import requests
+import yaml
+from pycti import OpenCTIApiClient, OpenCTIConnectorHelper, get_config_variable
 
 
 class LastInfoSec:

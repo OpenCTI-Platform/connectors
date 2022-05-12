@@ -5,15 +5,12 @@ import time
 from datetime import datetime
 from typing import Any, List, Mapping, NoReturn, Optional
 
-from pydantic.tools import parse_obj_as
-
 import requests
-from requests import RequestException, Response
-from requests.exceptions import ConnectTimeout, ReadTimeout
-
 from kaspersky.models import Publication
 from kaspersky.utils import datetime_to_timestamp, decode_base64_gzip_to_string
-
+from pydantic.tools import parse_obj_as
+from requests import RequestException, Response
+from requests.exceptions import ConnectTimeout, ReadTimeout
 
 log = logging.getLogger(__name__)
 

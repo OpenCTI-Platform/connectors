@@ -1,23 +1,24 @@
 # coding: utf-8
 
-import os
-import yaml
-import requests
-import time
 import io
 import json
+import os
 import re
-import pyzipper
-import magic
+import time
 from urllib.parse import urlparse
 
-from stix2 import Bundle, AttackPattern, Relationship, TLP_WHITE, Note
+import magic
+import pyzipper
+import requests
+import yaml
 from pycti import (
+    AttackPattern,
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
-    get_config_variable,
     SimpleObservable,
+    get_config_variable,
 )
+from stix2 import TLP_WHITE, AttackPattern, Bundle, Note, Relationship
 
 
 class CapeSandboxConnector:
@@ -177,7 +178,7 @@ class CapeSandboxConnector:
             signature = tactic_dict["signature"]
 
             attack_pattern = AttackPattern(
-                id=OpenCTIStix2Utils.generate_random_stix_id("attack-pattern"),
+                id=AttackPattern.generate_id(signature, attack_id),
                 created_by_ref=self.identity,
                 name=signature,
                 custom_properties={
@@ -187,7 +188,6 @@ class CapeSandboxConnector:
             )
 
             relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                 relationship_type="uses",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
@@ -278,7 +278,6 @@ class CapeSandboxConnector:
 
                 # Create relationship between uploaded procdump Artifact and original
                 relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
@@ -293,9 +292,7 @@ class CapeSandboxConnector:
                         tp_list = attck_dict[tactic]
                         for tp in tp_list:
                             attack_pattern = AttackPattern(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "attack-pattern"
-                                ),
+                                id=AttackPattern.generate_id(tactic, tp),
                                 created_by_ref=self.identity,
                                 name=tactic,
                                 custom_properties={
@@ -305,9 +302,6 @@ class CapeSandboxConnector:
                             )
 
                             relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
-                                ),
                                 relationship_type="uses",
                                 created_by_ref=self.identity,
                                 source_ref=response["standard_id"],

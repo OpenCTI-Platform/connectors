@@ -1,29 +1,23 @@
 # coding: utf-8
 
-import os
-import yaml
-import time
 import io
-import json
-import re
-import magic
 import ipaddress
-from triage import Client
+import json
+import os
+import re
+import time
 from hashlib import sha256
 
-from stix2 import (
-    Bundle,
-    AttackPattern,
-    Relationship,
-    TLP_WHITE,
-    Note,
-)
+import magic
+import yaml
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
-    get_config_variable,
     SimpleObservable,
+    get_config_variable,
 )
+from stix2 import TLP_WHITE, AttackPattern, Bundle, Note, Relationship
+from triage import Client
 
 
 class HatchingTriageSandboxConnector:

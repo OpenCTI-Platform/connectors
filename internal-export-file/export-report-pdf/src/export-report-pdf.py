@@ -1,16 +1,17 @@
-import yaml
+import base64
+import datetime
+import io
 import os
 import time
-import datetime
+
 import cairosvg
-import io
-import base64
-from pycti.utils.constants import StixCyberObservableTypes
-from weasyprint import HTML
-from pycti import OpenCTIConnectorHelper, get_config_variable
+import yaml
 from jinja2 import Environment, FileSystemLoader
-from pygal_maps_world.maps import World
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti.utils.constants import StixCyberObservableTypes
 from pygal_maps_world.i18n import COUNTRIES
+from pygal_maps_world.maps import World
+from weasyprint import HTML
 
 
 class ExportReportPdf:

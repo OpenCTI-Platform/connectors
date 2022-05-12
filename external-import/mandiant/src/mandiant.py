@@ -1,15 +1,14 @@
-import os
-import yaml
-import time
-import requests
-import json
 import datetime
+import json
+import os
+import time
+from urllib.parse import parse_qs, urlparse
 
-from urllib.parse import urlparse, parse_qs
+import requests
+import yaml
 from dateutil.parser import parse
-from requests.auth import HTTPBasicAuth
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
+from requests.auth import HTTPBasicAuth
 
 searchable_types = [
     "threat-actor",

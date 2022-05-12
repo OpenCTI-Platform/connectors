@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """RiskIQ external-import module."""
 import datetime
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 from typing import Any, Mapping, Optional
 
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
-import yaml
 
 from .article_importer import ArticleImporter
 from .client import RiskIQClient

@@ -6,13 +6,7 @@ import time
 from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
-
-from crowdstrike_client.client import CrowdStrikeClient
-
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
-
-from stix2 import Identity, MarkingDefinition  # type: ignore
+import stix2
 
 from crowdstrike.actor.importer import ActorImporter
 from crowdstrike.importer import BaseImporter
@@ -27,6 +21,9 @@ from crowdstrike.utils import (
     timestamp_to_datetime,
 )
 from crowdstrike.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
+from crowdstrike_client.client import CrowdStrikeClient
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
 
 
 class CrowdStrike:
@@ -267,7 +264,7 @@ class CrowdStrike:
         return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
 
     @staticmethod
-    def _create_author() -> Identity:
+    def _create_author() -> stix2.Identity:
         return create_organization("CrowdStrike")
 
     @staticmethod
@@ -292,7 +289,7 @@ class CrowdStrike:
     @classmethod
     def _convert_tlp_to_marking_definition(
         cls, tlp_value: Optional[str]
-    ) -> MarkingDefinition:
+    ) -> stix2.MarkingDefinition:
         if tlp_value is None:
             return DEFAULT_TLP_MARKING_DEFINITION
         return get_tlp_string_marking_definition(tlp_value)

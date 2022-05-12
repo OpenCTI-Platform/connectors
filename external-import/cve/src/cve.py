@@ -1,17 +1,17 @@
 # coding: utf-8
 
+import gzip
 import os
-import yaml
+import shutil
+import ssl
 import time
 import urllib.request
-import gzip
-import shutil
-import certifi
-import ssl
-
 from datetime import datetime
-from pycti import OpenCTIConnectorHelper, get_config_variable
+
+import certifi
+import yaml
 from cvetostix2 import convert
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class Cve:

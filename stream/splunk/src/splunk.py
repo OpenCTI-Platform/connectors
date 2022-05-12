@@ -2,11 +2,11 @@
 # Splunk Connector for OpenCTI #
 ################################
 
-import os
-import yaml
 import json
-import requests
+import os
 
+import requests
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

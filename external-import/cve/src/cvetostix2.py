@@ -1,23 +1,24 @@
 # coding: utf-8
 
-import sys
 import datetime
 
 # Importing the JSON module
 import json
+import sys
 
-# Importing the different stix2 modules
-from stix2 import Vulnerability
-from stix2 import Bundle
-from stix2 import Identity
-from stix2 import ExternalReference
+# Umporting the STIX module
+import stix2
 
-from pycti import OpenCTIStix2Utils
+from pycti import Identity, Vulnerability
 
 
 def convert(filename, output="output.json"):
     # Create the default author
-    author = Identity(name="The MITRE Corporation", identity_class="organization")
+    author = stix2.Identity(
+        id=Identity.generate_id("The MITRE Corporation", "organization"),
+        name="The MITRE Corporation",
+        identity_class="organization",
+    )
     count = 0
     with open(filename) as json_file:
         vulnerabilities_bundle = [author]
@@ -28,7 +29,7 @@ def convert(filename, output="output.json"):
             name = cves["cve"]["CVE_data_meta"]["ID"]
 
             # Create external references
-            external_reference = ExternalReference(
+            external_reference = stix2.ExternalReference(
                 source_name="NIST NVD", url="https://nvd.nist.gov/vuln/detail/" + name
             )
             external_references = [external_reference]
@@ -37,7 +38,7 @@ def convert(filename, output="output.json"):
                 and "reference_data" in cves["cve"]["references"]
             ):
                 for reference in cves["cve"]["references"]["reference_data"]:
-                    external_reference = ExternalReference(
+                    external_reference = stix2.ExternalReference(
                         source_name=reference["refsource"], url=reference["url"]
                     )
                     external_references.append(external_reference)
@@ -80,8 +81,8 @@ def convert(filename, output="output.json"):
             )
 
             # Creating the vulnerability with the extracted fields
-            vuln = Vulnerability(
-                id=OpenCTIStix2Utils.generate_random_stix_id("vulnerability"),
+            vuln = stix2.Vulnerability(
+                id=Vulnerability.generate_id(name),
                 name=name,
                 created=cdate,
                 modified=mdate,
@@ -100,7 +101,7 @@ def convert(filename, output="output.json"):
             # Adding the vulnerability to the list of vulnerabilities
             vulnerabilities_bundle.append(vuln)
     # Creating the bundle from the list of vulnerabilities
-    bundle = Bundle(vulnerabilities_bundle, allow_custom=True)
+    bundle = stix2.Bundle(vulnerabilities_bundle, allow_custom=True)
     bundle_json = bundle.serialize()
 
     # Write to file

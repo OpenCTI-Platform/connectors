@@ -2,18 +2,17 @@
 """OpenCTI valhalla connector core module."""
 
 import os
-import yaml
 import time
-
-from typing import Any, Dict, Mapping, Optional
 from datetime import datetime
+from typing import Any, Dict, Mapping, Optional
+
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2 import TLP_AMBER, TLP_WHITE
+from valhallaAPI.valhalla import ValhallaAPI
 
 from .knowledge import KnowledgeImporter
 from .models import Status
-
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import TLP_WHITE, TLP_AMBER
-from valhallaAPI.valhalla import ValhallaAPI
 
 
 class Valhalla:

@@ -3,7 +3,6 @@
 ######################
 
 import requests
-
 from stix2slider import slide_string
 from stix2slider.options import initialize_options
 

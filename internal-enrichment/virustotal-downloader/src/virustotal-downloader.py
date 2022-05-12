@@ -1,13 +1,13 @@
 # coding: utf-8
 
 import os
-import yaml
 import time
-import magic
 import urllib.request
 
-from stix2 import Bundle, Relationship
+import magic
+import yaml
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+from stix2 import Bundle, Relationship
 
 
 class VirustotalDownloaderConnector:

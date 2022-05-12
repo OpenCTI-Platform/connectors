@@ -6,8 +6,6 @@ from datetime import datetime, timezone
 from io import StringIO
 from typing import Any, List, Mapping, Optional
 
-from lxml.etree import Element, fromstring  # type: ignore
-
 from kaspersky.models import OpenIOC, OpenIOCCSV
 from kaspersky.utils.stix2 import (
     OBSERVATION_FACTORY_DOMAIN_NAME,
@@ -29,7 +27,7 @@ from kaspersky.utils.stix2 import (
     OBSERVATION_FACTORY_X509_CERTIFICATE_SUBJECT,
     ObservationFactory,
 )
-
+from lxml.etree import Element, fromstring  # type: ignore
 
 log = logging.getLogger(__name__)
 

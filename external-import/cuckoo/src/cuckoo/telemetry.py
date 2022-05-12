@@ -1,7 +1,5 @@
-from stix2.v21.bundle import Bundle
-from stix2.v21.common import ExternalReference
-from stix2.v21.observables import File, NetworkTraffic, WindowsRegistryKey
-from stix2.v21.sdo import Indicator, Report
+from datetime import datetime
+
 from cuckoo.cuckoo import (
     cuckooReport,
     cuckooReportDropped,
@@ -10,15 +8,12 @@ from cuckoo.cuckoo import (
     cuckooReportSignature,
     cuckooReportTCPUDP,
 )
-from datetime import datetime
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2.v21 import (
-    IPv4Address,
-    AttackPattern,
-    DomainName,
-    Process,
-    Relationship,
-)
+from stix2.v21 import AttackPattern, DomainName, IPv4Address, Process, Relationship
+from stix2.v21.bundle import Bundle
+from stix2.v21.common import ExternalReference
+from stix2.v21.observables import File, NetworkTraffic, WindowsRegistryKey
+from stix2.v21.sdo import Indicator, Report
 
 
 class openCTIInterface:

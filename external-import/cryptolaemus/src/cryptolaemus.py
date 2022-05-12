@@ -1,10 +1,10 @@
 import os
-import yaml
 import time
-import feedparser
-from bs4 import BeautifulSoup
-
 from datetime import datetime
+
+import feedparser
+import yaml
+from bs4 import BeautifulSoup
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

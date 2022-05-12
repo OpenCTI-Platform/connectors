@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia client module."""
 import logging
-import requests
-
-from urllib.parse import urljoin
 from typing import Any
+from urllib.parse import urljoin
+
+import requests
 
 logger = logging.getLogger(__name__)
 

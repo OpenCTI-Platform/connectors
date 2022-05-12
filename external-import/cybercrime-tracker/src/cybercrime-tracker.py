@@ -1,14 +1,21 @@
+import datetime
 import os
-import yaml
 import time
+from urllib.parse import quote, urlparse
+
 import feedparser
 import stix2
-import datetime
-
-from pycti import OpenCTIConnectorHelper, get_config_variable
+import yaml
+from pycti import (
+    Identity,
+    Indicator,
+    Malware,
+    StixCoreRelationship,
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils, SimpleObservable
 from pygrok import Grok
-from urllib.parse import urlparse, quote
 
 
 class Cybercrimetracker:
@@ -185,9 +192,10 @@ class Cybercrimetracker:
 
                         # Create the bundle
                         bundle_objects = list()
+                        identity_name = "CYBERCRIME-TRACKER.NET"
                         organization = stix2.Identity(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
-                            name="CYBERCRIME-TRACKER.NET",
+                            id=Identity.generate_id(identity_name, "organization"),
+                            name=identity_name,
                             identity_class="organization",
                             description="Tracker collecting and sharing daily updates of C2 IPs/Urls. http://cybercrime-tracker.net",
                         )
@@ -200,7 +208,7 @@ class Cybercrimetracker:
                             )
                             indicator_pattern = self.gen_indicator_pattern(parsed_entry)
                             malware = stix2.Malware(
-                                id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
+                                id=Malware.generate_id(parsed_entry["type"]),
                                 is_family=True,
                                 name=parsed_entry["type"],
                                 description="{} malware.".format(parsed_entry["type"]),
@@ -209,9 +217,7 @@ class Cybercrimetracker:
                             indicator = None
                             if self.create_indicators:
                                 indicator = stix2.Indicator(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "indicator"
-                                    ),
+                                    id=Indicator.generate_id(indicator_pattern),
                                     name=parsed_entry["url"],
                                     description="C2 URL for: {}".format(
                                         parsed_entry["type"]
@@ -231,8 +237,16 @@ class Cybercrimetracker:
                                 )
                                 bundle_objects.append(indicator)
                                 relation = stix2.Relationship(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "relationship"
+                                    id=StixCoreRelationship.generate_id(
+                                        "indicates",
+                                        indicator.id,
+                                        malware.id,
+                                        self._time_to_datetime(
+                                            entry["published_parsed"]
+                                        ),
+                                        self._time_to_datetime(
+                                            entry["published_parsed"]
+                                        ),
                                     ),
                                     source_ref=indicator.id,
                                     target_ref=malware.id,
@@ -297,9 +311,6 @@ class Cybercrimetracker:
 
                                 if indicator is not None:
                                     relationship_1 = stix2.Relationship(
-                                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                                            "relationship"
-                                        ),
                                         relationship_type="based-on",
                                         created_by_ref=organization.id,
                                         source_ref=indicator.id,
@@ -308,9 +319,6 @@ class Cybercrimetracker:
                                     )
                                     bundle_objects.append(relationship_1)
                                     relationship_2 = stix2.Relationship(
-                                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                                            "relationship"
-                                        ),
                                         relationship_type="based-on",
                                         created_by_ref=organization.id,
                                         source_ref=indicator.id,
@@ -320,9 +328,6 @@ class Cybercrimetracker:
                                     bundle_objects.append(relationship_2)
                                     if observable_domain is not None:
                                         relationship_3 = stix2.Relationship(
-                                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                                "relationship"
-                                            ),
                                             relationship_type="based-on",
                                             created_by_ref=organization.id,
                                             source_ref=indicator.id,

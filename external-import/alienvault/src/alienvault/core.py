@@ -1,19 +1,13 @@
 # -*- coding: utf-8 -*-
 """OpenCTI AlienVault connector module."""
 
+import datetime
 import os
 import time
-import datetime
 from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
-
-from pycti.connector.opencti_connector_helper import (  # type: ignore
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
-
-from stix2 import Identity, MarkingDefinition  # type: ignore
+import stix2
 
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter, PulseImporterConfig
@@ -23,6 +17,10 @@ from alienvault.utils import (
     get_tlp_string_marking_definition,
 )
 from alienvault.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
+from pycti.connector.opencti_connector_helper import (  # type: ignore
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 
 
 class AlienVault:
@@ -181,7 +179,7 @@ class AlienVault:
         self.pulse_importer = PulseImporter(pulse_importer_config)
 
     @staticmethod
-    def _create_author() -> Identity:
+    def _create_author() -> stix2.Identity:
         return create_organization("AlienVault")
 
     @staticmethod
@@ -213,7 +211,7 @@ class AlienVault:
     @classmethod
     def _convert_tlp_to_marking_definition(
         cls, tlp_value: Optional[str]
-    ) -> MarkingDefinition:
+    ) -> stix2.MarkingDefinition:
         if tlp_value is None:
             return DEFAULT_TLP_MARKING_DEFINITION
         return get_tlp_string_marking_definition(tlp_value)

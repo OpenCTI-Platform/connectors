@@ -1,8 +1,8 @@
-import yaml
-import os
 import json
+import os
 import time
 
+import yaml
 from pycti import OpenCTIConnectorHelper
 from pycti.utils.constants import StixCyberObservableTypes
 

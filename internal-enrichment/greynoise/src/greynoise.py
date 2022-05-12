@@ -1,8 +1,8 @@
 import os
 from time import sleep
 
-import requests
 import pycountry
+import requests
 import yaml
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper, get_config_variable

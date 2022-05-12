@@ -1,24 +1,19 @@
-import os
-import yaml
 import csv
+import os
+import ssl
 import time
 import urllib.request
-import certifi
-import ssl
-
 from datetime import datetime
+
+import certifi
+import yaml
 from pycti import (
     OpenCTIConnectorHelper,
-    get_config_variable,
-    SimpleObservable,
     OpenCTIStix2Utils,
+    SimpleObservable,
+    get_config_variable,
 )
-
-from stix2 import (
-    Bundle,
-    ExternalReference,
-    TLP_WHITE,
-)
+from stix2 import TLP_WHITE, Bundle, ExternalReference
 
 
 class URLhaus:

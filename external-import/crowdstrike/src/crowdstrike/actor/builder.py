@@ -4,20 +4,6 @@
 import logging
 from typing import List, Optional, Tuple
 
-from crowdstrike_client.api.models.actor import Actor
-from crowdstrike_client.api.models.base import Entity
-
-from stix2 import (  # type: ignore
-    Bundle,
-    ExternalReference,
-    Identity,
-    IntrusionSet,
-    Location,
-    MarkingDefinition,
-    Relationship,
-)
-from stix2.v21 import _DomainObject  # type: ignore
-
 from crowdstrike.utils import (
     create_external_reference,
     create_intrusion_set,
@@ -30,7 +16,18 @@ from crowdstrike.utils import (
     normalize_start_time_and_stop_time,
     remove_html_tags,
 )
-
+from crowdstrike_client.api.models.actor import Actor
+from crowdstrike_client.api.models.base import Entity
+from stix2 import (
+    Bundle,
+    ExternalReference,
+    Identity,  # type: ignore
+    IntrusionSet,
+    Location,
+    MarkingDefinition,
+    Relationship,
+)
+from stix2.v21 import _DomainObject  # type: ignore
 
 logger = logging.getLogger(__name__)
 

@@ -1,39 +1,38 @@
-import re
-import os
-import yaml
-import time
 import json
-
+import os
+import re
+import time
 from datetime import datetime
-from pymisp import ExpandedPyMISP
-from stix2 import (
-    Bundle,
-    Identity,
-    IntrusionSet,
-    Malware,
-    Tool,
-    AttackPattern,
-    Report,
-    Indicator,
-    Relationship,
-    ExternalReference,
-    Sighting,
-    Location,
-    TLP_WHITE,
-    TLP_GREEN,
-    TLP_AMBER,
-    TLP_RED,
-    ObjectPath,
-    EqualityComparisonExpression,
-    ObservationExpression,
-    Note,
-)
 
+import yaml
 from pycti import (
     OpenCTIConnectorHelper,
-    get_config_variable,
-    SimpleObservable,
     OpenCTIStix2Utils,
+    SimpleObservable,
+    get_config_variable,
+)
+from pymisp import ExpandedPyMISP
+from stix2 import (
+    TLP_AMBER,
+    TLP_GREEN,
+    TLP_RED,
+    TLP_WHITE,
+    AttackPattern,
+    Bundle,
+    EqualityComparisonExpression,
+    ExternalReference,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Malware,
+    Note,
+    ObjectPath,
+    ObservationExpression,
+    Relationship,
+    Report,
+    Sighting,
+    Tool,
 )
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]

@@ -2,10 +2,10 @@
 """OpenCTI Malpedia connector models."""
 
 import re
-import dateutil.parser as dp
-from datetime import datetime, date
-from typing import Optional, List
+from datetime import date, datetime
+from typing import List, Optional
 
+import dateutil.parser as dp
 from pydantic import BaseModel
 
 

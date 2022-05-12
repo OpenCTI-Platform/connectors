@@ -1,10 +1,10 @@
-import yaml
-import os
-import json
-import io
 import csv
+import io
+import json
+import os
 import time
 
+import yaml
 from pycti import OpenCTIConnectorHelper
 from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 

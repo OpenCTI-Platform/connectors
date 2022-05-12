@@ -1,21 +1,13 @@
 # coding: utf-8
 
 import os
-import yaml
 import time
+
 import magic
+import yaml
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+from stix2 import Bundle, Relationship
 from unpac_me_api_client import UnpacMeApi, UnpacMeStatus
-
-
-from stix2 import (
-    Bundle,
-    Relationship,
-)
-from pycti import (
-    OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    get_config_variable,
-)
 
 
 class UnpacMeConnector:

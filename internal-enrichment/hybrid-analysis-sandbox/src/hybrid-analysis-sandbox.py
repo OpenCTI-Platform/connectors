@@ -1,23 +1,17 @@
 # coding: utf-8
 
 import os
-import yaml
-import requests
 import time
 
-from stix2 import (
-    Bundle,
-    AttackPattern,
-    Relationship,
-    File,
-    TLP_WHITE,
-)
+import requests
+import yaml
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
-    get_config_variable,
     SimpleObservable,
+    get_config_variable,
 )
+from stix2 import TLP_WHITE, AttackPattern, Bundle, File, Relationship
 
 
 class HybridAnalysis:

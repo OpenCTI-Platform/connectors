@@ -1,10 +1,10 @@
-import yaml
 import os
-import requests
-import pycountry
 
-from stix2 import Relationship, Location, Bundle
+import pycountry
+import requests
+import yaml
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+from stix2 import Bundle, Location, Relationship
 
 
 class IpInfoConnector:

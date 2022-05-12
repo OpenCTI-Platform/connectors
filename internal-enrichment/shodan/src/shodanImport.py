@@ -1,7 +1,8 @@
-import yaml
 import os
-import shodan
 from datetime import datetime, timedelta
+
+import shodan
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

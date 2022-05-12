@@ -1,6 +1,7 @@
 import configparser
 import re
-from typing import List, Dict
+from typing import Dict, List
+
 import ioc_finder
 from dateparser.search import search_dates
 

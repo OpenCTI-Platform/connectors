@@ -3,25 +3,28 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
-from stix2 import (  # type: ignore
-    CustomObservable,
-    DomainName,
-    EmailAddress,
-    File,
-    IPv4Address,
-    IPv6Address,
-    Identity,
-    MarkingDefinition,
-    Mutex,
-    URL,
-)
-from stix2.properties import ListProperty, ReferenceProperty, StringProperty  # type: ignore # noqa: E501
-
 from alienvault.utils.constants import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_CREATED_BY_REF,
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
+)
+from stix2 import (
+    URL,
+    CustomObservable,
+    DomainName,  # type: ignore
+    EmailAddress,
+    File,
+    Identity,
+    IPv4Address,
+    IPv6Address,
+    MarkingDefinition,
+    Mutex,
+)
+from stix2.properties import (
+    ListProperty,  # type: ignore # noqa: E501
+    ReferenceProperty,
+    StringProperty,
 )
 
 

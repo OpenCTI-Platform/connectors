@@ -1,7 +1,7 @@
+import io
 import logging
 import os
-import io
-from typing import Dict, List, Pattern, IO, Tuple
+from typing import IO, Dict, List, Pattern, Tuple
 
 import ioc_finder
 from bs4 import BeautifulSoup
@@ -9,21 +9,21 @@ from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 from pycti import OpenCTIConnectorHelper
 from reportimporter.constants import (
-    OBSERVABLE_CLASS,
     ENTITY_CLASS,
-    RESULT_FORMAT_MATCH,
-    RESULT_FORMAT_TYPE,
-    RESULT_FORMAT_CATEGORY,
-    RESULT_FORMAT_RANGE,
+    MIME_CSV,
+    MIME_HTML,
+    MIME_MD,
     MIME_PDF,
     MIME_TXT,
-    MIME_HTML,
-    MIME_CSV,
-    MIME_MD,
+    OBSERVABLE_CLASS,
     OBSERVABLE_DETECTION_CUSTOM_REGEX,
     OBSERVABLE_DETECTION_LIBRARY,
+    RESULT_FORMAT_CATEGORY,
+    RESULT_FORMAT_MATCH,
+    RESULT_FORMAT_RANGE,
+    RESULT_FORMAT_TYPE,
 )
-from reportimporter.models import Observable, Entity
+from reportimporter.models import Entity, Observable
 from reportimporter.util import library_mapping
 
 
