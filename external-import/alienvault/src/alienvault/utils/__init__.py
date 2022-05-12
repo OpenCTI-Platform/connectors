@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Union
 
-from pycti import OpenCTIStix2Utils  # type: ignore
+from pycti import OpenCTIStix2Utils, Identity, Indicator, IntrusionSet, Malware, Location, Vulnerability, AttackPattern, Report  # type: ignore
 from pycti.utils.constants import LocationTypes  # type: ignore
 
 from stix2 import (  # type: ignore
@@ -142,10 +142,6 @@ def convert_comma_separated_str_to_list(input_str: str, trim: bool = True) -> Li
     return result
 
 
-def _create_random_identifier(identifier_type: str) -> str:
-    return OpenCTIStix2Utils.generate_random_stix_id(identifier_type)
-
-
 def create_organization(name: str, created_by: Optional[Identity] = None) -> Identity:
     """Create an organization."""
     return create_identity(
@@ -164,7 +160,7 @@ def create_identity(
 ) -> Identity:
     """Create an identity."""
     if identity_id is None:
-        identity_id = _create_random_identifier("identity")
+        identity_id = Identity.generate_id(name, identity_class)
 
     if custom_properties is None:
         custom_properties = {}
@@ -206,7 +202,7 @@ def create_indicator(
         ] = x_opencti_main_observable_type
 
     return Indicator(
-        id=_create_random_identifier("indicator"),
+        id=Indicator.generate_id(pattern),
         created_by_ref=created_by,
         name=name,
         description=description,
@@ -228,7 +224,7 @@ def create_intrusion_set(
 ) -> IntrusionSet:
     """Create an intrusion set."""
     return IntrusionSet(
-        id=_create_random_identifier("intrusion-set"),
+        id=IntrusionSet.generate_id(name),
         created_by_ref=created_by,
         name=name,
         confidence=confidence,
@@ -246,7 +242,7 @@ def create_malware(
 ) -> Malware:
     """Create a malware."""
     if malware_id is None:
-        malware_id = _create_random_identifier("malware")
+        malware_id = Malware.generate_id(name)
 
     return Malware(
         id=malware_id,
@@ -270,7 +266,7 @@ def create_sector(name: str, created_by: Identity) -> Identity:
 def create_country(name: str, created_by: Identity) -> Location:
     """Create a country."""
     return Location(
-        id=_create_random_identifier("location"),
+        id=Location.generate_id(name, "Country"),
         created_by_ref=created_by,
         name=name,
         country="ZZ",  # TODO: Country code is required by STIX2!
@@ -287,7 +283,7 @@ def create_vulnerability(
 ) -> Vulnerability:
     """Create a vulnerability."""
     return Vulnerability(
-        id=_create_random_identifier("vulnerability"),
+        id=Vulnerability.generate_id(name),
         created_by_ref=created_by,
         name=name,
         confidence=confidence,
@@ -316,7 +312,7 @@ def create_attack_pattern(
 ) -> AttackPattern:
     """Create an attack pattern."""
     return AttackPattern(
-        id=_create_random_identifier("attack-pattern"),
+        id=AttackPattern.generate_id(name, name),
         created_by_ref=created_by,
         name=name,
         confidence=confidence,
@@ -513,7 +509,7 @@ def create_report(
 ) -> Report:
     """Create a report."""
     return Report(
-        id=_create_random_identifier("report"),
+        id=Report.generate_id(name, published),
         created_by_ref=created_by,
         created=created,
         modified=modified,
