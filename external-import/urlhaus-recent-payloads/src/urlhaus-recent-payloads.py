@@ -1,13 +1,11 @@
+import datetime
 import os
-import yaml
 import time
+
 import magic
 import requests
-import datetime
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class URLHausRecentPayloads:

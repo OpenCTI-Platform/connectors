@@ -1,14 +1,14 @@
 ################################
 # OpenCTI Restore Files         #
 ################################
-import os
-import yaml
-import json
 import datetime
+import json
+import os
 import sys
-
-from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIStix2Splitter
 from pathlib import Path
+
+import yaml
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Splitter, get_config_variable
 
 
 def ref_extractors(objects):

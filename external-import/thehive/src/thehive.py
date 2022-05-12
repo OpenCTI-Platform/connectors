@@ -1,28 +1,28 @@
 import os
-import yaml
 import time
-
 from datetime import datetime
+
+import yaml
 from dateutil.parser import parse
 from pycti import (
+    Incident,
     OpenCTIConnectorHelper,
-    get_config_variable,
     OpenCTIStix2Utils,
     SimpleObservable,
+    get_config_variable,
+)
+from stix2 import (
+    TLP_AMBER,
+    TLP_GREEN,
+    TLP_RED,
+    TLP_WHITE,
+    Bundle,
+    Incident,
+    Relationship,
+    Sighting,
 )
 from thehive4py.api import TheHiveApi
-from thehive4py.query import Gt, Or, Child
-
-from stix2 import (
-    Bundle,
-    Relationship,
-    Incident,
-    Sighting,
-    TLP_WHITE,
-    TLP_GREEN,
-    TLP_AMBER,
-    TLP_RED,
-)
+from thehive4py.query import Child, Gt, Or
 
 OBSERVABLES_MAPPING = {
     "autonomous-system": "Autonomous-System.number",
@@ -105,7 +105,7 @@ class TheHive:
             markings.append(TLP_WHITE)
         bundle_objects = []
         incident = Incident(
-            id=OpenCTIStix2Utils.generate_random_stix_id("incident"),
+            id=Incident.generate_id(case["title"]),
             name=case["title"],
             description=case["description"],
             object_marking_refs=markings,
@@ -143,7 +143,6 @@ class TheHive:
                     x_opencti_create_indicator=observable["ioc"],
                 )
                 stix_observable_relation = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                     relationship_type="related-to",
                     created_by_ref=self.identity["standard_id"],
                     source_ref=stix_observable.id,
@@ -158,7 +157,6 @@ class TheHive:
                         "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
                     )
                     stix_sighting = Sighting(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("sighting"),
                         first_seen=datetime.utcfromtimestamp(
                             int(observable["startDate"] / 1000)
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),

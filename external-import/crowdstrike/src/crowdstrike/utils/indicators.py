@@ -3,13 +3,12 @@
 
 from typing import List, NamedTuple
 
-from stix2 import (  # type: ignore
+from stix2 import (
     EqualityComparisonExpression,
-    ObjectPath,
+    ObjectPath,  # type: ignore
     ObservationExpression,
     StringConstant,
 )
-
 
 _OBJECT_TYPE_IPV4_ADDR = "ipv4-addr"
 _OBJECT_TYPE_IPV6_ADDR = "ipv6-addr"

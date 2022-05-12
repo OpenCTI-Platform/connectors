@@ -1,13 +1,13 @@
 import atexit
 import json
 import os
+from typing import Union
+
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from sseclient import Event
 from stix2 import Indicator, Sighting, parse
 from threatbus.data import Operation, ThreatBusSTIX2Constants
-from typing import Union
-import yaml
-
 from threatbus_connector_helper import ThreatBusConnectorHelper
 
 

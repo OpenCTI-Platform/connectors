@@ -2,15 +2,15 @@
 # Tanium Connector for OpenCTI                 #
 ################################################
 
-import os
-import yaml
 import json
+import os
 
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from intel_cache import IntelCache
+import yaml
 from import_manager import IntelManager
-from tanium_api_handler import TaniumApiHandler
+from intel_cache import IntelCache
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from sightings import Sightings
+from tanium_api_handler import TaniumApiHandler
 
 
 class TaniumConnector:

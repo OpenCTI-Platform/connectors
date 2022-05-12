@@ -1,28 +1,27 @@
 import os
 import time
-
 from datetime import datetime
-from typing import Dict, List, Callable
+from typing import Callable, Dict, List
 
 import yaml
 from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
-    get_config_variable,
     SimpleObservable,
+    get_config_variable,
 )
 from pydantic import BaseModel
 from reportimporter.constants import (
-    RESULT_FORMAT_TYPE,
-    RESULT_FORMAT_MATCH,
-    RESULT_FORMAT_CATEGORY,
-    OBSERVABLE_CLASS,
     ENTITY_CLASS,
+    OBSERVABLE_CLASS,
+    RESULT_FORMAT_CATEGORY,
+    RESULT_FORMAT_MATCH,
+    RESULT_FORMAT_TYPE,
 )
-from reportimporter.models import Observable, EntityConfig, Entity
+from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
 from reportimporter.util import MyConfigParser
-from stix2 import Report, Bundle
+from stix2 import Bundle, Report
 
 
 class ReportImporter:

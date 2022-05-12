@@ -2,20 +2,18 @@
 """OpenCTI AlienVault importer module."""
 
 import re
+import stix2
 from datetime import datetime
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Set
-
-from pycti.connector.opencti_connector_helper import (  # type: ignore
-    OpenCTIConnectorHelper,
-)
-
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
 
 from alienvault.builder import PulseBundleBuilder, PulseBundleBuilderConfig
 from alienvault.client import AlienVaultClient
 from alienvault.models import Pulse
 from alienvault.utils import iso_datetime_str_to_datetime
+from pycti.connector.opencti_connector_helper import (
+    OpenCTIConnectorHelper,
+)  # type: ignore
+from stix2.exceptions import STIXError  # type: ignore
 
 
 class PulseImporterConfig(NamedTuple):
@@ -175,7 +173,7 @@ class PulseImporter:
 
         return True
 
-    def _create_pulse_bundle(self, pulse: Pulse) -> Optional[Bundle]:
+    def _create_pulse_bundle(self, pulse: Pulse) -> Optional[stix2.Bundle]:
         config = PulseBundleBuilderConfig(
             pulse=pulse,
             provider=self.author,
@@ -281,7 +279,7 @@ class PulseImporter:
     def _set_state(self, state: Dict[str, Any]) -> None:
         self.helper.set_state(state)
 
-    def _send_bundle(self, bundle: Bundle) -> None:
+    def _send_bundle(self, bundle: stix2.Bundle) -> None:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(
             serialized_bundle, update=self.update_existing_data, work_id=self.work_id

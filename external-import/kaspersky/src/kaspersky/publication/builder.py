@@ -4,18 +4,6 @@ import logging
 from datetime import datetime
 from typing import List, Mapping, Optional, Set, Union
 
-from stix2 import (  # type: ignore
-    Bundle,
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Location,
-    MarkingDefinition,
-    Relationship,
-    Report,
-)
-from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
-
 from kaspersky.models import OpenIOC, OpenIOCIndicatorItem, Publication, Yara, YaraRule
 from kaspersky.utils import (
     Observation,
@@ -38,7 +26,17 @@ from kaspersky.utils import (
     decode_base64_gzip_to_string,
     get_observation_factory_by_openioc_search,
 )
-
+from stix2 import (
+    Bundle,
+    Identity,
+    Indicator,
+    IntrusionSet,  # type: ignore
+    Location,
+    MarkingDefinition,
+    Relationship,
+    Report,
+)
+from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
 
 log = logging.getLogger(__name__)
 

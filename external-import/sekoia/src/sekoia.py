@@ -4,12 +4,12 @@ import os
 import time
 from datetime import datetime, timedelta
 from posixpath import join as urljoin
-from typing import Any, Iterable, List, Set, Dict
+from typing import Any, Dict, Iterable, List, Set
 
-from dateutil.parser import parse, ParserError
 import requests
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIStix2Utils
+from dateutil.parser import ParserError, parse
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
 
 

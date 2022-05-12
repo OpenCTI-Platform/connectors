@@ -1,13 +1,11 @@
 # coding: utf-8
 
 import os
-import yaml
 import time
+
+import yaml
 from intezer_api import IntezerApi
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class IntezerSandboxConnector:

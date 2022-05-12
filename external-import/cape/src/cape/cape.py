@@ -1,7 +1,7 @@
 from datetime import datetime
+
 import requests
 from requests.exceptions import HTTPError
-
 
 # ------------------------------------------------------------------
 # This is a Class to serialize the Cuckoo API /tasks/Summary JSON

@@ -7,9 +7,9 @@ from typing import Optional
 
 import plyara
 import plyara.utils
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Indicator
-import yaml
 
 from .client import VirusTotalClient
 

@@ -1,16 +1,16 @@
 # coding: utf-8
 
 import os
-from typing import Optional, Dict, Any, Mapping
-import yaml
-import time
-import requests
 import re
-import stix2
+import time
 import urllib.parse
-
 from datetime import datetime
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from typing import Any, Dict, Mapping, Optional
+
+import requests
+import stix2
+import yaml
+from pycti import Identity, Indicator, OpenCTIConnectorHelper, get_config_variable
 from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils, SimpleObservable
 
 
@@ -99,9 +99,10 @@ class CyberThreatCoalition:
         bundle_objects = list()
 
         # create an identity for the coalition team
+        identity_name = "Cyber Threat Coalition Team"
         organization = stix2.Identity(
-            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
-            name="Cyber Threat Coalition Team",
+            id=Identity.generate_id(identity_name, "organization"),
+            name=identity_name,
             identity_class="organization",
             description="Team of Experts collecting and sharing pandemic related "
             "cyber threat intelligence during the COVID-19 crisis time",
@@ -146,7 +147,11 @@ class CyberThreatCoalition:
                         return
                     if self.cyber_threat_coalition_create_indicators:
                         indicator = stix2.Indicator(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("indicator"),
+                            id=Indicator.generate_id(
+                                self._INDICATOR_PATTERN[observable_resolver].format(
+                                    data
+                                )
+                            ),
                             name=data,
                             pattern_type=pattern_type,
                             pattern=self._INDICATOR_PATTERN[observable_resolver].format(

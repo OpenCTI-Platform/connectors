@@ -5,10 +5,11 @@ MQ.
 """
 
 import asyncio
+import time
 from threading import Event, Thread
 from typing import Callable, List
+
 import zmq
-import time
 
 
 def send_manage_message(endpoint: str, action: dict, timeout: int = 1):

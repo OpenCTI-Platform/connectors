@@ -4,25 +4,6 @@ import base64
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Union
 
-from pycti import OpenCTIStix2Utils  # type: ignore
-from pycti.utils.constants import LocationTypes  # type: ignore
-
-from stix2 import (  # type: ignore
-    ExternalReference,
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Location,
-    MarkingDefinition,
-    Relationship,
-    Report,
-    TLP_AMBER,
-    TLP_GREEN,
-    TLP_RED,
-    TLP_WHITE,
-)
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
-
 from kaspersky.utils.common import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_FILES,
@@ -75,7 +56,30 @@ from kaspersky.utils.observables import (
     create_observable_x509_certificate_serial_number,
     create_observable_x509_certificate_subject,
 )
-
+from pycti import (
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,  # type: ignore
+    OpenCTIStix2Utils,
+    Report,
+)
+from pycti.utils.constants import LocationTypes  # type: ignore
+from stix2 import (
+    TLP_AMBER,
+    TLP_GREEN,
+    TLP_RED,
+    TLP_WHITE,  # type: ignore
+    ExternalReference,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    MarkingDefinition,
+    Relationship,
+    Report,
+)
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
 _TLP_MARKING_DEFINITION_MAPPING = {
     "white": TLP_WHITE,
@@ -260,10 +264,6 @@ def get_tlp_string_marking_definition(tlp: str) -> MarkingDefinition:
     return marking_definition
 
 
-def _create_random_identifier(identifier_type: str) -> str:
-    return OpenCTIStix2Utils.generate_random_stix_id(identifier_type)
-
-
 def create_identity(
     name: str,
     identity_id: Optional[str] = None,
@@ -273,7 +273,7 @@ def create_identity(
 ) -> Identity:
     """Create an identity."""
     if identity_id is None:
-        identity_id = _create_random_identifier("identity")
+        identity_id = Identity.generate_id(name, identity_class)
 
     if custom_properties is None:
         custom_properties = {}
@@ -316,8 +316,12 @@ def create_location(
     if custom_properties is None:
         custom_properties = {}
 
+    location_id = Location.generate_id(name, "Region")
+    if country is not None:
+        location_id = Location.generate_id(name, "Country")
+
     return Location(
-        id=_create_random_identifier("location"),
+        id=location_id,
         created_by_ref=created_by,
         name=name,
         region=region,
@@ -369,7 +373,7 @@ def create_intrusion_set(
 ) -> IntrusionSet:
     """Create a intrusion set."""
     if intrusion_set_id is None:
-        intrusion_set_id = _create_random_identifier("intrusion-set")
+        intrusion_set_id = IntrusionSet.generate_id(name)
 
     return IntrusionSet(
         id=intrusion_set_id,
@@ -547,7 +551,7 @@ def create_report(
 ) -> Report:
     """Create a report."""
     if report_id is None:
-        report_id = _create_random_identifier("report")
+        report_id = Report.generate_id(name, published)
 
     return Report(
         id=report_id,
@@ -605,7 +609,7 @@ def create_indicator(
         ] = x_opencti_main_observable_type
 
     return Indicator(
-        id=_create_random_identifier("indicator"),
+        id=Indicator.generate_id(pattern),
         created_by_ref=created_by,
         created=created,
         modified=modified,

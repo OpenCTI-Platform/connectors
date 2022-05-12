@@ -7,6 +7,9 @@ from typing import Any, Mapping, Optional
 from dateutil import parser
 from pycti import OpenCTIConnectorHelper
 from stix2 import (
+    TLP_AMBER,
+    TLP_WHITE,
+    URL,
     Bundle,
     DomainName,
     EmailAddress,
@@ -16,9 +19,6 @@ from stix2 import (
     IPv4Address,
     Mutex,
     Report,
-    TLP_AMBER,
-    TLP_WHITE,
-    URL,
     X509Certificate,
     utils,
 )

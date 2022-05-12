@@ -1,14 +1,12 @@
-import os
-import yaml
-import time
-import vt
 import io
-import magic
+import os
+import time
 from datetime import datetime
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+
+import magic
+import vt
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class VirustotalLivehuntNotifications:

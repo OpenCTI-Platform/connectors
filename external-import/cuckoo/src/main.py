@@ -1,10 +1,11 @@
 import os
 import time
 from datetime import datetime
+
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
 from cuckoo.cuckoo import cuckoo
 from cuckoo.telemetry import openCTIInterface
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class cuckooConnector:

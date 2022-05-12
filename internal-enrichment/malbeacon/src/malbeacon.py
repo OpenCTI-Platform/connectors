@@ -1,14 +1,13 @@
-import os
-import yaml
 import logging
-import requests
-
-from dateutil import parser
+import os
 from typing import Optional
-from pydantic import BaseModel
 from urllib.parse import urljoin
 
+import requests
+import yaml
+from dateutil import parser
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
