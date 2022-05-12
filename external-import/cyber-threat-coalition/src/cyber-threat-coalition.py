@@ -13,11 +13,11 @@ import yaml
 from pycti import (
     Identity,
     Indicator,
-    StixCoreRelationship,
     OpenCTIConnectorHelper,
+    StixCoreRelationship,
     get_config_variable,
 )
-from stix2 import DomainName, IPv4Address, URL, File
+from stix2 import URL, DomainName, File, IPv4Address
 
 
 class CyberThreatCoalition:

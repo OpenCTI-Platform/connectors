@@ -2,11 +2,11 @@ import os
 
 import pycountry
 import requests
-import yaml
 import stix2
+import yaml
 from pycti import (
-    OpenCTIConnectorHelper,
     Location,
+    OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
 )

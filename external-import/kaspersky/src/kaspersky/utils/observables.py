@@ -11,10 +11,10 @@ from kaspersky.utils.common import (
     is_ip_address,
     is_ipv4_address,
 )
+from stix2 import DomainName  # type: ignore
 from stix2 import (
     URL,
     CustomObservable,
-    DomainName,  # type: ignore
     EmailAddress,
     EmailMessage,
     File,
@@ -26,11 +26,8 @@ from stix2 import (
     Process,
     X509Certificate,
 )
-from stix2.properties import (
-    ListProperty,  # type: ignore  # noqa: E501
-    ReferenceProperty,
-    StringProperty,
-)
+from stix2.properties import ListProperty  # type: ignore  # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
 
 
 class ObservableProperties(NamedTuple):

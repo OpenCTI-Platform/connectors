@@ -9,13 +9,13 @@ import time
 from hashlib import sha256
 
 import magic
-import yaml
 import stix2
+import yaml
 from pycti import (
+    AttackPattern,
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,
-    AttackPattern,
     StixCoreRelationship,
     get_config_variable,
 )

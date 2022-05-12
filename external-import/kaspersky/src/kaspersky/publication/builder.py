@@ -26,11 +26,11 @@ from kaspersky.utils import (
     decode_base64_gzip_to_string,
     get_observation_factory_by_openioc_search,
 )
+from stix2 import IntrusionSet  # type: ignore
 from stix2 import (
     Bundle,
     Identity,
     Indicator,
-    IntrusionSet,  # type: ignore
     Location,
     MarkingDefinition,
     Relationship,

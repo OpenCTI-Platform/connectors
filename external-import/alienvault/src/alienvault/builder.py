@@ -2,10 +2,10 @@
 """OpenCTI AlienVault builder module."""
 
 import logging
-import stix2
 from datetime import datetime
 from typing import Callable, List, Mapping, NamedTuple, Optional, Set
 
+import stix2
 from alienvault.models import Pulse, PulseIndicator
 from alienvault.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,

@@ -5,9 +5,8 @@ import os
 import time
 from typing import Any, Dict, List, Mapping, Optional
 
-import yaml
 import stix2
-
+import yaml
 from crowdstrike.actor.importer import ActorImporter
 from crowdstrike.importer import BaseImporter
 from crowdstrike.indicator.importer import IndicatorImporter, IndicatorImporterConfig

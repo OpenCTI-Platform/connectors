@@ -9,10 +9,10 @@ from alienvault.utils.constants import (
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
 )
+from stix2 import DomainName  # type: ignore
 from stix2 import (
     URL,
     CustomObservable,
-    DomainName,  # type: ignore
     EmailAddress,
     File,
     Identity,
@@ -21,11 +21,8 @@ from stix2 import (
     MarkingDefinition,
     Mutex,
 )
-from stix2.properties import (
-    ListProperty,  # type: ignore # noqa: E501
-    ReferenceProperty,
-    StringProperty,
-)
+from stix2.properties import ListProperty  # type: ignore # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
 
 
 def _get_default_custom_properties(

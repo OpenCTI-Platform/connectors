@@ -8,7 +8,6 @@ import sys
 
 # Umporting the STIX module
 import stix2
-
 from pycti import Identity, Vulnerability
 
 
