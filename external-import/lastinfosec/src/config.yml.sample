@@ -10,7 +10,14 @@ connector:
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: True
   log_level: 'info'
+  run_and_terminate: False
 
 lastinfosec:
-  api_url_cti: 'https://api.client.lastinfosec.com/v2/stix21/getlasthour?api_key='
-  api_key_cti: 'ChangeMe'
+  api_key: 'ChangeMe'
+  cti:
+    is_enabled: False  # Set to true if you want to import lastinfosec iocs feed
+    interval: 30 # url minutes argument. Example: 30: The connector will run every 30 minutes to get IOCs for the last 30 minutes
+  cve:  # vulnerability feed
+    is_enabled: False  # Set to true if you want to import lastinfosec cve feed
+  tactic:  # tactic feed
+    is_enabled: False  # Set to true if you want to import lastinfosec tactic feed
