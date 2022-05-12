@@ -13,7 +13,6 @@ import requests
 import yaml
 import stix2
 from pycti import (
-    AttackPattern,
     OpenCTIConnectorHelper,
     OpenCTIStix2Utils,
     SimpleObservable,

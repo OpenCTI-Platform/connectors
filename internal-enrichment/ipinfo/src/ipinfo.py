@@ -6,7 +6,6 @@ import yaml
 import stix2
 from pycti import (
     OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
     Location,
     StixCoreRelationship,
     get_config_variable,

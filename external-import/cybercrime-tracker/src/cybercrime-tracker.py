@@ -6,6 +6,7 @@ from urllib.parse import quote, urlparse
 import feedparser
 import stix2
 import yaml
+from stix2 import DomainName, URL, IPv4Address
 from pycti import (
     Identity,
     Indicator,
@@ -14,7 +15,6 @@ from pycti import (
     OpenCTIConnectorHelper,
     get_config_variable,
 )
-from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils, SimpleObservable
 from pygrok import Grok
 
 
@@ -270,42 +270,36 @@ class Cybercrimetracker:
                                 )
                                 bundle_objects.append(relation)
                             if self.create_observables:
-                                observable_url = SimpleObservable(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "x-opencti-simple-observable"
-                                    ),
-                                    key="Url.value",
-                                    labels=["C2 Server"],
+                                observable_url = URL(
                                     value=parsed_entry["url"],
-                                    created_by_ref=organization.id,
                                     object_marking_refs=[tlp["standard_id"]],
-                                    external_references=[external_reference],
+                                    custom_properties={
+                                        "labels": ["C2 Server"],
+                                        "created_by_ref": organization.id,
+                                        "external_references": [external_reference],
+                                    },
                                 )
                                 bundle_objects.append(observable_url)
-                                observable_ip = SimpleObservable(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "x-opencti-simple-observable"
-                                    ),
-                                    key="IPv4-Addr.value",
-                                    labels=["C2 Server"],
+                                observable_ip = IPv4Address(
                                     value=parsed_entry["ip"],
-                                    created_by_ref=organization.id,
                                     object_marking_refs=[tlp["standard_id"]],
-                                    external_references=[external_reference],
+                                    custom_properties={
+                                        "labels": ["C2 Server"],
+                                        "created_by_ref": organization.id,
+                                        "external_references": [external_reference],
+                                    },
                                 )
                                 bundle_objects.append(observable_ip)
                                 observable_domain = None
                                 if "domain" in parsed_entry.keys():
-                                    observable_domain = SimpleObservable(
-                                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                                            "x-opencti-simple-observable"
-                                        ),
-                                        key="Domain-Name.value",
-                                        labels=["C2 Server"],
+                                    observable_domain = DomainName(
                                         value=parsed_entry["domain"],
-                                        created_by_ref=organization.id,
                                         object_marking_refs=[tlp["standard_id"]],
-                                        external_references=[external_reference],
+                                        custom_properties={
+                                            "labels": ["C2 Server"],
+                                            "created_by_ref": organization.id,
+                                            "external_references": [external_reference],
+                                        },
                                     )
                                     bundle_objects.append(observable_domain)
 
