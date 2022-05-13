@@ -289,7 +289,7 @@ class TaniumApiHandler:
 
     def update_indicator_tanium_signal(self, intel_id, entity):
         platforms = []
-        if "x_mitre_platforms" in entity and len(entity["x_mitre_platforms"]) > 0:
+        if OpenCTIConnectorHelper.get_attribute_in_mitre_extension("platforms", entity):
             for x_mitre_platform in entity["x_mitre_platforms"]:
                 if x_mitre_platform in ["Linux", "Windows", "macOS"]:
                     platforms.append(
