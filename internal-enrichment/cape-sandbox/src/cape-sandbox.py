@@ -15,11 +15,10 @@ import yaml
 from pycti import (
     AttackPattern,
     OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    SimpleObservable,
     StixCoreRelationship,
     get_config_variable,
 )
+from stix2 import IPv4Address, DomainName
 
 
 class CapeSandboxConnector:
@@ -360,14 +359,13 @@ class CapeSandboxConnector:
                     for address in address_list:
                         parsed = address.rsplit(":", 1)[0]
                         if self._is_ipv4_address(parsed):
-                            host_stix = SimpleObservable(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "x-opencti-simple-observable"
-                                ),
-                                labels=[detection_name, "c2 server"],
-                                key="IPv4-Addr.value",
+                            host_stix = IPv4Address(
                                 value=parsed,
-                                created_by_ref=self.identity,
+                                object_marking_refs=[stix2.TLP_WHITE],
+                                custom_properties={
+                                    "labels": [detection_name, "c2 server"],
+                                    "created_by_ref": self.identity,
+                                },
                             )
                             relationship = stix2.Relationship(
                                 id=StixCoreRelationship.generate_id(
@@ -384,15 +382,13 @@ class CapeSandboxConnector:
                             bundle_objects.append(relationship)
                         else:
                             domain = urlparse(address).hostname
-                            domain_stix = SimpleObservable(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "x-opencti-simple-observable"
-                                ),
-                                labels=[detection_name, "c2 server"],
-                                key="Domain-Name.value",
+                            domain_stix = DomainName(
                                 value=domain,
-                                created_by_ref=self.identity,
                                 object_marking_refs=[stix2.TLP_WHITE],
+                                custom_properties={
+                                    "labels": [detection_name, "c2 server"],
+                                    "created_by_ref": self.identity,
+                                },
                             )
                             relationship = stix2.Relationship(
                                 id=StixCoreRelationship.generate_id(
@@ -410,14 +406,12 @@ class CapeSandboxConnector:
 
         # Attach the domains
         for domain_dict in report.get("network", {}).get("domains", []):
-            domain_stix = SimpleObservable(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "x-opencti-simple-observable"
-                ),
-                key="Domain-Name.value",
+            domain_stix = DomainName(
                 value=domain_dict["domain"],
-                created_by_ref=self.identity,
                 object_marking_refs=[stix2.TLP_WHITE],
+                custom_properties={
+                    "created_by_ref": self.identity,
+                },
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -434,13 +428,10 @@ class CapeSandboxConnector:
         # Attach the IP addresses
         for host_dict in report.get("network", {}).get("hosts", []):
             host = host_dict["ip"]
-            host_stix = SimpleObservable(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "x-opencti-simple-observable"
-                ),
-                key="IPv4-Addr.value",
+            host_stix = IPv4Address(
                 value=host,
-                created_by_ref=self.identity,
+                object_marking_refs=[stix2.TLP_WHITE],
+                custom_properties={"created_by_ref": self.identity},
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -525,7 +516,6 @@ class CapeSandboxConnector:
                                 },
                                 object_marking_refs=[stix2.TLP_WHITE],
                             )
-
                             relationship = stix2.Relationship(
                                 id=StixCoreRelationship.generate_id(
                                     "uses", response["standard_id"], attack_pattern.id

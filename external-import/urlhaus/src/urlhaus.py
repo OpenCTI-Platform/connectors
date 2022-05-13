@@ -7,13 +7,8 @@ from datetime import datetime
 
 import certifi
 import yaml
-from pycti import (
-    OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    SimpleObservable,
-    get_config_variable,
-)
-from stix2 import TLP_WHITE, Bundle, ExternalReference
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2 import TLP_WHITE, Bundle, ExternalReference, URL
 
 
 class URLhaus:
@@ -114,24 +109,22 @@ class URLhaus:
                                     url=row[7],
                                     description="URLhaus repository URL",
                                 )
-                                stix_observable = SimpleObservable(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "x-opencti-simple-observable"
-                                    ),
-                                    key="Url.value",
+                                stix_observable = URL(
                                     value=row[2],
-                                    description="Threat: "
-                                    + row[5]
-                                    + " - Reporter: "
-                                    + row[8]
-                                    + " - Status: "
-                                    + row[3],
-                                    x_opencti_score=80,
                                     object_marking_refs=[TLP_WHITE],
-                                    labels=[x for x in row[6].split(",") if x],
-                                    created_by_ref=self.identity["standard_id"],
-                                    x_opencti_create_indicator=self.create_indicators,
-                                    external_references=[external_reference],
+                                    custom_properties={
+                                        "description": "Threat: "
+                                        + row[5]
+                                        + " - Reporter: "
+                                        + row[8]
+                                        + " - Status: "
+                                        + row[3],
+                                        "x_opencti_score": 80,
+                                        "labels": [x for x in row[6].split(",") if x],
+                                        "created_by_ref": self.identity["standard_id"],
+                                        "x_opencti_create_indicator": self.create_indicators,
+                                        "external_references": [external_reference],
+                                    },
                                 )
                                 bundle_objects.append(stix_observable)
                         fp.close()
