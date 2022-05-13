@@ -86,12 +86,14 @@ class TaniumConnector:
         try:
             data = json.loads(msg.data)["data"]
         except:
-            raise ValueError("Cannot process the message: " + msg)
+            raise ValueError("Cannot process the message")
         # Handle creation
         if msg.event == "create":
             if data["type"] == "indicator":
                 self.helper.log_info(
-                    "[CREATE] Processing indicator {" + data["x_opencti_id"] + "}"
+                    "[CREATE] Processing indicator {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
                 )
                 self.import_manager.import_intel_from_indicator(data)
             elif data["type"] in [
@@ -102,7 +104,9 @@ class TaniumConnector:
                 "process",
             ]:
                 self.helper.log_info(
-                    "[CREATE] Processing observable {" + data["x_opencti_id"] + "}"
+                    "[CREATE] Processing observable {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
                 )
                 self.import_manager.import_intel_from_observable(data)
             elif data["type"] in ["file", "artifact"]:
@@ -115,7 +119,9 @@ class TaniumConnector:
         if msg.event == "update":
             if data["type"] == "indicator":
                 self.helper.log_info(
-                    "[UPDATE] Processing indicator {" + data["x_opencti_id"] + "}"
+                    "[UPDATE] Processing indicator {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
                 )
                 self.import_manager.import_intel_from_indicator(data, True)
             elif data["type"] in [
@@ -128,7 +134,9 @@ class TaniumConnector:
                 "process",
             ]:
                 self.helper.log_info(
-                    "[UPDATE] Processing observable {" + data["x_opencti_id"] + "}"
+                    "[UPDATE] Processing observable {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
                 )
                 self.import_manager.import_intel_from_observable(data, True)
             return

@@ -3,6 +3,7 @@
 ######################
 
 import requests
+from pycti import OpenCTIConnectorHelper
 from stix2slider import slide_string
 from stix2slider.options import initialize_options
 
@@ -219,10 +220,11 @@ class TaniumApiHandler:
         try:
             initialize_options()
             stix_indicator = slide_string(stix2_bundle)
+            payload = {"intelDoc": stix_indicator}
             intel_document = self._query(
                 "put",
                 "/plugin/products/detect3/api/v1/intels/" + intel_id,
-                stix_indicator,
+                payload,
                 "application/xml",
                 "stix",
             )
@@ -345,8 +347,13 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": entity["x_opencti_description"]
-                if "x_opencti_description" in entity
+                "description": OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "description", entity
+                )
+                if OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "description", entity
+                )
+                is not None
                 else "",
                 "type": intel_type,
                 "text": value,
@@ -402,8 +409,13 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": entity["x_opencti_description"]
-                if "x_opencti_description" in entity
+                "description": OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "description", entity
+                )
+                if OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "description", entity
+                )
+                is not None
                 else "",
                 "type": intel_type,
                 "text": value,
@@ -444,8 +456,13 @@ class TaniumApiHandler:
                 entry["uploadedHash"] = entity["hashes"]["SHA-256"]
             else:
                 entry["sha256"] = ""
-            if "x_opencti_description" in entity:
-                entry["notes"] = entity["x_opencti_description"]
+            if (
+                OpenCTIConnectorHelper.get_attribute_in_extension("description", entity)
+                is not None
+            ):
+                entry["notes"] = OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "description", entity
+                )
             if "labels" in entity:
                 entry["notes"] = ",".join(entity["labels"])
             reputation_entry = self._query(
@@ -479,3 +496,36 @@ class TaniumApiHandler:
                         "intelDocId": intel_document_id,
                     },
                 )
+
+    def add_label(self, intel_id, label):
+        self._query(
+            "put",
+            "/plugin/products/detect3/api/v1/intels/" + str(intel_id) + "/labels",
+            {"id": label["id"]},
+        )
+
+    def get_labels(self, labels):
+        # List labels
+        tanium_labels = self._query(
+            "get", "/plugin/products/detect3/api/v1/labels", {"limit": 500}
+        )
+        tanium_labels_dict = {}
+        for tanium_label in tanium_labels:
+            tanium_labels_dict[tanium_label["name"].lower()] = tanium_label
+        final_labels = []
+        for label in labels:
+            # Label already exists
+            if label in tanium_labels_dict:
+                final_labels.append(tanium_labels_dict[label])
+            # Create the label
+            else:
+                created_label = self._query(
+                    "post",
+                    "/plugin/products/detect3/api/v1/labels",
+                    {
+                        "name": label,
+                        "description": "Label imported from OpenCTI",
+                    },
+                )
+                final_labels.append(created_label)
+        return final_labels
