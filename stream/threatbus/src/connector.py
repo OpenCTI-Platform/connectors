@@ -205,24 +205,18 @@ class ThreatBusConnector(object):
             (either `create`, `update` or `delete`)
         @return a STIX-2 Indicator or None
         """
-        opencti_id: str = data.get("x_opencti_id", None)
+        opencti_id: str = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         if not opencti_id:
             self.opencti_helper.log_error(
                 "Cannot process data without 'x_opencti_id' field"
             )
             return
-
-        event_id = data.get("id", None)
-        update = data.get("x_data_update", {})
-        added = update.get("add", {})
-        added_ids = added.get("x_opencti_stix_ids", [])
-        type_ = data.get("type", None)
-        if type_ == "indicator" and len(added_ids) == 1 and added_ids[0] == event_id:
-            # Discard the update if it was empty. An update is empty when the
-            # only "changed" attribute is the stix_id and it changed to its own
-            # already existing value. Example:
-            # data ~ {'id': 'XXX', 'x_data_update': {'add': {'x_opencti_stix_ids': ['XXX']}}}
-            return
+        # if type_ == "indicator" and len(added_ids) == 1 and added_ids[0] == event_id:
+        # Discard the update if it was empty. An update is empty when the
+        # only "changed" attribute is the stix_id and it changed to its own
+        # already existing value. Example:
+        # data ~ {'id': 'XXX', 'x_data_update': {'add': {'x_opencti_stix_ids': ['XXX']}}}
+        #   return
 
         if opencti_action == "delete":
             indicator: dict = data

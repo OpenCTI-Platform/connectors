@@ -109,30 +109,42 @@ class SplunkConnector:
         # Handle creation
         if msg.event == "create":
             self.helper.log_info(
-                "[CREATE] Processing data {" + data["x_opencti_id"] + "}"
+                "[CREATE] Processing data {"
+                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                + "}"
             )
-            data["_key"] = data["x_opencti_id"]
+            data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
             return self._query("post", "/data/" + self.splunk_kv_store_name, data, True)
         # Handle update
         if msg.event == "update":
             self.helper.log_info(
-                "[UPDATE] Processing data {" + data["x_opencti_id"] + "}"
+                "[UPDATE] Processing data {"
+                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                + "}"
             )
-            data["_key"] = data["x_opencti_id"]
+            data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
             return self._query(
                 "post",
-                "/data/" + self.splunk_kv_store_name + "/" + data["x_opencti_id"],
+                "/data/"
+                + self.splunk_kv_store_name
+                + "/"
+                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
                 data,
                 True,
             )
         # Handle delete
         elif msg.event == "delete":
             self.helper.log_info(
-                "[DELETE] Processing data {" + data["x_opencti_id"] + "}"
+                "[DELETE] Processing data {"
+                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                + "}"
             )
             return self._query(
                 "delete",
-                "/data/" + self.splunk_kv_store_name + "/" + data["x_opencti_id"],
+                "/data/"
+                + self.splunk_kv_store_name
+                + "/"
+                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
                 data,
             )
         return None
