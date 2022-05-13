@@ -93,32 +93,3 @@ class SentinelOneApi:
             print(f"Failed to download threat, exception: {e}")
 
         return file_contents
-
-
-if __name__ == "__main__":
-    """
-    For local testing purposes
-    """
-
-    parser = argparse.ArgumentParser(description="For local testing purposes.")
-    parser.add_argument(
-        "-a",
-        "--api-url",
-        help="The base URL for SentinelOne, e.g. https://xxxxxx.sentinelone.net",
-        required=True,
-    )
-    parser.add_argument(
-        "-t",
-        "--token",
-        help="The API token with threats view and threats download file permissions",
-        required=True,
-    )
-    args = parser.parse_args()
-
-    api_url = args.api_url
-    api_token = args.token
-
-    s1 = SentinelOneApi(api_url=api_url, api_token=api_token)
-
-    for threats_list in s1.get_threats():
-        print(json.dumps(threats_list, indent=4, sort_keys=True))
