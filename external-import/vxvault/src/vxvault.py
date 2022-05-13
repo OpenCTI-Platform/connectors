@@ -1,23 +1,16 @@
 import os
-import yaml
+import ssl
 import time
 import urllib.request
-import certifi
-import ssl
-
 from datetime import datetime
+
+import certifi
+import yaml
 from pycti import (
     OpenCTIConnectorHelper,
     get_config_variable,
-    SimpleObservable,
-    OpenCTIStix2Utils,
 )
-
-from stix2 import (
-    Bundle,
-    ExternalReference,
-    TLP_WHITE,
-)
+from stix2 import TLP_WHITE, Bundle, ExternalReference, URL
 
 
 class VXVault:
@@ -115,18 +108,16 @@ class VXVault:
                                     url="http://vxvault.net",
                                     description="VX Vault repository URL",
                                 )
-                                stix_observable = SimpleObservable(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "x-opencti-simple-observable"
-                                    ),
-                                    key="Url.value",
+                                stix_observable = URL(
                                     value=line,
-                                    description="VX Vault URL",
-                                    x_opencti_score=80,
                                     object_marking_refs=[TLP_WHITE],
-                                    created_by_ref=self.identity["standard_id"],
-                                    x_opencti_create_indicator=self.create_indicators,
-                                    external_references=[external_reference],
+                                    custom_properties={
+                                        "description": "VX Vault URL",
+                                        "x_opencti_score": 80,
+                                        "created_by_ref": self.identity["standard_id"],
+                                        "x_opencti_create_indicator": self.create_indicators,
+                                        "external_references": [external_reference],
+                                    },
                                 )
                                 bundle_objects.append(stix_observable)
                         bundle = Bundle(

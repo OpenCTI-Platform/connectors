@@ -6,13 +6,10 @@ from datetime import datetime
 from io import StringIO
 from typing import Any, List, Mapping, Optional, Tuple
 
-from pycti import OpenCTIConnectorHelper  # type: ignore
-
-from stix2 import Identity, Indicator, MarkingDefinition  # type: ignore
-
 from kaspersky.models import Yara, YaraRule
 from kaspersky.utils.stix2 import create_indicator
-
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from stix2 import Identity, Indicator, MarkingDefinition  # type: ignore
 
 log = logging.getLogger(__name__)
 

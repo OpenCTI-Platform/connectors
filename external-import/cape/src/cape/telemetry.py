@@ -1,5 +1,5 @@
 from datetime import datetime
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+
 from cape.cape import (
     cuckooPayload,
     cuckooReport,
@@ -12,23 +12,24 @@ from cape.cape import (
     cuckooReportTTP,
     cuckooTarget,
 )
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import (
-    IPv4Address,
-    DomainName,
-    Process,
-    Relationship,
-    Malware,
-    ExternalReference,
-    Bundle,
-    File,
-    NetworkTraffic,
-    WindowsRegistryKey,
-    Indicator,
-    Report,
     TLP_AMBER,
     TLP_GREEN,
     TLP_RED,
     TLP_WHITE,
+    Bundle,
+    DomainName,
+    ExternalReference,
+    File,
+    Indicator,
+    IPv4Address,
+    Malware,
+    NetworkTraffic,
+    Process,
+    Relationship,
+    Report,
+    WindowsRegistryKey,
 )
 
 

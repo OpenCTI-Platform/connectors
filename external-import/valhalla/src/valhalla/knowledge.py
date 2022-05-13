@@ -2,16 +2,16 @@
 """OpenCTI Valhalla Knowledge importer module."""
 
 import re
-import requests
-
 from datetime import datetime
 from typing import Any, Mapping
 from urllib.parse import urlparse
+
+import requests
 from dateutil.relativedelta import relativedelta
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from stix2 import Bundle, ExternalReference, Identity, Indicator, Relationship
 
 from .models import ApiResponse, StixEnterpriseAttack
-from stix2 import Bundle, Identity, Indicator, ExternalReference, Relationship
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 
 class KnowledgeImporter:

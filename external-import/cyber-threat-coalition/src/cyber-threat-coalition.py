@@ -1,17 +1,23 @@
 # coding: utf-8
 
 import os
-from typing import Optional, Dict, Any, Mapping
-import yaml
-import time
-import requests
 import re
-import stix2
+import time
 import urllib.parse
-
 from datetime import datetime
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils, SimpleObservable
+from typing import Any, Dict, Mapping, Optional
+
+import requests
+import stix2
+import yaml
+from pycti import (
+    Identity,
+    Indicator,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
+from stix2 import URL, DomainName, File, IPv4Address
 
 
 class CyberThreatCoalition:
@@ -99,9 +105,10 @@ class CyberThreatCoalition:
         bundle_objects = list()
 
         # create an identity for the coalition team
+        identity_name = "Cyber Threat Coalition Team"
         organization = stix2.Identity(
-            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
-            name="Cyber Threat Coalition Team",
+            id=Identity.generate_id(identity_name, "organization"),
+            name=identity_name,
             identity_class="organization",
             description="Team of Experts collecting and sharing pandemic related "
             "cyber threat intelligence during the COVID-19 crisis time",
@@ -146,7 +153,11 @@ class CyberThreatCoalition:
                         return
                     if self.cyber_threat_coalition_create_indicators:
                         indicator = stix2.Indicator(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("indicator"),
+                            id=Indicator.generate_id(
+                                self._INDICATOR_PATTERN[observable_resolver].format(
+                                    data
+                                )
+                            ),
                             name=data,
                             pattern_type=pattern_type,
                             pattern=self._INDICATOR_PATTERN[observable_resolver].format(
@@ -162,33 +173,45 @@ class CyberThreatCoalition:
                         bundle_objects.append(indicator)
                         report_object_refs.append(indicator["id"])
                     if self.cyber_threat_coalition_create_observables:
-                        observable = SimpleObservable(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "x-opencti-simple-observable"
-                            ),
-                            key=observable_type
-                            + "."
-                            + ".".join(self._OBSERVABLE_PATH[observable_resolver]),
-                            value=data,
-                            labels=labels,
-                            created_by_ref=organization,
-                            object_marking_refs=[stix2.TLP_WHITE],
-                        )
-                        bundle_objects.append(observable)
-                        report_object_refs.append(observable["id"])
-                        if indicator is not None:
-                            relationship = stix2.Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
-                                ),
-                                relationship_type="based-on",
-                                created_by_ref=organization,
-                                source_ref=indicator.id,
-                                target_ref=observable.id,
-                                allow_custom=True,
+                        observable = None
+                        if observable_type == "Domain-Name":
+                            observable = DomainName(
+                                value=data, custom_properties={"labels": labels}
                             )
-                            bundle_objects.append(relationship)
-                            report_object_refs.append(relationship["id"])
+                        elif observable_type == "IPv4-Addr":
+                            observable = IPv4Address(
+                                value=data, custom_properties={"labels": labels}
+                            )
+                        elif observable_type == "Url":
+                            observable = URL(
+                                value=data, custom_properties={"labels": labels}
+                            )
+                        elif observable_type == "File":
+                            hashes = {}
+                            hashes[
+                                CyberThreatCoalition._OBSERVABLE_PATH[
+                                    observable_resolver
+                                ][1]
+                            ] = data
+                            observable = File(
+                                hashes=hashes, custom_properties={"labels": labels}
+                            )
+                        if observable is not None:
+                            bundle_objects.append(observable)
+                            report_object_refs.append(observable["id"])
+                            if indicator is not None:
+                                relationship = stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "based-on", indicator.id, observable.id
+                                    ),
+                                    relationship_type="based-on",
+                                    created_by_ref=organization,
+                                    source_ref=indicator.id,
+                                    target_ref=observable.id,
+                                    allow_custom=True,
+                                )
+                                bundle_objects.append(relationship)
+                                report_object_refs.append(relationship["id"])
 
         # create a global threat report
         report_uuid = "report--552b3ae6-8522-409d-8b72-a739bc1926aa"

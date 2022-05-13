@@ -2,13 +2,13 @@
 # OpenCTI Backup Files         #
 ################################
 import datetime
-import os
-import yaml
 import json
+import os
 import sys
 
-from pycti import OpenCTIConnectorHelper, get_config_variable, StixMetaTypes
+import yaml
 from dateutil import parser
+from pycti import OpenCTIConnectorHelper, StixMetaTypes, get_config_variable
 
 
 def round_time(dt, round_to=60):

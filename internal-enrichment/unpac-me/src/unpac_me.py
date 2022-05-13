@@ -1,21 +1,13 @@
 # coding: utf-8
 
 import os
-import yaml
 import time
+
 import magic
+import stix2
+import yaml
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 from unpac_me_api_client import UnpacMeApi, UnpacMeStatus
-
-
-from stix2 import (
-    Bundle,
-    Relationship,
-)
-from pycti import (
-    OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    get_config_variable,
-)
 
 
 class UnpacMeConnector:
@@ -129,8 +121,10 @@ class UnpacMeConnector:
             response = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
 
             # Create Relationship between original and newly uploaded Artifact
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to", response["standard_id"], observable["standard_id"]
+                ),
                 relationship_type="related-to",
                 created_by_ref=self.identity,
                 source_ref=response["standard_id"],
@@ -162,7 +156,7 @@ class UnpacMeConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:

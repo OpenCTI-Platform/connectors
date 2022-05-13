@@ -3,11 +3,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Mapping, Optional
 
-from pycti import OpenCTIConnectorHelper  # type: ignore
-
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-
 from kaspersky.client import KasperskyClient
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 
 class BaseImporter(ABC):

@@ -4,25 +4,7 @@ import base64
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Union
 
-from pycti import OpenCTIStix2Utils  # type: ignore
-from pycti.utils.constants import LocationTypes  # type: ignore
-
-from stix2 import (  # type: ignore
-    ExternalReference,
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Location,
-    MarkingDefinition,
-    Relationship,
-    Report,
-    TLP_AMBER,
-    TLP_GREEN,
-    TLP_RED,
-    TLP_WHITE,
-)
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
-
+import stix2
 from kaspersky.utils.common import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_FILES,
@@ -75,17 +57,26 @@ from kaspersky.utils.observables import (
     create_observable_x509_certificate_serial_number,
     create_observable_x509_certificate_subject,
 )
-
+from pycti import (
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Report,
+    StixCoreRelationship,
+)
+from pycti.utils.constants import LocationTypes  # type: ignore
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
 _TLP_MARKING_DEFINITION_MAPPING = {
-    "white": TLP_WHITE,
-    "green": TLP_GREEN,
-    "amber": TLP_AMBER,
-    "red": TLP_RED,
+    "white": stix2.TLP_WHITE,
+    "green": stix2.TLP_GREEN,
+    "amber": stix2.TLP_AMBER,
+    "red": stix2.TLP_RED,
 }
 
 
-DEFAULT_TLP_MARKING_DEFINITION = TLP_AMBER
+DEFAULT_TLP_MARKING_DEFINITION = stix2.TLP_AMBER
 
 
 _INDICATOR_PATTERN_TYPE_STIX = "stix"
@@ -95,18 +86,18 @@ class Observation(NamedTuple):
     """Observation."""
 
     observable: Optional[_Observable]
-    indicator: Optional[Indicator]
-    relationship: Optional[Relationship]
+    indicator: Optional[stix2.Indicator]
+    relationship: Optional[stix2.Relationship]
 
 
 class ObservationConfig(NamedTuple):
     """Observation configuration."""
 
     value: str
-    created_by: Identity
+    created_by: stix2.Identity
     labels: List[str]
     confidence: int
-    object_markings: List[MarkingDefinition]
+    object_markings: List[stix2.MarkingDefinition]
     description: Optional[str] = None
     created: Optional[datetime] = None
     modified: Optional[datetime] = None
@@ -251,7 +242,7 @@ OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT = ObservationFactory(
 )
 
 
-def get_tlp_string_marking_definition(tlp: str) -> MarkingDefinition:
+def get_tlp_string_marking_definition(tlp: str) -> stix2.MarkingDefinition:
     """Get marking definition for given TLP."""
     marking_definition = _TLP_MARKING_DEFINITION_MAPPING.get(tlp.lower())
     if marking_definition is None:
@@ -260,25 +251,21 @@ def get_tlp_string_marking_definition(tlp: str) -> MarkingDefinition:
     return marking_definition
 
 
-def _create_random_identifier(identifier_type: str) -> str:
-    return OpenCTIStix2Utils.generate_random_stix_id(identifier_type)
-
-
 def create_identity(
     name: str,
     identity_id: Optional[str] = None,
-    created_by: Optional[Identity] = None,
+    created_by: Optional[stix2.Identity] = None,
     identity_class: Optional[str] = None,
     custom_properties: Optional[Mapping[str, Any]] = None,
-) -> Identity:
+) -> stix2.Identity:
     """Create an identity."""
     if identity_id is None:
-        identity_id = _create_random_identifier("identity")
+        identity_id = Identity.generate_id(name, identity_class)
 
     if custom_properties is None:
         custom_properties = {}
 
-    return Identity(
+    return stix2.Identity(
         id=identity_id,
         created_by_ref=created_by,
         name=name,
@@ -287,7 +274,9 @@ def create_identity(
     )
 
 
-def create_organization(name: str, created_by: Optional[Identity] = None) -> Identity:
+def create_organization(
+    name: str, created_by: Optional[stix2.Identity] = None
+) -> stix2.Identity:
     """Create an organization."""
     return create_identity(
         name,
@@ -296,7 +285,9 @@ def create_organization(name: str, created_by: Optional[Identity] = None) -> Ide
     )
 
 
-def create_sector(name: str, created_by: Optional[Identity] = None) -> Identity:
+def create_sector(
+    name: str, created_by: Optional[stix2.Identity] = None
+) -> stix2.Identity:
     """Create a sector."""
     return create_identity(
         name,
@@ -311,13 +302,17 @@ def create_location(
     region: Optional[str] = None,
     country: Optional[str] = None,
     custom_properties: Optional[Mapping[str, Any]] = None,
-) -> Location:
+) -> stix2.Location:
     """Create a location."""
     if custom_properties is None:
         custom_properties = {}
 
-    return Location(
-        id=_create_random_identifier("location"),
+    location_id = Location.generate_id(name, "Region")
+    if country is not None:
+        location_id = Location.generate_id(name, "Country")
+
+    return stix2.Location(
+        id=location_id,
         created_by_ref=created_by,
         name=name,
         region=region,
@@ -326,7 +321,9 @@ def create_location(
     )
 
 
-def create_country(name: str, created_by: Optional[Identity] = None) -> Location:
+def create_country(
+    name: str, created_by: Optional[stix2.Identity] = None
+) -> stix2.Location:
     """Create a country."""
     return create_location(
         name,
@@ -338,7 +335,9 @@ def create_country(name: str, created_by: Optional[Identity] = None) -> Location
     )
 
 
-def create_region(name: str, created_by: Optional[Identity] = None) -> Location:
+def create_region(
+    name: str, created_by: Optional[stix2.Identity] = None
+) -> stix2.Location:
     """Create a region."""
     return create_location(
         name,
@@ -351,7 +350,7 @@ def create_region(name: str, created_by: Optional[Identity] = None) -> Location:
 def create_intrusion_set(
     name: str,
     intrusion_set_id: Optional[str] = None,
-    created_by: Optional[Identity] = None,
+    created_by: Optional[stix2.Identity] = None,
     created: Optional[datetime] = None,
     modified: Optional[datetime] = None,
     description: Optional[str] = None,
@@ -364,14 +363,14 @@ def create_intrusion_set(
     secondary_motivations: Optional[List[str]] = None,
     labels: Optional[List[str]] = None,
     confidence: Optional[int] = None,
-    external_references: Optional[List[ExternalReference]] = None,
-    object_markings: Optional[List[MarkingDefinition]] = None,
-) -> IntrusionSet:
+    external_references: Optional[List[stix2.ExternalReference]] = None,
+    object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+) -> stix2.IntrusionSet:
     """Create a intrusion set."""
     if intrusion_set_id is None:
-        intrusion_set_id = _create_random_identifier("intrusion-set")
+        intrusion_set_id = IntrusionSet.generate_id(name)
 
-    return IntrusionSet(
+    return stix2.IntrusionSet(
         id=intrusion_set_id,
         created_by_ref=created_by,
         created=created,
@@ -394,16 +393,19 @@ def create_intrusion_set(
 
 def create_relationship(
     relationship_type: str,
-    created_by: Identity,
+    created_by: stix2.Identity,
     source: _DomainObject,
     target: _DomainObject,
     confidence: int,
-    object_markings: List[MarkingDefinition],
+    object_markings: List[stix2.MarkingDefinition],
     start_time: Optional[datetime] = None,
     stop_time: Optional[datetime] = None,
-) -> Relationship:
+) -> stix2.Relationship:
     """Create a relationship."""
-    return Relationship(
+    return stix2.Relationship(
+        id=StixCoreRelationship.generate_id(
+            relationship_type, source.id, target.id, start_time, stop_time
+        ),
         created_by_ref=created_by,
         relationship_type=relationship_type,
         source_ref=source,
@@ -418,14 +420,14 @@ def create_relationship(
 
 def create_relationships(
     relationship_type: str,
-    created_by: Identity,
+    created_by: stix2.Identity,
     sources: List[_DomainObject],
     targets: List[_DomainObject],
     confidence: int,
-    object_markings: List[MarkingDefinition],
+    object_markings: List[stix2.MarkingDefinition],
     start_time: Optional[datetime] = None,
     stop_time: Optional[datetime] = None,
-) -> List[Relationship]:
+) -> List[stix2.Relationship]:
     """Create relationships."""
     relationships = []
     for source in sources:
@@ -445,14 +447,14 @@ def create_relationships(
 
 
 def create_targets_relationships(
-    created_by: Identity,
+    created_by: stix2.Identity,
     sources: List[_DomainObject],
     targets: List[_DomainObject],
     confidence: int,
-    object_markings: List[MarkingDefinition],
+    object_markings: List[stix2.MarkingDefinition],
     start_time: Optional[datetime] = None,
     stop_time: Optional[datetime] = None,
-) -> List[Relationship]:
+) -> List[stix2.Relationship]:
     """Create 'targets' relationships."""
     return create_relationships(
         "targets",
@@ -467,14 +469,14 @@ def create_targets_relationships(
 
 
 def create_indicates_relationships(
-    created_by: Identity,
+    created_by: stix2.Identity,
     sources: List[_DomainObject],
     targets: List[_DomainObject],
     confidence: int,
-    object_markings: List[MarkingDefinition],
+    object_markings: List[stix2.MarkingDefinition],
     start_time: Optional[datetime] = None,
     stop_time: Optional[datetime] = None,
-) -> List[Relationship]:
+) -> List[stix2.Relationship]:
     """Create 'indicates' relationships."""
     return create_relationships(
         "indicates",
@@ -489,14 +491,14 @@ def create_indicates_relationships(
 
 
 def create_based_on_relationships(
-    created_by: Identity,
+    created_by: stix2.Identity,
     sources: List[_DomainObject],
     targets: List[_DomainObject],
     confidence: int,
-    object_markings: List[MarkingDefinition],
+    object_markings: List[stix2.MarkingDefinition],
     start_time: Optional[datetime] = None,
     stop_time: Optional[datetime] = None,
-) -> List[Relationship]:
+) -> List[stix2.Relationship]:
     """Create 'based-on' relationships."""
     return create_relationships(
         "based-on",
@@ -533,23 +535,23 @@ def create_report(
     published: datetime,
     objects: List[Union[_DomainObject, _RelationshipObject]],
     report_id: Optional[str] = None,
-    created_by: Optional[Identity] = None,
+    created_by: Optional[stix2.Identity] = None,
     created: Optional[datetime] = None,
     modified: Optional[datetime] = None,
     description: Optional[str] = None,
     report_types: Optional[List[str]] = None,
     labels: Optional[List[str]] = None,
     confidence: Optional[int] = None,
-    external_references: Optional[List[ExternalReference]] = None,
-    object_markings: Optional[List[MarkingDefinition]] = None,
+    external_references: Optional[List[stix2.ExternalReference]] = None,
+    object_markings: Optional[List[stix2.MarkingDefinition]] = None,
     x_opencti_report_status: Optional[int] = None,
     x_opencti_files: Optional[List[Mapping[str, str]]] = None,
-) -> Report:
+) -> stix2.Report:
     """Create a report."""
     if report_id is None:
-        report_id = _create_random_identifier("report")
+        report_id = Report.generate_id(name, published)
 
-    return Report(
+    return stix2.Report(
         id=report_id,
         created_by_ref=created_by,
         created=created,
@@ -585,7 +587,7 @@ def create_file_pdf(name: str, data: bytes) -> Mapping[str, str]:
 def create_indicator(
     pattern: str,
     pattern_type: str,
-    created_by: Optional[Identity] = None,
+    created_by: Optional[stix2.Identity] = None,
     created: Optional[datetime] = None,
     modified: Optional[datetime] = None,
     name: Optional[str] = None,
@@ -593,9 +595,9 @@ def create_indicator(
     valid_from: Optional[datetime] = None,
     labels: Optional[List[str]] = None,
     confidence: Optional[int] = None,
-    object_markings: Optional[List[MarkingDefinition]] = None,
+    object_markings: Optional[List[stix2.MarkingDefinition]] = None,
     x_opencti_main_observable_type: Optional[str] = None,
-) -> Indicator:
+) -> stix2.Indicator:
     """Create an indicator."""
     custom_properties: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
 
@@ -604,8 +606,8 @@ def create_indicator(
             X_OPENCTI_MAIN_OBSERVABLE_TYPE
         ] = x_opencti_main_observable_type
 
-    return Indicator(
-        id=_create_random_identifier("indicator"),
+    return stix2.Indicator(
+        id=Indicator.generate_id(pattern),
         created_by_ref=created_by,
         created=created,
         modified=modified,

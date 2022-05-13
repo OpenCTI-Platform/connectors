@@ -1,8 +1,11 @@
-import os, time, yaml
+import os
+import time
 from datetime import datetime
-from pycti import OpenCTIConnectorHelper, get_config_variable
+
+import yaml
 from cape.cape import cuckoo, cuckooReport
 from cape.telemetry import openCTIInterface
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class capeConnector:

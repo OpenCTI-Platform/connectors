@@ -8,7 +8,6 @@ from pydantic import BaseModel, validator
 from pydantic.datetime_parse import parse_date, parse_datetime
 from pydantic.errors import DateError, DateTimeError
 
-
 log = logging.getLogger(__name__)
 
 

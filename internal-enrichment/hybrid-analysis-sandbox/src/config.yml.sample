@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'Hybrid Analysis (Sandbox Windows 10 64bit)'
-  scope: 'StixFile,Artifact,Url,Domain,X-OpenCTI-Hostname'
+  scope: 'StixFile,Artifact,Url,Domain,Hostname'
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'

@@ -1,40 +1,106 @@
-import re
-import os
-import yaml
-import time
 import json
-
+import os
+import re
+import time
 from datetime import datetime
+
+import stix2
+import yaml
+from pycti import (
+    AttackPattern,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Malware,
+    Note,
+    OpenCTIConnectorHelper,
+    Report,
+    StixCoreRelationship,
+    StixSightingRelationship,
+    Tool,
+    get_config_variable,
+)
 from pymisp import ExpandedPyMISP
 from stix2 import (
-    Bundle,
-    Identity,
-    IntrusionSet,
-    Malware,
-    Tool,
-    AttackPattern,
-    Report,
-    Indicator,
-    Relationship,
-    ExternalReference,
-    Sighting,
-    Location,
-    TLP_WHITE,
-    TLP_GREEN,
-    TLP_AMBER,
-    TLP_RED,
-    ObjectPath,
-    EqualityComparisonExpression,
-    ObservationExpression,
-    Note,
+    URL,
+    AutonomousSystem,
+    CustomObservable,
+    Directory,
+    DomainName,
+    EmailAddress,
+    EmailMessage,
+    File,
+    IPv4Address,
+    IPv6Address,
+    MACAddress,
+    Mutex,
+    WindowsRegistryKey,
+    WindowsRegistryValueType,
 )
+from stix2.properties import ListProperty  # type: ignore # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
 
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    SimpleObservable,
-    OpenCTIStix2Utils,
+
+@CustomObservable(
+    "cryptocurrency-wallet",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
 )
+class CryptocurrencyWallet:
+    """Cryptocurrency wallet observable."""
+
+    pass
+
+
+@CustomObservable(
+    "hostname",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Hostname:
+    """Hostname observable."""
+
+    pass
+
+
+@CustomObservable(
+    "text",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Text:
+    """Text observable."""
+
+    pass
+
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -44,7 +110,7 @@ OPENCTISTIX2 = {
         "transform": {"operation": "remove_string", "value": "AS"},
     },
     "mac-addr": {"type": "mac-addr", "path": ["value"]},
-    "hostname": {"type": "x-opencti-hostname", "path": ["value"]},
+    "hostname": {"type": "hostname", "path": ["value"]},
     "domain": {"type": "domain-name", "path": ["value"]},
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
@@ -66,7 +132,7 @@ OPENCTISTIX2 = {
         "type": "x509-certificate",
         "path": ["serial_number"],
     },
-    "text": {"type": "x-opencti-text", "path": ["value"]},
+    "text": {"type": "text", "path": ["value"]},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
@@ -409,7 +475,7 @@ class Misp:
 
             ### Pre-process
             # Author
-            author = Identity(
+            author = stix2.Identity(
                 name=event["Event"]["Orgc"]["name"],
                 identity_class="organization",
             )
@@ -417,7 +483,7 @@ class Misp:
             if "Tag" in event["Event"]:
                 event_markings = self.resolve_markings(event["Event"]["Tag"])
             else:
-                event_markings = [TLP_WHITE]
+                event_markings = [stix2.TLP_WHITE]
             # Elements
             event_elements = self.prepare_elements(
                 event["Event"]["Galaxy"],
@@ -434,7 +500,7 @@ class Misp:
                 url = self.misp_reference_url + "/events/view/" + event["Event"]["uuid"]
             else:
                 url = self.misp_url + "/events/view/" + event["Event"]["uuid"]
-            event_external_reference = ExternalReference(
+            event_external_reference = stix2.ExternalReference(
                 source_name=self.helper.connect_name,
                 description=event["Event"]["info"],
                 external_id=event["Event"]["uuid"],
@@ -458,7 +524,7 @@ class Misp:
                 )
                 if attribute["type"] == "link":
                     event_external_references.append(
-                        ExternalReference(
+                        stix2.ExternalReference(
                             source_name=attribute["category"],
                             external_id=attribute["uuid"],
                             url=attribute["value"],
@@ -481,7 +547,7 @@ class Misp:
                 for attribute in object["Attribute"]:
                     if attribute["type"] == "link":
                         attribute_external_references.append(
-                            ExternalReference(
+                            stix2.ExternalReference(
                                 source_name=attribute["category"],
                                 external_id=attribute["uuid"],
                                 url=attribute["value"],
@@ -503,19 +569,18 @@ class Misp:
                             + object["Attribute"][0]["value"]
                             + ")"
                         )
-
-                    object_observable = SimpleObservable(
-                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                            "x-opencti-simple-observable"
-                        ),
-                        key="X-OpenCTI-Text.value",
+                    object_observable = Text(
                         value=object["name"] + unique_key,
-                        description=object["description"],
-                        x_opencti_score=self.threat_level_to_score(event_threat_level),
-                        labels=event_tags,
-                        created_by_ref=author,
                         object_marking_refs=event_markings,
-                        external_references=attribute_external_references,
+                        custom_properties={
+                            "description": object["description"],
+                            "x_opencti_score": self.threat_level_to_score(
+                                event_threat_level
+                            ),
+                            "labels": event_tags,
+                            "created_by_ref": author,
+                            "external_references": attribute_external_references,
+                        },
                     )
                     objects_observables.append(object_observable)
                 object_attributes = []
@@ -641,8 +706,12 @@ class Misp:
                         )
                         if src_result is not None and target_result is not None:
                             objects_relationships.append(
-                                Relationship(
-                                    id="relationship--" + ref["uuid"],
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "related-to",
+                                        src_result["entity"]["id"],
+                                        target_result["entity"]["id"],
+                                    ),
                                     relationship_type="related-to",
                                     created_by_ref=author,
                                     description="Original Relationship: "
@@ -680,8 +749,17 @@ class Misp:
             # Create the report if needed
             # Report in STIX must have at least one object_refs
             if self.misp_create_report and len(object_refs) > 0:
-                report = Report(
-                    id="report--" + event["Event"]["uuid"],
+                report = stix2.Report(
+                    id=Report.generate_id(
+                        event["Event"]["info"],
+                        datetime.utcfromtimestamp(
+                            int(
+                                datetime.strptime(
+                                    str(event["Event"]["date"]), "%Y-%m-%d"
+                                ).timestamp()
+                            )
+                        ),
+                    ),
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
                     published=datetime.utcfromtimestamp(
@@ -715,8 +793,8 @@ class Misp:
                 )
                 bundle_objects.append(report)
                 for note in event["Event"]["EventReport"]:
-                    note = Note(
-                        id="note--" + note["uuid"],
+                    note = stix2.Note(
+                        id=Note.generate_id(),
                         confidence=self.helper.connect_confidence_level,
                         created=datetime.utcfromtimestamp(
                             int(note["timestamp"])
@@ -732,7 +810,7 @@ class Misp:
                         allow_custom=True,
                     )
                     bundle_objects.append(note)
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
             try:
                 self.helper.send_stix2_bundle(
@@ -853,13 +931,13 @@ class Misp:
                             OPENCTISTIX2[observable_resolver]["transform"]["value"],
                             "",
                         )
-                lhs = ObjectPath(
+                lhs = stix2.ObjectPath(
                     OPENCTISTIX2[observable_resolver]["type"],
                     OPENCTISTIX2[observable_resolver]["path"],
                 )
                 genuine_pattern = str(
-                    ObservationExpression(
-                        EqualityComparisonExpression(lhs, observable_value)
+                    stix2.ObservationExpression(
+                        stix2.EqualityComparisonExpression(lhs, observable_value)
                     )
                 )
                 pattern = genuine_pattern
@@ -873,8 +951,8 @@ class Misp:
             indicator = None
             if self.misp_create_indicators:
                 try:
-                    indicator = Indicator(
-                        id="indicator--" + attribute["uuid"],
+                    indicator = stix2.Indicator(
+                        id=Indicator.generate_id(pattern),
                         name=name,
                         description=attribute["comment"],
                         confidence=self.helper.connect_confidence_level,
@@ -904,19 +982,131 @@ class Misp:
             observable = None
             if self.misp_create_observables and observable_type is not None:
                 try:
-                    observable = SimpleObservable(
-                        id="x-opencti-simple-observable--" + attribute["uuid"],
-                        key=observable_type
-                        + "."
-                        + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
-                        value=observable_value,
-                        description=attribute["comment"],
-                        x_opencti_score=score,
-                        labels=attribute_tags,
-                        created_by_ref=author,
-                        object_marking_refs=attribute_markings,
-                        external_references=attribute_external_references,
-                    )
+                    custom_properties = {
+                        "description": attribute["comment"],
+                        "x_opencti_score": score,
+                        "labels": attribute_tags,
+                        "created_by_ref": author,
+                        "external_references": attribute_external_references,
+                    }
+                    observable = None
+                    if observable_type == "autonomous-system":
+                        observable = AutonomousSystem(
+                            number=observable_value.replace("AS", ""),
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "mac-addr":
+                        observable = MACAddress(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "hostname":
+                        observable = Hostname(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "domain-name":
+                        observable = DomainName(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "ipv4-addr":
+                        observable = IPv4Address(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "ipv6-addr":
+                        observable = IPv6Address(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "url":
+                        observable = URL(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "email-address":
+                        observable = EmailAddress(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "email-message":
+                        observable = EmailMessage(
+                            subject=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "mutex":
+                        observable = Mutex(
+                            name=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "file":
+                        if OPENCTISTIX2[observable_resolver]["path"][0] == "name":
+                            observable = File(
+                                name=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                        elif OPENCTISTIX2[observable_resolver]["path"][1] == "hashes":
+                            hashes = {}
+                            hashes[
+                                OPENCTISTIX2[observable_resolver]["path"][1]
+                            ] = observable_value
+                            observable = File(
+                                hashes=hashes,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                    elif observable_type == "directory":
+                        observable = Directory(
+                            path=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "windows-registry-key":
+                        observable = WindowsRegistryKey(
+                            key=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "ewindows-registry-value-type":
+                        observable = WindowsRegistryValueType(
+                            data=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "x509-certificate":
+                        if OPENCTISTIX2[observable_resolver]["path"][0] == "issuer":
+                            observable = File(
+                                issuer=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                        elif (
+                            OPENCTISTIX2[observable_resolver]["path"][1]
+                            == "serial_number"
+                        ):
+                            observable = File(
+                                serial_number=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                    elif observable_type == "text":
+                        observable = Text(
+                            data=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
                 except Exception as e:
                     self.helper.log_error(str(e))
             sightings = []
@@ -924,8 +1114,10 @@ class Misp:
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
                     if "Organisation" in misp_sighting:
-                        sighted_by = Identity(
-                            id="identity--" + misp_sighting["Organisation"]["uuid"],
+                        sighted_by = stix2.Identity(
+                            id=Identity.generate_id(
+                                misp_sighting["Organisation"]["name"], "organization"
+                            ),
                             name=misp_sighting["Organisation"]["name"],
                             identity_class="organization",
                         )
@@ -934,7 +1126,17 @@ class Misp:
                         sighted_by = None
 
                     if indicator is not None:
-                        sighting = Sighting(
+                        sighting = stix2.Sighting(
+                            id=StixSightingRelationship.generate_id(
+                                indicator["id"],
+                                sighted_by,
+                                datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"])
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"]) + 3600
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            ),
                             sighting_of_ref=indicator["id"],
                             first_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"])
@@ -967,7 +1169,10 @@ class Misp:
             relationships = []
             if indicator is not None and observable is not None:
                 relationships.append(
-                    Relationship(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "based-on", indicator.id, observable.id
+                        ),
                         relationship_type="based-on",
                         created_by_ref=author,
                         source_ref=indicator.id,
@@ -980,7 +1185,10 @@ class Misp:
                 indicator is not None or observable is not None
             ):
                 relationships.append(
-                    Relationship(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", object_observable.id, observable.id
+                        ),
                         relationship_type="related-to",
                         created_by_ref=author,
                         source_ref=object_observable.id,
@@ -1000,7 +1208,10 @@ class Misp:
                 threat_names[threat.name] = threat.id
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "indicates", indicator.id, threat.id
+                            ),
                             relationship_type="indicates",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1013,7 +1224,10 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, threat.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1037,7 +1251,10 @@ class Misp:
                     threat_id = threat.id
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "indicates", indicator.id, threat_id
+                            ),
                             relationship_type="indicates",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1050,7 +1267,10 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, threat_id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1074,7 +1294,10 @@ class Misp:
                         threat_id = threat_names[threat.name]
                     else:
                         threat_id = threat.id
-                    relationship_uses = Relationship(
+                    relationship_uses = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "uses", threat_id, attack_pattern.id
+                        ),
                         relationship_type="uses",
                         created_by_ref=author,
                         source_ref=threat_id,
@@ -1127,7 +1350,10 @@ class Misp:
                         threat_id = threat_names[threat.name]
                     else:
                         threat_id = threat.id
-                    relationship_uses = Relationship(
+                    relationship_uses = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "uses", threat_id, attack_pattern.id
+                        ),
                         relationship_type="uses",
                         confidence=self.helper.connect_confidence_level,
                         created_by_ref=author,
@@ -1169,7 +1395,10 @@ class Misp:
             for sector in attribute_elements["sectors"]:
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", indicator.id, sector.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1182,7 +1411,10 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, sector.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1197,7 +1429,10 @@ class Misp:
             for country in attribute_elements["countries"]:
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", indicator.id, country.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=indicator.id,
@@ -1210,7 +1445,10 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, country.id
+                            ),
                             relationship_type="related-to",
                             created_by_ref=author,
                             source_ref=observable.id,
@@ -1268,7 +1506,8 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["intrusion_sets"].append(
-                            IntrusionSet(
+                            stix2.IntrusionSet(
+                                id=IntrusionSet.generate_id(name),
                                 name=name,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
@@ -1291,7 +1530,8 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["tools"].append(
-                            Tool(
+                            stix2.Tool(
+                                id=Tool.generate_id(name),
                                 name=name,
                                 labels=["tool"],
                                 description=galaxy_entity["description"],
@@ -1321,7 +1561,8 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["malwares"].append(
-                            Malware(
+                            stix2.Malware(
+                                id=Malware.generate_id(name),
                                 name=name,
                                 is_family=True,
                                 aliases=aliases,
@@ -1353,7 +1594,8 @@ class Misp:
                             if len(galaxy_entity["meta"]["external_id"]) > 0:
                                 x_mitre_id = galaxy_entity["meta"]["external_id"][0]
                         elements["attack_patterns"].append(
-                            AttackPattern(
+                            stix2.AttackPattern(
+                                id=AttackPattern.generate_id(name, x_mitre_id),
                                 name=name,
                                 description=galaxy_entity["description"],
                                 created_by_ref=author,
@@ -1372,7 +1614,8 @@ class Misp:
                     name = galaxy_entity["value"]
                     if name not in added_names:
                         elements["sectors"].append(
-                            Identity(
+                            stix2.Identity(
+                                id=Identity.generate_id(name, "class"),
                                 name=name,
                                 identity_class="class",
                                 description=galaxy_entity["description"],
@@ -1388,7 +1631,8 @@ class Misp:
                     name = galaxy_entity["description"]
                     if name not in added_names:
                         elements["countries"].append(
-                            Location(
+                            stix2.Location(
+                                id=Location.generate_id(name, "Country"),
                                 name=name,
                                 country=galaxy_entity["meta"]["ISO"],
                                 description="Imported from MISP tag",
@@ -1425,7 +1669,8 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["intrusion_sets"].append(
-                        IntrusionSet(
+                        stix2.IntrusionSet(
+                            id=IntrusionSet.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
@@ -1446,7 +1691,8 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["tools"].append(
-                        Tool(
+                        stix2.Tool(
+                            id=Tool.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
@@ -1472,7 +1718,8 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["malwares"].append(
-                        Malware(
+                        stix2.Malware(
+                            id=Malware.generate_id(name),
                             name=name,
                             is_family=True,
                             description="Imported from MISP tag",
@@ -1492,7 +1739,8 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["attack_patterns"].append(
-                        AttackPattern(
+                        stix2.AttackPattern(
+                            id=AttackPattern.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
                             created_by_ref=author,
@@ -1507,7 +1755,8 @@ class Misp:
                 name = tag_value_split[1][:-1].strip()
                 if name not in added_names:
                     elements["sectors"].append(
-                        Identity(
+                        stix2.Identity(
+                            id=Identity.generate_id(name, "class"),
                             name=name,
                             description="Imported from MISP tag",
                             identity_class="class",
@@ -1544,16 +1793,16 @@ class Misp:
             "ip-dst": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
             "ip-src|port": [
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "text", "type": "Text"},
             ],
             "ip-dst|port": [
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "text", "type": "Text"},
             ],
-            "hostname": [{"resolver": "hostname", "type": "X-OpenCTI-Hostname"}],
+            "hostname": [{"resolver": "hostname", "type": "Hostname"}],
             "hostname|port": [
-                {"resolver": "hostname", "type": "X-OpenCTI-Hostname"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "hostname", "type": "Hostname"},
+                {"resolver": "text", "type": "Text"},
             ],
             "domain": [{"resolver": "domain", "type": "Domain-Name"}],
             "domain|ip": [
@@ -1565,7 +1814,7 @@ class Misp:
             "email-dst": [{"resolver": "email-address", "type": "Email-Addr"}],
             "url": [{"resolver": "url", "type": "Url"}],
             "windows-scheduled-task": [
-                {"resolver": "windows-scheduled-task", "type": "X-OpenCTI-Text"}
+                {"resolver": "windows-scheduled-task", "type": "Text"}
             ],
         }
         if type in types:
@@ -1605,7 +1854,7 @@ class Misp:
             return [
                 {
                     "resolver": "text",
-                    "type": "X-OpenCTI-Text",
+                    "type": "Text",
                     "value": value + " (type=" + type + ")",
                 }
             ]
@@ -1626,15 +1875,15 @@ class Misp:
         markings = []
         for tag in tags:
             if tag["name"] == "tlp:white":
-                markings.append(TLP_WHITE)
+                markings.append(stix2.TLP_WHITE)
             if tag["name"] == "tlp:green":
-                markings.append(TLP_GREEN)
+                markings.append(stix2.TLP_GREEN)
             if tag["name"] == "tlp:amber":
-                markings.append(TLP_AMBER)
+                markings.append(stix2.TLP_AMBER)
             if tag["name"] == "tlp:red":
-                markings.append(TLP_RED)
+                markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
-            markings.append(TLP_WHITE)
+            markings.append(stix2.TLP_WHITE)
         return markings
 
     def resolve_tags(self, tags):

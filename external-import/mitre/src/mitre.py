@@ -1,16 +1,16 @@
 """Mitre connector module."""
-from datetime import datetime
+import json
 import os
 import ssl
 import sys
 import time
-from typing import Optional
 import urllib
-import json
+from datetime import datetime
+from typing import Optional
 
 import certifi
-from pycti import OpenCTIConnectorHelper, get_config_variable
 import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class Mitre:
