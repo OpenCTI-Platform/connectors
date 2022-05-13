@@ -14,12 +14,33 @@ import yaml
 from pycti import (
     AttackPattern,
     OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    SimpleObservable,
     StixCoreRelationship,
     get_config_variable,
 )
+from stix2 import URL, IPv4Address, EmailAddress, CustomObservable, DomainName
+from stix2.properties import ListProperty  # type: ignore # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
 from triage import Client
+
+
+@CustomObservable(
+    "hostname",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Hostname:
+    """Hostname observable."""
+
+    pass
 
 
 class HatchingTriageSandboxConnector:
@@ -143,11 +164,9 @@ class HatchingTriageSandboxConnector:
 
             # Handle config
             if "config" in extracted_dict:
-
                 if "rule" not in extracted_dict["config"]:
                     self.helper.api.log_info("rule key not found, skipping...")
                     continue
-
                 # Create a Note
                 config_json = json.dumps(extracted_dict, indent=2)
                 config_rule = extracted_dict["config"]["rule"]
@@ -158,7 +177,6 @@ class HatchingTriageSandboxConnector:
                     object_refs=[observable["standard_id"]],
                 )
                 bundle_objects.append(note)
-
                 # Create Observables and Relationships for C2s
                 c2_list = extracted_dict.get("config").get("c2", [])
                 for c2 in c2_list:
@@ -171,48 +189,53 @@ class HatchingTriageSandboxConnector:
                     else:
                         parsed = c2
                         relationship_type = "related-to"
-
-                    host_stix = SimpleObservable(
-                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                            "x-opencti-simple-observable"
-                        ),
-                        labels=[config_rule, "c2 server"],
-                        key=f"{key}.value",
-                        value=parsed,
-                        created_by_ref=self.identity,
-                    )
-                    relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            relationship_type, observable["standard_id"], host_stix.id
-                        ),
-                        relationship_type=relationship_type,
-                        created_by_ref=self.identity,
-                        source_ref=observable["standard_id"],
-                        target_ref=host_stix.id,
-                        allow_custom=True,
-                    )
-                    bundle_objects.append(host_stix)
-                    bundle_objects.append(relationship)
-
+                    host_stix = None
+                    if key == "Url":
+                        host_stix = URL(
+                            value=parsed,
+                            custom_properties={
+                                "labels": [config_rule, "c2 server"],
+                                "created_by_ref": self.identity,
+                            },
+                        )
+                    elif key == "IPv4-Addr":
+                        host_stix = IPv4Address(
+                            value=parsed,
+                            custom_properties={
+                                "labels": [config_rule, "c2 server"],
+                                "created_by_ref": self.identity,
+                            },
+                        )
+                    if host_stix is not None:
+                        relationship = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                relationship_type,
+                                observable["standard_id"],
+                                host_stix.id,
+                            ),
+                            relationship_type=relationship_type,
+                            created_by_ref=self.identity,
+                            source_ref=observable["standard_id"],
+                            target_ref=host_stix.id,
+                            allow_custom=True,
+                        )
+                        bundle_objects.append(host_stix)
+                        bundle_objects.append(relationship)
                 # Create Observables and Relationships for credentials
                 creds_list = extracted_dict.get("config").get("credentials", [])
                 for cred_dict in creds_list:
                     host = cred_dict.get("host", None)
                     username = cred_dict.get("username")
                     protocol = cred_dict.get("protocol")
-
                     if host:
                         # Add Host Observable
-                        host_stix = SimpleObservable(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "x-opencti-simple-observable"
-                            ),
-                            labels=[config_rule, "credentials"],
-                            key="Hostname.value",
+                        host_stix = Hostname(
                             value=host,
-                            created_by_ref=self.identity,
+                            custom_properties={
+                                "labels": [config_rule, "credentials"],
+                                "created_by_ref": self.identity,
+                            },
                         )
-
                         relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
                                 "related-to", observable["standard_id"], host_stix.id
@@ -226,19 +249,15 @@ class HatchingTriageSandboxConnector:
 
                         bundle_objects.append(host_stix)
                         bundle_objects.append(relationship)
-
                     if protocol == "smtp" and username:
                         # Add Email Address Observable
-                        email_stix = SimpleObservable(
-                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                "x-opencti-simple-observable"
-                            ),
-                            labels=[config_rule, "credentials"],
-                            key="Email-Addr.value",
+                        email_stix = EmailAddress(
                             value=username,
-                            created_by_ref=self.identity,
+                            custom_properties={
+                                "labels": [config_rule, "credentials"],
+                                "created_by_ref": self.identity,
+                            },
                         )
-
                         relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
                                 "related-to", observable["standard_id"], email_stix.id
@@ -249,10 +268,8 @@ class HatchingTriageSandboxConnector:
                             target_ref=email_stix.id,
                             allow_custom=True,
                         )
-
                         bundle_objects.append(email_stix)
                         bundle_objects.append(relationship)
-
                 # Download task file, wait for it to become available
                 # Give up after 5 tries
                 task_id = extracted_dict["tasks"][0]
@@ -260,7 +277,6 @@ class HatchingTriageSandboxConnector:
                 file_contents = self.triage_client.sample_task_file(
                     sample_id, task_id, filename
                 )
-
                 for x in range(5):
                     # Sample not yet available, sleep
                     if b"NOT_AVAILABLE" in file_contents[:30]:
@@ -276,10 +292,8 @@ class HatchingTriageSandboxConnector:
                         "Maximum attempts tried to obtain extracted file, skipping..."
                     )
                     continue
-
                 # Upload task file to OpenCTI
                 mime_type = magic.from_buffer(file_contents, mime=True)
-
                 kwargs = {
                     "file_name": f"{sample_id}_{filename}",
                     "data": file_contents,
@@ -289,7 +303,6 @@ class HatchingTriageSandboxConnector:
                 response = self.helper.api.stix_cyber_observable.upload_artifact(
                     **kwargs
                 )
-
                 # Create Relationship between original Observable and the extracted
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
@@ -313,25 +326,21 @@ class HatchingTriageSandboxConnector:
                 self.helper.api.stix_cyber_observable.add_label(
                     id=response["id"], label_id=extracted_label["id"]
                 )
-
             # Handle dropper
             if "dropper" in extracted_dict:
                 dropper_dict = extracted_dict["dropper"]
-
                 # Create Url Observables and Relationships
                 dropper_urls = dropper_dict["urls"]
                 for url_dict in dropper_urls:
                     dropper_type = url_dict["type"]
                     url = url_dict["url"]
-                    url_stix = SimpleObservable(
-                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                            "x-opencti-simple-observable"
-                        ),
-                        labels=[dropper_type],
-                        key="Url.value",
+                    url_stix = URL(
                         value=url.rstrip(),
-                        created_by_ref=self.identity,
                         object_marking_refs=[stix2.TLP_WHITE],
+                        custom_properties={
+                            "labels": [dropper_type],
+                            "created_by_ref": self.identity,
+                        },
                     )
                     relationship = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -345,7 +354,6 @@ class HatchingTriageSandboxConnector:
                     )
                     bundle_objects.append(url_stix)
                     bundle_objects.append(relationship)
-
                     # Create dropper type label
                     self.helper.api.label.create(
                         value=dropper_type, color=self.default_tag_color
@@ -357,15 +365,13 @@ class HatchingTriageSandboxConnector:
             for task_dict in overview_dict["targets"]
         ]
         for domain in domains[0]:
-            domain_stix = SimpleObservable(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "x-opencti-simple-observable"
-                ),
-                labels=["dynamic"],
-                key="Domain-Name.value",
+            domain_stix = DomainName(
                 value=domain,
-                created_by_ref=self.identity,
                 object_marking_refs=[stix2.TLP_WHITE],
+                custom_properties={
+                    "labels": ["dynamic"],
+                    "created_by_ref": self.identity,
+                },
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -379,28 +385,23 @@ class HatchingTriageSandboxConnector:
             )
             bundle_objects.append(domain_stix)
             bundle_objects.append(relationship)
-
         # Attach IP addresses
         ips = [
             task_dict.get("iocs", {}).get("ips", [])
             for task_dict in overview_dict["targets"]
         ]
         for ip in ips[0]:
-
             # Filter out non-global and known DNS IPs
             if not ipaddress.ip_address(ip).is_global:
                 continue
             if ip in ["8.8.8.8", "8.8.4.4"]:
                 continue
-
-            host_stix = SimpleObservable(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "x-opencti-simple-observable"
-                ),
-                labels=["dynamic"],
-                key="IPv4-Addr.value",
+            host_stix = IPv4Address(
                 value=ip,
-                created_by_ref=self.identity,
+                custom_properties={
+                    "labels": ["dynamic"],
+                    "created_by_ref": self.identity,
+                },
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -414,20 +415,15 @@ class HatchingTriageSandboxConnector:
             )
             bundle_objects.append(host_stix)
             bundle_objects.append(relationship)
-
         # Attach the TTPs
         if "signatures" in overview_dict:
             for signature_dict in overview_dict["signatures"]:
-
                 # Skip any dicts without a ttps key
                 if "ttp" not in signature_dict:
                     continue
-
                 name = signature_dict["name"]
                 ttps = signature_dict["ttp"]
-
                 for ttp in ttps:
-
                     attack_pattern = stix2.AttackPattern(
                         id=AttackPattern.generate_id(name, ttp),
                         created_by_ref=self.identity,
@@ -436,8 +432,8 @@ class HatchingTriageSandboxConnector:
                             "x_mitre_id": ttp,
                         },
                         object_marking_refs=[stix2.TLP_WHITE],
+                        allow_custom=True,
                     )
-
                     relationship = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "uses", observable["standard_id"], attack_pattern.id
@@ -451,7 +447,6 @@ class HatchingTriageSandboxConnector:
                     )
                     bundle_objects.append(attack_pattern)
                     bundle_objects.append(relationship)
-
         # Serialize and send all bundles
         if bundle_objects:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()

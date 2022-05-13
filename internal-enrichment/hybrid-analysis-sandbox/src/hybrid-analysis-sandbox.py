@@ -5,13 +5,14 @@ import time
 
 import requests
 import yaml
+import stix2
 from pycti import (
     OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    SimpleObservable,
     get_config_variable,
+    AttackPattern,
+    StixCoreRelationship,
 )
-from stix2 import TLP_WHITE, AttackPattern, Bundle, File, Relationship
+from stix2 import DomainName, IPv4Address, IPv6Address, File
 
 
 class HybridAnalysis:
@@ -109,64 +110,77 @@ class HybridAnalysis:
                 tactic["malicious_identifiers_count"] > 0
                 or tactic["suspicious_identifiers_count"] > 0
             ):
-                attack_pattern = AttackPattern(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("attack-pattern"),
+                attack_pattern = stix2.AttackPattern(
+                    id=AttackPattern.generate_id(
+                        tactic["technique"], tactic["attck_id"]
+                    ),
                     created_by_ref=self.identity,
                     name=tactic["technique"],
                     custom_properties={
                         "x_mitre_id": tactic["attck_id"],
                     },
-                    object_marking_refs=[TLP_WHITE],
+                    object_marking_refs=[stix2.TLP_WHITE],
                 )
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "uses", final_observable["standard_id"], attack_pattern.id
+                    ),
                     relationship_type="uses",
                     created_by_ref=self.identity,
                     source_ref=final_observable["standard_id"],
                     target_ref=attack_pattern.id,
-                    object_marking_refs=[TLP_WHITE],
+                    object_marking_refs=[stix2.TLP_WHITE],
                 )
                 bundle_objects.append(attack_pattern)
                 bundle_objects.append(relationship)
         # Attach the domains
         for domain in report["domains"]:
-            domain_stix = SimpleObservable(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "x-opencti-simple-observable"
-                ),
-                key="Domain-Name.value",
+            domain_stix = DomainName(
                 value=domain,
-                created_by_ref=self.identity,
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
+                custom_properties={
+                    "created_by_ref": self.identity,
+                },
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "communicates-with", final_observable["standard_id"], domain_stix.id
+                ),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
                 target_ref=domain_stix.id,
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
             )
             bundle_objects.append(domain_stix)
             bundle_objects.append(relationship)
         # Attach the IP addresses
         for host in report["hosts"]:
-            host_stix = SimpleObservable(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "x-opencti-simple-observable"
+            if self.detect_ip_version(host) == "IPv4-Addr":
+                host_stix = IPv4Address(
+                    value=host,
+                    object_marking_refs=[stix2.TLP_WHITE],
+                    custom_properties={
+                        "created_by_ref": self.identity,
+                    },
+                )
+            else:
+                host_stix = IPv6Address(
+                    value=host,
+                    object_marking_refs=[stix2.TLP_WHITE],
+                    custom_properties={
+                        "created_by_ref": self.identity,
+                    },
+                )
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "communicates-with", final_observable["standard_id"], host_stix.id
                 ),
-                key=self.detect_ip_version(host) + ".value",
-                value=host,
-                created_by_ref=self.identity,
-                object_marking_refs=[TLP_WHITE],
-            )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
                 target_ref=host_stix.id,
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
             )
             bundle_objects.append(host_stix)
             bundle_objects.append(relationship)
@@ -174,7 +188,6 @@ class HybridAnalysis:
         for file in report["extracted_files"]:
             if file["threat_level"] > 0:
                 file_stix = File(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("file"),
                     hashes={
                         "MD5": file["md5"],
                         "SHA-1": file["sha1"],
@@ -184,10 +197,12 @@ class HybridAnalysis:
                     name=file["name"],
                     custom_properties={"x_opencti_labels": file["type_tags"]},
                     created_by_ref=self.identity,
-                    object_marking_refs=[TLP_WHITE],
+                    object_marking_refs=[stix2.TLP_WHITE],
                 )
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "drops", final_observable["standard_id"], file_stix.id
+                    ),
                     relationship_type="drops",
                     created_by_ref=self.identity,
                     source_ref=final_observable["standard_id"],
@@ -200,16 +215,20 @@ class HybridAnalysis:
                 tactic["malicious_identifiers_count"] > 0
                 or tactic["suspicious_identifiers_count"] > 0
             ):
-                attack_pattern = AttackPattern(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("attack-pattern"),
+                attack_pattern = stix2.AttackPattern(
+                    id=AttackPattern.generate_id(
+                        tactic["technique"], tactic["attck_id"]
+                    ),
                     created_by_ref=self.identity,
                     name=tactic["technique"],
                     custom_properties={
                         "x_mitre_id": tactic["attck_id"],
                     },
                 )
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "uses", final_observable["standard_id"], attack_pattern.id
+                    ),
                     relationship_type="uses",
                     created_by_ref=self.identity,
                     source_ref=final_observable["standard_id"],
@@ -218,7 +237,7 @@ class HybridAnalysis:
                 bundle_objects.append(attack_pattern)
                 bundle_objects.append(relationship)
         if len(bundle_objects) > 0:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"

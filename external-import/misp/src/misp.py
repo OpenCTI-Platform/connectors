@@ -9,11 +9,15 @@ import yaml
 from pycti import (
     AttackPattern,
     Identity,
+    Indicator,
     IntrusionSet,
     Location,
     Malware,
+    Note,
     OpenCTIConnectorHelper,
+    Report,
     StixCoreRelationship,
+    StixSightingRelationship,
     Tool,
     get_config_variable,
 )
@@ -703,7 +707,11 @@ class Misp:
                         if src_result is not None and target_result is not None:
                             objects_relationships.append(
                                 stix2.Relationship(
-                                    id="relationship--" + ref["uuid"],
+                                    id=StixCoreRelationship.generate_id(
+                                        "related-to",
+                                        src_result["entity"]["id"],
+                                        target_result["entity"]["id"],
+                                    ),
                                     relationship_type="related-to",
                                     created_by_ref=author,
                                     description="Original Relationship: "
@@ -742,7 +750,16 @@ class Misp:
             # Report in STIX must have at least one object_refs
             if self.misp_create_report and len(object_refs) > 0:
                 report = stix2.Report(
-                    id="report--" + event["Event"]["uuid"],
+                    id=Report.generate_id(
+                        event["Event"]["info"],
+                        datetime.utcfromtimestamp(
+                            int(
+                                datetime.strptime(
+                                    str(event["Event"]["date"]), "%Y-%m-%d"
+                                ).timestamp()
+                            )
+                        ),
+                    ),
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
                     published=datetime.utcfromtimestamp(
@@ -777,7 +794,7 @@ class Misp:
                 bundle_objects.append(report)
                 for note in event["Event"]["EventReport"]:
                     note = stix2.Note(
-                        id="note--" + note["uuid"],
+                        id=Note.generate_id(),
                         confidence=self.helper.connect_confidence_level,
                         created=datetime.utcfromtimestamp(
                             int(note["timestamp"])
@@ -935,7 +952,7 @@ class Misp:
             if self.misp_create_indicators:
                 try:
                     indicator = stix2.Indicator(
-                        id="indicator--" + attribute["uuid"],
+                        id=Indicator.generate_id(pattern),
                         name=name,
                         description=attribute["comment"],
                         confidence=self.helper.connect_confidence_level,
@@ -1098,7 +1115,9 @@ class Misp:
                 for misp_sighting in attribute["Sighting"]:
                     if "Organisation" in misp_sighting:
                         sighted_by = stix2.Identity(
-                            id="identity--" + misp_sighting["Organisation"]["uuid"],
+                            id=Identity.generate_id(
+                                misp_sighting["Organisation"]["name"], "organization"
+                            ),
                             name=misp_sighting["Organisation"]["name"],
                             identity_class="organization",
                         )
@@ -1108,6 +1127,16 @@ class Misp:
 
                     if indicator is not None:
                         sighting = stix2.Sighting(
+                            id=StixSightingRelationship.generate_id(
+                                indicator["id"],
+                                sighted_by,
+                                datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"])
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"]) + 3600
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            ),
                             sighting_of_ref=indicator["id"],
                             first_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"])
