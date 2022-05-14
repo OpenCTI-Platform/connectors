@@ -1,0 +1,29 @@
+version: '3'
+services:
+  connector-sentinelone-threats:
+    image: opencti/connector-sentinelone-threats:5.2.1
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=sentinelone-threats
+      - CONNECTOR_SCOPE=sentinelone-threats
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - "CONNECTOR_NAME=SentinelOne Threats"
+      - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_LOG_LEVEL=info
+      - SENTINELONE_THREATS_BASE_URL=https://changeme.sentinelone.net # SentinelOne host
+      # SentinelOne API Token with Threats View and Download Threat permissions, WARNING: S1 tokens expire every 6 months, see README
+      - SENTINELONE_THREATS_API_TOKEN=ChangeMe
+      - SENTINELONE_THREATS_COOLDOWN_SECONDS=300 # Time to wait in seconds between subsequent requests
+      - SENTINELONE_THREATS_SKIP_FALSE_POSITIVES=true # Skip uploading threat if verdict was set to false_positive
+      - SENTINELONE_THREATS_SKIP_SUSPICIOUS=false # Skip uploading threat if confidence level is suspicious
+      - SENTINELONE_THREATS_SKIP_PUA=false # Skip uploading threats classified as Potentially Unwanted Applications (PUA)
+      - SENTINELONE_THREATS_INCLUDE_FILE_EXTENSIONS= # Only upload threats matching these file extensions, e.g. EXE,PDF (Comma separated if multiple)
+      - SENTINELONE_THREATS_FILE_EXTENSION_LABEL=true # Whether or not to apply file extension as a label on the uploaded Artifact, e.g. EXE
+      - SENTINELONE_THREATS_FILE_EXTENSION_LABEL_COLOR=#54483b # Color for file extension label
+      - SENTINELONE_THREATS_CLASSIFICATION_LABEL=true # Whether or not to apply SentinelOne classification as a label on the uploaded Artifact, e.g. Malware, Trojan, Virus, Hacktool
+      - SENTINELONE_THREATS_CLASSIFICATION_LABEL_COLOR=#0059f7 # Color for classification label
+      - SENTINELONE_THREATS_LABELS=sentinelone # Labels to apply to uploaded Artifacts. (Comma separated if multiple)
+      - SENTINELONE_THREATS_LABELS_COLOR=#54483b # Color for labels specified above
+    restart: always
