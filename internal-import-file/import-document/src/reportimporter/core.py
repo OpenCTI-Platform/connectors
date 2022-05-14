@@ -5,6 +5,7 @@ from typing import Callable, Dict, List
 
 import yaml
 import stix2
+import base64
 from pycti import (
     OpenCTIConnectorHelper,
     get_config_variable,
@@ -51,6 +52,7 @@ class ReportImporter:
             ["import_document", "create_indicator"],
             config,
         )
+        self.current_file = None
 
         # Load Entity and Observable configs
         observable_config_file = base_path + "/config/observable_config.ini"
@@ -88,6 +90,14 @@ class ReportImporter:
 
         # Parse report
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
+        if data["file_id"].startswith("import/global"):
+            file_data = open(file_name, "rb").read()
+            file_data_encoded = base64.b64encode(file_data)
+            self.file = {
+                "name": data["file_id"].replace("import/global/", ""),
+                "data": file_data_encoded,
+                "mime_type": "application/pdf",
+            }
         parsed = parser.run_parser(file_name, data["file_mime"])
         os.remove(file_name)
 
@@ -349,6 +359,7 @@ class ReportImporter:
                 report_types=entity["report_types"],
                 object_refs=observables + entities,
                 allow_custom=True,
+                custom_properties={"x_opencti_files": [self.file]},
             )
             observables.append(report)
         elif entity is not None:
@@ -368,6 +379,7 @@ class ReportImporter:
                 report_types=["threat-report"],
                 object_refs=observables + entities,
                 allow_custom=True,
+                custom_properties={"x_opencti_files": [self.file]},
             )
             observables.append(report)
         bundles_sent = []
