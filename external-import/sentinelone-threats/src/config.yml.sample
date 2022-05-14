@@ -1,0 +1,32 @@
+opencti:
+  url: 'ChangeMe'
+  token: 'ChangeMe'
+
+connector:
+  id: 'sentinelone-threats'
+  type: 'EXTERNAL_IMPORT'
+  name: 'SentinelOne Threats'
+  scope: 'sentinelone-threats'
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  create_indicator: False
+  update_existing_data: True
+  log_level: 'info'
+
+sentinelone_threats:
+  # BinaryVault must be setup
+  # See https://success.alienvault.com/s/article/UUID-9bf40076-0ba9-2f93-93bd-b4878bd6c220
+  # Otherwise you will get permission errors when the connector attempts to download the threat
+  base_url: 'https://changeme.sentinelone.net' # SentinelOne host
+  # SentinelOne API Token with Threats View and Download Threat permissions, WARNING: S1 tokens expire every 6 months, see README
+  api_token: 'changeme'
+  cooldown_seconds: 300 # Time to wait in seconds between subsequent requests
+  skip_false_positives: True # Skip uploading threat if verdict was set to false_positive
+  skip_suspicious: False # Skip uploading threat if confidence level is suspicious
+  skip_pua: False # Skip uploading threats classified as Potentially Unwanted Applications (PUA)
+  include_file_extensions: '' # Only upload threats matching these file extensions, e.g. 'EXE,PDF'
+  file_extension_label: True # Whether or not to apply SentinelOne file type as a label on the uploaded Artifact, e.g. EXE, PDF
+  file_extension_label_color: '#54483b'
+  classification_label: True # Whether or not to apply SentinelOne classification as a label on the uploaded Artifact, e.g. Malware, Trojan, Virus, Hacktool
+  classification_label_color: '#0059f7' # Color for classification label
+  labels: 'sentinel-one' # (Optional) Labels to apply to uploaded Artifacts. (Comma separated)
+  labels_color: '#54483b' # Color for labels specified above
