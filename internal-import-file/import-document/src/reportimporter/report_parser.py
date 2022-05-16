@@ -1,9 +1,9 @@
 import io
 import logging
 import os
-import chardet
 from typing import IO, Dict, List, Pattern, Tuple
 
+import chardet
 import ioc_finder
 from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_pages

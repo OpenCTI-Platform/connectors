@@ -17,7 +17,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from stix2 import URL, IPv4Address, EmailAddress, CustomObservable, DomainName
+from stix2 import URL, CustomObservable, DomainName, EmailAddress, IPv4Address
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
 from triage import Client

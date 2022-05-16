@@ -1,27 +1,12 @@
+import base64
 import os
 import time
 from datetime import datetime
 from typing import Callable, Dict, List
 
-import yaml
 import stix2
-import base64
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    Report,
-)
-from stix2 import (
-    URL,
-    AutonomousSystem,
-    DomainName,
-    EmailAddress,
-    File,
-    IPv4Address,
-    IPv6Address,
-    MACAddress,
-    WindowsRegistryKey,
-)
+import yaml
+from pycti import OpenCTIConnectorHelper, Report, get_config_variable
 from pydantic import BaseModel
 from reportimporter.constants import (
     ENTITY_CLASS,
@@ -33,6 +18,17 @@ from reportimporter.constants import (
 from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
 from reportimporter.util import MyConfigParser
+from stix2 import (
+    URL,
+    AutonomousSystem,
+    DomainName,
+    EmailAddress,
+    File,
+    IPv4Address,
+    IPv6Address,
+    MACAddress,
+    WindowsRegistryKey,
+)
 
 
 class ReportImporter:
