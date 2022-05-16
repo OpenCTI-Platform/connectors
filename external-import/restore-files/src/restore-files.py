@@ -164,7 +164,9 @@ class RestoreFilesConnector:
     def start(self):
         # Check if the directory exists
         if not os.path.exists(self.backup_path + "/opencti_data"):
-            raise ValueError("Backup path does not exist")
+            raise ValueError(
+                "Backup path does not exist - " + self.backup_path + "/opencti_data"
+            )
         self.restore_files()
 
 

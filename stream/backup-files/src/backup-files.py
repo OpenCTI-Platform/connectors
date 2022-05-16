@@ -36,33 +36,11 @@ class BackupFilesConnector:
 
     def _enrich_with_files(self, current):
         entity = current
-        files = []
-        if (
-            entity["type"] != "relationship"
-            and entity["type"] != "sighting"
-            and not StixMetaTypes.has_value(entity["type"])
-        ):
-            files = self.helper.api.stix_core_object.list_files(id=entity["id"])
-        elif entity["type"] == "external-reference":
-            files = self.helper.api.external_reference.list_files(id=entity["id"])
-        if len(files) > 0:
-            entity["x_opencti_files"] = []
+        files = self.helper.api.get_attribute_in_extension('files', current)
+        if files is not None and len(files) > 0:
             for file in files:
-                url = (
-                    self.helper.api.api_url.replace("graphql", "storage/get/")
-                    + file["id"]
-                )
-                data = self.helper.api.fetch_opencti_file(
-                    url, binary=True, serialize=True
-                )
-                entity["x_opencti_files"].append(
-                    {
-                        "name": file["name"],
-                        "data": data,
-                        "mime_type": file["metaData"]["mimetype"],
-                        "version": file["metaData"]["version"],
-                    }
-                )
+                file_data = self.helper.api.fetch_opencti_file(file["uri"], binary=True, serialize=True)
+                file["data"] = file_data
         return entity
 
     def write_files(self, date_range, entity_id, bundle):
@@ -84,9 +62,12 @@ class BackupFilesConnector:
         if msg.event == "create" or msg.event == "update" or msg.event == "delete":
             data = json.loads(msg.data)
             # created_at will be removed in next version
+            created_at_extension = self.helper.api.get_attribute_in_extension(
+                "created_at", data["data"]
+            )
             creation_date = (
-                data["data"]["x_opencti_created_at"]
-                if "x_opencti_created_at" in data["data"] is not None
+                created_at_extension
+                if created_at_extension is not None
                 else data["data"]["created_at"]
             )
             created_at = parser.parse(creation_date)
@@ -94,7 +75,6 @@ class BackupFilesConnector:
             if msg.event == "create":
                 bundle = {
                     "type": "bundle",
-                    "x_opencti_event_version": data["version"],
                     "objects": [data["data"]],
                 }
                 data["data"] = self._enrich_with_files(data["data"])
@@ -102,7 +82,6 @@ class BackupFilesConnector:
             elif msg.event == "update":
                 bundle = {
                     "type": "bundle",
-                    "x_opencti_event_version": data["version"],
                     "objects": [data["data"]],
                 }
                 data["data"] = self._enrich_with_files(data["data"])
@@ -121,7 +100,7 @@ class BackupFilesConnector:
     def start(self):
         # Check if the directory exists
         if not os.path.exists(self.backup_path):
-            raise ValueError("Backup path does not exist")
+            raise ValueError("Backup path does not exist - " + self.backup_path)
         if not os.path.exists(self.backup_path + "/opencti_data"):
             os.mkdir(self.backup_path + "/opencti_data")
         self.helper.listen_stream(self._process_message)
