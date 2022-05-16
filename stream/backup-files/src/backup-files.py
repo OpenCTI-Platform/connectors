@@ -36,10 +36,12 @@ class BackupFilesConnector:
 
     def _enrich_with_files(self, current):
         entity = current
-        files = self.helper.api.get_attribute_in_extension('files', current)
+        files = self.helper.api.get_attribute_in_extension("files", current)
         if files is not None and len(files) > 0:
             for file in files:
-                file_data = self.helper.api.fetch_opencti_file(file["uri"], binary=True, serialize=True)
+                file_data = self.helper.api.fetch_opencti_file(
+                    file["uri"], binary=True, serialize=True
+                )
                 file["data"] = file_data
         return entity
 
