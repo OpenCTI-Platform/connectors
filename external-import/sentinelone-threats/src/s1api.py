@@ -1,6 +1,6 @@
+import io
 import json
 import urllib.parse
-import io
 import zipfile
 from urllib.request import Request, urlopen
 

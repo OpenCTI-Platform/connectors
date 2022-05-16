@@ -18,7 +18,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from stix2 import IPv4Address, DomainName
+from stix2 import DomainName, IPv4Address
 
 
 class CapeSandboxConnector:

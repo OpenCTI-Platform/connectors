@@ -4,15 +4,15 @@ import os
 import time
 
 import requests
-import yaml
 import stix2
+import yaml
 from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
     AttackPattern,
+    OpenCTIConnectorHelper,
     StixCoreRelationship,
+    get_config_variable,
 )
-from stix2 import DomainName, IPv4Address, IPv6Address, File
+from stix2 import DomainName, File, IPv4Address, IPv6Address
 
 
 class HybridAnalysis:
