@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import chardet
 from typing import IO, Dict, List, Pattern, Tuple
 
 import ioc_finder
@@ -114,7 +115,11 @@ class ReportParser(object):
 
     def _parse_text(self, file_data: IO) -> Dict[str, Dict]:
         parse_info = {}
-        for text in file_data.readlines():
+        text = file_data.read()
+        encoding = chardet.detect(text)["encoding"]
+        if encoding == "UTF-16":
+            parse_info.update(self._parse(text.decode("utf-16")))
+        else:
             parse_info.update(self._parse(text.decode("utf-8")))
         return parse_info
 
