@@ -1129,7 +1129,7 @@ class Misp:
                         sighting = stix2.Sighting(
                             id=StixSightingRelationship.generate_id(
                                 indicator["id"],
-                                sighted_by,
+                                sighted_by["id"],
                                 datetime.utcfromtimestamp(
                                     int(misp_sighting["date_sighting"])
                                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
