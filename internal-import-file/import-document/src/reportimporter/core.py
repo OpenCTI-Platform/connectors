@@ -289,7 +289,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-1":
-                        observable = AutonomousSystem(
+                        observable = File(
                             hashes={"SHA-1": match[RESULT_FORMAT_MATCH]},
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -298,7 +298,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-256":
-                        observable = AutonomousSystem(
+                        observable = File(
                             hashes={"SHA-256": match[RESULT_FORMAT_MATCH]},
                             object_marking_refs=object_markings,
                             custom_properties={
