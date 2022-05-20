@@ -45,6 +45,18 @@ class Sekoia(object):
         self._load_data_sets()
         self.helper.log_info("All datasets has been loaded")
 
+        self.helper.api.identity.create(
+            stix_id="identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
+            type="Organization",
+            name="SEKOIA",
+            description="SEKOIA.IO is a European cybersecurity SAAS company, whose mission is to develop the best protection capabilities against cyber attacks.",
+        )
+        self.helper.api.marking_definition.create(
+            stix_id="marking-definition--bf973641-9d22-45d7-a307-ccdc68e120b9",
+            definition_type="statement",
+            definition="Copyright SEKOIA.IO",
+        )
+
     def run(self):
         self.helper.log_info("Starting SEKOIA.IO connector")
         state = self.helper.get_state() or {}
