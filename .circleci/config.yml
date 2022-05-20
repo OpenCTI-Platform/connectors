@@ -270,7 +270,11 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/vulmatch
           name: Build Docker image opencti/connector-vulmatch
-          command: docker build -t opencti/connector-vulmatch:latest . && docker tag opencti/connector-vulmatch:latest opencti/connector-vulmatch:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-vulmatch:latest . && docker tag opencti/connector-vulmatch:latest opencti/connector-vulmatch:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/cisa-known-exploited-vulnerabilities
+          name: Build Docker image opencti/connector-cisa-known-exploited-vulnerabilities
+          command: docker build -t opencti/connector-cisa-known-exploited-vulnerabilities:latest . && docker tag opencti/connector-cisa-known-exploited-vulnerabilities:latest opencti/connector-cisa-known-exploited-vulnerabilities:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -391,6 +395,8 @@ jobs:
             docker push opencti/connector-siemrules:${CIRCLE_TAG}
             docker push opencti/connector-vulmatch:latest
             docker push opencti/connector-vulmatch:${CIRCLE_TAG}
+            docker push opencti/connector-cisa-known-exploited-vulnerabilities:latest
+            docker push opencti/connector-cisa-known-exploited-vulnerabilities:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1                   
@@ -630,6 +636,10 @@ jobs:
           name: Build Docker image opencti/connector-siemrules
           command: docker build -t opencti/connector-siemrules:rolling .
       - run:
+          working_directory: ~/opencti/external-import/cisa-known-exploited-vulnerabilities
+          name: Build Docker image opencti/connector-cisa-known-exploited-vulnerabilities
+          command: docker build -t opencti/connector-cisa-known-exploited-vulnerabilities:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -690,6 +700,7 @@ jobs:
             docker push opencti/connector-stixify:rolling
             docker push opencti/connector-vulmatch:rolling
             docker push opencti/connector-siemrules:rolling
+            docker push opencti/connector-cisa-known-exploited-vulnerabilities:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
