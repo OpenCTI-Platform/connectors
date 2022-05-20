@@ -38,6 +38,9 @@ class Mitre:
         self.mitre_ics_attack_file_url = get_config_variable(
             "MITRE_ICS_ATTACK_FILE_URL", ["mitre", "ics_attack_file_url"], config
         )
+        self.mitre_capec_file_url = get_config_variable(
+            "MITRE_CAPEC_FILE_URL", ["mitre", "capeck_file_url"], config
+        )
         self.mitre_interval = get_config_variable(
             "MITRE_INTERVAL", ["mitre", "interval"], config, True
         )
@@ -178,6 +181,17 @@ class Mitre:
                         self.add_confidence_to_bundle_objects(ics_attack_data)
                     )
                     self.send_bundle(work_id, ics_attack_data_with_confidence)
+
+                # Mitre ics attack file url
+                if (
+                    self.mitre_capec_file_url is not None
+                    and len(self.mitre_capec_file_url) > 0
+                ):
+                    capec_data = self.retrieve_data(self.mitre_capec_file_url)
+                    capec_data_with_confidence = self.add_confidence_to_bundle_objects(
+                        capec_data
+                    )
+                    self.send_bundle(work_id, capec_data_with_confidence)
 
                 # Store the current timestamp as a last run
                 message = "Connector successfully run, storing last_run as " + str(
