@@ -990,74 +990,74 @@ class Misp:
                         "external_references": attribute_external_references,
                     }
                     observable = None
-                    if observable_type == "autonomous-system":
+                    if observable_type == "Autonomous-System":
                         observable = AutonomousSystem(
                             number=observable_value.replace("AS", ""),
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "mac-addr":
+                    elif observable_type == "Mac-Addr":
                         observable = MACAddress(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "hostname":
+                    elif observable_type == "Hostname":
                         observable = Hostname(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "domain-name":
+                    elif observable_type == "Domain-Name":
                         observable = DomainName(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "ipv4-addr":
+                    elif observable_type == "IPv4-Addr":
                         observable = IPv4Address(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "ipv6-addr":
+                    elif observable_type == "IPv6-Addr":
                         observable = IPv6Address(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "url":
+                    elif observable_type == "Url":
                         observable = URL(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "email-address":
+                    elif observable_type == "Email-Addr":
                         observable = EmailAddress(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "email-message":
+                    elif observable_type == "Email-Message":
                         observable = EmailMessage(
                             subject=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "mutex":
+                    elif observable_type == "Mutex":
                         observable = Mutex(
                             name=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "file":
+                    elif observable_type == "File":
                         if OPENCTISTIX2[observable_resolver]["path"][0] == "name":
                             observable = File(
                                 name=observable_value,
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
                             )
-                        elif OPENCTISTIX2[observable_resolver]["path"][1] == "hashes":
+                        elif OPENCTISTIX2[observable_resolver]["path"][0] == "hashes":
                             hashes = {}
                             hashes[
                                 OPENCTISTIX2[observable_resolver]["path"][1]
@@ -1067,25 +1067,25 @@ class Misp:
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
                             )
-                    elif observable_type == "directory":
+                    elif observable_type == "Directory":
                         observable = Directory(
                             path=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "windows-registry-key":
+                    elif observable_type == "Windows-Registry-Key":
                         observable = WindowsRegistryKey(
                             key=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "ewindows-registry-value-type":
+                    elif observable_type == "Windows-Registry-Value-Type":
                         observable = WindowsRegistryValueType(
                             data=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
-                    elif observable_type == "x509-certificate":
+                    elif observable_type == "X509-Certificate":
                         if OPENCTISTIX2[observable_resolver]["path"][0] == "issuer":
                             observable = File(
                                 issuer=observable_value,
@@ -1101,7 +1101,7 @@ class Misp:
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
                             )
-                    elif observable_type == "text":
+                    elif observable_type == "Text":
                         observable = Text(
                             data=observable_value,
                             object_marking_refs=attribute_markings,
@@ -1111,6 +1111,10 @@ class Misp:
                     self.helper.log_error(str(e))
             sightings = []
             identities = []
+            if observable is None:
+                self.helper.log_warning(
+                    "Not possible to create observable for type " + observable_type
+                )
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
                     if "Organisation" in misp_sighting:
