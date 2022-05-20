@@ -7,7 +7,12 @@ import os
 
 import requests
 import yaml
+import threading
+import queue
+
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+q = queue.Queue()
 
 
 class SplunkConnector:
@@ -22,9 +27,6 @@ class SplunkConnector:
         self.helper = OpenCTIConnectorHelper(config)
 
         self.splunk_url = get_config_variable("SPLUNK_URL", ["splunk", "url"], config)
-        self.splunk_ssl_verify = get_config_variable(
-            "SPLUNK_SSL_VERIFY", ["splunk", "ssl_verify"], config, False, True
-        )
         self.splunk_login = get_config_variable(
             "SPLUNK_LOGIN", ["splunk", "login"], config
         )
@@ -33,6 +35,9 @@ class SplunkConnector:
         )
         self.splunk_owner = get_config_variable(
             "SPLUNK_OWNER", ["splunk", "owner"], config
+        )
+        self.splunk_ssl_verify = get_config_variable(
+            "SPLUNK_SSL_VERIFY", ["splunk", "ssl_verify"], config, False, True
         )
         self.splunk_app = get_config_variable("SPLUNK_APP", ["splunk", "app"], config)
         self.splunk_kv_store_name = get_config_variable(
@@ -45,15 +50,45 @@ class SplunkConnector:
         ):
             raise ValueError("Missing Live Stream ID")
 
-        # Initialize the KV Store
-        self._query("post", "/config", {"name": self.splunk_kv_store_name})
+        # Initialize the threads
+        thread1 = threading.Thread(target=self._query_worker)
+        thread2 = threading.Thread(target=self._query_worker)
+        thread3 = threading.Thread(target=self._query_worker)
+        thread4 = threading.Thread(target=self._query_worker)
+        thread1.start()
+        thread2.start()
+        thread3.start()
+        thread4.start()
 
-    def _query(self, method, uri, payload=None, is_json=False):
-        self.helper.log_info("Query " + method + " on " + uri)
+        # Initialize the KV Store
+        self._distribute_works("post", "/config", {"name": self.splunk_kv_store_name})
+
+    def _query(
+        self,
+        splunk_url,
+        splunk_login,
+        splunk_password,
+        splunk_owner,
+        method,
+        uri,
+        payload=None,
+        is_json=False,
+    ):
+        self.helper.log_info(
+            "Query "
+            + method
+            + " on "
+            + uri
+            + " (url="
+            + splunk_url
+            + ", login="
+            + splunk_login
+            + ")"
+        )
         url = (
-            self.splunk_url
+            splunk_url
             + "/servicesNS/"
-            + self.splunk_owner
+            + splunk_owner
             + "/"
             + self.splunk_app
             + "/storage/collections"
@@ -62,7 +97,7 @@ class SplunkConnector:
         if method == "get":
             r = requests.get(
                 url,
-                auth=(self.splunk_login, self.splunk_password),
+                auth=(splunk_login, splunk_password),
                 params=payload,
                 verify=self.splunk_ssl_verify,
             )
@@ -71,7 +106,7 @@ class SplunkConnector:
                 headers = {"content-type": "application/json"}
                 r = requests.post(
                     url,
-                    auth=(self.splunk_login, self.splunk_password),
+                    auth=(splunk_login, splunk_password),
                     headers=headers,
                     json=payload,
                     verify=self.splunk_ssl_verify,
@@ -79,14 +114,14 @@ class SplunkConnector:
             else:
                 r = requests.post(
                     url,
-                    auth=(self.splunk_login, self.splunk_password),
+                    auth=(splunk_login, splunk_password),
                     data=payload,
                     verify=self.splunk_ssl_verify,
                 )
         elif method == "delete":
             r = requests.delete(
                 url,
-                auth=(self.splunk_login, self.splunk_password),
+                auth=(splunk_login, splunk_password),
                 verify=self.splunk_ssl_verify,
             )
         else:
@@ -101,6 +136,44 @@ class SplunkConnector:
         else:
             self.helper.log_info(r.text)
 
+    def _query_worker(self):
+        while True:
+            item = q.get()
+            self._query(
+                item["splunk_url"],
+                item["splunk_login"],
+                item["splunk_password"],
+                item["splunk_owner"],
+                item["method"],
+                item["uri"],
+                item["data"],
+                item["is_json"],
+            )
+            q.task_done()
+
+    def _distribute_works(self, method, uri, data, is_json=False):
+        for x, url in enumerate(self.splunk_url):
+            if (
+                len(self.splunk_login) - 1 < x
+                or len(self.splunk_password) - 1 < x
+                or len(self.splunk_owner) - 1 < x
+            ):
+                raise ValueError(
+                    "Login, password or owner do not have the same number of items as URLs"
+                )
+            item = {
+                "splunk_url": url,
+                "splunk_login": self.splunk_login[x],
+                "splunk_password": self.splunk_password[x],
+                "splunk_owner": self.splunk_owner[x],
+                "method": method,
+                "uri": uri,
+                "data": data,
+                "is_json": is_json,
+            }
+            q.put(item)
+        return "Sent " + str(len(self.splunk_url)) + " jobs for execution"
+
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
@@ -113,8 +186,13 @@ class SplunkConnector:
                 + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
                 + "}"
             )
+            # Do any processing needed
             data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            return self._query("post", "/data/" + self.splunk_kv_store_name, data, True)
+
+            # Distribute the works on parallel threads for ingestion
+            return self._distribute_works(
+                "post", "/data/" + self.splunk_kv_store_name, data, True
+            )
         # Handle update
         if msg.event == "update":
             self.helper.log_info(
@@ -123,7 +201,7 @@ class SplunkConnector:
                 + "}"
             )
             data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            return self._query(
+            return self._distribute_works(
                 "post",
                 "/data/"
                 + self.splunk_kv_store_name
@@ -139,7 +217,7 @@ class SplunkConnector:
                 + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
                 + "}"
             )
-            return self._query(
+            return self._distribute_works(
                 "delete",
                 "/data/"
                 + self.splunk_kv_store_name
