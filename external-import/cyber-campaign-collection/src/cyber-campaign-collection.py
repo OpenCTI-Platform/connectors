@@ -141,7 +141,7 @@ class CyberMonitor:
                         + ")"
                     )
                     external_reference = stix2.ExternalReference(
-                        source_name="Cyber Monitor Github",
+                        source_name="Cyber Campaign Collections",
                         url="https://github.com/CyberMonitor/APT_CyberCriminal_Campagin_Collections/tree/master/"
                         + report_dir.path,
                     )

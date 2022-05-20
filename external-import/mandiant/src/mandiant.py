@@ -10,30 +10,6 @@ from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from requests.auth import HTTPBasicAuth
 
-searchable_types = [
-    "threat-actor",
-    "malware",
-    "autonomous-system",
-    "email-message",
-    "x-mandiant-com-cpe",
-    "ipv4-addr",
-    "vulnerability",
-    "indicator",
-    "artifact",
-    "x-mandiant-com-exploit",
-    "domain-name",
-    "url",
-    "email-addr",
-    "windows-registry-key",
-    "x-mandiant-com-weakness",
-    "location",
-    "file",
-    "report",
-    "x-mandiant-com-exploitation",
-    "identity",
-    "all",
-]
-
 
 class Mandiant:
     def __init__(self):
@@ -166,6 +142,11 @@ class Mandiant:
                         stix2.TLP_AMBER.get("id"),
                         self.marking["id"],
                     ]
+                    for key in actor.keys():
+                        if actor[key] == "redacted" or (
+                            isinstance(actor[key], list) and "redacted" in actor[key]
+                        ):
+                            del actor[key]
                     actors.append(actor)
                 self.helper.send_stix2_bundle(
                     json.dumps({"type": "bundle", "objects": actors}),
@@ -197,6 +178,12 @@ class Mandiant:
                         stix2.TLP_AMBER.get("id"),
                         self.marking["id"],
                     ]
+                    for key in malware.keys():
+                        if malware[key] == "redacted" or (
+                            isinstance(malware[key], list)
+                            and "redacted" in malware[key]
+                        ):
+                            del malware[key]
                     malwares.append(malware)
                 self.helper.send_stix2_bundle(
                     json.dumps({"type": "bundle", "objects": malwares}),
