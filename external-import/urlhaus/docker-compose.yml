@@ -7,7 +7,7 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - "CONNECTOR_NAME=Abuse.ch URLhaus"
+      - CONNECTOR_NAME=Abuse.ch URLhaus
       - CONNECTOR_SCOPE=urlhaus
       - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=true
