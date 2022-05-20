@@ -4,12 +4,11 @@
 
 import json
 import os
+import queue
+import threading
 
 import requests
 import yaml
-import threading
-import queue
-
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 q = queue.Queue()

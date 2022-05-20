@@ -75,16 +75,9 @@ from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.download import Download
 from crowdstrike_client.api.models.report import Entity, Report
 from lxml.html import fromstring  # type: ignore
-from pycti import (
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Location,
-    Malware,
-    StixCoreRelationship,
-    Vulnerability,
-    Report as PyCTIReport,
-)
+from pycti import Identity, Indicator, IntrusionSet, Location, Malware
+from pycti import Report as PyCTIReport
+from pycti import StixCoreRelationship, Vulnerability
 from pycti.utils.constants import LocationTypes  # type: ignore
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
