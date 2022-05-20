@@ -9,15 +9,17 @@ services:
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - "CONNECTOR_NAME=OpenCTI Elastic Connector"
+      - CONNECTOR_LIVE_STREAM_WITH_INFERENCES=false
+      - "CONNECTOR_NAME=OpenCTI Splunk Connector"
       - CONNECTOR_SCOPE=elastic
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
-      - SPLUNK_URL=https://splunk.changeme.com:8089
-      - SPLUNK_SSL_VERIFY=true
-      - SPLUNK_LOGIN=ChangeMe
-      - SPLUNK_PASSWORD=ChangeMe
+      - "SPLUNK_URL=[\"https://splunk.changeme.com:8089\"]"
+      - "SPLUNK_LOGIN=[\"ChangeMe\"]"
+      - "SPLUNK_PASSWORD=[\"ChangeMe\"]"
+      - "SPLUNK_OWNER=[\"nobody\"]"
       - SPLUNK_OWNER=nobody
+      - SPLUNK_SSL_VERIFY=true
       - SPLUNK_APP=search
       - SPLUNK_KV_STORE_NAME=opencti
     restart: always
