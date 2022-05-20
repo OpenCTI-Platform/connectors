@@ -83,6 +83,7 @@ from pycti import (
     Malware,
     StixCoreRelationship,
     Vulnerability,
+    Report as PyCTIReport,
 )
 from pycti.utils.constants import LocationTypes  # type: ignore
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
@@ -820,7 +821,7 @@ def create_report(
 ) -> stix2.Report:
     """Create a report."""
     return stix2.Report(
-        id=Report.generate_id(name, published),
+        id=PyCTIReport.generate_id(name, published),
         created_by_ref=created_by,
         created=created,
         modified=modified,
