@@ -1,21 +1,21 @@
 """Cyber Monitor connector module."""
+import base64
+import mimetypes
 import os
 import ssl
+import sys
 import time
 import urllib
-import base64
-import sys
-import requests
-import mimetypes
-from datetime import datetime, date
-from dateutil import parser
+from datetime import date, datetime
 from typing import Optional
 
 import certifi
-import yaml
+import requests
 import stix2
-from pycti import OpenCTIConnectorHelper, get_config_variable, Report
+import yaml
+from dateutil import parser
 from github import Github
+from pycti import OpenCTIConnectorHelper, Report, get_config_variable
 from requests import RequestException
 
 

@@ -8,7 +8,7 @@ connector:
   name: 'Cyber Monitor Github'
   scope: 'report'
   confidence_level: 0 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: true
+  update_existing_data: false
   run_and_terminate: false
   log_level: 'info'
 

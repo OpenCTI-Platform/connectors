@@ -1,13 +1,20 @@
 import datetime
-import json
 import os
+import re
+import sys
 import time
-import requests
-import yaml
-import stix2
 
+import requests
+import stix2
+import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    Identity,
+    Indicator,
+    Malware,
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 from requests.auth import HTTPBasicAuth
 
 
@@ -54,7 +61,7 @@ class Mandiant:
             ["connector", "update_existing_data"],
             config,
         )
-        self.added_after = parse(self.mandiant_import_start_date).timestamp()
+        self.added_after = int(parse(self.mandiant_import_start_date).timestamp())
 
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -95,7 +102,20 @@ class Mandiant:
         data = r.json()
         self.auth_token = data.get("access_token")
 
-    def _query(self, url, limit=None, offset=None, retry=False):
+    def _redacted_as_none(self, key, object):
+        if key not in object or object[key] == "redacted":
+            return None
+        return object[key]
+
+    def _query(
+        self,
+        url,
+        limit=None,
+        offset=None,
+        start_epoch=None,
+        end_epoch=None,
+        retry=False,
+    ):
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/json",
@@ -106,15 +126,24 @@ class Mandiant:
             params["limit"] = str(limit)
         if offset is not None:
             params["offset"] = str(offset)
+        if start_epoch is not None:
+            params["start_epoch"] = str(int(start_epoch))
+        if end_epoch is not None:
+            params["end_epoch"] = str(int(end_epoch))
+
         r = requests.get(url, params=params, headers=headers)
         if r.status_code == 200:
             return r.json()
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
             self._get_token()
-            return self._query(url, True)
+            return self._query(url, limit, offset, start_epoch, end_epoch, True)
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
         else:
+            result = r.json()
+            if result and "error" in result:
+                if "future" in result["error"]:
+                    return None
             raise ValueError("An unknown error occurred")
 
     def _import_actor(self, work_id, current_state):
@@ -127,34 +156,47 @@ class Mandiant:
                 "Iterating with limit=" + str(limit) + " and offset=" + str(offset)
             )
             result = self._query(url, limit, offset)
-            if len(result["threat-actors"]) > 0:
+            if result is not None and len(result["threat-actors"]) > 0:
                 actors = []
                 for actor in result["threat-actors"]:
                     if self.mandiant_threat_actor_as_intrusion_set:
-                        actor["type"] = "intrusion-set"
-                        actor["id"] = actor["id"].replace(
-                            "threat-actor", "intrusion-set"
+                        stix_actor = stix2.IntrusionSet(
+                            id=actor["id"].replace("threat-actor", "intrusion-set"),
+                            name=self._redacted_as_none("name", actor),
+                            description=self._redacted_as_none("description", actor),
+                            modified=self._redacted_as_none("last_updated", actor),
+                            aliases=self._redacted_as_none("aliases", actor),
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[
+                                stix2.TLP_AMBER.get("id"),
+                                self.marking["standard_id"],
+                            ],
                         )
                     else:
-                        actor["type"] = "threat-actor"
-                    actor["created_by_ref"] = self.identity["standard_id"]
-                    actor["object_marking_refs"] = [
-                        stix2.TLP_AMBER.get("id"),
-                        self.marking["id"],
-                    ]
-                    for key in actor.keys():
-                        if actor[key] == "redacted" or (
-                            isinstance(actor[key], list) and "redacted" in actor[key]
-                        ):
-                            del actor[key]
-                    actors.append(actor)
+                        stix_actor = stix2.ThreatActor(
+                            id=actor["id"],
+                            name=self._redacted_as_none("name", actor),
+                            description=self._redacted_as_none("description", actor),
+                            modified=self._redacted_as_none("last_updated", actor),
+                            aliases=self._redacted_as_none("aliases", actor),
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[
+                                stix2.TLP_AMBER.get("id"),
+                                self.marking["standard_id"],
+                            ],
+                        )
+                    actors.append(stix_actor)
                 self.helper.send_stix2_bundle(
-                    json.dumps({"type": "bundle", "objects": actors}),
+                    stix2.Bundle(
+                        objects=actors,
+                        allow_custom=True,
+                    ).serialize(),
                     update=self.update_existing_data,
                     work_id=work_id,
                 )
-                current_state["actor"] = offset + result["total_count"]
                 offset = offset + limit
+                current_state["actor"] = offset
+                self.helper.set_state(current_state)
             else:
                 no_more_result = True
         return current_state
@@ -169,32 +211,277 @@ class Mandiant:
                 "Iterating with limit=" + str(limit) + " and offset=" + str(offset)
             )
             result = self._query(url, limit, offset)
-            if len(result["malware"]) > 0:
+            if result is not None and len(result["malware"]) > 0:
                 malwares = []
                 for malware in result["malware"]:
-                    malware["type"] = "malware"
-                    malware["created_by_ref"] = self.identity["standard_id"]
-                    malware["object_marking_refs"] = [
-                        stix2.TLP_AMBER.get("id"),
-                        self.marking["id"],
-                    ]
-                    for key in malware.keys():
-                        if malware[key] == "redacted" or (
-                            isinstance(malware[key], list)
-                            and "redacted" in malware[key]
-                        ):
-                            del malware[key]
-                    malwares.append(malware)
+                    stix_malware = stix2.Malware(
+                        id=malware["id"],
+                        is_family=True,
+                        name=self._redacted_as_none("name", malware),
+                        description=self._redacted_as_none("description", malware),
+                        modified=self._redacted_as_none("last_updated", malware),
+                        aliases=self._redacted_as_none("aliases", malware),
+                        created_by_ref=self.identity["standard_id"],
+                        object_marking_refs=[
+                            stix2.TLP_AMBER.get("id"),
+                            self.marking["standard_id"],
+                        ],
+                    )
+                    malwares.append(stix_malware)
                 self.helper.send_stix2_bundle(
-                    json.dumps({"type": "bundle", "objects": malwares}),
+                    stix2.Bundle(
+                        objects=malwares,
+                        allow_custom=True,
+                    ).serialize(),
                     update=self.update_existing_data,
                     work_id=work_id,
                 )
-                current_state["malware"] = offset + result["total_count"]
-                self.helper.set_state(current_state)
                 offset = offset + limit
+                current_state["malware"] = offset
+                self.helper.set_state(current_state)
             else:
                 no_more_result = True
+        return current_state
+
+    def _import_vulnerability(self, work_id, current_state):
+        url = self.mandiant_api_url + "/v4/vulnerability"
+        no_more_result = False
+        limit = 1000
+        start_epoch = current_state["vulnerability"]
+        end_epoch = start_epoch + 3600
+        while no_more_result is False:
+            self.helper.log_info(
+                "Iterating with start_epoch="
+                + str(start_epoch)
+                + ", end_epoch="
+                + str(end_epoch)
+            )
+            result = self._query(url, limit, None, start_epoch, end_epoch)
+            if result is not None and len(result["vulnerability"]) > 0:
+                vulnerabilities = []
+                for vulnerability in result["vulnerability"]:
+                    custom_properties = {}
+                    if (
+                        "common_vulnerability_scores" in vulnerability
+                        and "v3.1" in vulnerability["common_vulnerability_scores"]
+                    ):
+                        score = vulnerability["common_vulnerability_scores"]["v3.1"]
+                        custom_properties = {
+                            "x_opencti_base_score": self._redacted_as_none(
+                                "base_score", score
+                            ),
+                            "x_opencti_attack_vector": self._redacted_as_none(
+                                "attack_vector", score
+                            ),
+                            "x_opencti_integrity_impact": self._redacted_as_none(
+                                "integrity_impact", score
+                            ),
+                            "x_opencti_availability_impact": self._redacted_as_none(
+                                "availability_impact", score
+                            ),
+                            "x_opencti_confidentiality_impact": self._redacted_as_none(
+                                "confidentiality_impact", score
+                            ),
+                        }
+                    stix_vulnerability = stix2.Vulnerability(
+                        id=vulnerability["id"],
+                        name=self._redacted_as_none("cve_id", vulnerability),
+                        description=self._redacted_as_none(
+                            "description", vulnerability
+                        ),
+                        created=self._redacted_as_none("publish_date", vulnerability),
+                        created_by_ref=self.identity["standard_id"],
+                        object_marking_refs=[
+                            stix2.TLP_AMBER.get("id"),
+                            self.marking["standard_id"],
+                        ],
+                        allow_custom=True,
+                        custom_properties=custom_properties,
+                    )
+                    vulnerabilities.append(stix_vulnerability)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=vulnerabilities,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+            elif end_epoch > int(time.time()):
+                no_more_result = True
+            start_epoch = end_epoch
+            end_epoch = start_epoch + 3600
+            current_state["vulnerability"] = int(start_epoch)
+            self.helper.set_state(current_state)
+        return current_state
+
+    def _import_indicator(self, work_id, current_state):
+        url = self.mandiant_api_url + "/v4/indicator"
+        no_more_result = False
+        limit = 1000
+        start_epoch = current_state["indicator"]
+        end_epoch = start_epoch + 3600
+        while no_more_result is False:
+            self.helper.log_info(
+                "Iterating with start_epoch="
+                + str(start_epoch)
+                + ", end_epoch="
+                + str(end_epoch)
+            )
+            result = self._query(url, limit, None, start_epoch, end_epoch)
+            if result is not None and len(result["indicators"]) > 0:
+                indicators = []
+                for indicator in result["indicators"]:
+                    pattern = None
+                    type = None
+                    if indicator["type"] == "ipv4":
+                        pattern = "[ipv4-addr:value = '" + indicator["value"] + "']"
+                        type = "IPv4-Addr"
+                    elif indicator["type"] == "ipv6":
+                        pattern = "[ipv6-addr:value = '" + indicator["value"] + "']"
+                        type = "IPv6-Addr"
+                    elif indicator["type"] == "fqdn":
+                        pattern = "[domain-name:value = '" + indicator["value"] + "']"
+                        type = "Domain-Name"
+                    elif indicator["type"] == "url":
+                        pattern = "[url:value = '" + indicator["value"] + "']"
+                        type = "Url'"
+                    elif indicator["type"] == "md5":
+                        pattern = "[file:hashes.MD5 = '" + indicator["value"] + "']"
+                        type = "File"
+                    elif indicator["type"] == "sha1":
+                        pattern = "[file:hashes.SHA-1 = '" + indicator["value"] + "']"
+                        type = "File"
+                    elif indicator["type"] == "sha-256":
+                        pattern = "[file:hashes.SHA-256 = '" + indicator["value"] + "']"
+                        type = "File"
+                    if pattern is not None:
+                        stix_indicator = stix2.Indicator(
+                            id=Indicator.generate_id(pattern),
+                            pattern=pattern,
+                            pattern_type="stix",
+                            allow_custom=True,
+                            name=self._redacted_as_none("name", indicator)
+                            if self._redacted_as_none("name", indicator) is not None
+                            else pattern,
+                            description=self._redacted_as_none(
+                                "description", indicator
+                            ),
+                            created=self._redacted_as_none("first_seen", indicator),
+                            modified=self._redacted_as_none("last_updated", indicator),
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[
+                                stix2.TLP_AMBER.get("id"),
+                                self.marking["standard_id"],
+                            ],
+                            custom_properties={
+                                "x_opencti_main_observable_type": type,
+                                "x_opencti_create_observables": True,
+                            },
+                        )
+                        indicators.append(stix_indicator)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=indicators,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+            elif end_epoch > int(time.time()):
+                no_more_result = True
+            start_epoch = end_epoch
+            end_epoch = start_epoch + 3600
+            current_state["indicator"] = int(start_epoch)
+            self.helper.set_state(current_state)
+        return current_state
+
+    def _import_report(self, work_id, current_state):
+        url = self.mandiant_api_url + "/v4/report"
+        no_more_result = False
+        limit = 1000
+        start_epoch = current_state["report"]
+        end_epoch = start_epoch + 3600
+        while no_more_result is False:
+            self.helper.log_info(
+                "Iterating with start_epoch="
+                + str(start_epoch)
+                + ", end_epoch="
+                + str(end_epoch)
+            )
+            result = self._query(url, limit, None, start_epoch, end_epoch)
+            if result is not None and len(result["objects"]) > 0:
+                objects = []
+                for report in result["objects"]:
+                    url_report = self.mandiant_api_url + "/v4/report/" + report["id"]
+                    result_report = self._query(url_report)
+                    if result_report is not None and "id" in result_report:
+                        malwares = []
+                        if "malware_families" in result_report:
+                            for malware in result_report["malware_families"]:
+                                stix_malware = stix2.Malware(
+                                    id=Malware.generate_id(malware["name"]),
+                                    name=malware["name"],
+                                )
+                                malwares.append(stix_malware)
+                                objects.append(stix_malware)
+                        affected_industries = []
+                        if "affected_industries" in result_report:
+                            for industry in result_report["affected_industries"]:
+                                stix_identity = stix2.Identity(
+                                    id=Identity.generate_id(industry, "class"),
+                                    name=industry,
+                                    identity_class="class",
+                                )
+                                affected_industries.append(stix_identity)
+                                objects.append(stix_identity)
+                        report_objects = malwares + affected_industries
+                        stix_report = stix2.Report(
+                            id=report["id"],
+                            name=self._redacted_as_none("title", result_report),
+                            report_types=[
+                                self._redacted_as_none("report_type", result_report)
+                            ]
+                            if self._redacted_as_none("report_type", result_report)
+                            is not None
+                            else [],
+                            description=re.sub(
+                                "<[^<]+?>",
+                                "",
+                                self._redacted_as_none(
+                                    "executive_summary", result_report
+                                ),
+                            )
+                            if self._redacted_as_none(
+                                "executive_summary", result_report
+                            )
+                            is not None
+                            else "No description",
+                            created=datetime.datetime.fromtimestamp(
+                                self._redacted_as_none("publish_date", report)
+                            ).isoformat(),
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[
+                                stix2.TLP_AMBER.get("id"),
+                                self.marking["standard_id"],
+                            ],
+                            objects=report_objects,
+                        )
+                        objects.append(stix_report)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=objects,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+            elif end_epoch > int(time.time()):
+                no_more_result = True
+            start_epoch = end_epoch
+            end_epoch = start_epoch + 3600
+            current_state["report"] = int(start_epoch)
+            self.helper.set_state(current_state)
         return current_state
 
     def run(self):
@@ -213,8 +500,8 @@ class Mandiant:
                         {
                             "actor": 0,
                             "malware": 0,
-                            "indicator": 0,
-                            "vulnerability": 0,
+                            "vulnerability": self.added_after,
+                            "indicator": self.added_after,
                             "report": 0,
                         }
                     )
@@ -225,6 +512,7 @@ class Mandiant:
                         "Get ACTOR after position " + str(current_state["actor"])
                     )
                     new_state = self._import_actor(work_id, current_state)
+                    self.helper.log_info("Setting new state " + str(new_state))
                     self.helper.set_state(new_state)
                 if "malware" in self.mandiant_collections:
                     current_state = self.helper.get_state()
@@ -232,30 +520,32 @@ class Mandiant:
                         "Get MALWARE after position " + str(current_state["malware"])
                     )
                     new_state = self._import_malware(work_id, current_state)
+                    self.helper.log_info("Setting new state " + str(new_state))
                     self.helper.set_state(new_state)
-                # if "indicator" in self.mandiant_collections:
-                #     current_state = self.helper.get_state()
-                #     self.helper.log_info(
-                #         "Get INDICATOR after position "
-                #         + str(current_state["indicator"])
-                #     )
-                #     new_state = self._import_indicator(current_state)
-                #     self.helper.set_state(new_state)
-                # if "vulnerability" in self.mandiant_collections:
-                #     current_state = self.helper.get_state()
-                #     self.helper.log_info(
-                #         "Get VULNERABILITY after position "
-                #         + str(current_state["vulnerability"])
-                #     )
-                #     new_state = self._import_vulnerability(current_state)
-                #     self.helper.set_state(new_state)
-                # if "report" in self.mandiant_collections:
-                #     current_state = self.helper.get_state()
-                #     self.helper.log_info(
-                #         "Get ACTOR after position " + str(current_state["actor"])
-                #     )
-                #     new_state = self._import_report(current_state)
-                #     self.helper.set_state(new_state)
+                if "vulnerability" in self.mandiant_collections:
+                    current_state = self.helper.get_state()
+                    self.helper.log_info(
+                        "Get VULNERABILITY after position "
+                        + str(current_state["vulnerability"])
+                    )
+                    new_state = self._import_vulnerability(work_id, current_state)
+                    self.helper.log_info("Setting new state " + str(new_state))
+                    self.helper.set_state(new_state)
+                if "indicator" in self.mandiant_collections:
+                    current_state = self.helper.get_state()
+                    self.helper.log_info(
+                        "Get INDICATOR after position "
+                        + str(current_state["indicator"])
+                    )
+                    new_state = self._import_indicator(work_id, current_state)
+                    self.helper.set_state(new_state)
+                if "report" in self.mandiant_collections:
+                    current_state = self.helper.get_state()
+                    self.helper.log_info(
+                        "Get REPORT after position " + str(current_state["report"])
+                    )
+                    new_state = self._import_report(current_state)
+                    self.helper.set_state(new_state)
 
                 message = "End of synchronization"
                 self.helper.api.work.to_processed(work_id, message)
@@ -276,4 +566,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

@@ -10,13 +10,13 @@ services:
       - "CONNECTOR_NAME=Mandiant Cyber Threat Intelligence"
       - CONNECTOR_SCOPE=mandiant
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - MANDIANT_API_URL=https://api.intelligence.fireeye.com
       - MANDIANT_API_V4_KEY_ID=ChangeMe
       - MANDIANT_API_V4_KEY_SECRET=ChangeMe
       - MANDIANT_COLLECTIONS=actor,malware,indicator,vulnerability,report
-      - MANDIANT_IMPORT_START_DATE=2020-01-01
+      - MANDIANT_IMPORT_START_DATE=2022-04-01 # Max 90 days in the past, limitation of Mandiant API for indicators
       - MANDIANT_THREAT_ACTOR_AS_INTRUSION_SET=true
       - MANDIANT_INTERVAL=5 # Required, in minutes
     restart: always

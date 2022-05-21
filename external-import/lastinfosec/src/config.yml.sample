@@ -8,7 +8,7 @@ connector:
   name: 'LastInfoSec'
   scope: 'cyber threat intelligence'
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: True
+  update_existing_data: false
   log_level: 'info'
   run_and_terminate: False
 
