@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=TheHive
       - CONNECTOR_SCOPE=thehive
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - THEHIVE_URL=https://thehive.changeme.com
       - THEHIVE_API_KEY=ChangeMe

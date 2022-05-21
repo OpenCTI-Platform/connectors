@@ -8,7 +8,7 @@ connector:
   name: 'Mandiant Cyber Threat Intelligence'
   scope: 'mandiant'
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: True
+  update_existing_data: false
   log_level: 'info'
 
 mandiant:
@@ -16,6 +16,6 @@ mandiant:
   api_v4_key_id: 'ChangeMe'
   api_v4_key_secret: 'ChangeMe'
   collections: 'actor,malware,indicator,vulnerability,report'
-  import_start_date: '2020-01-01'
+  import_start_date: '2022-04-01' # Max 90 days in the past, limitation of Mandiant API for indicators
   threat_actor_as_intrusion_set: true
   interval: 5 # Required, in minutes
