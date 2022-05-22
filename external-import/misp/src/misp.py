@@ -193,8 +193,17 @@ class Misp:
         self.import_creator_orgs = get_config_variable(
             "MISP_IMPORT_CREATOR_ORGS", ["misp", "import_creator_orgs"], config
         )
+        self.import_creator_orgs_not = get_config_variable(
+            "MISP_IMPORT_CREATOR_ORGS_NOT", ["misp", "import_creator_orgs_not"], config
+        )
         self.import_owner_orgs = get_config_variable(
             "MISP_IMPORT_OWNER_ORGS", ["misp", "import_owner_orgs"], config
+        )
+        self.import_owner_orgs_not = get_config_variable(
+            "MISP_IMPORT_OWNER_ORGS_NOT", ["misp", "import_owner_orgs_not"], config
+        )
+        self.import_keyword = get_config_variable(
+            "MISP_IMPORT_KEYWORD", ["misp", "MISP_IMPORT_KEYWORD"], config
         )
         self.import_distribution_levels = get_config_variable(
             "MISP_IMPORT_DISTRIBUTION_LEVELS",
@@ -339,6 +348,9 @@ class Misp:
             while True:
                 kwargs["limit"] = 50
                 kwargs["page"] = current_page
+                if self.import_keyword is not None:
+                    kwargs["value"] = self.import_keyword
+                    kwargs["searchall"] = True
                 self.helper.log_info(
                     "Fetching MISP events with args: " + json.dumps(kwargs)
                 )
@@ -388,14 +400,20 @@ class Misp:
     def process_events(self, work_id, events) -> int:
         # Prepare filters
         import_creator_orgs = None
+        import_creator_orgs_not = None
         import_owner_orgs = None
+        import_owner_orgs_not = None
         import_distribution_levels = None
         import_threat_levels = None
         latest_event_timestamp = None
         if self.import_creator_orgs is not None:
             import_creator_orgs = self.import_creator_orgs.split(",")
+        if self.import_creator_orgs_not is not None:
+            import_creator_orgs_not = self.import_creator_orgs_not.split(",")
         if self.import_owner_orgs is not None:
             import_owner_orgs = self.import_owner_orgs.split(",")
+        if self.import_owner_orgs_not is not None:
+            import_owner_orgs_not = self.import_owner_orgs_not.split(",")
         if self.import_distribution_levels is not None:
             import_distribution_levels = self.import_distribution_levels.split(",")
         if self.import_threat_levels is not None:
@@ -414,7 +432,6 @@ class Misp:
             # Check against filter
             if (
                 import_creator_orgs is not None
-                and not import_creator_orgs
                 and event["Event"]["Orgc"]["name"] not in import_creator_orgs
             ):
                 self.helper.log_info(
@@ -424,14 +441,33 @@ class Misp:
                 )
                 continue
             if (
+                import_creator_orgs_not is not None
+                and event["Event"]["Orgc"]["name"] in import_creator_orgs_not
+            ):
+                self.helper.log_info(
+                    "Event creator organization "
+                    + event["Event"]["Orgc"]["name"]
+                    + " in import_creator_orgs_not, do not import"
+                )
+                continue
+            if (
                 import_owner_orgs is not None
-                and not import_owner_orgs
                 and event["Event"]["Org"]["name"] not in import_owner_orgs
             ):
                 self.helper.log_info(
                     "Event owner organization "
                     + event["Event"]["Org"]["name"]
                     + " not in import_owner_orgs, do not import"
+                )
+                continue
+            if (
+                import_owner_orgs_not is not None
+                and event["Event"]["Org"]["name"] not in import_owner_orgs_not
+            ):
+                self.helper.log_info(
+                    "Event owner organization "
+                    + event["Event"]["Org"]["name"]
+                    + " in import_owner_orgs_not, do not import"
                 )
                 continue
             if (
@@ -578,7 +614,7 @@ class Misp:
                                 event_threat_level
                             ),
                             "labels": event_tags,
-                            "created_by_ref": author,
+                            "created_by_ref": author["id"],
                             "external_references": attribute_external_references,
                         },
                     )
@@ -713,7 +749,7 @@ class Misp:
                                         target_result["entity"]["id"],
                                     ),
                                     relationship_type="related-to",
-                                    created_by_ref=author,
+                                    created_by_ref=author["id"],
                                     description="Original Relationship: "
                                     + ref["relationship_type"]
                                     + "  \nComment: "
@@ -780,7 +816,7 @@ class Misp:
                         int(event["Event"]["timestamp"])
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     report_types=[self.misp_report_type],
-                    created_by_ref=author,
+                    created_by_ref=author["id"],
                     object_marking_refs=event_markings,
                     labels=event_tags,
                     object_refs=object_refs,
@@ -802,7 +838,7 @@ class Misp:
                         modified=datetime.utcfromtimestamp(
                             int(note["timestamp"])
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         object_marking_refs=event_markings,
                         abstract=note["name"],
                         content=self.process_note(note["content"], bundle_objects),
@@ -812,18 +848,10 @@ class Misp:
                     bundle_objects.append(note)
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
-            try:
-                self.helper.send_stix2_bundle(
-                    bundle, work_id=work_id, update=self.update_existing_data
-                )
-            except:
-                time.sleep(60)
-                try:
-                    self.helper.send_stix2_bundle(
-                        bundle, work_id=work_id, update=self.update_existing_data
-                    )
-                except:
-                    return latest_event_timestamp
+
+            self.helper.send_stix2_bundle(
+                bundle, work_id=work_id, update=self.update_existing_data
+            )
         return latest_event_timestamp
 
     def _get_pdf_file(self, attribute):
@@ -962,7 +990,7 @@ class Misp:
                             int(attribute["timestamp"])
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                         labels=attribute_tags,
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         object_marking_refs=attribute_markings,
                         external_references=attribute_external_references,
                         created=datetime.utcfromtimestamp(
@@ -986,7 +1014,7 @@ class Misp:
                         "description": attribute["comment"],
                         "x_opencti_score": score,
                         "labels": attribute_tags,
-                        "created_by_ref": author,
+                        "created_by_ref": author["id"],
                         "external_references": attribute_external_references,
                     }
                     observable = None
@@ -1178,7 +1206,7 @@ class Misp:
                             "based-on", indicator.id, observable.id
                         ),
                         relationship_type="based-on",
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         source_ref=indicator.id,
                         target_ref=observable.id,
                         allow_custom=True,
@@ -1194,7 +1222,7 @@ class Misp:
                             "related-to", object_observable.id, observable.id
                         ),
                         relationship_type="related-to",
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         source_ref=object_observable.id,
                         target_ref=observable.id
                         if (observable is not None)
@@ -1217,7 +1245,7 @@ class Misp:
                                 "indicates", indicator.id, threat.id
                             ),
                             relationship_type="indicates",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=indicator.id,
                             target_ref=threat.id,
                             description=attribute["comment"],
@@ -1233,7 +1261,7 @@ class Misp:
                                 "related-to", observable.id, threat.id
                             ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=observable.id,
                             target_ref=threat.id,
                             description=attribute["comment"],
@@ -1260,7 +1288,7 @@ class Misp:
                                 "indicates", indicator.id, threat_id
                             ),
                             relationship_type="indicates",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=indicator.id,
                             target_ref=threat_id,
                             description=attribute["comment"],
@@ -1276,7 +1304,7 @@ class Misp:
                                 "related-to", observable.id, threat_id
                             ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=observable.id,
                             target_ref=threat_id,
                             description=attribute["comment"],
@@ -1303,7 +1331,7 @@ class Misp:
                             "uses", threat_id, attack_pattern.id
                         ),
                         relationship_type="uses",
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         source_ref=threat_id,
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
@@ -1318,7 +1346,7 @@ class Misp:
                     #             "relationship"
                     #         ),
                     #         relationship_type="indicates",
-                    #         created_by_ref=author,
+                    #         created_by_ref=author["id"],
                     #         source_ref=indicator.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
@@ -1332,7 +1360,7 @@ class Misp:
                     #             "relationship"
                     #         ),
                     #         relationship_type="related-to",
-                    #         created_by_ref=author,
+                    #         created_by_ref=author["id"],
                     #         source_ref=observable.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
@@ -1360,7 +1388,7 @@ class Misp:
                         ),
                         relationship_type="uses",
                         confidence=self.helper.connect_confidence_level,
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         source_ref=threat_id,
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
@@ -1374,7 +1402,7 @@ class Misp:
                     #            "relationship"
                     #        ),
                     #        relationship_type="indicates",
-                    #        created_by_ref=author,
+                    #        created_by_ref=author["id"],
                     #        source_ref=indicator.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
@@ -1388,7 +1416,7 @@ class Misp:
                     #            "relationship"
                     #        ),
                     #        relationship_type="indicates",
-                    #        created_by_ref=author,
+                    #        created_by_ref=author["id"],
                     #        source_ref=observable.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
@@ -1404,7 +1432,7 @@ class Misp:
                                 "related-to", indicator.id, sector.id
                             ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=indicator.id,
                             target_ref=sector.id,
                             description=attribute["comment"],
@@ -1420,7 +1448,7 @@ class Misp:
                                 "related-to", observable.id, sector.id
                             ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=observable.id,
                             target_ref=sector.id,
                             description=attribute["comment"],
@@ -1438,7 +1466,7 @@ class Misp:
                                 "related-to", indicator.id, country.id
                             ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=indicator.id,
                             target_ref=country.id,
                             description=attribute["comment"],
@@ -1454,7 +1482,7 @@ class Misp:
                                 "related-to", observable.id, country.id
                             ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=observable.id,
                             target_ref=country.id,
                             description=attribute["comment"],
@@ -1515,7 +1543,7 @@ class Misp:
                                 name=name,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 custom_properties={"x_opencti_aliases": aliases},
                             )
@@ -1539,7 +1567,7 @@ class Misp:
                                 name=name,
                                 labels=["tool"],
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 custom_properties={"x_opencti_aliases": aliases},
                                 allow_custom=True,
@@ -1572,7 +1600,7 @@ class Misp:
                                 aliases=aliases,
                                 labels=[galaxy["name"]],
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
                             )
@@ -1602,7 +1630,7 @@ class Misp:
                                 id=AttackPattern.generate_id(name, x_mitre_id),
                                 name=name,
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 custom_properties={
                                     "x_mitre_id": x_mitre_id,
@@ -1623,7 +1651,7 @@ class Misp:
                                 name=name,
                                 identity_class="class",
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
                             )
@@ -1640,7 +1668,7 @@ class Misp:
                                 name=name,
                                 country=galaxy_entity["meta"]["ISO"],
                                 description="Imported from MISP tag",
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
                             )
@@ -1677,7 +1705,7 @@ class Misp:
                             id=IntrusionSet.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1699,7 +1727,7 @@ class Misp:
                             id=Tool.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1727,7 +1755,7 @@ class Misp:
                             name=name,
                             is_family=True,
                             description="Imported from MISP tag",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1747,7 +1775,7 @@ class Misp:
                             id=AttackPattern.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1764,7 +1792,7 @@ class Misp:
                             name=name,
                             description="Imported from MISP tag",
                             identity_class="class",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )

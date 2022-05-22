@@ -25,8 +25,11 @@ services:
       - MISP_IMPORT_FROM_DATE=2000-01-01 # Optional, import all event from this date
       - MISP_IMPORT_TAGS=opencti:import,type:osint # Optional, list of tags used for import events
       - MISP_IMPORT_TAGS_NOT= # Optional, list of tags to not include
-      - MISP_IMPORT_CREATOR_ORGS= # Optional, only import events created by this ORG (put the identifier here)
-      - MISP_IMPORT_OWNER_ORGS= # Optional, only import events owned by this ORG (put the identifier here)
+      - MISP_IMPORT_CREATOR_ORGS= # Optional, only import events created by those orgs (put the identifiers here)
+      - MISP_IMPORT_CREATOR_ORGS_NOT= # Optional, do not import events created by those orgs (put the identifiers here)
+      - MISP_IMPORT_OWNER_ORGS= # Optional, only import events owned by those orgs (put the identifiers here)
+      - MISP_IMPORT_OWNER_ORGS_NOT= # Optional, do not import events owned by those orgs (put the identifiers here)
+      - MISP_IMPORT_KEYWORD= # Optional, search only events based on a keyword
       - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3 # Optional, only import events with the given distribution levels
       - MISP_IMPORT_THREAT_LEVELS=1,2,3,4 # Optional only import events with the given threat levels
       - MISP_IMPORT_ONLY_PUBLISHED=False
