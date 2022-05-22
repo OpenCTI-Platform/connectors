@@ -931,6 +931,7 @@ class Misp:
             )
 
             ### Create the indicator
+            print(resolved_attribute)
             observable_resolver = resolved_attribute["resolver"]
             observable_type = resolved_attribute["type"]
             observable_value = resolved_attribute["value"]
@@ -1139,10 +1140,6 @@ class Misp:
                     self.helper.log_error(str(e))
             sightings = []
             identities = []
-            if observable is None:
-                self.helper.log_warning(
-                    "Not possible to create observable for type " + observable_type
-                )
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
                     if "Organisation" in misp_sighting:
