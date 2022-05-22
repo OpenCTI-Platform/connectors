@@ -512,11 +512,6 @@ class X509CertificateIndicator(StixIndicator):
         super().__init__(**kwargs)
 
 
-class X509v3ExtensionTypeIndicator(StixIndicator):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
-
 class XOpenCTI_HostnameIndicator(StixIndicator):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
