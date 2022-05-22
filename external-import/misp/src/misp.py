@@ -931,7 +931,6 @@ class Misp:
             )
 
             ### Create the indicator
-            print(resolved_attribute)
             observable_resolver = resolved_attribute["resolver"]
             observable_type = resolved_attribute["type"]
             observable_value = resolved_attribute["value"]
