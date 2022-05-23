@@ -2,22 +2,18 @@
 """Virustotal client module."""
 import json
 import logging
-from typing import Any, Optional
-
+import base64
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
-# Custom type to simulate a JSON format.
-JSONType = dict[str, Any]
-
 
 class VirusTotalClient:
     """VirusTotal client."""
 
-    def __init__(self, base_url: str, token: str) -> None:
+    def __init__(self, base_url, token):
         """Initialize Virustotal client."""
         # Drop the ending slash if present.
         self.url = base_url[:-1] if base_url[-1] == "/" else base_url
@@ -28,7 +24,7 @@ class VirusTotalClient:
             "content-type": "application/json",
         }
 
-    def _query(self, url: str) -> Optional[JSONType]:
+    def _query(self, url):
         """
         Execute a query to the Virustotal api.
 
@@ -78,7 +74,7 @@ class VirusTotalClient:
             )
             return None
 
-    def get_file_info(self, hash: str) -> Optional[JSONType]:
+    def get_file_info(self, hash):
         """
         Retrieve file information based on the given hash-256.
 
@@ -89,13 +85,13 @@ class VirusTotalClient:
 
         Returns
         -------
-        JSON
-            File information, as JSON.
+        dict
+            File object, see https://developers.virustotal.com/reference/files.
         """
         url = f"{self.url}/files/{hash}"
         return self._query(url)
 
-    def get_yara_ruleset(self, ruleset_id: str) -> Optional[JSONType]:
+    def get_yara_ruleset(self, ruleset_id):
         """
         Retrieve the YARA rules based on the given ruleset id.
 
@@ -106,8 +102,75 @@ class VirusTotalClient:
 
         Returns
         -------
-        JSON
-            YARA ruleset objects, as JSON.
+        dict
+            YARA ruleset objects, see https://developers.virustotal.com/reference/yara-rulesets
         """
         url = f"{self.url}/yara_rulesets/{ruleset_id}"
         return self._query(url)
+
+    def get_ip_info(self, ip):
+        """
+        Retrieve IP report based on the given IP.
+
+        Parameters
+        ----------
+        ip : str
+            IP address.
+
+        Returns
+        -------
+        dict
+            IP address object, see https://developers.virustotal.com/reference/ip-object
+        """
+        url = f"{self.url}/ip_addresses/{ip}"
+        return self._query(url)
+
+    def get_domain_info(self, domain):
+        """
+        Retrieve Domain report based on the given Domain.
+
+        Parameters
+        ----------
+        ip : str
+            IP address.
+
+        Returns
+        -------
+        dict
+            Domain Object, see https://developers.virustotal.com/reference/domains-1
+        """
+        url = f"{self.url}/domains/{domain}"
+        return self._query(url)
+
+    def get_url_info(self, url):
+        """
+        Retrieve URL report based on the given URL.
+
+        Parameters
+        ----------
+        ip : str
+            IP address.
+
+        Returns
+        -------
+        dict
+            URL Object, see https://developers.virustotal.com/reference/url-object
+        """
+        url = f"{self.url}/urls/{self.base64_encode_no_padding(url)}"
+        return self._query(url)
+
+    def base64_encode_no_padding(self, contents):
+        """
+        Base64 encode a string and remove padding.
+
+        Parameters
+        ----------
+        contents : str
+            String to encode.
+
+        Returns
+        -------
+        str
+            Base64 encoded string without padding
+        """
+        return base64.b64encode(contents.encode()).decode().replace("=", "")
