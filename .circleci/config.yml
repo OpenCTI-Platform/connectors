@@ -402,7 +402,7 @@ jobs:
             docker push opencti/connector-cisa-known-exploited-vulnerabilities:latest
             docker push opencti/connector-cisa-known-exploited-vulnerabilities:${CIRCLE_TAG}
             docker push opencti/connector-cyber-campaign-collection:latest
-            docker push opencti/connector-cyber-campaign-collections:${CIRCLE_TAG}
+            docker push opencti/connector-cyber-campaign-collection:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1                   
