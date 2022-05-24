@@ -27,6 +27,7 @@ class BackupFilesConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
+        self.direct_url = get_config_variable("OPENCTI_URL", ["opencti", "url"], config)
         self.backup_protocol = get_config_variable(
             "BACKUP_PROTOCOL", ["backup", "protocol"], config
         )
@@ -39,8 +40,17 @@ class BackupFilesConnector:
         files = self.helper.api.get_attribute_in_extension("files", current)
         if files is not None and len(files) > 0:
             for file in files:
+                target_uri = (
+                    self.direct_url
+                    if self.direct_url.endswith("/")
+                    else self.direct_url + "/"
+                )
+                # fmt: off
+                file_uri = file["uri"][file["uri"].index("storage/get"):]
+                # fmt: on
+                url = target_uri + file_uri
                 file_data = self.helper.api.fetch_opencti_file(
-                    file["uri"], binary=True, serialize=True
+                    url, binary=True, serialize=True
                 )
                 file["data"] = file_data
         return entity
