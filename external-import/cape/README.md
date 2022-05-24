@@ -1,7 +1,7 @@
 # OpenCTI CAPE Sandbox Connector
 
 ## Description
-This is a connector for syncing CAPE snadbox analysis as reports and IOCs [OpenCTI](https://github.com/OpenCTI-Platform/opencti). 
+This is a connector for syncing CAPE sandbox analysis as reports and IOCs [OpenCTI](https://github.com/OpenCTI-Platform/opencti). 
 
 ## Configuration
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). Since the `opencti` and `connector` options are the same as any other Connector, I'm only going to address the `CAPE` options
