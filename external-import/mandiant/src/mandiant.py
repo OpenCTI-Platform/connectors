@@ -544,7 +544,7 @@ class Mandiant:
                     self.helper.log_info(
                         "Get REPORT after position " + str(current_state["report"])
                     )
-                    new_state = self._import_report(current_state)
+                    new_state = self._import_report(work_id, current_state)
                     self.helper.set_state(new_state)
 
                 message = "End of synchronization"
