@@ -336,7 +336,9 @@ class Misp:
                 next_event_timestamp = latest_event_timestamp + 1
                 kwargs[self.misp_datetime_attribute] = next_event_timestamp
             elif import_from_date is not None:
-                kwargs["date_from"] = import_from_date.strftime("%Y-%m-%d")
+                kwargs[self.misp_datetime_attribute] = import_from_date.strftime(
+                    "%Y-%m-%d"
+                )
 
             # With attachments
             if self.import_with_attachments:
