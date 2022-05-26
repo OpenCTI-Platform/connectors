@@ -134,6 +134,8 @@ class Sekoia(object):
             yield items[i : i + chunk_size]
 
     def _run(self, cursor, work_id):
+        start = f"{(datetime.utcnow() - timedelta(hours=1)).isoformat()}Z"
+        current_cursor = base64.b64encode(start.encode("utf-8")).decode("utf-8")
         while True:
             params = {"limit": self.limit, "cursor": cursor}
 
@@ -141,7 +143,9 @@ class Sekoia(object):
             if not data:
                 return cursor
 
-            cursor = data["next_cursor"] or cursor  # In case next_cursor is None
+            cursor = (
+                data["next_cursor"] or current_cursor
+            )  # In case next_cursor is None
             items = data["items"]
             if not items:
                 return cursor
@@ -156,6 +160,9 @@ class Sekoia(object):
             try:
                 self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
             except RecursionError:
+                self.helper.log_error(
+                    "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
+                )
                 self.helper.send_stix2_bundle(
                     bundle, update=True, work_id=work_id, bypass_split=True
                 )
@@ -237,7 +244,13 @@ class Sekoia(object):
         items += self._retrieve_by_ids(
             relationships_to_fetch, self.get_relationship_url
         )
-        return self._retrieve_references(items, current_depth + 1)
+        # Avoid circular
+        final_items = []
+        for item in items:
+            if "created_by_ref" in item and item["created_by_ref"] == item["id"]:
+                del item["created_by_ref"]
+            final_items.append(item)
+        return self._retrieve_references(final_items, current_depth + 1)
 
     def _get_missing_refs(self, items: List[Dict]) -> Set:
         """
