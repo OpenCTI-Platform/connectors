@@ -907,6 +907,11 @@ class Misp:
         if resolved_attributes is None:
             return None
 
+        file_name = None
+        for resolved_attribute in resolved_attributes:
+            if resolved_attribute["resolver"] == "file-name":
+                file_name = resolved_attribute["value"]
+
         for resolved_attribute in resolved_attributes:
             ### Pre-process
             # Markings & Tags
@@ -1093,6 +1098,7 @@ class Misp:
                                 OPENCTISTIX2[observable_resolver]["path"][1]
                             ] = observable_value
                             observable = File(
+                                name=file_name,
                                 hashes=hashes,
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,

@@ -134,8 +134,8 @@ class Sekoia(object):
             yield items[i : i + chunk_size]
 
     def _run(self, cursor, work_id):
-        start = f"{(datetime.utcnow() - timedelta(hours=1)).isoformat()}Z"
-        current_cursor = base64.b64encode(start.encode("utf-8")).decode("utf-8")
+        current_time = f"{datetime.utcnow().isoformat()}Z"
+        current_cursor = base64.b64encode(current_time.encode("utf-8")).decode("utf-8")
         while True:
             params = {"limit": self.limit, "cursor": cursor}
 
@@ -147,7 +147,7 @@ class Sekoia(object):
                 data["next_cursor"] or current_cursor
             )  # In case next_cursor is None
             items = data["items"]
-            if not items:
+            if not items or len(items) == 0:
                 return cursor
 
             items = self._retrieve_references(items)
