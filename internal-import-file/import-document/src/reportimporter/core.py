@@ -68,6 +68,8 @@ class ReportImporter:
         else:
             raise FileNotFoundError(f"{entity_config_file} was not found")
 
+        self.file = None
+
     def _process_message(self, data: Dict) -> str:
         self.helper.log_info("Processing new message")
         file_name = self._download_import_file(data)
@@ -86,6 +88,7 @@ class ReportImporter:
 
         # Parse report
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
+
         if data["file_id"].startswith("import/global"):
             file_data = open(file_name, "rb").read()
             file_data_encoded = base64.b64encode(file_data)
@@ -355,7 +358,9 @@ class ReportImporter:
                 report_types=entity["report_types"],
                 object_refs=observables + entities,
                 allow_custom=True,
-                custom_properties={"x_opencti_files": [self.file]},
+                custom_properties={
+                    "x_opencti_files": [self.file] if self.file is not None else []
+                },
             )
             observables.append(report)
         elif entity is not None:
@@ -375,7 +380,9 @@ class ReportImporter:
                 report_types=["threat-report"],
                 object_refs=observables + entities,
                 allow_custom=True,
-                custom_properties={"x_opencti_files": [self.file]},
+                custom_properties={
+                    "x_opencti_files": [self.file] if self.file is not None else []
+                },
             )
             observables.append(report)
         bundles_sent = []
