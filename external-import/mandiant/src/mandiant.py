@@ -361,8 +361,8 @@ class Mandiant:
                             pattern=pattern,
                             pattern_type="stix",
                             allow_custom=True,
-                            name=self._redacted_as_none("name", indicator)
-                            if self._redacted_as_none("name", indicator) is not None
+                            name=self._redacted_as_none("value", indicator)
+                            if self._redacted_as_none("value", indicator) is not None
                             else pattern,
                             description=self._redacted_as_none(
                                 "description", indicator
