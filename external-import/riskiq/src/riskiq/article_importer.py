@@ -56,156 +56,163 @@ class ArticleImporter:
             stix2.TLP_WHITE if indicator["source"] == "public" else stix2.TLP_AMBER
         )
 
-        if indicator_type == "hash_md5":
-            return [
-                stix2.File(
-                    type="file",
-                    hashes={"MD5": v},
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+        try:
+            if indicator_type == "hash_md5":
+                return [
+                    stix2.File(
+                        type="file",
+                        hashes={"MD5": v},
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type in ["hash_sha1", "sha1"]:
-            return [
-                stix2.File(
-                    type="file",
-                    hashes={"SHA-1": v},
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type in ["hash_sha1", "sha1"]:
+                return [
+                    stix2.File(
+                        type="file",
+                        hashes={"SHA-1": v},
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type in ["sha256", "hash_sha256"]:
-            return [
-                stix2.File(
-                    type="file",
-                    hashes={"SHA-256": v},
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type in ["sha256", "hash_sha256"]:
+                return [
+                    stix2.File(
+                        type="file",
+                        hashes={"SHA-256": v},
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type == "domain":
-            return [
-                stix2.DomainName(
-                    type="domain-name",
-                    value=v,
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type == "domain":
+                return [
+                    stix2.DomainName(
+                        type="domain-name",
+                        value=v,
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type in ["email", "emails"]:
-            return [
-                stix2.EmailAddress(
-                    type="email-addr",
-                    value=v,
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type in ["email", "emails"]:
+                return [
+                    stix2.EmailAddress(
+                        type="email-addr",
+                        value=v,
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type in ["filename", "filepath"]:
-            return [
-                stix2.File(
-                    type="file",
-                    name=v,
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type in ["filename", "filepath"]:
+                return [
+                    stix2.File(
+                        type="file",
+                        name=v,
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type == "ip":
-            return [
-                stix2.IPv4Address(
-                    type="ipv4-addr",
-                    value=v,
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type == "ip":
+                return [
+                    stix2.IPv4Address(
+                        type="ipv4-addr",
+                        value=v,
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type in ["proces_mutex", "process_mutex", "mutex"]:
-            return [
-                stix2.Mutex(
-                    type="mutex",
-                    name=v,
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type in ["proces_mutex", "process_mutex", "mutex"]:
+                return [
+                    stix2.Mutex(
+                        type="mutex",
+                        name=v,
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type == "url":
-            return [
-                stix2.URL(
-                    type="url",
-                    value=v,
-                    object_marking_refs=tlp_marking,
-                    defanged=False,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type == "url":
+                return [
+                    stix2.URL(
+                        type="url",
+                        value=v,
+                        object_marking_refs=tlp_marking,
+                        defanged=False,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type == "certificate_sha1":
-            return [
-                stix2.X509Certificate(
-                    type="x509-certificate",
-                    hashes={"SHA-1": v},
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type == "certificate_sha1":
+                return [
+                    stix2.X509Certificate(
+                        type="x509-certificate",
+                        hashes={"SHA-1": v},
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type in [
-            "certificate_issuerorganizationname",
-            "certificate_issuercommonname",
-        ]:
-            return [
-                stix2.X509Certificate(
-                    type="x509-certificate",
-                    issuer=v,
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type in [
+                "certificate_issuerorganizationname",
+                "certificate_issuercommonname",
+            ]:
+                return [
+                    stix2.X509Certificate(
+                        type="x509-certificate",
+                        issuer=v,
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type in [
-            "certificate_subjectorganizationname",
-            "certificate_subjectcountry",
-            "certificate_subjectcommonname",
-        ]:
-            return [
-                stix2.X509Certificate(
-                    type="x509-certificate",
-                    subject=v,
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type in [
+                "certificate_subjectorganizationname",
+                "certificate_subjectcountry",
+                "certificate_subjectcommonname",
+            ]:
+                return [
+                    stix2.X509Certificate(
+                        type="x509-certificate",
+                        subject=v,
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
 
-        if indicator_type in ["certificate_serialnumber", "code_certificate_serial"]:
-            return [
-                stix2.X509Certificate(
-                    type="x509-certificate",
-                    serial_number=v,
-                    object_marking_refs=tlp_marking,
-                    custom_properties=self.custom_props,
-                )
-                for v in values
-            ]
+            if indicator_type in [
+                "certificate_serialnumber",
+                "code_certificate_serial",
+            ]:
+                return [
+                    stix2.X509Certificate(
+                        type="x509-certificate",
+                        serial_number=v,
+                        object_marking_refs=tlp_marking,
+                        custom_properties=self.custom_props,
+                    )
+                    for v in values
+                ]
+        except Exception as e:
+            self.helper.log_error(f"[RiskIQ] Fail to create the SCO (error: {str(e)})")
+            return []
 
         self.helper.log_warning(
             f"[RiskIQ] indicator with key {indicator_type} not supported. (Values: {values})"
