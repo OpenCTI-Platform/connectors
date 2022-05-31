@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'SOC Prime'
+  scope: 'socprime'
+  log_level: 'info'
+
+socprime:
+  api_key: 'ChangeMe'
+  content_list_name: 'ChangeMe'
+  interval_sec: 3600
