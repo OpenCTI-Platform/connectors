@@ -6,8 +6,7 @@ The connector leverages the SOC Prime Continuous Content Management API to get t
 
 ## Installation
 
-The OpenCTI SOC Prime connector is a standalone Python process that requires access
-to the OpenCTI platform and RabbitMQ. RabbitMQ credentials and connection parameters
+The OpenCTI SOC Prime connector is a standalone Python process that requires access to the OpenCTI platform, RabbitMQ and API Key to the SOC Prime CCM to be able to pull Sigma rules. RabbitMQ credentials and connection parameters
 are provided by the OpenCTI API directly, as configured in the platform settings.
 
 Enabling this connector could be done by launching the Python process directly after
