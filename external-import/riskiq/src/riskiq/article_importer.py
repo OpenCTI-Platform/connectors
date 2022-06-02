@@ -2,9 +2,9 @@
 """OpenCTI RiskIQ's article importer module."""
 import datetime
 import itertools
-import stix2
-
 from typing import Any, Mapping, Optional
+
+import stix2
 from dateutil import parser
 from pycti import OpenCTIConnectorHelper, Report
 from stix2 import utils

@@ -3,11 +3,13 @@
 import datetime
 import json
 from pathlib import Path
+
 import plyara
 import plyara.utils
 import yaml
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
-from stix2.v21 import Bundle, Relationship, AutonomousSystem, Location, Note
+from stix2.v21 import AutonomousSystem, Bundle, Location, Note, Relationship
+
 from .client import VirusTotalClient
 
 

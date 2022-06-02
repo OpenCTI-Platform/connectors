@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Virustotal client module."""
+import base64
 import json
 import logging
-import base64
+
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
