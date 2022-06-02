@@ -93,6 +93,10 @@ class ExportReportPdf:
         file_name = data["file_name"]
         # TODO this can be implemented to filter every entity and observable
         # max_marking = data["max_marking"]
+        if "entity_type" not in data or "entity_id" not in data:
+            raise ValueError(
+                'This Connector currently only handles direct export (single entity and no list) of the following entity types: "Report" and "Intrusion-Set'
+            )
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
 
