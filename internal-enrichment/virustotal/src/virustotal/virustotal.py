@@ -7,8 +7,15 @@ from pathlib import Path
 import plyara
 import plyara.utils
 import yaml
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
-from stix2.v21 import AutonomousSystem, Bundle, Location, Note, Relationship
+import stix2
+from pycti import (
+    OpenCTIConnectorHelper,
+    OpenCTIStix2Utils,
+    get_config_variable,
+    StixCoreRelationship,
+    Location,
+    Note,
+)
 
 from .client import VirusTotalClient
 
@@ -260,8 +267,12 @@ class VirusTotalConnector:
                 x_opencti_detection=self.ip_indicator_detect,
                 x_opencti_score=score,
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on",
+                    indicator["standard_id"],
+                    observable["standard_id"],
+                ),
                 relationship_type="based-on",
                 created_by_ref=self.identity,
                 source_ref=indicator["standard_id"],
@@ -306,7 +317,8 @@ class VirusTotalConnector:
 
         # Create a Note with the full report
         if self.file_create_note_full_report:
-            note_stix = Note(
+            note_stix = stix2.Note(
+                id=Note.generate_id(),
                 abstract="VirusTotal Report",
                 content=f"```\n{json.dumps(json_data, indent=2)}\n```",
                 created_by_ref=self.identity,
@@ -316,7 +328,7 @@ class VirusTotalConnector:
 
         # Serialize/send all bundled objects
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
@@ -343,13 +355,17 @@ class VirusTotalConnector:
         now_time = datetime.datetime.utcnow()
 
         # Create AutonomousSystem and Relationship between the observable
-        as_stix = AutonomousSystem(
+        as_stix = stix2.AutonomousSystem(
             number=attributes["asn"],
             name=attributes["as_owner"],
             rir=attributes["regional_internet_registry"],
         )
-        relationship = Relationship(
-            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+        relationship = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "belongs-to",
+                observable["standard_id"],
+                as_stix.id,
+            ),
             relationship_type="belongs-to",
             created_by_ref=self.identity,
             source_ref=observable["standard_id"],
@@ -376,13 +392,17 @@ class VirusTotalConnector:
         )
 
         # Create a Location and Relationship between the observable
-        location_stix = Location(
-            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
+        location_stix = stix2.Location(
+            id=Location.generate_id(country_code, "Country"),
             created_by_ref=self.identity,
             country=country_code,
         )
-        relationship = Relationship(
-            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+        relationship = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "located-at",
+                observable["standard_id"],
+                location_stix.id,
+            ),
             relationship_type="located-at",
             created_by_ref=self.identity,
             source_ref=observable["standard_id"],
@@ -417,8 +437,12 @@ class VirusTotalConnector:
                 x_opencti_detection=self.ip_indicator_detect,
                 x_opencti_score=score,
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on",
+                    indicator["standard_id"],
+                    observable["standard_id"],
+                ),
                 relationship_type="based-on",
                 created_by_ref=self.identity,
                 source_ref=indicator["standard_id"],
@@ -436,7 +460,8 @@ class VirusTotalConnector:
                     attributes["last_analysis_results"].values(),
                 )
             )
-            note_stix = Note(
+            note_stix = stix2.Note(
+                id=Note.generate_id(),
                 abstract="VirusTotal Positives",
                 content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
                 created_by_ref=self.identity,
@@ -446,7 +471,7 @@ class VirusTotalConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
@@ -531,8 +556,12 @@ class VirusTotalConnector:
                 x_opencti_detection=self.domain_indicator_detect,
                 x_opencti_score=score,
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on",
+                    indicator["standard_id"],
+                    observable["standard_id"],
+                ),
                 relationship_type="based-on",
                 created_by_ref=self.identity,
                 source_ref=indicator["standard_id"],
@@ -550,7 +579,8 @@ class VirusTotalConnector:
                     attributes["last_analysis_results"].values(),
                 )
             )
-            note = Note(
+            note = stix2.Note(
+                id=Note.generate_id(),
                 abstract="VirusTotal Positives",
                 content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
                 created_by_ref=self.identity,
@@ -559,7 +589,8 @@ class VirusTotalConnector:
             bundle_objects.append(note)
 
         if attributes["categories"]:
-            note = Note(
+            note = stix2.Note(
+                id=Note.generate_id(),
                 abstract="VirusTotal Categories",
                 content=f'```\n{json.dumps(attributes["categories"], indent=2)}\n```',
                 created_by_ref=self.identity,
@@ -569,7 +600,7 @@ class VirusTotalConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
@@ -633,8 +664,12 @@ class VirusTotalConnector:
                 x_opencti_detection=self.url_indicator_detect,
                 x_opencti_score=score,
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on",
+                    indicator["standard_id"],
+                    observable["standard_id"],
+                ),
                 relationship_type="based-on",
                 created_by_ref=self.identity,
                 source_ref=indicator["standard_id"],
@@ -652,7 +687,8 @@ class VirusTotalConnector:
                     attributes["last_analysis_results"].values(),
                 )
             )
-            note = Note(
+            note = stix2.Note(
+                id=Note.generate_id(),
                 abstract="VirusTotal Positives",
                 content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
                 created_by_ref=self.identity,
@@ -661,7 +697,8 @@ class VirusTotalConnector:
             bundle_objects.append(note)
 
         if attributes["categories"]:
-            note = Note(
+            note = stix2.Note(
+                id=Note.generate_id(),
                 abstract="VirusTotal Categories",
                 content=f'```\n{json.dumps(attributes["categories"], indent=2)}\n```',
                 created_by_ref=self.identity,
@@ -671,7 +708,7 @@ class VirusTotalConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
