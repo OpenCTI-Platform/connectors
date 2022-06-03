@@ -345,7 +345,7 @@ class Mandiant:
                         type = "Domain-Name"
                     elif indicator["type"] == "url":
                         pattern = "[url:value = '" + indicator["value"] + "']"
-                        type = "Url'"
+                        type = "Url"
                     elif indicator["type"] == "md5":
                         pattern = "[file:hashes.MD5 = '" + indicator["value"] + "']"
                         type = "File"
