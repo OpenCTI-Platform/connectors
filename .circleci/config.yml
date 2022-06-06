@@ -658,7 +658,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/socprime
           name: Build Docker image opencti/connector-socprime
-          command: docker build -t opencti/connector-socprimen:rolling .
+          command: docker build -t opencti/connector-socprime:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
