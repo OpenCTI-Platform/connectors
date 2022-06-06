@@ -280,6 +280,10 @@ jobs:
           name: Build Docker image opencti/connector-cyber-campaign-collection
           command: docker build -t opencti/connector-cyber-campaign-collection:latest . && docker tag opencti/connector-cyber-campaign-collection:latest opencti/connector-cyber-campaign-collection:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/socprime
+          name: Build Docker image opencti/connector-socprime
+          command: docker build -t opencti/connector-socprime:latest . && docker tag opencti/connector-socprime:latest opencti/connector-socprime:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -403,6 +407,8 @@ jobs:
             docker push opencti/connector-cisa-known-exploited-vulnerabilities:${CIRCLE_TAG}
             docker push opencti/connector-cyber-campaign-collection:latest
             docker push opencti/connector-cyber-campaign-collection:${CIRCLE_TAG}
+            docker push opencti/connector-socprime:latest
+            docker push opencti/connector-socprime:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1                   
@@ -650,6 +656,10 @@ jobs:
           name: Build Docker image opencti/connector-cyber-campaign-collection
           command: docker build -t opencti/connector-cyber-campaign-collection:rolling .
       - run:
+          working_directory: ~/opencti/external-import/socprime
+          name: Build Docker image opencti/connector-socprime
+          command: docker build -t opencti/connector-socprimen:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -712,6 +722,7 @@ jobs:
             docker push opencti/connector-siemrules:rolling
             docker push opencti/connector-cisa-known-exploited-vulnerabilities:rolling
             docker push opencti/connector-cyber-campaign-collection:rolling
+            docker push opencti/connector-socprime:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
