@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-socprime:
+    image: opencti/connector-socprime:5.3.0
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=SOC Prime
+      - CONNECTOR_SCOPE=socprime
+      - CONNECTOR_LOG_LEVEL=info
+      - SOCPRIME_API_KEY=ChangeMe
+      - SOCPRIME_CONTENT_LIST_NAME=ChangeMe
+      - SOCPRIME_INTERVAL_SEC=3600
+      - SOCPRIME_SIEM_TYPE=
+    restart: always
