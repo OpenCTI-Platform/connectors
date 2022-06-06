@@ -397,7 +397,7 @@ class Mandiant:
         return current_state
 
     def _import_report(self, work_id, current_state):
-        url = self.mandiant_api_url + "/v4/report"
+        url = self.mandiant_api_url + "/v4/reports"
         no_more_result = False
         limit = 1000
         start_epoch = current_state["report"]
@@ -413,7 +413,7 @@ class Mandiant:
             if result is not None and len(result["objects"]) > 0:
                 objects = []
                 for report in result["objects"]:
-                    url_report = self.mandiant_api_url + "/v4/report/" + report["id"]
+                    url_report = self.mandiant_api_url + "/v4/reports/" + report["id"]
                     result_report = self._query(url_report)
                     if result_report is not None and "id" in result_report:
                         malwares = []
