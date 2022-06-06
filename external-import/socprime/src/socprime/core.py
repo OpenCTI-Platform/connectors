@@ -190,8 +190,8 @@ class SocprimeConnector:
             return self.tdm_api_client.get_rules_from_content_list(
                 content_list_name=self.tdm_content_list_name, siem_type="sigma"
             )
-        except Exception:
-            self.helper.log_error("Error while getting rules from content list.")
+        except Exception as err:
+            self.helper.log_error(f"Error while getting rules from content list - {err}")
             return []
 
     def send_rules_from_tdm(self, work_id: str) -> None:
