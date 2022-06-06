@@ -61,7 +61,7 @@ class ArticleImporter:
                 return [
                     stix2.File(
                         type="file",
-                        hashes={"MD5": v},
+                        hashes={"MD5": v.strip()},
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -72,7 +72,7 @@ class ArticleImporter:
                 return [
                     stix2.File(
                         type="file",
-                        hashes={"SHA-1": v},
+                        hashes={"SHA-1": v.strip()},
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -83,7 +83,7 @@ class ArticleImporter:
                 return [
                     stix2.File(
                         type="file",
-                        hashes={"SHA-256": v},
+                        hashes={"SHA-256": v.strip()},
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -94,7 +94,7 @@ class ArticleImporter:
                 return [
                     stix2.DomainName(
                         type="domain-name",
-                        value=v,
+                        value=v.strip(),
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -105,7 +105,7 @@ class ArticleImporter:
                 return [
                     stix2.EmailAddress(
                         type="email-addr",
-                        value=v,
+                        value=v.strip(),
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -116,7 +116,7 @@ class ArticleImporter:
                 return [
                     stix2.File(
                         type="file",
-                        name=v,
+                        name=v.strip(),
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -127,7 +127,7 @@ class ArticleImporter:
                 return [
                     stix2.IPv4Address(
                         type="ipv4-addr",
-                        value=v,
+                        value=v.strip(),
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -138,7 +138,7 @@ class ArticleImporter:
                 return [
                     stix2.Mutex(
                         type="mutex",
-                        name=v,
+                        name=v.strip(),
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -149,7 +149,7 @@ class ArticleImporter:
                 return [
                     stix2.URL(
                         type="url",
-                        value=v,
+                        value=v.strip(),
                         object_marking_refs=tlp_marking,
                         defanged=False,
                         custom_properties=self.custom_props,
@@ -161,7 +161,7 @@ class ArticleImporter:
                 return [
                     stix2.X509Certificate(
                         type="x509-certificate",
-                        hashes={"SHA-1": v},
+                        hashes={"SHA-1": v.strip()},
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -175,7 +175,7 @@ class ArticleImporter:
                 return [
                     stix2.X509Certificate(
                         type="x509-certificate",
-                        issuer=v,
+                        issuer=v.strip(),
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -190,7 +190,7 @@ class ArticleImporter:
                 return [
                     stix2.X509Certificate(
                         type="x509-certificate",
-                        subject=v,
+                        subject=v.strip(),
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
@@ -204,7 +204,7 @@ class ArticleImporter:
                 return [
                     stix2.X509Certificate(
                         type="x509-certificate",
-                        serial_number=v,
+                        serial_number=v.strip(),
                         object_marking_refs=tlp_marking,
                         custom_properties=self.custom_props,
                     )
