@@ -1,9 +1,9 @@
 import os
-import yaml
 
-from pymispwarninglists import WarningLists
-from pycti import OpenCTIConnectorHelper, get_config_variable
 import tldextract
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from pymispwarninglists import WarningLists
 
 # At the moment it is not possible to map lists to their upstream path.
 # Thus we need to have our own mapping here.

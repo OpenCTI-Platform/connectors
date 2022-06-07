@@ -1,39 +1,21 @@
-import os
-import yaml
-import time
-import requests
-import json
 import datetime
+import os
+import re
+import sys
+import time
 
-from urllib.parse import urlparse, parse_qs
+import requests
+import stix2
+import yaml
 from dateutil.parser import parse
+from pycti import (
+    Identity,
+    Indicator,
+    Malware,
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 from requests.auth import HTTPBasicAuth
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
-
-searchable_types = [
-    "threat-actor",
-    "malware",
-    "autonomous-system",
-    "email-message",
-    "x-mandiant-com-cpe",
-    "ipv4-addr",
-    "vulnerability",
-    "indicator",
-    "artifact",
-    "x-mandiant-com-exploit",
-    "domain-name",
-    "url",
-    "email-addr",
-    "windows-registry-key",
-    "x-mandiant-com-weakness",
-    "location",
-    "file",
-    "report",
-    "x-mandiant-com-exploitation",
-    "identity",
-    "all",
-]
 
 
 class Mandiant:
@@ -50,15 +32,22 @@ class Mandiant:
         self.mandiant_api_url = get_config_variable(
             "MANDIANT_API_URL", ["mandiant", "api_url"], config
         )
-        self.mandiant_api_v3_public = get_config_variable(
-            "MANDIANT_API_V3_PUBLIC", ["mandiant", "api_v3_public"], config
+        self.mandiant_api_v4_key_id = get_config_variable(
+            "MANDIANT_API_V4_KEY_ID", ["mandiant", "api_v4_key_id"], config
         )
-        self.mandiant_api_v3_secret = get_config_variable(
-            "MANDIANT_API_V3_SECRET", ["mandiant", "api_v3_secret"], config
+        self.mandiant_api_v4_key_secret = get_config_variable(
+            "MANDIANT_API_V4_KEY_SECRET", ["mandiant", "api_v4_key_secret"], config
         )
         self.mandiant_collections = get_config_variable(
             "MANDIANT_COLLECTIONS", ["mandiant", "collections"], config
         ).split(",")
+        self.mandiant_threat_actor_as_intrusion_set = get_config_variable(
+            "MANDIANT_THREAT_ACTOR_AS_INTRUSION_SET",
+            ["mandiant", "threat_actor_as_intrusion_set"],
+            config,
+            False,
+            True,
+        )
         self.mandiant_import_start_date = get_config_variable(
             "MANDIANT_IMPORT_START_DATE",
             ["mandiant", "import_start_date"],
@@ -72,7 +61,7 @@ class Mandiant:
             ["connector", "update_existing_data"],
             config,
         )
-        self.added_after = parse(self.mandiant_import_start_date).timestamp()
+        self.added_after = int(parse(self.mandiant_import_start_date).timestamp())
 
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -96,258 +85,404 @@ class Mandiant:
         return int(self.mandiant_interval) * 60
 
     def _get_token(self):
+        headers = {
+            "accept": "application/json",
+            "x-app-name": "opencti-connector-5.3.3",
+        }
         r = requests.post(
             self.mandiant_api_url + "/token",
             auth=HTTPBasicAuth(
-                self.mandiant_api_v3_public, self.mandiant_api_v3_secret
+                self.mandiant_api_v4_key_id, self.mandiant_api_v4_key_secret
             ),
             data={"grant_type": "client_credentials"},
+            headers=headers,
         )
         if r.status_code != 200:
             raise ValueError("Mandiant Authentication failed")
         data = r.json()
         self.auth_token = data.get("access_token")
 
-    def _search(self, stix_id, retry=False):
-        time.sleep(3)
-        self.helper.log_info("Searching for " + stix_id)
-        headers = {
-            "authorization": "Bearer " + self.auth_token,
-            "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-5.2.4",
-        }
-        body = """
-            {
-                "queries": [
-                    {
-                        "type": "ENTITY_TYPE",
-                        "query": "id = 'ENTITY_ID'"
-                    }
-                ],
-                "include_connected_objects": false
-            }
-        """
-        entity_type = stix_id.split("--")[0]
-        if entity_type not in searchable_types:
+    def _redacted_as_none(self, key, object):
+        if key not in object or object[key] == "redacted":
             return None
-        body = body.replace("ENTITY_TYPE", entity_type).replace("ENTITY_ID", stix_id)
-        r = requests.post(
-            self.mandiant_api_url + "/collections/search", data=body, headers=headers
-        )
-        if r.status_code == 200:
-            return r
-        elif (r.status_code == 401 or r.status_code == 403) and not retry:
-            self._get_token()
-            return self._search(stix_id, True)
-        elif r.status_code == 204 or r.status_code == 205:
-            return None
-        elif r.status_code == 401 or r.status_code == 403:
-            raise ValueError("Query failed, permission denied")
-        else:
-            print(r)
-            raise ValueError("An unknown error occurred")
+        return object[key]
 
-    def _query(self, url, retry=False):
-        headers = {
-            "authorization": "Bearer " + self.auth_token,
-            "accept": "application/vnd.oasis.stix+json; version=2.1",
-            "x-app-name": "opencti-connector-5.2.4",
-        }
-        r = requests.get(url, headers=headers)
-        if r.status_code == 200:
-            return r
-        elif (r.status_code == 401 or r.status_code == 403) and not retry:
-            self._get_token()
-            return self._query(url, True)
-        elif r.status_code == 401 or r.status_code == 403:
-            raise ValueError("Query failed, permission denied")
-        else:
-            raise ValueError("An unknown error occurred")
-
-    def _send_entity(self, bundle, work_id):
-        if "objects" in bundle and len(bundle) > 0:
-            final_objects = []
-            for stix_object in bundle["objects"]:
-                if "created_by_ref" not in stix_object:
-                    stix_object["created_by_ref"] = self.identity["standard_id"]
-                if stix_object["type"] != "marking-definition":
-                    stix_object["object_marking_refs"] = [
-                        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
-                    ]
-                    stix_object["object_marking_refs"].append(
-                        self.marking["standard_id"]
-                    )
-                final_objects.append(stix_object)
-            final_bundle = {"type": "bundle", "objects": final_objects}
-            self.helper.send_stix2_bundle(
-                json.dumps(final_bundle),
-                update=self.update_existing_data,
-                work_id=work_id,
-            )
-
-    def _import_collection(
-        self, collection, last_id_modified_timestamp=None, last_id=None, work_id=None
+    def _query(
+        self,
+        url,
+        limit=None,
+        offset=None,
+        start_epoch=None,
+        end_epoch=None,
+        retry=False,
     ):
-        have_next_page = True
-        url = None
-        last_object = None
-        while have_next_page:
-            if url is None:
-                if last_id_modified_timestamp is not None:
-                    url = (
-                        self.mandiant_api_url
-                        + "/collections/"
-                        + collection
-                        + "/objects"
-                        + "?added_after="
-                        + str(self.added_after)
-                        + "&length=100"
-                        + "&last_id_modified_timestamp="
-                        + str(last_id_modified_timestamp)
-                    )
-                else:
-                    url = (
-                        self.mandiant_api_url
-                        + "/collections/"
-                        + collection
-                        + "/objects"
-                        + "?added_after="
-                        + str(self.added_after)
-                        + "&length=100"
-                    )
-            result = self._query(url)
-            parsed_result = json.loads(result.text)
-            if "objects" in parsed_result and len(parsed_result) > 0:
-                relevant_objects = []
-                for object in parsed_result["objects"]:
-                    if (
-                        collection == "indicators" and object["type"] == "indicator"
-                    ) or (collection == "reports" and object["type"] == "report"):
-                        relevant_objects.append(object)
-                last_object = relevant_objects[-1]
-                object_ids = [
-                    stix_object["id"] for stix_object in parsed_result["objects"]
-                ]
-                if last_object["id"] != last_id:
-                    final_objects = []
-                    for stix_object in parsed_result["objects"]:
-                        if stix_object["type"] == "relationship":
-                            # If the source_ref is not in the current bundle
-                            if stix_object["source_ref"] not in object_ids:
-                                if stix_object["source_ref"] not in self.cache:
-                                    # Search entity in OpenCTI
-                                    opencti_entity = (
-                                        self.helper.api.stix_domain_object.read(
-                                            id=stix_object["source_ref"]
-                                        )
-                                    )
-                                    if opencti_entity is not None:
-                                        self.cache[
-                                            stix_object["source_ref"]
-                                        ] = opencti_entity
-                                else:
-                                    opencti_entity = self.cache[
-                                        stix_object["source_ref"]
-                                    ]
-                                # If the entity is not found
-                                if opencti_entity is None:
-                                    # Search the entity in Mandiant
-                                    mandiant_entity = self._search(
-                                        stix_object["source_ref"]
-                                    )
-                                    # If the entity is found
-                                    if mandiant_entity is not None:
-                                        mandiant_entity_decoded = json.loads(
-                                            mandiant_entity.text
-                                        )
-                                        # Send the entity before this bundle
-                                        self._send_entity(
-                                            mandiant_entity_decoded, work_id
-                                        )
-                            # Search if the entity is not in bundle
-                            if stix_object["target_ref"] not in object_ids:
-                                if stix_object["target_ref"] not in self.cache:
-                                    opencti_entity = (
-                                        self.helper.api.stix_domain_object.read(
-                                            id=stix_object["target_ref"]
-                                        )
-                                    )
-                                    if opencti_entity is not None:
-                                        self.cache[
-                                            stix_object["target_ref"]
-                                        ] = opencti_entity
-                                else:
-                                    opencti_entity = self.cache[
-                                        stix_object["target_ref"]
-                                    ]
-                                if opencti_entity is None:
-                                    mandiant_entity = self._search(
-                                        stix_object["target_ref"]
-                                    )
-                                    if mandiant_entity is not None:
-                                        mandiant_entity_decoded = json.loads(
-                                            mandiant_entity.text
-                                        )
-                                        self._send_entity(
-                                            mandiant_entity_decoded, work_id
-                                        )
-                        if (
-                            "object_refs" in stix_object
-                            and len(stix_object["object_refs"]) > 0
-                        ):
-                            for object_ref in stix_object["object_refs"]:
-                                if object_ref not in object_ids:
-                                    if object_ref not in self.cache:
-                                        opencti_entity = (
-                                            self.helper.api.stix_domain_object.read(
-                                                id=object_ref
-                                            )
-                                        )
-                                        if opencti_entity is not None:
-                                            self.cache[object_ref] = opencti_entity
-                                    else:
-                                        opencti_entity = self.cache[object_ref]
-                                    if opencti_entity is None:
-                                        mandiant_entity = self._search(object_ref)
-                                        if mandiant_entity is not None:
-                                            mandiant_entity_decoded = json.loads(
-                                                mandiant_entity.text
-                                            )
-                                            self._send_entity(
-                                                mandiant_entity_decoded, work_id
-                                            )
-                        if "created_by_ref" not in stix_object:
-                            stix_object["created_by_ref"] = self.identity["standard_id"]
-                        if stix_object["type"] != "marking-definition":
-                            stix_object["object_marking_refs"] = [
-                                "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
-                            ]
-                            stix_object["object_marking_refs"].append(
-                                self.marking["standard_id"]
-                            )
-                        final_objects.append(stix_object)
-                    final_bundle = {"type": "bundle", "objects": final_objects}
-                    self.helper.send_stix2_bundle(
-                        json.dumps(final_bundle),
-                        update=self.update_existing_data,
-                        work_id=work_id,
-                    )
-                    headers = result.headers
-                    if "Link" in headers:
-                        have_next_page = True
-                        link = headers["Link"].split(";")
-                        url = link[0][1:-1]
-                        last_id_modified_timestamp = parse_qs(urlparse(url).query)[
-                            "last_id_modified_timestamp"
-                        ][0]
-                    else:
-                        have_next_page = False
-                else:
-                    have_next_page = False
-        return {
-            "last_id_modified_timestamp": last_id_modified_timestamp,
-            "last_id": last_object["id"] if "id" in last_object else None,
+        headers = {
+            "authorization": "Bearer " + self.auth_token,
+            "accept": "application/json",
+            "x-app-name": "opencti-connector-5.3.3",
         }
+        params = {}
+        if limit is not None:
+            params["limit"] = str(limit)
+        if offset is not None:
+            params["offset"] = str(offset)
+        if start_epoch is not None:
+            params["start_epoch"] = str(int(start_epoch))
+        if end_epoch is not None:
+            params["end_epoch"] = str(int(end_epoch))
+
+        r = requests.get(url, params=params, headers=headers)
+        if r.status_code == 200:
+            return r.json()
+        elif (r.status_code == 401 or r.status_code == 403) and not retry:
+            self._get_token()
+            return self._query(url, limit, offset, start_epoch, end_epoch, True)
+        elif r.status_code == 401 or r.status_code == 403:
+            raise ValueError("Query failed, permission denied")
+        else:
+            result = r.json()
+            if result and "error" in result:
+                if "future" in result["error"]:
+                    return None
+            raise ValueError("An unknown error occurred")
+
+    def _import_actor(self, work_id, current_state):
+        url = self.mandiant_api_url + "/v4/actor"
+        no_more_result = False
+        limit = 30
+        offset = current_state["actor"]
+        while no_more_result is False:
+            self.helper.log_info(
+                "Iterating with limit=" + str(limit) + " and offset=" + str(offset)
+            )
+            result = self._query(url, limit, offset)
+            if result is not None and len(result["threat-actors"]) > 0:
+                actors = []
+                for actor in result["threat-actors"]:
+                    if self.mandiant_threat_actor_as_intrusion_set:
+                        stix_actor = stix2.IntrusionSet(
+                            id=actor["id"].replace("threat-actor", "intrusion-set"),
+                            name=self._redacted_as_none("name", actor),
+                            description=self._redacted_as_none("description", actor),
+                            modified=self._redacted_as_none("last_updated", actor),
+                            aliases=self._redacted_as_none("aliases", actor),
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[
+                                stix2.TLP_AMBER.get("id"),
+                                self.marking["standard_id"],
+                            ],
+                        )
+                    else:
+                        stix_actor = stix2.ThreatActor(
+                            id=actor["id"],
+                            name=self._redacted_as_none("name", actor),
+                            description=self._redacted_as_none("description", actor),
+                            modified=self._redacted_as_none("last_updated", actor),
+                            aliases=self._redacted_as_none("aliases", actor),
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[
+                                stix2.TLP_AMBER.get("id"),
+                                self.marking["standard_id"],
+                            ],
+                        )
+                    actors.append(stix_actor)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=actors,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+                offset = offset + limit
+                current_state["actor"] = offset
+                self.helper.set_state(current_state)
+            else:
+                no_more_result = True
+        return current_state
+
+    def _import_malware(self, work_id, current_state):
+        url = self.mandiant_api_url + "/v4/malware"
+        no_more_result = False
+        limit = 10
+        offset = current_state["malware"]
+        while no_more_result is False:
+            self.helper.log_info(
+                "Iterating with limit=" + str(limit) + " and offset=" + str(offset)
+            )
+            result = self._query(url, limit, offset)
+            if result is not None and len(result["malware"]) > 0:
+                malwares = []
+                for malware in result["malware"]:
+                    stix_malware = stix2.Malware(
+                        id=malware["id"],
+                        is_family=True,
+                        name=self._redacted_as_none("name", malware),
+                        description=self._redacted_as_none("description", malware),
+                        modified=self._redacted_as_none("last_updated", malware),
+                        aliases=self._redacted_as_none("aliases", malware),
+                        created_by_ref=self.identity["standard_id"],
+                        object_marking_refs=[
+                            stix2.TLP_AMBER.get("id"),
+                            self.marking["standard_id"],
+                        ],
+                    )
+                    malwares.append(stix_malware)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=malwares,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+                offset = offset + limit
+                current_state["malware"] = offset
+                self.helper.set_state(current_state)
+            else:
+                no_more_result = True
+        return current_state
+
+    def _import_vulnerability(self, work_id, current_state):
+        url = self.mandiant_api_url + "/v4/vulnerability"
+        no_more_result = False
+        limit = 1000
+        start_epoch = current_state["vulnerability"]
+        end_epoch = start_epoch + 3600
+        while no_more_result is False:
+            self.helper.log_info(
+                "Iterating with start_epoch="
+                + str(start_epoch)
+                + ", end_epoch="
+                + str(end_epoch)
+            )
+            result = self._query(url, limit, None, start_epoch, end_epoch)
+            if result is not None and len(result["vulnerability"]) > 0:
+                vulnerabilities = []
+                for vulnerability in result["vulnerability"]:
+                    custom_properties = {}
+                    if (
+                        "common_vulnerability_scores" in vulnerability
+                        and "v3.1" in vulnerability["common_vulnerability_scores"]
+                    ):
+                        score = vulnerability["common_vulnerability_scores"]["v3.1"]
+                        custom_properties = {
+                            "x_opencti_base_score": self._redacted_as_none(
+                                "base_score", score
+                            ),
+                            "x_opencti_attack_vector": self._redacted_as_none(
+                                "attack_vector", score
+                            ),
+                            "x_opencti_integrity_impact": self._redacted_as_none(
+                                "integrity_impact", score
+                            ),
+                            "x_opencti_availability_impact": self._redacted_as_none(
+                                "availability_impact", score
+                            ),
+                            "x_opencti_confidentiality_impact": self._redacted_as_none(
+                                "confidentiality_impact", score
+                            ),
+                        }
+                    stix_vulnerability = stix2.Vulnerability(
+                        id=vulnerability["id"],
+                        name=self._redacted_as_none("cve_id", vulnerability),
+                        description=self._redacted_as_none(
+                            "description", vulnerability
+                        ),
+                        created=self._redacted_as_none("publish_date", vulnerability),
+                        created_by_ref=self.identity["standard_id"],
+                        object_marking_refs=[
+                            stix2.TLP_AMBER.get("id"),
+                            self.marking["standard_id"],
+                        ],
+                        allow_custom=True,
+                        custom_properties=custom_properties,
+                    )
+                    vulnerabilities.append(stix_vulnerability)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=vulnerabilities,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+            elif end_epoch > int(time.time()):
+                no_more_result = True
+            start_epoch = end_epoch
+            end_epoch = start_epoch + 3600
+            current_state["vulnerability"] = int(start_epoch)
+            self.helper.set_state(current_state)
+        return current_state
+
+    def _import_indicator(self, work_id, current_state):
+        url = self.mandiant_api_url + "/v4/indicator"
+        no_more_result = False
+        limit = 1000
+        start_epoch = current_state["indicator"]
+        end_epoch = start_epoch + 3600
+        while no_more_result is False:
+            self.helper.log_info(
+                "Iterating with start_epoch="
+                + str(start_epoch)
+                + ", end_epoch="
+                + str(end_epoch)
+            )
+            result = self._query(url, limit, None, start_epoch, end_epoch)
+            if result is not None and len(result["indicators"]) > 0:
+                indicators = []
+                for indicator in result["indicators"]:
+                    pattern = None
+                    type = None
+                    if indicator["type"] == "ipv4":
+                        pattern = "[ipv4-addr:value = '" + indicator["value"] + "']"
+                        type = "IPv4-Addr"
+                    elif indicator["type"] == "ipv6":
+                        pattern = "[ipv6-addr:value = '" + indicator["value"] + "']"
+                        type = "IPv6-Addr"
+                    elif indicator["type"] == "fqdn":
+                        pattern = "[domain-name:value = '" + indicator["value"] + "']"
+                        type = "Domain-Name"
+                    elif indicator["type"] == "url":
+                        pattern = "[url:value = '" + indicator["value"] + "']"
+                        type = "Url"
+                    elif indicator["type"] == "md5":
+                        pattern = "[file:hashes.MD5 = '" + indicator["value"] + "']"
+                        type = "File"
+                    elif indicator["type"] == "sha1":
+                        pattern = "[file:hashes.SHA-1 = '" + indicator["value"] + "']"
+                        type = "File"
+                    elif indicator["type"] == "sha-256":
+                        pattern = "[file:hashes.SHA-256 = '" + indicator["value"] + "']"
+                        type = "File"
+                    if pattern is not None:
+                        stix_indicator = stix2.Indicator(
+                            id=Indicator.generate_id(pattern),
+                            pattern=pattern,
+                            pattern_type="stix",
+                            allow_custom=True,
+                            name=self._redacted_as_none("value", indicator)
+                            if self._redacted_as_none("value", indicator) is not None
+                            else pattern,
+                            description=self._redacted_as_none(
+                                "description", indicator
+                            ),
+                            created=self._redacted_as_none("first_seen", indicator),
+                            modified=self._redacted_as_none("last_updated", indicator),
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[
+                                stix2.TLP_AMBER.get("id"),
+                                self.marking["standard_id"],
+                            ],
+                            custom_properties={
+                                "x_opencti_main_observable_type": type,
+                                "x_opencti_create_observables": True,
+                            },
+                        )
+                        indicators.append(stix_indicator)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=indicators,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+            elif end_epoch > int(time.time()):
+                no_more_result = True
+            start_epoch = end_epoch
+            end_epoch = start_epoch + 3600
+            current_state["indicator"] = int(start_epoch)
+            self.helper.set_state(current_state)
+        return current_state
+
+    def _import_report(self, work_id, current_state):
+        url = self.mandiant_api_url + "/v4/reports"
+        no_more_result = False
+        limit = 1000
+        start_epoch = current_state["report"]
+        end_epoch = start_epoch + 3600
+        while no_more_result is False:
+            self.helper.log_info(
+                "Iterating with start_epoch="
+                + str(start_epoch)
+                + ", end_epoch="
+                + str(end_epoch)
+            )
+            result = self._query(url, limit, None, start_epoch, end_epoch)
+            if result is not None and len(result["objects"]) > 0:
+                objects = []
+                for report in result["objects"]:
+                    url_report = self.mandiant_api_url + "/v4/reports/" + report["id"]
+                    result_report = self._query(url_report)
+                    if result_report is not None and "id" in result_report:
+                        malwares = []
+                        if "malware_families" in result_report:
+                            for malware in result_report["malware_families"]:
+                                stix_malware = stix2.Malware(
+                                    id=Malware.generate_id(malware["name"]),
+                                    name=malware["name"],
+                                )
+                                malwares.append(stix_malware)
+                                objects.append(stix_malware)
+                        affected_industries = []
+                        if "affected_industries" in result_report:
+                            for industry in result_report["affected_industries"]:
+                                stix_identity = stix2.Identity(
+                                    id=Identity.generate_id(industry, "class"),
+                                    name=industry,
+                                    identity_class="class",
+                                )
+                                affected_industries.append(stix_identity)
+                                objects.append(stix_identity)
+                        report_objects = malwares + affected_industries
+                        stix_report = stix2.Report(
+                            id=report["id"],
+                            name=self._redacted_as_none("title", result_report),
+                            report_types=[
+                                self._redacted_as_none("report_type", result_report)
+                            ]
+                            if self._redacted_as_none("report_type", result_report)
+                            is not None
+                            else [],
+                            description=re.sub(
+                                "<[^<]+?>",
+                                "",
+                                self._redacted_as_none(
+                                    "executive_summary", result_report
+                                ),
+                            )
+                            if self._redacted_as_none(
+                                "executive_summary", result_report
+                            )
+                            is not None
+                            else "No description",
+                            created=datetime.datetime.fromtimestamp(
+                                self._redacted_as_none("publish_date", report)
+                            ).isoformat(),
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[
+                                stix2.TLP_AMBER.get("id"),
+                                self.marking["standard_id"],
+                            ],
+                            objects=report_objects,
+                        )
+                        objects.append(stix_report)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=objects,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+            elif end_epoch > int(time.time()):
+                no_more_result = True
+            start_epoch = end_epoch
+            end_epoch = start_epoch + 3600
+            current_state["report"] = int(start_epoch)
+            self.helper.set_state(current_state)
+        return current_state
 
     def run(self):
         while True:
@@ -360,79 +495,58 @@ class Mandiant:
                     self.helper.connect_id, friendly_name
                 )
                 current_state = self.helper.get_state()
-                if (
-                    current_state is None
-                    or "last_id_modified_timestamp" not in current_state
-                ):
+                if current_state is None:
                     self.helper.set_state(
                         {
-                            "last_id_modified_timestamp": {
-                                "indicators": None,
-                                "reports": None,
-                            },
-                            "last_id": {
-                                "indicators": None,
-                                "reports": None,
-                            },
+                            "actor": 0,
+                            "malware": 0,
+                            "vulnerability": self.added_after,
+                            "indicator": self.added_after,
+                            "report": 0,
                         }
                     )
+
+                if "actor" in self.mandiant_collections:
                     current_state = self.helper.get_state()
-                last_id_modified_timestamp = current_state["last_id_modified_timestamp"]
-                last_id = current_state["last_id"]
-                if "indicators" in self.mandiant_collections:
                     self.helper.log_info(
-                        "Get indicators created after "
-                        + str(last_id_modified_timestamp["indicators"])
+                        "Get ACTOR after position " + str(current_state["actor"])
                     )
-                    indicators_last = self._import_collection(
-                        "indicators",
-                        last_id_modified_timestamp["indicators"],
-                        last_id["indicators"],
-                        work_id,
-                    )
+                    new_state = self._import_actor(work_id, current_state)
+                    self.helper.log_info("Setting new state " + str(new_state))
+                    self.helper.set_state(new_state)
+                if "malware" in self.mandiant_collections:
                     current_state = self.helper.get_state()
-                    self.helper.set_state(
-                        {
-                            "last_id_modified_timestamp": {
-                                "indicators": indicators_last[
-                                    "last_id_modified_timestamp"
-                                ],
-                                "reports": current_state["last_id_modified_timestamp"][
-                                    "reports"
-                                ],
-                            },
-                            "last_id": {
-                                "indicators": indicators_last["last_id"],
-                                "reports": current_state["last_id"]["reports"],
-                            },
-                        }
-                    )
-                if "reports" in self.mandiant_collections:
                     self.helper.log_info(
-                        "Get reports created after "
-                        + str(last_id_modified_timestamp["reports"])
+                        "Get MALWARE after position " + str(current_state["malware"])
                     )
-                    reports_last = self._import_collection(
-                        "reports",
-                        last_id_modified_timestamp["reports"],
-                        last_id["reports"],
-                        work_id,
-                    )
+                    new_state = self._import_malware(work_id, current_state)
+                    self.helper.log_info("Setting new state " + str(new_state))
+                    self.helper.set_state(new_state)
+                if "vulnerability" in self.mandiant_collections:
                     current_state = self.helper.get_state()
-                    self.helper.set_state(
-                        {
-                            "last_id_modified_timestamp": {
-                                "indicators": current_state[
-                                    "last_id_modified_timestamp"
-                                ]["indicators"],
-                                "reports": reports_last["last_id_modified_timestamp"],
-                            },
-                            "last_id": {
-                                "indicators": current_state["last_id"]["indicators"],
-                                "reports": reports_last["last_id"],
-                            },
-                        }
+                    self.helper.log_info(
+                        "Get VULNERABILITY after position "
+                        + str(current_state["vulnerability"])
                     )
+                    new_state = self._import_vulnerability(work_id, current_state)
+                    self.helper.log_info("Setting new state " + str(new_state))
+                    self.helper.set_state(new_state)
+                if "indicator" in self.mandiant_collections:
+                    current_state = self.helper.get_state()
+                    self.helper.log_info(
+                        "Get INDICATOR after position "
+                        + str(current_state["indicator"])
+                    )
+                    new_state = self._import_indicator(work_id, current_state)
+                    self.helper.set_state(new_state)
+                if "report" in self.mandiant_collections:
+                    current_state = self.helper.get_state()
+                    self.helper.log_info(
+                        "Get REPORT after position " + str(current_state["report"])
+                    )
+                    new_state = self._import_report(work_id, current_state)
+                    self.helper.set_state(new_state)
+
                 message = "End of synchronization"
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(message)
@@ -452,4 +566,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

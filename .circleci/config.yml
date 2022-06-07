@@ -84,10 +84,6 @@ jobs:
           name: Build Docker image opencti/connector-cape
           command: docker build -t opencti/connector-cape:latest . && docker tag opencti/connector-cape:latest opencti/connector-cape:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/cyber-threat-coalition
-          name: Build Docker image opencti/connector-cyber-threat-coalition
-          command: docker build -t opencti/connector-cyber-threat-coalition:latest . && docker tag opencti/connector-cyber-threat-coalition:latest opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/external-import/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
@@ -107,6 +103,10 @@ jobs:
           working_directory: ~/opencti/external-import/amitt
           name: Build Docker image opencti/connector-amitt
           command: docker build -t opencti/connector-amitt:latest . && docker tag opencti/connector-amitt:latest opencti/connector-amitt:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/sentinelone-threats
+          name: Build Docker image opencti/connector-sentinelone-threats
+          command: docker build -t opencti/connector-sentinelone-threats:latest . && docker tag opencti/connector-sentinelone-threats:latest opencti/connector-sentinelone-threats:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/internal-enrichment/ipinfo
           name: Build Docker image opencti/connector-ipinfo
@@ -139,10 +139,6 @@ jobs:
           working_directory: ~/opencti/external-import/cybercrime-tracker
           name: Build Docker image opencti/connector-cybercrime-tracker
           command: docker build -t opencti/connector-cybercrime-tracker:latest . && docker tag opencti/connector-cybercrime-tracker:latest opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/stream/history
-          name: Build Docker image opencti/connector-history
-          command: docker build -t opencti/connector-history:latest . && docker tag opencti/connector-history:latest opencti/connector-history:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
@@ -274,7 +270,19 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/vulmatch
           name: Build Docker image opencti/connector-vulmatch
-          command: docker build -t opencti/connector-vulmatch:latest . && docker tag opencti/connector-vulmatch:latest opencti/connector-vulmatch:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-vulmatch:latest . && docker tag opencti/connector-vulmatch:latest opencti/connector-vulmatch:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/cisa-known-exploited-vulnerabilities
+          name: Build Docker image opencti/connector-cisa-known-exploited-vulnerabilities
+          command: docker build -t opencti/connector-cisa-known-exploited-vulnerabilities:latest . && docker tag opencti/connector-cisa-known-exploited-vulnerabilities:latest opencti/connector-cisa-known-exploited-vulnerabilities:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/cyber-campaign-collection
+          name: Build Docker image opencti/connector-cyber-campaign-collection
+          command: docker build -t opencti/connector-cyber-campaign-collection:latest . && docker tag opencti/connector-cyber-campaign-collection:latest opencti/connector-cyber-campaign-collection:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/socprime
+          name: Build Docker image opencti/connector-socprime
+          command: docker build -t opencti/connector-socprime:latest . && docker tag opencti/connector-socprime:latest opencti/connector-socprime:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -301,8 +309,6 @@ jobs:
             docker push opencti/connector-cuckoo:${CIRCLE_TAG}
             docker push opencti/connector-cape:latest
             docker push opencti/connector-cape:${CIRCLE_TAG}
-            docker push opencti/connector-cyber-threat-coalition:latest
-            docker push opencti/connector-cyber-threat-coalition:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
             docker push opencti/connector-mitre:latest
@@ -313,6 +319,8 @@ jobs:
             docker push opencti/connector-cve:${CIRCLE_TAG}
             docker push opencti/connector-amitt:latest
             docker push opencti/connector-amitt:${CIRCLE_TAG}
+            docker push opencti/connector-sentinelone-threats:latest
+            docker push opencti/connector-sentinelone-threats:${CIRCLE_TAG}
             docker push opencti/connector-ipinfo:latest
             docker push opencti/connector-ipinfo:${CIRCLE_TAG}
             docker push opencti/connector-virustotal:latest
@@ -329,8 +337,6 @@ jobs:
             docker push opencti/connector-valhalla:${CIRCLE_TAG}
             docker push opencti/connector-cybercrime-tracker:latest
             docker push opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
-            docker push opencti/connector-history:latest
-            docker push opencti/connector-history:${CIRCLE_TAG}
             docker push opencti/connector-tanium:latest
             docker push opencti/connector-tanium:${CIRCLE_TAG}
             docker push opencti/connector-mandiant:latest
@@ -397,6 +403,12 @@ jobs:
             docker push opencti/connector-siemrules:${CIRCLE_TAG}
             docker push opencti/connector-vulmatch:latest
             docker push opencti/connector-vulmatch:${CIRCLE_TAG}
+            docker push opencti/connector-cisa-known-exploited-vulnerabilities:latest
+            docker push opencti/connector-cisa-known-exploited-vulnerabilities:${CIRCLE_TAG}
+            docker push opencti/connector-cyber-campaign-collection:latest
+            docker push opencti/connector-cyber-campaign-collection:${CIRCLE_TAG}
+            docker push opencti/connector-socprime:latest
+            docker push opencti/connector-socprime:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1                   
@@ -452,10 +464,6 @@ jobs:
           name: Build Docker image opencti/connector-cape
           command: docker build -t opencti/connector-cape:rolling .
       - run:
-          working_directory: ~/opencti/external-import/cyber-threat-coalition
-          name: Build Docker image opencti/connector-cyber-threat-coalition
-          command: docker build -t opencti/connector-cyber-threat-coalition:rolling .
-      - run:
           working_directory: ~/opencti/external-import/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:rolling .
@@ -507,10 +515,6 @@ jobs:
           working_directory: ~/opencti/external-import/cybercrime-tracker
           name: Build Docker image opencti/connector-cybercrime-tracker
           command: docker build -t opencti/connector-cybercrime-tracker:rolling .
-      - run:
-          working_directory: ~/opencti/stream/history
-          name: Build Docker image opencti/connector-history
-          command: docker build -t opencti/connector-history:rolling .
       - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
@@ -644,6 +648,18 @@ jobs:
           name: Build Docker image opencti/connector-siemrules
           command: docker build -t opencti/connector-siemrules:rolling .
       - run:
+          working_directory: ~/opencti/external-import/cisa-known-exploited-vulnerabilities
+          name: Build Docker image opencti/connector-cisa-known-exploited-vulnerabilities
+          command: docker build -t opencti/connector-cisa-known-exploited-vulnerabilities:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/cyber-campaign-collection
+          name: Build Docker image opencti/connector-cyber-campaign-collection
+          command: docker build -t opencti/connector-cyber-campaign-collection:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/socprime
+          name: Build Docker image opencti/connector-socprime
+          command: docker build -t opencti/connector-socprime:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -658,7 +674,6 @@ jobs:
             docker push opencti/connector-cryptolaemus:rolling
             docker push opencti/connector-cuckoo:rolling
             docker push opencti/connector-cape:rolling
-            docker push opencti/connector-cyber-threat-coalition:rolling
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling
@@ -672,7 +687,6 @@ jobs:
             docker push opencti/connector-riskiq:rolling
             docker push opencti/connector-valhalla:rolling
             docker push opencti/connector-cybercrime-tracker:rolling
-            docker push opencti/connector-history:rolling
             docker push opencti/connector-tanium:rolling
             docker push opencti/connector-mandiant:rolling
             docker push opencti/connector-kaspersky:rolling
@@ -706,6 +720,9 @@ jobs:
             docker push opencti/connector-stixify:rolling
             docker push opencti/connector-vulmatch:rolling
             docker push opencti/connector-siemrules:rolling
+            docker push opencti/connector-cisa-known-exploited-vulnerabilities:rolling
+            docker push opencti/connector-cyber-campaign-collection:rolling
+            docker push opencti/connector-socprime:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

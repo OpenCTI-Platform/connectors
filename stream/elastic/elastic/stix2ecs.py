@@ -36,7 +36,7 @@ class StixIndicator(object):
                 "windows-registry-key": WindowsRegistryKeyIndicator,
                 "win-registry-key": WindowsRegistryKeyIndicator,
                 "x509-certificate": X509CertificateIndicator,
-                "x-opencti-hostname": XOpenCTIHostnameIndicator,
+                "hostname": XOpenCTIHostnameIndicator,
             }
             objs.append(
                 switch.get(item, UnknownIndicator)(typename=item)._parse(data[item])
@@ -508,11 +508,6 @@ class WindowsRegistryKeyIndicator(StixIndicator):
 
 
 class X509CertificateIndicator(StixIndicator):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
-
-class X509v3ExtensionTypeIndicator(StixIndicator):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 

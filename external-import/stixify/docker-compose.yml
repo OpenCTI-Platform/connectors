@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-taxii2:
-    image: opencti/connector-stixify:5.2.4
+    image: opencti/connector-stixify:5.3.3
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=STIXIFY
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software
       - CONNECTOR_CONFIDENCE_LEVEL=70
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - TAXII2_DISCOVERY_URL=https://app.stixify.com/taxii/taxii2
       - TAXII2_USERNAME=CHANGEME

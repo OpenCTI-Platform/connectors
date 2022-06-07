@@ -13,10 +13,10 @@ connector:
   log_level: 'info'
 
 splunk:
-  url: 'https://splunk.changeme.com:8089'
+  url: ['https://splunk.changeme.com:8089']
+  login: ['ChangeMe']
+  password: ['ChangeMe']
+  owner: ['nobody']
   ssl_verify: true
-  login: 'ChangeMe'
-  password: 'ChangeMe'
-  owner: 'nobody'
   app: 'search'
   kv_store_name: 'opencti'

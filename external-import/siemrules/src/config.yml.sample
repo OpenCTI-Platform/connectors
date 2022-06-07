@@ -8,7 +8,7 @@ connector:
   name: 'SIEMRULES'
   scope:'identity,report,indicator'
   confidence_level: 70
-  update_existing_data: True
+  update_existing_data: false
   log_level: 'info'
 
 taxii2:

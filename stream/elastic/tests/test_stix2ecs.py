@@ -102,7 +102,7 @@ data = [
         },
     ),
     (
-        """[x-opencti-hostname:value = 'jon-steak.duckdns.org']""",
+        """[hostname:value = 'jon-steak.duckdns.org']""",
         {"type": "domain-name", "domain": ["jon-steak.duckdns.org"]},
     ),
 ]

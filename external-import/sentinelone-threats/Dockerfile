@@ -1,12 +1,12 @@
-FROM python:3.9-alpine
+FROM python:3.10-alpine
 
-# Copy the worker
-COPY src /opt/opencti-connector-history
+# Copy the connector
+COPY src /opt/opencti-connector-sentinelone-threats
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-connector-history && \
+    cd /opt/opencti-connector-sentinelone-threats && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 

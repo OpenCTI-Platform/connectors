@@ -2,7 +2,8 @@ import json
 import os
 import re
 from json import JSONDecodeError
-from typing import List, Optional, Dict, Pattern, Any
+from typing import Any, Dict, List, Optional, Pattern
+
 from pycti import OpenCTIConnectorHelper
 from pydantic import BaseModel, validator
 from reportimporter.constants import (

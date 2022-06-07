@@ -1,15 +1,15 @@
-import yaml
 import os
-import urllib.request
 import ssl
-import certifi
-import pdfkit
-import html2text
+import urllib.request
 
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.pdfpage import PDFPage
+import certifi
+import html2text
+import pdfkit
+import yaml
 from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
+from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
+from pdfminer.pdfpage import PDFPage
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

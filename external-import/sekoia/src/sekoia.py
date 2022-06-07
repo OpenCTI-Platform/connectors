@@ -4,12 +4,12 @@ import os
 import time
 from datetime import datetime, timedelta
 from posixpath import join as urljoin
-from typing import Any, Iterable, List, Set, Dict
+from typing import Any, Dict, Iterable, List, Set
 
-from dateutil.parser import parse, ParserError
 import requests
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIStix2Utils
+from dateutil.parser import ParserError, parse
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
 
 
@@ -44,6 +44,18 @@ class Sekoia(object):
 
         self._load_data_sets()
         self.helper.log_info("All datasets has been loaded")
+
+        self.helper.api.identity.create(
+            stix_id="identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
+            type="Organization",
+            name="SEKOIA",
+            description="SEKOIA.IO is a European cybersecurity SAAS company, whose mission is to develop the best protection capabilities against cyber attacks.",
+        )
+        self.helper.api.marking_definition.create(
+            stix_id="marking-definition--bf973641-9d22-45d7-a307-ccdc68e120b9",
+            definition_type="statement",
+            definition="Copyright SEKOIA.IO",
+        )
 
     def run(self):
         self.helper.log_info("Starting SEKOIA.IO connector")
@@ -122,6 +134,8 @@ class Sekoia(object):
             yield items[i : i + chunk_size]
 
     def _run(self, cursor, work_id):
+        current_time = f"{datetime.utcnow().isoformat()}Z"
+        current_cursor = base64.b64encode(current_time.encode("utf-8")).decode("utf-8")
         while True:
             params = {"limit": self.limit, "cursor": cursor}
 
@@ -129,9 +143,11 @@ class Sekoia(object):
             if not data:
                 return cursor
 
-            cursor = data["next_cursor"] or cursor  # In case next_cursor is None
+            cursor = (
+                data["next_cursor"] or current_cursor
+            )  # In case next_cursor is None
             items = data["items"]
-            if not items:
+            if not items or len(items) == 0:
                 return cursor
 
             items = self._retrieve_references(items)
@@ -144,6 +160,9 @@ class Sekoia(object):
             try:
                 self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
             except RecursionError:
+                self.helper.log_error(
+                    "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
+                )
                 self.helper.send_stix2_bundle(
                     bundle, update=True, work_id=work_id, bypass_split=True
                 )
@@ -225,7 +244,13 @@ class Sekoia(object):
         items += self._retrieve_by_ids(
             relationships_to_fetch, self.get_relationship_url
         )
-        return self._retrieve_references(items, current_depth + 1)
+        # Avoid circular
+        final_items = []
+        for item in items:
+            if "created_by_ref" in item and item["created_by_ref"] == item["id"]:
+                del item["created_by_ref"]
+            final_items.append(item)
+        return self._retrieve_references(final_items, current_depth + 1)
 
     def _get_missing_refs(self, items: List[Dict]) -> Set:
         """

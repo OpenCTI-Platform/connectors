@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cuckoo:
-    image: opencti/connector-cuckoo:5.2.4
+    image: opencti/connector-cuckoo:5.3.3
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=cuckoo
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - CUCKOO_CREATE_INDICATORS=true
       - CUCKOO_ENABLE_NETWORK_TRAFFIC=false # enable creation of net Traffic (Very Loud)

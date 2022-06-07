@@ -1,8 +1,8 @@
-import yaml
 import os
-import requests
-
 from collections import defaultdict
+
+import requests
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

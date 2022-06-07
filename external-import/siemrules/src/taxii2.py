@@ -1,15 +1,16 @@
 """Generic TAXII2 connector. """
 
+import json
 import os
 import time
-import json
 from datetime import datetime, timedelta
-import yaml
-from requests.exceptions import HTTPError
+
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
-from taxii2client.exceptions import TAXIIServiceException
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from requests.exceptions import HTTPError
+from taxii2client.exceptions import TAXIIServiceException
 
 
 class Taxii2Connector:

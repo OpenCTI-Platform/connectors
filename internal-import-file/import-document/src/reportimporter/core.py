@@ -1,28 +1,34 @@
+import base64
 import os
 import time
-
 from datetime import datetime
-from typing import Dict, List, Callable
+from typing import Callable, Dict, List
 
+import stix2
 import yaml
-from pycti import (
-    OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    get_config_variable,
-    SimpleObservable,
-)
+from pycti import OpenCTIConnectorHelper, Report, get_config_variable
 from pydantic import BaseModel
 from reportimporter.constants import (
-    RESULT_FORMAT_TYPE,
-    RESULT_FORMAT_MATCH,
-    RESULT_FORMAT_CATEGORY,
-    OBSERVABLE_CLASS,
     ENTITY_CLASS,
+    OBSERVABLE_CLASS,
+    RESULT_FORMAT_CATEGORY,
+    RESULT_FORMAT_MATCH,
+    RESULT_FORMAT_TYPE,
 )
-from reportimporter.models import Observable, EntityConfig, Entity
+from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
 from reportimporter.util import MyConfigParser
-from stix2 import Report, Bundle
+from stix2 import (
+    URL,
+    AutonomousSystem,
+    DomainName,
+    EmailAddress,
+    File,
+    IPv4Address,
+    IPv6Address,
+    MACAddress,
+    WindowsRegistryKey,
+)
 
 
 class ReportImporter:
@@ -42,6 +48,7 @@ class ReportImporter:
             ["import_document", "create_indicator"],
             config,
         )
+        self.current_file = None
 
         # Load Entity and Observable configs
         observable_config_file = base_path + "/config/observable_config.ini"
@@ -61,6 +68,8 @@ class ReportImporter:
         else:
             raise FileNotFoundError(f"{entity_config_file} was not found")
 
+        self.file = None
+
     def _process_message(self, data: Dict) -> str:
         self.helper.log_info("Processing new message")
         file_name = self._download_import_file(data)
@@ -79,6 +88,15 @@ class ReportImporter:
 
         # Parse report
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
+
+        if data["file_id"].startswith("import/global"):
+            file_data = open(file_name, "rb").read()
+            file_data_encoded = base64.b64encode(file_data)
+            self.file = {
+                "name": data["file_id"].replace("import/global/", ""),
+                "data": file_data_encoded,
+                "mime_type": "application/pdf",
+            }
         parsed = parser.run_parser(file_name, data["file_mime"])
         os.remove(file_name)
 
@@ -155,7 +173,7 @@ class ReportImporter:
 
     def _process_parsing_results(
         self, parsed: List[Dict], context_entity: Dict
-    ) -> (List[SimpleObservable], List[str]):
+    ) -> (List[Dict], List[str]):
         observables = []
         entities = []
         if context_entity is not None:
@@ -200,19 +218,117 @@ class ReportImporter:
 
                     entities.append(entity["standard_id"])
                 else:
-                    observable = SimpleObservable(
-                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                            "x-opencti-simple-observable"
-                        ),
-                        key=match[RESULT_FORMAT_CATEGORY],
-                        value=match[RESULT_FORMAT_MATCH],
-                        x_opencti_create_indicator=self.create_indicator,
-                        object_marking_refs=object_markings,
-                        created_by_ref=author,
-                        # labels=labels,
-                        # external_references=external_references
-                    )
-                    observables.append(observable)
+                    observable = None
+                    if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
+                        observable = AutonomousSystem(
+                            value=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "Domain-Name.value":
+                        observable = DomainName(
+                            value=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "Email-Addr.value":
+                        observable = EmailAddress(
+                            value=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "File.name":
+                        observable = File(
+                            name=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value":
+                        observable = IPv4Address(
+                            value=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value":
+                        observable = IPv6Address(
+                            value=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "Mac-Addr.value":
+                        observable = MACAddress(
+                            value=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.MD5":
+                        observable = File(
+                            hashes={"MD5": match[RESULT_FORMAT_MATCH]},
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-1":
+                        observable = File(
+                            hashes={"SHA-1": match[RESULT_FORMAT_MATCH]},
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-256":
+                        observable = File(
+                            hashes={"SHA-256": match[RESULT_FORMAT_MATCH]},
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "Windows-Registry-Key.key":
+                        observable = WindowsRegistryKey(
+                            key=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
+                        observable = URL(
+                            value=match[RESULT_FORMAT_MATCH],
+                            object_marking_refs=object_markings,
+                            custom_properties={
+                                "x_opencti_create_indicator": self.create_indicator,
+                                "created_by_ref": author,
+                            },
+                        )
+                    if observable is not None:
+                        observables.append(observable)
 
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
                 entities.append(match[RESULT_FORMAT_MATCH])
@@ -234,7 +350,7 @@ class ReportImporter:
             return 0
 
         if entity is not None and entity["entity_type"] == "Report":
-            report = Report(
+            report = stix2.Report(
                 id=entity["standard_id"],
                 name=entity["name"],
                 description=entity["description"],
@@ -242,6 +358,9 @@ class ReportImporter:
                 report_types=entity["report_types"],
                 object_refs=observables + entities,
                 allow_custom=True,
+                custom_properties={
+                    "x_opencti_files": [self.file] if self.file is not None else []
+                },
             )
             observables.append(report)
         elif entity is not None:
@@ -253,18 +372,22 @@ class ReportImporter:
         else:
             timestamp = int(time.time())
             now = datetime.utcfromtimestamp(timestamp)
-            report = Report(
+            report = stix2.Report(
+                id=Report.generate_id(file_name, now),
                 name=file_name,
                 description="Automatic import",
                 published=now,
                 report_types=["threat-report"],
                 object_refs=observables + entities,
                 allow_custom=True,
+                custom_properties={
+                    "x_opencti_files": [self.file] if self.file is not None else []
+                },
             )
             observables.append(report)
         bundles_sent = []
         if len(observables) > 0:
-            bundle = Bundle(objects=observables, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=observables, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle=bundle,
                 update=True,

@@ -3,23 +3,18 @@
 
 from typing import List, NamedTuple
 
-from stix2 import (  # type: ignore
-    EqualityComparisonExpression,
-    ObjectPath,
-    ObservationExpression,
-    StringConstant,
-)
-
+from stix2 import ObjectPath  # type: ignore
+from stix2 import EqualityComparisonExpression, ObservationExpression, StringConstant
 
 _OBJECT_TYPE_IPV4_ADDR = "ipv4-addr"
 _OBJECT_TYPE_IPV6_ADDR = "ipv6-addr"
 _OBJECT_TYPE_DOMAIN_NAME = "domain-name"
-_OBJECT_TYPE_HOSTNAME = "x-opencti-hostname"
+_OBJECT_TYPE_HOSTNAME = "hostname"
 _OBJECT_TYPE_EMAIL_ADDR = "email-addr"
 _OBJECT_TYPE_URL = "url"
 _OBJECT_TYPE_FILE = "file"
 _OBJECT_TYPE_MUTEX = "mutex"
-_OBJECT_TYPE_CRYPTOCURRENCY_WALLET = "x-opencti-cryptocurrency-wallet"
+_OBJECT_TYPE_CRYPTOCURRENCY_WALLET = "cryptocurrency-wallet"
 
 _HASH_MD5 = "MD5"
 _HASH_SHA1 = "SHA-1"
@@ -29,12 +24,12 @@ _OBJECT_TYPE_TO_OBSERVABLE_TYPE_MAP = {
     _OBJECT_TYPE_IPV4_ADDR: "IPv4-Addr",
     _OBJECT_TYPE_IPV6_ADDR: "IPv6-Addr",
     _OBJECT_TYPE_DOMAIN_NAME: "Domain-Name",
-    _OBJECT_TYPE_HOSTNAME: "X-OpenCTI-Hostname",
+    _OBJECT_TYPE_HOSTNAME: "Hostname",
     _OBJECT_TYPE_EMAIL_ADDR: "Email-Addr",
     _OBJECT_TYPE_URL: "Url",
     _OBJECT_TYPE_FILE: "StixFile",
     _OBJECT_TYPE_MUTEX: "Mutex",
-    _OBJECT_TYPE_CRYPTOCURRENCY_WALLET: "X-OpenCTI-Cryptocurrency-Wallet",
+    _OBJECT_TYPE_CRYPTOCURRENCY_WALLET: "Cryptocurrency-Wallet",
 }
 
 

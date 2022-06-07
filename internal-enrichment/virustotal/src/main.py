@@ -3,7 +3,6 @@
 
 from virustotal import VirusTotalConnector
 
-
 if __name__ == "__main__":
     connector = VirusTotalConnector()
     connector.start()

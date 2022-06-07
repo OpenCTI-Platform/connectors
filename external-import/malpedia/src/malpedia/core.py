@@ -2,17 +2,16 @@
 """OpenCTI Malpedia connector core module."""
 
 import os
-import yaml
 import time
-
 from datetime import datetime
 from typing import Any, Dict, Mapping, Optional
 
-from .knowledge import KnowledgeImporter
-from .client import MalpediaClient
-
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import TLP_WHITE, TLP_AMBER
+from stix2 import TLP_AMBER, TLP_WHITE
+
+from .client import MalpediaClient
+from .knowledge import KnowledgeImporter
 
 
 class Malpedia:

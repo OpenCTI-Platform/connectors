@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cve:
-    image: opencti/connector-cve:5.2.4
+    image: opencti/connector-cve:5.3.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=Common Vulnerabilities and Exposures
       - CONNECTOR_SCOPE=identity,vulnerability
       - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=info
       - CVE_IMPORT_HISTORY=true # Import history at the first run (after only recent), reset the connector state if you want to re-import

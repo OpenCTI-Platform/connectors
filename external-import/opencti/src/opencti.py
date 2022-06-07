@@ -1,9 +1,9 @@
 import os
-import yaml
 import time
 import urllib.request
-
 from datetime import datetime
+
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

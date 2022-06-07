@@ -1,28 +1,30 @@
+import io
 import logging
 import os
-import io
-from typing import Dict, List, Pattern, IO, Tuple
+from typing import IO, Dict, List, Pattern, Tuple
 
+import chardet
 import ioc_finder
 from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 from pycti import OpenCTIConnectorHelper
 from reportimporter.constants import (
-    OBSERVABLE_CLASS,
     ENTITY_CLASS,
-    RESULT_FORMAT_MATCH,
-    RESULT_FORMAT_TYPE,
-    RESULT_FORMAT_CATEGORY,
-    RESULT_FORMAT_RANGE,
+    MIME_CSV,
+    MIME_HTML,
+    MIME_MD,
     MIME_PDF,
     MIME_TXT,
-    MIME_HTML,
-    MIME_CSV,
+    OBSERVABLE_CLASS,
     OBSERVABLE_DETECTION_CUSTOM_REGEX,
     OBSERVABLE_DETECTION_LIBRARY,
+    RESULT_FORMAT_CATEGORY,
+    RESULT_FORMAT_MATCH,
+    RESULT_FORMAT_RANGE,
+    RESULT_FORMAT_TYPE,
 )
-from reportimporter.models import Observable, Entity
+from reportimporter.models import Entity, Observable
 from reportimporter.util import library_mapping
 
 
@@ -51,6 +53,7 @@ class ReportParser(object):
             MIME_TXT: self._parse_text,
             MIME_HTML: self._parse_html,
             MIME_CSV: self._parse_text,
+            MIME_MD: self._parse_text,
         }
 
         self.library_lookup = library_mapping()
@@ -112,7 +115,11 @@ class ReportParser(object):
 
     def _parse_text(self, file_data: IO) -> Dict[str, Dict]:
         parse_info = {}
-        for text in file_data.readlines():
+        text = file_data.read()
+        encoding = chardet.detect(text)["encoding"]
+        if encoding == "UTF-16":
+            parse_info.update(self._parse(text.decode("utf-16")))
+        else:
             parse_info.update(self._parse(text.decode("utf-8")))
         return parse_info
 

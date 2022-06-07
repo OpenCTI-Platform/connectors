@@ -1,23 +1,24 @@
 # coding: utf-8
 
-import os
-import yaml
-import requests
-import time
 import io
 import json
+import os
 import re
-import pyzipper
-import magic
+import time
 from urllib.parse import urlparse
 
-from stix2 import Bundle, AttackPattern, Relationship, TLP_WHITE, Note
+import magic
+import pyzipper
+import requests
+import stix2
+import yaml
 from pycti import (
+    AttackPattern,
     OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
+    StixCoreRelationship,
     get_config_variable,
-    SimpleObservable,
 )
+from stix2 import DomainName, IPv4Address
 
 
 class CapeSandboxConnector:
@@ -162,7 +163,7 @@ class CapeSandboxConnector:
 
         # Create a Note containing the TrID results
         trid_json = json.dumps(report["trid"], indent=2)
-        note = Note(
+        note = stix2.Note(
             abstract="TrID Analysis",
             content=f"```\n{trid_json}\n```",
             created_by_ref=self.identity,
@@ -176,23 +177,25 @@ class CapeSandboxConnector:
             attack_id = tactic_dict["ttp"]
             signature = tactic_dict["signature"]
 
-            attack_pattern = AttackPattern(
-                id=OpenCTIStix2Utils.generate_random_stix_id("attack-pattern"),
+            attack_pattern = stix2.AttackPattern(
+                id=AttackPattern.generate_id(signature, attack_id),
                 created_by_ref=self.identity,
                 name=signature,
                 custom_properties={
                     "x_mitre_id": attack_id,
                 },
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
             )
 
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "uses", final_observable["standard_id"], attack_pattern.id
+                ),
                 relationship_type="uses",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
                 target_ref=attack_pattern.id,
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
             )
             bundle_objects.append(attack_pattern)
             bundle_objects.append(relationship)
@@ -277,8 +280,12 @@ class CapeSandboxConnector:
                 )
 
                 # Create relationship between uploaded procdump Artifact and original
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        response["standard_id"],
+                        final_observable["standard_id"],
+                    ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
@@ -292,27 +299,25 @@ class CapeSandboxConnector:
                     for tactic in attck_dict:
                         tp_list = attck_dict[tactic]
                         for tp in tp_list:
-                            attack_pattern = AttackPattern(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "attack-pattern"
-                                ),
+                            attack_pattern = stix2.AttackPattern(
+                                id=AttackPattern.generate_id(tactic, tp),
                                 created_by_ref=self.identity,
                                 name=tactic,
                                 custom_properties={
                                     "x_mitre_id": tp,
                                 },
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
 
-                            relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "uses", response["standard_id"], attack_pattern.id
                                 ),
                                 relationship_type="uses",
                                 created_by_ref=self.identity,
                                 source_ref=response["standard_id"],
                                 target_ref=attack_pattern.id,
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
                             bundle_objects.append(attack_pattern)
                             bundle_objects.append(relationship)
@@ -336,7 +341,7 @@ class CapeSandboxConnector:
             for config_dict in configs_list:
                 for detection_name in config_dict:
                     # Create a Note containing the config
-                    note = Note(
+                    note = stix2.Note(
                         abstract=f"{detection_name} Config",
                         content=f"```\n{json.dumps(config_dict, indent=2)}\n```",
                         created_by_ref=self.identity,
@@ -354,18 +359,19 @@ class CapeSandboxConnector:
                     for address in address_list:
                         parsed = address.rsplit(":", 1)[0]
                         if self._is_ipv4_address(parsed):
-                            host_stix = SimpleObservable(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "x-opencti-simple-observable"
-                                ),
-                                labels=[detection_name, "c2 server"],
-                                key="IPv4-Addr.value",
+                            host_stix = IPv4Address(
                                 value=parsed,
-                                created_by_ref=self.identity,
+                                object_marking_refs=[stix2.TLP_WHITE],
+                                custom_properties={
+                                    "labels": [detection_name, "c2 server"],
+                                    "created_by_ref": self.identity,
+                                },
                             )
-                            relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "communicates-with",
+                                    final_observable["standard_id"],
+                                    host_stix.id,
                                 ),
                                 relationship_type="communicates-with",
                                 created_by_ref=self.identity,
@@ -376,19 +382,19 @@ class CapeSandboxConnector:
                             bundle_objects.append(relationship)
                         else:
                             domain = urlparse(address).hostname
-                            domain_stix = SimpleObservable(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "x-opencti-simple-observable"
-                                ),
-                                labels=[detection_name, "c2 server"],
-                                key="Domain-Name.value",
+                            domain_stix = DomainName(
                                 value=domain,
-                                created_by_ref=self.identity,
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
+                                custom_properties={
+                                    "labels": [detection_name, "c2 server"],
+                                    "created_by_ref": self.identity,
+                                },
                             )
-                            relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "communicates-with",
+                                    final_observable["standard_id"],
+                                    domain_stix.id,
                                 ),
                                 relationship_type="communicates-with",
                                 created_by_ref=self.identity,
@@ -400,17 +406,17 @@ class CapeSandboxConnector:
 
         # Attach the domains
         for domain_dict in report.get("network", {}).get("domains", []):
-            domain_stix = SimpleObservable(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "x-opencti-simple-observable"
-                ),
-                key="Domain-Name.value",
+            domain_stix = DomainName(
                 value=domain_dict["domain"],
-                created_by_ref=self.identity,
-                object_marking_refs=[TLP_WHITE],
+                object_marking_refs=[stix2.TLP_WHITE],
+                custom_properties={
+                    "created_by_ref": self.identity,
+                },
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "communicates-with", final_observable["standard_id"], domain_stix.id
+                ),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
@@ -422,16 +428,15 @@ class CapeSandboxConnector:
         # Attach the IP addresses
         for host_dict in report.get("network", {}).get("hosts", []):
             host = host_dict["ip"]
-            host_stix = SimpleObservable(
-                id=OpenCTIStix2Utils.generate_random_stix_id(
-                    "x-opencti-simple-observable"
-                ),
-                key="IPv4-Addr.value",
+            host_stix = IPv4Address(
                 value=host,
-                created_by_ref=self.identity,
+                object_marking_refs=[stix2.TLP_WHITE],
+                custom_properties={"created_by_ref": self.identity},
             )
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "communicates-with", final_observable["standard_id"], host_stix.id
+                ),
                 relationship_type="communicates-with",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
@@ -484,8 +489,12 @@ class CapeSandboxConnector:
                 )
 
                 # Create relationship between uploaded payload Artifact and original
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        response["standard_id"],
+                        final_observable["standard_id"],
+                    ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
@@ -498,27 +507,24 @@ class CapeSandboxConnector:
                     attck_dict = payload_dict["flare_capa"]["ATTCK"]
                     for tactic in attck_dict:
                         for tp in attck_dict[tactic]:
-                            attack_pattern = AttackPattern(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "attack-pattern"
-                                ),
+                            attack_pattern = stix2.AttackPattern(
+                                id=AttackPattern.generate_id(tactic, tp),
                                 created_by_ref=self.identity,
                                 name=tactic,
                                 custom_properties={
                                     "x_mitre_id": tp,
                                 },
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
-
-                            relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "uses", response["standard_id"], attack_pattern.id
                                 ),
                                 relationship_type="uses",
                                 created_by_ref=self.identity,
                                 source_ref=response["standard_id"],
                                 target_ref=attack_pattern.id,
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
                             bundle_objects.append(attack_pattern)
                             bundle_objects.append(relationship)
@@ -537,7 +543,7 @@ class CapeSandboxConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:

@@ -1,10 +1,10 @@
-import yaml
-import os
-import json
-import io
 import csv
+import io
+import json
+import os
 import time
 
+import yaml
 from pycti import OpenCTIConnectorHelper
 from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
@@ -183,6 +183,8 @@ class ExportFileCsv:
                 "Vulnerability": self.helper.api.vulnerability.list,
                 "Incident": self.helper.api.incident.list,
                 "Stix-Cyber-Observable": self.helper.api.stix_cyber_observable.list,
+                "Stix-Core-Relationship": self.helper.api.stix_core_relationship.list,
+                "stix-core-relationship": self.helper.api.stix_core_relationship.list,
             }
             do_list = lister.get(
                 final_entity_type,
@@ -195,6 +197,12 @@ class ExportFileCsv:
                 filters=list_params["filters"],
                 orderBy=list_params["orderBy"],
                 orderMode=list_params["orderMode"],
+                fromId=list_params["fromId"] if "fromId" in list_params else None,
+                toId=list_params["toId"] if "toId" in list_params else None,
+                fromTypes=list_params["fromTypes"]
+                if "fromTypes" in list_params
+                else None,
+                toTypes=list_params["toTypes"] if "toTypes" in list_params else None,
                 types=list_params["types"] if "types" in list_params else None,
                 getAll=True,
             )
