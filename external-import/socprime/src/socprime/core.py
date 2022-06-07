@@ -7,7 +7,7 @@ from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
 )
-from stix2 import Bundle, Indicator
+from stix2 import Bundle, Indicator, Identity
 from socprime.tdm_api_client import ApiClient
 
 
@@ -83,7 +83,10 @@ class SocprimeConnector:
 
     @classmethod
     def convert_sigma_rule_to_indicator(
-        cls, rule: dict, siem_types: Optional[List[str]] = None
+        cls,
+        rule: dict,
+        siem_types: Optional[List[str]] = None,
+        author_id: Optional[str] = None,
     ) -> Indicator:
         sigma_body = cls._get_sigma_body_from_rule(rule)
         indicator_id = (
@@ -104,6 +107,7 @@ class SocprimeConnector:
             external_references=cls._get_external_refs_from_rule(
                 rule, siem_types=siem_types
             ),
+            created_by_ref=author_id,
         )
 
     @classmethod
@@ -196,7 +200,31 @@ class SocprimeConnector:
             )
             return []
 
+    def _create_author_identity(self, work_id: str) -> str:
+        """Creates SOC Prime author and returns its id."""
+        identity_id = "identity--23f79316-054e-5ff4-8851-f649b31425e6"
+        author_identity = Identity(
+            id=identity_id,
+            type="identity",
+            name="SOC Prime",
+            identity_class="organization",
+            confidence=85,
+            description="SOC Prime operates the world’s largest and most advanced Platform for collaborative cyber defense. "
+            + "The SOC Prime Platform integration with OpenCTI provides the latest detections within Sigma rules.",
+            contact_information="support@socprime.com",
+            external_references=[
+                {"source_name": "SOC Prime", "url": "https://socprime.com/"}
+            ],
+        )
+        serialized_bundle = Bundle(objects=[author_identity]).serialize()
+        self.helper.send_stix2_bundle(
+            serialized_bundle, update=self.update_existing_data, work_id=work_id
+        )
+        return identity_id
+
     def send_rules_from_tdm(self, work_id: str) -> None:
+        author_id = self._create_author_identity(work_id)
+
         bundle_objects = []
         rules = self._get_rules_from_content_list()
         available_siem_types = self._get_available_siem_types(
@@ -206,7 +234,9 @@ class SocprimeConnector:
         for rule in rules:
             try:
                 indicator = self.convert_sigma_rule_to_indicator(
-                    rule, siem_types=available_siem_types.get(rule["case"]["id"])
+                    rule,
+                    siem_types=available_siem_types.get(rule["case"]["id"]),
+                    author_id=author_id,
                 )
                 bundle_objects.append(indicator)
             except Exception as err:
