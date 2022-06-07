@@ -10,10 +10,12 @@ Intel 471 Website: [https://www.intel471.com](https://www.intel471.com)
 
 At the moment this connector runs four streams:
 
-- `Intel471IndicatorsStream` - fetches malware indicators from `/indicators` API endpoint and produces `Indicator` and `Malware` SDOs related using `Relationship` object.
-- `Intel471IOCsStream` - fetches IOCs from `/iocs` API endpoint and produces `Indicator` and `Report` SDOs related using `Report`'s internal property `object_refs`.
-- `Intel471YARAStream` - fetches YARA rules from `/yara` API endpoint and produces `Indicator` and `Malware` SDOs related using `Relationship` object.
-- `Intel471CVEsStream` - fetches CVE reports from `/cve/reports` API endpoint and produces `Vulnerability` SDOs.
+| Stream                | Operation                                             | Produced objects
+|-----------------------|-------------------------------------------------------|--------------------------------------------------
+| Intel471IndicatorsStream | fetches malware indicators from `/indicators` API endpoint | `Indicator` and `Malware` SDOs related using `Relationship` object; `URL`, `IPv4Address` or `File` Observable related with the `Indicator` SDO using `Relationship` object
+| Intel471YARAStream | fetches YARA rules from `/yara` API endpoint          | `Indicator` and `Malware` SDOs related using `Relationship` object
+| Intel471IOCsStream | fetches IOCs from `/iocs` API endpoint                | `Indicator` and `Report` SDOs and either `URL` or `DomainName` Observable. Both `Indicator` and Observable objects are related with the `Report` using `Report`'s internal property `object_refs`. Observable and `Indicator` objects are additionally related using `Relationship` object
+| Intel471CVEsStream | fetches CVE reports from `/cve/reports` API endpoint  | `Vulnerability` SDO
 
 Each stream can be enabled/disabled and configured separately. For more details see Configuration section.
 
