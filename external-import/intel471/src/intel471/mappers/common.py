@@ -3,9 +3,10 @@ import datetime
 import logging
 import uuid
 from abc import ABC
-from collections import Callable
+from collections import Callable, namedtuple
 from typing import Union
 
+import titan_client
 from stix2 import Relationship, EmailAddress, File, ThreatActor, IPv4Address, URL, Location, DomainName, Bundle, \
     Identity
 from stix2.base import _DomainObject, _Observable
@@ -16,6 +17,9 @@ from .exceptions import EmptyBundle, StixMapperNotFound
 NAMESPACE_OASIS = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 
 log = logging.getLogger(__name__)
+
+
+MappingConfig = namedtuple("MappingConfig", ["patterning_mapper", "observable_mapper", "kwargs_extractor"])
 
 
 def generate_id(stix_class: Union[_DomainObject, Relationship, _Observable], **id_contributing_properties: str):
@@ -36,6 +40,9 @@ author_identity = Identity(
 
 
 class StixMapper:
+
+    def __init__(self, api_config: titan_client.Configuration):
+        self.api_config = api_config
 
     mappers = {}
 
@@ -61,13 +68,12 @@ class StixMapper:
             return wrapped_class
         return inner_wrapper
 
-    @classmethod
-    def map(cls, source: dict, stix_version: str = "2.1", girs_names: dict = None) -> Bundle:
+    def map(self, source: dict, stix_version: str = "2.1", girs_names: dict = None) -> Bundle:
         log.info(f"Initializing converter. STIX version {stix_version}.")
-        for name, (condition, mapper_class) in cls.mappers.items():
+        for name, (condition, mapper_class) in self.mappers.items():
             if condition(source):
                 log.info(f"Mapping Titan payload for {name}.")
-                mapper = mapper_class()
+                mapper = mapper_class(self.api_config)
                 bundle = mapper.map(source, girs_names)
                 if bundle:
                     return bundle
@@ -78,8 +84,9 @@ class StixMapper:
 
 class BaseMapper(ABC):
 
-    def __init__(self):
+    def __init__(self, api_config: titan_client.Configuration):
         self.now = datetime.datetime.utcnow()
+        self.api_config = api_config
 
     @abc.abstractmethod
     def map(self, source: dict) -> Bundle:
