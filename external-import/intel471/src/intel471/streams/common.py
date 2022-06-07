@@ -50,7 +50,7 @@ class Intel471Stream(ABC):
         self.out_queue = out_queue
         self.api_config = titan_client.Configuration(username=api_username, password=api_key)
         self.update_existing_data = update_existing_data
-        self.stix_mapper = StixMapper()
+        self.stix_mapper = StixMapper(self.api_config)
         if initial_history:
             self.initial_history = initial_history
         else:

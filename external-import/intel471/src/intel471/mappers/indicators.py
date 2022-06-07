@@ -4,25 +4,46 @@ import yaml
 from pytz import UTC
 from stix2 import Indicator, Bundle, Relationship, Malware, KillChainPhase, TLP_AMBER
 
-from .common import StixMapper, BaseMapper, generate_id, author_identity
-from .patterning import STIXPatterningMapper
+from .common import StixMapper, BaseMapper, generate_id, author_identity, MappingConfig
+from .patterning import create_url_pattern, create_ipv4_pattern, create_file_pattern
+from .observables import create_url, create_ipv4, create_file
+from .sdo import create_malware
 
 
 @StixMapper.register("indicators", lambda x: "indicatorTotalCount" in x)
 class IndicatorsMapper(BaseMapper):
 
+    mapping_configs = {
+        "url": MappingConfig(
+            patterning_mapper=create_url_pattern,
+            observable_mapper=create_url,
+            kwargs_extractor=lambda i: {"value": i["data"]["indicator_data"]["url"]}),
+        "ipv4": MappingConfig(
+            patterning_mapper=create_ipv4_pattern,
+            observable_mapper=create_ipv4,
+            kwargs_extractor=lambda i: {"value": i["data"]["indicator_data"]["address"]}),
+        "file": MappingConfig(
+            patterning_mapper=create_file_pattern,
+            observable_mapper=create_file,
+            kwargs_extractor=lambda i: {
+                "md5": i["data"]["indicator_data"]["file"]["md5"],
+                "sha1": i["data"]["indicator_data"]["file"]["sha1"],
+                "sha256": i["data"]["indicator_data"]["file"]["sha256"]}
+        )
+    }
+
     def map(self, source: dict, girs_names: dict = None) -> Bundle:
         container = {}
         items = source.get("indicators") or [] if "indicatorTotalCount" in source else [source]
         for item in items:
+            indicator_type = item["data"]["indicator_type"]
+            mapping_config = self.mapping_configs.get(indicator_type)
+            if not mapping_config:
+                continue
             malware_family_name = item["data"]["threat"]["data"]["family"]
-            malware_family_uid = item["data"]["threat"]["data"]["malware_family_profile_uid"]
             valid_from = datetime.datetime.fromtimestamp(item["activity"]["first"] / 1000, UTC)
             valid_until = datetime.datetime.fromtimestamp(item["data"]["expiration"] / 1000, UTC)
             tactics = self.map_tactic(item["data"]["mitre_tactics"])
-            indicator_id = item["uid"]
-            indicator_type = item["data"]["indicator_type"]
-            indicator_data = item["data"]["indicator_data"]
             confidence = self.map_confidence(item["data"]["confidence"])
             girs_paths = item["data"]["intel_requirements"]
             girs_names = girs_names or {}
@@ -30,31 +51,27 @@ class IndicatorsMapper(BaseMapper):
             description_main = item["data"]["context"]["description"]
             description = f"{description_main}\n\n### Intel requirements\n\n```yaml\n{yaml.dump(girs)}```"
 
-            pattern_mapper = getattr(STIXPatterningMapper, f"map_{indicator_type}", None)
-            if pattern_mapper:
-                stix_pattern = pattern_mapper(indicator_data)
 
-                malware = Malware(id=generate_id(Malware, name=malware_family_name.strip().lower()),
-                                  name=malware_family_name,
-                                  is_family=True,
+            kwargs = mapping_config.kwargs_extractor(item)
+            stix_pattern = mapping_config.patterning_mapper(**kwargs)
+            observable = mapping_config.observable_mapper(**kwargs)
+            malware = create_malware(malware_family_name)
+            indicator = Indicator(id=generate_id(Indicator, pattern=stix_pattern),
+                                  pattern_type="stix",
+                                  pattern=stix_pattern,
+                                  indicator_types=["malicious-activity"],
+                                  valid_from=valid_from,
+                                  valid_until=valid_until,
                                   created_by_ref=author_identity,
                                   object_marking_refs=[TLP_AMBER],
-                                  custom_properties={"x_intel471_com_uid": malware_family_uid})
-                indicator = Indicator(id=generate_id(Indicator, pattern=stix_pattern),
-                                      description=description,
-                                      indicator_types=["malicious-activity"],
-                                      pattern_type="stix",
-                                      pattern=stix_pattern,
-                                      valid_from=valid_from,
-                                      valid_until=valid_until,
-                                      kill_chain_phases=[KillChainPhase(kill_chain_name="mitre-attack", phase_name=tactics)],
-                                      created_by_ref=author_identity,
-                                      confidence=confidence,
-                                      object_marking_refs=[TLP_AMBER],
-                                      custom_properties={"x_intel471_com_uid": indicator_id})
-                r1 = Relationship(indicator, "indicates", malware, created_by_ref=author_identity)
-                for stix_object in [malware, indicator, author_identity, r1, TLP_AMBER]:
-                    container[stix_object.id] = stix_object
+                                  description=description,
+                                  labels=[malware_family_name],
+                                  confidence=confidence,
+                                  kill_chain_phases=[KillChainPhase(kill_chain_name="mitre-attack", phase_name=tactics)])
+            r1 = Relationship(indicator, "indicates", malware, created_by_ref=author_identity)
+            r2 = Relationship(indicator, "based-on", observable, created_by_ref=author_identity)
+            for stix_object in [malware, indicator, observable, r1, r2, author_identity, TLP_AMBER]:
+                container[stix_object.id] = stix_object
         if container:
             bundle = Bundle(*container.values(), allow_custom=True)
             return bundle
