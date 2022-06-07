@@ -100,8 +100,7 @@ class Intel471Connector:
             self.helper.log_info(f"Done. Put ACK into queue for task {str(request)}")
 
     def add_job(self, stream_obj: Intel471Stream, interval: int) -> None:
-        self.scheduler.add_job(stream_obj.run, name=stream_obj.__class__.__name__)
-        # self.scheduler.add_job(stream_obj.run, name=stream_obj.__class__.__name__, trigger="interval", minutes=interval)
+        self.scheduler.add_job(stream_obj.run, name=stream_obj.__class__.__name__, trigger="interval", minutes=interval)
 
     @staticmethod
     def _init_scheduler() -> BaseScheduler:
