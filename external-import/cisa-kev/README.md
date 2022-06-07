@@ -1,0 +1,46 @@
+# OpenCTI CISA Connector
+
+For the benefit of the cybersecurity community and network defenders—and to better manage vulnerabilities and keep pace with threat activity—CISA maintains the authoritative source of known exploited vulnerabilities: the Known Exploited Vulnerability (KEV) catalog. CISA strongly recommends all organizations review and monitor the KEV catalog and remediate the listed vulnerabilities to strengthen their security and resilience posture.
+
+Binding Operational Directive (BOD) 22-01, Reducing the Significant Risk of Known Exploited Vulnerabilities, which established the KEV catalog, requires federal civilian executive branch (FCEB) agencies to identify and remediate any vulnerability on their information systems that is listed in the KEV catalog. Although not bound by BOD 22-01, state, local, tribal, and territorial (SLTT) governments and private industry can significantly strengthen their security and resilience posture by remediating the vulnerabilities listed in the KEV catalog as well. CISA strongly recommends all stakeholders include a requirement to immediately address KEV catalog vulnerabilities as part of their vulnerability management plan. Doing so will build collective resilience across the cybersecurity community.
+
+The KEV catalog sends a clear message to all organizations to prioritize remediation efforts on the subset of vulnerabilities that are causing immediate harm based on adversary activity. Organizations should use the KEV catalog as an input to their vulnerability management prioritization framework. Vulnerability management frameworks—such as the Stakeholder-Specific Vulnerability Categorization (SSVC) model—consider a vulnerability's exploitation status and the KEV catalog serves as the authoritative repository of that information.
+
+CISA updates the catalog as exploitation of vulnerabilities becomes known and when vulnerabilities satisfy the following thresholds:
+•    The vulnerability has an assigned Common Vulnerabilities and Exposures (CVE) ID.
+•    There is reliable evidence that the vulnerability has been actively exploited in the wild.
+•    There is a clear remediation action for the vulnerability, such as a vendor-provided update.
+
+## Installation
+
+### Requirements
+
+- OpenCTI Platform >= 5.2.4
+
+### Configuration
+
+| Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
+| ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `opencti_url`                        | `OPENCTI_URL`                       | Yes          | The URL of the OpenCTI platform.                                                                                                                           |
+| `opencti_token`                      | `OPENCTI_TOKEN`                     | Yes          | The default admin token configured in the OpenCTI platform parameters file.                                                                                |
+| `connector_id`                       | `CONNECTOR_ID`                      | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                         |
+| `connector_type`                     | `CONNECTOR_TYPE`                    | Yes          | Must be `Template_Type` (this is the connector type).                                                                                                      |
+| `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | Option `Template`                                                                                                                                          |
+| `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope: Template Scope (MIME Type or Stix Object)                                                                                                 |
+| `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 4).                                                                             |
+| `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
+| `template_attribute`                 | `TEMPLATE_ATTRIBUTE`                | Yes          | Additional setting for the connector itself                                                                                                                |
+
+### Debugging ###
+
+<!-- Any additional information to help future users debug and report detailed issues concerning this connector --> 
+
+### Additional information
+
+<!-- 
+Any additional information about this connector 
+* What information is ingested/updated/changed
+* What should the user take into account when using this connector
+* ...
+-->
+
