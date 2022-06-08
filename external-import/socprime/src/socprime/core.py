@@ -9,6 +9,7 @@ from pycti.connector.opencti_connector_helper import (
 )
 from stix2 import Bundle, Indicator, Identity
 from socprime.tdm_api_client import ApiClient
+import pycti
 
 
 class SocprimeConnector:
@@ -202,11 +203,12 @@ class SocprimeConnector:
 
     def _create_author_identity(self, work_id: str) -> str:
         """Creates SOC Prime author and returns its id."""
-        identity_id = "identity--23f79316-054e-5ff4-8851-f649b31425e6"
+        name = "SOC Prime"
+        identity_id = pycti.Identity.generate_id(name=name, identity_class="organization")
         author_identity = Identity(
             id=identity_id,
             type="identity",
-            name="SOC Prime",
+            name=name,
             identity_class="organization",
             confidence=85,
             description="SOC Prime operates the world’s largest and most advanced Platform for collaborative cyber defense. "
