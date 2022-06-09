@@ -7,7 +7,15 @@ from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
 )
-from stix2 import Bundle, Indicator, Identity, Tool, Relationship, Malware
+from stix2 import (
+    Bundle,
+    Indicator,
+    Identity,
+    Tool,
+    Relationship,
+    Malware,
+    AttackPattern,
+)
 from socprime.tdm_api_client import ApiClient
 from socprime.mitre_attack import MitreAttack
 import pycti
@@ -114,6 +122,11 @@ class SocprimeConnector:
         stix_objects.extend(
             self._get_tools_and_relations_from_indicator(indicator=indicator, rule=rule)
         )
+        stix_objects.extend(
+            self._get_techniques_and_relations_from_indicator(
+                indicator=indicator, rule=rule
+            )
+        )
 
         return stix_objects
 
@@ -138,6 +151,34 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=tool.id,
+                )
+                res.append(rel)
+        return res
+
+    @staticmethod
+    def _get_techniques_from_rule(rule: dict) -> List[str]:
+        res = []
+        if "tags" in rule and isinstance(rule["tags"], dict):
+            if "technique" in rule["tags"] and isinstance(
+                rule["tags"]["technique"], list
+            ):
+                for d in rule["tags"]["technique"]:
+                    res.append(d["id"])
+        return res
+
+    def _get_techniques_and_relations_from_indicator(
+        self, indicator: Indicator, rule: dict
+    ) -> List[Union[AttackPattern, Relationship]]:
+        res = []
+        indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
+        for technique_id in self._get_techniques_from_rule(rule):
+            technique = self.mitre_attack.get_technique_by_id(technique_id)
+            if technique:
+                res.append(technique)
+                rel = Relationship(
+                    relationship_type="indicates",
+                    source_ref=indicator_id,
+                    target_ref=technique.id,
                 )
                 res.append(rel)
         return res

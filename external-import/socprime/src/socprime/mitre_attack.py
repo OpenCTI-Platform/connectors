@@ -17,14 +17,23 @@ class MitreAttack:
         ).json()
         return MemoryStore(stix_data=stix_json["objects"])
 
-    def get_technique_by_id(self, id: str) -> Optional[AttackPattern]:
+    def get_technique_by_id(self, technique_mitre_id: str) -> Optional[AttackPattern]:
         filt = [
             Filter("type", "=", "attack-pattern"),
-            Filter("external_references.external_id", "=", id),
+            Filter("external_references.external_id", "=", technique_mitre_id),
         ]
         res = self._src.query(filt)
         if res:
-            return res[0]
+            props = res[0]._inner
+            return AttackPattern(
+                type="attack-pattern",
+                id=pycti.AttackPattern.generate_id(
+                    name=props["name"], x_mitre_id=technique_mitre_id
+                ),
+                name=props["name"],
+                description=props["description"],
+                external_references=props["external_references"],
+            )
 
     def get_tool_by_name(self, name: str) -> Optional[Union[Tool, Malware]]:
         for item in self._tools:
