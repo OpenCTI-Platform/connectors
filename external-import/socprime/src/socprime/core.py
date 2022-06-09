@@ -2,20 +2,21 @@ import os
 import yaml
 import time
 import datetime
-from typing import Any, Dict, List, Optional, Mapping
+from typing import Any, Dict, List, Optional, Mapping, Union
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
 )
-from stix2 import Bundle, Indicator, Identity
+from stix2 import Bundle, Indicator, Identity, Tool, Relationship, Malware
 from socprime.tdm_api_client import ApiClient
+from socprime.mitre_attack import MitreAttack
 import pycti
 
 
 class SocprimeConnector:
     _DEFAULT_CONNECTOR_RUN_INTERVAL_SEC = 3600
     _STATE_LAST_RUN = "last_run"
-    update_existing_data = True
+    _stix_object_types_to_udate = (Indicator, Relationship)
 
     def __init__(self):
         config = self._read_configuration()
@@ -37,6 +38,7 @@ class SocprimeConnector:
             default=self._DEFAULT_CONNECTOR_RUN_INTERVAL_SEC,
         )
         self.tdm_api_client = ApiClient(api_key=tdm_api_key)
+        self.mitre_attack = MitreAttack()
 
     @staticmethod
     def _read_configuration() -> Dict[str, str]:
@@ -82,19 +84,16 @@ class SocprimeConnector:
     def _sleep(cls, delay_sec: Optional[int] = None) -> None:
         time.sleep(delay_sec)
 
-    @classmethod
-    def convert_sigma_rule_to_indicator(
-        cls,
+    def get_stix_objects_from_rule(
+        self,
         rule: dict,
         siem_types: Optional[List[str]] = None,
         author_id: Optional[str] = None,
-    ) -> Indicator:
-        sigma_body = cls._get_sigma_body_from_rule(rule)
-        indicator_id = (
-            f'indicator--{sigma_body["id"]}' if sigma_body.get("id") else None
-        )
-        return Indicator(
-            id=indicator_id,
+    ) -> List:
+        stix_objects = []
+        sigma_body = self._get_sigma_body_from_rule(rule)
+        indicator = Indicator(
+            id=f'indicator--{sigma_body["id"]}' if sigma_body.get("id") else None,
             type="indicator",
             name=rule["case"]["name"],
             description=rule.get("description"),
@@ -102,14 +101,46 @@ class SocprimeConnector:
             pattern_type="sigma",
             labels=sigma_body.get("tags", [])
             + ["Sigma Author: " + sigma_body.get("author")],
-            confidence=cls.convert_sigma_status_to_stix_confidence(
+            confidence=self.convert_sigma_status_to_stix_confidence(
                 sigma_level=sigma_body.get("status")
             ),
-            external_references=cls._get_external_refs_from_rule(
+            external_references=self._get_external_refs_from_rule(
                 rule, siem_types=siem_types
             ),
             created_by_ref=author_id,
         )
+        stix_objects.append(indicator)
+
+        stix_objects.extend(
+            self._get_tools_and_relations_from_indicator(indicator=indicator, rule=rule)
+        )
+
+        return stix_objects
+
+    @staticmethod
+    def _get_tools_from_rule(rule: dict) -> List[str]:
+        res = []
+        if "tags" in rule and isinstance(rule["tags"], dict):
+            if "tool" in rule["tags"] and isinstance(rule["tags"]["tool"], list):
+                res.extend(rule["tags"]["tool"])
+        return res
+
+    def _get_tools_and_relations_from_indicator(
+        self, indicator: Indicator, rule: dict
+    ) -> List[Union[Tool, Malware, Relationship]]:
+        res = []
+        indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
+        for tool_name in self._get_tools_from_rule(rule):
+            tool = self.mitre_attack.get_tool_by_name(tool_name)
+            if tool:
+                res.append(tool)
+                rel = Relationship(
+                    relationship_type="indicates",
+                    source_ref=indicator_id,
+                    target_ref=tool.id,
+                )
+                res.append(rel)
+        return res
 
     @classmethod
     def _get_external_refs_from_rule(
@@ -204,7 +235,9 @@ class SocprimeConnector:
     def _create_author_identity(self, work_id: str) -> str:
         """Creates SOC Prime author and returns its id."""
         name = "SOC Prime"
-        identity_id = pycti.Identity.generate_id(name=name, identity_class="organization")
+        identity_id = pycti.Identity.generate_id(
+            name=name, identity_class="organization"
+        )
         author_identity = Identity(
             id=identity_id,
             type="identity",
@@ -219,9 +252,7 @@ class SocprimeConnector:
             ],
         )
         serialized_bundle = Bundle(objects=[author_identity]).serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, update=self.update_existing_data, work_id=work_id
-        )
+        self.helper.send_stix2_bundle(serialized_bundle, update=True, work_id=work_id)
         return identity_id
 
     def send_rules_from_tdm(self, work_id: str) -> None:
@@ -235,22 +266,40 @@ class SocprimeConnector:
 
         for rule in rules:
             try:
-                indicator = self.convert_sigma_rule_to_indicator(
+                rule_stix_objects = self.get_stix_objects_from_rule(
                     rule,
                     siem_types=available_siem_types.get(rule["case"]["id"]),
                     author_id=author_id,
                 )
-                bundle_objects.append(indicator)
+                bundle_objects.extend(rule_stix_objects)
             except Exception as err:
                 case_id = rule.get("case", {}).get("id")
                 self.helper.log_error(f"Error while parsing rule {case_id} - {err}")
 
-        self.helper.log_info(f"Sending {len(bundle_objects)} rules")
-        if bundle_objects:
-            serialized_bundle = Bundle(objects=bundle_objects).serialize()
-            self.helper.send_stix2_bundle(
-                serialized_bundle, update=self.update_existing_data, work_id=work_id
-            )
+        self.helper.log_info(f"Sending {len(rules)} sigma rules")
+
+        self._send_stix_objects(objects_list=bundle_objects, work_id=work_id)
+
+    def _send_stix_objects(self, objects_list: list, work_id: str) -> None:
+        bundle = Bundle(
+            objects=[
+                x
+                for x in objects_list
+                if not isinstance(x, self._stix_object_types_to_udate)
+            ]
+        ).serialize()
+        if bundle:
+            self.helper.send_stix2_bundle(bundle, update=False, work_id=work_id)
+
+        bundle = Bundle(
+            objects=[
+                x
+                for x in objects_list
+                if isinstance(x, self._stix_object_types_to_udate)
+            ]
+        ).serialize()
+        if bundle:
+            self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
 
     def run(self):
         self.helper.log_info("Starting SOC Prime connector...")
