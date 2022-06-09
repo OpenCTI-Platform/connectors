@@ -1,6 +1,6 @@
 from typing import List, Optional, Union
 import requests
-from stix2 import MemoryStore, Filter, AttackPattern, Tool, Malware
+from stix2 import MemoryStore, Filter, AttackPattern, Tool, Malware, ThreatActor
 from itertools import chain
 import pycti
 
@@ -67,3 +67,20 @@ class MitreAttack:
                 for f in [Filter("type", "=", "tool"), Filter("type", "=", "malware")]
             )
         )
+
+    def get_threat_actor_by_name(self, name: str) -> Optional[ThreatActor]:
+        filt = [
+            Filter("type", "=", "intrusion-set"),
+            Filter("name", "=", name),
+        ]
+        res = self._src.query(filt)
+        if res:
+            props = res[0]._inner
+            return ThreatActor(
+                type="threat-actor",
+                id=pycti.ThreatActor.generate_id(name=props["name"]),
+                name=props["name"],
+                description=props["description"],
+                external_references=props["external_references"],
+                aliases=props["aliases"],
+            )

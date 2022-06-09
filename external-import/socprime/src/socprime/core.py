@@ -15,6 +15,7 @@ from stix2 import (
     Relationship,
     Malware,
     AttackPattern,
+    ThreatActor,
 )
 from socprime.tdm_api_client import ApiClient
 from socprime.mitre_attack import MitreAttack
@@ -127,6 +128,11 @@ class SocprimeConnector:
                 indicator=indicator, rule=rule
             )
         )
+        stix_objects.extend(
+            self._get_actors_and_relations_from_indicator(
+                indicator=indicator, rule=rule
+            )
+        )
 
         return stix_objects
 
@@ -179,6 +185,31 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=technique.id,
+                )
+                res.append(rel)
+        return res
+
+    @staticmethod
+    def _get_actors_from_rule(rule: dict) -> List[str]:
+        res = []
+        if "tags" in rule and isinstance(rule["tags"], dict):
+            if "actor" in rule["tags"] and isinstance(rule["tags"]["actor"], list):
+                res.extend(rule["tags"]["actor"])
+        return res
+
+    def _get_actors_and_relations_from_indicator(
+        self, indicator: Indicator, rule: dict
+    ) -> List[Union[ThreatActor, Relationship]]:
+        res = []
+        indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
+        for actor_name in self._get_actors_from_rule(rule):
+            actor = self.mitre_attack.get_threat_actor_by_name(actor_name)
+            if actor:
+                res.append(actor)
+                rel = Relationship(
+                    relationship_type="indicates",
+                    source_ref=indicator_id,
+                    target_ref=actor.id,
                 )
                 res.append(rel)
         return res
