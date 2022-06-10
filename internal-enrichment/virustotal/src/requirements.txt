@@ -1,2 +1,2 @@
-pycti==5.3.3
+pycti==5.3.4
 plyara~=2.1.1
