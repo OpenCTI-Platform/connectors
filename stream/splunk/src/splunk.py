@@ -25,16 +25,18 @@ class SplunkConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
 
-        self.splunk_url = get_config_variable("SPLUNK_URL", ["splunk", "url"], config)
+        self.splunk_url = get_config_variable(
+            "SPLUNK_URL", ["splunk", "url"], config
+        ).split(",")
         self.splunk_login = get_config_variable(
             "SPLUNK_LOGIN", ["splunk", "login"], config
-        )
+        ).split(",")
         self.splunk_password = get_config_variable(
             "SPLUNK_PASSWORD", ["splunk", "password"], config
-        )
+        ).split(",")
         self.splunk_owner = get_config_variable(
             "SPLUNK_OWNER", ["splunk", "owner"], config
-        )
+        ).split(",")
         self.splunk_ssl_verify = get_config_variable(
             "SPLUNK_SSL_VERIFY", ["splunk", "ssl_verify"], config, False, True
         )
