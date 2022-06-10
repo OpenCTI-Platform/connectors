@@ -221,7 +221,7 @@ class ReportImporter:
                     observable = None
                     if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
                         observable = AutonomousSystem(
-                            value=match[RESULT_FORMAT_MATCH],
+                            number=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
                                 "x_opencti_create_indicator": self.create_indicator,
