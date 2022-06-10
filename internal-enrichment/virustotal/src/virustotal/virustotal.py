@@ -62,11 +62,13 @@ class VirusTotalConnector:
             "VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES",
             ["virustotal", "file_indicator_create_positives"],
             config,
+            True,
         )
         self.file_indicator_valid_minutes = get_config_variable(
             "VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES",
             ["virustotal", "file_indicator_valid_minutes"],
             config,
+            True,
         )
         self.file_indicator_detect = get_config_variable(
             "VIRUSTOTAL_FILE_INDICATOR_DETECT",
@@ -79,11 +81,13 @@ class VirusTotalConnector:
             "VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES",
             ["virustotal", "ip_indicator_create_positives"],
             config,
+            True,
         )
         self.ip_indicator_valid_minutes = get_config_variable(
             "VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES",
             ["virustotal", "ip_indicator_valid_minutes"],
             config,
+            True,
         )
         self.ip_indicator_detect = get_config_variable(
             "VIRUSTOTAL_IP_INDICATOR_DETECT",
@@ -96,11 +100,13 @@ class VirusTotalConnector:
             "VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES",
             ["virustotal", "domain_indicator_create_positives"],
             config,
+            True,
         )
         self.domain_indicator_valid_minutes = get_config_variable(
             "VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES",
             ["virustotal", "domain_indicator_valid_minutes"],
             config,
+            True,
         )
         self.domain_indicator_detect = get_config_variable(
             "VIRUSTOTAL_DOMAIN_INDICATOR_DETECT",
@@ -113,11 +119,13 @@ class VirusTotalConnector:
             "VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES",
             ["virustotal", "url_indicator_create_positives"],
             config,
+            True,
         )
         self.url_indicator_valid_minutes = get_config_variable(
             "VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES",
             ["virustotal", "url_indicator_valid_minutes"],
             config,
+            True,
         )
         self.url_indicator_detect = get_config_variable(
             "VIRUSTOTAL_URL_INDICATOR_DETECT",
