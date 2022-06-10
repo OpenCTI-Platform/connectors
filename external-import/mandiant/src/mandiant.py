@@ -87,7 +87,7 @@ class Mandiant:
     def _get_token(self):
         headers = {
             "accept": "application/json",
-            "x-app-name": "opencti-connector-5.3.4",
+            "x-app-name": "opencti-connector-5.3.5",
         }
         r = requests.post(
             self.mandiant_api_url + "/token",
@@ -119,7 +119,7 @@ class Mandiant:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/json",
-            "x-app-name": "opencti-connector-5.3.4",
+            "x-app-name": "opencti-connector-5.3.5",
         }
         params = {}
         if limit is not None:
