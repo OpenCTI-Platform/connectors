@@ -541,9 +541,6 @@ class Misp:
             else:
                 url = self.misp_url + "/events/view/" + event["Event"]["uuid"]
             event_external_reference = stix2.ExternalReference(
-                id=ExternalReference.generate_id(
-                    url, self.helper.connect_name, event["Event"]["uuid"]
-                ),
                 source_name=self.helper.connect_name,
                 description=event["Event"]["info"],
                 external_id=event["Event"]["uuid"],
@@ -568,11 +565,6 @@ class Misp:
                 if attribute["type"] == "link":
                     event_external_references.append(
                         stix2.ExternalReference(
-                            id=ExternalReference.generate_id(
-                                attribute["value"],
-                                attribute["category"],
-                                attribute["uuid"],
-                            ),
                             source_name=attribute["category"],
                             external_id=attribute["uuid"],
                             url=attribute["value"],
@@ -596,11 +588,6 @@ class Misp:
                     if attribute["type"] == "link":
                         attribute_external_references.append(
                             stix2.ExternalReference(
-                                id=ExternalReference.generate_id(
-                                    attribute["value"],
-                                    attribute["category"],
-                                    attribute["uuid"],
-                                ),
                                 source_name=attribute["category"],
                                 external_id=attribute["uuid"],
                                 url=attribute["value"],
