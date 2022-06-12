@@ -14,7 +14,6 @@ from pycti import (
     Location,
     Malware,
     Note,
-    ExternalReference,
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
