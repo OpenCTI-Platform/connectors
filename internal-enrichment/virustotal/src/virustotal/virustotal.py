@@ -49,7 +49,10 @@ class VirusTotalConnector:
         self.yara_cache = {}
 
         self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config
+            "CONNECTOR_CONFIDENCE_LEVEL",
+            ["connector", "confidence_level"],
+            config,
+            True,
         )
 
         # File/Artifact specific settings
