@@ -361,11 +361,11 @@ class Misp:
                 try:
                     events = self.misp.search("events", **kwargs)
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(f"Error fetching misp event: {e}")
                     try:
                         events = self.misp.search("events", **kwargs)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(f"Error fetching misp event again: {e}")
 
                 self.helper.log_info("MISP returned " + str(len(events)) + " events.")
                 number_events = number_events + len(events)
@@ -1014,7 +1014,7 @@ class Misp:
                         },
                     )
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(f"Error processing indicator {name}: {e}")
             observable = None
             if self.misp_create_observables and observable_type is not None:
                 try:
@@ -1145,7 +1145,9 @@ class Misp:
                             custom_properties=custom_properties,
                         )
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(
+                        f"Error creating observable type {observable_type} with value {observable_value}: {e}"
+                    )
             sightings = []
             identities = []
             if "Sighting" in attribute:
@@ -1224,7 +1226,9 @@ class Misp:
                 relationships.append(
                     stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "related-to", object_observable.id, observable.id
+                            "related-to",
+                            object_observable.id,
+                            observable.id if observable is not None else indicator.id,
                         ),
                         relationship_type="related-to",
                         created_by_ref=author["id"],
