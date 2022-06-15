@@ -115,6 +115,7 @@ OPENCTISTIX2 = {
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
     "url": {"type": "url", "path": ["value"]},
+    "link": {"type": "url", "path": ["value"]},
     "email-address": {"type": "email-addr", "path": ["value"]},
     "email-subject": {"type": "email-message", "path": ["subject"]},
     "mutex": {"type": "mutex", "path": ["name"]},
@@ -910,6 +911,11 @@ class Misp:
         attribute,
         event_threat_level,
     ):
+        if (
+                attribute["type"] == "link"
+                and attribute["category"] == "External analysis"
+        ):
+            return None
         resolved_attributes = self.resolve_type(attribute["type"], attribute["value"])
         if resolved_attributes is None:
             return None
