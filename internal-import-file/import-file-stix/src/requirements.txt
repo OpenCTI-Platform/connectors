@@ -1,3 +1,3 @@
-pycti==5.3.5
+pycti==5.3.6
 maec==4.1.0.17
 stix2-elevator==4.0.1

@@ -87,7 +87,7 @@ class Mandiant:
     def _get_token(self):
         headers = {
             "accept": "application/json",
-            "x-app-name": "opencti-connector-5.3.5",
+            "x-app-name": "opencti-connector-5.3.6",
         }
         r = requests.post(
             self.mandiant_api_url + "/token",
@@ -119,7 +119,7 @@ class Mandiant:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": "application/json",
-            "x-app-name": "opencti-connector-5.3.5",
+            "x-app-name": "opencti-connector-5.3.6",
         }
         params = {}
         if limit is not None:
@@ -166,6 +166,7 @@ class Mandiant:
                             description=self._redacted_as_none("description", actor),
                             modified=self._redacted_as_none("last_updated", actor),
                             aliases=self._redacted_as_none("aliases", actor),
+                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[
                                 stix2.TLP_AMBER.get("id"),
@@ -179,6 +180,7 @@ class Mandiant:
                             description=self._redacted_as_none("description", actor),
                             modified=self._redacted_as_none("last_updated", actor),
                             aliases=self._redacted_as_none("aliases", actor),
+                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[
                                 stix2.TLP_AMBER.get("id"),
@@ -221,6 +223,7 @@ class Mandiant:
                         description=self._redacted_as_none("description", malware),
                         modified=self._redacted_as_none("last_updated", malware),
                         aliases=self._redacted_as_none("aliases", malware),
+                        confidence=self.helper.connect_confidence_level,
                         created_by_ref=self.identity["standard_id"],
                         object_marking_refs=[
                             stix2.TLP_AMBER.get("id"),
@@ -290,6 +293,7 @@ class Mandiant:
                             "description", vulnerability
                         ),
                         created=self._redacted_as_none("publish_date", vulnerability),
+                        confidence=self.helper.connect_confidence_level,
                         created_by_ref=self.identity["standard_id"],
                         object_marking_refs=[
                             stix2.TLP_AMBER.get("id"),
@@ -369,6 +373,7 @@ class Mandiant:
                             ),
                             created=self._redacted_as_none("first_seen", indicator),
                             modified=self._redacted_as_none("last_updated", indicator),
+                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[
                                 stix2.TLP_AMBER.get("id"),
@@ -460,6 +465,7 @@ class Mandiant:
                             created=datetime.datetime.fromtimestamp(
                                 self._redacted_as_none("publish_date", report)
                             ).isoformat(),
+                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[
                                 stix2.TLP_AMBER.get("id"),
