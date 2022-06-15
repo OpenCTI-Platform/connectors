@@ -911,10 +911,7 @@ class Misp:
         attribute,
         event_threat_level,
     ):
-        if (
-                attribute["type"] == "link"
-                and attribute["category"] == "External analysis"
-        ):
+        if attribute["type"] == "link" and attribute["category"] == "External analysis":
             return None
         resolved_attributes = self.resolve_type(attribute["type"], attribute["value"])
         if resolved_attributes is None:
