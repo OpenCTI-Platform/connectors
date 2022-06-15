@@ -561,7 +561,10 @@ class Misp:
                     attribute,
                     event["Event"]["threat_level_id"],
                 )
-                if attribute["type"] == "link" and attribute["category"] == "External analysis":
+                if (
+                    attribute["type"] == "link"
+                    and attribute["category"] == "External analysis"
+                ):
                     event_external_references.append(
                         stix2.ExternalReference(
                             source_name=attribute["category"],
@@ -584,7 +587,10 @@ class Misp:
             for object in event["Event"]["Object"]:
                 attribute_external_references = []
                 for attribute in object["Attribute"]:
-                    if attribute["type"] == "link" and attribute["category"] == "External analysis":
+                    if (
+                        attribute["type"] == "link"
+                        and attribute["category"] == "External analysis"
+                    ):
                         attribute_external_references.append(
                             stix2.ExternalReference(
                                 source_name=attribute["category"],
