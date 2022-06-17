@@ -177,6 +177,7 @@ class VirusTotalConnector:
                     ),
                 }
             ),
+            createdBy=self.identity,
             pattern=plyara.utils.rebuild_yara_rule(rule[0]),
             pattern_type="yara",
             valid_from=self.helper.api.stix2.format_date(valid_from_date),
@@ -271,7 +272,7 @@ class VirusTotalConnector:
                 pattern=f"[file:hashes.'SHA-256' = '{file_sha256}']",
                 valid_from=self.helper.api.stix2.format_date(now_time),
                 valid_until=self.helper.api.stix2.format_date(valid_until),
-                created_by_ref=self.identity,
+                createdBy=self.identity,
                 external_references=[external_reference],
                 x_opencti_main_observable_type=observable["entity_type"],
                 x_opencti_detection=self.ip_indicator_detect,
@@ -323,6 +324,7 @@ class VirusTotalConnector:
                     fromId=final_observable["id"],
                     toId=yara["id"],
                     relationship_type="related-to",
+                    createdBy=self.identity,
                 )
 
         # Create a Note with the full report
@@ -441,7 +443,7 @@ class VirusTotalConnector:
                 pattern=f"[ipv4-addr:value = '{ip_address}']",
                 valid_from=self.helper.api.stix2.format_date(now_time),
                 valid_until=self.helper.api.stix2.format_date(valid_until),
-                created_by_ref=self.identity,
+                createdBy=self.identity,
                 external_references=[external_reference],
                 x_opencti_main_observable_type="IPv4-Addr",
                 x_opencti_detection=self.ip_indicator_detect,
@@ -514,12 +516,16 @@ class VirusTotalConnector:
             description="VirusTotal Report",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
-            id=observable["id"], external_reference_id=external_reference["id"]
+            id=observable["id"],
+            external_reference_id=external_reference["id"],
+            createdBy=self.identity,
         )
 
         # Update the score for the observable
         self.helper.api.stix_cyber_observable.update_field(
-            id=observable["id"], input={"key": "x_opencti_score", "value": str(score)}
+            id=observable["id"],
+            input={"key": "x_opencti_score", "value": str(score)},
+            createdBy=self.identity,
         )
 
         # Create IPv4 address observables for each A record
@@ -531,7 +537,8 @@ class VirusTotalConnector:
             # Have the use the API for these, see:
             # https://github.com/OpenCTI-Platform/client-python/blob/master/examples/create_ip_domain_resolution.py
             ipv4_stix = self.helper.api.stix_cyber_observable.create(
-                observableData={"type": "ipv4-addr", "value": ip}
+                observableData={"type": "ipv4-addr", "value": ip},
+                createdBy=self.identity,
             )
             self.helper.api.stix_cyber_observable_relationship.create(
                 fromId=observable["standard_id"],
@@ -560,7 +567,7 @@ class VirusTotalConnector:
                 pattern=f"[domain-name:value = '{domain}']",
                 valid_from=self.helper.api.stix2.format_date(now_time),
                 valid_until=self.helper.api.stix2.format_date(valid_until),
-                created_by_ref=self.identity,
+                createdBy=self.identity,
                 external_references=[external_reference],
                 x_opencti_main_observable_type="Domain-Name",
                 x_opencti_detection=self.domain_indicator_detect,
@@ -668,7 +675,7 @@ class VirusTotalConnector:
                 pattern=f"[url:value = '{url}']",
                 valid_from=self.helper.api.stix2.format_date(now_time),
                 valid_until=self.helper.api.stix2.format_date(valid_until),
-                created_by_ref=self.identity,
+                createdBy=self.identity,
                 external_references=[external_reference],
                 x_opencti_main_observable_type="Url",
                 x_opencti_detection=self.url_indicator_detect,

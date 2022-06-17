@@ -75,13 +75,13 @@ class VirusTotalClient:
             )
             return None
 
-    def get_file_info(self, hash):
+    def get_file_info(self, hash256):
         """
         Retrieve file information based on the given hash-256.
 
         Parameters
         ----------
-        hash : str
+        hash256 : str
             Hash of the file to retrieve.
 
         Returns
@@ -89,7 +89,7 @@ class VirusTotalClient:
         dict
             File object, see https://developers.virustotal.com/reference/files.
         """
-        url = f"{self.url}/files/{hash}"
+        url = f"{self.url}/files/{hash256}"
         return self._query(url)
 
     def get_yara_ruleset(self, ruleset_id):
