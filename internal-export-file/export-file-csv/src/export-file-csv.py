@@ -43,12 +43,18 @@ class ExportFileCsv:
                                 rrow.append(r["definition"])
                             elif "value" in r:
                                 rrow.append(r["value"])
+                            elif "observable_value" in r:
+                                rrow.append(r["observable_value"])
                         row.append(",".join(rrow))
                     else:
                         row.append("")
                 elif isinstance(d[h], dict):
                     if "name" in d[h]:
                         row.append(d[h]["name"])
+                    elif "value" in d[h]:
+                        row.append(d[h]["value"])
+                    elif "observable_value" in d[h]:
+                        row.append(d[h]["observable_value"])
                     else:
                         row.append("")
                 else:
@@ -197,6 +203,9 @@ class ExportFileCsv:
                 filters=list_params["filters"],
                 orderBy=list_params["orderBy"],
                 orderMode=list_params["orderMode"],
+                relationship_type=list_params["relationship_type"]
+                if "relationship_type" in list_params
+                else None,
                 fromId=list_params["fromId"] if "fromId" in list_params else None,
                 toId=list_params["toId"] if "toId" in list_params else None,
                 fromTypes=list_params["fromTypes"]
