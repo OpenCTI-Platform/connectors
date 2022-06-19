@@ -73,6 +73,9 @@ class ExportFileTxt:
             filters=list_params["filters"],
             orderBy=list_params["orderBy"],
             orderMode=list_params["orderMode"],
+            relationship_type=list_params["relationship_type"]
+            if "relationship_type" in list_params
+            else None,
             fromId=list_params["fromId"] if "fromId" in list_params else None,
             toId=list_params["toId"] if "toId" in list_params else None,
             fromTypes=list_params["fromTypes"] if "fromTypes" in list_params else None,
