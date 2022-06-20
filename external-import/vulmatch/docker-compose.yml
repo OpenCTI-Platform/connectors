@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-taxii2:
-    image: opencti/connector-vulmatch:5.3.6
+    image: opencti/connector-vulmatch:5.3.7
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
