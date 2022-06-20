@@ -23,14 +23,32 @@ class ExportFileCsv:
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
         headers = sorted(set().union(*(d.keys() for d in data)))
+        if "hashes" in headers:
+            headers = headers + [
+                "hashes_MD5",
+                "hashes_SHA-1",
+                "hashes_SHA-256",
+                "hashes_SHA-512",
+                "hashes_SSDEEP",
+            ]
         csv_data = [headers]
         for d in data:
             row = []
             for h in headers:
-                if h not in d:
+                if h.startswith("hashes_") and "hashes" in d:
+                    hashes = {}
+                    for hash in d["hashes"]:
+                        hashes[hash["algorithm"]] = hash["hash"]
+                    if h.split("_")[1] in hashes:
+                        row.append(hashes[h.split("_")[1]])
+                    else:
+                        row.append("")
+                elif h not in d:
                     row.append("")
                 elif isinstance(d[h], str):
                     row.append(d[h])
+                elif isinstance(d[h], int):
+                    row.append(str(d[h]))
                 elif isinstance(d[h], list):
                     if len(d[h]) > 0 and isinstance(d[h][0], str):
                         row.append(",".join(d[h]))
