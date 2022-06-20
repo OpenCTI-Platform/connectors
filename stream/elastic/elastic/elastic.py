@@ -109,11 +109,17 @@ class ElasticConnector:
             logger.debug(
                 f"Connecting to Elasticsearch using hosts: {self.config.get('output.elasticsearch.hosts', ['localhost:9200'])}"
             )
+            ssl_ver = (
+                "True"
+                == str(
+                    self.config.get("output.elasticsearch.ssl_verify", True)
+                ).capitalize()
+            )
             self.elasticsearch = Elasticsearch(
                 hosts=self.config.get("output.elasticsearch.hosts", ["localhost:9200"]),
-                verify_certs=self.config.get("output.elasticsearch.ssl_verify", True),
                 http_auth=_httpauth,
                 api_key=_apikey,
+                verify_certs=ssl_ver,
             )
 
         logger.info("Connected to Elasticsearch")
