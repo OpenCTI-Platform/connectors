@@ -295,7 +295,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "pycti"
-version = "5.3.6"
+version = "5.3.7"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -715,8 +715,8 @@ pycodestyle = [
     {file = "pycodestyle-2.7.0.tar.gz", hash = "sha256:c389c1d06bf7904078ca03399a4816f974a1d590090fecea0c63ec26ebaf1cef"},
 ]
 pycti = [
-    {file = "pycti-5.3.6-py3-none-any.whl", hash = "sha256:3609906e7c0ae048cbbab50cfa498be84d818c773b404ef8c2af6538204d0dcd"},
-    {file = "pycti-5.3.6.tar.gz", hash = "sha256:b23942b5e0073c7449fc1e58a8777642c01598657b96bb29b0a669a0414eac55"},
+    {file = "pycti-5.3.7-py3-none-any.whl", hash = "sha256:3609906e7c0ae048cbbab50cfa498be84d818c773b404ef8c2af6538204d0dcd"},
+    {file = "pycti-5.3.7.tar.gz", hash = "sha256:b23942b5e0073c7449fc1e58a8777642c01598657b96bb29b0a669a0414eac55"},
 ]
 pyflakes = [
     {file = "pyflakes-2.3.1-py2.py3-none-any.whl", hash = "sha256:7893783d01b8a89811dd72d7dfd4d84ff098e5eed95cfa8905b22bbffe52efc3"},
