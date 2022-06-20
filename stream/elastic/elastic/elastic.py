@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from logging import getLogger
 
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, RequestsHttpConnection
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
@@ -109,12 +109,22 @@ class ElasticConnector:
             logger.debug(
                 f"Connecting to Elasticsearch using hosts: {self.config.get('output.elasticsearch.hosts', ['localhost:9200'])}"
             )
-            self.elasticsearch = Elasticsearch(
-                hosts=self.config.get("output.elasticsearch.hosts", ["localhost:9200"]),
-                verify_certs=self.config.get("output.elasticsearch.ssl_verify", True),
-                http_auth=_httpauth,
-                api_key=_apikey,
-            )
+            ssl_ver = "True" == str(self.config.get("output.elasticsearch.ssl_verify", True)).capitalize()
+            if ssl_ver:
+                self.elasticsearch = Elasticsearch(
+                    hosts=self.config.get("output.elasticsearch.hosts", ["localhost:9200"]),
+                    http_auth=_httpauth,
+                    api_key=_apikey,
+                    verify_certs=ssl_ver,
+                )
+            else:
+                self.elasticsearch = Elasticsearch(
+                    hosts=self.config.get("output.elasticsearch.hosts", ["localhost:9200"]),
+                    verify_certs=ssl_ver,
+                    http_auth=_httpauth,
+                    api_key=_apikey,
+                    connection_class=RequestsHttpConnection
+                )
 
         logger.info("Connected to Elasticsearch")
 
