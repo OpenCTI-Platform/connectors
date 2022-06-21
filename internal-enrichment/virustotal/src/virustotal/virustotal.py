@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """VirusTotal enrichment module."""
+from dataclasses import dataclass
 import datetime
 import json
 from pathlib import Path
+from typing import Optional
 
 import plyara
 import plyara.utils
@@ -19,9 +21,19 @@ from pycti import (
 from .client import VirusTotalClient
 
 
+@dataclass
+class IndicatorConfig:
+    """Class to store the indicator config."""
+
+    threshold: int
+    valid_minutes: int
+    detect: bool
+
+
 class VirusTotalConnector:
     """VirusTotal connector."""
 
+    _SOURCE_NAME = "VirusTotal"
     _API_URL = "https://www.virustotal.com/api/v3"
 
     def __init__(self):
@@ -47,6 +59,8 @@ class VirusTotalConnector:
         # Cache to store YARA rulesets.
         self.yara_cache = {}
 
+        self.bundle = []
+
         self.confidence_level = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL",
             ["connector", "confidence_level"],
@@ -60,83 +74,107 @@ class VirusTotalConnector:
             ["virustotal", "file_create_note_full_report"],
             config,
         )
-        self.file_indicator_create_positives = get_config_variable(
-            "VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES",
-            ["virustotal", "file_indicator_create_positives"],
-            config,
-            True,
-        )
-        self.file_indicator_valid_minutes = get_config_variable(
-            "VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES",
-            ["virustotal", "file_indicator_valid_minutes"],
-            config,
-            True,
-        )
-        self.file_indicator_detect = get_config_variable(
-            "VIRUSTOTAL_FILE_INDICATOR_DETECT",
-            ["virustotal", "file_indicator_detect"],
-            config,
+        self.file_indicator_config = IndicatorConfig(
+            threshold=get_config_variable(
+                "VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES",
+                ["virustotal", "file_indicator_create_positives"],
+                config,
+                True,
+            ),
+            valid_minutes=get_config_variable(
+                "VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES",
+                ["virustotal", "file_indicator_valid_minutes"],
+                config,
+                True,
+            ),
+            detect=get_config_variable(
+                "VIRUSTOTAL_FILE_INDICATOR_DETECT",
+                ["virustotal", "file_indicator_detect"],
+                config,
+            ),
         )
 
         # IP specific settings
-        self.ip_indicator_create_positives = get_config_variable(
-            "VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES",
-            ["virustotal", "ip_indicator_create_positives"],
-            config,
-            True,
-        )
-        self.ip_indicator_valid_minutes = get_config_variable(
-            "VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES",
-            ["virustotal", "ip_indicator_valid_minutes"],
-            config,
-            True,
-        )
-        self.ip_indicator_detect = get_config_variable(
-            "VIRUSTOTAL_IP_INDICATOR_DETECT",
-            ["virustotal", "ip_indicator_detect"],
-            config,
+        self.ip_indicator_config = IndicatorConfig(
+            threshold=get_config_variable(
+                "VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES",
+                ["virustotal", "ip_indicator_create_positives"],
+                config,
+                True,
+            ),
+            valid_minutes=get_config_variable(
+                "VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES",
+                ["virustotal", "ip_indicator_valid_minutes"],
+                config,
+                True,
+            ),
+            detect=get_config_variable(
+                "VIRUSTOTAL_IP_INDICATOR_DETECT",
+                ["virustotal", "ip_indicator_detect"],
+                config,
+            ),
         )
 
         # Domain specific settings
-        self.domain_indicator_create_positives = get_config_variable(
-            "VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES",
-            ["virustotal", "domain_indicator_create_positives"],
-            config,
-            True,
-        )
-        self.domain_indicator_valid_minutes = get_config_variable(
-            "VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES",
-            ["virustotal", "domain_indicator_valid_minutes"],
-            config,
-            True,
-        )
-        self.domain_indicator_detect = get_config_variable(
-            "VIRUSTOTAL_DOMAIN_INDICATOR_DETECT",
-            ["virustotal", "domain_indicator_detect"],
-            config,
+        self.domain_indicator_config = IndicatorConfig(
+            threshold=get_config_variable(
+                "VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES",
+                ["virustotal", "domain_indicator_create_positives"],
+                config,
+                True,
+            ),
+            valid_minutes=get_config_variable(
+                "VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES",
+                ["virustotal", "domain_indicator_valid_minutes"],
+                config,
+                True,
+            ),
+            detect=get_config_variable(
+                "VIRUSTOTAL_DOMAIN_INDICATOR_DETECT",
+                ["virustotal", "domain_indicator_detect"],
+                config,
+            ),
         )
 
         # Url specific settings
-        self.url_indicator_create_positives = get_config_variable(
-            "VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES",
-            ["virustotal", "url_indicator_create_positives"],
-            config,
-            True,
-        )
-        self.url_indicator_valid_minutes = get_config_variable(
-            "VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES",
-            ["virustotal", "url_indicator_valid_minutes"],
-            config,
-            True,
-        )
-        self.url_indicator_detect = get_config_variable(
-            "VIRUSTOTAL_URL_INDICATOR_DETECT",
-            ["virustotal", "url_indicator_detect"],
-            config,
+        self.url_indicator_config = IndicatorConfig(
+            threshold=get_config_variable(
+                "VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES",
+                ["virustotal", "url_indicator_create_positives"],
+                config,
+                True,
+            ),
+            valid_minutes=get_config_variable(
+                "VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES",
+                ["virustotal", "url_indicator_valid_minutes"],
+                config,
+                True,
+            ),
+            detect=get_config_variable(
+                "VIRUSTOTAL_URL_INDICATOR_DETECT",
+                ["virustotal", "url_indicator_detect"],
+                config,
+            ),
         )
 
-    def _create_yara_indicator(self, yara, valid_from):
-        """Create an indicator containing the YARA rule from VirusTotal."""
+    def _create_yara_indicator(
+        self, yara: dict, valid_from: Optional[float]
+    ) -> Optional[stix2.Identity]:
+        """
+        Create an indicator containing the YARA rule from VirusTotal.
+
+        Parameters
+        ----------
+        yara : dict
+            Yara rule to use for the indicator.
+        valid_from : float, optional
+            Timestamp for the start of the validity.
+
+        Returns
+        -------
+        stix2.Identity
+            New yara indicator or None if there is no rule.
+        """
         valid_from_date = (
             datetime.datetime.min
             if valid_from is None
@@ -163,7 +201,8 @@ class VirusTotalConnector:
             self.helper.log_warning(f"No YARA rule for rule name {rule_name}")
             return None
 
-        return self.helper.api.indicator.create(
+        return stix2.Indicator(
+            created_by_ref=self.identity,
             name=yara.get("rule_name", "No rulename provided"),
             description=json.dumps(
                 {
@@ -176,12 +215,167 @@ class VirusTotalConnector:
                     ),
                 }
             ),
-            createdBy=self.identity,
             pattern=plyara.utils.rebuild_yara_rule(rule[0]),
             pattern_type="yara",
             valid_from=self.helper.api.stix2.format_date(valid_from_date),
-            x_opencti_main_observable_type="StixFile",
+            custom_properties={
+                "x_opencti_main_observable_type": "StixFile",
+            },
         )
+
+    def _create_external_reference(
+        self, observable_id: str, url: str, description: str = "VirusTotal Report"
+    ) -> dict:
+        """
+        Create an external reference with the given url.
+
+        The external reference is added to the observable being enriched.
+
+        Parameters
+        ----------
+        observable_id : str
+            Id of the observable being enriched.
+        url : str
+            Url for the external reference.
+        description : str, default "Virustotal Report"
+            Description for the external reference.
+
+        Returns
+        -------
+        dict
+            Newly created external reference.
+        """
+        # Create/attach external reference
+        external_reference = self.helper.api.external_reference.create(
+            source_name=self._SOURCE_NAME,
+            url=url,
+            description=description,
+        )
+        self.helper.api.stix_cyber_observable.add_external_reference(
+            id=observable_id, external_reference_id=external_reference["id"]
+        )
+        return external_reference
+
+    @staticmethod
+    def _compute_score(stats: dict) -> int:
+        """
+        Compute the score for the observable.
+
+        score = malicious_count / total_count * 100
+
+        Parameters
+        ----------
+        stats : dict
+            Dictionary with counts of each category (e.g. `harmless`, `malicious`, ...)
+
+        Returns
+        -------
+        int
+            Score, in percent, rounded.
+        """
+        return round(
+            (stats["malicious"] / (stats["harmless"] + stats["undetected"])) * 100
+        )
+
+    def create_indicator_based_on(
+        self,
+        indicator_config: IndicatorConfig,
+        observable: dict,
+        attributes: dict,
+        name: str,
+        pattern: str,
+        score: int,
+        external_reference: dict,
+    ):
+        """
+        Create an Indicator if the positives hits >= threshold specified in the config.
+
+        Objects created are added in the bundle.
+
+        Parameters
+        ----------
+        threshold : int
+            Threshold to reach with positives hits to create the Indicator.
+        """
+        now_time = datetime.datetime.utcnow()
+
+        # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
+        if (
+            attributes["last_analysis_stats"]["malicious"]
+            >= indicator_config.threshold
+            > 0
+        ):
+            valid_until = now_time + datetime.timedelta(
+                minutes=indicator_config.valid_minutes
+            )
+
+            indicator = stix2.Indicator(
+                created_by_ref=self.identity,
+                name=name,
+                description=(
+                    f"Created by VirusTotal connector as the positive count was >= {indicator_config.threshold}"
+                ),
+                confidence=self.confidence_level,
+                pattern=pattern,
+                pattern_type="stix",
+                valid_from=self.helper.api.stix2.format_date(now_time),
+                valid_until=self.helper.api.stix2.format_date(valid_until),
+                external_references=[external_reference],
+                custom_properties={
+                    "x_opencti_main_observable_type": observable["entity_type"],
+                    "x_opencti_detection": indicator_config.detect,
+                    "x_opencti_score": score,
+                },
+            )
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on",
+                    indicator.id,
+                    observable["standard_id"],
+                ),
+                relationship_type="based-on",
+                created_by_ref=self.identity,
+                source_ref=indicator.id,
+                target_ref=observable["standard_id"],
+                confidence=self.confidence_level,
+                allow_custom=True,
+            )
+            self.bundle += [indicator, relationship]
+
+    def _create_notes(self, observable_id: str, attributes: dict):
+        """
+        Create Notes with the analysis results and categories.
+
+        Notes are directly append in the bundle.
+
+        Parameters
+        ----------
+        observable_id : str
+            Id of the observable needing the Notes.
+        attributes : dict
+            Attributes with the `last_analysis_results` and `categories`.
+        """
+        if attributes["last_analysis_stats"]["malicious"] != 0:
+            self.bundle.append(
+                stix2.Note(
+                    id=Note.generate_id(),
+                    abstract="VirusTotal Positives",
+                    content=f'```\n{json.dumps([v for v in attributes["last_analysis_results"].values() if v["category"] == "malicious"], indent=2)}\n```',
+                    created_by_ref=self.identity,
+                    object_refs=[observable_id],
+                )
+            )
+
+        if "categories" in attributes:
+            self.bundle.append(
+                stix2.Note(
+                    id=Note.generate_id(),
+                    abstract="VirusTotal Categories",
+                    content=f'```\n{json.dumps(attributes["categories"], indent=2)}\n```',
+                    created_by_ref=self.identity,
+                    object_refs=[observable_id],
+                )
+            )
 
     def _process_file(self, observable):
         json_data = self.client.get_file_info(observable["observable_value"])
@@ -191,15 +385,8 @@ class VirusTotalConnector:
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
-        bundle_objects = []
-        now_time = datetime.datetime.utcnow()
         attributes = json_data["data"]["attributes"]
-        malicious_count = attributes["last_analysis_stats"]["malicious"]
-        harmless_count = (
-            attributes["last_analysis_stats"]["harmless"]
-            + attributes["last_analysis_stats"]["undetected"]
-        )
-        score = round((malicious_count / (harmless_count + malicious_count)) * 100)
+        score = VirusTotalConnector._compute_score(attributes["last_analysis_stats"])
         file_sha256 = attributes["sha256"]
 
         # Update the hashes for the current observable
@@ -244,53 +431,21 @@ class VirusTotalConnector:
             )
 
         # Create/attach external reference
-        external_reference = self.helper.api.external_reference.create(
-            source_name="VirusTotal",
-            url="https://www.virustotal.com/gui/file/" + file_sha256,
-            description=attributes["magic"],
-        )
-        self.helper.api.stix_cyber_observable.add_external_reference(
-            id=observable["id"], external_reference_id=external_reference["id"]
+        external_reference = self._create_external_reference(
+            observable["id"],
+            f"https://www.virustotal.com/gui/file/{file_sha256}",
+            attributes["magic"],
         )
 
-        # Create an Indicator if positive hits >= file_indicator_create_positives specified in config
-        if (
-            self.file_indicator_create_positives
-            and malicious_count >= self.file_indicator_create_positives
-        ):
-
-            valid_until = now_time + datetime.timedelta(
-                minutes=self.file_indicator_valid_minutes
-            )
-
-            indicator = self.helper.api.indicator.create(
-                name=file_sha256,
-                description=f"Created by VirusTotal connector as the positive count was >= {self.file_indicator_create_positives}",
-                confidence=self.confidence_level,
-                pattern_type="stix",
-                pattern=f"[file:hashes.'SHA-256' = '{file_sha256}']",
-                valid_from=self.helper.api.stix2.format_date(now_time),
-                valid_until=self.helper.api.stix2.format_date(valid_until),
-                createdBy=self.identity,
-                external_references=[external_reference],
-                x_opencti_main_observable_type=observable["entity_type"],
-                x_opencti_detection=self.ip_indicator_detect,
-                x_opencti_score=score,
-            )
-            relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "based-on",
-                    indicator["standard_id"],
-                    observable["standard_id"],
-                ),
-                relationship_type="based-on",
-                created_by_ref=self.identity,
-                source_ref=indicator["standard_id"],
-                target_ref=observable["standard_id"],
-                confidence=self.confidence_level,
-                allow_custom=True,
-            )
-            bundle_objects.append(relationship)
+        self.create_indicator_based_on(
+            self.file_indicator_config,
+            observable,
+            attributes,
+            file_sha256,
+            f"[file:hashes.'SHA-256' = '{file_sha256}']",
+            score,
+            external_reference,
+        )
 
         # Create labels from tags
         for tag in attributes["tags"]:
@@ -319,12 +474,20 @@ class VirusTotalConnector:
 
             # Create the relationships (`related-to`) between the yaras and the file.
             for yara in yaras:
-                self.helper.api.stix_core_relationship.create(
-                    fromId=observable["id"],
-                    toId=yara["id"],
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        observable["standard_id"],
+                        yara.id,
+                    ),
+                    created_by_ref=self.identity,
                     relationship_type="related-to",
-                    createdBy=self.identity,
+                    source_ref=observable["standard_id"],
+                    target_ref=yara.id,
+                    confidence=self.confidence_level,
+                    allow_custom=True,
                 )
+                self.bundle += [yara, relationship]
 
         # Create a Note with the full report
         if self.file_create_note_full_report:
@@ -335,14 +498,7 @@ class VirusTotalConnector:
                 created_by_ref=self.identity,
                 object_refs=[observable["standard_id"]],
             )
-            bundle_objects.append(note_stix)
-
-        # Serialize/send all bundled objects
-        if bundle_objects:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
-            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        return "Nothing to attach"
+            self.bundle.append(note_stix)
 
     def _process_ip(self, observable):
         json_data = self.client.get_ip_info(observable["observable_value"])
@@ -352,16 +508,9 @@ class VirusTotalConnector:
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
-        bundle_objects = []
         attributes = json_data["data"]["attributes"]
-        malicious_count = attributes["last_analysis_stats"]["malicious"]
-        harmless_count = (
-            attributes["last_analysis_stats"]["harmless"]
-            + attributes["last_analysis_stats"]["undetected"]
-        )
-        score = round((malicious_count / (harmless_count + malicious_count)) * 100)
+        score = VirusTotalConnector._compute_score(attributes["last_analysis_stats"])
         ip_address = observable["observable_value"]
-        now_time = datetime.datetime.utcnow()
 
         # Create AutonomousSystem and Relationship between the observable
         as_stix = stix2.AutonomousSystem(
@@ -382,17 +531,11 @@ class VirusTotalConnector:
             confidence=self.confidence_level,
             allow_custom=True,
         )
-        bundle_objects.append(as_stix)
-        bundle_objects.append(relationship)
+        self.bundle += [as_stix, relationship]
 
         # Create/attach external reference
-        external_reference = self.helper.api.external_reference.create(
-            source_name="VirusTotal",
-            url=f"https://www.virustotal.com/gui/ip-address/{ip_address}",
-            description="VirusTotal Report",
-        )
-        self.helper.api.stix_cyber_observable.add_external_reference(
-            id=observable["id"], external_reference_id=external_reference["id"]
+        external_reference = self._create_external_reference(
+            observable["id"], f"https://www.virustotal.com/gui/ip-address/{ip_address}"
         )
 
         # Update the score for the observable
@@ -419,71 +562,19 @@ class VirusTotalConnector:
             confidence=self.confidence_level,
             allow_custom=True,
         )
-        bundle_objects.append(location_stix)
-        bundle_objects.append(relationship)
+        self.bundle += [location_stix, relationship]
 
-        # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
-        if (
-            self.ip_indicator_create_positives
-            and malicious_count >= self.ip_indicator_create_positives
-        ):
+        self.create_indicator_based_on(
+            self.ip_indicator_config,
+            observable,
+            attributes,
+            ip_address,
+            f"[ipv4-addr:value = '{ip_address}']",
+            score,
+            external_reference,
+        )
 
-            valid_until = now_time + datetime.timedelta(
-                minutes=self.ip_indicator_valid_minutes
-            )
-
-            indicator = self.helper.api.indicator.create(
-                name=ip_address,
-                description=f"Created by VirusTotal connector as the positive count was >= {self.ip_indicator_create_positives}",
-                confidence=self.confidence_level,
-                pattern_type="stix",
-                pattern=f"[ipv4-addr:value = '{ip_address}']",
-                valid_from=self.helper.api.stix2.format_date(now_time),
-                valid_until=self.helper.api.stix2.format_date(valid_until),
-                createdBy=self.identity,
-                external_references=[external_reference],
-                x_opencti_main_observable_type="IPv4-Addr",
-                x_opencti_detection=self.ip_indicator_detect,
-                x_opencti_score=score,
-            )
-            relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "based-on",
-                    indicator["standard_id"],
-                    observable["standard_id"],
-                ),
-                relationship_type="based-on",
-                created_by_ref=self.identity,
-                source_ref=indicator["standard_id"],
-                target_ref=observable["standard_id"],
-                confidence=self.confidence_level,
-                allow_custom=True,
-            )
-            bundle_objects.append(relationship)
-
-        # Create a Note with the analysis results if malicious count > 0
-        if malicious_count != 0:
-            malicious_results = list(
-                filter(
-                    lambda x: x["category"] == "malicious",
-                    attributes["last_analysis_results"].values(),
-                )
-            )
-            note_stix = stix2.Note(
-                id=Note.generate_id(),
-                abstract="VirusTotal Positives",
-                content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
-                created_by_ref=self.identity,
-                object_refs=[observable["standard_id"]],
-            )
-            bundle_objects.append(note_stix)
-
-        # Serialize and send all bundles
-        if bundle_objects:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
-            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        return "Nothing to attach"
+        self._create_notes(observable["standard_id"], attributes)
 
     def _process_domain(self, observable):
         json_data = self.client.get_domain_info(observable["observable_value"])
@@ -493,28 +584,14 @@ class VirusTotalConnector:
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
-        bundle_objects = []
         attributes = json_data["data"]["attributes"]
-        malicious_count = attributes["last_analysis_stats"]["malicious"]
-        harmless_count = (
-            attributes["last_analysis_stats"]["harmless"]
-            + attributes["last_analysis_stats"]["undetected"]
-        )
+        score = VirusTotalConnector._compute_score(attributes["last_analysis_stats"])
         dns_records = attributes["last_dns_records"]
-        score = round((malicious_count / (harmless_count + malicious_count)) * 100)
         domain = observable["observable_value"]
-        now_time = datetime.datetime.utcnow()
 
         # Create/attach external reference
-        external_reference = self.helper.api.external_reference.create(
-            source_name="VirusTotal",
-            url=f"https://www.virustotal.com/gui/domain/{domain}",
-            description="VirusTotal Report",
-        )
-        self.helper.api.stix_cyber_observable.add_external_reference(
-            id=observable["id"],
-            external_reference_id=external_reference["id"],
-            createdBy=self.identity,
+        external_reference = self._create_external_reference(
+            observable["id"], f"https://www.virustotal.com/gui/domain/{domain}"
         )
 
         # Update the score for the observable
@@ -525,98 +602,45 @@ class VirusTotalConnector:
         )
 
         # Create IPv4 address observables for each A record
-        # And a Relationship between them and the observable
+        # and a Relationship between them and the observable.
         ip_addresses = [
             record["value"] for record in dns_records if record["type"] == "A"
         ]
         for ip in ip_addresses:
-            # Have the use the API for these, see:
-            # https://github.com/OpenCTI-Platform/client-python/blob/master/examples/create_ip_domain_resolution.py
-            ipv4_stix = self.helper.api.stix_cyber_observable.create(
-                observableData={"type": "ipv4-addr", "value": ip},
-                createdBy=self.identity,
-            )
-            self.helper.api.stix_cyber_observable_relationship.create(
-                fromId=observable["standard_id"],
-                toId=ipv4_stix["standard_id"],
-                createdBy=self.identity,
-                relationship_type="resolves-to",
-                update=True,
-                confidence=self.confidence_level,
-            )
-
-        # Create an Indicator if positive hits >= domain_indicator_create_positives specified in config
-        if (
-            self.domain_indicator_create_positives
-            and malicious_count >= self.domain_indicator_create_positives
-        ):
-
-            valid_until = now_time + datetime.timedelta(
-                minutes=self.domain_indicator_valid_minutes
-            )
-
-            indicator = self.helper.api.indicator.create(
-                name=domain,
-                description=f"Created by VirusTotal connector as the positive count was >= {self.domain_indicator_create_positives}",
-                confidence=self.confidence_level,
-                pattern_type="stix",
-                pattern=f"[domain-name:value = '{domain}']",
-                valid_from=self.helper.api.stix2.format_date(now_time),
-                valid_until=self.helper.api.stix2.format_date(valid_until),
-                createdBy=self.identity,
-                external_references=[external_reference],
-                x_opencti_main_observable_type="Domain-Name",
-                x_opencti_detection=self.domain_indicator_detect,
-                x_opencti_score=score,
+            ipv4_stix = stix2.IPv4Address(
+                type="ipv4-addr",
+                value=ip,
+                custom_properties={
+                    "created_by_ref": self.identity,
+                    "x_opencti_score": score,
+                },
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    "based-on",
-                    indicator["standard_id"],
+                    "resolves-to",
                     observable["standard_id"],
+                    ipv4_stix.id,
                 ),
-                relationship_type="based-on",
+                relationship_type="resolves-to",
                 created_by_ref=self.identity,
-                source_ref=indicator["standard_id"],
-                target_ref=observable["standard_id"],
+                source_ref=observable["standard_id"],
+                target_ref=ipv4_stix.id,
                 confidence=self.confidence_level,
                 allow_custom=True,
             )
-            bundle_objects.append(relationship)
+            self.bundle += [ipv4_stix, relationship]
 
-        # Create Notes with the analysis results and categories
-        if malicious_count != 0:
-            malicious_results = list(
-                filter(
-                    lambda x: x["category"] == "malicious",
-                    attributes["last_analysis_results"].values(),
-                )
-            )
-            note = stix2.Note(
-                id=Note.generate_id(),
-                abstract="VirusTotal Positives",
-                content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
-                created_by_ref=self.identity,
-                object_refs=[observable["standard_id"]],
-            )
-            bundle_objects.append(note)
+        self.create_indicator_based_on(
+            self.ip_indicator_config,
+            observable,
+            attributes,
+            domain,
+            f"[domain-name:value = '{domain}']",
+            score,
+            external_reference,
+        )
 
-        if attributes["categories"]:
-            note = stix2.Note(
-                id=Note.generate_id(),
-                abstract="VirusTotal Categories",
-                content=f'```\n{json.dumps(attributes["categories"], indent=2)}\n```',
-                created_by_ref=self.identity,
-                object_refs=[observable["standard_id"]],
-            )
-            bundle_objects.append(note)
-
-        # Serialize and send all bundles
-        if bundle_objects:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
-            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        return "Nothing to attach"
+        self._create_notes(observable["standard_id"], attributes)
 
     def _process_url(self, observable):
         url = observable["observable_value"]
@@ -627,24 +651,13 @@ class VirusTotalConnector:
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
-        bundle_objects = []
         attributes = json_data["data"]["attributes"]
-        malicious_count = attributes["last_analysis_stats"]["malicious"]
-        harmless_count = (
-            attributes["last_analysis_stats"]["harmless"]
-            + attributes["last_analysis_stats"]["undetected"]
-        )
-        score = round((malicious_count / (harmless_count + malicious_count)) * 100)
-        now_time = datetime.datetime.utcnow()
+        score = VirusTotalConnector._compute_score(attributes["last_analysis_stats"])
 
         # Create/attach external reference
-        external_reference = self.helper.api.external_reference.create(
-            source_name="VirusTotal",
-            url=f"https://www.virustotal.com/gui/url/{self.client.base64_encode_no_padding(url)}",
-            description="VirusTotal Report",
-        )
-        self.helper.api.stix_cyber_observable.add_external_reference(
-            id=observable["id"], external_reference_id=external_reference["id"]
+        external_reference = self._create_external_reference(
+            observable["id"],
+            f"https://www.virustotal.com/gui/url/{VirusTotalClient.base64_encode_no_padding(url)}",
         )
 
         # Update the score for the observable
@@ -652,86 +665,30 @@ class VirusTotalConnector:
             id=observable["id"], input={"key": "x_opencti_score", "value": str(score)}
         )
 
-        # Create an Indicator if positive hits >= url_indicator_create_positives specified in config
-        if (
-            self.url_indicator_create_positives
-            and malicious_count >= self.url_indicator_create_positives
-        ):
-
-            valid_until = now_time + datetime.timedelta(
-                minutes=self.url_indicator_valid_minutes
-            )
-
-            indicator = self.helper.api.indicator.create(
-                name=url,
-                description=f"Created by VirusTotal connector as the positive count was >= {self.url_indicator_create_positives}",
-                confidence=self.confidence_level,
-                pattern_type="stix",
-                pattern=f"[url:value = '{url}']",
-                valid_from=self.helper.api.stix2.format_date(now_time),
-                valid_until=self.helper.api.stix2.format_date(valid_until),
-                createdBy=self.identity,
-                external_references=[external_reference],
-                x_opencti_main_observable_type="Url",
-                x_opencti_detection=self.url_indicator_detect,
-                x_opencti_score=score,
-            )
-            relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "based-on",
-                    indicator["standard_id"],
-                    observable["standard_id"],
-                ),
-                relationship_type="based-on",
-                created_by_ref=self.identity,
-                source_ref=indicator["standard_id"],
-                target_ref=observable["standard_id"],
-                confidence=self.confidence_level,
-                allow_custom=True,
-            )
-            bundle_objects.append(relationship)
+        self.create_indicator_based_on(
+            self.ip_indicator_config,
+            observable,
+            attributes,
+            url,
+            f"[url:value = '{url}']",
+            score,
+            external_reference,
+        )
 
         # Create Notes with the analysis results and categories
-        if malicious_count != 0:
-            malicious_results = list(
-                filter(
-                    lambda x: x["category"] == "malicious",
-                    attributes["last_analysis_results"].values(),
-                )
-            )
-            note = stix2.Note(
-                id=Note.generate_id(),
-                abstract="VirusTotal Positives",
-                content=f"```\n{json.dumps(malicious_results, indent=2)}\n```",
-                created_by_ref=self.identity,
-                object_refs=[observable["standard_id"]],
-            )
-            bundle_objects.append(note)
-
-        if attributes["categories"]:
-            note = stix2.Note(
-                id=Note.generate_id(),
-                abstract="VirusTotal Categories",
-                content=f'```\n{json.dumps(attributes["categories"], indent=2)}\n```',
-                created_by_ref=self.identity,
-                object_refs=[observable["standard_id"]],
-            )
-            bundle_objects.append(note)
-
-        # Serialize and send all bundles
-        if bundle_objects:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
-            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        return "Nothing to attach"
+        self._create_notes(observable["standard_id"], attributes)
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:
             raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
+                "Observable not found (or the connector does not has access to this observable, "
+                "check the group of the connector user)"
             )
+        # Initialize the bundle
+        self.bundle = []
+
         # Extract TLP
         tlp = "TLP:WHITE"
         for marking_definition in observable.get("objectMarking", []):
@@ -742,18 +699,39 @@ class VirusTotalConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
-        if (
-            observable["entity_type"] == "StixFile"
-            or observable["entity_type"] == "Artifact"
-        ):
-            return self._process_file(observable)
-        if observable["entity_type"] == "IPv4-Addr":
-            return self._process_ip(observable)
-        if observable["entity_type"] == "Domain-Name":
-            return self._process_domain(observable)
-        if observable["entity_type"] == "Url":
-            return self._process_url(observable)
-        raise ValueError(f'{observable["entity_type"]} is not a supported entity type.')
+        match observable["entity_type"]:
+            case "StixFile" | "Artifact":
+                self._process_file(observable)
+            case "IPv4-Addr":
+                self._process_ip(observable)
+            case "Domain-Name":
+                self._process_domain(observable)
+            case "Url":
+                self._process_url(observable)
+            case _:
+                raise ValueError(
+                    f'{observable["entity_type"]} is not a supported entity type.'
+                )
+
+        return self._send_bundle()
+
+    def _send_bundle(self) -> str:
+        """
+        Serialize and send the bundle to be inserted.
+
+        Returns
+        -------
+        str
+            String with the number of bundle sent.
+        """
+        if self.bundle is not None:
+            self.helper.metric_inc("record_send", len(self.bundle))
+            serialized_bundle = stix2.Bundle(
+                objects=self.bundle, allow_custom=True
+            ).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
+            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+        return "Nothing to attach"
 
     def start(self):
         """Start the main loop."""

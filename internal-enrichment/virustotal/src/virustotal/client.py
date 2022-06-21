@@ -176,3 +176,6 @@ class VirusTotalClient:
             Base64 encoded string without padding
         """
         return base64.b64encode(contents.encode()).decode().replace("=", "")
+
+
+# aHR0cDovL215ZXRoZXJldnZhbGxpZXQuY29tLw = 'https://www.virustotal.com/api/v3'
