@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'MISP' # Required
   scope: 'misp'
-  confidence_level: 15 # 0 (Unknown) or from 1 to 100
+  confidence_level: 25 # 0 (Unknown) or from 1 to 100
   update_existing_data: False
   log_level: 'info'
 
