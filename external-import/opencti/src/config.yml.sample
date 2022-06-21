@@ -8,7 +8,7 @@ connector:
   name: 'OpenCTI'
   scope: 'marking-definition,identity,location'
   confidence_level: 90 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: false
+  update_existing_data: true
   run_and_terminate: false
   log_level: 'info'
 

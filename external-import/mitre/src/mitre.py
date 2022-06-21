@@ -49,11 +49,6 @@ class Mitre:
             ["connector", "update_existing_data"],
             config,
         )
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-        )
 
     def get_interval(self):
         return int(self.mitre_interval) * 60 * 60 * 24
@@ -108,7 +103,7 @@ class Mitre:
             object_type = obj["type"]
             if object_type in object_types_with_confidence:
                 # self.helper.log_info(f"Adding confidence to {object_type} object")
-                obj["confidence"] = int(self.confidence_level)
+                obj["confidence"] = int(self.helper.connect_confidence_level)
         return json.dumps(stix_bundle)
 
     def process_data(self):

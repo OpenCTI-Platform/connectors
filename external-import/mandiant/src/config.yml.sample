@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Mandiant Cyber Threat Intelligence'
   scope: 'mandiant'
-  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: false
   log_level: 'info'
 
