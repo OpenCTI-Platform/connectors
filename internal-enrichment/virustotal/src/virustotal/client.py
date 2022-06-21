@@ -132,8 +132,8 @@ class VirusTotalClient:
 
         Parameters
         ----------
-        ip : str
-            IP address.
+        domain : str
+            Domain name.
 
         Returns
         -------
@@ -149,18 +149,19 @@ class VirusTotalClient:
 
         Parameters
         ----------
-        ip : str
-            IP address.
+        url : str
+            Url.
 
         Returns
         -------
         dict
             URL Object, see https://developers.virustotal.com/reference/url-object
         """
-        url = f"{self.url}/urls/{self.base64_encode_no_padding(url)}"
+        url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}"
         return self._query(url)
 
-    def base64_encode_no_padding(self, contents):
+    @staticmethod
+    def base64_encode_no_padding(contents):
         """
         Base64 encode a string and remove padding.
 

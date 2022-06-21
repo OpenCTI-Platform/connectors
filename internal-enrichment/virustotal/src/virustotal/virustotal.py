@@ -22,7 +22,6 @@ from .client import VirusTotalClient
 class VirusTotalConnector:
     """VirusTotal connector."""
 
-    _CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
     _API_URL = "https://www.virustotal.com/api/v3"
 
     def __init__(self):
@@ -189,7 +188,7 @@ class VirusTotalConnector:
         assert json_data
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
-        elif "data" not in json_data or "attributes" not in json_data["data"]:
+        if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
         bundle_objects = []
@@ -204,27 +203,27 @@ class VirusTotalConnector:
         file_sha256 = attributes["sha256"]
 
         # Update the hashes for the current observable
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
+        self.helper.api.stix_cyber_observable.update_field(
             id=observable["id"], input={"key": "hashes.MD5", "value": attributes["md5"]}
         )
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
-            id=final_observable["id"],
+        self.helper.api.stix_cyber_observable.update_field(
+            id=observable["id"],
             input={"key": "hashes.SHA-1", "value": attributes["sha1"]},
         )
-        final_observable = self.helper.api.stix_cyber_observable.update_field(
-            id=final_observable["id"],
+        self.helper.api.stix_cyber_observable.update_field(
+            id=observable["id"],
             input={"key": "hashes.SHA-256", "value": file_sha256},
         )
 
         # Set the size and file name
         if observable["entity_type"] == "StixFile":
             self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
+                id=observable["id"],
                 input={"key": "size", "value": str(attributes["size"])},
             )
             if observable["name"] is None and len(attributes["names"]) > 0:
                 self.helper.api.stix_cyber_observable.update_field(
-                    id=final_observable["id"],
+                    id=observable["id"],
                     input={"key": "name", "value": attributes["names"][0]},
                 )
                 del attributes["names"][0]
@@ -237,7 +236,7 @@ class VirusTotalConnector:
         # Add additional file names
         if attributes["names"]:
             self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
+                id=observable["id"],
                 input={
                     "key": "x_opencti_additional_names",
                     "value": attributes["names"],
@@ -297,7 +296,7 @@ class VirusTotalConnector:
         for tag in attributes["tags"]:
             tag_vt = self.helper.api.label.create(value=tag, color="#0059f7")
             self.helper.api.stix_cyber_observable.add_label(
-                id=final_observable["id"], label_id=tag_vt["id"]
+                id=observable["id"], label_id=tag_vt["id"]
             )
 
         if "crowdsourced_yara_results" in attributes:
@@ -321,7 +320,7 @@ class VirusTotalConnector:
             # Create the relationships (`related-to`) between the yaras and the file.
             for yara in yaras:
                 self.helper.api.stix_core_relationship.create(
-                    fromId=final_observable["id"],
+                    fromId=observable["id"],
                     toId=yara["id"],
                     relationship_type="related-to",
                     createdBy=self.identity,
@@ -343,20 +342,18 @@ class VirusTotalConnector:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        else:
-            return "Nothing to attach"
+        return "Nothing to attach"
 
     def _process_ip(self, observable):
         json_data = self.client.get_ip_info(observable["observable_value"])
         assert json_data
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
-        elif "data" not in json_data or "attributes" not in json_data["data"]:
+        if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
         bundle_objects = []
         attributes = json_data["data"]["attributes"]
-        country_code = attributes["country"]
         malicious_count = attributes["last_analysis_stats"]["malicious"]
         harmless_count = (
             attributes["last_analysis_stats"]["harmless"]
@@ -405,9 +402,9 @@ class VirusTotalConnector:
 
         # Create a Location and Relationship between the observable
         location_stix = stix2.Location(
-            id=Location.generate_id(country_code, "Country"),
+            id=Location.generate_id(attributes["country"], "Country"),
             created_by_ref=self.identity,
-            country=country_code,
+            country=attributes["country"],
         )
         relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
@@ -486,15 +483,14 @@ class VirusTotalConnector:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        else:
-            return "Nothing to attach"
+        return "Nothing to attach"
 
     def _process_domain(self, observable):
         json_data = self.client.get_domain_info(observable["observable_value"])
         assert json_data
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
-        elif "data" not in json_data or "attributes" not in json_data["data"]:
+        if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
         bundle_objects = []
@@ -620,8 +616,7 @@ class VirusTotalConnector:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        else:
-            return "Nothing to attach"
+        return "Nothing to attach"
 
     def _process_url(self, observable):
         url = observable["observable_value"]
@@ -629,7 +624,7 @@ class VirusTotalConnector:
         assert json_data
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
-        elif "data" not in json_data or "attributes" not in json_data["data"]:
+        if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
         bundle_objects = []
@@ -728,8 +723,7 @@ class VirusTotalConnector:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        else:
-            return "Nothing to attach"
+        return "Nothing to attach"
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
@@ -753,16 +747,13 @@ class VirusTotalConnector:
             or observable["entity_type"] == "Artifact"
         ):
             return self._process_file(observable)
-        elif observable["entity_type"] == "IPv4-Addr":
+        if observable["entity_type"] == "IPv4-Addr":
             return self._process_ip(observable)
-        elif observable["entity_type"] == "Domain-Name":
+        if observable["entity_type"] == "Domain-Name":
             return self._process_domain(observable)
-        elif observable["entity_type"] == "Url":
+        if observable["entity_type"] == "Url":
             return self._process_url(observable)
-        else:
-            raise ValueError(
-                f'{observable["entity_type"]} is not a supported entity type.'
-            )
+        raise ValueError(f'{observable["entity_type"]} is not a supported entity type.')
 
     def start(self):
         """Start the main loop."""
