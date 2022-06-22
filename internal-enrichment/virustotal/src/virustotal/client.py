@@ -2,23 +2,22 @@
 """Virustotal client module."""
 import base64
 import json
-import logging
 
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-logger = logging.getLogger(__name__)
-
 
 class VirusTotalClient:
     """VirusTotal client."""
 
-    def __init__(self, base_url, token):
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, base_url: str, token: str
+    ) -> None:
         """Initialize Virustotal client."""
         # Drop the ending slash if present.
         self.url = base_url[:-1] if base_url[-1] == "/" else base_url
-        logger.info(f"[VirusTotal] URL: {self.url}")
+        self.helper.log_info(f"[VirusTotal] URL: {self.url}")
         self.headers = {
             "x-apikey": token,
             "accept": "application/json",
@@ -58,19 +57,19 @@ class VirusTotalClient:
             response = http.get(url, headers=self.headers)
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
-            logger.error(f"[VirusTotal] Http error: {errh}")
+            self.helper.log_error(f"[VirusTotal] Http error: {errh}")
         except requests.exceptions.ConnectionError as errc:
-            logger.error(f"[VirusTotal] Error connecting: {errc}")
+            self.helper.log_error(f"[VirusTotal] Error connecting: {errc}")
         except requests.exceptions.Timeout as errt:
-            logger.error(f"[VirusTotal] Timeout error: {errt}")
+            self.helper.log_error(f"[VirusTotal] Timeout error: {errt}")
         except requests.exceptions.RequestException as err:
-            logger.error(f"[VirusTotal] Something else happened: {err}")
+            self.helper.log_error(f"[VirusTotal] Something else happened: {err}")
         except Exception as err:
-            logger.error(f"[VirusTotal] Unknown error {err}")
+            self.helper.log_error(f"[VirusTotal] Unknown error {err}")
         try:
             return response.json()
         except json.JSONDecodeError as err:
-            logger.error(
+            self.helper.log_error(
                 f"[VirusTotal] Error decoding the json: {err} - {response.text}"
             )
             return None
@@ -92,7 +91,7 @@ class VirusTotalClient:
         url = f"{self.url}/files/{hash256}"
         return self._query(url)
 
-    def get_yara_ruleset(self, ruleset_id):
+    def get_yara_ruleset(self, ruleset_id) -> dict:
         """
         Retrieve the YARA rules based on the given ruleset id.
 
@@ -176,6 +175,3 @@ class VirusTotalClient:
             Base64 encoded string without padding
         """
         return base64.b64encode(contents.encode()).decode().replace("=", "")
-
-
-# aHR0cDovL215ZXRoZXJldnZhbGxpZXQuY29tLw = 'https://www.virustotal.com/api/v3'
