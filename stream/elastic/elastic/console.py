@@ -76,6 +76,7 @@ def __process_config(argv={}, config={}) -> dict:
             "log_level": os.environ.get("CONNECTOR_LOG_LEVEL", None),
             "confidence_level": os.environ.get("CONNECTOR_CONFIDENCE_LEVEL", None),
             "mode": os.environ.get("CONNECTOR_MODE", None),
+            "start_timestamp": os.environ.get("CONNECTOR_START_TIMESTAMP", None),
         },
         "cloud": {
             "auth": os.environ.get("CLOUD_AUTH", None),
