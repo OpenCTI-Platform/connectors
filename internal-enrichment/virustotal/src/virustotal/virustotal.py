@@ -234,6 +234,9 @@ class VirusTotalConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
+        self.helper.log_debug(
+            f"[VirusTotal] starting enrichment of observable: {observable}"
+        )
         match observable["entity_type"]:
             case "StixFile" | "Artifact":
                 return self._process_file(observable)

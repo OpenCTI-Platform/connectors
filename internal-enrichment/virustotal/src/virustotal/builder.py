@@ -65,6 +65,7 @@ class VirusTotalBuilder:
 
     def create_asn_belongs_to(self):
         """Create AutonomousSystem and Relationship between the observable."""
+        self.helper.log_debug(f'[VirusTotal] creating asn {self.attributes["asn"]}')
         as_stix = stix2.AutonomousSystem(
             number=self.attributes["asn"],
             name=self.attributes["as_owner"],
@@ -94,6 +95,7 @@ class VirusTotalBuilder:
         ipv4 : str
             IPv4-Address to link.
         """
+        self.helper.log_debug(f"[VirusTotal] creating ipv4-address {ipv4}")
         ipv4_stix = stix2.IPv4Address(
             value=ipv4,
             custom_properties={
@@ -118,6 +120,9 @@ class VirusTotalBuilder:
 
     def create_location_located_at(self):
         """Create a Location and link it to the observable."""
+        self.helper.log_debug(
+            f'[VirusTotal] creating location with country {self.attributes["country"]}'
+        )
         location_stix = stix2.Location(
             id=Location.generate_id(self.attributes["country"], "Country"),
             created_by_ref=self.author,
@@ -174,6 +179,9 @@ class VirusTotalBuilder:
             >= indicator_config.threshold
             > 0
         ):
+            self.helper.log_debug(
+                f"[VirusTotal] creating indicator with pattern {pattern}"
+            )
             valid_until = now_time + datetime.timedelta(
                 minutes=indicator_config.valid_minutes
             )
@@ -234,6 +242,7 @@ class VirusTotalBuilder:
         dict
             Newly created external reference.
         """
+        self.helper.log_debug(f"[VirusTotal] adding external reference for url {url}")
         # Create/attach external reference
         external_reference = self.helper.api.external_reference.create(
             source_name=source_name,
@@ -259,6 +268,7 @@ class VirusTotalBuilder:
         content : str
             Content for the Note.
         """
+        self.helper.log_debug(f"[VirusTotal] creating note with abstract {abstract}")
         self.bundle.append(
             stix2.Note(
                 id=Note.generate_id(),
@@ -306,6 +316,7 @@ class VirusTotalBuilder:
         valid_from : float, optional
             Timestamp for the start of the validity.
         """
+        self.helper.log_debug(f"[VirusTotal] creating indicator for yara {yara}")
         valid_from_date = (
             datetime.datetime.min
             if valid_from is None
@@ -346,7 +357,7 @@ class VirusTotalBuilder:
                 "x_opencti_score": self.score,
             },
         )
-        self.helper.log_debug(f"[VirusTotal] Indicator (yara) created: {indicator}")
+        self.helper.log_debug(f"[VirusTotal] yara indicator created: {indicator}")
 
         # Create the relationships (`related-to`) between the yaras and the file.
         relationship = stix2.Relationship(
@@ -374,6 +385,7 @@ class VirusTotalBuilder:
             String with the number of bundle sent.
         """
         if self.bundle is not None:
+            self.helper.log_debug(f"[VirusTotal] sending bundle: {self.bundle}")
             self.helper.metric_inc("record_send", len(self.bundle))
             serialized_bundle = stix2.Bundle(
                 objects=self.bundle, allow_custom=True
@@ -383,22 +395,24 @@ class VirusTotalBuilder:
         return "Nothing to attach"
 
     def update_hashes(self):
-        """Update the hashes of the file."""
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.observable["id"],
-            input={"key": "hashes.MD5", "value": self.attributes["md5"]},
-        )
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.observable["id"],
-            input={"key": "hashes.SHA-1", "value": self.attributes["sha1"]},
-        )
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.observable["id"],
-            input={"key": "hashes.SHA-256", "value": self.attributes["sha256"]},
-        )
+        """Update the hashes (md5 and sha1) of the file."""
+        for algo in {"MD5", "SHA-1", "SHA-256"}:
+            self.helper.log_debug(
+                f'[VirusTotal] updating hash {algo}: {self.attributes[algo.lower().replace("-", "")]}'
+            )
+            self.helper.api.stix_cyber_observable.update_field(
+                id=self.observable["id"],
+                input={
+                    "key": f"hashes.{algo}",
+                    "value": self.attributes[algo.lower().replace("-", "")],
+                },
+            )
 
     def update_labels(self):
         """Update the labels of the file using the tags."""
+        self.helper.log_debug(
+            f'[VirusTotal] updating labels with {self.attributes["tags"]}'
+        )
         for tag in self.attributes["tags"]:
             tag_vt = self.helper.api.label.create(value=tag, color="#0059f7")
             self.helper.api.stix_cyber_observable.add_label(
@@ -414,6 +428,9 @@ class VirusTotalBuilder:
         main : bool
             If True, update the main name.
         """
+        self.helper.log_debug(
+            f'[VirusTotal] updating names with {self.attributes["names"]}'
+        )
         names = self.attributes["names"]
         if len(names) > 0 and main:
             self.helper.api.stix_cyber_observable.update_field(
@@ -432,6 +449,9 @@ class VirusTotalBuilder:
 
     def update_size(self):
         """Update the size of the file."""
+        self.helper.log_debug(
+            f'[VirusTotal] updating size with {self.attributes["size"]}'
+        )
         self.helper.api.stix_cyber_observable.update_field(
             id=self.observable["id"],
             input={"key": "size", "value": str(self.attributes["size"])},

@@ -67,6 +67,7 @@ class VirusTotalClient:
         except Exception as err:
             self.helper.log_error(f"[VirusTotal] Unknown error {err}")
         try:
+            self.helper.log_debug(f"[VirusTotal] data retrieved: {response.json()}")
             return response.json()
         except json.JSONDecodeError as err:
             self.helper.log_error(
