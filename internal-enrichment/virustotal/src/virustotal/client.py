@@ -3,6 +3,7 @@
 import base64
 import json
 
+from pycti import OpenCTIConnectorHelper
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -15,6 +16,7 @@ class VirusTotalClient:
         self, helper: OpenCTIConnectorHelper, base_url: str, token: str
     ) -> None:
         """Initialize Virustotal client."""
+        self.helper = helper
         # Drop the ending slash if present.
         self.url = base_url[:-1] if base_url[-1] == "/" else base_url
         self.helper.log_info(f"[VirusTotal] URL: {self.url}")
