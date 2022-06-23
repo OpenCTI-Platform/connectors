@@ -56,7 +56,11 @@ class VirusTotalBuilder:
             Score, in percent, rounded.
         """
         return round(
-            (stats["malicious"] / (stats["harmless"] + stats["undetected"] + stats["malicious"])) * 100
+            (
+                stats["malicious"]
+                / (stats["harmless"] + stats["undetected"] + stats["malicious"])
+            )
+            * 100
         )
 
     def create_asn_belongs_to(self):
@@ -288,8 +292,8 @@ class VirusTotalBuilder:
             )
 
     def create_yara(
-        self, yara: dict, ruleset: dict, valid_from: Optional[float]
-    ) -> Optional[stix2.Identity]:
+        self, yara: dict, ruleset: dict, valid_from: Optional[float] = None
+    ):
         """
         Create an indicator containing the YARA rule from VirusTotal and link it to the observable.
 
@@ -301,18 +305,13 @@ class VirusTotalBuilder:
             Yara ruleset to use for the indicator.
         valid_from : float, optional
             Timestamp for the start of the validity.
-
-        Returns
-        -------
-        stix2.Identity
-            New yara indicator or None if there is no rule.
         """
         valid_from_date = (
             datetime.datetime.min
             if valid_from is None
             else datetime.datetime.utcfromtimestamp(valid_from)
         )
-        ruleset_id = yara.get("ruleset_id", "No ruleset id provided")
+        ruleset_id = yara.get("id", "No ruleset id provided")
         self.helper.log_info(f"[VirusTotal] Retrieving ruleset {ruleset_id}")
 
         # Parse the rules to find the correct one.

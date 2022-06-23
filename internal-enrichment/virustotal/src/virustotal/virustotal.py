@@ -182,7 +182,9 @@ class VirusTotalConnector:
         for ip in [
             r["value"] for r in attributes["last_dns_records"] if r["type"] == "A"
         ]:
-            self.helper.log_debug(f'[VirusTotal] adding ip {ip} to domain {observable["observable_value"]}')
+            self.helper.log_debug(
+                f'[VirusTotal] adding ip {ip} to domain {observable["observable_value"]}'
+            )
             builder.create_ip_resolves_to(ip)
 
         builder.create_indicator_based_on(
