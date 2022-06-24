@@ -7,7 +7,12 @@ from typing import Optional
 import plyara
 import plyara.utils
 import stix2
-from pycti import Location, Note, OpenCTIConnectorHelper, StixCoreRelationship
+from pycti import (
+    Location,
+    Note,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+)
 
 from .indicator_config import IndicatorConfig
 
@@ -169,10 +174,6 @@ class VirusTotalBuilder:
         """
         now_time = datetime.datetime.utcnow()
 
-        external_reference = self._create_external_reference(
-            self.author["name"], url, description
-        )
-
         # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
         if (
             self.attributes["last_analysis_stats"]["malicious"]
@@ -184,6 +185,12 @@ class VirusTotalBuilder:
             )
             valid_until = now_time + datetime.timedelta(
                 minutes=indicator_config.valid_minutes
+            )
+
+            external_reference = stix2.ExternalReference(
+                source_name=self.author["name"],
+                url=url,
+                description=description,
             )
 
             indicator = stix2.Indicator(
@@ -219,41 +226,6 @@ class VirusTotalBuilder:
                 allow_custom=True,
             )
             self.bundle += [indicator, relationship]
-
-    def _create_external_reference(
-        self, source_name: str, url: str, description: str
-    ) -> dict:
-        """
-        Create an external reference with the given url.
-
-        The external reference is added to the observable being enriched.
-
-        Parameters
-        ----------
-        source_name : str
-            Source name for the external reference.
-        url : str
-            Url for the external reference.
-        description : str
-            Description for the external reference.
-
-        Returns
-        -------
-        dict
-            Newly created external reference.
-        """
-        self.helper.log_debug(f"[VirusTotal] adding external reference for url {url}")
-        # Create/attach external reference
-        external_reference = self.helper.api.external_reference.create(
-            source_name=source_name,
-            url=url,
-            description=description,
-        )
-        self.helper.api.stix_cyber_observable.add_external_reference(
-            id=self.observable["standard_id"],
-            external_reference_id=external_reference["id"],
-        )
-        return external_reference
 
     def create_note(self, abstract: str, content: str):
         """
@@ -396,7 +368,7 @@ class VirusTotalBuilder:
 
     def update_hashes(self):
         """Update the hashes (md5 and sha1) of the file."""
-        for algo in {"MD5", "SHA-1", "SHA-256"}:
+        for algo in ("MD5", "SHA-1", "SHA-256"):
             self.helper.log_debug(
                 f'[VirusTotal] updating hash {algo}: {self.attributes[algo.lower().replace("-", "")]}'
             )

@@ -75,16 +75,17 @@ class VirusTotalBuilderTest(unittest.TestCase):
             "standard_id": "domain-name--c3967e18-f6e3-5b6a-8d40-16dca535fca3",
             "id": "c3967e18-f6e3-5b6a-8d40-16dca535fca3",
         }
+        ipv4 = "65.8.243.66"
         builder = VirusTotalBuilder(
             self.helper,
             self.author,
             observable,
             self.load_file("./resources/vt_test_domain.json")["data"]["attributes"],
         )
-        builder.create_asn_belongs_to()
+        builder.create_ip_resolves_to(ipv4)
         # Bundle should have 3 elements: the author, the asn and the relationship.
         self.assertEqual(len(builder.bundle), 3)
-        self.assertEqual(builder.bundle[1].value, "65.8.243.66")
+        self.assertEqual(builder.bundle[1].value, ipv4)
         self.assertEqual(builder.bundle[2].relationship_type, "resolves-to")
         self.assertEqual(
             builder.bundle[2].source_ref,
