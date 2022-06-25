@@ -32,7 +32,9 @@ class Cve:
             "CVE_NVD_DATA_FEED", ["cve", "nvd_data_feed"], config
         )
         self.cve_history_data_feed = get_config_variable(
-            "CVE_HISTORY_DATA_FEED", ["cve", "history_data_feed"], config,
+            "CVE_HISTORY_DATA_FEED",
+            ["cve", "history_data_feed"],
+            config,
         )
         self.cve_history_start_date = get_config_variable(
             "CVE_HISTORY_START_DATE", ["cve", "history_start_date"], config, True
