@@ -32,7 +32,12 @@ class Cve:
             "CVE_NVD_DATA_FEED", ["cve", "nvd_data_feed"], config
         )
         self.cve_history_data_feed = get_config_variable(
-            "CVE_HISTORY_DATA_FEED", ["cve", "history_data_feed"], config
+            "CVE_HISTORY_DATA_FEED",
+            ["cve", "history_data_feed"],
+            config,
+        )
+        self.cve_history_start_date = get_config_variable(
+            "CVE_HISTORY_START_DATE", ["cve", "history_start_date"], config, True
         )
         self.cve_interval = get_config_variable(
             "CVE_INTERVAL", ["cve", "interval"], config, True
@@ -119,7 +124,7 @@ class Cve:
                 # If import history and never run
                 if last_run is None and self.cve_import_history:
                     now = datetime.now()
-                    years = list(range(2002, now.year + 1))
+                    years = list(range(self.cve_history_start_date, now.year + 1))
                     for year in years:
                         self.convert_and_send(
                             f"{self.cve_history_data_feed}nvdcve-1.1-{year}.json.gz",
