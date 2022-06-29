@@ -32,7 +32,7 @@ class VirusTotalBuilderTest(unittest.TestCase):
             self.helper,
             self.author,
             {"id": "fakeid"},
-            self.load_file("./resources/vt_test_file.json")["data"]["attributes"],
+            self.load_file("./resources/vt_test_file.json")["data"],
         )
         self.assertEqual(len(builder.bundle), 1)
         self.assertEqual(builder.bundle[0].name, "VirusTotal")
@@ -55,7 +55,7 @@ class VirusTotalBuilderTest(unittest.TestCase):
             self.helper,
             self.author,
             observable,
-            self.load_file("./resources/vt_test_ipv4.json")["data"]["attributes"],
+            self.load_file("./resources/vt_test_ipv4.json")["data"],
         )
         builder.create_asn_belongs_to()
         # Bundle should have 3 elements: the author, the asn and the relationship.
@@ -80,7 +80,7 @@ class VirusTotalBuilderTest(unittest.TestCase):
             self.helper,
             self.author,
             observable,
-            self.load_file("./resources/vt_test_domain.json")["data"]["attributes"],
+            self.load_file("./resources/vt_test_domain.json")["data"],
         )
         builder.create_ip_resolves_to(ipv4)
         # Bundle should have 3 elements: the author, the asn and the relationship.
@@ -102,7 +102,7 @@ class VirusTotalBuilderTest(unittest.TestCase):
             self.helper,
             self.author,
             observable,
-            self.load_file("./resources/vt_test_ipv4.json")["data"]["attributes"],
+            self.load_file("./resources/vt_test_ipv4.json")["data"],
         )
         builder.create_location_located_at()
         # Bundle should have 3 elements: the author, the asn and the relationship.
@@ -125,7 +125,7 @@ class VirusTotalBuilderTest(unittest.TestCase):
             self.helper,
             self.author,
             observable,
-            self.load_file("./resources/vt_test_url.json")["data"]["attributes"],
+            self.load_file("./resources/vt_test_url.json")["data"],
         )
         builder.create_notes()
         # Bundle should have 3 elements: the author, the asn and the relationship.
@@ -149,11 +149,9 @@ class VirusTotalBuilderTest(unittest.TestCase):
             "standard_id": "file--3a30a5ed-003e-5ef9-9ede-10823a9fb17f",
             "id": "3a30a5ed-003e-5ef9-9ede-10823a9fb17f",
         }
-        attributes = self.load_file("./resources/vt_test_file.json")["data"][
-            "attributes"
-        ]
-        builder = VirusTotalBuilder(self.helper, self.author, observable, attributes)
-        yara = attributes["crowdsourced_yara_results"][0]
+        data = self.load_file("./resources/vt_test_file.json")["data"]
+        builder = VirusTotalBuilder(self.helper, self.author, observable, data)
+        yara = data["attributes"]["crowdsourced_yara_results"][0]
         ruleset = self.load_file("./resources/vt_test_yara.json")
         builder.create_yara(yara, ruleset)
         # Bundle should have 3 elements: the author, the asn and the relationship.
@@ -169,8 +167,38 @@ class VirusTotalBuilderTest(unittest.TestCase):
         )
         self.assertEqual(builder.bundle[2].target_ref, builder.bundle[1].id)
 
+    def test_extract_link(self):
+        self.assertEqual(
+            VirusTotalBuilder._extract_link(
+                "https://www.virustotal.com/api/v3/files/4bc00f7d638e042da764e8648c03c0db46700599dd4f08d117e3e9e8b538519b"
+            ),
+            "https://www.virustotal.com/gui/file/4bc00f7d638e042da764e8648c03c0db46700599dd4f08d117e3e9e8b538519b",
+        )
+        self.assertEqual(
+            VirusTotalBuilder._extract_link("https://www.virustotal.com/api/v3/f/abc"),
+            None,
+        )
+        self.assertEqual(
+            VirusTotalBuilder._extract_link(
+                "https://www.virustotal.com/api/v3/ip_addresses/138.128.150.133"
+            ),
+            "https://www.virustotal.com/gui/ip-address/138.128.150.133",
+        )
+        self.assertEqual(
+            VirusTotalBuilder._extract_link(
+                "https://www.virustotal.com/api/v3/domains/tawuhoju.com"
+            ),
+            "https://www.virustotal.com/gui/domain/tawuhoju.com",
+        )
+        self.assertEqual(
+            VirusTotalBuilder._extract_link(
+                "https://www.virustotal.com/api/v3/urls/7d83e9f686ff0122ded311f27aababf6922800a45a23a4dacc860b56ccada4cb"
+            ),
+            "https://www.virustotal.com/gui/url/7d83e9f686ff0122ded311f27aababf6922800a45a23a4dacc860b56ccada4cb",
+        )
+
     @staticmethod
     def load_file(path: str):
         """Utility function to load a json file to a dict."""
-        with open(path) as json_file:
+        with open(path, encoding="utf-8") as json_file:
             return json.load(json_file)
