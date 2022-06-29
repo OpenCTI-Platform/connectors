@@ -8,6 +8,7 @@ import plyara
 import plyara.utils
 import stix2
 from pycti import (
+    ExternalReference,
     Location,
     Note,
     OpenCTIConnectorHelper,
@@ -25,14 +26,14 @@ class VirusTotalBuilder:
         helper: OpenCTIConnectorHelper,
         author: stix2.Identity,
         observable: dict,
-        attributes: dict,
+        data: dict,
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
         self.author = author
         self.bundle = [self.author]
         self.observable = observable
-        self.attributes = attributes
+        self.attributes = data["attributes"]
         self.score = VirusTotalBuilder._compute_score(
             self.attributes["last_analysis_stats"]
         )
@@ -42,6 +43,17 @@ class VirusTotalBuilder:
             id=self.observable["id"],
             input={"key": "x_opencti_score", "value": str(self.score)},
         )
+
+        # Add the external reference.
+        link = self._extract_link(data["links"]["self"])
+        if link is not None:
+            self.helper.log_debug(f"[VirusTotal] adding external reference {link}")
+            self.external_reference = self._create_external_reference(
+                link,
+                self.attributes.get("magic", "VirusTotal Report"),
+            )
+        else:
+            self.external_reference = None
 
     @staticmethod
     def _compute_score(stats: dict) -> int:
@@ -90,6 +102,106 @@ class VirusTotalBuilder:
             allow_custom=True,
         )
         self.bundle += [as_stix, relationship]
+
+    def _create_external_reference(
+        self,
+        url: str,
+        description: str,
+    ) -> ExternalReference:
+        """
+        Create an external reference with the given url.
+        The external reference is added to the observable being enriched.
+
+        Parameters
+        ----------
+        url : str
+            Url for the external reference.
+        description : str
+            Description for the external reference.
+        Returns
+        -------
+        ExternalReference
+            Newly created external reference.
+        """
+        # Create/attach external reference
+        external_reference = self.helper.api.external_reference.create(
+            source_name=self.author["name"],
+            url=url,
+            description=description,
+        )
+        self.helper.api.stix_cyber_observable.add_external_reference(
+            id=self.observable["id"],
+            external_reference_id=external_reference["id"],
+        )
+        return external_reference
+
+    def create_indicator_based_on(
+        self,
+        indicator_config: IndicatorConfig,
+        pattern: str,
+    ):
+        """
+        Create an Indicator if the positives hits >= threshold specified in the config.
+
+        Objects created are added in the bundle.
+
+        Parameters
+        ----------
+        indicator_config : IndicatorConfig
+            Config for the indicator, with the threshold, limit, ...
+        pattern : str
+            Stix pattern for the indicator.
+        """
+        now_time = datetime.datetime.utcnow()
+
+        # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
+        if (
+            self.attributes["last_analysis_stats"]["malicious"]
+            >= indicator_config.threshold
+            > 0
+        ):
+            self.helper.log_debug(
+                f"[VirusTotal] creating indicator with pattern {pattern}"
+            )
+            valid_until = now_time + datetime.timedelta(
+                minutes=indicator_config.valid_minutes
+            )
+
+            indicator = stix2.Indicator(
+                created_by_ref=self.author,
+                name=self.observable["observable_value"],
+                description=(
+                    "Created by VirusTotal connector as the positive count "
+                    f"was >= {indicator_config.threshold}"
+                ),
+                confidence=self.helper.connect_confidence_level,
+                pattern=pattern,
+                pattern_type="stix",
+                valid_from=self.helper.api.stix2.format_date(now_time),
+                valid_until=self.helper.api.stix2.format_date(valid_until),
+                external_references=[self.external_reference]
+                if self.external_reference is not None
+                else None,
+                custom_properties={
+                    "x_opencti_main_observable_type": self.observable["entity_type"],
+                    "x_opencti_detection": indicator_config.detect,
+                    "x_opencti_score": self.score,
+                },
+            )
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on",
+                    indicator.id,
+                    self.observable["standard_id"],
+                ),
+                relationship_type="based-on",
+                created_by_ref=self.author,
+                source_ref=indicator.id,
+                target_ref=self.observable["standard_id"],
+                confidence=self.helper.connect_confidence_level,
+                allow_custom=True,
+            )
+            self.bundle += [indicator, relationship]
 
     def create_ip_resolves_to(self, ipv4: str):
         """
@@ -147,85 +259,6 @@ class VirusTotalBuilder:
             allow_custom=True,
         )
         self.bundle += [location_stix, relationship]
-
-    def create_indicator_based_on(
-        self,
-        indicator_config: IndicatorConfig,
-        pattern: str,
-        url: str,
-        description: str = "VirusTotal Report",
-    ):
-        """
-        Create an Indicator if the positives hits >= threshold specified in the config.
-
-        Objects created are added in the bundle.
-
-        Parameters
-        ----------
-        indicator_config : IndicatorConfig
-            Config for the indicator, with the threshold, limit, ...
-        pattern : str
-            Stix pattern for the indicator.
-        url : str
-            Url for the external reference.
-        description : str, default "VirusTotal Report"
-            Description for the external reference.
-
-        """
-        now_time = datetime.datetime.utcnow()
-
-        # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
-        if (
-            self.attributes["last_analysis_stats"]["malicious"]
-            >= indicator_config.threshold
-            > 0
-        ):
-            self.helper.log_debug(
-                f"[VirusTotal] creating indicator with pattern {pattern}"
-            )
-            valid_until = now_time + datetime.timedelta(
-                minutes=indicator_config.valid_minutes
-            )
-
-            external_reference = stix2.ExternalReference(
-                source_name=self.author["name"],
-                url=url,
-                description=description,
-            )
-
-            indicator = stix2.Indicator(
-                created_by_ref=self.author,
-                name=self.observable["observable_value"],
-                description=(
-                    "Created by VirusTotal connector as the positive count "
-                    f"was >= {indicator_config.threshold}"
-                ),
-                confidence=self.helper.connect_confidence_level,
-                pattern=pattern,
-                pattern_type="stix",
-                valid_from=self.helper.api.stix2.format_date(now_time),
-                valid_until=self.helper.api.stix2.format_date(valid_until),
-                external_references=[external_reference],
-                custom_properties={
-                    "x_opencti_main_observable_type": self.observable["entity_type"],
-                    "x_opencti_detection": indicator_config.detect,
-                    "x_opencti_score": self.score,
-                },
-            )
-            relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "based-on",
-                    indicator.id,
-                    self.observable["standard_id"],
-                ),
-                relationship_type="based-on",
-                created_by_ref=self.author,
-                source_ref=indicator.id,
-                target_ref=self.observable["standard_id"],
-                confidence=self.helper.connect_confidence_level,
-                allow_custom=True,
-            )
-            self.bundle += [indicator, relationship]
 
     def create_note(self, abstract: str, content: str):
         """
@@ -346,6 +379,33 @@ class VirusTotalBuilder:
             allow_custom=True,
         )
         self.bundle += [indicator, relationship]
+
+    @staticmethod
+    def _extract_link(link: str) -> Optional[str]:
+        """
+        Extract the links for the external reference.
+
+        For the gui link, observable type need to be singular.
+
+        Parameters
+        ----------
+        link : str
+            Original link used for the query
+
+        Returns
+        -------
+            str, optional
+                Link to the gui of the observable on VirusTotal website, if any.
+        """
+        for k, v in {
+            "files": "file",
+            "ip_addresses": "ip-address",
+            "domains": "domain",
+            "urls": "url",
+        }.items():
+            if k in link:
+                return link.replace("api/v3", "gui").replace(k, v)
+        return None
 
     def send_bundle(self) -> str:
         """
