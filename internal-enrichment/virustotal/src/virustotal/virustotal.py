@@ -106,8 +106,9 @@ class VirusTotalConnector:
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
-        attributes = json_data["data"]["attributes"]
-        builder = VirusTotalBuilder(self.helper, self.author, observable, attributes)
+        builder = VirusTotalBuilder(
+            self.helper, self.author, observable, json_data["data"]
+        )
 
         builder.update_hashes()
 
@@ -121,20 +122,24 @@ class VirusTotalConnector:
 
         builder.create_indicator_based_on(
             self.file_indicator_config,
-            f"""[file:hashes.'SHA-256' = '{attributes["sha256"]}']""",
-            f'https://www.virustotal.com/gui/file/{attributes["sha256"]}',
-            attributes["magic"],
+            f"""[file:hashes.'SHA-256' = '{json_data["data"]["attributes"]["sha256"]}']""",
         )
 
         # Create labels from tags
         builder.update_labels()
 
         # Add YARA rules (only if a rule is given).
-        for yara in attributes.get("crowdsourced_yara_results", []):
+        for yara in json_data["data"]["attributes"].get(
+            "crowdsourced_yara_results", []
+        ):
             ruleset = self._retrieve_yara_ruleset(
                 yara.get("ruleset_id", "No ruleset id provided")
             )
-            builder.create_yara(yara, ruleset, attributes.get("creation_date", None))
+            builder.create_yara(
+                yara,
+                ruleset,
+                json_data["data"]["attributes"].get("creation_date", None),
+            )
 
         # Create a Note with the full report
         if self.file_create_note_full_report:
@@ -152,7 +157,7 @@ class VirusTotalConnector:
             raise ValueError("An error has occurred.")
 
         builder = VirusTotalBuilder(
-            self.helper, self.author, observable, json_data["data"]["attributes"]
+            self.helper, self.author, observable, json_data["data"]
         )
 
         builder.create_asn_belongs_to()
@@ -161,7 +166,6 @@ class VirusTotalConnector:
         builder.create_indicator_based_on(
             self.ip_indicator_config,
             f"""[ipv4-addr:value = '{observable["observable_value"]}']""",
-            f'https://www.virustotal.com/gui/ip-address/{observable["observable_value"]}',
         )
         builder.create_notes()
         return builder.send_bundle()
@@ -174,13 +178,16 @@ class VirusTotalConnector:
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
-        attributes = json_data["data"]["attributes"]
-        builder = VirusTotalBuilder(self.helper, self.author, observable, attributes)
+        builder = VirusTotalBuilder(
+            self.helper, self.author, observable, json_data["data"]
+        )
 
         # Create IPv4 address observables for each A record
         # and a Relationship between them and the observable.
         for ip in [
-            r["value"] for r in attributes["last_dns_records"] if r["type"] == "A"
+            r["value"]
+            for r in json_data["data"]["attributes"]["last_dns_records"]
+            if r["type"] == "A"
         ]:
             self.helper.log_debug(
                 f'[VirusTotal] adding ip {ip} to domain {observable["observable_value"]}'
@@ -190,7 +197,6 @@ class VirusTotalConnector:
         builder.create_indicator_based_on(
             self.domain_indicator_config,
             f"""[domain-name:value = '{observable["observable_value"]}']""",
-            f'https://www.virustotal.com/gui/domain/{observable["observable_value"]}',
         )
         builder.create_notes()
         return builder.send_bundle()
@@ -204,13 +210,12 @@ class VirusTotalConnector:
             raise ValueError("An error has occurred.")
 
         builder = VirusTotalBuilder(
-            self.helper, self.author, observable, json_data["data"]["attributes"]
+            self.helper, self.author, observable, json_data["data"]
         )
 
         builder.create_indicator_based_on(
             self.ip_indicator_config,
             f"""[url:value = '{observable["observable_value"]}']""",
-            f'https://www.virustotal.com/gui/url/{VirusTotalClient.base64_encode_no_padding(observable["observable_value"])}',
         )
         builder.create_notes()
         return builder.send_bundle()
