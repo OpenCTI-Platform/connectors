@@ -175,9 +175,7 @@ class MWDB:
         port = ""
         indicatorc2 = None
         observablec2 = None
-        if re.match(
-            r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?", value
-        ):
+        if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?", value):
             port = None
             if ":" in value:
                 port = value.split(":")[1]
