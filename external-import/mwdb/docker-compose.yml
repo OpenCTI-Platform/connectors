@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-mwdb:
-    image: opencti/connector-mwdb:5.3.1
+    image: opencti/connector-mwdb:5.3.7
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN='ChangeMe'
@@ -20,6 +20,7 @@ services:
       - MWDB_UPDATE_EXISTING_DATA=True
       - MWDB_ORG_DESCRIPTION='ChangeMe'
       - MWDB_ORG_NAME='ChangeMe'
-      - MWDB_START_DATE=2022-04-01T00:00:00  # ISO 8601
+      - MWDB_START_DATE=2022-04-01T00:00:00.000Z  # ISO 8601
       - MWDB_TAG_FILTER=virusshare.*|bazaar-.*|malshare-.*|apt20\d{2}
+      - MWDB_MAX_START_RETENTION=6
     restart: always

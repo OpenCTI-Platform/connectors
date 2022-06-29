@@ -48,7 +48,7 @@ _The `opencti` and `connector` options in the `docker-compose.yml` and `config.y
 
 ### Docker
 
-Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t opencti-siemrules-import:latest`. Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`
+Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t opencti-mwdb-import:latest`. Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`
 
 ### Manual/VM Deployment
 
