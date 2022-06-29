@@ -3,13 +3,13 @@
 Usage:  elastic [-v | -vv | -vvv | -q | --debug] [-c FILE] [-d DIR]
         elastic --version
 
-Runs OpenCTI connector using provided config.yml file. See config.yml.reference
+Runs OpenCTI connector using provided config.yml.bk file. See config.yml.bk.reference
 for full configuration options and optional environment variables.
 
 Options:
   -h --help                   show this help message and exit
   --version                   show version and exit
-  -c FILE --config=FILE       path to configuration YAML [default: config.yml]
+  -c FILE --config=FILE       path to configuration YAML [default: config.yml.bk]
   -d DIR --data-dir=DIR       path to data directory for Elasticsearch templates (uses module data by default)
   -v                          increase verbosity (can be used up to 3 times)
   -q                          quiet mode
@@ -21,7 +21,6 @@ import logging
 import os
 import sys
 import re
-import time
 from importlib.metadata import version
 from typing import OrderedDict
 
