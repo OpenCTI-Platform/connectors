@@ -1,4 +1,4 @@
-# OpenCTI SIEM Rules Connector
+# OpenCTI MWDB Connector
 
 ## Description
 
