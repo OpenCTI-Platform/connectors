@@ -1,0 +1,34 @@
+{
+    "uid": "0",
+    "documentFamily": "INFOREP",
+    "documentType": "INFOREP",
+    "admiraltyCode": "B2",
+    "motivation": [
+        "CC"
+    ],
+    "subject": "Foo bar",
+    "created": 0,
+    "dateOfInformation": 0,
+    "sourceCharacterization": "",
+    "relatedReports": [
+    ],
+    "entities": [
+    ],
+    "locations": [
+    ],
+    "tags": [
+    ],
+    "portalReportUrl": "",
+    "lastUpdated": 0,
+    "actorSubjectOfReport": [
+    ],
+    "classification": {
+        "intelRequirements": [
+            "0"
+        ]
+    },
+    "reportAttachments": [
+    ],
+    "researcherComments": "",
+    "rawText": "<h1>inforep</h1><p>Foo bar baz extended</p>"
+}

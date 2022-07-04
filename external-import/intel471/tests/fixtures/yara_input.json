@@ -1,0 +1,34 @@
+{
+    "yaraTotalCount": 145,
+    "yaras": [
+        {
+            "data": {
+                "threat": {
+                    "type": "malware",
+                    "uid": "4c4712a4141d261ec0ca8f9037950685",
+                    "data": {
+                        "malware_family_profile_uid": "4c4712a4141d261ec0ca8f9037950685",
+                        "family": "foobar"
+                    }
+                },
+                "yara_data": {
+                    "title": "foobar",
+                    "signature": "rule Foobar\n{\n    meta:\n        author = \"Myself\"\n}"
+                },
+                "confidence": "high",
+                "intel_requirements": [
+                    "1.1"
+                ]
+            },
+            "meta": {
+                "version": "0.1"
+            },
+            "last_updated": 1653905175937,
+            "uid": "4c4712a4141d261ec0ca8f9037950685",
+            "activity": {
+                "first": 1653912372000,
+                "last": 1653912372000
+            }
+        }
+    ]
+}
