@@ -14,4 +14,7 @@ def create_domain(value: str) -> DomainName:
 
 
 def create_file(md5: str, sha1: str, sha256: str) -> File:
-    return File(hashes={"md5": md5, "sha1": sha1, "sha256": sha256}, object_marking_refs=[TLP_AMBER])
+    return File(
+        hashes={"md5": md5, "sha1": sha1, "sha256": sha256},
+        object_marking_refs=[TLP_AMBER],
+    )

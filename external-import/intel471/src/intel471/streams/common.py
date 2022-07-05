@@ -38,17 +38,22 @@ class Intel471Stream(ABC):
     api_class_name = None
     api_method_name = None
 
-    def __init__(self, helper: OpenCTIConnectorHelper,
-                 api_username: str,
-                 api_key: str,
-                 in_queue: Queue,
-                 out_queue: Queue,
-                 initial_history: int = None,
-                 update_existing_data: bool = False) -> None:
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        api_username: str,
+        api_key: str,
+        in_queue: Queue,
+        out_queue: Queue,
+        initial_history: int = None,
+        update_existing_data: bool = False,
+    ) -> None:
         self.helper = helper
         self.in_queue = in_queue
         self.out_queue = out_queue
-        self.api_config = titan_client.Configuration(username=api_username, password=api_key)
+        self.api_config = titan_client.Configuration(
+            username=api_username, password=api_key
+        )
         self.update_existing_data = update_existing_data
         self.stix_mapper = StixMapper(self.api_config)
         if initial_history:
@@ -70,12 +75,20 @@ class Intel471Stream(ABC):
             api_instance = getattr(titan_client, self.api_class_name)(api_client)
         while True:
             kwargs = self._get_api_kwargs(cursor)
-            self.helper.log_info("{} calls Titan API with arguments: {}.".format(self.__class__.__name__, str(kwargs)))
+            self.helper.log_info(
+                "{} calls Titan API with arguments: {}.".format(
+                    self.__class__.__name__, str(kwargs)
+                )
+            )
             api_response = getattr(api_instance, self.api_method_name)(**kwargs)
-            api_payload_objects = getattr(api_response, self.api_payload_objects_key) or []
-            self.helper.log_info("{} got {} items from Titan API.".format(
-                self.__class__.__name__,
-                len(api_payload_objects)))
+            api_payload_objects = (
+                getattr(api_response, self.api_payload_objects_key) or []
+            )
+            self.helper.log_info(
+                "{} got {} items from Titan API.".format(
+                    self.__class__.__name__, len(api_payload_objects)
+                )
+            )
             if not api_payload_objects:
                 break
             cursor = self._get_cursor_value(api_response)
@@ -83,22 +96,33 @@ class Intel471Stream(ABC):
             api_response_serialized = api_response.to_dict(serialize=True)
             try:
                 bundle = self.stix_mapper.map(
-                    api_response_serialized, girs_names=self._get_girs_names(self._get_ttl_hash())
+                    api_response_serialized,
+                    girs_names=self._get_girs_names(self._get_ttl_hash()),
                 )
             except EmptyBundle:
-                self.helper.log_info(f"{self.__class__.__name__} got empty bundle from STIX converter.")
+                self.helper.log_info(
+                    f"{self.__class__.__name__} got empty bundle from STIX converter."
+                )
             else:
                 yield bundle
 
     def send_to_server(self, bundle: Bundle) -> None:
-        self.helper.log_info(f"{self.__class__.__name__} sends bundle with {len(bundle.objects)} objects")
-        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, self.__class__.__name__)
-        self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id, update=self.update_existing_data)
+        self.helper.log_info(
+            f"{self.__class__.__name__} sends bundle with {len(bundle.objects)} objects"
+        )
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, self.__class__.__name__
+        )
+        self.helper.send_stix2_bundle(
+            bundle.serialize(), work_id=work_id, update=self.update_existing_data
+        )
         self.helper.api.work.to_processed(work_id, "Done")
 
     def _fetch_cursor(self) -> Union[str, None]:
         self.helper.log_debug("Sending task to helper handler to get the state")
-        self.out_queue.put(HelperRequest(operation=HelperRequest.Operation.GET, stream=self.label))
+        self.out_queue.put(
+            HelperRequest(operation=HelperRequest.Operation.GET, stream=self.label)
+        )
         self.helper.log_debug("Waiting for helper handler to get state")
         cursor = self.in_queue.get().get(self.cursor_name)
         self.helper.log_debug("Got data from helper handler")
@@ -106,7 +130,13 @@ class Intel471Stream(ABC):
 
     def _update_cursor(self, value: str) -> None:
         self.helper.log_debug("Sending task to helper handler to save state")
-        self.out_queue.put(HelperRequest(operation=HelperRequest.Operation.UPDATE, stream=self.label, data={self.cursor_name: value}))
+        self.out_queue.put(
+            HelperRequest(
+                operation=HelperRequest.Operation.UPDATE,
+                stream=self.label,
+                data={self.cursor_name: value},
+            )
+        )
         self.helper.log_debug("Waiting for ACK from helper handler to save state")
         self.in_queue.get()
         self.helper.log_debug("Got ack for save state, proceeding")
@@ -118,7 +148,9 @@ class Intel471Stream(ABC):
 
     @lru_cache(maxsize=2)
     def _get_girs_names(self, ttl_hash):
-        self.helper.log_info(f"Refreshing list of GIRs names for {self.__class__.__name__} (ttl_hash={ttl_hash}).")
+        self.helper.log_info(
+            f"Refreshing list of GIRs names for {self.__class__.__name__} (ttl_hash={ttl_hash})."
+        )
         girs_names = {}
         with titan_client.ApiClient(self.api_config) as api_client:
             api_instance = titan_client.GIRsApi(api_client)
@@ -135,5 +167,6 @@ class Intel471Stream(ABC):
         raise NotImplementedError
 
     def _get_cursor_value(self, api_response: Any) -> Union[None, str, int]:
-        return str(getattr(api_response, self.api_payload_objects_key)[-1].activity.last + 1)
-
+        return str(
+            getattr(api_response, self.api_payload_objects_key)[-1].activity.last + 1
+        )

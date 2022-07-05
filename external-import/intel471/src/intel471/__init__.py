@@ -7,7 +7,9 @@ class HelperRequest:
         UPDATE = "update"
         KILL = "kill"
 
-    def __init__(self, operation: Operation, stream: str = None, data: dict = None) -> None:
+    def __init__(
+        self, operation: Operation, stream: str = None, data: dict = None
+    ) -> None:
         self.stream = stream
         self.operation = operation
         self.data = data

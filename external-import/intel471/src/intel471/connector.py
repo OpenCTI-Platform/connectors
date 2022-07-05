@@ -26,9 +26,13 @@ class Intel471Connector:
         self.in_queue = Queue()
         self.out_queues: dict[str, Queue] = {}
 
-        update_existing_data = bool(get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA", ["connector", "update_existing_data"], config,
-        ))
+        update_existing_data = bool(
+            get_config_variable(
+                "CONNECTOR_UPDATE_EXISTING_DATA",
+                ["connector", "update_existing_data"],
+                config,
+            )
+        )
 
         api_username = get_config_variable(
             "INTEL471_API_USERNAME", ["intel471", "api_username"], config
@@ -38,16 +42,17 @@ class Intel471Connector:
         )
 
         for stream_class in (
-                Intel471IndicatorsStream,
-                Intel471CVEsStream,
-                Intel471YARAStream,
-                Intel471IOCsStream):
+            Intel471IndicatorsStream,
+            Intel471CVEsStream,
+            Intel471YARAStream,
+            Intel471IOCsStream,
+        ):
             if interval := get_config_variable(
-                    f"INTEL471_INTERVAL_{stream_class.label}".upper(),
-                    ["intel471", f"interval_{stream_class.label}"],
-                    config,
-                    isNumber=True,
-                    default=0,
+                f"INTEL471_INTERVAL_{stream_class.label}".upper(),
+                ["intel471", f"interval_{stream_class.label}"],
+                config,
+                isNumber=True,
+                default=0,
             ):
                 self.out_queues[stream_class.label] = Queue()
                 initial_history = get_config_variable(
@@ -55,7 +60,8 @@ class Intel471Connector:
                     ["intel471", f"initial_history_{stream_class.label}"],
                     config,
                     isNumber=True,
-                    default=0)
+                    default=0,
+                )
                 self.add_job(
                     stream_class(
                         self.helper,
@@ -64,8 +70,10 @@ class Intel471Connector:
                         self.out_queues[stream_class.label],
                         self.in_queue,
                         initial_history,
-                        update_existing_data),
-                    interval)
+                        update_existing_data,
+                    ),
+                    interval,
+                )
 
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -100,19 +108,26 @@ class Intel471Connector:
             self.helper.log_info(f"Done. Put ACK into queue for task {str(request)}")
 
     def add_job(self, stream_obj: Intel471Stream, interval: int) -> None:
-        self.scheduler.add_job(stream_obj.run, name=stream_obj.__class__.__name__, trigger="interval", minutes=interval)
+        self.scheduler.add_job(
+            stream_obj.run,
+            name=stream_obj.__class__.__name__,
+            trigger="interval",
+            minutes=interval,
+        )
 
     @staticmethod
     def _init_scheduler() -> BaseScheduler:
         return BackgroundScheduler(
             jobstores={"default": MemoryJobStore()},
             job_defaults={"coalesce": True},
-            timezone="UTC"
+            timezone="UTC",
         )
 
     @staticmethod
     def _init_config() -> dict:
-        config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config.yml")
+        config_file_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "config.yml"
+        )
         try:
             with open(config_file_path) as fh:
                 return yaml.load(fh, Loader=yaml.FullLoader)

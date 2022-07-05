@@ -21,8 +21,11 @@ def strip_random_values(bundle: dict) -> dict:
 
 
 def get_rest_client_get_side_effect(*payloads):
-    return [MagicMock(
-        data=bytes(i, 'utf-8'),
-        status=200,
-        getheader=lambda x: 'application/json; charset=utf-8'
-    ) for i in payloads]
+    return [
+        MagicMock(
+            data=bytes(i, "utf-8"),
+            status=200,
+            getheader=lambda x: "application/json; charset=utf-8",
+        )
+        for i in payloads
+    ]

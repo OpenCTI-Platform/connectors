@@ -7,8 +7,18 @@ from collections import Callable, namedtuple
 from typing import Union
 
 import titan_client
-from stix2 import Relationship, EmailAddress, File, ThreatActor, IPv4Address, URL, Location, DomainName, Bundle, \
-    Identity
+from stix2 import (
+    Relationship,
+    EmailAddress,
+    File,
+    ThreatActor,
+    IPv4Address,
+    URL,
+    Location,
+    DomainName,
+    Bundle,
+    Identity,
+)
 from stix2.base import _DomainObject, _Observable
 from stix2.canonicalization.Canonicalize import canonicalize
 
@@ -19,10 +29,15 @@ NAMESPACE_OASIS = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 log = logging.getLogger(__name__)
 
 
-MappingConfig = namedtuple("MappingConfig", ["patterning_mapper", "observable_mapper", "kwargs_extractor"])
+MappingConfig = namedtuple(
+    "MappingConfig", ["patterning_mapper", "observable_mapper", "kwargs_extractor"]
+)
 
 
-def generate_id(stix_class: Union[_DomainObject, Relationship, _Observable], **id_contributing_properties: str):
+def generate_id(
+    stix_class: Union[_DomainObject, Relationship, _Observable],
+    **id_contributing_properties: str,
+):
     if id_contributing_properties:
         name = canonicalize(id_contributing_properties, utf8=False)
         return f"{stix_class._type}--{uuid.uuid5(NAMESPACE_OASIS, name)}"
@@ -35,12 +50,11 @@ author_identity = Identity(
     name=author_name,
     identity_class="organization",
     created=datetime.datetime(2022, 1, 1),
-    modified=datetime.datetime(2022, 1, 1)
+    modified=datetime.datetime(2022, 1, 1),
 )
 
 
 class StixMapper:
-
     def __init__(self, api_config: titan_client.Configuration):
         self.api_config = api_config
 
@@ -61,14 +75,18 @@ class StixMapper:
                           to determine if given mapper should be used or not
 
         """
+
         def inner_wrapper(wrapped_class: Callable) -> Callable:
             if name in cls.mappers:
                 log.info(f"Mapper for {name} already exists. Will replace it")
             cls.mappers[name] = (condition, wrapped_class)
             return wrapped_class
+
         return inner_wrapper
 
-    def map(self, source: dict, stix_version: str = "2.1", girs_names: dict = None) -> Bundle:
+    def map(
+        self, source: dict, stix_version: str = "2.1", girs_names: dict = None
+    ) -> Bundle:
         log.info(f"Initializing converter. STIX version {stix_version}.")
         for name, (condition, mapper_class) in self.mappers.items():
             if condition(source):
@@ -79,11 +97,12 @@ class StixMapper:
                     return bundle
                 else:
                     raise EmptyBundle("STIX Mapper produced an empty bundle.")
-        raise StixMapperNotFound(f"STIX Mapper for this payload is not available (keys: {', '.join(source.keys())}).")
+        raise StixMapperNotFound(
+            f"STIX Mapper for this payload is not available (keys: {', '.join(source.keys())})."
+        )
 
 
 class BaseMapper(ABC):
-
     def __init__(self, api_config: titan_client.Configuration):
         self.now = datetime.datetime.utcnow()
         self.api_config = api_config

@@ -10,7 +10,12 @@ class Intel471YARAStream(Intel471Stream):
     api_method_name = "yara_get"
 
     def _get_api_kwargs(self, cursor: Union[None, str]) -> dict:
-        kwargs = {"_from": self.initial_history, "yara": "*", "sort": "earliest", "count": 100}
+        kwargs = {
+            "_from": self.initial_history,
+            "yara": "*",
+            "sort": "earliest",
+            "count": 100,
+        }
         if cursor:
             kwargs["_from"] = cursor
         return kwargs
