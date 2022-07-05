@@ -2,7 +2,7 @@ import datetime
 
 import yaml
 from pytz import UTC
-from stix2 import Indicator, Bundle, Relationship, Malware, KillChainPhase, TLP_AMBER
+from stix2 import Indicator, Bundle, Relationship, KillChainPhase, TLP_AMBER
 
 from .common import StixMapper, BaseMapper, generate_id, author_identity, MappingConfig
 from .patterning import create_url_pattern, create_ipv4_pattern, create_file_pattern

@@ -132,7 +132,7 @@ class Intel471Stream(ABC):
 
     @abstractmethod
     def _get_api_kwargs(self, cursor: Union[None, str]) -> dict:
-        raise NotImplemented
+        raise NotImplementedError
 
     def _get_cursor_value(self, api_response: Any) -> Union[None, str, int]:
         return str(getattr(api_response, self.api_payload_objects_key)[-1].activity.last + 1)
