@@ -1,0 +1,138 @@
+{
+    "indicatorTotalCount": 3,
+    "indicators": [
+        {
+            "data": {
+                "uid": "391e962681972d5625fc3574e112a4bdae603550",
+                "source_id": "391e962681972d5625fc3574e112a4bdae603550",
+                "threat": {
+                    "type": "malware",
+                    "uid": "4c4712a4141d261ec0ca8f9037950685",
+                    "data": {
+                        "malware_family_profile_uid": "4c4712a4141d261ec0ca8f9037950685",
+                        "family": "fooBar",
+                        "version": "0.1"
+                    }
+                },
+                "expiration": 1656850659000,
+                "confidence": "medium",
+                "context": {
+                    "description": "fooBar controller IPv4"
+                },
+                "mitre_tactics": "command_and_control",
+                "indicator_type": "ipv4",
+                "indicator_data": {
+                    "geo_ip": {
+                        "country": "Poland",
+                        "country_code": "PL",
+                        "city": "Warsaw",
+                        "subdivision": [
+                            "Warsaw"
+                        ],
+                        "isp": {
+                            "network": "1.1.1.1/1",
+                            "autonomous_system": "AS12345 FOO Limited",
+                            "isp": "FOO",
+                            "organization": "FOO"
+                        }
+                    },
+                    "address": "1.2.3.4"
+                },
+                "intel_requirements": [
+                    "0.0.0"
+                ]
+            },
+            "meta": {
+                "version": "0.1"
+            },
+            "last_updated": 1654258676141,
+            "uid": "4c4712a4141d261ec0ca8f9037950685",
+            "activity": {
+                "first": 1654256174000,
+                "last": 1654258659000
+            }
+        },
+        {
+            "data": {
+                "uid": "391e962681972d5625fc3574e112a4bdae603550",
+                "source_id": "391e962681972d5625fc3574e112a4bdae603550",
+                "threat": {
+                    "type": "malware",
+                    "uid": "4c4712a4141d261ec0ca8f9037950685",
+                    "data": {
+                        "malware_family_profile_uid": "4c4712a4141d261ec0ca8f9037950685",
+                        "family": "fooBar",
+                        "version": "0.1"
+                    }
+                },
+                "expiration": 1656850659000,
+                "confidence": "high",
+                "context": {
+                    "description": "sample of fooBar malware family"
+                },
+                "mitre_tactics": "command_and_control",
+                "indicator_type": "file",
+                "indicator_data": {
+                    "file": {
+                        "md5": "4c4712a4141d261ec0ca8f9037950685",
+                        "sha1": "391e962681972d5625fc3574e112a4bdae603550",
+                        "sha256": "38a5dfa3ec07f08e8e1788d1d567359a7ed95b0e354953cf0222e0fea1872a7e",
+                        "type": "PEEXE_x86",
+                        "size": 12345,
+                        "ssdeep": "3:q8wK6FuFWcEqlv:3wK6FN1I",
+                        "download_url": "https://foobar/1.zip"
+                    }
+                },
+                "intel_requirements": [
+                    "0.0.0"
+                ]
+            },
+            "meta": {
+                "version": "0.1"
+            },
+            "last_updated": 1654258676141,
+            "uid": "4c4712a4141d261ec0ca8f9037950685",
+            "activity": {
+                "first": 1654256174000,
+                "last": 1654258659000
+            }
+        },
+        {
+            "data": {
+                "uid": "391e962681972d5625fc3574e112a4bdae603550",
+                "source_id": "391e962681972d5625fc3574e112a4bdae603550",
+                "threat": {
+                    "type": "malware",
+                    "uid": "4c4712a4141d261ec0ca8f9037950685",
+                    "data": {
+                        "malware_family_profile_uid": "4c4712a4141d261ec0ca8f9037950685",
+                        "family": "barBaz",
+                        "version": "0.1"
+                    }
+                },
+                "expiration": 1656850659000,
+                "confidence": "high",
+                "context": {
+                    "description": "barBaz controller URL"
+                },
+                "mitre_tactics": "command_and_control",
+                "indicator_type": "url",
+                "indicator_data": {
+                    "url": "http://foo.bar/baz"
+                },
+                "intel_requirements": [
+                    "0.0.0"
+                ]
+            },
+            "meta": {
+                "version": "0.1"
+            },
+            "last_updated": 1654258676141,
+            "uid": "4c4712a4141d261ec0ca8f9037950685",
+            "activity": {
+                "first": 1654256174000,
+                "last": 1654258659000
+            }
+        }
+    ]
+}
