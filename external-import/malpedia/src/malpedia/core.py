@@ -65,7 +65,7 @@ class Malpedia:
         self.helper.log_info(f"loaded malpedia config: {config}")
 
         # Create Malpedia client and importers
-        self.client = MalpediaClient(self.AUTH_KEY)
+        self.client = MalpediaClient(self.helper, self.AUTH_KEY)
 
         # If we run without API key we can assume all data is TLP:WHITE else we
         # default to TLP:AMBER to be safe.
