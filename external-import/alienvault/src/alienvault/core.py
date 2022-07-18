@@ -263,10 +263,15 @@ class AlienVault:
                         "Connector will not run, next run in: {0} seconds", next_run
                     )
 
-                self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
                 self._info("Connector stop")
                 exit(0)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
+            self._sleep(delay_sec=run_interval)
 
     @classmethod
     def _sleep(cls, delay_sec: Optional[int] = None) -> None:

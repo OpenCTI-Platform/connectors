@@ -179,6 +179,10 @@ class capeConnector:
                 f"Run Complete. Sleeping until next run in " f"{self.interval} Minutes"
             )
 
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
             time.sleep(self.get_interval())
 
 

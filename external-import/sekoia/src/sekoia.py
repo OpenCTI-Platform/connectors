@@ -87,6 +87,10 @@ class Sekoia(object):
                 message = f"Connector encountered an error, cursor updated to {cursor}"
                 self.helper.api.work.to_processed(work_id, message)
 
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
             time.sleep(60)
 
     @staticmethod

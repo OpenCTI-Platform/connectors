@@ -415,12 +415,23 @@ class KasperskyConnector:
                         "Connector will not run, next run in: {0} seconds", next_run
                     )
 
+                if self.helper.connect_run_and_terminate:
+                    self.helper.log_info("Connector stop")
+                    exit(0)
+
                 self._sleep(delay_sec=run_interval)
+
             except (KeyboardInterrupt, SystemExit):
                 self._info("Kaspersky connector stop")
                 exit(0)
+
             except Exception as e:  # noqa: B902
                 self._error("Kaspersky connector internal error: {0}", str(e))
+
+                if self.helper.connect_run_and_terminate:
+                    self.helper.log_info("Connector stop")
+                    exit(0)
+
                 self._sleep()
 
     def _initiate_work(self, timestamp: int) -> str:

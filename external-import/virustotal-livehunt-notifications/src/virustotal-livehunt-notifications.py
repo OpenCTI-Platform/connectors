@@ -252,15 +252,18 @@ class VirustotalLivehuntNotifications:
 
                 self.helper.log_info("No new Livehunt Notifications found...")
 
-                time.sleep(self.cooldown_seconds)
-
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)
 
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(self.cooldown_seconds)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
+            time.sleep(self.cooldown_seconds)
 
     def delete_livehunt_notification(self, notification_id):
         """

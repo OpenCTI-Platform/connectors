@@ -187,10 +187,16 @@ class RiskIQConnector:
                         f"[RiskIQ] Connector will not run, next run in {run_interval} seconds"
                     )
 
-                self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("RiskIQ connector stop")
                 sys.exit(0)
+
             except Exception as e:
                 self.helper.log_error(str(e))
                 sys.exit(0)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
+            self._sleep(delay_sec=run_interval)

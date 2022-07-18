@@ -156,7 +156,6 @@ class URLhaus:
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))
                         + " days"
                     )
-                    time.sleep(60)
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)
                     self.helper.log_info(
@@ -164,13 +163,18 @@ class URLhaus:
                         + str(round(new_interval / 60 / 60 / 24, 2))
                         + " days"
                     )
-                    time.sleep(60)
+
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(60)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
+            time.sleep(60)
 
 
 if __name__ == "__main__":

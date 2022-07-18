@@ -398,6 +398,11 @@ class Misp:
                 }
             )
             self.helper.api.work.to_processed(work_id, message)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
             time.sleep(self.get_interval())
 
     def process_events(self, work_id, events) -> int:

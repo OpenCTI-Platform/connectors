@@ -417,7 +417,12 @@ class SocprimeConnector:
                         f"Connector will not run, next run in: {next_run} seconds"
                     )
 
-                self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
+            self._sleep(delay_sec=run_interval)

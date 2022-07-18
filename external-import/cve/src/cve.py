@@ -150,9 +150,11 @@ class Cve:
                     + str(round(new_interval / 60 / 60 / 24, 2))
                     + " days"
                 )
+
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
             exit(0)
+
         except Exception as e:
             self.helper.log_error(str(e))
 

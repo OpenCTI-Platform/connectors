@@ -173,13 +173,19 @@ class Malpedia:
                         f"connector will not run, next run in: {new_interval} seconds"
                     )
 
-                time.sleep(60)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("connector stop")
                 exit(0)
+
             except Exception as e:
                 self.helper.log_error(str(e))
                 exit(0)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                exit(0)
+
+            time.sleep(60)
 
     def _run_knowledge_importer(
         self, current_state: Mapping[str, Any]
