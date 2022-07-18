@@ -63,7 +63,7 @@ class RiskIQConnector:
             confidence=self.helper.connect_confidence_level,
         )
         # Initialization of the client
-        self.client = RiskIQClient(self.base_url, user, password)
+        self.client = RiskIQClient(self.helper, self.base_url, user, password)
 
     @staticmethod
     def _current_unix_timestamp() -> int:

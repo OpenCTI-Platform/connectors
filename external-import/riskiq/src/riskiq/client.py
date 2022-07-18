@@ -2,14 +2,12 @@
 """RiskIQ client module."""
 import datetime
 import json
-import logging
 from typing import Any, Optional
 
+from pycti import OpenCTIConnectorHelper
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-
-logger = logging.getLogger(__name__)
 
 # Custom type to simulate a JSON format.
 JSONType = dict[str, Any]
@@ -18,11 +16,14 @@ JSONType = dict[str, Any]
 class RiskIQClient:
     """Risk IQ client."""
 
-    def __init__(self, base_url: str, user: str, password: str) -> None:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, base_url: str, user: str, password: str
+    ) -> None:
         """Initialize RiskIQ client."""
+        self.helper = helper
         # Drop the ending slash if present.
         self.url = base_url[:-1] if base_url[-1] == "/" else base_url
-        logger.info(f"URL: {self.url}")
+        self.helper.log_info(f"[RiskIQ] URL: {self.url}")
         self.user = user
         self.password = password
 
@@ -59,18 +60,19 @@ class RiskIQClient:
             response = http.get(url, auth=(self.user, self.password))
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
-            logger.error(f"[RiskIQ] Http error: {errh}")
+            self.helper.log_error(f"[RiskIQ] Http error: {errh}")
         except requests.exceptions.ConnectionError as errc:
-            logger.error(f"[RiskIQ] Error connecting: {errc}")
+            self.helper.log_error(f"[RiskIQ] Error connecting: {errc}")
         except requests.exceptions.Timeout as errt:
-            logger.error(f"[RiskIQ] Timeout error: {errt}")
+            self.helper.log_error(f"[RiskIQ] Timeout error: {errt}")
         except requests.exceptions.RequestException as err:
-            logger.error(f"[RiskIQ] Something else happened: {err}")
+            self.helper.log_error(f"[RiskIQ] Something else happened: {err}")
         else:
             try:
+                self.helper.log_debug(f"[RiskIQ] data retrieved: {response.json()}")
                 return response.json()
             except json.JSONDecodeError as err:
-                logger.error(
+                self.helper.log_error(
                     f"[RiskIQ] Error decoding the json: {err} - {response.text}"
                 )
         return None
