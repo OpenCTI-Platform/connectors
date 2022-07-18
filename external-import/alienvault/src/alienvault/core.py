@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI AlienVault connector module."""
 
 import datetime
@@ -9,11 +8,6 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
 import yaml
-from pycti.connector.opencti_connector_helper import (  # type: ignore
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
-
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter, PulseImporterConfig
 from alienvault.utils import (
@@ -22,6 +16,10 @@ from alienvault.utils import (
     get_tlp_string_marking_definition,
 )
 from alienvault.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
+from pycti.connector.opencti_connector_helper import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 
 
 class AlienVault:
@@ -46,6 +44,7 @@ class AlienVault:
     _CONFIG_ENABLE_ATTACK_PATTERNS_INDICATES = (
         f"{_CONFIG_NAMESPACE}.enable_attack_patterns_indicates"
     )
+    _CONFIG_FILTER_INDICATORS = f"{_CONFIG_NAMESPACE}.filter_indicators"
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
@@ -59,6 +58,7 @@ class AlienVault:
 
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
+    _DEFAULT_FILTER_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
     _DEFAULT_ENABLE_RELATIONSHIPS = True
     _DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES = True
@@ -93,6 +93,14 @@ class AlienVault:
             create_indicators = self._DEFAULT_CREATE_INDICATORS
         else:
             create_indicators = bool(create_indicators)
+
+        filter_indicators = self._get_configuration(
+            config, self._CONFIG_FILTER_INDICATORS
+        )
+        if filter_indicators is None:
+            filter_indicators = self._DEFAULT_FILTER_INDICATORS
+        else:
+            filter_indicators = bool(filter_indicators)
 
         default_latest_pulse_timestamp = self._get_configuration(
             config, self._CONFIG_PULSE_START_TIMESTAMP
@@ -173,6 +181,7 @@ class AlienVault:
             guess_malware=guess_malware,
             guess_cve=guess_cve,
             excluded_pulse_indicator_types=excluded_pulse_indicator_types,
+            filter_indicators=filter_indicators,
             enable_relationships=enable_relationships,
             enable_attack_patterns_indicates=enable_attack_patterns_indicates,
         )

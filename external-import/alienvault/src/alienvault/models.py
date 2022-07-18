@@ -1,10 +1,13 @@
-# -*- coding: utf-8 -*-
 """OpenCTI AlienVault models module."""
-
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel
+
+__all__ = [
+    "Pulse",
+    "PulseIndicator",
+]
 
 
 class PulseIndicator(BaseModel):
@@ -12,18 +15,18 @@ class PulseIndicator(BaseModel):
 
     id: int
     type: str
-    title: Optional[str]
+    title: str
     indicator: str
-    description: Optional[str]
+    description: str
     created: datetime
     is_active: Union[bool, int]
-    content: Optional[str]
+    content: str
     observations: Optional[int] = None
-    role: Optional[str] = None
-    access_type: Optional[str] = None
-    access_reason: Optional[str] = None
-    access_groups: Optional[List[int]] = None
-    expiration: Optional[datetime] = None
+    role: Optional[str]
+    access_type: Optional[Literal["public", "private", "redacted"]] = None
+    access_reason: Optional[str]
+    access_groups: Optional[List[int]]
+    expiration: Optional[datetime]
 
 
 class Pulse(BaseModel):
@@ -35,7 +38,7 @@ class Pulse(BaseModel):
     author_name: str
     public: bool
     revision: int
-    adversary: Optional[str]
+    adversary: str
     malware_families: List[str]
     industries: List[str]
     attack_ids: List[str]
