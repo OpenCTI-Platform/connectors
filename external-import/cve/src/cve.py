@@ -4,14 +4,16 @@ import gzip
 import os
 import shutil
 import ssl
+import sys
 import time
 import urllib.request
 from datetime import datetime
 
 import certifi
 import yaml
-from cvetostix2 import convert
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+from cvetostix2 import convert
 
 
 class Cve:
@@ -153,7 +155,7 @@ class Cve:
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
-            exit(0)
+            sys.exit(0)
 
         except Exception as e:
             self.helper.log_error(str(e))
@@ -176,4 +178,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

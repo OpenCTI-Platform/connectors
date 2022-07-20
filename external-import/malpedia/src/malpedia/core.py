@@ -2,6 +2,7 @@
 """OpenCTI Malpedia connector core module."""
 
 import os
+import sys
 import time
 from datetime import datetime
 from typing import Any, Dict, Mapping, Optional
@@ -175,15 +176,15 @@ class Malpedia:
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("connector stop")
-                exit(0)
+                sys.exit(0)
 
             except Exception as e:
                 self.helper.log_error(str(e))
-                exit(0)
+                sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             time.sleep(60)
 

@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 import time
 from datetime import datetime, timedelta
 
@@ -142,7 +143,7 @@ class Taxii2Connector:
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             time.sleep(self.get_interval())
 

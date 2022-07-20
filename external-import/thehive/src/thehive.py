@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from datetime import datetime
 
@@ -540,13 +541,13 @@ class TheHive:
                 self.helper.set_state(current_state)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             time.sleep(60)
 
@@ -558,4 +559,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

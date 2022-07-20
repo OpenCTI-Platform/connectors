@@ -6,14 +6,15 @@ from datetime import datetime
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Set
 
 import stix2
-from alienvault.builder import PulseBundleBuilder, PulseBundleBuilderConfig
-from alienvault.client import AlienVaultClient
-from alienvault.models import Pulse
-from alienvault.utils import iso_datetime_str_to_datetime
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
 )  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore
+
+from alienvault.builder import PulseBundleBuilder, PulseBundleBuilderConfig
+from alienvault.client import AlienVaultClient
+from alienvault.models import Pulse
+from alienvault.utils import iso_datetime_str_to_datetime
 
 
 class PulseImporterConfig(NamedTuple):

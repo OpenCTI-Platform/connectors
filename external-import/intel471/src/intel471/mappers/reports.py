@@ -5,9 +5,9 @@ from typing import List
 
 import titan_client
 from pytz import UTC
-from stix2 import Bundle, Report, ExternalReference, TLP_AMBER
+from stix2 import TLP_AMBER, Bundle, ExternalReference, Report
 
-from .common import StixMapper, BaseMapper, generate_id, author_identity
+from .common import BaseMapper, StixMapper, author_identity, generate_id
 
 log = logging.getLogger(__name__)
 

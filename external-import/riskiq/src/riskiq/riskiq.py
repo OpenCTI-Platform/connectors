@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """RiskIQ external-import module."""
+
 import datetime
 import sys
 import time
@@ -197,6 +198,6 @@ class RiskIQConnector:
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             self._sleep(delay_sec=run_interval)

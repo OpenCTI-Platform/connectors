@@ -1,10 +1,14 @@
 """Kaspersky connector module."""
 
 import os
+import sys
 import time
 from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable  # type: ignore
+from stix2 import Identity, MarkingDefinition  # type: ignore
+
 from kaspersky.client import KasperskyClient
 from kaspersky.master_ioc.importer import MasterIOCImporter
 from kaspersky.master_yara.importer import MasterYaraImporter
@@ -16,8 +20,6 @@ from kaspersky.utils import (
     get_tlp_string_marking_definition,
     timestamp_to_datetime,
 )
-from pycti import OpenCTIConnectorHelper, get_config_variable  # type: ignore
-from stix2 import Identity, MarkingDefinition  # type: ignore
 
 
 class KasperskyConnector:
@@ -417,20 +419,20 @@ class KasperskyConnector:
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
-                    exit(0)
+                    sys.exit(0)
 
                 self._sleep(delay_sec=run_interval)
 
             except (KeyboardInterrupt, SystemExit):
                 self._info("Kaspersky connector stop")
-                exit(0)
+                sys.exit(0)
 
             except Exception as e:  # noqa: B902
                 self._error("Kaspersky connector internal error: {0}", str(e))
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
-                    exit(0)
+                    sys.exit(0)
 
                 self._sleep()
 

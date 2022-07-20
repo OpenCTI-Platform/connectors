@@ -1,12 +1,14 @@
 # coding: utf-8
 
 import os
+import sys
 import time
 
 import magic
 import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+
 from unpac_me_api_client import UnpacMeApi, UnpacMeStatus
 
 
@@ -239,4 +241,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

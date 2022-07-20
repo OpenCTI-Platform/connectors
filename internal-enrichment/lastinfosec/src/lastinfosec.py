@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 import time
 
 import requests
@@ -94,4 +95,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

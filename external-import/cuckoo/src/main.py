@@ -1,11 +1,13 @@
 import os
+import sys
 import time
 from datetime import datetime
 
 import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
+
 from cuckoo.cuckoo import cuckoo
 from cuckoo.telemetry import openCTIInterface
-from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class cuckooConnector:
@@ -183,7 +185,7 @@ class cuckooConnector:
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             time.sleep(self.get_interval())
 

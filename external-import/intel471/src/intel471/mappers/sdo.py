@@ -1,5 +1,6 @@
-from stix2 import Malware, TLP_AMBER
-from .common import generate_id, author_identity
+from stix2 import TLP_AMBER, Malware
+
+from .common import author_identity, generate_id
 
 
 def create_malware(value: str) -> Malware:

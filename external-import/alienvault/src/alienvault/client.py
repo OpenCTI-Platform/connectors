@@ -4,9 +4,10 @@
 from datetime import datetime
 from typing import List
 
-from alienvault.models import Pulse
 from OTXv2 import OTXv2  # type: ignore
 from pydantic import parse_obj_as
+
+from alienvault.models import Pulse
 
 
 class AlienVaultClient:

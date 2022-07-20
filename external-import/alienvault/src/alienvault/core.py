@@ -3,11 +3,17 @@
 
 import datetime
 import os
+import sys
 import time
 from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
 import yaml
+from pycti.connector.opencti_connector_helper import (  # type: ignore
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
+
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter, PulseImporterConfig
 from alienvault.utils import (
@@ -16,10 +22,6 @@ from alienvault.utils import (
     get_tlp_string_marking_definition,
 )
 from alienvault.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from pycti.connector.opencti_connector_helper import (  # type: ignore
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
 
 
 class AlienVault:
@@ -265,11 +267,11 @@ class AlienVault:
 
             except (KeyboardInterrupt, SystemExit):
                 self._info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             self._sleep(delay_sec=run_interval)
 

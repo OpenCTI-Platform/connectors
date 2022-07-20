@@ -1,25 +1,28 @@
-import os
-import yaml
-import time
 import datetime
-from typing import Any, Dict, List, Optional, Mapping, Union
+import os
+import sys
+import time
+from typing import Any, Dict, List, Mapping, Optional, Union
+
+import pycti
+import yaml
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
 )
 from stix2 import (
-    Bundle,
-    Indicator,
-    Identity,
-    Tool,
-    Relationship,
-    Malware,
     AttackPattern,
+    Bundle,
+    Identity,
+    Indicator,
+    Malware,
+    Relationship,
     ThreatActor,
+    Tool,
 )
-from socprime.tdm_api_client import ApiClient
+
 from socprime.mitre_attack import MitreAttack
-import pycti
+from socprime.tdm_api_client import ApiClient
 
 
 class SocprimeConnector:
@@ -419,10 +422,10 @@ class SocprimeConnector:
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             self._sleep(delay_sec=run_interval)
