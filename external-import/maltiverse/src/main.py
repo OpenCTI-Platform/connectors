@@ -55,28 +55,30 @@ class MaltiverseConnector:
                     last_run = None
                     self.helper.log_info("Connector has never run")
                 # If the last_run is more than interval-1 day
-                if last_run is None or (
-                    (timestamp - last_run)
-                    > (self.get_interval())
-                ):
+                if last_run is None or ((timestamp - last_run) > (self.get_interval())):
                     timestamp = int(time.time())
                     now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "Connector run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    friendly_name = "Connector run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
 
-                    cli = taxiicli.Server('https://api.maltiverse.com/taxii2/',
-                                          user=self.user,
-                                          password=self.passwd)
+                    cli = taxiicli.Server(
+                        "https://api.maltiverse.com/taxii2/",
+                        user=self.user,
+                        password=self.passwd,
+                    )
 
-                    collections = [col for col in cli.default.collections if col.id in self.feeds]
+                    collections = [
+                        col for col in cli.default.collections if col.id in self.feeds
+                    ]
 
                     for col in collections:
                         try:
                             self.helper.send_stix2_bundle(
-                                json.dumps(col.get_objects()),
-                                update=True
+                                json.dumps(col.get_objects()), update=True
                             )
                         except Exception as e:
                             self.helper.log_error("error sending collection: " + str(e))
