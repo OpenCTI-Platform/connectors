@@ -288,6 +288,10 @@ jobs:
           name: Build Docker image opencti/connector-maltiverse
           command: docker build -t opencti/connector-maltiverse:latest . && docker tag opencti/connector-maltiverse:latest opencti/connector-maltiverse:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/intel471
+          name: Build Docker image opencti/connector-intel471
+          command: docker build -t opencti/connector-intel471:latest . && docker tag opencti/connector-intel471:latest opencti/connector-intel471:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -415,6 +419,8 @@ jobs:
             docker push opencti/connector-socprime:${CIRCLE_TAG}
             docker push opencti/connector-maltiverse:latest
             docker push opencti/connector-maltiverse:${CIRCLE_TAG}
+            docker push opencti/connector-intel471:latest
+            docker push opencti/connector-intel471:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -669,6 +675,10 @@ jobs:
           working_directory: ~/opencti/external-import/maltiverse
           name: Build Docker image opencti/connector-maltiverse
           command: docker build -t opencti/connector-maltiverse:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/intel471
+          name: Build Docker image opencti/connector-intel471
+          command: docker build -t opencti/connector-intel471:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
