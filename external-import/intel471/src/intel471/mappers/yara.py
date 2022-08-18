@@ -2,8 +2,9 @@ import datetime
 
 import yaml
 from pytz import UTC
-from stix2 import Indicator, Bundle, Relationship, TLP_AMBER
-from .common import StixMapper, BaseMapper, generate_id, author_identity
+from stix2 import TLP_AMBER, Bundle, Indicator, Relationship
+
+from .common import BaseMapper, StixMapper, author_identity, generate_id
 from .sdo import create_malware
 
 

@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import sys
 import time
 from datetime import datetime, timedelta
 from posixpath import join as urljoin
@@ -83,7 +84,7 @@ class Sekoia(object):
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 self.helper.api.work.to_processed(work_id, "Connector is stopping")
-                exit(0)
+                sys.exit(0)
             except Exception as ex:
                 # In case of error try to get the last updated cursor
                 # since `_run` updates it after every successful request
@@ -92,6 +93,10 @@ class Sekoia(object):
                 self.helper.log_error(str(ex))
                 message = f"Connector encountered an error, cursor updated to {cursor}"
                 self.helper.api.work.to_processed(work_id, message)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
 
             time.sleep(60)
 
@@ -422,4 +427,4 @@ if __name__ == "__main__":
         sekoiaConnector.run()
     except Exception:
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

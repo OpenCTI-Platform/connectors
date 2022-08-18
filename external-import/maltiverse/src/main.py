@@ -1,10 +1,11 @@
+import json
 import os
+import sys
 import time
 from datetime import datetime
-import json
 
-import yaml
 import taxii2client.v21 as taxiicli
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -115,4 +116,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

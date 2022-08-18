@@ -8,16 +8,16 @@ from typing import Union
 
 import titan_client
 from stix2 import (
-    Relationship,
+    URL,
+    Bundle,
+    DomainName,
     EmailAddress,
     File,
-    ThreatActor,
-    IPv4Address,
-    URL,
-    Location,
-    DomainName,
-    Bundle,
     Identity,
+    IPv4Address,
+    Location,
+    Relationship,
+    ThreatActor,
 )
 from stix2.base import _DomainObject, _Observable
 from stix2.canonicalization.Canonicalize import canonicalize

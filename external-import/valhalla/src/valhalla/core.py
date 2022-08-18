@@ -2,6 +2,7 @@
 """OpenCTI valhalla connector core module."""
 
 import os
+import sys
 import time
 from datetime import datetime
 from typing import Any, Dict, Mapping, Optional
@@ -127,14 +128,19 @@ class Valhalla:
                         f"connector will not run, next run in: {new_interval} seconds"
                     )
 
-                # After a successful run pause at least 60sec
-                time.sleep(60)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("connector stop")
-                exit(0)
+                sys.exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
-                exit(0)
+                sys.exit(0)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            # After a successful run pause at least 60sec
+            time.sleep(60)
 
     def _get_interval(self) -> int:
         return int(self.INTERVAL_SEC)

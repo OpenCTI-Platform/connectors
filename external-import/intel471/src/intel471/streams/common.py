@@ -3,15 +3,15 @@ import time
 from abc import ABC, abstractmethod
 from functools import lru_cache
 from queue import Queue
-from typing import Iterator, Union, Any
-
-from stix2 import Bundle
+from typing import Any, Iterator, Union
 
 import titan_client
 from pycti import OpenCTIConnectorHelper
-from ..mappers.exceptions import EmptyBundle
+from stix2 import Bundle
+
 from .. import HelperRequest
 from ..mappers import StixMapper
+from ..mappers.exceptions import EmptyBundle
 
 
 class Intel471Stream(ABC):

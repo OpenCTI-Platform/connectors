@@ -6,6 +6,8 @@ from datetime import datetime
 from typing import Callable, List, Mapping, NamedTuple, Optional, Set
 
 import stix2
+from stix2.v21 import _DomainObject, _Observable  # type: ignore
+
 from alienvault.models import Pulse, PulseIndicator
 from alienvault.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
@@ -41,7 +43,6 @@ from alienvault.utils import (
     create_vulnerability_external_reference,
     get_tlp_string_marking_definition,
 )
-from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 log = logging.getLogger(__name__)
 

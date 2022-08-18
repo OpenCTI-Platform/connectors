@@ -2,11 +2,11 @@ import datetime
 
 import yaml
 from pytz import UTC
-from stix2 import Indicator, Bundle, Relationship, KillChainPhase, TLP_AMBER
+from stix2 import TLP_AMBER, Bundle, Indicator, KillChainPhase, Relationship
 
-from .common import StixMapper, BaseMapper, generate_id, author_identity, MappingConfig
-from .patterning import create_url_pattern, create_ipv4_pattern, create_file_pattern
-from .observables import create_url, create_ipv4, create_file
+from .common import BaseMapper, MappingConfig, StixMapper, author_identity, generate_id
+from .observables import create_file, create_ipv4, create_url
+from .patterning import create_file_pattern, create_ipv4_pattern, create_url_pattern
 from .sdo import create_malware
 
 

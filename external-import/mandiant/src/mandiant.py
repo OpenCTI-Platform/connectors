@@ -583,12 +583,23 @@ class Mandiant:
                 message = "End of synchronization"
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(message)
+
+                if self.helper.connect_run_and_terminate:
+                    self.helper.log_info("Connector stop")
+                    sys.exit(0)
+
                 time.sleep(self.get_interval())
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
+
             except Exception as e:
                 self.helper.log_error(str(e))
+
+                if self.helper.connect_run_and_terminate:
+                    self.helper.log_info("Connector stop")
+                    sys.exit(0)
+
                 time.sleep(60)
 
 
