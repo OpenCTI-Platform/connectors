@@ -12,6 +12,12 @@ from dateutil.parser import ParserError, parse
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
 
+## MODIFICATION BY CYRILYXE (OPENCTI 5.3.7, the 2022-08-12)
+# By default, the def '_load_data_sets' (line 370ish in this file) uses relative path
+#   But from a manual deployement, we have to use a Daemon for launching the service
+#   So i added a global var : gbl_scriptDir (not mandatory but for visibility purpose only)
+gbl_scriptDir:str = os.path.dirname(os.path.realpath(__file__))
+# so i propose the change on the relative path with the concat of the script dir path (go to line 374)
 
 class Sekoia(object):
 
@@ -367,23 +373,28 @@ class Sekoia(object):
 
     def _load_data_sets(self):
         # Mapping between SEKOIA sectors/locations and OpenCTI ones
+        ## MODIFICATION BY CYRILYXE
+        #   Use of the global variable : gbl_scriptDir
+        #   For using absolute path and not relative ones        
+        global gbl_scriptDir
+        
         self.helper.log_info("Loading locations mapping")
-        with open("./data/geography_mapping.json") as fp:
+        with open(gbl_scriptDir+"/data/geography_mapping.json") as fp:
             self._geography_mapping: Dict = json.load(fp)
 
         self.helper.log_info("Loading sectors mapping")
-        with open("./data/sectors_mapping.json") as fp:
+        with open(gbl_scriptDir+"/data/sectors_mapping.json") as fp:
             self._sectors_mapping: Dict = json.load(fp)
 
         # Adds OpenCTI sectors/locations to cache
         self.helper.log_info("Loading OpenCTI sectors")
-        with open("./data/sectors.json") as fp:
+        with open(gbl_scriptDir+"/data/sectors.json") as fp:
             objects = json.load(fp)["objects"]
             for sector in objects:
                 self._clean_and_add_to_cache(sector)
 
         self.helper.log_info("Loading OpenCTI locations")
-        with open("./data/geography.json") as fp:
+        with open(gbl_scriptDir+"/data/geography.json") as fp:
             for geography in json.load(fp)["objects"]:
                 self._clean_and_add_to_cache(geography)
 
