@@ -1,7 +1,7 @@
 import yaml
-from stix2 import Bundle, Vulnerability, ExternalReference, TLP_AMBER
+from stix2 import TLP_AMBER, Bundle, ExternalReference, Vulnerability
 
-from .common import BaseMapper, StixMapper, generate_id, author_identity
+from .common import BaseMapper, StixMapper, author_identity, generate_id
 
 
 @StixMapper.register("cves", lambda x: "cveReportsTotalCount" in x)

@@ -1,4 +1,4 @@
-from stix2 import URL, TLP_AMBER, IPv4Address, File, DomainName
+from stix2 import TLP_AMBER, URL, DomainName, File, IPv4Address
 
 
 def create_url(value: str) -> URL:

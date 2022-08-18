@@ -3,12 +3,12 @@ import logging
 from typing import Union
 
 from pytz import UTC
-from stix2 import Bundle, Indicator, Report, TLP_AMBER, DomainName, URL, Relationship
+from stix2 import TLP_AMBER, URL, Bundle, DomainName, Indicator, Relationship, Report
 
-from .patterning import create_domain_pattern, create_url_pattern
+from .common import BaseMapper, MappingConfig, StixMapper, author_identity, generate_id
 from .observables import create_domain, create_url
+from .patterning import create_domain_pattern, create_url_pattern
 from .reports import ReportMapper
-from .common import StixMapper, BaseMapper, generate_id, author_identity, MappingConfig
 
 log = logging.getLogger(__name__)
 

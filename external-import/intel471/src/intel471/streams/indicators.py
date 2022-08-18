@@ -1,4 +1,4 @@
-from typing import Union, Any
+from typing import Any, Union
 
 from .common import Intel471Stream
 

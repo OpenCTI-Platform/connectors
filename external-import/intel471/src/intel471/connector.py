@@ -6,15 +6,15 @@ import yaml
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from yaml.parser import ParserError
 
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from . import HelperRequest
 from .streams.common import Intel471Stream
+from .streams.cves import Intel471CVEsStream
 from .streams.indicators import Intel471IndicatorsStream
 from .streams.iocs import Intel471IOCsStream
-from .streams.cves import Intel471CVEsStream
 from .streams.yara import Intel471YARAStream
-from . import HelperRequest
 
 
 class Intel471Connector:

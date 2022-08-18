@@ -1,11 +1,11 @@
 import json
 
 import pytest
-from mock.mock import patch, MagicMock
 import titan_client
-
 from mappers import StixMapper
-from .conftest import get_fixture, strip_random_values, get_rest_client_get_side_effect
+from mock.mock import MagicMock, patch
+
+from .conftest import get_fixture, get_rest_client_get_side_effect, strip_random_values
 
 
 @patch("titan_client.rest.RESTClientObject")

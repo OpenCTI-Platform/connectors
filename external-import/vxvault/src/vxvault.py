@@ -1,5 +1,6 @@
 import os
 import ssl
+import sys
 import time
 import urllib.request
 from datetime import datetime
@@ -145,7 +146,6 @@ class VXVault:
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))
                         + " days"
                     )
-                    time.sleep(60)
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)
                     self.helper.log_info(
@@ -153,13 +153,17 @@ class VXVault:
                         + str(round(new_interval / 60 / 60 / 24, 2))
                         + " days"
                     )
-                    time.sleep(60)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(60)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            time.sleep(60)
 
 
 if __name__ == "__main__":
@@ -169,4 +173,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)
