@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'abuseipdb-ipblacklist-import'
+  type: 'EXTERNAL_IMPORT'
+  name: abuseipdb-ipblacklist-import'
+  scope: 'abuseipdb' # MIME type or SCO
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+abuseipdb:
+  api_url: 'https://api.abuseipdb.com/api/v2/blacklist'
+  import_offline: false
+  create_indicators: true
+  interval: 2 # In days, must be strictly greater than 1
