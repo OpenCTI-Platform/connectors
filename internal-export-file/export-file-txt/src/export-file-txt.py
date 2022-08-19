@@ -107,7 +107,7 @@ class ExportFileTxt:
                 )
             self.helper.log_info("Export done: " + entity_type + " to " + file_name)
         else:
-            raise ValueError(f"An error occurred, the list is empty")
+            raise ValueError("An error occurred, the list is empty")
         return "Export done"
 
     # Start the main loop
