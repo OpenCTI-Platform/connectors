@@ -6,7 +6,7 @@ import sys
 import time
 
 import yaml
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 
@@ -20,6 +20,9 @@ class ExportFileCsv:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+        self.export_file_csv_delimiter = get_config_variable(
+            "EXPORT_FILE_CSV_DELIMITER", ["export-file-csv", "delimiter"], config, False, ";"
+        )
 
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
@@ -79,7 +82,7 @@ class ExportFileCsv:
                 else:
                     row.append("")
             csv_data.append(row)
-        writer = csv.writer(output, delimiter=";", quotechar='"', quoting=csv.QUOTE_ALL)
+        writer = csv.writer(output, delimiter=self.export_file_csv_delimiter, quotechar='"', quoting=csv.QUOTE_ALL)
         writer.writerows(csv_data)
         return output.getvalue()
 
