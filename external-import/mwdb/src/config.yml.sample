@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'MWDB Artifacts'
+  scope: 'mwdb'
+  log_level: 'info'
+
+mwdb:
+  url: 'ChangeMe'
+  confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)
+  create_indicators: True
+  create_observables: True
+  interval: 3 # In days, must be strictly greater than 1
+  update_existing_data: True
+  token: 'ChangeMe'
+  import_config: True
+  start_date: '2022-04-01T00:00:00'  # ISO 8601
+  org_description: 'ChangeMe'
+  org_name: 'ChangeMe'
+  start_date: '2022-04-01T00:00:00'
+  tag_filter: 'virusshare.*|bazaar-.*|malshare-.*|apt20\d{2}'
+  start_retention: 5
