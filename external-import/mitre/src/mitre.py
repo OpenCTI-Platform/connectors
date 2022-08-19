@@ -91,10 +91,12 @@ class Mitre:
         object_types_with_confidence = [
             "attack-pattern",
             "course-of-action",
+            "threat-actor",
             "intrusion-set",
             "campaign",
             "malware",
             "tool",
+            "vulnerability",
             "report",
             "relationship",
         ]
@@ -131,7 +133,7 @@ class Mitre:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-                # Mitre enterprise file url
+                # MITRE enterprise file url
                 if (
                     self.mitre_enterprise_file_url is not None
                     and len(self.mitre_enterprise_file_url) > 0
@@ -142,18 +144,7 @@ class Mitre:
                     )
                     self.send_bundle(work_id, enterprise_data_with_confidence)
 
-                # Mitre pre attack file url
-                if (
-                    self.mitre_pre_attack_file_url is not None
-                    and len(self.mitre_pre_attack_file_url) > 0
-                ):
-                    pre_attack_data = self.retrieve_data(self.mitre_pre_attack_file_url)
-                    pre_attack_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(pre_attack_data)
-                    )
-                    self.send_bundle(work_id, pre_attack_data_with_confidence)
-
-                # Mitre mobile attack file url
+                # MITRE mobile attack file url
                 if (
                     self.mitre_mobile_attack_file_url is not None
                     and len(self.mitre_mobile_attack_file_url) > 0
@@ -166,7 +157,7 @@ class Mitre:
                     )
                     self.send_bundle(work_id, mobile_attack_data_with_confidence)
 
-                # Mitre ics attack file url
+                # MITRE ICS attack file url
                 if (
                     self.mitre_ics_attack_file_url is not None
                     and len(self.mitre_ics_attack_file_url) > 0
@@ -177,7 +168,7 @@ class Mitre:
                     )
                     self.send_bundle(work_id, ics_attack_data_with_confidence)
 
-                # Mitre ics attack file url
+                # MITRE CAPEC attack file url
                 if (
                     self.mitre_capec_file_url is not None
                     and len(self.mitre_capec_file_url) > 0
