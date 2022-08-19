@@ -9,6 +9,7 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
+      - run: sudo apt-get update -qq && sudo apt install curl
       - run:
           name: install dependencies
           command: pip install black --user
@@ -23,13 +24,14 @@ jobs:
           template: basic_fail_1
       - ms-teams/report:
           only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL          
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   linter:
     docker:
       - image: alpine/flake8
     working_directory: ~/repo
     steps:
       - checkout
+      - run: apk update && apk upgrade && apk --no-cache add curl
       - run:
           name: flake8
           command: flake8 --ignore=E,W ~/repo
@@ -46,6 +48,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
@@ -453,6 +456,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
@@ -787,6 +791,7 @@ jobs:
     docker:
       - image: 'cimg/base:stable'
     steps:
+      - run: sudo apt-get update -qq && sudo apt install curl
       - slack/notify:
           event: pass
           template: basic_success_1
@@ -797,6 +802,7 @@ jobs:
     docker:
       - image: 'cimg/base:stable'
     steps:
+      - run: sudo apt-get update -qq && sudo apt install curl
       - slack/notify:
           event: pass
           template: basic_success_1

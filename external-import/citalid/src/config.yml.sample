@@ -13,6 +13,6 @@ connector:
   log_level: 'info'
 
 citalid:
-  file_repo: '/path/to/data'
+  files_path: '/path/to/data'
   start_date: '1609455600' # 2021-01-01
   interval: 5 # In minutes
