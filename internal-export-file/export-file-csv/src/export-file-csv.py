@@ -23,7 +23,7 @@ class ExportFileCsv:
         self.export_file_csv_delimiter = get_config_variable(
             "EXPORT_FILE_CSV_DELIMITER", ["export-file-csv", "delimiter"], config, False, ";"
         )
-
+        
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
         headers = sorted(set().union(*(d.keys() for d in data)))

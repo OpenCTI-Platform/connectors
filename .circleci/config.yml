@@ -1,7 +1,7 @@
 version: 2.1
 orbs:
   slack: circleci/slack@4.8.3
-  ms-teams: cloudradar-monitoring/ms-teams@0.0.1
+  ms-teams: bestsellerit/ms-teams@0.0.3
 jobs:
   ensure_formatting:
     docker:
@@ -9,7 +9,7 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
-      - run: sudo apt-get update -qq && sudo apt install curl
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           name: install dependencies
           command: pip install black --user
@@ -22,25 +22,29 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/report:
+      - ms-teams/send-message:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
+          title_failure: "Job Failed.\U0001F534"
+          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
   linter:
     docker:
       - image: alpine/flake8
     working_directory: ~/repo
     steps:
       - checkout
-      - run: apk update && apk upgrade && apk --no-cache add curl
+      - run: apk update && apk upgrade && apk --no-cache add curl gettext-base
       - run:
           name: flake8
           command: flake8 --ignore=E,W ~/repo
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/report:
+      - ms-teams/send-message:
           only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL          
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
+          title_failure: "Job Failed.\U0001F534"
+          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
   build:
     working_directory: ~/opencti
     docker:
@@ -48,7 +52,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: sudo apt-get update -qq && sudo apt install curl
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
@@ -446,9 +450,11 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/report:
+      - ms-teams/send-message:
           only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL          
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
+          title_failure: "Job Failed.\U0001F534"
+          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -456,7 +462,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: sudo apt-get update -qq && sudo apt install curl
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
@@ -784,31 +790,43 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/report:
+      - ms-teams/send-message:
           only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL          
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
+          title_failure: "Job Failed.\U0001F534"
+          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
   notify_rolling:
     docker:
       - image: 'cimg/base:stable'
     steps:
-      - run: sudo apt-get update -qq && sudo apt install curl
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - slack/notify:
           event: pass
           template: basic_success_1
-      - ms-teams/report:
+      - ms-teams/send-message:
           only_on_fail: false
-          webhook_url: $MS_TEAMS_WEBHOOK_URL      
+          only_on_success: false
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
+          title_failure: "Job Failed.\U0001F534"
+          title_success: "Job Succeeded.\U0001F7E2"
+          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
+          message_success: "CircleCI workflow has succeeded."
   notify:
     docker:
       - image: 'cimg/base:stable'
     steps:
-      - run: sudo apt-get update -qq && sudo apt install curl
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - slack/notify:
           event: pass
           template: basic_success_1
-      - ms-teams/report:
+      - ms-teams/send-message:
           only_on_fail: false
-          webhook_url: $MS_TEAMS_WEBHOOK_URL          
+          only_on_success: false
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
+          title_failure: "Job Failed.\U0001F534"
+          title_success: "Job Succeeded.\U0001F7E2"
+          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
+          message_success: "CircleCI workflow has succeeded."
 workflows:
   version: 2
   opencti:
