@@ -1,0 +1,31 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Orange Cyberdefense Cyber Threat Intelligence'
+  scope: 'ocd'
+  confidence_level: 55 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  log_level: 'info'
+
+ocd:
+  worldwatch_api_login: 'ChangeMe'
+  worldwatch_api_key: 'ChangeMe'
+  datalake_login: 'ChangeMe'
+  datalake_password: 'ChangeMe'
+  import_worldwatch: true
+  import_worldwatch_start_date: '2022-01-01'
+  import_vulnerabilities: true
+  import_vulnerabilities_start_date: '2022-01-01'
+  import_datalake: true
+  import_datalake_atom_types: 'apk,as,cc,crypto,cve,domain,email,file,fqdn,iban,ip,ip_range,paste,phone_number,regkey,ssl,url'
+  import_datalake_threat_types: 'ddos,fraud,hack,leak,malware,phishing,scam,scan,spam'
+  import_datalake_minimum_risk_score: 0
+  import_datalake_start_date: '2022-01-01'
+  create_observables: true  # Create observables from indicators
+  curate_labels: true # Curated labels
+  threat_actor_as_intrusion_set: true
+  interval: 5 # Required, in minutes
