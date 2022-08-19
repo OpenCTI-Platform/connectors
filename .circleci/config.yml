@@ -1,7 +1,7 @@
 version: 2.1
 orbs:
   slack: circleci/slack@4.8.3
-  ms-teams: cloudradar-monitoring/ms-teams@1.0.0
+  ms-teams: cloudradar-monitoring/ms-teams@0.0.1
 jobs:
   ensure_formatting:
     docker:
@@ -301,7 +301,11 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/orange-cyberdefense
           name: Build Docker image opencti/connector-orange-cyberdefense
-          command: docker build -t opencti/connector-orange-cyberdefense:latest . && docker tag opencti/connector-orange-cyberdefense:latest opencti/connector-orange-cyberdefense:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-orange-cyberdefense:latest . && docker tag opencti/connector-orange-cyberdefense:latest opencti/connector-orange-cyberdefense:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/citalid
+          name: Build Docker image opencti/connector-citalid
+          command: docker build -t opencti/connector-citalid:latest . && docker tag opencti/connector-citalid:latest opencti/connector-citalid:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -433,7 +437,9 @@ jobs:
             docker push opencti/connector-intel471:latest
             docker push opencti/connector-intel471:${CIRCLE_TAG}
             docker push opencti/connector-orange-cyberdefense:latest
-            docker push opencti/connector-orange-cyberdefense:${CIRCLE_TAG}            
+            docker push opencti/connector-orange-cyberdefense:${CIRCLE_TAG}
+            docker push opencti/connector-citalid:latest
+            docker push opencti/connector-citalid:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -698,7 +704,11 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/orange-cyberdefense
           name: Build Docker image opencti/connector-orange-cyberdefense
-          command: docker build -t opencti/connector-orange-cyberdefense:rolling .          
+          command: docker build -t opencti/connector-orange-cyberdefense:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/citalid
+          name: Build Docker image opencti/connector-citalid
+          command: docker build -t opencti/connector-citalid:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -766,6 +776,7 @@ jobs:
             docker push opencti/connector-maltiverse:rolling
             docker push opencti/connector-intel471:rolling
             docker push opencti/connector-orange-cyberdefense:rolling
+            docker push opencti/connector-citalid:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
