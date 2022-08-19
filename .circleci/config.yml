@@ -1,10 +1,11 @@
 version: 2.1
 orbs:
   slack: circleci/slack@4.8.3
+  ms-teams: cloudradar-monitoring/ms-teams@1.0.0
 jobs:
   ensure_formatting:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.10
     working_directory: ~/repo
     steps:
       - checkout
@@ -20,6 +21,9 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL          
   linter:
     docker:
       - image: alpine/flake8
@@ -32,6 +36,9 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL          
   build:
     working_directory: ~/opencti
     docker:
@@ -292,6 +299,10 @@ jobs:
           name: Build Docker image opencti/connector-intel471
           command: docker build -t opencti/connector-intel471:latest . && docker tag opencti/connector-intel471:latest opencti/connector-intel471:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/orange-cyberdefense
+          name: Build Docker image opencti/connector-orange-cyberdefense
+          command: docker build -t opencti/connector-orange-cyberdefense:latest . && docker tag opencti/connector-orange-cyberdefense:latest opencti/connector-orange-cyberdefense:${CIRCLE_TAG}          
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -421,9 +432,14 @@ jobs:
             docker push opencti/connector-maltiverse:${CIRCLE_TAG}
             docker push opencti/connector-intel471:latest
             docker push opencti/connector-intel471:${CIRCLE_TAG}
+            docker push opencti/connector-orange-cyberdefense:latest
+            docker push opencti/connector-orange-cyberdefense:${CIRCLE_TAG}            
       - slack/notify:
           event: fail
           template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL          
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -680,6 +696,10 @@ jobs:
           name: Build Docker image opencti/connector-intel471
           command: docker build -t opencti/connector-intel471:rolling .
       - run:
+          working_directory: ~/opencti/external-import/orange-cyberdefense
+          name: Build Docker image opencti/connector-orange-cyberdefense
+          command: docker build -t opencti/connector-orange-cyberdefense:rolling .          
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -745,9 +765,13 @@ jobs:
             docker push opencti/connector-socprime:rolling
             docker push opencti/connector-maltiverse:rolling
             docker push opencti/connector-intel471:rolling
+            docker push opencti/connector-orange-cyberdefense:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL          
   notify_rolling:
     docker:
       - image: 'cimg/base:stable'
@@ -755,6 +779,9 @@ jobs:
       - slack/notify:
           event: pass
           template: basic_success_1
+      - ms-teams/report:
+          only_on_fail: false
+          webhook_url: $MS_TEAMS_WEBHOOK_URL      
   notify:
     docker:
       - image: 'cimg/base:stable'
@@ -762,6 +789,9 @@ jobs:
       - slack/notify:
           event: pass
           template: basic_success_1
+      - ms-teams/report:
+          only_on_fail: false
+          webhook_url: $MS_TEAMS_WEBHOOK_URL          
 workflows:
   version: 2
   opencti:
