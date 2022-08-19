@@ -2,7 +2,7 @@ import os
 import time
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable, Identity
-from stix2 import IPv4Address, TLP_WHITE, Indicator, ExternalReference, Bundle
+from stix2 import IPv4Address,IPv6Address, TLP_WHITE, Indicator, ExternalReference, Bundle
 from datetime import datetime
 import certifi
 import ssl
@@ -118,12 +118,27 @@ class abuseipdbipblacklistimport:
                         ipv4validator = re.compile("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
                         for d in data_json["data"]:
                             if(ipv4validator.match(d["ipAddress"])):
-                                typeaddr="ipv4-addr"
-                            else:
-                                typeaddr= "ipv6-addr"
-                            #print(d) # {'ipAddress': '1.2.3.4', 'countryCode': 'FR', 'abuseConfidenceScore': 100, 'lastReportedAt': '2022-08-17T11:50:02+00:00'}"
-                            stix_observable = IPv4Address(
+                                stix_observable = IPv4Address(
                                 type="ipv4-addr",
+                                spec_version= "2.1",
+                                value = d["ipAddress"],
+                                object_marking_refs=[TLP_WHITE],
+                                custom_properties={
+                                        "description": "Agressive IP known malicious on AbuseIPDB"
+                                        + " - countryCode: "
+                                        + str(d["countryCode"])
+                                        + " - abuseConfidenceScore: "
+                                        + str(d["abuseConfidenceScore"])
+                                        + " - lastReportedAt: "
+                                        + str(d["lastReportedAt"]),
+                                        "x_opencti_score": d["abuseConfidenceScore"],
+                                        "created_by_ref": self.identity["standard_id"],
+                                        "x_opencti_create_indicator": self.create_indicators,
+                                        "external_references": [external_reference],
+                                    })
+                            else:
+                                stix_observable = IPv6Address(
+                                type="ipv6-addr",
                                 spec_version= "2.1",
                                 value = d["ipAddress"],
                                 object_marking_refs=[TLP_WHITE],
