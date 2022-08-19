@@ -21,9 +21,13 @@ class ExportFileCsv:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.export_file_csv_delimiter = get_config_variable(
-            "EXPORT_FILE_CSV_DELIMITER", ["export-file-csv", "delimiter"], config, False, ";"
+            "EXPORT_FILE_CSV_DELIMITER",
+            ["export-file-csv", "delimiter"],
+            config,
+            False,
+            ";",
         )
-        
+
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
         headers = sorted(set().union(*(d.keys() for d in data)))
@@ -82,7 +86,12 @@ class ExportFileCsv:
                 else:
                     row.append("")
             csv_data.append(row)
-        writer = csv.writer(output, delimiter=self.export_file_csv_delimiter, quotechar='"', quoting=csv.QUOTE_ALL)
+        writer = csv.writer(
+            output,
+            delimiter=self.export_file_csv_delimiter,
+            quotechar='"',
+            quoting=csv.QUOTE_ALL,
+        )
         writer.writerows(csv_data)
         return output.getvalue()
 

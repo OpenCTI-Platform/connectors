@@ -1,7 +1,7 @@
 version: 2.1
 orbs:
   slack: circleci/slack@4.8.3
-  ms-teams: bestsellerit/ms-teams@0.0.3
+  ms-teams: cloudradar-monitoring/ms-teams@0.0.1
 jobs:
   ensure_formatting:
     docker:
@@ -22,29 +22,25 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/send-message:
+      - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
-          title_failure: "Job Failed.\U0001F534"
-          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
   linter:
     docker:
       - image: alpine/flake8
     working_directory: ~/repo
     steps:
       - checkout
-      - run: apk update && apk upgrade && apk --no-cache add curl gettext-base
+      - run: apk update && apk upgrade && apk --no-cache add curl gettext
       - run:
           name: flake8
           command: flake8 --ignore=E,W ~/repo
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/send-message:
+      - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
-          title_failure: "Job Failed.\U0001F534"
-          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
   build:
     working_directory: ~/opencti
     docker:
@@ -450,11 +446,9 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/send-message:
+      - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
-          title_failure: "Job Failed.\U0001F534"
-          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -790,11 +784,9 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/send-message:
+      - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
-          title_failure: "Job Failed.\U0001F534"
-          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
   notify_rolling:
     docker:
       - image: 'cimg/base:stable'
@@ -803,14 +795,9 @@ jobs:
       - slack/notify:
           event: pass
           template: basic_success_1
-      - ms-teams/send-message:
+      - ms-teams/report:
           only_on_fail: false
-          only_on_success: false
           webhook_url: $MS_TEAMS_WEBHOOK_URL
-          title_failure: "Job Failed.\U0001F534"
-          title_success: "Job Succeeded.\U0001F7E2"
-          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
-          message_success: "CircleCI workflow has succeeded."
   notify:
     docker:
       - image: 'cimg/base:stable'
@@ -819,14 +806,9 @@ jobs:
       - slack/notify:
           event: pass
           template: basic_success_1
-      - ms-teams/send-message:
+      - ms-teams/report:
           only_on_fail: false
-          only_on_success: false
           webhook_url: $MS_TEAMS_WEBHOOK_URL
-          title_failure: "Job Failed.\U0001F534"
-          title_success: "Job Succeeded.\U0001F7E2"
-          message_failure: "CircleCI workflow has failed for the job *$CIRCLE_JOB*"
-          message_success: "CircleCI workflow has succeeded."
 workflows:
   version: 2
   opencti:
