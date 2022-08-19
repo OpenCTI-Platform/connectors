@@ -1,8 +1,14 @@
 import os
 import time
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable, Identity
-from stix2 import IPv4Address,IPv6Address, TLP_WHITE, Indicator, ExternalReference, Bundle
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2 import (
+    IPv4Address,
+    IPv6Address,
+    TLP_WHITE,
+    ExternalReference,
+    Bundle,
+)
 from datetime import datetime
 import certifi
 import ssl
@@ -10,6 +16,7 @@ import urllib
 from urllib import parse
 import json
 import re
+
 
 class abuseipdbipblacklistimport:
     def __init__(self):
@@ -34,7 +41,10 @@ class abuseipdbipblacklistimport:
             "ABUSEIPDB_LIMIT", ["abuseipdbipblacklistimport", "limit"], config, True
         )
         self.interval = get_config_variable(
-            "ABUSEIPDB_INTERVAL", ["abuseipdbipblacklistimport", "interval"], config, True
+            "ABUSEIPDB_INTERVAL",
+            ["abuseipdbipblacklistimport", "interval"],
+            config,
+            True,
         )
         self.create_indicators = get_config_variable(
             "ABUSEIPDB_CREATE_INDICATORS",
@@ -80,28 +90,34 @@ class abuseipdbipblacklistimport:
                     self.helper.log_info("Connector has never run")
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
-                    (timestamp - last_run)
-                    > ((int(self.interval) - 1) * 60 * 60 * 24)
+                    (timestamp - last_run) > ((int(self.interval) - 1) * 60 * 60 * 24)
                 ):
                     # Initiate the run
                     self.helper.log_info("Connector will run!")
                     now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "AbuseIPDB connector run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    friendly_name = "AbuseIPDB connector run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
                     try:
                         # Requesting data over AbuseIPDB
                         req = urllib.request.Request(self.api_url)
-                        req.add_header('Key', self.api_key)
-                        req.add_header('Accept', "application/json")
-                        req.method = 'GET'
-                        body= parse.urlencode({"confidenceMinimum":str(self.score),"limit":str(self.limit)}).encode()
+                        req.add_header("Key", self.api_key)
+                        req.add_header("Accept", "application/json")
+                        req.method = "GET"
+                        body = parse.urlencode(
+                            {
+                                "confidenceMinimum": str(self.score),
+                                "limit": str(self.limit),
+                            }
+                        ).encode()
 
                         response = urllib.request.urlopen(
                             req,
                             context=ssl.create_default_context(cafile=certifi.where()),
-                            data=body
+                            data=body,
                         )
                         image = response.read()
                         data_json = json.loads(image)
@@ -115,15 +131,17 @@ class abuseipdbipblacklistimport:
                         bundle_objects = []
 
                         # Filling the bundle
-                        ipv4validator = re.compile("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+                        ipv4validator = re.compile(
+                            "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+                        )
                         for d in data_json["data"]:
-                            if(ipv4validator.match(d["ipAddress"])):
+                            if ipv4validator.match(d["ipAddress"]):
                                 stix_observable = IPv4Address(
-                                type="ipv4-addr",
-                                spec_version= "2.1",
-                                value = d["ipAddress"],
-                                object_marking_refs=[TLP_WHITE],
-                                custom_properties={
+                                    type="ipv4-addr",
+                                    spec_version="2.1",
+                                    value=d["ipAddress"],
+                                    object_marking_refs=[TLP_WHITE],
+                                    custom_properties={
                                         "description": "Agressive IP known malicious on AbuseIPDB"
                                         + " - countryCode: "
                                         + str(d["countryCode"])
@@ -135,14 +153,15 @@ class abuseipdbipblacklistimport:
                                         "created_by_ref": self.identity["standard_id"],
                                         "x_opencti_create_indicator": self.create_indicators,
                                         "external_references": [external_reference],
-                                    })
+                                    },
+                                )
                             else:
                                 stix_observable = IPv6Address(
-                                type="ipv6-addr",
-                                spec_version= "2.1",
-                                value = d["ipAddress"],
-                                object_marking_refs=[TLP_WHITE],
-                                custom_properties={
+                                    type="ipv6-addr",
+                                    spec_version="2.1",
+                                    value=d["ipAddress"],
+                                    object_marking_refs=[TLP_WHITE],
+                                    custom_properties={
                                         "description": "Agressive IP known malicious on AbuseIPDB"
                                         + " - countryCode: "
                                         + str(d["countryCode"])
@@ -154,7 +173,8 @@ class abuseipdbipblacklistimport:
                                         "created_by_ref": self.identity["standard_id"],
                                         "x_opencti_create_indicator": self.create_indicators,
                                         "external_references": [external_reference],
-                                    })
+                                    },
+                                )
                             # Adding the IP to the list
                             bundle_objects.append(stix_observable)
                         # Creating the bundle from the list
@@ -169,7 +189,9 @@ class abuseipdbipblacklistimport:
                     except Exception as e:
                         self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
-                    message = "Connector successfully run, storing last_run as " + str(timestamp)
+                    message = "Connector successfully run, storing last_run as " + str(
+                        timestamp
+                    )
                     self.helper.log_info(message)
                     self.helper.set_state({"last_run": timestamp})
                     self.helper.api.work.to_processed(work_id, message)
@@ -180,7 +202,7 @@ class abuseipdbipblacklistimport:
                     )
                     time.sleep(60)
                 else:
-                    #wait for next run
+                    # wait for next run
                     new_interval = self.get_interval() - (timestamp - last_run)
                     self.helper.log_info(
                         "Connector will not run, next run in: "
@@ -195,10 +217,11 @@ class abuseipdbipblacklistimport:
                 self.helper.log_error(str(e))
                 time.sleep(60)
 
+
 if __name__ == "__main__":
     try:
         connector = abuseipdbipblacklistimport()
         connector.run()
-    except Exception as e:
+    except:
         time.sleep(10)
         exit(0)
