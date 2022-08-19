@@ -744,6 +744,7 @@ jobs:
             docker push opencti/connector-cyber-campaign-collection:rolling
             docker push opencti/connector-socprime:rolling
             docker push opencti/connector-maltiverse:rolling
+            docker push opencti/connector-intel471:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
