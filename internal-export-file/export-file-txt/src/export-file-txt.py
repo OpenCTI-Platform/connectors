@@ -84,18 +84,30 @@ class ExportFileTxt:
             types=list_params["types"] if "types" in list_params else None,
             getAll=True,
         )
-        observable_values = [f["observable_value"] for f in entities_list]
-        observable_values_bytes = "\n".join(observable_values)
         self.helper.log_info("Uploading: " + entity_type + " to " + file_name)
-        if entity_type != "Stix-Cyber-Observable":
-            self.helper.api.stix_domain_object.push_list_export(
-                entity_type, file_name, observable_values_bytes, json.dumps(list_params)
-            )
+        if entities_list is not None:
+            if entity_type == "Stix-Cyber-Observable":
+                observable_values = [
+                    f["observable_value"]
+                    for f in entities_list
+                    if "observable_value" in f
+                ]
+                observable_values_bytes = "\n".join(observable_values)
+                self.helper.api.stix_cyber_observable.push_list_export(
+                    file_name, observable_values_bytes, json.dumps(list_params)
+                )
+            else:
+                entities_values = [f["name"] for f in entities_list if "name" in f]
+                entities_values_bytes = "\n".join(entities_values)
+                self.helper.api.stix_domain_object.push_list_export(
+                    entity_type,
+                    file_name,
+                    entities_values_bytes,
+                    json.dumps(list_params),
+                )
+            self.helper.log_info("Export done: " + entity_type + " to " + file_name)
         else:
-            self.helper.api.stix_cyber_observable.push_list_export(
-                file_name, observable_values_bytes, json.dumps(list_params)
-            )
-        self.helper.log_info("Export done: " + entity_type + " to " + file_name)
+            raise ValueError(f"An error occurred, the list is empty")
         return "Export done"
 
     # Start the main loop
