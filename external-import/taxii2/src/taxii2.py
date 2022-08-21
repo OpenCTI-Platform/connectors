@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable, StixCyberObservableTypes
 from requests.exceptions import HTTPError
 from taxii2client.exceptions import TAXIIServiceException
 
@@ -28,7 +28,6 @@ class Taxii2Connector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-
         username = get_config_variable(
             "TAXII2_USERNAME", ["taxii2", "username"], config
         )
@@ -44,7 +43,6 @@ class Taxii2Connector:
         self.verify_ssl = get_config_variable(
             "TAXII2_VERIFY_SSL", ["taxii2", "verify_ssl"], config, default=True
         )
-
         # if V21 flag set to true
         if get_config_variable("TAXII2_V21", ["taxii2", "v2.1"], config, default=True):
             self.server = tx21.Server(
@@ -62,23 +60,32 @@ class Taxii2Connector:
                 verify=self.verify_ssl,
                 cert=cert_path,
             )
-
         self.collections = get_config_variable(
             "TAXII2_COLLECTIONS", ["taxii2", "collections"], config
         ).split(",")
-
         self.initial_history = get_config_variable(
             "TAXII2_INITIAL_HISTORY", ["taxii2", "initial_history"], config, True
         )
-
         self.per_request = get_config_variable(
             "TAXII2_PER_REQUEST", ["taxii2", "per_request"], config, True
         )
-
         self.interval = get_config_variable(
             "TAXII2_INTERVAL", ["taxii2", "interval"], config, True, 1
         )
-
+        self.create_indicators = get_config_variable(
+            "TAXII2_CREATE_INDICATORS",
+            ["taxii2", "create_indicators"],
+            config,
+            False,
+            True,
+        )
+        self.create_observables = get_config_variable(
+            "TAXII2_CREATE_OBSERVABLES",
+            ["taxii2", "create_observables"],
+            config,
+            False,
+            True,
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -222,6 +229,33 @@ class Taxii2Connector:
             filters["added_after"] = added_after
         self.helper.log_info(f"Polling Collection {collection.title}")
         self.send_to_server(collection.get_objects(**filters))
+
+    def _process_objects(self, serialized_bundle: str) -> str:
+        # the list of object types for which the confidence has to be added
+        object_types_with_confidence = [
+            "attack-pattern",
+            "course-of-action",
+            "threat-actor",
+            "intrusion-set",
+            "campaign",
+            "malware",
+            "tool",
+            "vulnerability",
+            "report",
+            "relationship",
+            "indicator",
+        ]
+        stix_bundle = json.loads(serialized_bundle)
+        for obj in stix_bundle["objects"]:
+            object_type = obj["type"]
+            if object_type in object_types_with_confidence:
+                if "confidence" not in obj:
+                    obj["confidence"] = int(self.helper.connect_confidence_level)
+            if object_type == "indicator":
+                obj["x_opencti_create_observables"] = self.create_observables
+            elif StixCyberObservableTypes.has_value(object_type):
+                obj["x_opencti_create_indicators"] = self.create_indicators
+        return json.dumps(stix_bundle)
 
     def send_to_server(self, bundle):
         """

@@ -1,7 +1,7 @@
 FROM python:3.10-alpine
 
 # Copy the connector
-COPY src /opt/abuseipdb-ipblacklist-import
+COPY src /opt/abuseipdb-ipblacklist
 
 # Install Python modules
 # hadolint ignore=DL3003

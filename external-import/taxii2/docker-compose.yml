@@ -21,4 +21,6 @@ services:
       - TAXII2_INITIAL_HISTORY= 24 # Required, in hours
       - TAXII2_INTERVAL=100 # Required, in hours
       - TAXII2_VERIFY_SSL=true
+      - TAXII2_CREATE_INDICATORS=true # Generate indicators for ingested observables
+      - TAXII2_CREATE_OBSERVABLES=true # Generate observables for ingested indicators
     restart: always

@@ -3,9 +3,9 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'abuseipdb-ipblacklist-import'
+  id: 'ChangeMe' # Valid UUIDv4
   type: 'EXTERNAL_IMPORT'
-  name: abuseipdb-ipblacklist-import'
+  name: 'AbuseIPDB IP Blacklist'
   scope: 'abuseipdb' # MIME type or SCO
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
