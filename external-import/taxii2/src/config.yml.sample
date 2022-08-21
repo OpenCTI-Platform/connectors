@@ -21,3 +21,5 @@ taxii2:
   initial_history: 24 # Required, in hours
   interval: 1000 # Required, in hours
   verify_ssl: true
+  create_indicators: true # Generate indicators for ingested observables
+  create_observables: true # Generate observables for ingested indicators
