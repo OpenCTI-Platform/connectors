@@ -38,18 +38,29 @@ class Taxii2Connector:
         server_url = get_config_variable(
             "TAXII2_DISCOVERY_URL", ["taxii2", "discovery_url"], config
         )
+        cert_path = get_config_variable(
+            "TAXII2_CERT_PATH", ["taxii2", "cert_path"], config
+        )
         self.verify_ssl = get_config_variable(
-            "VERIFY_SSL", ["taxii2", "verify_ssl"], config, default=True
+            "TAXII2_VERIFY_SSL", ["taxii2", "verify_ssl"], config, default=True
         )
 
         # if V21 flag set to true
         if get_config_variable("TAXII2_V21", ["taxii2", "v2.1"], config, default=True):
             self.server = tx21.Server(
-                server_url, user=username, password=password, verify=self.verify_ssl
+                server_url,
+                user=username,
+                password=password,
+                verify=self.verify_ssl,
+                cert=cert_path,
             )
         else:
             self.server = tx20.Server(
-                server_url, user=username, password=password, verify=self.verify_ssl
+                server_url,
+                user=username,
+                password=password,
+                verify=self.verify_ssl,
+                cert=cert_path,
             )
 
         self.collections = get_config_variable(
