@@ -230,7 +230,7 @@ class Taxii2Connector:
         self.helper.log_info(f"Polling Collection {collection.title}")
         self.send_to_server(collection.get_objects(**filters))
 
-    def _process_objects(self, stix_bundle) -> str:
+    def _process_objects(self, stix_bundle: object) -> object:
         # the list of object types for which the confidence has to be added
         object_types_with_confidence = [
             "attack-pattern",
@@ -311,7 +311,7 @@ class Taxii2Connector:
 
 if __name__ == "__main__":
     try:
-        CONNECTOR = Taxii2Connector()
-        CONNECTOR.run()
+        taxii2Connector = Taxii2Connector()
+        taxii2Connector.run()
     except Exception as e:
         raise e
