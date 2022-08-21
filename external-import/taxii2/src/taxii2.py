@@ -4,11 +4,12 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timedelta
-
+import yaml
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
-import yaml
+
+from datetime import datetime, timedelta
+from typing import Dict
 from pycti import OpenCTIConnectorHelper, get_config_variable, StixCyberObservableTypes
 from requests.exceptions import HTTPError
 from taxii2client.exceptions import TAXIIServiceException
@@ -230,7 +231,7 @@ class Taxii2Connector:
         self.helper.log_info(f"Polling Collection {collection.title}")
         self.send_to_server(collection.get_objects(**filters))
 
-    def _process_objects(self, stix_bundle: object) -> object:
+    def _process_objects(self, stix_bundle: Dict) -> Dict:
         # the list of object types for which the confidence has to be added
         object_types_with_confidence = [
             "attack-pattern",
