@@ -230,7 +230,7 @@ class Taxii2Connector:
         self.helper.log_info(f"Polling Collection {collection.title}")
         self.send_to_server(collection.get_objects(**filters))
 
-    def _process_objects(self, serialized_bundle: str) -> str:
+    def _process_objects(self, stix_bundle) -> str:
         # the list of object types for which the confidence has to be added
         object_types_with_confidence = [
             "attack-pattern",
@@ -245,7 +245,6 @@ class Taxii2Connector:
             "relationship",
             "indicator",
         ]
-        stix_bundle = json.loads(serialized_bundle)
         for obj in stix_bundle["objects"]:
             object_type = obj["type"]
             if object_type in object_types_with_confidence:
@@ -255,7 +254,7 @@ class Taxii2Connector:
                 obj["x_opencti_create_observables"] = self.create_observables
             elif StixCyberObservableTypes.has_value(object_type):
                 obj["x_opencti_create_indicators"] = self.create_indicators
-        return json.dumps(stix_bundle)
+        return stix_bundle
 
     def send_to_server(self, bundle):
         """
@@ -267,9 +266,10 @@ class Taxii2Connector:
         self.helper.log_info(
             f"Sending Bundle to server with '{len(bundle.get('objects', []))}' objects"
         )
+
         try:
             self.helper.send_stix2_bundle(
-                json.dumps(bundle),
+                json.dumps(self._process_objects(bundle)),
                 update=self.update_existing_data,
             )
 
