@@ -138,6 +138,10 @@ jobs:
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:latest . && docker tag opencti/connector-malpedia:latest opencti/connector-malpedia:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/mwdb
+          name: Build Docker image opencti/connector-mwdb
+          command: docker build -t opencti/connector-mwdb:latest . && docker tag opencti/connector-mwdb:latest opencti/connector-mwdb:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/external-import/riskiq
           name: Build Docker image opencti/connector-riskiq
           command: docker build -t opencti/connector-riskiq:latest . && docker tag opencti/connector-riskiq:latest opencti/connector-riskiq:${CIRCLE_TAG}
