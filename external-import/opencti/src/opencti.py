@@ -1,8 +1,13 @@
+import json
 import os
+import ssl
+import sys
 import time
 import urllib.request
 from datetime import datetime
+from typing import Optional
 
+import certifi
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -36,6 +41,50 @@ class OpenCTI:
     def get_interval(self):
         return int(self.opencti_interval) * 60 * 60 * 24
 
+    def retrieve_data(self, url: str) -> Optional[str]:
+        """
+        Retrieve data from the given url.
+
+        Parameters
+        ----------
+        url : str
+            Url to retrieve.
+
+        Returns
+        -------
+        str
+            A string with the content or None in case of failure.
+        """
+        try:
+            return (
+                urllib.request.urlopen(
+                    url,
+                    context=ssl.create_default_context(cafile=certifi.where()),
+                )
+                .read()
+                .decode("utf-8")
+            )
+        except (
+            urllib.error.URLError,
+            urllib.error.HTTPError,
+            urllib.error.ContentTooShortError,
+        ) as urllib_error:
+            self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
+        return None
+
+    # Add confidence to every object in a bundle
+    def add_confidence_to_bundle_objects(self, serialized_bundle: str) -> str:
+        # the list of object types for which the confidence has to be added
+        # (skip marking-definition, identity, external-reference-as-report)
+        object_types_with_confidence = ["identity", "location", "relationship"]
+        stix_bundle = json.loads(serialized_bundle)
+        for obj in stix_bundle["objects"]:
+            object_type = obj["type"]
+            if object_type in object_types_with_confidence:
+                # self.helper.log_info(f"Adding confidence to {object_type} object")
+                obj["confidence"] = int(self.helper.connect_confidence_level)
+        return json.dumps(stix_bundle)
+
     def process_data(self):
         try:
             # Get the current timestamp and check
@@ -63,27 +112,19 @@ class OpenCTI:
                     self.helper.connect_id, friendly_name
                 )
                 try:
-                    sectors_data = urllib.request.urlopen(
-                        self.opencti_sectors_file_url
-                    ).read()
-                    self.helper.send_stix2_bundle(
-                        sectors_data.decode("utf-8"),
-                        entities_types=self.helper.connect_scope,
-                        update=self.update_existing_data,
-                        work_id=work_id,
+                    sectors_data = self.retrieve_data(self.opencti_sectors_file_url)
+                    sectors_data_with_confidence = (
+                        self.add_confidence_to_bundle_objects(sectors_data)
                     )
+                    self.send_bundle(work_id, sectors_data_with_confidence)
                 except Exception as e:
                     self.helper.log_error(str(e))
                 try:
-                    geography_data = urllib.request.urlopen(
-                        self.opencti_geography_file_url
-                    ).read()
-                    self.helper.send_stix2_bundle(
-                        geography_data.decode("utf-8"),
-                        entities_types=self.helper.connect_scope,
-                        update=self.update_existing_data,
-                        work_id=work_id,
+                    geography_data = self.retrieve_data(self.opencti_geography_file_url)
+                    geography_data_with_confidence = (
+                        self.add_confidence_to_bundle_objects(geography_data)
                     )
+                    self.send_bundle(work_id, geography_data_with_confidence)
                 except Exception as e:
                     self.helper.log_error(str(e))
                 # Store the current timestamp as a last run
@@ -107,9 +148,20 @@ class OpenCTI:
                 )
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
-            exit(0)
+            sys.exit(0)
         except Exception as e:
             self.helper.log_error(str(e))
+
+    def send_bundle(self, work_id: str, serialized_bundle: str) -> None:
+        try:
+            self.helper.send_stix2_bundle(
+                serialized_bundle,
+                entities_types=self.helper.connect_scope,
+                update=self.update_existing_data,
+                work_id=work_id,
+            )
+        except Exception as e:
+            self.helper.log_error(f"Error while sending bundle: {e}")
 
     def run(self):
         self.helper.log_info("Fetching OpenCTI datasets...")
@@ -130,4 +182,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

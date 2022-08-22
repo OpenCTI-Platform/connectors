@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia client module."""
-import logging
 from typing import Any
 from urllib.parse import urljoin
 
+from pycti import OpenCTIConnectorHelper
 import requests
-
-logger = logging.getLogger(__name__)
 
 
 class MalpediaClient:
 
     _DEFAULT_API_URL = "https://malpedia.caad.fkie.fraunhofer.de/api/"
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, helper: OpenCTIConnectorHelper, api_key: str) -> None:
         """Initialize Malpedia api client."""
+        self.helper = helper
         self.api_url = self._DEFAULT_API_URL
         self.api_key = api_key
 
@@ -23,7 +22,7 @@ class MalpediaClient:
         else:
             self.unauthenticated = False
             if not self.token_check():
-                logger.fatal("error verifying Malpedia token")
+                self.helper.log_error("error verifying Malpedia token")
 
     def query(self, url_path: str) -> Any:
         url = urljoin(self._DEFAULT_API_URL, url_path)
@@ -37,7 +36,7 @@ class MalpediaClient:
                 )
                 data = r.json()
         except requests.exceptions.RequestException as e:
-            logger.error(f"error in malpedia query: {e}")
+            self.helper.log_error(f"error in malpedia query: {e}")
             return None
         return data
 

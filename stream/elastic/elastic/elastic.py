@@ -1,7 +1,6 @@
 import json
 import sys
 import threading
-import time
 from datetime import datetime, timezone
 from logging import getLogger
 
@@ -15,6 +14,9 @@ from .sightings_manager import SignalsManager
 
 logger = getLogger(LOGGER_NAME)
 
+TRUTHY = ["yes", "true", "True"]
+FALSY = ["no", "false", "False"]
+
 
 class ElasticConnector:
     def __init__(self, config: dict = {}, datadir: str = None):
@@ -23,19 +25,13 @@ class ElasticConnector:
         self.helper = OpenCTIConnectorHelper(config)
         logger.info("Connected to OpenCTI")
 
+        # Check Live Stream ID
         if (
             self.helper.connect_live_stream_id is None
             or self.helper.connect_live_stream_id == "ChangeMe"
         ):
             raise ValueError("Missing Live Stream ID")
-
         self.config = Cut(config)
-
-        # Start streaming from 1 second ago
-        self.helper.set_state(
-            {"connectorLastEventId": str(int(round(time.time() * 1000)) - 1000)}
-        )
-
         # Get the external URL as configured in OpenCTI Settings page
         query = """
         query SettingsQuery {
@@ -95,13 +91,20 @@ class ElasticConnector:
             )
             sys.exit(1)
 
+        verify_ssl = str(self.config.get("output.elasticsearch.ssl_verify", True))
+        if verify_ssl in TRUTHY:
+            verify_ssl = True
+        elif verify_ssl in FALSY:
+            verify_ssl = False
+        else:
+            verify_ssl = True
         if self.config.get("cloud.id", None):
             logger.debug(
                 f"Connecting to Elasticsearch using cloud.id {self.config.get('cloud.id')}"
             )
             self.elasticsearch = Elasticsearch(
                 cloud_id=self.config.get("cloud.id"),
-                verify_certs=self.config.get("output.elasticsearch.ssl_verify", True),
+                verify_certs=verify_ssl,
                 http_auth=_httpauth,
                 api_key=_apikey,
             )
@@ -111,7 +114,7 @@ class ElasticConnector:
             )
             self.elasticsearch = Elasticsearch(
                 hosts=self.config.get("output.elasticsearch.hosts", ["localhost:9200"]),
-                verify_certs=self.config.get("output.elasticsearch.ssl_verify", True),
+                verify_certs=verify_ssl,
                 http_auth=_httpauth,
                 api_key=_apikey,
             )

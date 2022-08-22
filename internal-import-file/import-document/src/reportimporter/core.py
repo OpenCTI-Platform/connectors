@@ -6,7 +6,12 @@ from typing import Callable, Dict, List
 
 import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, Report, get_config_variable
+from pycti import (
+    OpenCTIConnectorHelper,
+    Report,
+    get_config_variable,
+    StixCoreRelationship,
+)
 from pydantic import BaseModel
 from reportimporter.constants import (
     ENTITY_CLASS,
@@ -18,17 +23,6 @@ from reportimporter.constants import (
 from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
 from reportimporter.util import MyConfigParser
-from stix2 import (
-    URL,
-    AutonomousSystem,
-    DomainName,
-    EmailAddress,
-    File,
-    IPv4Address,
-    IPv6Address,
-    MACAddress,
-    WindowsRegistryKey,
-)
 
 
 class ReportImporter:
@@ -220,8 +214,8 @@ class ReportImporter:
                 else:
                     observable = None
                     if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
-                        observable = AutonomousSystem(
-                            value=match[RESULT_FORMAT_MATCH],
+                        observable = stix2.AutonomousSystem(
+                            number=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
                                 "x_opencti_create_indicator": self.create_indicator,
@@ -229,7 +223,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "Domain-Name.value":
-                        observable = DomainName(
+                        observable = stix2.DomainName(
                             value=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -238,7 +232,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "Email-Addr.value":
-                        observable = EmailAddress(
+                        observable = stix2.EmailAddress(
                             value=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -247,7 +241,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "File.name":
-                        observable = File(
+                        observable = stix2.File(
                             name=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -256,7 +250,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value":
-                        observable = IPv4Address(
+                        observable = stix2.IPv4Address(
                             value=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -265,7 +259,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value":
-                        observable = IPv6Address(
+                        observable = stix2.IPv6Address(
                             value=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -274,7 +268,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "Mac-Addr.value":
-                        observable = MACAddress(
+                        observable = stix2.MACAddress(
                             value=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -283,7 +277,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.MD5":
-                        observable = File(
+                        observable = stix2.File(
                             hashes={"MD5": match[RESULT_FORMAT_MATCH]},
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -292,7 +286,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-1":
-                        observable = File(
+                        observable = stix2.File(
                             hashes={"SHA-1": match[RESULT_FORMAT_MATCH]},
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -301,7 +295,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-256":
-                        observable = File(
+                        observable = stix2.File(
                             hashes={"SHA-256": match[RESULT_FORMAT_MATCH]},
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -310,7 +304,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "Windows-Registry-Key.key":
-                        observable = WindowsRegistryKey(
+                        observable = stix2.WindowsRegistryKey(
                             key=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -319,7 +313,7 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
-                        observable = URL(
+                        observable = stix2.URL(
                             value=match[RESULT_FORMAT_MATCH],
                             object_marking_refs=object_markings,
                             custom_properties={
@@ -349,26 +343,95 @@ class ReportImporter:
         if len(observables) == 0 and len(entities) == 0:
             return 0
 
-        if entity is not None and entity["entity_type"] == "Report":
-            report = stix2.Report(
-                id=entity["standard_id"],
-                name=entity["name"],
-                description=entity["description"],
-                published=self.helper.api.stix2.format_date(entity["created"]),
-                report_types=entity["report_types"],
-                object_refs=observables + entities,
-                allow_custom=True,
-                custom_properties={
-                    "x_opencti_files": [self.file] if self.file is not None else []
-                },
-            )
-            observables.append(report)
-        elif entity is not None:
-            # TODO, relate all object to the entity
+        observables_ids = [o["id"] for o in observables]
+        entities_ids = [e["id"] for e in entities]
+
+        if entity is not None:
             entity_stix_bundle = self.helper.api.stix2.export_entity(
                 entity["entity_type"], entity["id"]
             )
-            observables = observables + entity_stix_bundle["objects"]
+            relationships = []
+            # For containers, just insert everything in it
+            if (
+                entity_stix_bundle["type"] == "report"
+                or entity_stix_bundle["type"] == "note"
+                or entity_stix_bundle["type"] == "opinion"
+            ):
+                entity_stix_bundle["object_refs"] = (
+                    entity_stix_bundle["object_refs"] + observables_ids + entities_ids
+                )
+                entity_stix_bundle["x_opencti_files"] = (
+                    [self.file] if self.file is not None else []
+                )
+            # For observed data, just insert all observables in it
+            elif entity_stix_bundle["type"] == "observed-data":
+                entity_stix_bundle["object_refs"] = (
+                    entity_stix_bundle["object_refs"] + observables_ids
+                )
+            else:
+                # For all other entities, relate all observables
+                for observable in observables:
+                    relationships.append(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable["id"], entity_stix_bundle["id"]
+                            ),
+                            relationship_type="related-to",
+                            source_ref=observable["id"],
+                            target_ref=entity_stix_bundle["id"],
+                            allow_custom=True,
+                        )
+                    )
+                if entity["entity_type"] == "Incident":
+                    for entity in entities:
+                        # Incident attributed-to Threats
+                        if (
+                            entity["type"] == "threat-actor"
+                            or entity["type"] == "intrusion-set"
+                            or entity["type"] == "campaign"
+                        ):
+                            relationships.append(
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "attributed-to",
+                                        entity_stix_bundle["id"],
+                                        entity["id"],
+                                    ),
+                                    relationship_type="attributed-to",
+                                    source_ref=entity_stix_bundle["id"],
+                                    target_ref=entity["id"],
+                                    allow_custom=True,
+                                )
+                            )
+                        # Incident targets Vulnerabilities
+                        elif entity["type"] == "vulnerability":
+                            relationships.append(
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "targets",
+                                        entity_stix_bundle["id"],
+                                        entity["id"],
+                                    ),
+                                    relationship_type="targets",
+                                    source_ref=entity_stix_bundle["id"],
+                                    target_ref=entity["id"],
+                                    allow_custom=True,
+                                )
+                            )
+                        # Incident uses Attack Patterns
+                        elif entity["type"] == "attack-pattern":
+                            relationships.append(
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "uses", entity_stix_bundle["id"], entity["id"]
+                                    ),
+                                    relationship_type="uses",
+                                    source_ref=entity_stix_bundle["id"],
+                                    target_ref=entity["id"],
+                                    allow_custom=True,
+                                )
+                            )
+            observables = observables + relationships + entity_stix_bundle
         else:
             timestamp = int(time.time())
             now = datetime.utcfromtimestamp(timestamp)

@@ -2,10 +2,11 @@ import csv
 import io
 import json
 import os
+import sys
 import time
 
 import yaml
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 
@@ -19,18 +20,43 @@ class ExportFileCsv:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+        self.export_file_csv_delimiter = get_config_variable(
+            "EXPORT_FILE_CSV_DELIMITER",
+            ["export-file-csv", "delimiter"],
+            config,
+            False,
+            ";",
+        )
 
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
         headers = sorted(set().union(*(d.keys() for d in data)))
+        if "hashes" in headers:
+            headers = headers + [
+                "hashes_MD5",
+                "hashes_SHA-1",
+                "hashes_SHA-256",
+                "hashes_SHA-512",
+                "hashes_SSDEEP",
+            ]
         csv_data = [headers]
         for d in data:
             row = []
             for h in headers:
-                if h not in d:
+                if h.startswith("hashes_") and "hashes" in d:
+                    hashes = {}
+                    for hash in d["hashes"]:
+                        hashes[hash["algorithm"]] = hash["hash"]
+                    if h.split("_")[1] in hashes:
+                        row.append(hashes[h.split("_")[1]])
+                    else:
+                        row.append("")
+                elif h not in d:
                     row.append("")
                 elif isinstance(d[h], str):
                     row.append(d[h])
+                elif isinstance(d[h], int):
+                    row.append(str(d[h]))
                 elif isinstance(d[h], list):
                     if len(d[h]) > 0 and isinstance(d[h][0], str):
                         row.append(",".join(d[h]))
@@ -43,18 +69,29 @@ class ExportFileCsv:
                                 rrow.append(r["definition"])
                             elif "value" in r:
                                 rrow.append(r["value"])
+                            elif "observable_value" in r:
+                                rrow.append(r["observable_value"])
                         row.append(",".join(rrow))
                     else:
                         row.append("")
                 elif isinstance(d[h], dict):
                     if "name" in d[h]:
                         row.append(d[h]["name"])
+                    elif "value" in d[h]:
+                        row.append(d[h]["value"])
+                    elif "observable_value" in d[h]:
+                        row.append(d[h]["observable_value"])
                     else:
                         row.append("")
                 else:
                     row.append("")
             csv_data.append(row)
-        writer = csv.writer(output, delimiter=";", quotechar='"', quoting=csv.QUOTE_ALL)
+        writer = csv.writer(
+            output,
+            delimiter=self.export_file_csv_delimiter,
+            quotechar='"',
+            quoting=csv.QUOTE_ALL,
+        )
         writer.writerows(csv_data)
         return output.getvalue()
 
@@ -197,6 +234,9 @@ class ExportFileCsv:
                 filters=list_params["filters"],
                 orderBy=list_params["orderBy"],
                 orderMode=list_params["orderMode"],
+                relationship_type=list_params["relationship_type"]
+                if "relationship_type" in list_params
+                else None,
                 fromId=list_params["fromId"] if "fromId" in list_params else None,
                 toId=list_params["toId"] if "toId" in list_params else None,
                 fromTypes=list_params["fromTypes"]
@@ -236,4 +276,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

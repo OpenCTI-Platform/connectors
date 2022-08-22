@@ -295,7 +295,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "pycti"
-version = "5.3.3"
+version = "5.3.7"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -443,7 +443,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "python-magic"
-version = "0.4.26"
+version = "0.4.27"
 description = "File type identification using libmagic"
 category = "main"
 optional = false
@@ -483,20 +483,20 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "requests"
-version = "2.27.1"
+version = "2.28.0"
 description = "Python HTTP for Humans."
 category = "main"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
+python-versions = ">=3.7, <4"
 
 [package.dependencies]
 certifi = ">=2017.4.17"
-charset-normalizer = {version = ">=2.0.0,<2.1.0", markers = "python_version >= \"3\""}
-idna = {version = ">=2.5,<4", markers = "python_version >= \"3\""}
+charset-normalizer = ">=2.0.0,<2.1.0"
+idna = ">=2.5,<4"
 urllib3 = ">=1.21.1,<1.27"
 
 [package.extras]
-socks = ["PySocks (>=1.5.6,!=1.5.7)", "win-inet-pton"]
+socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
 
 [[package]]
@@ -610,7 +610,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "2230963006a2146b59252fedade2005de77a1244d5c456f0b0a8aab75975f3c2"
+content-hash = "5864ad0cf718ee50e92e150cbc92a9731bf45de13689ec13db01c81c18360f4f"
 
 [metadata.files]
 antlr4-python3-runtime = [
@@ -715,8 +715,8 @@ pycodestyle = [
     {file = "pycodestyle-2.7.0.tar.gz", hash = "sha256:c389c1d06bf7904078ca03399a4816f974a1d590090fecea0c63ec26ebaf1cef"},
 ]
 pycti = [
-    {file = "pycti-5.3.3-py3-none-any.whl", hash = "sha256:81e2fee8d0c470a06eab653ddc10513563407c686f753d6cdef61c88daeca9c2"},
-    {file = "pycti-5.3.3.tar.gz", hash = "sha256:03104ec719b598f28a20f66f8f006407f789cacc63a5bcce16f6ac9c33affeaa"},
+    {file = "pycti-5.3.7-py3-none-any.whl", hash = "sha256:3609906e7c0ae048cbbab50cfa498be84d818c773b404ef8c2af6538204d0dcd"},
+    {file = "pycti-5.3.7.tar.gz", hash = "sha256:b23942b5e0073c7449fc1e58a8777642c01598657b96bb29b0a669a0414eac55"},
 ]
 pyflakes = [
     {file = "pyflakes-2.3.1-py2.py3-none-any.whl", hash = "sha256:7893783d01b8a89811dd72d7dfd4d84ff098e5eed95cfa8905b22bbffe52efc3"},
@@ -758,8 +758,8 @@ python-json-logger = [
     {file = "python_json_logger-2.0.2-py3-none-any.whl", hash = "sha256:99310d148f054e858cd5f4258794ed6777e7ad2c3fd7e1c1b527f1cba4d08420"},
 ]
 python-magic = [
-    {file = "python-magic-0.4.26.tar.gz", hash = "sha256:8262c13001f904ad5b724d38b5e5b5f17ec0450ae249def398a62e4e33108a50"},
-    {file = "python_magic-0.4.26-py2.py3-none-any.whl", hash = "sha256:b978c4b69a20510d133a7f488910c2f07e7796f1f31703e61c241973f2bbf5fb"},
+    {file = "python-magic-0.4.27.tar.gz", hash = "sha256:c1ba14b08e4a5f5c31a302b7721239695b2f0f058d125bd5ce1ee36b9d9d3c3b"},
+    {file = "python_magic-0.4.27-py2.py3-none-any.whl", hash = "sha256:c212960ad306f700aa0d01e5d7a325d20548ff97eb9920dcd29513174f0294d3"},
 ]
 python-magic-bin = [
     {file = "python_magic_bin-0.4.14-py2.py3-none-macosx_10_6_intel.whl", hash = "sha256:7b1743b3dbf16601d6eedf4e7c2c9a637901b0faaf24ad4df4d4527e7d8f66a4"},
@@ -882,8 +882,8 @@ regex = [
     {file = "regex-2022.6.2.tar.gz", hash = "sha256:f7b43acb2c46fb2cd506965b2d9cf4c5e64c9c612bac26c1187933c7296bf08c"},
 ]
 requests = [
-    {file = "requests-2.27.1-py2.py3-none-any.whl", hash = "sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d"},
-    {file = "requests-2.27.1.tar.gz", hash = "sha256:68d7c56fd5a8999887728ef304a6d12edc7be74f1cfa47714fc8b414525c9a61"},
+    {file = "requests-2.28.0-py3-none-any.whl", hash = "sha256:bc7861137fbce630f17b03d3ad02ad0bf978c844f3536d0edda6499dafce2b6f"},
+    {file = "requests-2.28.0.tar.gz", hash = "sha256:d568723a7ebd25875d8d1eaf5dfa068cd2fc8194b2e483d7b1f7c81918dbec6b"},
 ]
 scalpl = [
     {file = "scalpl-0.4.2-py3-none-any.whl", hash = "sha256:3a7a963b9b3639108722008cc2b5a42ae576b48c74fcd0f17baf7b1c9792ab7b"},

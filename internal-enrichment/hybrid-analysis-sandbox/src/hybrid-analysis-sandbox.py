@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import os
+import sys
 import time
 
 import requests
@@ -41,7 +42,7 @@ class HybridAnalysis:
         self.api_url = "https://www.hybrid-analysis.com/api/v2"
         self.headers = {
             "api-key": self.api_key,
-            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 5.3.3",
+            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 5.3.7",
             "accept": "application/json",
         }
         self.identity = self.helper.api.identity.create(
@@ -396,4 +397,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

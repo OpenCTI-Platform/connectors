@@ -1,13 +1,15 @@
 version: 2.1
-orbs: 
+orbs:
   slack: circleci/slack@4.8.3
+  ms-teams: cloudradar-monitoring/ms-teams@0.0.1
 jobs:
   ensure_formatting:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.10
     working_directory: ~/repo
     steps:
       - checkout
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           name: install dependencies
           command: pip install black --user
@@ -19,19 +21,26 @@ jobs:
           command: black --check .
       - slack/notify:
           event: fail
-          template: basic_fail_1          
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   linter:
     docker:
       - image: alpine/flake8
     working_directory: ~/repo
     steps:
       - checkout
+      - run: apk update && apk upgrade && apk --no-cache add curl gettext
       - run:
           name: flake8
           command: flake8 --ignore=E,W ~/repo
       - slack/notify:
           event: fail
-          template: basic_fail_1          
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   build:
     working_directory: ~/opencti
     docker:
@@ -39,6 +48,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
@@ -246,7 +256,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/malwarebazaar-recent-additions
           name: Build Docker image opencti/connector-malwarebazaar-recent-additions
-          command: docker build -t opencti/connector-malwarebazaar-recent-additions:latest . && docker tag opencti/connector-malwarebazaar-recent-additions:latest opencti/connector-malwarebazaar-recent-additions:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-malwarebazaar-recent-additions:latest . && docker tag opencti/connector-malwarebazaar-recent-additions:latest opencti/connector-malwarebazaar-recent-additions:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/urlhaus-recent-payloads
           name: Build Docker image opencti/connector-urlhaus-recent-payloads
@@ -283,6 +293,26 @@ jobs:
           working_directory: ~/opencti/external-import/socprime
           name: Build Docker image opencti/connector-socprime
           command: docker build -t opencti/connector-socprime:latest . && docker tag opencti/connector-socprime:latest opencti/connector-socprime:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/maltiverse
+          name: Build Docker image opencti/connector-maltiverse
+          command: docker build -t opencti/connector-maltiverse:latest . && docker tag opencti/connector-maltiverse:latest opencti/connector-maltiverse:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/intel471
+          name: Build Docker image opencti/connector-intel471
+          command: docker build -t opencti/connector-intel471:latest . && docker tag opencti/connector-intel471:latest opencti/connector-intel471:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/orange-cyberdefense
+          name: Build Docker image opencti/connector-orange-cyberdefense
+          command: docker build -t opencti/connector-orange-cyberdefense:latest . && docker tag opencti/connector-orange-cyberdefense:latest opencti/connector-orange-cyberdefense:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/citalid
+          name: Build Docker image opencti/connector-citalid
+          command: docker build -t opencti/connector-citalid:latest . && docker tag opencti/connector-citalid:latest opencti/connector-citalid:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/abuseipdb-ipblacklist
+          name: Build Docker image opencti/connector-abuseipdb-ipblacklist
+          command: docker build -t opencti/connector-abuseipdb-ipblacklist:latest . && docker tag opencti/connector-abuseipdb-ipblacklist:latest opencti/connector-abuseipdb-ipblacklist:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -409,9 +439,22 @@ jobs:
             docker push opencti/connector-cyber-campaign-collection:${CIRCLE_TAG}
             docker push opencti/connector-socprime:latest
             docker push opencti/connector-socprime:${CIRCLE_TAG}
+            docker push opencti/connector-maltiverse:latest
+            docker push opencti/connector-maltiverse:${CIRCLE_TAG}
+            docker push opencti/connector-intel471:latest
+            docker push opencti/connector-intel471:${CIRCLE_TAG}
+            docker push opencti/connector-orange-cyberdefense:latest
+            docker push opencti/connector-orange-cyberdefense:${CIRCLE_TAG}
+            docker push opencti/connector-citalid:latest
+            docker push opencti/connector-citalid:${CIRCLE_TAG}
+            docker push opencti/connector-abuseipdb-ipblacklist:latest
+            docker push opencti/connector-abuseipdb-ipblacklist:${CIRCLE_TAG}
       - slack/notify:
           event: fail
-          template: basic_fail_1                   
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   build_rolling:
     working_directory: ~/opencti
     docker:
@@ -419,6 +462,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
@@ -642,7 +686,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/vulmatch
           name: Build Docker image opencti/connector-vulmatch
-          command: docker build -t opencti/connector-vulmatch:rolling .   
+          command: docker build -t opencti/connector-vulmatch:rolling .
       - run:
           working_directory: ~/opencti/external-import/siemrules
           name: Build Docker image opencti/connector-siemrules
@@ -659,6 +703,26 @@ jobs:
           working_directory: ~/opencti/external-import/socprime
           name: Build Docker image opencti/connector-socprime
           command: docker build -t opencti/connector-socprime:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/maltiverse
+          name: Build Docker image opencti/connector-maltiverse
+          command: docker build -t opencti/connector-maltiverse:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/intel471
+          name: Build Docker image opencti/connector-intel471
+          command: docker build -t opencti/connector-intel471:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/orange-cyberdefense
+          name: Build Docker image opencti/connector-orange-cyberdefense
+          command: docker build -t opencti/connector-orange-cyberdefense:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/citalid
+          name: Build Docker image opencti/connector-citalid
+          command: docker build -t opencti/connector-citalid:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/abuseipdb-ipblacklist
+          name: Build Docker image opencti/connector-abuseipdb-ipblacklist
+          command: docker build -t opencti/connector-abuseipdb-ipblacklist:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -723,23 +787,39 @@ jobs:
             docker push opencti/connector-cisa-known-exploited-vulnerabilities:rolling
             docker push opencti/connector-cyber-campaign-collection:rolling
             docker push opencti/connector-socprime:rolling
+            docker push opencti/connector-maltiverse:rolling
+            docker push opencti/connector-intel471:rolling
+            docker push opencti/connector-orange-cyberdefense:rolling
+            docker push opencti/connector-citalid:rolling
+            docker push opencti/connector-abuseipdb-ipblacklist:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   notify_rolling:
     docker:
       - image: 'cimg/base:stable'
     steps:
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - slack/notify:
           event: pass
-          template: basic_success_1                
+          template: basic_success_1
+      - ms-teams/report:
+          only_on_fail: false
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   notify:
     docker:
       - image: 'cimg/base:stable'
     steps:
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - slack/notify:
           event: pass
-          template: basic_success_1                    
+          template: basic_success_1
+      - ms-teams/report:
+          only_on_fail: false
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
 workflows:
   version: 2
   opencti:
@@ -770,4 +850,4 @@ workflows:
             tags:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
-              ignore: /.*/            
+              ignore: /.*/

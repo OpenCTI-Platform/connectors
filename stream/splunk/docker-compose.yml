@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-splunk:
-    image: opencti/connector-splunk:5.3.3
+    image: opencti/connector-splunk:5.3.7
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -14,11 +14,10 @@ services:
       - CONNECTOR_SCOPE=elastic
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
-      - "SPLUNK_URL=[\"https://splunk.changeme.com:8089\"]"
-      - "SPLUNK_LOGIN=[\"ChangeMe\"]"
-      - "SPLUNK_PASSWORD=[\"ChangeMe\"]"
-      - "SPLUNK_OWNER=[\"nobody\"]"
-      - SPLUNK_OWNER=nobody
+      - "SPLUNK_URL=https://splunk1.changeme.com:8089,https://splunk2.changeme.com:8089"
+      - "SPLUNK_LOGIN=Login1,Login2"
+      - "SPLUNK_PASSWORD=Password1,Password2"
+      - "SPLUNK_OWNER=nobody,nobody"
       - SPLUNK_SSL_VERIFY=true
       - SPLUNK_APP=search
       - SPLUNK_KV_STORE_NAME=opencti

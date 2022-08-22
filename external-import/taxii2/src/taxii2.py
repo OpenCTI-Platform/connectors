@@ -2,13 +2,15 @@
 
 import json
 import os
+import sys
 import time
-from datetime import datetime, timedelta
-
+import yaml
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+
+from datetime import datetime, timedelta
+from typing import Dict
+from pycti import OpenCTIConnectorHelper, get_config_variable, StixCyberObservableTypes
 from requests.exceptions import HTTPError
 from taxii2client.exceptions import TAXIIServiceException
 
@@ -27,7 +29,6 @@ class Taxii2Connector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-
         username = get_config_variable(
             "TAXII2_USERNAME", ["taxii2", "username"], config
         )
@@ -37,36 +38,55 @@ class Taxii2Connector:
         server_url = get_config_variable(
             "TAXII2_DISCOVERY_URL", ["taxii2", "discovery_url"], config
         )
-        self.verify_ssl = get_config_variable(
-            "VERIFY_SSL", ["taxii2", "verify_ssl"], config, default=True
+        cert_path = get_config_variable(
+            "TAXII2_CERT_PATH", ["taxii2", "cert_path"], config
         )
-
+        self.verify_ssl = get_config_variable(
+            "TAXII2_VERIFY_SSL", ["taxii2", "verify_ssl"], config, default=True
+        )
         # if V21 flag set to true
         if get_config_variable("TAXII2_V21", ["taxii2", "v2.1"], config, default=True):
             self.server = tx21.Server(
-                server_url, user=username, password=password, verify=self.verify_ssl
+                server_url,
+                user=username,
+                password=password,
+                verify=self.verify_ssl,
+                cert=cert_path,
             )
         else:
             self.server = tx20.Server(
-                server_url, user=username, password=password, verify=self.verify_ssl
+                server_url,
+                user=username,
+                password=password,
+                verify=self.verify_ssl,
+                cert=cert_path,
             )
-
         self.collections = get_config_variable(
             "TAXII2_COLLECTIONS", ["taxii2", "collections"], config
         ).split(",")
-
         self.initial_history = get_config_variable(
             "TAXII2_INITIAL_HISTORY", ["taxii2", "initial_history"], config, True
         )
-
         self.per_request = get_config_variable(
             "TAXII2_PER_REQUEST", ["taxii2", "per_request"], config, True
         )
-
         self.interval = get_config_variable(
             "TAXII2_INTERVAL", ["taxii2", "interval"], config, True, 1
         )
-
+        self.create_indicators = get_config_variable(
+            "TAXII2_CREATE_INDICATORS",
+            ["taxii2", "create_indicators"],
+            config,
+            False,
+            True,
+        )
+        self.create_observables = get_config_variable(
+            "TAXII2_CREATE_OBSERVABLES",
+            ["taxii2", "create_observables"],
+            config,
+            False,
+            True,
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -139,6 +159,11 @@ class Taxii2Connector:
                 f"Run Complete. Sleeping until next run in " f"{self.interval} hours"
             )
             self.helper.set_state({"last_run": timestamp})
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
             time.sleep(self.get_interval())
 
     def poll_all_roots(self, coll_title):
@@ -206,6 +231,32 @@ class Taxii2Connector:
         self.helper.log_info(f"Polling Collection {collection.title}")
         self.send_to_server(collection.get_objects(**filters))
 
+    def _process_objects(self, stix_bundle: Dict) -> Dict:
+        # the list of object types for which the confidence has to be added
+        object_types_with_confidence = [
+            "attack-pattern",
+            "course-of-action",
+            "threat-actor",
+            "intrusion-set",
+            "campaign",
+            "malware",
+            "tool",
+            "vulnerability",
+            "report",
+            "relationship",
+            "indicator",
+        ]
+        for obj in stix_bundle["objects"]:
+            object_type = obj["type"]
+            if object_type in object_types_with_confidence:
+                if "confidence" not in obj:
+                    obj["confidence"] = int(self.helper.connect_confidence_level)
+            if object_type == "indicator":
+                obj["x_opencti_create_observables"] = self.create_observables
+            elif StixCyberObservableTypes.has_value(object_type):
+                obj["x_opencti_create_indicators"] = self.create_indicators
+        return stix_bundle
+
     def send_to_server(self, bundle):
         """
         Sends a STIX2 bundle to OpenCTI Server
@@ -216,9 +267,10 @@ class Taxii2Connector:
         self.helper.log_info(
             f"Sending Bundle to server with '{len(bundle.get('objects', []))}' objects"
         )
+
         try:
             self.helper.send_stix2_bundle(
-                json.dumps(bundle),
+                json.dumps(self._process_objects(bundle)),
                 update=self.update_existing_data,
             )
 
@@ -260,7 +312,7 @@ class Taxii2Connector:
 
 if __name__ == "__main__":
     try:
-        CONNECTOR = Taxii2Connector()
-        CONNECTOR.run()
+        taxii2Connector = Taxii2Connector()
+        taxii2Connector.run()
     except Exception as e:
         raise e

@@ -1,11 +1,13 @@
 # coding: utf-8
 
 import os
+import sys
 import time
 
 import yaml
-from intezer_api import IntezerApi
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+from intezer_api import IntezerApi
 
 
 class IntezerSandboxConnector:
@@ -194,4 +196,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

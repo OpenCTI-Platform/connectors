@@ -1,0 +1,19 @@
+version: '3'
+services:
+  connector-citalid:
+    image: opencti/connector-citalid:5.3.7
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Citalid
+      - CONNECTOR_SCOPE=citalid
+      - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - CONNECTOR_LOG_LEVEL=info
+      - CITALID_FILES_PATH=/path/to/data
+      - CITALID_START_DATE=1609455600 # 2021-01-01
+      - CITALID_INTERVAL=5 # In minutes
+    restart: always

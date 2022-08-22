@@ -49,11 +49,6 @@ class Mitre:
             ["connector", "update_existing_data"],
             config,
         )
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-        )
 
     def get_interval(self):
         return int(self.mitre_interval) * 60 * 60 * 24
@@ -96,10 +91,12 @@ class Mitre:
         object_types_with_confidence = [
             "attack-pattern",
             "course-of-action",
+            "threat-actor",
             "intrusion-set",
             "campaign",
             "malware",
             "tool",
+            "vulnerability",
             "report",
             "relationship",
         ]
@@ -108,7 +105,7 @@ class Mitre:
             object_type = obj["type"]
             if object_type in object_types_with_confidence:
                 # self.helper.log_info(f"Adding confidence to {object_type} object")
-                obj["confidence"] = int(self.confidence_level)
+                obj["confidence"] = int(self.helper.connect_confidence_level)
         return json.dumps(stix_bundle)
 
     def process_data(self):
@@ -136,7 +133,7 @@ class Mitre:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-                # Mitre enterprise file url
+                # MITRE enterprise file url
                 if (
                     self.mitre_enterprise_file_url is not None
                     and len(self.mitre_enterprise_file_url) > 0
@@ -147,18 +144,7 @@ class Mitre:
                     )
                     self.send_bundle(work_id, enterprise_data_with_confidence)
 
-                # Mitre pre attack file url
-                if (
-                    self.mitre_pre_attack_file_url is not None
-                    and len(self.mitre_pre_attack_file_url) > 0
-                ):
-                    pre_attack_data = self.retrieve_data(self.mitre_pre_attack_file_url)
-                    pre_attack_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(pre_attack_data)
-                    )
-                    self.send_bundle(work_id, pre_attack_data_with_confidence)
-
-                # Mitre mobile attack file url
+                # MITRE mobile attack file url
                 if (
                     self.mitre_mobile_attack_file_url is not None
                     and len(self.mitre_mobile_attack_file_url) > 0
@@ -171,7 +157,7 @@ class Mitre:
                     )
                     self.send_bundle(work_id, mobile_attack_data_with_confidence)
 
-                # Mitre ics attack file url
+                # MITRE ICS attack file url
                 if (
                     self.mitre_ics_attack_file_url is not None
                     and len(self.mitre_ics_attack_file_url) > 0
@@ -182,7 +168,7 @@ class Mitre:
                     )
                     self.send_bundle(work_id, ics_attack_data_with_confidence)
 
-                # Mitre ics attack file url
+                # MITRE CAPEC attack file url
                 if (
                     self.mitre_capec_file_url is not None
                     and len(self.mitre_capec_file_url) > 0

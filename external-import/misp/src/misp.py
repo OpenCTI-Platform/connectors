@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sys
 import time
 from datetime import datetime
 
@@ -115,6 +116,7 @@ OPENCTISTIX2 = {
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
     "url": {"type": "url", "path": ["value"]},
+    "link": {"type": "url", "path": ["value"]},
     "email-address": {"type": "email-addr", "path": ["value"]},
     "email-subject": {"type": "email-message", "path": ["subject"]},
     "mutex": {"type": "mutex", "path": ["name"]},
@@ -361,11 +363,11 @@ class Misp:
                 try:
                     events = self.misp.search("events", **kwargs)
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(f"Error fetching misp event: {e}")
                     try:
                         events = self.misp.search("events", **kwargs)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(f"Error fetching misp event again: {e}")
 
                 self.helper.log_info("MISP returned " + str(len(events)) + " events.")
                 number_events = number_events + len(events)
@@ -397,6 +399,11 @@ class Misp:
                 }
             )
             self.helper.api.work.to_processed(work_id, message)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
             time.sleep(self.get_interval())
 
     def process_events(self, work_id, events) -> int:
@@ -514,6 +521,7 @@ class Misp:
             ### Pre-process
             # Author
             author = stix2.Identity(
+                id=Identity.generate_id(event["Event"]["Orgc"]["name"], "organization"),
                 name=event["Event"]["Orgc"]["name"],
                 identity_class="organization",
             )
@@ -560,7 +568,10 @@ class Misp:
                     attribute,
                     event["Event"]["threat_level_id"],
                 )
-                if attribute["type"] == "link":
+                if (
+                    attribute["type"] == "link"
+                    and attribute["category"] == "External analysis"
+                ):
                     event_external_references.append(
                         stix2.ExternalReference(
                             source_name=attribute["category"],
@@ -583,7 +594,10 @@ class Misp:
             for object in event["Event"]["Object"]:
                 attribute_external_references = []
                 for attribute in object["Attribute"]:
-                    if attribute["type"] == "link":
+                    if (
+                        attribute["type"] == "link"
+                        and attribute["category"] == "External analysis"
+                    ):
                         attribute_external_references.append(
                             stix2.ExternalReference(
                                 source_name=attribute["category"],
@@ -903,6 +917,8 @@ class Misp:
         attribute,
         event_threat_level,
     ):
+        if attribute["type"] == "link" and attribute["category"] == "External analysis":
+            return None
         resolved_attributes = self.resolve_type(attribute["type"], attribute["value"])
         if resolved_attributes is None:
             return None
@@ -1013,7 +1029,7 @@ class Misp:
                         },
                     )
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(f"Error processing indicator {name}: {e}")
             observable = None
             if self.misp_create_observables and observable_type is not None:
                 try:
@@ -1144,7 +1160,9 @@ class Misp:
                             custom_properties=custom_properties,
                         )
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(
+                        f"Error creating observable type {observable_type} with value {observable_value}: {e}"
+                    )
             sightings = []
             identities = []
             if "Sighting" in attribute:
@@ -1223,7 +1241,9 @@ class Misp:
                 relationships.append(
                     stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "related-to", object_observable.id, observable.id
+                            "related-to",
+                            object_observable.id,
+                            observable.id if observable is not None else indicator.id,
                         ),
                         relationship_type="related-to",
                         created_by_ref=author["id"],

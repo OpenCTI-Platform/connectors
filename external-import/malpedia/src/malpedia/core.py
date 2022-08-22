@@ -2,6 +2,7 @@
 """OpenCTI Malpedia connector core module."""
 
 import os
+import sys
 import time
 from datetime import datetime
 from typing import Any, Dict, Mapping, Optional
@@ -65,7 +66,7 @@ class Malpedia:
         self.helper.log_info(f"loaded malpedia config: {config}")
 
         # Create Malpedia client and importers
-        self.client = MalpediaClient(self.AUTH_KEY)
+        self.client = MalpediaClient(self.helper, self.AUTH_KEY)
 
         # If we run without API key we can assume all data is TLP:WHITE else we
         # default to TLP:AMBER to be safe.
@@ -173,13 +174,19 @@ class Malpedia:
                         f"connector will not run, next run in: {new_interval} seconds"
                     )
 
-                time.sleep(60)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("connector stop")
-                exit(0)
+                sys.exit(0)
+
             except Exception as e:
                 self.helper.log_error(str(e))
-                exit(0)
+                sys.exit(0)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            time.sleep(60)
 
     def _run_knowledge_importer(
         self, current_state: Mapping[str, Any]
