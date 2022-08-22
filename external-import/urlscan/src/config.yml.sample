@@ -1,0 +1,22 @@
+---
+
+opencti:
+  url: "http://localhost:8080"
+  token: "ChangeMe"
+
+connector:
+  id: "ChangeMe"
+  type: "EXTERNAL_IMPORT"
+  name: "Urlscan"
+  scope: "urlscan"
+  log_level: "info"
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  create_indicators: true
+  tlp: "white"
+  labels: "Phishing,Phishfeed"
+  interval: 86400 # seconds, 1d
+
+urlscan:
+  url: "https://urlscan.io/api/v1/pro/phishfeed?format=json&q=date:>now-1d"
+  api_key: ""
