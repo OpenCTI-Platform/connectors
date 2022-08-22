@@ -214,6 +214,10 @@ jobs:
           name: Build Docker image opencti/connector-shodan
           command: docker build -t opencti/connector-shodan:latest . && docker tag opencti/connector-shodan:latest opencti/connector-shodan:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/shodan-internetdb
+          name: Build Docker image opencti/connector-shodan-internetdb
+          command: docker build -t opencti/connector-shodan-internetdb:latest . && docker tag opencti/connector-shodan-internetdb:latest opencti/connector-shodan-internetdb:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/internal-enrichment/import-external-reference
           name: Build Docker image opencti/connector-import-external-reference
           command: docker build -t opencti/connector-import-external-reference:latest . && docker tag opencti/connector-import-external-reference:latest opencti/connector-import-external-reference:${CIRCLE_TAG}
@@ -399,6 +403,8 @@ jobs:
             docker push opencti/connector-vxvault:${CIRCLE_TAG}
             docker push opencti/connector-shodan:latest
             docker push opencti/connector-shodan:${CIRCLE_TAG}
+            docker push opencti/connector-shodan-internetdb:latest
+            docker push opencti/connector-shodan-internetdb:${CIRCLE_TAG}
             docker push opencti/connector-import-external-reference:latest
             docker push opencti/connector-import-external-reference:${CIRCLE_TAG}
             docker push opencti/connector-backup-files:latest
@@ -624,6 +630,10 @@ jobs:
           name: Build Docker image opencti/connector-shodan
           command: docker build -t opencti/connector-shodan:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/shodan-internetdb
+          name: Build Docker image opencti/connector-shodan-internetdb
+          command: docker build -t opencti/connector-shodan-internetdb:rolling .
+      - run:
           working_directory: ~/opencti/internal-enrichment/import-external-reference
           name: Build Docker image opencti/connector-import-external-reference
           command: docker build -t opencti/connector-import-external-reference:rolling .
@@ -767,6 +777,7 @@ jobs:
             docker push opencti/connector-elastic:rolling
             docker push opencti/connector-vxvault:rolling
             docker push opencti/connector-shodan:rolling
+            docker push opencti/connector-shodan-internetdb:rolling
             docker push opencti/connector-import-external-reference:rolling
             docker push opencti/connector-backup-files:rolling
             docker push opencti/connector-threatmatch:rolling
