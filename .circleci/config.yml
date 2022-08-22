@@ -365,6 +365,8 @@ jobs:
             docker push opencti/connector-lastinfosec:${CIRCLE_TAG}
             docker push opencti/connector-malpedia:latest
             docker push opencti/connector-malpedia:${CIRCLE_TAG}
+            docker push opencti/connector-mwdb:latest
+            docker push opencti/connector-mwdb:${CIRCLE_TAG}
             docker push opencti/connector-riskiq:latest
             docker push opencti/connector-riskiq:${CIRCLE_TAG}
             docker push opencti/connector-valhalla:latest
@@ -551,6 +553,10 @@ jobs:
           working_directory: ~/opencti/external-import/malpedia
           name: Build Docker image opencti/connector-malpedia
           command: docker build -t opencti/connector-malpedia:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/mwdb
+          name: Build Docker image opencti/connector-mwdb
+          command: docker build -t opencti/connector-mwdb:rolling .
       - run:
           working_directory: ~/opencti/external-import/riskiq
           name: Build Docker image opencti/connector-riskiq
@@ -752,6 +758,7 @@ jobs:
             docker push opencti/connector-virustotal-downloader:rolling
             docker push opencti/connector-lastinfosec:rolling
             docker push opencti/connector-malpedia:rolling
+            docker push opencti/connector-mwdb:rolling
             docker push opencti/connector-riskiq:rolling
             docker push opencti/connector-valhalla:rolling
             docker push opencti/connector-cybercrime-tracker:rolling
