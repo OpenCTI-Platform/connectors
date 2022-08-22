@@ -294,6 +294,10 @@ jobs:
           name: Build Docker image opencti/connector-socprime
           command: docker build -t opencti/connector-socprime:latest . && docker tag opencti/connector-socprime:latest opencti/connector-socprime:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/urlscan
+          name: Build Docker image opencti/connector-urlscan
+          command: docker build -t opencti/connector-urlscan:latest . && docker tag opencti/connector-urlscan:latest opencti/connector-urlscan:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/external-import/maltiverse
           name: Build Docker image opencti/connector-maltiverse
           command: docker build -t opencti/connector-maltiverse:latest . && docker tag opencti/connector-maltiverse:latest opencti/connector-maltiverse:${CIRCLE_TAG}
@@ -383,6 +387,8 @@ jobs:
             docker push opencti/connector-abuseipdb:${CIRCLE_TAG}
             docker push opencti/connector-urlhaus:latest
             docker push opencti/connector-urlhaus:${CIRCLE_TAG}
+            docker push opencti/connector-urlscan:latest
+            docker push opencti/connector-urlscan:${CIRCLE_TAG}
             docker push opencti/connector-malbeacon:latest
             docker push opencti/connector-malbeacon:${CIRCLE_TAG}
             docker push opencti/connector-sekoia:latest
@@ -704,6 +710,10 @@ jobs:
           name: Build Docker image opencti/connector-socprime
           command: docker build -t opencti/connector-socprime:rolling .
       - run:
+          working_directory: ~/opencti/external-import/urlscan
+          name: Build Docker image opencti/connector-urlscan
+          command: docker build -t opencti/connector-urlscan:rolling .
+      - run:
           working_directory: ~/opencti/external-import/maltiverse
           name: Build Docker image opencti/connector-maltiverse
           command: docker build -t opencti/connector-maltiverse:rolling .
@@ -787,6 +797,7 @@ jobs:
             docker push opencti/connector-cisa-known-exploited-vulnerabilities:rolling
             docker push opencti/connector-cyber-campaign-collection:rolling
             docker push opencti/connector-socprime:rolling
+            docker push opencti/connector-urlscan:rolling
             docker push opencti/connector-maltiverse:rolling
             docker push opencti/connector-intel471:rolling
             docker push opencti/connector-orange-cyberdefense:rolling
