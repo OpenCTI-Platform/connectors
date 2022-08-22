@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Callable, List, Mapping, NamedTuple, Optional, Set
 
 import stix2
-from alienvault.client import Pulse, PulseIndicator
+from alienvault.models import Pulse, PulseIndicator
 from alienvault.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,

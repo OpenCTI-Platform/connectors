@@ -38,7 +38,7 @@ class Pulse(BaseModel):
     author_name: str
     public: bool
     revision: int
-    adversary: str
+    adversary: Optional[str]
     malware_families: List[str]
     industries: List[str]
     attack_ids: List[str]
