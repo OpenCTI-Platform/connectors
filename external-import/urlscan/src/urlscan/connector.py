@@ -19,7 +19,6 @@ from pycti.connector.opencti_connector_helper import (
 from stix2.v21 import _Observable as Observable  # noqa
 
 from .client import *
-from .hygiene import *
 from .loop import *
 from .patterns import *
 
@@ -88,7 +87,6 @@ class UrlscanConnector:
         )
 
         self._default_labels = ["Phishing", "phishfeed"]
-        self._hygiene = HygieneClient()
         self._client = UrlscanClient(urlscan_url, urlscan_api_key)
         self._loop = ConnectorLoop(self._helper, 86_400, 60, self._process_feed, False)
 
@@ -113,9 +111,6 @@ class UrlscanConnector:
 
             hostname = urlparse(url).hostname
             if validators.domain(hostname):
-                if self._hygiene.is_safe(hostname):
-                    continue
-
                 obs2 = self._create_domain_observable(hostname, "Urlscan.io Domain")
                 bundle_objects.extend(filter(None, [*obs2]))
 
