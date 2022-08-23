@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI AlienVault builder module."""
 
 import logging
@@ -6,8 +5,6 @@ from datetime import datetime
 from typing import Callable, List, Mapping, NamedTuple, Optional, Set
 
 import stix2
-from stix2.v21 import _DomainObject, _Observable  # type: ignore
-
 from alienvault.models import Pulse, PulseIndicator
 from alienvault.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
@@ -43,6 +40,7 @@ from alienvault.utils import (
     create_vulnerability_external_reference,
     get_tlp_string_marking_definition,
 )
+from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 log = logging.getLogger(__name__)
 
@@ -121,18 +119,13 @@ class PulseBundleBuilder:
         config: PulseBundleBuilderConfig,
     ) -> None:
         """Initialize pulse bundle builder."""
-        pulse = config.pulse
-        self.pulse = pulse
-
-        provider = config.provider
-        self.pulse_author = self._determine_pulse_author(pulse, provider)
-        self.provider = provider
-
+        self.pulse = config.pulse
+        self.provider = config.provider
+        self.pulse_author = self._determine_pulse_author(self.pulse, self.provider)
         self.source_name = config.source_name
-
-        object_markings = config.object_markings
-        self.object_markings = self._determine_pulse_tlp(pulse, object_markings)
-
+        self.object_markings = self._determine_pulse_tlp(
+            self.pulse, config.object_markings
+        )
         self.confidence_level = config.confidence_level
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
@@ -423,7 +416,7 @@ class PulseBundleBuilder:
         ) -> bool:
             indicator_type = pulse_indicator.type
             if indicator_type in excluded_types:
-                log.info(
+                log.debug(
                     "Excluding pulse indicator '%s' (%s)",
                     pulse_indicator.indicator,
                     indicator_type,
@@ -771,6 +764,7 @@ class PulseBundleBuilder:
 
         # XXX: Without allow_custom=True the observable with the custom property
         # will cause an unexpected property (x_opencti_score) error.
+        log.info(f"Bundling {len(bundle_objects)} objects")
         return stix2.Bundle(objects=bundle_objects, allow_custom=True)
 
     def _create_dummy_object(self) -> stix2.Identity:
