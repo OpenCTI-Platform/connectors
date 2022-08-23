@@ -1,16 +1,16 @@
 FROM python:3.10-alpine
 
-# Copy the connector
-COPY src /opt/opencti-connector-alienvault
+COPY requirements.txt /opt/opencti-connector-alienvault/
 
-# Install Python modules
-# hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev && \
     cd /opt/opencti-connector-alienvault && \
     pip install --no-cache-dir -r requirements.txt && \
     apk del git build-base && \
     rm -rf /var/cache/apk/*
+
+# Copy the connector
+COPY src /opt/opencti-connector-alienvault
 
 # Expose and entrypoint
 COPY entrypoint.sh /
