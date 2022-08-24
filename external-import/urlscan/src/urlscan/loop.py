@@ -109,7 +109,7 @@ class ConnectorLoop(threading.Thread):
             try:
                 self._callback(work_id)
             except Exception as ex:
-                log.exception(f"Unhandled exception processing connector feed: %s", ex)
+                log.exception(f"Unhandled exception processing connector feed: {ex}")
                 self._helper.api.work.to_processed(work_id, f"Failed: {ex}", True)
             else:
                 log.info("Connector successfully run")
@@ -123,10 +123,10 @@ class ConnectorLoop(threading.Thread):
             self._helper.set_state(state)
 
             next_run = last_run + timedelta(seconds=self._interval)
-            log.info(f"Last_run stored, next run at %s", next_run)
+            log.info(f"Last_run stored, next run at {next_run}")
         else:
             next_run = last_run + timedelta(seconds=self._interval)
-            log.info(f"Connector will not run, next run at %s", next_run)
+            log.info(f"Connector will not run, next run at {next_run}")
 
     def stop(self) -> None:
         """

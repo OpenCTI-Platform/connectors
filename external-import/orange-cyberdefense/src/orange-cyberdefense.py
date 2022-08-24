@@ -368,7 +368,7 @@ class OrangeCyberDefense:
         }
         params = (
             ("timestamp_updated_since", current_state["worldwatch"]),
-            ("order_by", "timestamp_updated"),
+            ("ordering", "timestamp_updated"),
         )
         self.helper.log_info("Iterating " + url)
         response = requests.get(url, headers=headers, params=params)
