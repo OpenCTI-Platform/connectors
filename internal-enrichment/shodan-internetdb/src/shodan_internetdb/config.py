@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import os
 import re
-from datetime import timedelta
-from typing import Any, Dict, ForwardRef, List, Optional
+from typing import Any, Dict, ForwardRef
 
 import stix2
 from pydantic import BaseModel, BaseSettings, Field, validator

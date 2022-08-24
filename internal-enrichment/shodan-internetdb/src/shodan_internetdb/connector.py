@@ -12,7 +12,7 @@ import yaml
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from requests.exceptions import RequestException
 
-from .client import *
+from .client import ShodanInternetDbClient, ShodanResult
 from .config import RootConfig
 
 __all__ = [
@@ -141,8 +141,7 @@ class ShodanInternetDBConnector:
 
         # Update the observable so the domain/indicator can use it
         observable["x_opencti_description"] = description
-
-        log.debug(f"Updating description:\n%s", description)
+        log.debug(f"Updating description:\n{description}")
         self._helper.api.stix_cyber_observable.update_field(
             id=observable["id"],
             input={

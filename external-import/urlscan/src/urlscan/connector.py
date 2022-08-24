@@ -18,9 +18,13 @@ from pycti.connector.opencti_connector_helper import (
 )
 from stix2.v21 import _Observable as Observable  # noqa
 
-from .client import *
-from .loop import *
-from .patterns import *
+from .client import UrlscanClient
+from .loop import ConnectorLoop
+from .patterns import (
+    IndicatorPattern,
+    create_indicator_pattern_url,
+    create_indicator_pattern_domain_name,
+)
 
 __all__ = [
     "UrlscanConnector",
