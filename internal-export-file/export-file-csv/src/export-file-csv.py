@@ -215,6 +215,7 @@ class ExportFileCsv:
                 "Infrastructure": self.helper.api.infrastructure.list,
                 "Intrusion-Set": self.helper.api.intrusion_set.list,
                 "Location": self.helper.api.location.list,
+                "Language": self.helper.api.language.list,
                 "Malware": self.helper.api.malware.list,
                 "Threat-Actor": self.helper.api.threat_actor.list,
                 "Tool": self.helper.api.tool.list,
