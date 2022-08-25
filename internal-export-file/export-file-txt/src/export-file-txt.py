@@ -51,6 +51,7 @@ class ExportFileTxt:
             "Report": self.helper.api.report.list,
             "Course-Of-Action": self.helper.api.course_of_action.list,
             "Identity": self.helper.api.identity.list,
+            "Language": self.helper.api.language.list,
             "Indicator": self.helper.api.indicator.list,
             "Infrastructure": self.helper.api.infrastructure.list,
             "Intrusion-Set": self.helper.api.intrusion_set.list,

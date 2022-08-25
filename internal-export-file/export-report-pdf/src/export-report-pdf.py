@@ -373,6 +373,7 @@ class ExportReportPdf:
             "tool": self.helper.api.tool.read,
             "channel": self.helper.api.channel.read,
             "narrative": self.helper.api.narrative.read,
+            "language": self.helper.api.language.read,
             "vulnerability": self.helper.api.vulnerability.read,
             "incident": self.helper.api.incident.read,
             "city": self.helper.api.location.read,
