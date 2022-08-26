@@ -6,7 +6,6 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock
 
 import stix2
-
 from src.virustotal.builder import VirusTotalBuilder
 
 

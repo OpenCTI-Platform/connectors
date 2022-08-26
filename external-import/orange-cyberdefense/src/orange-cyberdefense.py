@@ -1,24 +1,20 @@
+import base64
 import datetime
+import json
 import os
 import sys
 import time
-import json
 import uuid
+from urllib import request
+
 import html2text
 import requests
-import base64
 import stix2
 import yaml
-
 from bs4 import BeautifulSoup
-from dateutil.parser import parse
-from urllib import request
 from datalake import Datalake, Output
-from pycti import (
-    Report,
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from dateutil.parser import parse
+from pycti import OpenCTIConnectorHelper, Report, get_config_variable
 
 
 class OrangeCyberDefense:

@@ -4,13 +4,13 @@ import json
 import os
 import sys
 import time
-import yaml
-import taxii2client.v20 as tx20
-import taxii2client.v21 as tx21
-
 from datetime import datetime, timedelta
 from typing import Dict
-from pycti import OpenCTIConnectorHelper, get_config_variable, StixCyberObservableTypes
+
+import taxii2client.v20 as tx20
+import taxii2client.v21 as tx21
+import yaml
+from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes, get_config_variable
 from requests.exceptions import HTTPError
 from taxii2client.exceptions import TAXIIServiceException
 

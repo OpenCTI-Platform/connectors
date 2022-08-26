@@ -4,10 +4,9 @@ import time
 from datetime import datetime
 
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from cape.cape import cuckoo, cuckooReport
 from cape.telemetry import openCTIInterface
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class capeConnector:

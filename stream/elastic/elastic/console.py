@@ -19,20 +19,19 @@ import datetime
 import json
 import logging
 import os
-import sys
 import re
+import sys
 from importlib.metadata import version
 from typing import OrderedDict
 
 import yaml
+from dateutil import parser
 from docopt import docopt
 
 from . import __DATA_DIR__, LOGGER_NAME, __version__
 from .conf import defaults
 from .elastic import ElasticConnector
 from .utils import add_branch, dict_merge, remove_nones, setup_logger
-
-from dateutil import parser
 
 BANNER = f"""
 

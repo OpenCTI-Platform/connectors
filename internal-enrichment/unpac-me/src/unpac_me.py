@@ -8,7 +8,6 @@ import magic
 import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
-
 from unpac_me_api_client import UnpacMeApi, UnpacMeStatus
 
 

@@ -3,12 +3,9 @@
 import json
 from pathlib import Path
 
-import yaml
 import stix2
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 from .builder import VirusTotalBuilder
 from .client import VirusTotalClient

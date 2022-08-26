@@ -1,30 +1,20 @@
+import calendar
 import os
-import time
-import requests
 import random
-import stix2
-from typing import Any, Dict, Mapping, Optional
+import re
+import time
+import urllib.parse
 from datetime import datetime
+from typing import Any, Dict, Mapping, Optional
+
+import requests
+import stix2
+import yaml
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
-import calendar
-import re
-import yaml
-
-
-from pycti import OpenCTIConnectorHelper, get_config_variable, Malware
-
-from stix2 import (
-    URL,
-    Relationship,
-    File,
-    IPv4Address,
-    Bundle,
-)
-
+from pycti import Malware, OpenCTIConnectorHelper, get_config_variable
+from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
-import urllib.parse
-
 
 __version__ = "5.3.7"
 BANNER = f"""

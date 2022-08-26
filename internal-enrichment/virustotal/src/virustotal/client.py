@@ -3,8 +3,8 @@
 import base64
 import json
 
-from pycti import OpenCTIConnectorHelper
 import requests
+from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
