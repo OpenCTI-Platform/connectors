@@ -11,9 +11,8 @@ from datetime import datetime
 
 import certifi
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from cvetostix2 import convert
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class Cve:

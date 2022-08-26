@@ -10,6 +10,8 @@ from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
 )
+from socprime.mitre_attack import MitreAttack
+from socprime.tdm_api_client import ApiClient
 from stix2 import (
     AttackPattern,
     Bundle,
@@ -20,9 +22,6 @@ from stix2 import (
     ThreatActor,
     Tool,
 )
-
-from socprime.mitre_attack import MitreAttack
-from socprime.tdm_api_client import ApiClient
 
 
 class SocprimeConnector:

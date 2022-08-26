@@ -2,9 +2,9 @@ import json
 import os
 import sys
 import time
-import yaml
-
 from datetime import datetime
+
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

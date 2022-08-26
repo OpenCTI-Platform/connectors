@@ -1,21 +1,16 @@
+import json
 import os
+import re
+import ssl
 import time
+import urllib
+from datetime import datetime
+from urllib import parse
+
+import certifi
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import (
-    IPv4Address,
-    IPv6Address,
-    TLP_WHITE,
-    ExternalReference,
-    Bundle,
-)
-from datetime import datetime
-import certifi
-import ssl
-import urllib
-from urllib import parse
-import json
-import re
+from stix2 import TLP_WHITE, Bundle, ExternalReference, IPv4Address, IPv6Address
 
 
 class abuseipdbipblacklistimport:

@@ -6,11 +6,11 @@ import json
 import os
 import queue
 import threading
+
 import requests
 import yaml
-
-from stix_shifter.stix_translation import stix_translation
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix_shifter.stix_translation import stix_translation
 
 q = queue.Queue()
 

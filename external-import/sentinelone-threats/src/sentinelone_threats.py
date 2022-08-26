@@ -5,7 +5,6 @@ import time
 import magic
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from s1api import SentinelOneApi
 
 

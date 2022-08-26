@@ -4,10 +4,10 @@ import re
 import sys
 import time
 from datetime import datetime
-from dateutil.parser import parse
 
 import stix2
 import yaml
+from dateutil.parser import parse
 from pycti import (
     AttackPattern,
     Identity,

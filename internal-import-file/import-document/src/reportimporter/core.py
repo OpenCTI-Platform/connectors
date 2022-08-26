@@ -9,8 +9,8 @@ import yaml
 from pycti import (
     OpenCTIConnectorHelper,
     Report,
-    get_config_variable,
     StixCoreRelationship,
+    get_config_variable,
 )
 from pydantic import BaseModel
 from reportimporter.constants import (

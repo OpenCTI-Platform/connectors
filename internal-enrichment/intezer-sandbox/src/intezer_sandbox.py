@@ -5,9 +5,8 @@ import sys
 import time
 
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from intezer_api import IntezerApi
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class IntezerSandboxConnector:

@@ -22,8 +22,8 @@ from .client import UrlscanClient
 from .loop import ConnectorLoop
 from .patterns import (
     IndicatorPattern,
-    create_indicator_pattern_url,
     create_indicator_pattern_domain_name,
+    create_indicator_pattern_url,
 )
 
 __all__ = [

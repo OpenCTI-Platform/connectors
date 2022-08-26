@@ -3,8 +3,8 @@
 from typing import Any
 from urllib.parse import urljoin
 
-from pycti import OpenCTIConnectorHelper
 import requests
+from pycti import OpenCTIConnectorHelper
 
 
 class MalpediaClient:
