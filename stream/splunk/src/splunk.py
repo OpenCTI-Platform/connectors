@@ -6,9 +6,10 @@ import json
 import os
 import queue
 import threading
-
 import requests
 import yaml
+
+from stix_shifter.stix_translation import stix_translation
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 q = queue.Queue()
@@ -95,6 +96,16 @@ class SplunkConnector:
             + "/storage/collections"
             + uri
         )
+        if (
+            "type" in payload
+            and payload["type"] == "indicator"
+            and payload["pattern_type"].startswith("stix")
+        ):
+            translation = stix_translation.StixTranslation()
+            response = translation.translate(
+                "splunk", "query", "{}", payload["pattern"]
+            )
+            payload["splunk_queries"] = response
         if method == "get":
             r = requests.get(
                 url,
@@ -129,7 +140,6 @@ class SplunkConnector:
             raise ValueError("Unsupported method")
 
         if r.status_code < 500:
-            print(r.text)
             try:
                 return r.json()
             except:
