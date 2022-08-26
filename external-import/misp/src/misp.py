@@ -180,9 +180,8 @@ class Misp:
             ["misp", "create_object_observables"],
             config,
         )
-        self.misp_report_type = (
-            get_config_variable("MISP_REPORT_TYPE", ["misp", "report_type"], config)
-            or "MISP Event"
+        self.misp_report_type = get_config_variable(
+            "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
         )
         self.misp_import_from_date = get_config_variable(
             "MISP_IMPORT_FROM_DATE", ["misp", "import_from_date"], config
