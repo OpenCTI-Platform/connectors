@@ -4,6 +4,7 @@ import re
 import sys
 import time
 from datetime import datetime
+from dateutil.parser import parse
 
 import stix2
 import yaml
@@ -269,40 +270,16 @@ class Misp:
                 self.helper.connect_id, friendly_name
             )
             current_state = self.helper.get_state()
-            if (
-                current_state is not None
-                and "last_run" in current_state
-                and "latest_event_timestamp" in current_state
-                and current_state["latest_event_timestamp"] is not None
-            ):
-                last_run = datetime.utcfromtimestamp(current_state["last_run"])
-                latest_event_timestamp = current_state["latest_event_timestamp"]
-                self.helper.log_info(
-                    "Connector last run: " + last_run.strftime("%Y-%m-%d %H:%M:%S")
-                )
-                self.helper.log_info(
-                    "Connector latest event timestamp: "
-                    + datetime.utcfromtimestamp(latest_event_timestamp).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                )
-            elif current_state is not None and "last_run" in current_state:
-                last_run = datetime.utcfromtimestamp(current_state["last_run"])
-                latest_event_timestamp = current_state["last_run"]
-                self.helper.log_info(
-                    "State was incomplete. Using last_run for latest_event_timestamp"
-                )
-                self.helper.log_info(
-                    "Connector last run: " + last_run.strftime("%Y-%m-%d %H:%M:%S")
-                )
-                self.helper.log_info(
-                    "Connector latest event timestamp: "
-                    + datetime.utcfromtimestamp(latest_event_timestamp).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                )
+            if current_state is not None and "last_run" in current_state:
+                if isinstance(current_state["last_run"], int):
+                    last_run = datetime.utcfromtimestamp(current_state["last_run"])
+                else:
+                    last_run = parse(current_state["last_run"])
+                last_run_date = last_run.isoformat()
+                self.helper.log_info("Connector last run: " + last_run_date)
             else:
-                latest_event_timestamp = None
+                last_run = parse(self.misp_import_from_date)
+                last_run_date = last_run.isoformat()
                 self.helper.log_info("Connector has never run")
 
             # If import with tags
@@ -325,22 +302,15 @@ class Misp:
                     not_parameters=not_parameters if len(not_parameters) > 0 else None,
                 )
 
-            # If import from a specific date
-            import_from_date = None
-            if self.misp_import_from_date is not None:
-                import_from_date = datetime.fromisoformat(self.misp_import_from_date)
-
             # Prepare the query
             kwargs = dict()
+
+            # Put the date
+            kwargs[self.misp_datetime_attribute] = last_run_date
+
+            # Complex query date
             if complex_query_tag is not None:
                 kwargs["tags"] = complex_query_tag
-            if latest_event_timestamp is not None:
-                next_event_timestamp = latest_event_timestamp + 1
-                kwargs[self.misp_datetime_attribute] = next_event_timestamp
-            elif import_from_date is not None:
-                kwargs[self.misp_datetime_attribute] = import_from_date.strftime(
-                    "%Y-%m-%d"
-                )
 
             # With attachments
             if self.import_with_attachments:
@@ -368,36 +338,30 @@ class Misp:
                         events = self.misp.search("events", **kwargs)
                     except Exception as e:
                         self.helper.log_error(f"Error fetching misp event again: {e}")
+                        break
 
                 self.helper.log_info("MISP returned " + str(len(events)) + " events.")
                 number_events = number_events + len(events)
+
+                # Update the state
+                self.helper.set_state({"last_run": now.isoformat()})
+
                 # Break if no more result
                 if len(events) == 0:
                     break
 
-                event_timestamp = self.process_events(work_id, events)
-                if event_timestamp is not None:
-                    if latest_event_timestamp is None or (
-                        latest_event_timestamp is not None
-                        and event_timestamp > latest_event_timestamp
-                    ):
-                        latest_event_timestamp = event_timestamp
+                # Process the event
+                self.process_events(work_id, events)
+
+                # Next page
                 current_page += 1
             message = (
                 "Connector successfully run ("
                 + str(number_events)
                 + " events have been processed), storing last_run as "
-                + str(timestamp)
-                + ", and latest_event_timestamp as "
-                + str(latest_event_timestamp)
+                + now.strftime("%Y-%m-%d %H:%M:%S")
             )
             self.helper.log_info(message)
-            self.helper.set_state(
-                {
-                    "last_run": timestamp,
-                    "latest_event_timestamp": latest_event_timestamp,
-                }
-            )
             self.helper.api.work.to_processed(work_id, message)
 
             if self.helper.connect_run_and_terminate:
