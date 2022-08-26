@@ -194,7 +194,6 @@ class CyberMonitor:
                     "Connector last run: "
                     + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
                 )
-                last_run = None
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
