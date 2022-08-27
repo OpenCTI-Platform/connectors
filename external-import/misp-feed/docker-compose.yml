@@ -1,0 +1,28 @@
+version: '3'
+services:
+  connector-misp-feed:
+    image: opencti/connector-misp-feed:5.3.7
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - "CONNECTOR_NAME=MISP Feed"
+      - CONNECTOR_SCOPE=misp-feed
+      - CONNECTOR_CONFIDENCE_LEVEL=20 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - CONNECTOR_LOG_LEVEL=info
+      - MISP_FEED_URL=https://changeme.com/misp-feed
+      - MISP_FEED_SSL_VERIFY=true # Required
+      - MISP_FEED_IMPORT_FROM_DATE=2000-01-01 # Required, import all event from this date
+      - MISP_FEED_CREATE_REPORTS=true # Required, create report for MISP event
+      - MISP_FEED_REPORT_TYPE=misp-event
+      - MISP_FEED_CREATE_INDICATORS=true # Required, create indicators from attributes
+      - MISP_FEED_CREATE_OBSERVABLES=true # Required, create observables from attributes
+      - MISP_FEED_CREATE_OBJECT_OBSERVABLES=true # Required, create text observables for MISP objects
+      - MISP_FEED_IMPORT_TO_IDS_NO_SCORE=40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
+      - MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false #  Optional, import unsupported observable as x_opencti_text
+      - MISP_FEED_IMPORT_WITH_ATTACHMENTS=false # Optional, try to import a PDF file from the attachment attribute
+      - MISP_FEED_INTERVAL=5 # Required, in minutes
+    restart: always
