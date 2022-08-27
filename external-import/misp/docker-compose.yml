@@ -15,14 +15,14 @@ services:
       - MISP_URL=http://localhost # Required
       - MISP_REFERENCE_URL= # Optional, will be used to create external reference to MISP event (default is "url")
       - MISP_KEY=ChangeMe # Required
-      - MISP_SSL_VERIFY=False # Required
+      - MISP_SSL_VERIFY=false # Required
       - MISP_DATETIME_ATTRIBUTE=timestamp # Required, filter to be used in query for new MISP events
-      - MISP_CREATE_REPORTS=True # Required, create report for MISP event
-      - MISP_CREATE_INDICATORS=True # Required, create indicators from attributes
-      - MISP_CREATE_OBSERVABLES=True # Required, create observables from attributes
-      - MISP_CREATE_OBJECT_OBSERVABLES=True # Required, create text observables for MISP objects
+      - MISP_CREATE_REPORTS=true # Required, create report for MISP event
+      - MISP_CREATE_INDICATORS=true # Required, create indicators from attributes
+      - MISP_CREATE_OBSERVABLES=true # Required, create observables from attributes
+      - MISP_CREATE_OBJECT_OBSERVABLES=true # Required, create text observables for MISP objects
       - MISP_REPORT_TYPE=misp-event # Optional, report_class if creating report for event
-      - MISP_IMPORT_FROM_DATE=2000-01-01 # Optional, import all event from this date
+      - MISP_IMPORT_FROM_DATE=2000-01-01 # Required, import all event from this date
       - MISP_IMPORT_TAGS=opencti:import,type:osint # Optional, list of tags used for import events
       - MISP_IMPORT_TAGS_NOT= # Optional, list of tags to not include
       - MISP_IMPORT_CREATOR_ORGS= # Optional, only import events created by those orgs (put the identifiers here)
@@ -32,9 +32,9 @@ services:
       - MISP_IMPORT_KEYWORD= # Optional, search only events based on a keyword
       - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3 # Optional, only import events with the given distribution levels
       - MISP_IMPORT_THREAT_LEVELS=1,2,3,4 # Optional only import events with the given threat levels
-      - MISP_IMPORT_ONLY_PUBLISHED=False
-      - MISP_IMPORT_WITH_ATTACHMENTS=False # Optional, try to import a PDF file from the attachment attribute
+      - MISP_IMPORT_ONLY_PUBLISHED=false
+      - MISP_IMPORT_WITH_ATTACHMENTS=false # Optional, try to import a PDF file from the attachment attribute
       - MISP_IMPORT_TO_IDS_NO_SCORE=40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
-      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=False #  Optional, import unsupported observable as x_opencti_text
+      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false #  Optional, import unsupported observable as x_opencti_text
       - MISP_INTERVAL=1 # Required, in minutes
     restart: always

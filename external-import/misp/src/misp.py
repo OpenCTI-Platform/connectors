@@ -24,27 +24,11 @@ from pycti import (
     get_config_variable,
 )
 from pymisp import ExpandedPyMISP
-from stix2 import (
-    URL,
-    AutonomousSystem,
-    CustomObservable,
-    Directory,
-    DomainName,
-    EmailAddress,
-    EmailMessage,
-    File,
-    IPv4Address,
-    IPv6Address,
-    MACAddress,
-    Mutex,
-    WindowsRegistryKey,
-    WindowsRegistryValueType,
-)
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
 
 
-@CustomObservable(
+@stix2.CustomObservable(
     "cryptocurrency-wallet",
     [
         ("value", StringProperty(required=True)),
@@ -64,7 +48,7 @@ class CryptocurrencyWallet:
     pass
 
 
-@CustomObservable(
+@stix2.CustomObservable(
     "hostname",
     [
         ("value", StringProperty(required=True)),
@@ -84,7 +68,7 @@ class Hostname:
     pass
 
 
-@CustomObservable(
+@stix2.CustomObservable(
     "text",
     [
         ("value", StringProperty(required=True)),
@@ -166,7 +150,7 @@ class Misp:
             False,
             "timestamp",
         )
-        self.misp_create_report = get_config_variable(
+        self.misp_create_reports = get_config_variable(
             "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
         )
         self.misp_create_indicators = get_config_variable(
@@ -179,6 +163,8 @@ class Misp:
             "MISP_CREATE_OBJECT_OBSERVABLES",
             ["misp", "create_object_observables"],
             config,
+            False,
+            False,
         )
         self.misp_report_type = get_config_variable(
             "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
@@ -377,7 +363,6 @@ class Misp:
         import_owner_orgs_not = None
         import_distribution_levels = None
         import_threat_levels = None
-        latest_event_timestamp = None
         if self.import_creator_orgs is not None:
             import_creator_orgs = self.import_creator_orgs.split(",")
         if self.import_creator_orgs_not is not None:
@@ -393,14 +378,6 @@ class Misp:
 
         for event in events:
             self.helper.log_info("Processing event " + event["Event"]["uuid"])
-            event_timestamp = int(event["Event"][self.misp_datetime_attribute])
-            # need to check if timestamp is more recent than the previous event since
-            # events are not ordered by timestamp in API response
-            if (
-                latest_event_timestamp is None
-                or event_timestamp > latest_event_timestamp
-            ):
-                latest_event_timestamp = event_timestamp
             # Check against filter
             if (
                 import_creator_orgs is not None
@@ -495,7 +472,7 @@ class Misp:
                 event_markings = [stix2.TLP_WHITE]
             # Elements
             event_elements = self.prepare_elements(
-                event["Event"]["Galaxy"],
+                event["Event"].get("Galaxy", []),
                 event["Event"].get("Tag", []),
                 author,
                 event_markings,
@@ -554,7 +531,7 @@ class Misp:
             objects_relationships = []
             objects_observables = []
             event_threat_level = event["Event"]["threat_level_id"]
-            for object in event["Event"]["Object"]:
+            for object in event["Event"].get("Object", []):
                 attribute_external_references = []
                 for attribute in object["Attribute"]:
                     if (
@@ -710,8 +687,8 @@ class Misp:
                     added_observables.append(object_observable["id"])
 
             # Link all objects with each other, now so we can find the correct entity type prefix in bundle_objects
-            for object in event["Event"]["Object"]:
-                for ref in object["ObjectReference"]:
+            for object in event["Event"].get("Object", []):
+                for ref in object.get("ObjectReference", []):
                     ref_src = ref.get("source_uuid")
                     ref_target = ref.get("referenced_uuid")
                     if ref_src is not None and ref_target is not None:
@@ -763,7 +740,7 @@ class Misp:
 
             # Create the report if needed
             # Report in STIX must have at least one object_refs
-            if self.misp_create_report and len(object_refs) > 0:
+            if self.misp_create_reports and len(object_refs) > 0:
                 report = stix2.Report(
                     id=Report.generate_id(
                         event["Event"]["info"],
@@ -807,7 +784,7 @@ class Misp:
                     allow_custom=True,
                 )
                 bundle_objects.append(report)
-                for note in event["Event"]["EventReport"]:
+                for note in event["Event"].get("EventReport", []):
                     note = stix2.Note(
                         id=Note.generate_id(),
                         confidence=self.helper.connect_confidence_level,
@@ -831,7 +808,6 @@ class Misp:
             self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, update=self.update_existing_data
             )
-        return latest_event_timestamp
 
     def _get_pdf_file(self, attribute):
         if not self.import_with_attachments:
@@ -871,7 +847,7 @@ class Misp:
 
     def process_attribute(
         self,
-        author,
+        author: stix2.Identity,
         event_elements,
         event_markings,
         event_labels,
@@ -906,14 +882,11 @@ class Misp:
                 attribute_markings = event_markings
 
             # Elements
-            tags = []
-            galaxies = []
-            if "Tag" in attribute:
-                tags = attribute["Tag"]
-            if "Galaxy" in attribute:
-                galaxies = attribute["Galaxy"]
             attribute_elements = self.prepare_elements(
-                galaxies, tags, author, attribute_markings
+                attribute.get("Galaxy", []),
+                attribute.get("Tag", []),
+                author,
+                attribute_markings,
             )
 
             ### Create the indicator
@@ -1005,13 +978,13 @@ class Misp:
                     }
                     observable = None
                     if observable_type == "Autonomous-System":
-                        observable = AutonomousSystem(
+                        observable = stix2.AutonomousSystem(
                             number=observable_value.replace("AS", ""),
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Mac-Addr":
-                        observable = MACAddress(
+                        observable = stix2.MACAddress(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
@@ -1023,50 +996,50 @@ class Misp:
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Domain-Name":
-                        observable = DomainName(
+                        observable = stix2.DomainName(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "IPv4-Addr":
-                        observable = IPv4Address(
+                        observable = stix2.IPv4Address(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "IPv6-Addr":
-                        observable = IPv6Address(
+                        observable = stix2.IPv6Address(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Url":
-                        observable = URL(
+                        observable = stix2.URL(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Email-Addr":
-                        observable = EmailAddress(
+                        observable = stix2.EmailAddress(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Email-Message":
-                        observable = EmailMessage(
+                        observable = stix2.EmailMessage(
                             subject=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Mutex":
-                        observable = Mutex(
+                        observable = stix2.Mutex(
                             name=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "File":
                         if OPENCTISTIX2[observable_resolver]["path"][0] == "name":
-                            observable = File(
+                            observable = stix2.File(
                                 name=observable_value,
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
@@ -1076,33 +1049,33 @@ class Misp:
                             hashes[
                                 OPENCTISTIX2[observable_resolver]["path"][1]
                             ] = observable_value
-                            observable = File(
+                            observable = stix2.File(
                                 name=file_name,
                                 hashes=hashes,
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
                             )
                     elif observable_type == "Directory":
-                        observable = Directory(
+                        observable = stix2.Directory(
                             path=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Windows-Registry-Key":
-                        observable = WindowsRegistryKey(
+                        observable = stix2.WindowsRegistryKey(
                             key=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Windows-Registry-Value-Type":
-                        observable = WindowsRegistryValueType(
+                        observable = stix2.WindowsRegistryValueType(
                             data=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "X509-Certificate":
                         if OPENCTISTIX2[observable_resolver]["path"][0] == "issuer":
-                            observable = File(
+                            observable = stix2.File(
                                 issuer=observable_value,
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
@@ -1111,7 +1084,7 @@ class Misp:
                             OPENCTISTIX2[observable_resolver]["path"][1]
                             == "serial_number"
                         ):
-                            observable = File(
+                            observable = stix2.File(
                                 serial_number=observable_value,
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
@@ -1498,7 +1471,6 @@ class Misp:
             "countries": [],
         }
         added_names = []
-        # TODO: process sector & countries from galaxies?
         for galaxy in galaxies:
             # Get the linked intrusion sets
             if (
@@ -1893,6 +1865,8 @@ class Misp:
     def resolve_markings(self, tags, with_default=True):
         markings = []
         for tag in tags:
+            if tag["name"] == "tlp:clear":
+                markings.append(stix2.TLP_WHITE)
             if tag["name"] == "tlp:white":
                 markings.append(stix2.TLP_WHITE)
             if tag["name"] == "tlp:green":

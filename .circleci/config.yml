@@ -326,6 +326,10 @@ jobs:
           name: Build Docker image opencti/connector-abuseipdb-ipblacklist
           command: docker build -t opencti/connector-abuseipdb-ipblacklist:latest . && docker tag opencti/connector-abuseipdb-ipblacklist:latest opencti/connector-abuseipdb-ipblacklist:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/misp-feed
+          name: Build Docker image opencti/connector-misp-feed
+          command: docker build -t opencti/connector-misp-feed:latest . && docker tag opencti/connector-misp-feed:latest opencti/connector-misp-feed:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -467,6 +471,8 @@ jobs:
             docker push opencti/connector-citalid:${CIRCLE_TAG}
             docker push opencti/connector-abuseipdb-ipblacklist:latest
             docker push opencti/connector-abuseipdb-ipblacklist:${CIRCLE_TAG}
+            docker push opencti/connector-misp-feed:latest
+            docker push opencti/connector-misp-feed:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -754,6 +760,10 @@ jobs:
           name: Build Docker image opencti/connector-abuseipdb-ipblacklist
           command: docker build -t opencti/connector-abuseipdb-ipblacklist:rolling .
       - run:
+          working_directory: ~/opencti/external-import/misp-feed
+          name: Build Docker image opencti/connector-misp-feed
+          command: docker build -t opencti/connector-misp-feed:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -825,6 +835,7 @@ jobs:
             docker push opencti/connector-orange-cyberdefense:rolling
             docker push opencti/connector-citalid:rolling
             docker push opencti/connector-abuseipdb-ipblacklist:rolling
+            docker push opencti/connector-misp-feed:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
