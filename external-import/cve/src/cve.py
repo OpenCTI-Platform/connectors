@@ -37,8 +37,8 @@ class Cve:
             ["cve", "history_data_feed"],
             config,
         )
-        self.cve_history_start_date = get_config_variable(
-            "CVE_HISTORY_START_DATE", ["cve", "history_start_date"], config, True
+        self.cve_history_start_year = get_config_variable(
+            "CVE_HISTORY_START_YEAR", ["cve", "history_start_year"], config, True, 2002
         )
         self.cve_interval = get_config_variable(
             "CVE_INTERVAL", ["cve", "interval"], config, True
@@ -124,9 +124,13 @@ class Cve:
                 self.convert_and_send(self.cve_nvd_data_feed, work_id)
                 # If import history and never run
                 if last_run is None and self.cve_import_history:
+                    self.helper.log_info(
+                        "Connector must import the history because it has never run"
+                    )
                     now = datetime.now()
-                    years = list(range(self.cve_history_start_date, now.year + 1))
+                    years = list(range(self.cve_history_start_year, now.year + 1))
                     for year in years:
+                        self.helper.log_info("Importing year " + str(year))
                         self.convert_and_send(
                             f"{self.cve_history_data_feed}nvdcve-1.1-{year}.json.gz",
                             work_id,
