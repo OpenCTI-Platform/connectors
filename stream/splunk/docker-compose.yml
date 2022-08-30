@@ -21,4 +21,5 @@ services:
       - SPLUNK_SSL_VERIFY=true
       - SPLUNK_APP=search
       - SPLUNK_KV_STORE_NAME=opencti
+      # - SPLUNK_START_TIMESTAMP=2020-05-01T00:00:00 #Comment this line for first time pull. Time format 2020-12-31T00:00:00 or Epoch 1607731200 
     restart: always

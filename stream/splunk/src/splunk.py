@@ -6,7 +6,8 @@ import json
 import os
 import queue
 import threading
-
+import re
+import time
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -45,6 +46,46 @@ class SplunkConnector:
         self.splunk_kv_store_name = get_config_variable(
             "SPLUNK_KV_STORE_NAME", ["splunk", "kv_store_name"], config
         )
+
+        self.splunk_start_timestamp = get_config_variable(
+            "SPLUNK_START_TIMESTAMP", ["splunk", "start_timestamp"], config
+        )
+
+        # Getting last event epoch time
+        current_state = None
+        try:
+            current_state = self.helper.get_state().get("connectorLastEventId")
+            if "-" not in current_state:
+                current_state = str(current_state) + "-0"
+                self.helper.set_state({"connectorLastEventId": current_state})
+                self.helper.log_debug("Starting from previous state " + current_state)
+
+        except:
+            self.helper.log_debug("No previous state")
+
+        self.helper.log_debug(
+            "Start time set in the config file " + str(self.splunk_start_timestamp)
+        )
+
+        if self.splunk_start_timestamp and current_state is None:
+            if re.match(
+                "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}",
+                self.splunk_start_timestamp,
+            ):
+                pattern = "%Y-%m-%dT%H:%M:%S"
+                epoch = int(
+                    time.mktime(time.strptime(self.splunk_start_timestamp, pattern))
+                )
+                start_timestamp = str(epoch) + "-0"
+                self.helper.set_state({"connectorLastEventId": str(start_timestamp)})
+
+                self.helper.log_debug("New Time Set " + str(start_timestamp))
+            else:
+
+                current_state = str(self.splunk_start_timestamp) + "-0"
+                self.helper.set_state({"connectorLastEventId": current_state})
+
+        self.helper.log_debug("Start time to pull data from " + str(current_state))
 
         if (
             self.helper.connect_live_stream_id is None

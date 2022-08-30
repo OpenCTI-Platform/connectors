@@ -27,3 +27,4 @@ This connector allows organizations to feed a **Splunk** KV Store using OpenCTI 
 | `splunk_ssl_verify`                  | `SPLUNK_SSL_VERIFY`                 | Yes          | Enable the SSL certificate check for all instances (default: `true`)                          |
 | `splunk_app`                         | `SPLUNK_APP`                        | Yes          | The app of the KV Store for all instances.                                                    |
 | `splunk_kv_store_name`               | `SPLUNK_KV_STORE_NAME`              | Yes          | The name of the KV Store for all instances.                                                                    |
+| `splunk_start_timestamp`               | `SPLUNK_START_TIMESTAMP`              | No          | To pull from specific time or comment the line out to pull from the initial time the instance was built. Time format 2020-12-31T00:00:00 or Epoch 1607731200 .                |
