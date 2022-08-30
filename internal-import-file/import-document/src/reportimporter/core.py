@@ -339,34 +339,42 @@ class ReportImporter:
         bypass_validation: bool,
         file_name: str,
     ) -> int:
-
         if len(observables) == 0 and len(entities) == 0:
             return 0
-
         observables_ids = [o["id"] for o in observables]
         entities_ids = [e["id"] for e in entities]
-
         if entity is not None:
             entity_stix_bundle = self.helper.api.stix2.export_entity(
                 entity["entity_type"], entity["id"]
             )
+            if len(entity_stix_bundle["objects"]) == 0:
+                raise ValueError("Entity cannot be found or exported")
+            entity_stix = [
+                object
+                for object in entity_stix_bundle["objects"]
+                if object["id"] == entity["standard_id"]
+            ][0]
             relationships = []
             # For containers, just insert everything in it
             if (
-                entity_stix_bundle["type"] == "report"
-                or entity_stix_bundle["type"] == "note"
-                or entity_stix_bundle["type"] == "opinion"
+                entity_stix["type"] == "report"
+                or entity_stix["type"] == "note"
+                or entity_stix["type"] == "opinion"
             ):
-                entity_stix_bundle["object_refs"] = (
-                    entity_stix_bundle["object_refs"] + observables_ids + entities_ids
+                entity_stix["object_refs"] = (
+                    entity_stix["object_refs"] + observables_ids + entities_ids
+                    if "object_refs" in entity_stix
+                    else observables_ids + entities_ids
                 )
-                entity_stix_bundle["x_opencti_files"] = (
+                entity_stix["x_opencti_files"] = (
                     [self.file] if self.file is not None else []
                 )
             # For observed data, just insert all observables in it
-            elif entity_stix_bundle["type"] == "observed-data":
-                entity_stix_bundle["object_refs"] = (
-                    entity_stix_bundle["object_refs"] + observables_ids
+            elif entity_stix["type"] == "observed-data":
+                entity_stix["object_refs"] = (
+                    entity_stix["object_refs"] + observables_ids
+                    if "object_refs" in entity_stix
+                    else observables_ids
                 )
             else:
                 # For all other entities, relate all observables
@@ -378,11 +386,11 @@ class ReportImporter:
                             ),
                             relationship_type="related-to",
                             source_ref=observable["id"],
-                            target_ref=entity_stix_bundle["id"],
+                            target_ref=entity_stix["id"],
                             allow_custom=True,
                         )
                     )
-                if entity["entity_type"] == "Incident":
+                if entity_stix["type"] == "incident":
                     for entity in entities:
                         # Incident attributed-to Threats
                         if (
@@ -394,11 +402,11 @@ class ReportImporter:
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
                                         "attributed-to",
-                                        entity_stix_bundle["id"],
+                                        entity_stix["id"],
                                         entity["id"],
                                     ),
                                     relationship_type="attributed-to",
-                                    source_ref=entity_stix_bundle["id"],
+                                    source_ref=entity_stix["id"],
                                     target_ref=entity["id"],
                                     allow_custom=True,
                                 )
@@ -409,11 +417,11 @@ class ReportImporter:
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
                                         "targets",
-                                        entity_stix_bundle["id"],
+                                        entity_stix["id"],
                                         entity["id"],
                                     ),
                                     relationship_type="targets",
-                                    source_ref=entity_stix_bundle["id"],
+                                    source_ref=entity_stix["id"],
                                     target_ref=entity["id"],
                                     allow_custom=True,
                                 )
@@ -423,15 +431,16 @@ class ReportImporter:
                             relationships.append(
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
-                                        "uses", entity_stix_bundle["id"], entity["id"]
+                                        "uses", entity_stix["id"], entity["id"]
                                     ),
                                     relationship_type="uses",
-                                    source_ref=entity_stix_bundle["id"],
+                                    source_ref=entity_stix["id"],
                                     target_ref=entity["id"],
                                     allow_custom=True,
                                 )
                             )
-            observables = observables + relationships + entity_stix_bundle
+            observables = observables + relationships
+            observables.append(entity_stix)
         else:
             timestamp = int(time.time())
             now = datetime.utcfromtimestamp(timestamp)
