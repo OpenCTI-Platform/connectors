@@ -1,2 +1,2 @@
 pycti==5.3.8
-hatching-triage==0.1.4
+git+https://github.com/hatching/triage.git#subdirectory=python
