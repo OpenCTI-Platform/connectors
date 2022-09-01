@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from dateutil.parser import parse
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -34,6 +35,13 @@ class Citalid:
             config,
         )
 
+        # Create the Citalid identity
+        self.identity = self.helper.api.identity.create(
+            type="Organization",
+            name="Citalid",
+            description="Citalid is a french software vendor specilized in cyber risk management.",
+        )
+
     def get_interval(self):
         return int(self.citalid_interval) * 60
 
@@ -57,6 +65,56 @@ class Citalid:
             if object_type in object_types_with_confidence:
                 # self.helper.log_info(f"Adding confidence to {object_type} object")
                 obj["confidence"] = int(self.helper.connect_confidence_level)
+        return json.dumps(stix_bundle)
+
+    # Citalid special processing for object
+    def process_bundle(self, serialized_bundle: str) -> str:
+        stix_bundle = json.loads(serialized_bundle)
+        new_objects = []
+        for obj in stix_bundle["objects"]:
+            new_obj = {k: v for k, v in obj.items() if v is not None}
+            if "created_by_ref" not in new_obj:
+                new_obj["created_by_ref"] = self.identity["standard_id"]
+            elif (
+                new_obj["created_by_ref"]
+                == "identity--0a8152ea-b13f-6fca-3742-6752c12f0858"
+            ):
+                new_obj["created_by_ref"] = self.identity["standard_id"]
+            if "created" in new_obj:
+                new_obj["created"] = parse(new_obj["created"]).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            if "modified" in new_obj:
+                new_obj["modified"] = parse(new_obj["modified"]).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            if "published" in new_obj:
+                new_obj["published"] = parse(new_obj["published"]).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            if "start_time" in new_obj:
+                new_obj["start_time"] = parse(new_obj["start_time"]).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            if "stop_time" in new_obj:
+                new_obj["stop_time"] = parse(new_obj["stop_time"]).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            if new_obj["type"] == "report":
+                if "title" in new_obj and "name" not in new_obj:
+                    new_obj["name"] = new_obj["title"]
+                if "report--" not in new_obj["id"]:
+                    new_obj["id"] = "report--" + new_obj["id"]
+            if new_obj["type"] == "location":
+                if (
+                    "x_citalid_location_type" in new_obj
+                    and new_obj["x_citalid_location_type"] == "country"
+                ):
+                    new_obj["x_opencti_location_type"] = "Country"
+            if "objects_refs" in new_obj:
+                new_obj["object_refs"] = new_obj["objects_refs"]
+            new_objects.append(new_obj)
+        stix_bundle["objects"] = new_objects
         return json.dumps(stix_bundle)
 
     def process_data(self):
@@ -85,8 +143,9 @@ class Citalid:
                     bundle_file = open(self.citalid_files_path + "/" + f)
                     bundle = bundle_file.read()
                     bundle_file.close()
+                    bundle_processed = self.process_bundle(bundle)
                     bundle_with_confidence = self.add_confidence_to_bundle_objects(
-                        bundle
+                        bundle_processed
                     )
                     self.send_bundle(work_id, bundle_with_confidence)
                     last_timestamp = file_timestamp
