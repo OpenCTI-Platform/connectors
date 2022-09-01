@@ -525,8 +525,9 @@ class HatchingTriageSandboxConnector:
                 "Observable not found "
                 "(may be linked to data seggregation, check your group and permissions)"
             )
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]

@@ -581,12 +581,12 @@ class IvreConnector:
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:
             return
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
-                break
 
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
