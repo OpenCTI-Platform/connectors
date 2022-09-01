@@ -67,7 +67,7 @@ class ShodanInternetDBConnector:
             return "Observable not found"
 
         # Check TLP markings, do not submit higher than the max allowed
-        tlps = ["TLP:WHITE"]
+        tlps = ["TLP:CLEAR"]
         for marking_definition in observable.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlps.append(marking_definition["definition"])

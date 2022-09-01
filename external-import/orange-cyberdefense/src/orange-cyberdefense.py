@@ -215,6 +215,8 @@ class OrangeCyberDefense:
             for object in data["objects"]:
                 if "labels" in object:
                     for label in object["labels"]:
+                        if label == "tlp:clear":
+                            object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
                         if label == "tlp:white":
                             object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
                         if label == "tlp:green":
@@ -471,6 +473,8 @@ class OrangeCyberDefense:
             for object in data["objects"]:
                 if "labels" in object:
                     for label in object["labels"]:
+                        if label == "tlp:clear":
+                            object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
                         if label == "tlp:white":
                             object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
                         if label == "tlp:green":

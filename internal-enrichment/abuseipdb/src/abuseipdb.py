@@ -61,8 +61,9 @@ class AbuseIPDBConnector:
             raise ValueError(
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]

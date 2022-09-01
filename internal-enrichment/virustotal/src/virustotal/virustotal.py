@@ -227,10 +227,11 @@ class VirusTotalConnector:
             )
 
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
+
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
