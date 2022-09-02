@@ -331,18 +331,26 @@ class ReportImporter:
 
         return observables, entities
 
+    def _get_entity_stix(self, entity, entity_stix_bundle):
+        if len(entity_stix_bundle["objects"]) == 0:
+            raise ValueError("Entity cannot be found or exported")
+        return [
+            object
+            for object in entity_stix_bundle["objects"]
+            if object["id"] == entity["standard_id"]
+        ][0]
+
     def _process_parsed_objects(
         self,
         entity: Dict,
         observables: List,
-        entities: List,
+        entities_ids: List,
         bypass_validation: bool,
         file_name: str,
     ) -> int:
-        if len(observables) == 0 and len(entities) == 0:
+        if len(observables) == 0 and len(entities_ids) == 0:
             return 0
         observables_ids = [o["id"] for o in observables]
-        entities_ids = [e["id"] for e in entities]
         if entity is not None:
             entity_stix_bundle = self.helper.api.stix2.export_entity(
                 entity["entity_type"], entity["id"]
@@ -391,12 +399,12 @@ class ReportImporter:
                         )
                     )
                 if entity_stix["type"] == "incident":
-                    for entity in entities:
+                    for entity_id in entities_ids:
                         # Incident attributed-to Threats
                         if (
-                            entity["type"] == "threat-actor"
-                            or entity["type"] == "intrusion-set"
-                            or entity["type"] == "campaign"
+                            entity_id.startswith("threat-actor")
+                            or entity_id.startswith("intrusion-set")
+                            or entity_id.startswith("campaign")
                         ):
                             relationships.append(
                                 stix2.Relationship(
@@ -407,12 +415,12 @@ class ReportImporter:
                                     ),
                                     relationship_type="attributed-to",
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity["id"],
+                                    target_ref=entity,
                                     allow_custom=True,
                                 )
                             )
                         # Incident targets Vulnerabilities
-                        elif entity["type"] == "vulnerability":
+                        elif entity_id.startswith("vulnerability"):
                             relationships.append(
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
@@ -422,12 +430,12 @@ class ReportImporter:
                                     ),
                                     relationship_type="targets",
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity["id"],
+                                    target_ref=entity,
                                     allow_custom=True,
                                 )
                             )
                         # Incident uses Attack Patterns
-                        elif entity["type"] == "attack-pattern":
+                        elif entity_id.startswith("attack-pattern"):
                             relationships.append(
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
@@ -435,7 +443,7 @@ class ReportImporter:
                                     ),
                                     relationship_type="uses",
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity["id"],
+                                    target_ref=entity,
                                     allow_custom=True,
                                 )
                             )
@@ -450,7 +458,7 @@ class ReportImporter:
                 description="Automatic import",
                 published=now,
                 report_types=["threat-report"],
-                object_refs=observables + entities,
+                object_refs=observables_ids + entities_ids,
                 allow_custom=True,
                 custom_properties={
                     "x_opencti_files": [self.file] if self.file is not None else []
