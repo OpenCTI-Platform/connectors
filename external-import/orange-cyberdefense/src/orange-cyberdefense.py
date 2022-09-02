@@ -325,9 +325,23 @@ class OrangeCyberDefense:
             + ")"
         )
         external_references = []
-        if report["url"] is not None:
+        if "url" in report and report["url"] is not None:
             external_reference = stix2.ExternalReference(
                 source_name=report["source_name"], url=report["url"]
+            )
+            external_references.append(external_reference)
+            if "portal.cert.orangecyberdefense.com" not in report["url"]:
+                external_reference = stix2.ExternalReference(
+                    source_name="Orange Cyberdefense",
+                    url="https://portal.cert.orangecyberdefense.com/worldwatch/"
+                    + str(report["id"]),
+                )
+                external_references.append(external_reference)
+        else:
+            external_reference = stix2.ExternalReference(
+                source_name="Orange Cyberdefense",
+                url="https://portal.cert.orangecyberdefense.com/worldwatch/"
+                + str(report["id"]),
             )
             external_references.append(external_reference)
         report_objects = self._get_alert_entities(report["id"])
