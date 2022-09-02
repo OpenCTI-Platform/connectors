@@ -1785,7 +1785,6 @@ class MispFeed:
                 self.helper.log_info("Connector last run: " + last_run_date)
             else:
                 last_run = parse(self.misp_feed_import_from_date)
-                last_run_date = last_run.isoformat()
                 last_run_timestamp = last_run.timestamp()
                 self.helper.log_info("Connector has never run")
 
@@ -1799,10 +1798,10 @@ class MispFeed:
                     self._retrieve_data(self.misp_feed_url + "/manifest.json")
                 )
                 for key, value in manifest_data.items():
-                    if value["timestamp"] >= last_run_timestamp:
-                        date = datetime.utcfromtimestamp(value["timestamp"]).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
+                    if int(value["timestamp"]) >= last_run_timestamp:
+                        date = datetime.utcfromtimestamp(
+                            int(value["timestamp"])
+                        ).strftime("%Y-%m-%d %H:%M:%S")
                         self.helper.log_info(
                             "Processing event "
                             + value["info"]

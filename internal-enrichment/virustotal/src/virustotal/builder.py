@@ -418,7 +418,6 @@ class VirusTotalBuilder:
         """
         if self.bundle is not None:
             self.helper.log_debug(f"[VirusTotal] sending bundle: {self.bundle}")
-            self.helper.metric_inc("record_send", len(self.bundle))
             serialized_bundle = stix2.Bundle(
                 objects=self.bundle, allow_custom=True
             ).serialize()

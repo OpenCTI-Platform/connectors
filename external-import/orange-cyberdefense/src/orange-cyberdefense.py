@@ -16,6 +16,26 @@ from datalake import Datalake, Output
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper, Report, get_config_variable
 
+atom_types_mapping = {
+    "apk": "Unknown",
+    "as": "Autonomous-System",
+    "cc": "Payment-Card",
+    "crypto": "Cryptocurrency-Wallet",
+    "cve": "Unknown",
+    "domain": "Domain-Name",
+    "email": "Email-Addr",
+    "file": "StixFile",
+    "fqdn": "Hostname",
+    "iban": "Bank-Account",
+    "ip": "IPv4-Addr",
+    "ip_range": "IPv4-Addr",
+    "paste": "Text",
+    "phone_number": "Phone-Number",
+    "regkey": "Windows-Registry-Key",
+    "ssl": "X509-Certificate",
+    "url": "Url",
+}
+
 
 class OrangeCyberDefense:
     def __init__(self):
@@ -187,6 +207,11 @@ class OrangeCyberDefense:
                             "multi_values": ["world_watch-" + str(id)],
                             "type": "filter",
                         },
+                        {
+                            "field": "atom_type",
+                            "multi_values": self.ocd_import_datalake_atom_types,
+                            "type": "filter",
+                        },
                     ]
                 }
             ]
@@ -235,8 +260,30 @@ class OrangeCyberDefense:
                     object["labels"] = self._curate_labels(object["labels"])
                 if "confidence" not in object:
                     object["confidence"] = self.helper.connect_confidence_level
+                if "x_datalake_score" in object:
+                    scores = list(object["x_datalake_score"].values())
+                    if len(scores) > 0:
+                        object["x_opencti_score"] = max(scores)
+                if (
+                    "x_datalake_atom_type" in object
+                    and object["x_datalake_atom_type"] in atom_types_mapping
+                ):
+                    object["x_opencti_main_observable_type"] = atom_types_mapping[
+                        object["x_datalake_atom_type"]
+                    ]
                 if "created_by_ref" not in object:
                     object["created_by_ref"] = self.identity["standard_id"]
+                if "external_references" in object:
+                    external_references = []
+                    for external_reference in object["external_references"]:
+                        if "url" in external_reference:
+                            external_reference["url"] = external_reference[
+                                "url"
+                            ].replace("api/v2/mrti/threats", "gui/threat")
+                            external_references.append(external_reference)
+                        else:
+                            external_references.append(external_reference)
+                    object["external_references"] = external_references
                 if object["type"] == "indicator" and self.ocd_create_observables:
                     object["x_opencti_create_observables"] = True
                 if (
@@ -284,8 +331,8 @@ class OrangeCyberDefense:
             )
             external_references.append(external_reference)
         report_objects = self._get_alert_entities(report["id"])
-        if report_objects is None or len(report_objects) == 0:
-            report_objects = [self.identity["standard_id"]]
+        if report_objects is None:
+            report_objects = []
         analysis_blocks = [
             x for x in report["incident_blocks"] if x["type"] == "analysis"
         ][::-1]
@@ -342,7 +389,9 @@ class OrangeCyberDefense:
             created=parse(report["timestamp_detected"]),
             published=parse(report["timestamp_detected"]),
             modified=parse(report["timestamp_updated"]),
-            object_refs=[x["id"] for x in report_objects],
+            object_refs=[x["id"] for x in report_objects]
+            if len(report_objects) > 0
+            else [self.identity["standard_id"]],
             labels=["severity-" + str(report["severity"]), report["source_name"]],
             allow_custom=True,
             object_marking_refs=[
@@ -493,8 +542,30 @@ class OrangeCyberDefense:
                     object["labels"] = self._curate_labels(object["labels"])
                 if "confidence" not in object:
                     object["confidence"] = self.helper.connect_confidence_level
+                if "x_datalake_score" in object:
+                    scores = list(object["x_datalake_score"].values())
+                    if len(scores) > 0:
+                        object["x_opencti_score"] = max(scores)
+                if (
+                    "x_datalake_atom_type" in object
+                    and object["x_datalake_atom_type"] in atom_types_mapping
+                ):
+                    object["x_opencti_main_observable_type"] = atom_types_mapping[
+                        object["x_datalake_atom_type"]
+                    ]
                 if "created_by_ref" not in object:
                     object["created_by_ref"] = self.identity["standard_id"]
+                if "external_references" in object:
+                    external_references = []
+                    for external_reference in object["external_references"]:
+                        if "url" in external_reference:
+                            external_reference["url"] = external_reference[
+                                "url"
+                            ].replace("api/v2/mrti/threats", "gui/threat")
+                            external_references.append(external_reference)
+                        else:
+                            external_references.append(external_reference)
+                    object["external_references"] = external_references
                 if object["type"] == "indicator" and self.ocd_create_observables:
                     object["x_opencti_create_observables"] = True
                 if (
