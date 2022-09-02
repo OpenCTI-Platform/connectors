@@ -120,6 +120,8 @@ OPENCTISTIX2 = {
         "path": ["serial_number"],
     },
     "text": {"type": "text", "path": ["value"]},
+    "user-agent": {"type": "user-agent", "path": ["value"]},
+    "phone-number": {"type": "phone-number", "path": ["value"]},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
@@ -857,6 +859,8 @@ class Misp:
         event_threat_level,
     ):
         if attribute["type"] == "link" and attribute["category"] == "External analysis":
+            return None
+        if attribute["type"] == "attachment":
             return None
         resolved_attributes = self.resolve_type(attribute["type"], attribute["value"])
         if resolved_attributes is None:
@@ -1763,6 +1767,8 @@ class Misp:
         types = {
             "yara": [{"resolver": "yara"}],
             "sigma": [{"resolver": "sigma"}],
+            "snort": [{"resolver": "snort"}],
+            "suricata": [{"resolver": "suricata"}],
             "md5": [{"resolver": "file-md5", "type": "File"}],
             "sha1": [{"resolver": "file-sha1", "type": "File"}],
             "sha256": [{"resolver": "file-sha256", "type": "File"}],
@@ -1806,6 +1812,12 @@ class Misp:
             "url": [{"resolver": "url", "type": "Url"}],
             "windows-scheduled-task": [
                 {"resolver": "windows-scheduled-task", "type": "Text"}
+            ],
+            "regkey": [{"resolver": "registry-key", "type": "Windows-Registry-Key"}],
+            "user-agent": [{"resolver": "user-agent", "type": "User-Agent"}],
+            "phone-number": [{"resolver": "phone-number", "type": "Phone-Number"}],
+            "whois-registrant-email": [
+                {"resolver": "email-address", "type": "Email-Addr"}
             ],
         }
         if type in types:
