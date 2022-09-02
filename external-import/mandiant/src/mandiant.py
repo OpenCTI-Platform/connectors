@@ -233,7 +233,11 @@ class Mandiant:
                 "Iterating with limit=" + str(limit) + " and offset=" + str(offset)
             )
             result = self._query(url, limit, offset)
-            if result is not None and len(result["threat-actors"]) > 0:
+            if (
+                result is not None
+                and result["threat-actors"] is not None
+                and len(result["threat-actors"]) > 0
+            ):
                 actors = []
                 for actor in result["threat-actors"]:
                     try:
@@ -297,7 +301,11 @@ class Mandiant:
                 "Iterating with limit=" + str(limit) + " and offset=" + str(offset)
             )
             result = self._query(url, limit, offset)
-            if result is not None and len(result["malware"]) > 0:
+            if (
+                result is not None
+                and result["malware"] is not None
+                and len(result["malware"]) > 0
+            ):
                 malwares = []
                 for malware in result["malware"]:
                     try:
@@ -347,7 +355,11 @@ class Mandiant:
                 + str(end_epoch)
             )
             result = self._query(url, limit, None, start_epoch, end_epoch)
-            if result is not None and len(result["vulnerability"]) > 0:
+            if (
+                result is not None
+                and result["vulnerability"] is not None
+                and len(result["vulnerability"]) > 0
+            ):
                 vulnerabilities = []
                 for vulnerability in result["vulnerability"]:
                     try:
@@ -425,7 +437,11 @@ class Mandiant:
                 + str(end_epoch)
             )
             result = self._query(url, limit, None, start_epoch, end_epoch)
-            if result is not None and len(result["indicators"]) > 0:
+            if (
+                result is not None
+                and result["indicators"] is not None
+                and len(result["indicators"]) > 0
+            ):
                 indicators = []
                 for indicator in result["indicators"]:
                     try:
