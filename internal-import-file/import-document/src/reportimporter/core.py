@@ -331,15 +331,6 @@ class ReportImporter:
 
         return observables, entities
 
-    def _get_entity_stix(self, entity, entity_stix_bundle):
-        if len(entity_stix_bundle["objects"]) == 0:
-            raise ValueError("Entity cannot be found or exported")
-        return [
-            object
-            for object in entity_stix_bundle["objects"]
-            if object["id"] == entity["standard_id"]
-        ][0]
-
     def _process_parsed_objects(
         self,
         entity: Dict,
