@@ -1,4 +1,4 @@
-pycti==5.3.8
+pycti==5.3.9
 stix-shifter==4.2.5
 stix-shifter-utils==4.2.5
 stix-shifter-modules-splunk==4.2.5
