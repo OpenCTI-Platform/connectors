@@ -74,6 +74,9 @@ class ShodanInternetDBConnector:
 
         for tlp in tlps:
             max_tlp_name = self._config.shodan.max_tlp.name
+            if max_tlp_name == 'TLP:WHITE':
+                max_tlp_name = 'TLP:CLEAR'
+
             if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp_name):
                 log.debug("Skipping observable, TLP is greater than the MAX TLP")
                 return "Skipping observable (TLP)"
