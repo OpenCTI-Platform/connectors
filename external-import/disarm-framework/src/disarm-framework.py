@@ -27,7 +27,7 @@ class DisarmFramework:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.disarm_framework_file_url = get_config_variable(
-            "DISARM_FRAMEWORK_CAPEC_FILE_URL", ["disarm_framework", "url"], config
+            "DISARM_FRAMEWORK_URL", ["disarm_framework", "url"], config
         )
         self.disarm_framework_interval = get_config_variable(
             "DISARM_FRAMEWORK_INTERVAL", ["disarm_framework", "interval"], config, True
