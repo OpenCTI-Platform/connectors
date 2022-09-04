@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cybercrimetracker:
-    image: opencti/connector-cybercrime-tracker:5.3.9
+    image: opencti/connector-cybercrime-tracker:5.3.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
