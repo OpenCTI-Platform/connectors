@@ -216,7 +216,7 @@ class OrangeCyberDefense:
                 }
             ]
         }
-        limit = 1000
+        limit = 500
         offset = 0
         objects = []
         while True:
@@ -475,7 +475,12 @@ class OrangeCyberDefense:
                 )
             except Exception as e:
                 self.helper.log_error(str(e))
-            current_state["worldwatch"] = last_report_time
+            last_report_timestamp = parse(last_report_time).timestamp() + 1
+            current_state["worldwatch"] = (
+                datetime.datetime.fromtimestamp(last_report_timestamp)
+                .astimezone()
+                .isoformat()
+            )
             self.helper.set_state(current_state)
         return current_state
 
@@ -592,6 +597,27 @@ class OrangeCyberDefense:
                     object["type"] = "identity"
                     object["identity_class"] = "class"
                     object["id"] = object["id"].replace("sector", "identity")
+                if (
+                    object["type"] == "indicator"
+                    and "x_opencti_main_observable_type" in object
+                    and "pattern" in object
+                ):
+                    if (
+                        object["x_opencti_main_observable_type"]
+                        == "Cryptocurrency-Wallet"
+                    ):
+                        object["pattern"] = object["pattern"].replace(
+                            "x-crypto:value = 'btc ", "cryptocurrency-wallet:value = '"
+                        )
+                    elif object["x_opencti_main_observable_type"] == "Phone-Number":
+                        object["pattern"] = object["pattern"].replace(
+                            "x-phone-number:international_phone_number = '",
+                            "phone-number:value = '",
+                        )
+                    elif object["x_opencti_main_observable_type"] == "Payment-Card":
+                        object["pattern"] = object["pattern"].replace(
+                            "x-cc:number = '", "payment-card:card_number = '"
+                        )
                 if object["type"] == "relationship":
                     object["source_ref"] = object["source_ref"].replace(
                         "sector", "identity"
@@ -619,7 +645,9 @@ class OrangeCyberDefense:
                 update=self.update_existing_data,
                 work_id=work_id,
             )
-            current_state["datalake"] = last_entity_timestamp
+            current_state["datalake"] = (
+                parse(last_entity_timestamp).astimezone().isoformat()
+            )
             self.helper.set_state(current_state)
             offset = offset + limit
         return current_state
@@ -640,15 +668,17 @@ class OrangeCyberDefense:
                 if current_state is None:
                     self.helper.set_state(
                         {
-                            "worldwatch": parse(
-                                self.ocd_import_worldwatch_start_date
-                            ).isoformat(),
-                            "datalake": parse(
-                                self.ocd_import_datalake_start_date
-                            ).isoformat(),
+                            "worldwatch": parse(self.ocd_import_worldwatch_start_date)
+                            .astimezone()
+                            .isoformat(),
+                            "datalake": parse(self.ocd_import_datalake_start_date)
+                            .astimezone()
+                            .isoformat(),
                             "vulnerabilities": parse(
                                 self.ocd_import_vulnerabilities_start_date
-                            ).isoformat(),
+                            )
+                            .astimezone()
+                            .isoformat(),
                         }
                     )
                 current_state = self.helper.get_state()
