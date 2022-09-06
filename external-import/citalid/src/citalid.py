@@ -105,6 +105,8 @@ class Citalid:
                     new_obj["name"] = new_obj["title"]
                 if "report--" not in new_obj["id"]:
                     new_obj["id"] = "report--" + new_obj["id"]
+                if "name" in new_obj:
+                    new_obj["name"] = new_obj["name"].capitalize()
             if new_obj["type"] == "location":
                 if (
                     "x_citalid_location_type" in new_obj
