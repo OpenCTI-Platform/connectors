@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import uuid
+import xml.etree.ElementTree as ET
 from urllib import request
 
 import html2text
@@ -14,7 +15,13 @@ import yaml
 from bs4 import BeautifulSoup
 from datalake import Datalake, Output
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, Report, get_config_variable
+from pycti import (
+    OpenCTIConnectorHelper,
+    Report,
+    get_config_variable,
+    StixCoreRelationship,
+    Vulnerability,
+)
 
 atom_types_mapping = {
     "apk": "Unknown",
@@ -35,6 +42,18 @@ atom_types_mapping = {
     "ssl": "X509-Certificate",
     "url": "Url",
 }
+
+
+def keep_first(iterable, key=None):
+    if key is None:
+        key = lambda x: x
+    seen = set()
+    for elem in iterable:
+        k = key(elem)
+        if k in seen:
+            continue
+        yield elem
+        seen.add(k)
 
 
 class OrangeCyberDefense:
@@ -65,6 +84,12 @@ class OrangeCyberDefense:
         self.ocd_datalake_password = get_config_variable(
             "OCD_DATALAKE_PASSWORD", ["ocd", "datalake_password"], config
         )
+        self.ocd_vulnerabilities_login = get_config_variable(
+            "OCD_VULNERABILITIES_LOGIN", ["ocd", "vulnerabilities_login"], config
+        )
+        self.ocd_vulnerabilities_password = get_config_variable(
+            "OCD_VULNERABILITIES_PASSWORD", ["ocd", "vulnerabilities_password"], config
+        )
         self.ocd_import_worldwatch = get_config_variable(
             "OCD_IMPORT_WORLDWATCH", ["ocd", "import_worldwatch"], config, False, True
         )
@@ -79,11 +104,6 @@ class OrangeCyberDefense:
             config,
             False,
             True,
-        )
-        self.ocd_import_vulnerabilities_start_date = get_config_variable(
-            "OCD_IMPORT_VULNERABILITIES_START_DATE",
-            ["ocd", "import_vulnerabilities_start_date"],
-            config,
         )
         self.ocd_import_datalake = get_config_variable(
             "OCD_IMPORT_DATALAKE", ["ocd", "import_datalake"], config, False, True
@@ -195,7 +215,151 @@ class OrangeCyberDefense:
             curated_labels.append(label_value)
         return curated_labels
 
-    def _get_alert_entities(self, id):
+    def _process_object(self, object):
+        if "labels" in object:
+            for label in object["labels"]:
+                if label == "tlp:clear":
+                    object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
+                if label == "tlp:white":
+                    object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
+                if label == "tlp:green":
+                    object["object_marking_refs"] = [stix2.TLP_GREEN.get("id")]
+                if label == "tlp:amber":
+                    object["object_marking_refs"] = [
+                        stix2.TLP_AMBER.get("id"),
+                        self.marking["standard_id"],
+                    ]
+                if label == "tlp:red":
+                    object["object_marking_refs"] = [
+                        stix2.TLP_RED.get("id"),
+                        self.marking["standard_id"],
+                    ]
+        if "labels" in object and self.ocd_curate_labels:
+            object["labels"] = self._curate_labels(object["labels"])
+        if "confidence" not in object:
+            object["confidence"] = self.helper.connect_confidence_level
+        if "x_datalake_score" in object:
+            scores = list(object["x_datalake_score"].values())
+            if len(scores) > 0:
+                object["x_opencti_score"] = max(scores)
+        if (
+            "x_datalake_atom_type" in object
+            and object["x_datalake_atom_type"] in atom_types_mapping
+        ):
+            object["x_opencti_main_observable_type"] = atom_types_mapping[
+                object["x_datalake_atom_type"]
+            ]
+        if "created_by_ref" not in object:
+            object["created_by_ref"] = self.identity["standard_id"]
+        if "external_references" in object:
+            external_references = []
+            for external_reference in object["external_references"]:
+                if "url" in external_reference:
+                    external_reference["url"] = external_reference["url"].replace(
+                        "api/v2/mrti/threats", "gui/threat"
+                    )
+                    external_references.append(external_reference)
+                else:
+                    external_references.append(external_reference)
+            object["external_references"] = external_references
+        if object["type"] == "indicator" and self.ocd_create_observables:
+            object["x_opencti_create_observables"] = True
+        if object["type"] == "threat-actor" and self.ocd_threat_actor_as_intrusion_set:
+            object["type"] = "intrusion-set"
+            object["id"] = object["id"].replace("threat-actor", "intrusion-set")
+        if object["type"] == "sector":
+            object["type"] = "identity"
+            object["identity_class"] = "class"
+            object["id"] = object["id"].replace("sector", "identity")
+        if object["type"] == "relationship":
+            object["source_ref"] = object["source_ref"].replace("sector", "identity")
+            object["target_ref"] = object["target_ref"].replace("sector", "identity")
+            if self.ocd_threat_actor_as_intrusion_set:
+                object["source_ref"] = object["source_ref"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+                object["target_ref"] = object["target_ref"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+        return object
+
+    def _create_magic_bundle(self, objects, date, markings):
+        attackers = [
+            o
+            for o in objects
+            if o["type"] in ["threat-actor", "intrusion-set", "malware", "campaign"]
+        ]
+        victims = [o for o in objects if o["type"] in ["identity", "location"]]
+        threats = [
+            o
+            for o in objects
+            if o["type"] in ["threat-actor", "intrusion-set", "campaign"]
+        ]
+        arsenals = [
+            o for o in objects if o["type"] in ["malware", "tool", "attack-pattern"]
+        ]
+        relationships = []
+        if len(attackers) <= 5:
+            # Magic targets
+            for attacker in attackers:
+                for victim in victims:
+                    relationships.append(
+                        json.loads(
+                            stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "targets", attacker["id"], victim["id"]
+                                ),
+                                relationship_type="targets",
+                                created_by_ref=self.identity["standard_id"],
+                                confidence=self.helper.connect_confidence_level,
+                                source_ref=attacker["id"],
+                                target_ref=victim["id"],
+                                object_marking_refs=markings,
+                                start_time=date,
+                                created=date,
+                                modified=date,
+                                allow_custom=True,
+                            ).serialize()
+                        )
+                    )
+        else:
+            self.helper.log_info(
+                "Too many attackers ("
+                + str(len(attackers))
+                + "), not creating relationships..."
+            )
+        if len(threats) <= 5:
+            # Magic uses
+            for threat in threats:
+                for arsenal in arsenals:
+                    relationships.append(
+                        json.loads(
+                            stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "uses", threat["id"], arsenal["id"]
+                                ),
+                                relationship_type="uses",
+                                created_by_ref=self.identity["standard_id"],
+                                confidence=self.helper.connect_confidence_level,
+                                source_ref=threat["id"],
+                                target_ref=arsenal["id"],
+                                object_marking_refs=markings,
+                                start_time=date,
+                                created=date,
+                                modified=date,
+                                allow_custom=True,
+                            ).serialize()
+                        )
+                    )
+        else:
+            self.helper.log_info(
+                "Too many threats ("
+                + str(len(threats))
+                + "), not creating relationships..."
+            )
+        return relationships
+
+    def _get_alert_entities(self, id, date, markings):
         self.helper.log_info("Getting datalake entries for worldwatch " + str(id))
         # Query params
         query_body = {
@@ -216,7 +380,7 @@ class OrangeCyberDefense:
                 }
             ]
         }
-        limit = 500
+        limit = 50
         offset = 0
         objects = []
         while True:
@@ -238,79 +402,12 @@ class OrangeCyberDefense:
                 break
             # Parse the result
             for object in data["objects"]:
-                if "labels" in object:
-                    for label in object["labels"]:
-                        if label == "tlp:clear":
-                            object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
-                        if label == "tlp:white":
-                            object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
-                        if label == "tlp:green":
-                            object["object_marking_refs"] = [stix2.TLP_GREEN.get("id")]
-                        if label == "tlp:amber":
-                            object["object_marking_refs"] = [
-                                stix2.TLP_AMBER.get("id"),
-                                self.marking["standard_id"],
-                            ]
-                        if label == "tlp:red":
-                            object["object_marking_refs"] = [
-                                stix2.TLP_RED.get("id"),
-                                self.marking["standard_id"],
-                            ]
-                if "labels" in object and self.ocd_curate_labels:
-                    object["labels"] = self._curate_labels(object["labels"])
-                if "confidence" not in object:
-                    object["confidence"] = self.helper.connect_confidence_level
-                if "x_datalake_score" in object:
-                    scores = list(object["x_datalake_score"].values())
-                    if len(scores) > 0:
-                        object["x_opencti_score"] = max(scores)
-                if (
-                    "x_datalake_atom_type" in object
-                    and object["x_datalake_atom_type"] in atom_types_mapping
-                ):
-                    object["x_opencti_main_observable_type"] = atom_types_mapping[
-                        object["x_datalake_atom_type"]
-                    ]
-                if "created_by_ref" not in object:
-                    object["created_by_ref"] = self.identity["standard_id"]
-                if "external_references" in object:
-                    external_references = []
-                    for external_reference in object["external_references"]:
-                        if "url" in external_reference:
-                            external_reference["url"] = external_reference[
-                                "url"
-                            ].replace("api/v2/mrti/threats", "gui/threat")
-                            external_references.append(external_reference)
-                        else:
-                            external_references.append(external_reference)
-                    object["external_references"] = external_references
-                if object["type"] == "indicator" and self.ocd_create_observables:
-                    object["x_opencti_create_observables"] = True
-                if (
-                    object["type"] == "threat-actor"
-                    and self.ocd_threat_actor_as_intrusion_set
-                ):
-                    object["type"] = "intrusion-set"
-                    object["id"] = object["id"].replace("threat-actor", "intrusion-set")
-                if object["type"] == "sector":
-                    object["type"] = "identity"
-                    object["identity_class"] = "class"
-                    object["id"] = object["id"].replace("sector", "identity")
-                if object["type"] == "relationship":
-                    object["source_ref"] = object["source_ref"].replace(
-                        "sector", "identity"
-                    )
-                    object["target_ref"] = object["target_ref"].replace(
-                        "sector", "identity"
-                    )
-                    if self.ocd_threat_actor_as_intrusion_set:
-                        object["source_ref"] = object["source_ref"].replace(
-                            "threat-actor", "intrusion-set"
-                        )
-                        object["target_ref"] = object["target_ref"].replace(
-                            "threat-actor", "intrusion-set"
-                        )
-                objects.append(object)
+                processed_object = self._process_object(object)
+                objects.append(processed_object)
+            magic_relationships = self._create_magic_bundle(
+                data["objects"], date, markings
+            )
+            objects = objects + magic_relationships
             offset = offset + limit
         return objects
 
@@ -344,7 +441,14 @@ class OrangeCyberDefense:
                 + str(report["id"]),
             )
             external_references.append(external_reference)
-        report_objects = self._get_alert_entities(report["id"])
+        report_objects = self._get_alert_entities(
+            report["id"],
+            parse(report["timestamp_detected"]),
+            [
+                stix2.TLP_GREEN.get("id"),
+                self.marking["standard_id"],
+            ],
+        )
         if report_objects is None:
             report_objects = []
         analysis_blocks = [
@@ -465,6 +569,7 @@ class OrangeCyberDefense:
                 continue
             try:
                 report_objects = self._generate_report(report)
+                keep_first(report_objects, "id")
                 self.helper.send_stix2_bundle(
                     stix2.Bundle(
                         objects=report_objects,
@@ -539,102 +644,12 @@ class OrangeCyberDefense:
                 break
             # Parse the result
             for object in data["objects"]:
-                if "labels" in object:
-                    for label in object["labels"]:
-                        if label == "tlp:clear":
-                            object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
-                        if label == "tlp:white":
-                            object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
-                        if label == "tlp:green":
-                            object["object_marking_refs"] = [stix2.TLP_GREEN.get("id")]
-                        if label == "tlp:amber":
-                            object["object_marking_refs"] = [
-                                stix2.TLP_AMBER.get("id"),
-                                self.marking["standard_id"],
-                            ]
-                        if label == "tlp:red":
-                            object["object_marking_refs"] = [
-                                stix2.TLP_RED.get("id"),
-                                self.marking["standard_id"],
-                            ]
-                if "labels" in object and self.ocd_curate_labels:
-                    object["labels"] = self._curate_labels(object["labels"])
-                if "confidence" not in object:
-                    object["confidence"] = self.helper.connect_confidence_level
-                if "x_datalake_score" in object:
-                    scores = list(object["x_datalake_score"].values())
-                    if len(scores) > 0:
-                        object["x_opencti_score"] = max(scores)
-                if (
-                    "x_datalake_atom_type" in object
-                    and object["x_datalake_atom_type"] in atom_types_mapping
-                ):
-                    object["x_opencti_main_observable_type"] = atom_types_mapping[
-                        object["x_datalake_atom_type"]
-                    ]
-                if "created_by_ref" not in object:
-                    object["created_by_ref"] = self.identity["standard_id"]
-                if "external_references" in object:
-                    external_references = []
-                    for external_reference in object["external_references"]:
-                        if "url" in external_reference:
-                            external_reference["url"] = external_reference[
-                                "url"
-                            ].replace("api/v2/mrti/threats", "gui/threat")
-                            external_references.append(external_reference)
-                        else:
-                            external_references.append(external_reference)
-                    object["external_references"] = external_references
-                if object["type"] == "indicator" and self.ocd_create_observables:
-                    object["x_opencti_create_observables"] = True
-                if (
-                    object["type"] == "threat-actor"
-                    and self.ocd_threat_actor_as_intrusion_set
-                ):
-                    object["type"] = "intrusion-set"
-                    object["id"] = object["id"].replace("threat-actor", "intrusion-set")
-                if object["type"] == "sector":
-                    object["type"] = "identity"
-                    object["identity_class"] = "class"
-                    object["id"] = object["id"].replace("sector", "identity")
-                if (
-                    object["type"] == "indicator"
-                    and "x_opencti_main_observable_type" in object
-                    and "pattern" in object
-                ):
-                    if (
-                        object["x_opencti_main_observable_type"]
-                        == "Cryptocurrency-Wallet"
-                    ):
-                        object["pattern"] = object["pattern"].replace(
-                            "x-crypto:value = 'btc ", "cryptocurrency-wallet:value = '"
-                        )
-                    elif object["x_opencti_main_observable_type"] == "Phone-Number":
-                        object["pattern"] = object["pattern"].replace(
-                            "x-phone-number:international_phone_number = '",
-                            "phone-number:value = '",
-                        )
-                    elif object["x_opencti_main_observable_type"] == "Payment-Card":
-                        object["pattern"] = object["pattern"].replace(
-                            "x-cc:number = '", "payment-card:card_number = '"
-                        )
-                if object["type"] == "relationship":
-                    object["source_ref"] = object["source_ref"].replace(
-                        "sector", "identity"
-                    )
-                    object["target_ref"] = object["target_ref"].replace(
-                        "sector", "identity"
-                    )
-                    if self.ocd_threat_actor_as_intrusion_set:
-                        object["source_ref"] = object["source_ref"].replace(
-                            "threat-actor", "intrusion-set"
-                        )
-                        object["target_ref"] = object["target_ref"].replace(
-                            "threat-actor", "intrusion-set"
-                        )
+                processed_object = self._process_object(object)
+                objects.append(processed_object)
                 if "modified" in object:
                     last_entity_timestamp = object["modified"]
                 objects.append(object)
+            keep_first(objects, "id")
             bundle = {
                 "id": f"bundle--{uuid.uuid4()}",
                 "type": "bundle",
@@ -651,6 +666,60 @@ class OrangeCyberDefense:
             self.helper.set_state(current_state)
             offset = offset + limit
         return current_state
+
+    def import_vulnerabilities(self, work_id):
+        try:
+            url = (
+                "https://portal.cert.orangecyberdefense.com/api/csi/xml/vulns/login/"
+                + self.ocd_vulnerabilities_login
+                + "/password/"
+                + self.ocd_vulnerabilities_password
+            )
+            xml_data = request.urlopen(url).read().decode("utf-8")
+            root = ET.fromstring(xml_data)
+            agent = root.find("./agent")
+            objects = []
+            for vuln in agent.findall("vuln"):
+                vulnerability = {
+                    "title": vuln.findtext("titre", None),
+                    "date": vuln.findtext("date", None),
+                    "cve": vuln.findtext("cve", None),
+                    "description": vuln.find("description").findtext("contenu"),
+                    "base_score": vuln.find("cvss").findtext("base_score"),
+                }
+                objects.append(
+                    stix2.Vulnerability(
+                        id=Vulnerability.generate_id(vulnerability["title"]),
+                        name=vulnerability["title"],
+                        description=vulnerability["description"],
+                        created=parse(vulnerability["date"]),
+                        modified=parse(vulnerability["date"]),
+                        allow_custom=True,
+                        created_by_ref=self.identity["standard_id"],
+                        confidence=self.helper.connect_confidence_level,
+                        object_marking_refs=[
+                            stix2.TLP_GREEN.get("id"),
+                            self.marking["standard_id"],
+                        ],
+                        custom_properties={
+                            "x_opencti_aliases": [vulnerability["cve"]]
+                            if vulnerability["cve"] is not None
+                            else None,
+                            "x_opencti_base_score": vulnerability["base_score"],
+                        },
+                    )
+                )
+            self.helper.send_stix2_bundle(
+                stix2.Bundle(
+                    objects=objects,
+                    allow_custom=True,
+                ).serialize(),
+                update=self.update_existing_data,
+                work_id=work_id,
+            )
+        except Exception as e:
+            self.helper.log_error(str(e))
+            pass
 
     def run(self):
         while True:
@@ -674,8 +743,8 @@ class OrangeCyberDefense:
                             "datalake": parse(self.ocd_import_datalake_start_date)
                             .astimezone()
                             .isoformat(),
-                            "vulnerabilities": parse(
-                                self.ocd_import_vulnerabilities_start_date
+                            "vulnerabilities": (
+                                datetime.datetime.today() - datetime.timedelta(days=30)
                             )
                             .astimezone()
                             .isoformat(),
@@ -690,6 +759,24 @@ class OrangeCyberDefense:
                     new_state = self._import_worldwatch(work_id, current_state)
                     self.helper.log_info("Setting new state " + str(new_state))
                     self.helper.set_state(new_state)
+                if self.ocd_import_vulnerabilities:
+                    now_timestamp = datetime.datetime.today().timestamp()
+                    state_timestamp = parse(
+                        current_state["vulnerabilities"]
+                    ).timestamp()
+                    if (now_timestamp - state_timestamp) > 3600 * 24 * 30:
+                        self.helper.log_info(
+                            "Get Vulnerabilities Data since "
+                            + str(current_state["vulnerabilities"])
+                        )
+                        self.import_vulnerabilities(work_id)
+                        current_state[
+                            "vulnerabilities"
+                        ] = datetime.datetime.utcfromtimestamp(
+                            now_timestamp
+                        ).isoformat()
+                        self.helper.log_info("Setting new state " + str(current_state))
+                        self.helper.set_state(current_state)
                 if self.ocd_import_datalake:
                     self.helper.log_info(
                         "Get Datalake Data since " + str(current_state["datalake"])
