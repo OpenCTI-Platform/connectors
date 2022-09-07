@@ -16,10 +16,11 @@ services:
       - OCD_WORLDWATCH_API_KEY=ChangeMe
       - OCD_DATALAKE_LOGIN=ChangeMe
       - OCD_DATALAKE_PASSWORD=ChangeMe
+      - OCD_VULNERABILITIES_LOGIN=ChangeMe
+      - OCD_VULNERABILITIES_PASSWORD=ChangeMe
       - OCD_IMPORT_WORLDWATCH=true
       - OCD_IMPORT_WORLDWATCH_START_DATE=2022-01-01
-      - OCD_IMPORT_VULNERABILITIES=true
-      - OCD_IMPORT_VULNERABILITIES_START_DATE=2022-01-01
+      - OCD_IMPORT_VULNERABILITIES=false
       - OCD_IMPORT_DATALAKE=true
       - OCD_IMPORT_DATALAKE_ATOM_TYPES=apk,as,cc,crypto,cve,domain,email,file,fqdn,iban,ip,ip_range,paste,phone_number,regkey,ssl,url
       - OCD_IMPORT_DATALAKE_THREAT_TYPES=ddos,fraud,hack,leak,malware,phishing,scam,scan,spam
