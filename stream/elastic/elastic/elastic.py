@@ -1,6 +1,7 @@
 import json
 import sys
 import threading
+import time
 from datetime import datetime, timezone
 from logging import getLogger
 
@@ -25,13 +26,28 @@ class ElasticConnector:
         self.helper = OpenCTIConnectorHelper(config)
         logger.info("Connected to OpenCTI")
 
-        # Check Live Stream ID
         if (
             self.helper.connect_live_stream_id is None
             or self.helper.connect_live_stream_id == "ChangeMe"
         ):
             raise ValueError("Missing Live Stream ID")
+
         self.config = Cut(config)
+
+        # Start streaming from 1 second ago
+        # added index
+        # added a parameter for starting time
+        # added to 5 seconds before
+        self.helper.set_state(
+            {
+                "connectorLastEventId": str(int(round(time.time() * 1000)) - 5000)
+                + "-0"
+                if "start_timestamp" not in self.config["connector"].keys()
+                or not self.config["connector.start_timestamp"]
+                else self.config["connector.start_timestamp"] + "-0"
+            }
+        )
+
         # Get the external URL as configured in OpenCTI Settings page
         query = """
         query SettingsQuery {
