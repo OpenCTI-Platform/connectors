@@ -73,7 +73,7 @@ gevent = ["gevent"]
 
 [[package]]
 name = "pycti"
-version = "5.3.10"
+version = "5.3.11"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -96,7 +96,7 @@ doc = ["autoapi (>=2.0.1,<2.1.0)", "sphinx-autodoc-typehints (>=1.19.2,<1.20.0)"
 
 [[package]]
 name = "pydantic"
-version = "1.10.1"
+version = "1.10.2"
 description = "Data validation and settings management using python type hints"
 category = "main"
 optional = false
@@ -287,7 +287,7 @@ test = ["pytest (>=2.2.3)", "flake8 (>=2.4.0)", "isort (>=4.2.2)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "c904e2d9c905daef55631e9cd1471dc74771a6d469d21a47637e13d5240d34eb"
+content-hash = "f6eb89e3cd65722a376952e5785d8c30fbedb5cf960d6444c7497bf1ac9e925b"
 
 [metadata.files]
 antlr4-python3-runtime = []
