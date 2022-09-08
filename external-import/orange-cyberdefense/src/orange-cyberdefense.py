@@ -562,6 +562,8 @@ class OrangeCyberDefense:
             url = str(data["next"])
             response = requests.get(url, headers=headers, params=params)
             data = json.loads(response.content)
+            if "next" not in data:
+                data["next"] = None
         for report in data["results"]:
             last_report_time = report["timestamp_updated"]
             date = parse(report["timestamp_updated"]).date()
