@@ -213,6 +213,9 @@ class OrangeCyberDefense:
             if '="' in label_value:
                 label_value = label_value.replace('="', "-")[:-1]
             curated_labels.append(label_value)
+        curated_labels = [
+            label for label in curated_labels if label is not None and len(label) > 0
+        ]
         return curated_labels
 
     def _process_object(self, object):
