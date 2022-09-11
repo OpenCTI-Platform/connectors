@@ -114,7 +114,8 @@ class VirusTotalConnector:
             builder.update_size()
 
         builder.update_names(
-            not observable["name"] and observable["entity_type"] == "StixFile"
+            observable["entity_type"] == "StixFile"
+            and (observable["name"] is None or len(observable["name"]) == 0)
         )
 
         builder.create_indicator_based_on(
