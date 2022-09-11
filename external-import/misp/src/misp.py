@@ -319,10 +319,16 @@ class Misp:
                 events = []
                 try:
                     events = self.misp.search("events", **kwargs)
+                    if isinstance(events, dict):
+                        if "errors" in events:
+                            raise ValueError(events["message"])
                 except Exception as e:
                     self.helper.log_error(f"Error fetching misp event: {e}")
                     try:
                         events = self.misp.search("events", **kwargs)
+                        if isinstance(events, dict):
+                            if "errors" in events:
+                                raise ValueError(events["message"])
                     except Exception as e:
                         self.helper.log_error(f"Error fetching misp event again: {e}")
                         break
@@ -350,14 +356,13 @@ class Misp:
             )
             self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
-
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
             time.sleep(self.get_interval())
 
-    def process_events(self, work_id, events) -> int:
+    def process_events(self, work_id, events):
         # Prepare filters
         import_creator_orgs = None
         import_creator_orgs_not = None

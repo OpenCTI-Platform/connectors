@@ -1403,7 +1403,7 @@ class MispFeed:
         def reformat(match):
             type = match.group(1)
             uuid = match.group(2)
-            result = self.find_type_by_uuid(uuid, bundle_objects)
+            result = self._find_type_by_uuid(uuid, bundle_objects)
             if result is None:
                 return "[{}:{}](/dashboard/search/{})".format(type, uuid, uuid)
             if result["type"] == "indicator":
