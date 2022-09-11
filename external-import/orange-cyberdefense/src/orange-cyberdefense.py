@@ -181,6 +181,7 @@ class OrangeCyberDefense:
             + self.ocd_worldwatch_api_key
             + '"}',
             "utf-8",
+            "escape",
         )
         query = request.Request(
             self.ocd_worldwatch_api_url + "/auth/",
