@@ -145,7 +145,7 @@ class MispFeed:
             "MISP_FEED_SSL_VERIFY", ["misp_feed", "ssl_verify"], config, False, True
         )
         self.misp_feed_import_from_date = get_config_variable(
-            "MISP_FEED_MPORT_FROM_DATE", ["misp_feed", "import_from_date"], config
+            "MISP_FEED_IMPORT_FROM_DATE", ["misp_feed", "import_from_date"], config
         )
         self.misp_feed_create_reports = get_config_variable(
             "MISP_FEED_CREATE_REPORTS",
