@@ -1,17 +1,16 @@
 import datetime
+import os
 import time
 from abc import ABC, abstractmethod
-from functools import lru_cache
 from queue import Queue
 from typing import Any, Iterator, Union
 
 import titan_client
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
+from titan_client.titan_stix.exceptions import EmptyBundle
 
 from .. import HelperRequest
-from ..mappers import StixMapper
-from ..mappers.exceptions import EmptyBundle
 
 
 class Intel471Stream(ABC):
@@ -55,7 +54,6 @@ class Intel471Stream(ABC):
             username=api_username, password=api_key
         )
         self.update_existing_data = update_existing_data
-        self.stix_mapper = StixMapper(self.api_config)
         if initial_history:
             self.initial_history = initial_history
         else:
@@ -93,12 +91,8 @@ class Intel471Stream(ABC):
                 break
             cursor = self._get_cursor_value(api_response)
             self._update_cursor(cursor)
-            api_response_serialized = api_response.to_dict(serialize=True)
             try:
-                bundle = self.stix_mapper.map(
-                    api_response_serialized,
-                    girs_names=self._get_girs_names(self._get_ttl_hash()),
-                )
+                bundle = api_response.to_stix(titan_client, api_client)
             except EmptyBundle:
                 self.helper.log_info(
                     f"{self.__class__.__name__} got empty bundle from STIX converter."
@@ -145,22 +139,6 @@ class Intel471Stream(ABC):
     def _get_ttl_hash(seconds=10_000):
         """Return the same value withing `seconds` time period"""
         return round(time.time() / seconds)
-
-    @lru_cache(maxsize=2)
-    def _get_girs_names(self, ttl_hash):
-        self.helper.log_info(
-            f"Refreshing list of GIRs names for {self.__class__.__name__} (ttl_hash={ttl_hash})."
-        )
-        girs_names = {}
-        with titan_client.ApiClient(self.api_config) as api_client:
-            api_instance = titan_client.GIRsApi(api_client)
-            for offset in range(0, 1000, 100):
-                api_response = api_instance.girs_get(count=100, offset=offset)
-                if not api_response.girs:
-                    break
-                for gir in api_response.girs:
-                    girs_names[gir.data.gir.path] = gir.data.gir.name
-        return girs_names
 
     @abstractmethod
     def _get_api_kwargs(self, cursor: Union[None, str]) -> dict:
