@@ -13,6 +13,11 @@ from titan_client.titan_stix.exceptions import EmptyBundle
 from .. import HelperRequest
 
 
+HERE = os.path.dirname(os.path.realpath(__file__))
+with open(os.path.join(HERE, '..', '..', '__version__')) as fh:
+    version = fh.read().strip()
+
+
 class Intel471Stream(ABC):
     """
     Base class for all streams. When creating new stream, inherit from this class and provide following class vars:
@@ -70,6 +75,7 @@ class Intel471Stream(ABC):
     def get_bundle(self) -> Iterator[Bundle]:
         cursor = self._fetch_cursor()
         with titan_client.ApiClient(self.api_config) as api_client:
+            api_client.user_agent = f'OpenCTI-Connector/{version}'
             api_instance = getattr(titan_client, self.api_class_name)(api_client)
         while True:
             kwargs = self._get_api_kwargs(cursor)
