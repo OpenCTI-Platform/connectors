@@ -601,6 +601,32 @@ class Mandiant:
                             each_object.update(adding_sector_class)
                             report_labels.append(each_object.get("name"))
 
+                    # Threat actors as intrusion set
+                    if self.mandiant_threat_actor_as_intrusion_set:
+                        for each_object in report.get("objects"):
+                            try:
+                                if each_object.get("type") == "threat-actor":
+                                    each_object["type"] = "intrusion-set"
+                                    each_object["id"] = each_object.get("id").replace(
+                                        "threat-actor", "intrusion-set"
+                                    )
+                                elif each_object.get("type") == "relationship":
+                                    each_object["source_ref"] = each_object.get(
+                                        "source_ref"
+                                    ).replace("threat-actor", "intrusion-set")
+                                    each_object["target_ref"] = each_object.get(
+                                        "target_ref"
+                                    ).replace("threat-actor", "intrusion-set")
+                                elif each_object.get("type") == "report":
+                                    object_refs = []
+                                    for ref in each_object["object_refs"]:
+                                        object_refs.append(
+                                            ref.replace("threat-actor", "intrusion-set")
+                                        )
+                                    each_object["object_refs"] = object_refs
+                            except:
+                                pass
+
                     # Adding the created by ref and getting the PDF report.
                     for each_object in report.get("objects"):
                         # Adding Sectors as labels for the report
