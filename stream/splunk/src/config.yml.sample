@@ -7,6 +7,7 @@ connector:
   type: 'STREAM'
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
+  live_stream_no_dependencies: true
   name: 'Splunk'
   scope: 'splunk' # Reserved
   confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
