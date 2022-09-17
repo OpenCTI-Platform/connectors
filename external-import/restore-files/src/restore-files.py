@@ -83,7 +83,9 @@ class RestoreFilesConnector:
     def restore_files(self):
         stix2_splitter = OpenCTIStix2Splitter()
         state = self.helper.get_state()
-        start_directory = state["current"] if state is not None else None
+        start_directory = (
+            state["current"] if state is not None and "current" in state else None
+        )
         start_date = (
             date_convert(start_directory) if start_directory is not None else None
         )
