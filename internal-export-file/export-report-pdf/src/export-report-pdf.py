@@ -309,11 +309,8 @@ class ExportReportPdf:
 
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
-        self.helper.api.stix_domain_object.add_file(
-            id=entity_id,
-            file_name=file_name,
-            data=pdf_contents,
-            mime_type="application/pdf",
+        self.helper.api.stix_domain_object.push_entity_export(
+            entity_id, file_name, pdf_contents, "application/pdf"
         )
 
     def _set_colors(self):
