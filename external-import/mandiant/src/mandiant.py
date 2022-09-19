@@ -9,7 +9,6 @@ import time
 import re
 import requests
 import stix2
-from stix2 import parse
 
 import yaml
 from dateutil.parser import parse
@@ -61,7 +60,9 @@ class Mandiant:
             config,
         )
         self.mandiant_report_types_ignored = get_config_variable(
-            "MANDIANT_REPORT_TYPES_IGNORED", ["mandiant", "report_types_ignored"], config
+            "MANDIANT_REPORT_TYPES_IGNORED",
+            ["mandiant", "report_types_ignored"],
+            config,
         )
         self.added_after = int(parse(self.mandiant_import_start_date).timestamp())
 
@@ -84,8 +85,8 @@ class Mandiant:
         self.cache = {}
 
     def cleanhtml(self, raw_html):
-        CLEANR = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-        cleantext = re.sub(CLEANR, '', raw_html)
+        CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
+        cleantext = re.sub(CLEANR, "", raw_html)
         return cleantext
 
     def get_interval(self):
@@ -265,8 +266,7 @@ class Mandiant:
                                 aliases=self._redacted_as_none("aliases", actor),
                                 confidence=self.helper.connect_confidence_level,
                                 created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[
-                                    stix2.TLP_AMBER.get("id")                                ],
+                                object_marking_refs=[stix2.TLP_AMBER.get("id")],
                             )
                         else:
                             stix_actor = stix2.ThreatActor(
@@ -279,9 +279,7 @@ class Mandiant:
                                 aliases=self._redacted_as_none("aliases", actor),
                                 confidence=self.helper.connect_confidence_level,
                                 created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[
-                                    stix2.TLP_AMBER.get("id")
-                                ],
+                                object_marking_refs=[stix2.TLP_AMBER.get("id")],
                             )
                         actors.append(stix_actor)
                     except Exception as e:
@@ -328,8 +326,7 @@ class Mandiant:
                             aliases=self._redacted_as_none("aliases", malware),
                             confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[
-                                stix2.TLP_AMBER.get("id")                            ],
+                            object_marking_refs=[stix2.TLP_AMBER.get("id")],
                         )
                         malwares.append(stix_malware)
                     except Exception as e:
@@ -405,8 +402,7 @@ class Mandiant:
                             ),
                             confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[
-                                stix2.TLP_AMBER.get("id")                            ],
+                            object_marking_refs=[stix2.TLP_AMBER.get("id")],
                             allow_custom=True,
                             custom_properties=custom_properties,
                         )
@@ -499,8 +495,7 @@ class Mandiant:
                                 ),
                                 confidence=self.helper.connect_confidence_level,
                                 created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[
-                                    stix2.TLP_AMBER.get("id")                                ],
+                                object_marking_refs=[stix2.TLP_AMBER.get("id")],
                                 custom_properties={
                                     "x_opencti_main_observable_type": type,
                                     "x_opencti_create_observables": True,
@@ -530,7 +525,7 @@ class Mandiant:
         no_more_result = False
         limit = 100
         reports_type_filter = self.mandiant_report_types_ignored
-        self.helper.log_info("Reports to ignore  "+str(reports_type_filter))
+        self.helper.log_info("Reports to ignore  " + str(reports_type_filter))
         # current_state_count = current_state["report"]
         # new_state_count = ""
         next_pointer = current_state["report"]
@@ -547,39 +542,40 @@ class Mandiant:
 
                 for reportOut in result["objects"]:
                     # Ignoring reports that are not listed in the parameters.
-                    if  reportOut.get("report_type") in reports_type_filter:
+                    if reportOut.get("report_type") in reports_type_filter:
                         pass
 
-                    elif not reportOut.get("report_type") in reports_type_filter and reportOut.get("report_type") == "News Analysis":
+                    elif (
+                        not reportOut.get("report_type") in reports_type_filter
+                        and reportOut.get("report_type") == "News Analysis"
+                    ):
                         try:
                             url_report = (
                                 self.mandiant_api_url
                                 + "/v4/report/"
                                 + reportOut.get("report_id")
                             )
-                            report = self._query(
-                                url_report
-                            )
+                            report = self._query(url_report)
                             self.helper.log_debug(
-                                "Processing report ID " + str(reportOut.get("report_id"))
+                                "Processing report ID "
+                                + str(reportOut.get("report_id"))
                             )
-                            
-                            #Bundle object
+
+                            # Bundle object
                             bundle_objects = []
 
-                            #Converting the publishDate to datetime format.
-                            publish_date=parser.parse(report["publishDate"])
+                            # Converting the publishDate to datetime format.
+                            publish_date = parser.parse(report["publishDate"])
 
-
-                            #Generating the Report and Note ID to be used in the required field object_refs.
-                            report_id = Report.generate_id(report["reportId"], publish_date)
+                            # Generating the Report and Note ID to be used in the required field object_refs.
+                            report_id = Report.generate_id(
+                                report["reportId"], publish_date
+                            )
                             note_id = Note.generate_id()
 
-                            self.helper.log_debug(
-                                "Note ID " + str(note_id)
-                            )
+                            self.helper.log_debug("Note ID " + str(note_id))
 
-                            #Getting PDF for report 
+                            # Getting PDF for report
                             try:
                                 report_pdf = self._getreportpdf(url_report)
                                 file_data_encoded = base64.b64encode(report_pdf)
@@ -597,49 +593,52 @@ class Mandiant:
                                     + str(reportOut.get("report_id"))
                                 )
                                 self.helper.log_info("ERROR: " + str(e))
-                                
-                            #Cleaning HTML Tags
+
+                            # Cleaning HTML Tags
                             note = self.cleanhtml(report["isightComment"])
 
                             stix_note = stix2.Note(
-                                    id=note_id,
-                                    abstract="ANALYST COMMENT",
-                                    content=note,
-                                    created_by_ref=self.identity["standard_id"],
-                                    object_refs=[report_id],
-                                )                        
+                                id=note_id,
+                                abstract="ANALYST COMMENT",
+                                content=note,
+                                created_by_ref=self.identity["standard_id"],
+                                object_refs=[report_id],
+                            )
 
-    
                             stix_report = stix2.Report(
                                 id=report_id,
                                 name=self._redacted_as_none("title", report),
-                                report_types=[self._redacted_as_none("reportType", report)]if self._redacted_as_none("reportType", report)is not None else [],
+                                report_types=[
+                                    self._redacted_as_none("reportType", report)
+                                ]
+                                if self._redacted_as_none("reportType", report)
+                                is not None
+                                else [],
                                 description=re.sub(
                                     "<[^<]+?>",
                                     "",
-                                    self._redacted_as_none(
-                                        "fromMedia", report
-                                    ),
+                                    self._redacted_as_none("fromMedia", report),
                                 )
-                                if self._redacted_as_none(
-                                    "fromMedia", report
-                                )
+                                if self._redacted_as_none("fromMedia", report)
                                 is not None
                                 else "No description",
                                 published=publish_date,
-                                labels=[report.get("tmhAccuracyRanking"), "News Analisys"],
+                                labels=[
+                                    report.get("tmhAccuracyRanking"),
+                                    "News Analisys",
+                                ],
                                 confidence=self.helper.connect_confidence_level,
                                 created_by_ref=self.identity["standard_id"],
                                 object_refs=[note_id],
                                 allow_custom=True,
                                 x_opencti_files=[file],
-                                object_marking_refs=[
-                                    stix2.TLP_AMBER.get("id")                            ],
-                                external_references= [
+                                object_marking_refs=[stix2.TLP_AMBER.get("id")],
+                                external_references=[
                                     {
                                         "source_name": report["outlet"],
-                                        "url": report["storyLink"]
-                                    }]
+                                        "url": report["storyLink"],
+                                    }
+                                ],
                             )
 
                             bundle_objects.append(stix_report)
@@ -656,7 +655,7 @@ class Mandiant:
                                         allow_custom=True,
                                     ).serialize(),
                                     update=self.update_existing_data,
-                                    bypass_split = True,
+                                    bypass_split=True,
                                     work_id=work_id,
                                 )
 
@@ -669,9 +668,9 @@ class Mandiant:
                                 self.helper.log_info("ERROR: " + str(e))
                         except Exception as e:
                             self.helper.log_info(
-                                    "Failed to process News Analyis Report "
-                                    + str(reportOut.get("report_id"))
-                                )
+                                "Failed to process News Analyis Report "
+                                + str(reportOut.get("report_id"))
+                            )
 
                             self.helper.log_info("ERROR: " + str(e))
 
@@ -684,10 +683,12 @@ class Mandiant:
                             )
                             # self.helper.log_debug("Report Title "+reportOut["title"])
                             report = self._query(
-                                url_report, app_header="application/stix+json;version=2.1"
+                                url_report,
+                                app_header="application/stix+json;version=2.1",
                             )
                             self.helper.log_debug(
-                                "Processing report ID " + str(reportOut.get("report_id"))
+                                "Processing report ID "
+                                + str(reportOut.get("report_id"))
                             )
                             # self.helper.log_debug(report)
 
@@ -707,59 +708,77 @@ class Mandiant:
                                         report.get("objects").pop(idx)
                                 except Exception as e:
                                     self.helper.log_info(
-                                            "Failed removing Mandiant marking definition "
-                                            + str(reportOut.get("report_id"))
-                                        )
+                                        "Failed removing Mandiant marking definition "
+                                        + str(reportOut.get("report_id"))
+                                    )
 
                                     self.helper.log_info("ERROR: " + str(e))
-                                    
 
                             # Removing the Mandiant entity
                             for idx, each_object in enumerate(report.get("objects")):
                                 try:
                                     if (
                                         each_object.get("type") == "identity"
-                                        and each_object.get("identity_class") == "organization"
+                                        and each_object.get("identity_class")
+                                        == "organization"
                                     ):
                                         report.get("objects").pop(idx)
 
                                 except Exception as e:
                                     self.helper.log_info(
-                                            "Failed removing Mandiant Entity "
-                                            + str(reportOut.get("report_id"))
-                                        )
+                                        "Failed removing Mandiant Entity "
+                                        + str(reportOut.get("report_id"))
+                                    )
 
                                     self.helper.log_info("ERROR: " + str(e))
-                                    
+
                             # Changing Threat Actor to Intrusion Set if it has been defined.
                             for each_actor_object in report.get("objects"):
                                 try:
-                                    if ( self.mandiant_threat_actor_as_intrusion_set
-                                        and each_actor_object.get("type") == "threat-actor"
+                                    if (
+                                        self.mandiant_threat_actor_as_intrusion_set
+                                        and each_actor_object.get("type")
+                                        == "threat-actor"
                                     ):
-                                        each_actor_object['type']="intrusion-set"
-                                        each_actor_object["id"]=each_actor_object.get("id").replace("threat-actor", "intrusion-set")
+                                        each_actor_object["type"] = "intrusion-set"
+                                        each_actor_object["id"] = each_actor_object.get(
+                                            "id"
+                                        ).replace("threat-actor", "intrusion-set")
 
-                                    elif ( self.mandiant_threat_actor_as_intrusion_set
-                                        and each_actor_object.get("type") == "relationship"
+                                    elif (
+                                        self.mandiant_threat_actor_as_intrusion_set
+                                        and each_actor_object.get("type")
+                                        == "relationship"
                                     ):
-                                        each_object["source_ref"]=each_object.get("id").replace("threat-actor", "intrusion-set")
-                                            
-                                    elif ( self.mandiant_threat_actor_as_intrusion_set
+                                        each_object["source_ref"] = each_object.get(
+                                            "id"
+                                        ).replace("threat-actor", "intrusion-set")
+
+                                    elif (
+                                        self.mandiant_threat_actor_as_intrusion_set
                                         and each_actor_object.get("type") == "report"
                                     ):
                                         new_object_refs = []
-                                        for each_object_refs in each_actor_object.get("object_refs"):
-                                            new_each_object_refs = each_object_refs.replace("threat-actor", "intrusion-set")
+                                        for each_object_refs in each_actor_object.get(
+                                            "object_refs"
+                                        ):
+                                            new_each_object_refs = (
+                                                each_object_refs.replace(
+                                                    "threat-actor", "intrusion-set"
+                                                )
+                                            )
                                             new_object_refs.append(new_each_object_refs)
-                                        
-                                        each_actor_object["object_refs"]= new_object_refs
-                                        
+
+                                        each_actor_object[
+                                            "object_refs"
+                                        ] = new_object_refs
+
                                 except Exception as e:
                                     self.helper.log_info(
-                                            "Failed to change Threat Actor to Intrusion Set "
-                                            + str(reportOut.get("report_id"))
-                                        )
+                                        "Failed to change Threat Actor to Intrusion Set "
+                                        + str(reportOut.get("report_id"))
+                                    )
+                                    self.helper.log_info("ERROR: " + str(e))
 
                             # Updating the identities as sectors
                             for each_object in report.get("objects"):
@@ -772,25 +791,32 @@ class Mandiant:
                                 # Adding Sectors as labels for the report
                                 if each_object.get("type") == "report":
                                     each_object.update(
-                                        {"created_by_ref": str(self.identity["standard_id"])}
+                                        {
+                                            "created_by_ref": str(
+                                                self.identity["standard_id"]
+                                            )
+                                        }
                                     )
 
-                                    #Appending Report type as Labels
-                                    for each_report_type in each_object.get("report_types"):
+                                    # Appending Report type as Labels
+                                    for each_report_type in each_object.get(
+                                        "report_types"
+                                    ):
                                         report_labels.append(each_report_type)
-                                    #Updating the labels for the report.
+                                    # Updating the labels for the report.
                                     each_object.update({"labels": report_labels})
-                                    
+
                                     self.helper.log_debug(
-                                            "Labels Object "
-                                            + str(report_labels)
-                                        )
+                                        "Labels Object " + str(report_labels)
+                                    )
 
                                     # Fetching the PDF for the report
                                     try:
                                         report_pdf = self._getreportpdf(url_report)
                                         file_data_encoded = base64.b64encode(report_pdf)
-                                        filename = str(reportOut.get("report_id")) + ".pdf"
+                                        filename = (
+                                            str(reportOut.get("report_id")) + ".pdf"
+                                        )
                                         file = {
                                             "name": filename,
                                             "data": file_data_encoded.decode("utf-8"),
@@ -807,9 +833,9 @@ class Mandiant:
 
                         except Exception as e:
                             self.helper.log_info(
-                                    "Failed to process News Analyis Report "
-                                    + str(reportOut.get("report_id"))
-                                )
+                                "Failed to process News Analyis Report "
+                                + str(reportOut.get("report_id"))
+                            )
 
                             self.helper.log_info("ERROR: " + str(e))
 
