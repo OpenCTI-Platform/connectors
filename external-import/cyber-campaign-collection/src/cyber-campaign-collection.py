@@ -129,7 +129,18 @@ class CyberMonitor:
                 year_contents = repo.get_contents(content_file.path)
                 for report_dir in year_contents:
                     # Sanitize
-                    report_date = parser.parse(report_dir.name[0:10].replace(".", "-"))
+                    report_date = report_dir.name[0:10].replace(".", "-")
+
+                    # Force report date to first month and/or first day if it is lacking
+                    # either field
+                    if report_date[5:7] == "00" or not report_date[5:7].isdigit():
+                        report_date = report_date[0:5] + "01" + report_date[7:]
+
+                    if report_date[8:10] == "00" or not report_date[8:10].isdigit():
+                        report_date = report_date[0:8] + "01"
+
+                    # Overwrite sanitized report_date with dateparser output from it
+                    report_date = parser.parse(report_date)
                     report_name = (
                         report_dir.name[11:].replace("_", " ").replace("-", " ")
                     )
