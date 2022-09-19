@@ -14,7 +14,7 @@ connector:
 unpac_me:
   api_key: 'ChangeMe' # See https://www.unpac.me/account
   private: false # Mark samples are private (only available to PRO users)
-  user_agent: 'UnpacMe OpenCTI Connector v5.3.12' # User agent for UnpacMeApi instantiation
+  user_agent: 'UnpacMe OpenCTI Connector v5.3.13' # User agent for UnpacMeApi instantiation
   less_noise: false # Only upload unpacked samples if they matched a malware family
   family_color: '#0059f7' # Label color for family
   tag_color: '#54483b' # Label color for all other labels
