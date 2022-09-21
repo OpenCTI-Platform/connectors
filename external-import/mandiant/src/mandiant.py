@@ -81,7 +81,7 @@ class Mandiant:
     def _get_token(self):
         headers = {
             "accept": "application/json",
-            "x-app-name": "opencti-connector-5.3.13",
+            "x-app-name": "opencti-connector-5.3.14",
         }
         r = requests.post(
             self.mandiant_api_url + "/token",

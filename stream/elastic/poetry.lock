@@ -295,7 +295,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "pycti"
-version = "5.3.13"
+version = "5.3.14"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -610,7 +610,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "183bbeb39c77303da998c7d60e1d0625bc7ecf9a22cd63312aa2863d8b1d653f"
+content-hash = "2b641fa3586e9e27666efd5eaf518e318f3741f9d1c4330b289554a01268658a"
 
 [metadata.files]
 antlr4-python3-runtime = []

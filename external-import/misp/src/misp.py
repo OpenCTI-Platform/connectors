@@ -2,6 +2,7 @@ import json
 import os
 import re
 import sys
+import pytz
 import time
 from datetime import datetime
 
@@ -249,24 +250,43 @@ class Misp:
 
     def run(self):
         while True:
-            timestamp = int(time.time())
-            # Get the last_run datetime
-            now = datetime.utcfromtimestamp(timestamp)
-            friendly_name = "MISP run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            now = datetime.now(pytz.UTC)
+            friendly_name = "MISP run @ " + now.astimezone(pytz.UTC).isoformat()
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
             current_state = self.helper.get_state()
-            if current_state is not None and "last_run" in current_state:
-                if isinstance(current_state["last_run"], int):
-                    last_run = datetime.utcfromtimestamp(current_state["last_run"])
-                else:
-                    last_run = parse(current_state["last_run"])
-                last_run_date = last_run.isoformat()
-                self.helper.log_info("Connector last run: " + last_run_date)
+            if (
+                current_state is not None
+                and "last_run" in current_state
+                and "last_event_timestamp" in current_state
+                and "last_event" in current_state
+            ):
+                last_run = parse(current_state["last_run"])
+                last_event = parse(current_state["last_event"])
+                last_event_timestamp = current_state["last_event_timestamp"]
+                self.helper.log_info(
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                )
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
+                )
+            elif "last_run" in current_state:
+                last_run = parse(current_state["last_run"])
+                last_event = last_run
+                last_event_timestamp = int(last_event.timestamp())
+                self.helper.log_info(
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                )
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
+                )
             else:
-                last_run = parse(self.misp_import_from_date)
-                last_run_date = last_run.isoformat()
+                last_run = now
+                last_event = now
+                last_event_timestamp = int(now.timestamp())
                 self.helper.log_info("Connector has never run")
 
             # If import with tags
@@ -293,7 +313,8 @@ class Misp:
             kwargs = dict()
 
             # Put the date
-            kwargs[self.misp_datetime_attribute] = last_run_date
+            next_event_timestamp = last_event_timestamp + 1
+            kwargs[self.misp_datetime_attribute] = next_event_timestamp
 
             # Complex query date
             if complex_query_tag is not None:
@@ -336,23 +357,44 @@ class Misp:
                 self.helper.log_info("MISP returned " + str(len(events)) + " events.")
                 number_events = number_events + len(events)
 
-                # Update the state
-                self.helper.set_state({"last_run": now.isoformat()})
-
                 # Break if no more result
                 if len(events) == 0:
                     break
 
                 # Process the event
-                self.process_events(work_id, events)
+                processed_events_last_timestamp = self.process_events(work_id, events)
+                if (
+                    processed_events_last_timestamp is not None
+                    and processed_events_last_timestamp > last_event_timestamp
+                ):
+                    last_event_timestamp = processed_events_last_timestamp
 
                 # Next page
                 current_page += 1
+
+            # Loop is over, storing the state
+            # We cannot store the state before, because MISP events are NOT ordered properly
+            # and there is NO WAY to order them using their library
             message = (
                 "Connector successfully run ("
                 + str(number_events)
-                + " events have been processed), storing last_run as "
-                + now.strftime("%Y-%m-%d %H:%M:%S")
+                + " events have been processed), storing state (last_run="
+                + now.astimezone(pytz.utc).isoformat()
+                + ", last_event="
+                + datetime.utcfromtimestamp(last_event_timestamp)
+                .astimezone(pytz.UTC)
+                .isoformat()
+                + ", last_event_timestamp="
+                + str(last_event_timestamp)
+            )
+            self.helper.set_state(
+                {
+                    "last_run": now.astimezone(pytz.utc).isoformat(),
+                    "last_event": datetime.utcfromtimestamp(last_event_timestamp)
+                    .astimezone(pytz.UTC)
+                    .isoformat(),
+                    "last_event_timestamp": last_event_timestamp,
+                }
             )
             self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
@@ -370,6 +412,7 @@ class Misp:
         import_owner_orgs_not = None
         import_distribution_levels = None
         import_threat_levels = None
+        last_event_timestamp = None
         if self.import_creator_orgs is not None:
             import_creator_orgs = self.import_creator_orgs.split(",")
         if self.import_creator_orgs_not is not None:
@@ -385,6 +428,11 @@ class Misp:
 
         for event in events:
             self.helper.log_info("Processing event " + event["Event"]["uuid"])
+            event_timestamp = int(event["Event"][self.misp_datetime_attribute])
+            # need to check if timestamp is more recent than the previous event since
+            # events are not ordered by timestamp in API response
+            if last_event_timestamp is None or event_timestamp > last_event_timestamp:
+                last_event_timestamp = event_timestamp
             # Check against filter
             if (
                 import_creator_orgs is not None
@@ -815,6 +863,7 @@ class Misp:
             self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, update=self.update_existing_data
             )
+            return last_event_timestamp
 
     def _get_pdf_file(self, attribute):
         if not self.import_with_attachments:
