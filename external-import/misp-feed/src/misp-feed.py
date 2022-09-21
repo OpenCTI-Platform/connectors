@@ -1426,6 +1426,14 @@ class MispFeed:
             self._retrieve_data(self.misp_feed_url + "/" + event_id + ".json")
         )
 
+        # Check the event is a list or not
+        ## It may be an illegal case if the length is not 1
+        if isinstance(event, list):
+            if len(event) == 1:
+                event = event[0]
+            else:
+                raise ValueError(f"The list of {event_id=} is too long.")
+
         ### Default variables
         added_markings = []
         added_entities = []
