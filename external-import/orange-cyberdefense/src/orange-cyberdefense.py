@@ -711,7 +711,7 @@ class OrangeCyberDefense:
                             "x_opencti_aliases": [vulnerability["cve"]]
                             if vulnerability["cve"] is not None
                             else None,
-                            "x_opencti_base_score": vulnerability["base_score"],
+                            "x_opencti_base_score": float(vulnerability["base_score"]),
                         },
                     )
                 )
