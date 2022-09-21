@@ -73,7 +73,7 @@ gevent = ["gevent"]
 
 [[package]]
 name = "pycti"
-version = "5.3.13"
+version = "5.3.14"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -287,7 +287,7 @@ test = ["pytest (>=2.2.3)", "flake8 (>=2.4.0)", "isort (>=4.2.2)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "96d1a0911c88cfa98b53657f036abb83d827c27bafb503718a8f94ebb2ec6a7c"
+content-hash = "6456790ebf7bd3de90d0bc755b0bce7a6a265d433e6b339e29f755003e94cb47"
 
 [metadata.files]
 antlr4-python3-runtime = []
