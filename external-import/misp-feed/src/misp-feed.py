@@ -6,6 +6,7 @@ import time
 import re
 import urllib.request
 import stix2
+import pytz
 import yaml
 import certifi
 
@@ -1777,53 +1778,97 @@ class MispFeed:
 
     def process_data(self):
         try:
-            # Get the current timestamp and check
-            timestamp = int(time.time())
-            # Get the last_run datetime
-            now = datetime.utcfromtimestamp(timestamp)
-
-            current_state = self.helper.get_state()
-            if current_state is not None and "last_run" in current_state:
-                if isinstance(current_state["last_run"], int):
-                    last_run = datetime.utcfromtimestamp(current_state["last_run"])
-                else:
-                    last_run = parse(current_state["last_run"])
-                last_run_date = last_run.isoformat()
-                last_run_timestamp = last_run.timestamp()
-                self.helper.log_info("Connector last run: " + last_run_date)
-            else:
-                last_run = parse(self.misp_feed_import_from_date)
-                last_run_timestamp = last_run.timestamp()
-                self.helper.log_info("Connector has never run")
-
-            friendly_name = "MISP Feed run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            now = datetime.now(pytz.UTC)
+            friendly_name = "MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
+            current_state = self.helper.get_state()
+            if (
+                current_state is not None
+                and "last_run" in current_state
+                and "last_event_timestamp" in current_state
+                and "last_event" in current_state
+            ):
+                last_run = parse(current_state["last_run"])
+                last_event = parse(current_state["last_event"])
+                last_event_timestamp = current_state["last_event_timestamp"]
+                self.helper.log_info(
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                )
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
+                )
+            elif current_state is not None and "last_run" in current_state:
+                last_run = parse(current_state["last_run"])
+                last_event = last_run
+                last_event_timestamp = int(last_event.timestamp())
+                self.helper.log_info(
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                )
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
+                )
+            else:
+                if self.misp_feed_import_from_date is not None:
+                    last_event = parse(self.misp_feed_import_from_date)
+                    last_event_timestamp = int(last_event.timestamp())
+                else:
+                    last_event_timestamp = int(now.timestamp())
+                self.helper.log_info("Connector has never run")
+
             number_events = 0
             try:
                 manifest_data = json.loads(
                     self._retrieve_data(self.misp_feed_url + "/manifest.json")
                 )
+                items = []
                 for key, value in manifest_data.items():
-                    if int(value["timestamp"]) >= last_run_timestamp:
-                        date = datetime.utcfromtimestamp(
-                            int(value["timestamp"])
-                        ).strftime("%Y-%m-%d %H:%M:%S")
+                    value["timestamp"] = int(value["timestamp"])
+                    items.append({**value, "event_key": key})
+                items = sorted(items, key=lambda d: d["timestamp"])
+                for item in items:
+                    if item["timestamp"] > last_event_timestamp:
+                        last_event_timestamp = item["timestamp"]
                         self.helper.log_info(
                             "Processing event "
-                            + value["info"]
+                            + item["info"]
                             + " (date="
-                            + value["date"]
+                            + item["date"]
                             + ", modified="
-                            + date
+                            + datetime.utcfromtimestamp(last_event_timestamp)
+                            .astimezone(pytz.UTC)
+                            .isoformat()
                             + ")"
                         )
-                        bundle = self._process_event(key)
+                        bundle = self._process_event(item["event_key"])
                         self.helper.log_info("Sending event STIX2 bundle...")
                         self._send_bundle(work_id, bundle)
                         number_events = number_events + 1
-                        self.helper.set_state({"last_run": now.isoformat()})
+                        message = (
+                            "Event processed, storing state (last_run="
+                            + now.astimezone(pytz.utc).isoformat()
+                            + ", last_event="
+                            + datetime.utcfromtimestamp(last_event_timestamp)
+                            .astimezone(pytz.UTC)
+                            .isoformat()
+                            + ", last_event_timestamp="
+                            + str(last_event_timestamp)
+                        )
+                        self.helper.set_state(
+                            {
+                                "last_run": now.astimezone(pytz.utc).isoformat(),
+                                "last_event": datetime.utcfromtimestamp(
+                                    last_event_timestamp
+                                )
+                                .astimezone(pytz.UTC)
+                                .isoformat(),
+                                "last_event_timestamp": last_event_timestamp,
+                            }
+                        )
+                        self.helper.log_info(message)
             except Exception as e:
                 self.helper.log_error(str(e))
 
@@ -1831,8 +1876,15 @@ class MispFeed:
             message = (
                 "Connector successfully run ("
                 + str(number_events)
-                + " events have been processed), storing last_run as "
-                + now.strftime("%Y-%m-%d %H:%M:%S")
+                + " events have been processed), storing state (last_run="
+                + now.astimezone(pytz.utc).isoformat()
+                + ", last_event="
+                + datetime.utcfromtimestamp(last_event_timestamp)
+                .astimezone(pytz.UTC)
+                .isoformat()
+                + ", last_event_timestamp="
+                + str(last_event_timestamp)
+                + ")"
             )
             self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
