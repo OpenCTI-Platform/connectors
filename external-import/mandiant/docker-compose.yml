@@ -19,4 +19,5 @@ services:
       - MANDIANT_IMPORT_START_DATE=2022-04-01 # Max 90 days in the past, limitation of Mandiant API for indicators
       - MANDIANT_THREAT_ACTOR_AS_INTRUSION_SET=true
       - MANDIANT_INTERVAL=5 # Required, in minutes
+      - MANDIANT_REPORT_TYPES_IGNORED=["Vulnerability Report"] #Highly suggest to ignore "Vulnerability Report" due the amount of reports daily and the amount of repetitive software creating extensive delay processing reports.
     restart: always
