@@ -530,7 +530,6 @@ class Mandiant:
         next_pointer = current_state["report"]
         while no_more_result is False:
             self.helper.log_info("Iterating with next pointer" + next_pointer)
-
             result = self._querynext(url, limit, next_pointer=next_pointer)
             result_count = len(result["objects"])
             self.helper.log_info(
@@ -539,13 +538,11 @@ class Mandiant:
                 + " and to process "
                 + str(result_count)
             )
-
             if (
                 result is not None
                 and result["objects"] is not None
                 and result_count > 0
             ):
-
                 for reportOut in result["objects"]:
                     # #Ignoring
                     # if reportOut.get("report_type") == "News Analysis":
@@ -636,7 +633,6 @@ class Mandiant:
                             )
                             if report_labels:
                                 each_object.update({"labels": report_labels})
-
                             # Fetching the PDF for the report
                             try:
                                 report_pdf = self._getreportpdf(url_report)
@@ -713,7 +709,6 @@ class Mandiant:
                             "report": "",
                         }
                     )
-
                 if "actor" in self.mandiant_collections:
                     current_state = self.helper.get_state()
                     self.helper.log_info(
