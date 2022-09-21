@@ -272,7 +272,7 @@ class Misp:
                     "Connector latest event: "
                     + last_event.astimezone(pytz.UTC).isoformat()
                 )
-            elif "last_run" in current_state:
+            elif current_state is not None and "last_run" in current_state:
                 last_run = parse(current_state["last_run"])
                 last_event = last_run
                 last_event_timestamp = int(last_event.timestamp())
@@ -284,9 +284,12 @@ class Misp:
                     + last_event.astimezone(pytz.UTC).isoformat()
                 )
             else:
-                last_run = now
-                last_event = now
-                last_event_timestamp = int(now.timestamp())
+                if self.misp_import_from_date is not None:
+                    last_event = parse(self.misp_import_from_date)
+                    last_event_timestamp = int(last_event.timestamp())
+                else:
+                    last_event = now
+                    last_event_timestamp = int(now.timestamp())
                 self.helper.log_info("Connector has never run")
 
             # If import with tags
@@ -386,6 +389,7 @@ class Misp:
                 .isoformat()
                 + ", last_event_timestamp="
                 + str(last_event_timestamp)
+                + ")"
             )
             self.helper.set_state(
                 {
