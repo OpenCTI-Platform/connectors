@@ -923,7 +923,6 @@ class Misp:
         resolved_attributes = self.resolve_type(attribute["type"], attribute["value"])
         if resolved_attributes is None:
             return None
-
         file_name = None
         for resolved_attribute in resolved_attributes:
             if resolved_attribute["resolver"] == "file-name":
@@ -1899,7 +1898,7 @@ class Misp:
                     {"resolver": resolver_1, "type": type_1, "value": values[1]},
                 ]
             else:
-                if resolved_types[0] == "ipv4-addr":
+                if resolved_types[0]["resolver"] == "ipv4-addr":
                     resolver_0 = self.detect_ip_version(value)
                     type_0 = self.detect_ip_version(value, True)
                 else:
