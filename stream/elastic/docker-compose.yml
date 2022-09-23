@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-elastic:
-    image: opencti/connector-elastic:5.3.14
+    image: opencti/connector-elastic:5.3.15
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,7 +9,6 @@ services:
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_WITH_INFERENCES=false
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=OpenCTI Elastic Connector"
       - CONNECTOR_SCOPE=elastic
