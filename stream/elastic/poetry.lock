@@ -295,7 +295,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "pycti"
-version = "5.3.14"
+version = "5.3.15"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -550,8 +550,8 @@ simplejson = "*"
 stix2-patterns = ">=1.2.0"
 
 [package.extras]
-semantic = ["haversine", "rapidfuzz"]
 taxii = ["taxii2-client (>=2.3.0)"]
+semantic = ["rapidfuzz", "haversine"]
 
 [[package]]
 name = "stix2-patterns"
@@ -610,7 +610,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "2b641fa3586e9e27666efd5eaf518e318f3741f9d1c4330b289554a01268658a"
+content-hash = "6eb2b2d0231af82ac6cfab27a74aa2ef1c82efaa573ac892de172d5d560f0acf"
 
 [metadata.files]
 antlr4-python3-runtime = []

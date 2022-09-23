@@ -73,7 +73,7 @@ gevent = ["gevent"]
 
 [[package]]
 name = "pycti"
-version = "5.3.14"
+version = "5.3.15"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -229,8 +229,8 @@ simplejson = "*"
 stix2-patterns = ">=1.2.0"
 
 [package.extras]
-semantic = ["haversine", "rapidfuzz"]
 taxii = ["taxii2-client (>=2.3.0)"]
+semantic = ["rapidfuzz", "haversine"]
 
 [[package]]
 name = "stix2-patterns"
@@ -287,7 +287,7 @@ test = ["pytest (>=2.2.3)", "flake8 (>=2.4.0)", "isort (>=4.2.2)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "6456790ebf7bd3de90d0bc755b0bce7a6a265d433e6b339e29f755003e94cb47"
+content-hash = "f9d06e830cca0c03ea8e2cdfe64bd446cba06907f892d5d80f4d786fdec76826"
 
 [metadata.files]
 antlr4-python3-runtime = []
