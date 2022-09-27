@@ -18,29 +18,30 @@ class CRITsConnector:
         # of External references
         ext_refs = []
         srcs = []
-        for src in crits_obj["source"]:
-            sname = src["name"]
-            author = stix2.Identity(
-                id=Identity.generate_id(sname, "organization"),
-                name=sname,
-                identity_class="organization",
-            )
-            srcs.append(author)
+        if "source" in crits_obj.keys():
+            for src in crits_obj["source"]:
+                sname = src["name"]
+                author = stix2.Identity(
+                    id=Identity.generate_id(sname, "organization"),
+                    name=sname,
+                    identity_class="organization",
+                )
+                srcs.append(author)
 
-            for inst in src["instances"]:
-                ref_params = {
-                    "source_name": sname,
-                    "description": inst["method"],
-                }
-                if inst["reference"]:
-                    if validators.url(inst["reference"]):
-                        ref_params["url"] = inst["reference"]
-                        ref_params["external_id"] = ""
-                    else:
-                        ref_params["url"] = ""
-                        ref_params["external_id"] = inst["reference"]
+                for inst in src["instances"]:
+                    ref_params = {
+                        "source_name": sname,
+                        "description": inst["method"],
+                    }
+                    if inst["reference"]:
+                        if validators.url(inst["reference"]):
+                            ref_params["url"] = inst["reference"]
+                            ref_params["external_id"] = ""
+                        else:
+                            ref_params["url"] = ""
+                            ref_params["external_id"] = inst["reference"]
 
-                    ext_refs.append(stix2.ExternalReference(**ref_params))
+                        ext_refs.append(stix2.ExternalReference(**ref_params))
 
         return srcs, ext_refs
 
@@ -104,11 +105,11 @@ class CRITsConnector:
                 new_objects.extend(srcs)
 
                 new_obj = None
-                custom_properties = {
-                    "x_opencti_score": self.default_score,
-                    "created_by_ref": srcs[0]["id"],
-                    "external_references": ext_refs,
-                }
+                custom_properties = {"x_opencti_score": self.default_score}
+                if srcs:
+                    custom_properties["created_by_ref"] = srcs[0]["id"]
+                    custom_properties["external_references"] = ext_refs
+
                 if collection == "ips":
                     new_obj = self.ip_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
