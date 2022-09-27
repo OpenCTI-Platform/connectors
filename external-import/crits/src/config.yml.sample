@@ -18,3 +18,4 @@ crits:
   api_key: 'ChangeMe'
   event_type: 'crits-event'
   interval: 60
+  import_campaign_as: 'IntrusionSet'

@@ -37,6 +37,7 @@ requests library to function.
 | `crits_api_key`                      | `CRITS_API_KEY`                     | Yes          | The API Key used for authentication (not the user's password, but an API Key that's creatable/viewable in the user's profile in CRITs)                     |
 | `crits_event_type`                   | `CRITS_EVENT_TYPE`                  | Yes          | When importing CRITs Events as Analysis Reports, what Report Type to give them                                                                             |
 | `crits_interval`                     | `CRITS_INTERVAL`                    | Yes          | The interval to delay between updates, in minutes                                                                                                          |
+| `crits_import_campaign_as`           | `CRITS_IMPORT_CAMPAIGN_AS`          | No           | 'Campaign' or 'IntrusionSet': What STIX2.1 type to import Campaigns as. Default: IntrusionSet                                                              |
 
 ### Behavior ###
 

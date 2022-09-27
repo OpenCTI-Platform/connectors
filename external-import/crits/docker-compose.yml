@@ -18,4 +18,5 @@ services:
       - CRITS_API_KEY=ChangeMe
       - CRITS_EVENT_TYPE=crits-event
       - CRITS_INTERVAL=60
+      - CRITS_IMPORT_CAMPAIGN_AS=IntrusionSet
     restart: always
