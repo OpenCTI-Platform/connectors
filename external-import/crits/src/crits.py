@@ -407,12 +407,12 @@ class CRITsConnector:
             #
             tmp_earliest = datetime(2010, 1, 1)
 
-            # First collect entities and observables and other objects that can be contained within reports
+            # First, collect up reports, which will initially populate using the Report-centric object model
+            self.process_events(since=tmp_earliest)
+
+            # Second, collect entities and observables and other objects that can be created without relating to Reports/Events
             for collection in ["ips", "domains"]:
                 self.process_objects(collection=collection, since=tmp_earliest)
-
-            # Next, collect reports
-            self.process_events(since=tmp_earliest)
 
             time.sleep(60 * self.crits_interval)
 
