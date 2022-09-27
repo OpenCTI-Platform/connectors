@@ -127,7 +127,9 @@ class CRITsConnector:
             )
 
             bundle = stix2.Bundle(objects=new_objects, allow_custom=True).serialize()
-            self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+            self.helper.send_stix2_bundle(
+                bundle, update=self.update_existing_data, work_id=work_id
+            )
 
             # If this is the last page of the collection, then break
             if (
@@ -248,7 +250,9 @@ class CRITsConnector:
             )
 
             bundle = stix2.Bundle(objects=new_objects, allow_custom=True).serialize()
-            self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+            self.helper.send_stix2_bundle(
+                bundle, update=self.update_existing_data, work_id=work_id
+            )
 
             # If this is the last page of the collection, then break
             if (
@@ -317,6 +321,13 @@ class CRITsConnector:
         )
         self.crits_interval = get_config_variable(
             "CRITS_INTERVAL", ["crits", "interval"], config, True
+        )
+        self.update_existing_data = get_config_variable(
+            "CONNECTOR_UPDATE_EXISTING_DATA",
+            ["connector", "update_existing_data"],
+            config,
+            isNumber=False,
+            default=True,
         )
         self.crits_timestamp_field = "modified"
         self.chunk_size = 100
