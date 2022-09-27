@@ -15,6 +15,7 @@ from pycti import (
     Campaign,
     IntrusionSet,
     ThreatActor,
+    Malware,
 )
 import stix2
 import validators
@@ -66,6 +67,23 @@ class CRITsConnector:
             name=crits_obj["name"],
             object_marking_refs=[self.default_marking],
             custom_properties=custom_properties,
+            **dynamic_params,
+        )
+
+    def backdoor_to_stix(self, crits_obj, custom_properties):
+        custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["x_opencti_aliases"] = crits_obj.get("aliases", [])
+
+        dynamic_params = {}
+        if "created_by_ref" in custom_properties.keys():
+            dynamic_params["created_by_ref"] = custom_properties["created_by_ref"]
+
+        return stix2.Malware(
+            id=Malware.generate_id(name=crits_obj["name"]),
+            name=crits_obj["name"],
+            object_marking_refs=[self.default_marking],
+            custom_properties=custom_properties,
+            is_family=True,
             **dynamic_params,
         )
 
@@ -175,6 +193,10 @@ class CRITsConnector:
                     new_obj = self.actor_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
+                elif collection == "backdoors":
+                    new_obj = self.backdoor_to_stix(
+                        crits_obj=crits_obj, custom_properties=custom_properties
+                    )
 
                 if new_obj:
                     new_objects.append(new_obj)
@@ -248,7 +270,7 @@ class CRITsConnector:
 
                 ts = dtparse(crits_obj["created"])
 
-                allowed_types = ["Actor", "IP", "Domain", "Campaign"]
+                allowed_types = ["Actor", "IP", "Domain", "Campaign", "Backdoor"]
                 report_contents_crits = list(
                     filter(
                         lambda x: x["type"] in allowed_types, crits_obj["relationships"]
@@ -295,6 +317,15 @@ class CRITsConnector:
                         )
                         if contained_tlo.ok:
                             contained_stix = self.actor_to_stix(
+                                crits_obj=contained_tlo.json(),
+                                custom_properties=contained_custom_properties,
+                            )
+                    elif contained["type"] == "Backdoor":
+                        contained_tlo = self.make_api_getobj(
+                            collection="backdoors", objid=contained["value"]
+                        )
+                        if contained_tlo.ok:
+                            contained_stix = self.backdoor_to_stix(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
@@ -517,7 +548,7 @@ class CRITsConnector:
             self.process_events(since=tmp_earliest)
 
             # Second, collect entities and observables and other objects that can be created without relating to Reports/Events
-            for collection in ["actors", "ips", "domains", "campaigns"]:
+            for collection in ["actors", "ips", "domains", "campaigns", "backdoors"]:
                 self.process_objects(collection=collection, since=tmp_earliest)
 
             time.sleep(60 * self.crits_interval)
