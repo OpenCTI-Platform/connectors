@@ -37,11 +37,12 @@ INDICATOR_MAPPING = {
 
 
 class CRITsConnector:
-    def collect_srcs_refs(self, crits_obj):
+    def collect_srcs_refs(self, crits_obj, collection):
         # Grab all the source.*.instances.*.references, and import them as a list
         # of External references
         ext_refs = []
         srcs = []
+
         if "source" in crits_obj.keys():
             for src in crits_obj["source"]:
                 sname = src["name"]
@@ -66,6 +67,23 @@ class CRITsConnector:
                             ref_params["external_id"] = inst["reference"]
 
                         ext_refs.append(stix2.ExternalReference(**ref_params))
+
+        # Finally, create an external reference that links back to the CRITs entity
+        if self.crits_reference_url:
+            crits_entity_id = crits_obj["_id"]
+            if collection == "samples":
+                crits_entity_id = crits_obj["md5"]
+            ref_params = {
+                "source_name": "CRITs",
+                "description": "Populated via external-import/crits connector",
+                "url": "{base}/{collection}/details/{objid}/".format(
+                    base=self.crits_reference_url,
+                    collection=collection,
+                    objid=crits_entity_id,
+                ),
+                "external_id": "",
+            }
+            ext_refs.append(stix2.ExternalReference(**ref_params))
 
         return srcs, ext_refs
 
@@ -272,7 +290,9 @@ class CRITsConnector:
             # Walk through each of the entities and build a stix object
             for crits_obj in content["objects"]:
                 # Grab the first Source name from this list, and import it as the author
-                srcs, ext_refs = self.collect_srcs_refs(crits_obj)
+                srcs, ext_refs = self.collect_srcs_refs(
+                    crits_obj=crits_obj, collection=collection
+                )
                 new_objects.extend(srcs)
 
                 new_obj = None
@@ -379,7 +399,9 @@ class CRITsConnector:
             for crits_obj in content["objects"]:
                 # Grab the first Source name from this list, and import it as the author
 
-                srcs, ext_refs = self.collect_srcs_refs(crits_obj)
+                srcs, ext_refs = self.collect_srcs_refs(
+                    crits_obj=crits_obj, collection="events"
+                )
                 new_objects.extend(srcs)
 
                 custom_properties = {"x_opencti_report_status": 2}
