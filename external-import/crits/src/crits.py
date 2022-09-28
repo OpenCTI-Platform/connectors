@@ -162,6 +162,36 @@ class CRITsConnector:
             custom_properties=custom_properties,
         )
 
+    def sample_to_stix(self, crits_obj, custom_properties):
+        custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["labels"] = crits_obj.get("bucket_list", [])
+
+        hashes = {}
+        for algo in ["MD5", "SHA-1", "SHA-256", "SHA-512", "SSDEEP"]:
+            crits_algo = algo.lower().replace("-", "")
+            if crits_algo in crits_obj:
+                hashes[algo] = crits_obj[crits_algo]
+
+        dynamic_params = {}
+        if "size" in crits_obj:
+            dynamic_params["size"] = crits_obj["size"]
+
+        if "mimetype" in crits_obj:
+            dynamic_params["mime_type"] = crits_obj["mimetype"]
+
+        if "filename" in crits_obj and crits_obj["filename"]:
+            dynamic_params["name"] = crits_obj["filename"]
+
+        if "filenames" in crits_obj and crits_obj["filenames"]:
+            custom_properties["x_opencti_additional_names"] = crits_obj["filenames"]
+
+        return stix2.File(
+            hashes=hashes,
+            object_marking_refs=[self.default_marking],
+            custom_properties=custom_properties,
+            **dynamic_params,
+        )
+
     def indicator_to_stix(self, crits_obj, custom_properties):
         custom_properties["description"] = crits_obj.get("description", "")
         custom_properties["labels"] = crits_obj.get("bucket_list", [])
@@ -257,6 +287,10 @@ class CRITsConnector:
                     )
                 elif collection == "domains":
                     new_obj = self.domain_to_stix(
+                        crits_obj=crits_obj, custom_properties=custom_properties
+                    )
+                elif collection == "samples":
+                    new_obj = self.sample_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
                 elif collection == "campaigns":
@@ -360,6 +394,7 @@ class CRITsConnector:
                     "Backdoor",
                     "Exploit",
                     "Indicator",
+                    "Sample",
                 ]
                 report_contents_crits = list(
                     filter(
@@ -389,6 +424,15 @@ class CRITsConnector:
                         )
                         if contained_tlo.ok:
                             contained_stix = self.domain_to_stix(
+                                crits_obj=contained_tlo.json(),
+                                custom_properties=contained_custom_properties,
+                            )
+                    elif contained["type"] == "Sample":
+                        contained_tlo = self.make_api_getobj(
+                            collection="samples", objid=contained["value"]
+                        )
+                        if contained_tlo.ok:
+                            contained_stix = self.sample_to_stix(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
@@ -665,6 +709,7 @@ class CRITsConnector:
                 "backdoors",
                 "exploits",
                 "indicators",
+                "samples",
             ]:
                 self.process_objects(collection=collection, since=tmp_earliest)
 
