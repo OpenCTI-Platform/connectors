@@ -65,6 +65,7 @@ class CRITsConnector:
         return stix2.ThreatActor(
             id=ThreatActor.generate_id(name=crits_obj["name"]),
             name=crits_obj["name"],
+            labels=crits_obj.get("bucket_list", []),
             object_marking_refs=[self.default_marking],
             custom_properties=custom_properties,
             **dynamic_params,
@@ -81,6 +82,7 @@ class CRITsConnector:
         return stix2.Malware(
             id=Malware.generate_id(name=crits_obj["name"]),
             name=crits_obj["name"],
+            labels=crits_obj.get("bucket_list", []),
             object_marking_refs=[self.default_marking],
             custom_properties=custom_properties,
             is_family=True,
@@ -100,6 +102,7 @@ class CRITsConnector:
         return stix2.Malware(
             id=Malware.generate_id(name=crits_obj["name"]),
             name=crits_obj["name"],
+            labels=crits_obj.get("bucket_list", []),
             object_marking_refs=[self.default_marking],
             custom_properties=custom_properties,
             is_family=True,
@@ -119,6 +122,7 @@ class CRITsConnector:
             return stix2.Campaign(
                 id=Campaign.generate_id(name=crits_obj["name"]),
                 name=crits_obj["name"],
+                labels=crits_obj.get("bucket_list", []),
                 object_marking_refs=[self.default_marking],
                 custom_properties=custom_properties,
                 **dynamic_params,
@@ -127,6 +131,7 @@ class CRITsConnector:
         return stix2.IntrusionSet(
             id=IntrusionSet.generate_id(name=crits_obj["name"]),
             name=crits_obj["name"],
+            labels=crits_obj.get("bucket_list", []),
             object_marking_refs=[self.default_marking],
             custom_properties=custom_properties,
             **dynamic_params,
@@ -134,6 +139,7 @@ class CRITsConnector:
 
     def domain_to_stix(self, crits_obj, custom_properties):
         custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["labels"] = crits_obj.get("bucket_list", [])
 
         return stix2.DomainName(
             value=crits_obj["domain"],
@@ -143,6 +149,7 @@ class CRITsConnector:
 
     def ip_to_stix(self, crits_obj, custom_properties):
         custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["labels"] = crits_obj.get("bucket_list", [])
 
         # IP Address observables have 4 subtype possibilities. However,
         # STIX 2.x maps "Address" and "Subnet" to the same data types, for
@@ -402,6 +409,7 @@ class CRITsConnector:
                     name=crits_obj["title"],
                     description=crits_obj.get("description", ""),
                     object_marking_refs=[self.default_marking],
+                    labels=crits_obj.get("bucket_list", []),
                     published=ts,
                     created=ts,
                     modified=dtparse(crits_obj["modified"]),
