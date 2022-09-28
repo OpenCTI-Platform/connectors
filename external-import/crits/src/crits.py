@@ -87,6 +87,26 @@ class CRITsConnector:
             **dynamic_params,
         )
 
+    def exploit_to_stix(self, crits_obj, custom_properties):
+        custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["x_opencti_aliases"] = crits_obj.get("aliases", [])
+
+        dynamic_params = {}
+        if "created_by_ref" in custom_properties.keys():
+            dynamic_params["created_by_ref"] = custom_properties["created_by_ref"]
+
+        cve = crits_obj["cve"]
+
+        return stix2.Malware(
+            id=Malware.generate_id(name=crits_obj["name"]),
+            name=crits_obj["name"],
+            object_marking_refs=[self.default_marking],
+            custom_properties=custom_properties,
+            is_family=True,
+            malware_types=["exploit-kit"],
+            **dynamic_params,
+        )
+
     def campaign_to_stix(self, crits_obj, custom_properties):
         custom_properties["description"] = crits_obj.get("description", "")
         custom_properties["x_opencti_aliases"] = crits_obj.get("aliases", [])
@@ -197,6 +217,10 @@ class CRITsConnector:
                     new_obj = self.backdoor_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
+                elif collection == "exploits":
+                    new_obj = self.exploit_to_stix(
+                        crits_obj=crits_obj, custom_properties=custom_properties
+                    )
 
                 if new_obj:
                     new_objects.append(new_obj)
@@ -270,7 +294,14 @@ class CRITsConnector:
 
                 ts = dtparse(crits_obj["created"])
 
-                allowed_types = ["Actor", "IP", "Domain", "Campaign", "Backdoor"]
+                allowed_types = [
+                    "Actor",
+                    "IP",
+                    "Domain",
+                    "Campaign",
+                    "Backdoor",
+                    "Exploit",
+                ]
                 report_contents_crits = list(
                     filter(
                         lambda x: x["type"] in allowed_types, crits_obj["relationships"]
@@ -326,6 +357,15 @@ class CRITsConnector:
                         )
                         if contained_tlo.ok:
                             contained_stix = self.backdoor_to_stix(
+                                crits_obj=contained_tlo.json(),
+                                custom_properties=contained_custom_properties,
+                            )
+                    elif contained["type"] == "Exploit":
+                        contained_tlo = self.make_api_getobj(
+                            collection="exploits", objid=contained["value"]
+                        )
+                        if contained_tlo.ok:
+                            contained_stix = self.exploit_to_stix(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
@@ -548,7 +588,14 @@ class CRITsConnector:
             self.process_events(since=tmp_earliest)
 
             # Second, collect entities and observables and other objects that can be created without relating to Reports/Events
-            for collection in ["actors", "ips", "domains", "campaigns", "backdoors"]:
+            for collection in [
+                "actors",
+                "ips",
+                "domains",
+                "campaigns",
+                "backdoors",
+                "exploits",
+            ]:
                 self.process_objects(collection=collection, since=tmp_earliest)
 
             time.sleep(60 * self.crits_interval)
