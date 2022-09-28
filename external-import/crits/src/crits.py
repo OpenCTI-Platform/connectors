@@ -180,6 +180,68 @@ class CRITsConnector:
             custom_properties=custom_properties,
         )
 
+    def email_to_stix(self, crits_obj, custom_properties):
+        custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["labels"] = crits_obj.get("bucket_list", [])
+
+        dynamic_params = {}
+
+        if "raw_headers" in crits_obj:
+            received_lines = []
+            additional_headers = {}
+            for header_line in (
+                x.strip() for x in crits_obj["raw_headers"].split("\n")
+            ):
+                hbreak = header_line.find(":")
+                if hbreak >= 0:
+                    hname = header_line[0:hbreak]
+                    if hname == "Received":
+                        received_lines.append(header_line[hbreak + 2 :])
+                    elif hname == "Content-Type":
+                        dynamic_params["content_type"] = header_line[hbreak + 2 :]
+                    elif not hname in [
+                        "Content-Type",
+                        "From",
+                        "Sender",
+                        "Cc",
+                        "To",
+                        "Bcc",
+                        "Subject",
+                        "Date",
+                        "Message-ID",
+                    ]:
+                        if not hname in additional_headers:
+                            additional_headers[hname] = header_line[hbreak + 2 :]
+                        elif isinstance(additional_headers[hname], str):
+                            additional_headers[hname] = [
+                                additional_headers[hname],
+                                header_line[hbreak + 2 :],
+                            ]
+                        else:
+                            additional_headers[hname].append(header_line[hbreak + 2 :])
+
+            if received_lines:
+                dynamic_params["received_lines"] = received_lines
+
+            if additional_headers:
+                dynamic_params["additional_header_fields"] = additional_headers
+
+        if "message_id" in crits_obj:
+            dynamic_params["message_id"] = crits_obj["message_id"]
+
+        if "isodate" in crits_obj:
+            ts = dtparse(crits_obj["isodate"]).isoformat()
+            dynamic_params["date"] = "{ts}Z".format(ts=ts)
+
+        return stix2.EmailMessage(
+            subject=crits_obj.get("subject", ""),
+            object_marking_refs=[self.default_marking],
+            custom_properties=custom_properties,
+            is_multipart=False,  # For now don't upload as multipart
+            body=crits_obj["raw_body"],
+            **dynamic_params,
+        )
+
     def sample_to_stix(self, crits_obj, custom_properties):
         custom_properties["description"] = crits_obj.get("description", "")
         custom_properties["labels"] = crits_obj.get("bucket_list", [])
@@ -333,6 +395,10 @@ class CRITsConnector:
                     new_obj = self.indicator_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
+                elif collection == "emails":
+                    new_obj = self.email_to_stix(
+                        crits_obj=crits_obj, custom_properties=custom_properties
+                    )
 
                 if new_obj:
                     new_objects.append(new_obj)
@@ -417,6 +483,7 @@ class CRITsConnector:
                     "Exploit",
                     "Indicator",
                     "Sample",
+                    "Email",
                 ]
                 report_contents_crits = list(
                     filter(
@@ -500,6 +567,15 @@ class CRITsConnector:
                         )
                         if contained_tlo.ok:
                             contained_stix = self.indicator_to_stix(
+                                crits_obj=contained_tlo.json(),
+                                custom_properties=contained_custom_properties,
+                            )
+                    elif contained["type"] == "Email":
+                        contained_tlo = self.make_api_getobj(
+                            collection="emails", objid=contained["value"]
+                        )
+                        if contained_tlo.ok:
+                            contained_stix = self.email_to_stix(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
@@ -732,6 +808,7 @@ class CRITsConnector:
                 "exploits",
                 "indicators",
                 "samples",
+                "emails",
             ]:
                 self.process_objects(collection=collection, since=tmp_earliest)
 
