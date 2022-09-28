@@ -16,9 +16,24 @@ from pycti import (
     IntrusionSet,
     ThreatActor,
     Malware,
+    Indicator,
 )
 import stix2
 import validators
+
+# Large table to map CRITs Indicator types to corresponding STIXv2.1 ones
+INDICATOR_MAPPING = {
+    "IPv4 Address": "ipv4-addr",
+    "IPv4 Subnet": "ipv4-addr",
+    "Address - ipv4-addr": "ipv4-addr",
+    "IPv6 Address": "ipv6-addr",
+    "IPv6 Subnet": "ipv6-addr",
+    "Address - ipv6-addr": "ipv6-addr",
+    "IPv6 Subnet": "ipv6-addr",
+    "Domain": "domain-name",
+    "URI - Domain Name": "domain-name",
+    "URI - domain-name": "domain-name",
+}
 
 
 class CRITsConnector:
@@ -147,6 +162,38 @@ class CRITsConnector:
             custom_properties=custom_properties,
         )
 
+    def indicator_to_stix(self, crits_obj, custom_properties):
+        custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["labels"] = crits_obj.get("bucket_list", [])
+
+        dynamic_params = {}
+        if "created_by_ref" in custom_properties.keys():
+            dynamic_params["created_by_ref"] = custom_properties["created_by_ref"]
+
+        if crits_obj["type"] in INDICATOR_MAPPING:
+            # If found in INDICATOR_MAPPING, it is an atomic type mapping to a STIX
+            # observable.
+            custom_properties["x_opencti_main_observable_type"] = INDICATOR_MAPPING[
+                crits_obj["type"]
+            ]
+            custom_properties["x_opencti_detection"] = False
+            pattern = "[{t}:value = '{v}']".format(
+                t=custom_properties["x_opencti_main_observable_type"],
+                v=crits_obj["value"],
+            )
+            return stix2.Indicator(
+                id=Indicator.generate_id(pattern=pattern),
+                name=crits_obj["value"],
+                description=crits_obj.get("description", ""),
+                pattern_type="stix",
+                pattern=pattern,
+                object_marking_refs=[self.default_marking],
+                labels=crits_obj.get("bucket_list", []),
+                **dynamic_params,
+            )
+
+        return None
+
     def ip_to_stix(self, crits_obj, custom_properties):
         custom_properties["description"] = crits_obj.get("description", "")
         custom_properties["labels"] = crits_obj.get("bucket_list", [])
@@ -226,6 +273,10 @@ class CRITsConnector:
                     )
                 elif collection == "exploits":
                     new_obj = self.exploit_to_stix(
+                        crits_obj=crits_obj, custom_properties=custom_properties
+                    )
+                elif collection == "indicators":
+                    new_obj = self.indicator_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
 
@@ -308,6 +359,7 @@ class CRITsConnector:
                     "Campaign",
                     "Backdoor",
                     "Exploit",
+                    "Indicator",
                 ]
                 report_contents_crits = list(
                     filter(
@@ -373,6 +425,15 @@ class CRITsConnector:
                         )
                         if contained_tlo.ok:
                             contained_stix = self.exploit_to_stix(
+                                crits_obj=contained_tlo.json(),
+                                custom_properties=contained_custom_properties,
+                            )
+                    elif contained["type"] == "Indicator":
+                        contained_tlo = self.make_api_getobj(
+                            collection="indicators", objid=contained["value"]
+                        )
+                        if contained_tlo.ok:
+                            contained_stix = self.indicator_to_stix(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
@@ -603,6 +664,7 @@ class CRITsConnector:
                 "campaigns",
                 "backdoors",
                 "exploits",
+                "indicators",
             ]:
                 self.process_objects(collection=collection, since=tmp_earliest)
 
