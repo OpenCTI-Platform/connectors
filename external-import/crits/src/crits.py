@@ -97,7 +97,7 @@ class CRITsConnector:
         if "created_by_ref" in custom_properties.keys():
             dynamic_params["created_by_ref"] = custom_properties["created_by_ref"]
 
-        cve = crits_obj["cve"]
+        # cve = crits_obj["cve"]
 
         return stix2.Malware(
             id=Malware.generate_id(name=crits_obj["name"]),
