@@ -21,6 +21,29 @@ from pycti import (
 import stix2
 import validators
 
+# Used from external-import/misp to cover importing Raw Data objects
+@stix2.CustomObservable(
+    "text",
+    [
+        ("value", stix2.properties.StringProperty(required=True)),
+        ("spec_version", stix2.properties.StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            stix2.properties.ListProperty(
+                stix2.properties.ReferenceProperty(
+                    valid_types="marking-definition", spec_version="2.1"
+                )
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Text:
+    """Text observable."""
+
+    pass
+
+
 # Large table to map CRITs Indicator types to corresponding STIXv2.1 ones
 INDICATOR_MAPPING = {
     "IPv4 Address": "ipv4-addr",
@@ -179,6 +202,16 @@ class CRITsConnector:
 
         return stix2.DomainName(
             value=crits_obj["domain"],
+            object_marking_refs=[self.default_marking],
+            custom_properties=custom_properties,
+        )
+
+    def rawdata_to_text(self, crits_obj, custom_properties):
+        custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["labels"] = crits_obj.get("bucket_list", [])
+
+        return Text(
+            value=crits_obj["data"],
             object_marking_refs=[self.default_marking],
             custom_properties=custom_properties,
         )
@@ -426,6 +459,10 @@ class CRITsConnector:
                     new_obj = self.domain_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
+                elif collection == "raw_data":
+                    new_obj = self.rawdata_to_text(
+                        crits_obj=crits_obj, custom_properties=custom_properties
+                    )
                 elif collection == "samples":
                     new_obj = self.sample_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
@@ -549,6 +586,7 @@ class CRITsConnector:
                     "Sample",
                     "Email",
                     "Target",
+                    "RawData",
                 ]
                 report_contents_crits = list(
                     filter(
@@ -578,6 +616,15 @@ class CRITsConnector:
                         )
                         if contained_tlo.ok:
                             contained_stix = self.domain_to_stix(
+                                crits_obj=contained_tlo.json(),
+                                custom_properties=contained_custom_properties,
+                            )
+                    elif contained["type"] == "RawData":
+                        contained_tlo = self.make_api_getobj(
+                            collection="raw_data", objid=contained["value"]
+                        )
+                        if contained_tlo.ok:
+                            contained_stix = self.rawdata_to_text(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
@@ -886,6 +933,7 @@ class CRITsConnector:
                 "actors",
                 "ips",
                 "domains",
+                "raw_data",
                 "campaigns",
                 "backdoors",
                 "exploits",
