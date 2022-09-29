@@ -73,6 +73,9 @@ class CRITsConnector:
             crits_entity_id = crits_obj["_id"]
             if collection == "samples":
                 crits_entity_id = crits_obj["md5"]
+            elif collection == "targets":
+                crits_entity_id = crits_obj["email_address"]
+
             ref_params = {
                 "source_name": "CRITs",
                 "description": "Populated via external-import/crits connector",
@@ -178,6 +181,31 @@ class CRITsConnector:
             value=crits_obj["domain"],
             object_marking_refs=[self.default_marking],
             custom_properties=custom_properties,
+        )
+
+    def target_to_stix(self, crits_obj, custom_properties):
+        custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["labels"] = crits_obj.get("bucket_list", [])
+
+        dynamic_params = {}
+        if "created_by_ref" in custom_properties.keys():
+            dynamic_params["created_by_ref"] = custom_properties["created_by_ref"]
+
+        if "title" in crits_obj and crits_obj["title"]:
+            dynamic_params["roles"] = [crits_obj["title"]]
+
+        return stix2.Identity(
+            id=Identity.generate_id(
+                name=crits_obj["email_address"], identity_class="individual"
+            ),
+            name="{f} {l}".format(
+                f=crits_obj.get("firstname", ""), l=crits_obj.get("lastname", "")
+            ),
+            contact_information=crits_obj["email_address"],
+            identity_class="individual",
+            object_marking_refs=[self.default_marking],
+            custom_properties=custom_properties,
+            **dynamic_params,
         )
 
     def email_to_stix(self, crits_obj, custom_properties):
@@ -430,6 +458,10 @@ class CRITsConnector:
                     new_obj = self.email_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
+                elif collection == "targets":
+                    new_obj = self.target_to_stix(
+                        crits_obj=crits_obj, custom_properties=custom_properties
+                    )
 
                 if new_obj:
                     new_objects.append(new_obj)
@@ -516,6 +548,7 @@ class CRITsConnector:
                     "Signature",
                     "Sample",
                     "Email",
+                    "Target",
                 ]
                 report_contents_crits = list(
                     filter(
@@ -617,6 +650,15 @@ class CRITsConnector:
                         )
                         if contained_tlo.ok:
                             contained_stix = self.email_to_stix(
+                                crits_obj=contained_tlo.json(),
+                                custom_properties=contained_custom_properties,
+                            )
+                    elif contained["type"] == "Target":
+                        contained_tlo = self.make_api_getobj(
+                            collection="targets", objid=contained["value"]
+                        )
+                        if contained_tlo.ok:
+                            contained_stix = self.target_to_stix(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
@@ -851,6 +893,7 @@ class CRITsConnector:
                 "signatures",
                 "samples",
                 "emails",
+                "targets",
             ]:
                 self.process_objects(collection=collection, since=tmp_earliest)
 
