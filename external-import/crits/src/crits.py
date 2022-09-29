@@ -304,6 +304,33 @@ class CRITsConnector:
 
         return None
 
+    def signature_to_stix(self, crits_obj, custom_properties):
+        custom_properties["description"] = crits_obj.get("description", "")
+        custom_properties["labels"] = crits_obj.get("bucket_list", [])
+
+        dynamic_params = {}
+        if "created_by_ref" in custom_properties.keys():
+            dynamic_params["created_by_ref"] = custom_properties["created_by_ref"]
+
+        if "data_type_max_version" in crits_obj:
+            dynamic_params["pattern_version"] = str(crits_obj["data_type_max_version"])
+
+        # If found in INDICATOR_MAPPING, it is an atomic type mapping to a STIX
+        # observable.
+        custom_properties["x_opencti_detection"] = False
+        return stix2.Indicator(
+            id=Indicator.generate_id(pattern=crits_obj["data"]),
+            name=crits_obj["title"],
+            description=crits_obj.get("description", ""),
+            pattern_type=crits_obj["data_type"].lower(),
+            pattern=crits_obj["data"],
+            object_marking_refs=[self.default_marking],
+            labels=crits_obj.get("bucket_list", []),
+            **dynamic_params,
+        )
+
+        return None
+
     def ip_to_stix(self, crits_obj, custom_properties):
         custom_properties["description"] = crits_obj.get("description", "")
         custom_properties["labels"] = crits_obj.get("bucket_list", [])
@@ -395,6 +422,10 @@ class CRITsConnector:
                     new_obj = self.indicator_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
+                elif collection == "signatures":
+                    new_obj = self.signature_to_stix(
+                        crits_obj=crits_obj, custom_properties=custom_properties
+                    )
                 elif collection == "emails":
                     new_obj = self.email_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
@@ -482,6 +513,7 @@ class CRITsConnector:
                     "Backdoor",
                     "Exploit",
                     "Indicator",
+                    "Signature",
                     "Sample",
                     "Email",
                 ]
@@ -567,6 +599,15 @@ class CRITsConnector:
                         )
                         if contained_tlo.ok:
                             contained_stix = self.indicator_to_stix(
+                                crits_obj=contained_tlo.json(),
+                                custom_properties=contained_custom_properties,
+                            )
+                    elif contained["type"] == "Signature":
+                        contained_tlo = self.make_api_getobj(
+                            collection="signatures", objid=contained["value"]
+                        )
+                        if contained_tlo.ok:
+                            contained_stix = self.signature_to_stix(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
@@ -807,6 +848,7 @@ class CRITsConnector:
                 "backdoors",
                 "exploits",
                 "indicators",
+                "signatures",
                 "samples",
                 "emails",
             ]:
