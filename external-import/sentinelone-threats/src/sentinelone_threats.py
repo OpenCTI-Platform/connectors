@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-
+import traceback
 import magic
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -52,6 +52,7 @@ class SentinelOneThreats:
             ["sentinelone_threats", "cooldown_seconds"],
             config,
         )
+
 
         self.skip_false_positives = get_config_variable(
             "SENTINELONE_THREATS_SKIP_FALSE_POSITIVES",
@@ -230,19 +231,19 @@ class SentinelOneThreats:
                 self.helper.log_info(
                     f"Re-checking for new threats in {self.cooldown_seconds} seconds..."
                 )
+                time.sleep(int(self.cooldown_seconds))
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.log_error(traceback.format_exc())
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
-            time.sleep(self.cooldown_seconds)
 
     def artifact_exists_opencti(self, sha1):
         """
