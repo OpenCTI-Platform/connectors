@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-chapsvision:
+    image: opencti/connector-chapsvision:5.3.16
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Chapsvision
+      - CONNECTOR_SCOPE=chapsvision
+      - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - CONNECTOR_LOG_LEVEL=info
+      - CHAPSVISION_CERTIFICATE=Certificate_base64
+      - CHAPSVISION_KEY=Key_base64
+      - CHAPSVISION_QUERY_PARAMETER=_params
+      - CHAPSVISION_START_DATE=2022-01-01
+      - CHAPSVISION_INTERVAL=5 # In minutes
+    restart: always

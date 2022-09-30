@@ -7,7 +7,7 @@ If you're using a free API key, you must use the 10K limitation in the parameter
 
 ### Requirements
 
-- OpenCTI Platform >= 5.3.15
+- OpenCTI Platform >= 5.3.16
 
 ### Configuration
 

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-export-file-stix:
-    image: opencti/connector-export-file-stix:5.3.15
+    image: opencti/connector-export-file-stix:5.3.16
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

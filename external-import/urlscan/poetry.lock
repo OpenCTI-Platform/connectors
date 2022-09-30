@@ -8,7 +8,7 @@ python-versions = "*"
 
 [[package]]
 name = "certifi"
-version = "2022.9.14"
+version = "2022.9.24"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -73,7 +73,7 @@ gevent = ["gevent"]
 
 [[package]]
 name = "pycti"
-version = "5.3.15"
+version = "5.3.16"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -287,7 +287,7 @@ test = ["pytest (>=2.2.3)", "flake8 (>=2.4.0)", "isort (>=4.2.2)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "f9d06e830cca0c03ea8e2cdfe64bd446cba06907f892d5d80f4d786fdec76826"
+content-hash = "a62d4c306fa68277c2eebb006af9372f8f18c235549f16b5adc4b59bb9b52e72"
 
 [metadata.files]
 antlr4-python3-runtime = []
