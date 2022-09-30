@@ -4,7 +4,6 @@ import uuid
 import time
 import base64
 import requests
-import stix2
 import json
 from datetime import datetime, timedelta
 from dateutil.parser import parse
