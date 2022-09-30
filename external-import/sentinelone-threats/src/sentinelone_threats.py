@@ -246,7 +246,6 @@ class SentinelOneThreats:
             )
             time.sleep(self.cooldown_seconds)
 
-
     def artifact_exists_opencti(self, sha1):
         """
         Determine whether or not an Artifact already exists in OpenCTI.
