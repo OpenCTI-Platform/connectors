@@ -3,6 +3,7 @@ import sys
 import uuid
 import time
 import base64
+import stix2
 import requests
 import json
 from datetime import datetime, timedelta
@@ -103,19 +104,20 @@ class Chapsvision:
             objects.append(channel)
         media_content = None
         if "link" in doc:
-            labels = None
+            labels = [doc["broadcaster"]]
             if "hashtag" in doc and len(doc["hashtag"]) > 0:
-                labels = []
                 for hashtag in doc["hashtag"]:
                     labels.append(hashtag.replace("#", ""))
             media_content = {
                 "id": "media-content--" + str(uuid.uuid4()),
+                "type": "media-content",
+                "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
-                "content": doc["content"],
+                "labels": labels,
                 "created_by_ref": self.identity["standard_id"],
             }
-            if labels is not None:
-                media_content["labels"] = labels
+            if "content" in doc:
+                media_content["content"] = doc["content"]
             objects.append(media_content)
         if channel is not None and media_content is not None:
             relationship = {
@@ -135,26 +137,237 @@ class Chapsvision:
                 "target_ref": media_content["id"],
             }
             objects.append(relationship)
+        user_account = None
+        if "user_name" in doc:
+            user_account = json.loads(
+                stix2.UserAccount(
+                    display_nbame=doc["user_name"],
+                    account_login=doc["user_account"],
+                    user_id=doc["user_id"],
+                    allow_custom=True,
+                    account_type=doc["broadcaster"],
+                    custom_properties={
+                        "created_by_ref": self.identity["standard_id"],
+                        "external_references": [
+                            {
+                                "source_name": doc["broadcaster"],
+                                "url": doc["profile_link"],
+                            }
+                        ],
+                    },
+                ).serialize()
+            )
+            objects.append(user_account)
+        if user_account is not None and media_content is not None:
+            relationship = {
+                "id": self.helper.api.stix_core_relationship.generate_id(
+                    "authored-by",
+                    media_content["id"],
+                    user_account["id"],
+                    doc["publication_date"],
+                ),
+                "type": "relationship",
+                "relationship_type": "authored-by",
+                "start_time": doc["publication_date"],
+                "created": doc["publication_date"],
+                "modified": doc["publication_date"],
+                "created_by_ref": self.identity["standard_id"],
+                "source_ref": media_content["id"],
+                "target_ref": user_account["id"],
+            }
+            objects.append(relationship)
+        if user_account is not None and channel is not None:
+            relationship = {
+                "id": self.helper.api.stix_core_relationship.generate_id(
+                    "belongs-to", channel["id"], user_account["id"]
+                ),
+                "type": "relationship",
+                "relationship_type": "belongs-to",
+                "created": doc["publication_date"],
+                "modified": doc["publication_date"],
+                "created_by_ref": self.identity["standard_id"],
+                "source_ref": channel["id"],
+                "target_ref": user_account["id"],
+            }
+            objects.append(relationship)
+        if "recipient" in doc and len(doc["recipient"]) > 0:
+            for recipient in doc["recipient"]:
+                recipient_account = json.loads(
+                    stix2.UserAccount(
+                        account_login=recipient,
+                        custom_properties={
+                            "created_by_ref": self.identity["standard_id"],
+                        },
+                    ).serialize()
+                )
+                objects.append(recipient_account)
+                if user_account is not None:
+                    relationship = {
+                        "id": self.helper.api.stix_core_relationship.generate_id(
+                            "related-to",
+                            user_account["id"],
+                            recipient_account["id"],
+                            doc["publication_date"],
+                        ),
+                        "type": "relationship",
+                        "relationship_type": "related-to",
+                        "start_time": doc["publication_date"],
+                        "created": doc["publication_date"],
+                        "modified": doc["publication_date"],
+                        "created_by_ref": self.identity["standard_id"],
+                        "source_ref": user_account["id"],
+                        "target_ref": recipient_account["id"],
+                    }
+                    objects.append(relationship)
 
         return objects
 
     def generate_website(self, doc):
         objects = []
         if "link" in doc:
-            labels = None
+            labels = [doc["content_provider"]]
             if "hashtag" in doc and len(doc["hashtag"]) > 0:
-                labels = []
                 for hashtag in doc["hashtag"]:
                     labels.append(hashtag.replace("#", ""))
             media_content = {
                 "id": "media-content--" + str(uuid.uuid4()),
+                "type": "media-content",
+                "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
-                "content": doc["content"],
+                "labels": labels,
+                "created_by_ref": self.identity["standard_id"],
+                "external_references": [
+                    {"source_name": doc["content_provider"], "url": doc["link"]}
+                ],
+            }
+            if "content" in doc:
+                media_content["content"] = doc["content"]
+            if "title" in doc:
+                media_content["title"] = doc["title"]
+            if "description" in doc:
+                media_content["x_opencti_description"] = doc["description"]
+
+            objects.append(media_content)
+
+        return objects
+
+    def generate_messaging(self, doc):
+        objects = []
+        channel = None
+        if "profile_link" in doc:
+            channel = {
+                "type": "channel",
+                "id": self.helper.api.channel.generate_id(doc["profile_link"]),
+                "name": doc["profile_link"],
+                "channel_type": doc["broadcaster"],
+                "labels": [doc["broadcaster_category"]],
                 "created_by_ref": self.identity["standard_id"],
             }
-            if labels is not None:
-                media_content["labels"] = labels
+            objects.append(channel)
+        media_content = None
+        if "link" in doc:
+            labels = [doc["broadcaster"]]
+            if "hashtag" in doc and len(doc["hashtag"]) > 0:
+                for hashtag in doc["hashtag"]:
+                    labels.append(hashtag.replace("#", ""))
+            media_content = {
+                "id": "media-content--" + str(uuid.uuid4()),
+                "type": "media-content",
+                "media_category": doc["broadcaster_category"],
+                "url": doc["link"],
+                "labels": labels,
+                "created_by_ref": self.identity["standard_id"],
+            }
+            if "content" in doc:
+                media_content["content"] = doc["content"]
             objects.append(media_content)
+        if channel is not None and media_content is not None:
+            relationship = {
+                "id": self.helper.api.stix_core_relationship.generate_id(
+                    "publishes",
+                    channel["id"],
+                    media_content["id"],
+                    doc["publication_date"],
+                ),
+                "type": "relationship",
+                "relationship_type": "publishes",
+                "start_time": doc["publication_date"],
+                "created": doc["publication_date"],
+                "modified": doc["publication_date"],
+                "created_by_ref": self.identity["standard_id"],
+                "source_ref": channel["id"],
+                "target_ref": media_content["id"],
+            }
+            objects.append(relationship)
+        user_account = None
+        if "user_name" in doc:
+            user_account = json.loads(
+                stix2.UserAccount(
+                    display_nbame=doc["user_name"],
+                    user_name=doc["user_account"],
+                    user_id=doc["user_id"],
+                    allow_custom=True,
+                    account_type=doc["broadcaster"],
+                    custom_properties={
+                        "created_by_ref": self.identity["standard_id"],
+                        "external_references": [
+                            {
+                                "source_name": doc["broadcaster"],
+                                "url": doc["profile_link"],
+                            }
+                        ],
+                    },
+                ).serialize()
+            )
+            objects.append(user_account)
+        if user_account is not None and media_content is not None:
+            relationship = {
+                "id": self.helper.api.stix_core_relationship.generate_id(
+                    "authored-by",
+                    media_content["id"],
+                    user_account["id"],
+                    doc["publication_date"],
+                ),
+                "type": "relationship",
+                "relationship_type": "authored-by",
+                "start_time": doc["publication_date"],
+                "created": doc["publication_date"],
+                "modified": doc["publication_date"],
+                "created_by_ref": self.identity["standard_id"],
+                "source_ref": media_content["id"],
+                "target_ref": user_account["id"],
+            }
+            objects.append(relationship)
+        if "recipient" in doc and len(doc["recipient"]) > 0:
+            for recipient in doc["recipient"]:
+                recipient_account = json.loads(
+                    stix2.UserAccount(
+                        account_login=recipient,
+                        custom_properties={
+                            "created_by_ref": self.identity["standard_id"],
+                        },
+                    ).serialize()
+                )
+                objects.append(recipient_account)
+                if user_account is not None:
+                    relationship = {
+                        "id": self.helper.api.stix_core_relationship.generate_id(
+                            "related-to",
+                            user_account["id"],
+                            recipient_account["id"],
+                            doc["publication_date"],
+                        ),
+                        "type": "relationship",
+                        "relationship_type": "related-to",
+                        "start_time": doc["publication_date"],
+                        "created": doc["publication_date"],
+                        "modified": doc["publication_date"],
+                        "created_by_ref": self.identity["standard_id"],
+                        "source_ref": user_account["id"],
+                        "target_ref": recipient_account["id"],
+                    }
+                    objects.append(relationship)
+
         return objects
 
     def generate_bundle(self, current_date, data):
@@ -167,6 +380,8 @@ class Chapsvision:
                     objects = objects + self.generate_micro_blogging(doc)
                 elif doc["broadcaster_category"] == "Website":
                     objects = objects + self.generate_website(doc)
+                elif doc["broadcaster_category"] == "Messaging":
+                    objects = objects + self.generate_messaging(doc)
             report_name = (
                 "CTI daily publications digest ("
                 + str(len(data["docs"]))
@@ -185,7 +400,6 @@ class Chapsvision:
             }
             objects.append(report)
             bundle = {"type": "bundle", "objects": objects}
-            print(bundle)
             return bundle
         except Exception as e:
             print(doc)
@@ -231,6 +445,7 @@ class Chapsvision:
                 bundle = self.generate_bundle(current_date, data)
                 if bundle is not None:
                     self.send_bundle(work_id, json.dumps(bundle))
+                self.helper.set_state({"last_run": current_date.isoformat()})
 
             # Store the current timestamp as a last run
             last_run = now.isoformat()
