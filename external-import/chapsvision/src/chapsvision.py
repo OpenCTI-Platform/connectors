@@ -2,6 +2,7 @@ import os
 import sys
 import uuid
 import time
+import pytz
 import base64
 import stix2
 import requests
@@ -97,7 +98,7 @@ class Chapsvision:
                 "type": "channel",
                 "id": self.helper.api.channel.generate_id(doc["profile_link"]),
                 "name": doc["profile_link"],
-                "channel_type": doc["broadcaster"],
+                "channel_types": [doc["broadcaster"]],
                 "labels": [doc["broadcaster_category"]],
                 "created_by_ref": self.identity["standard_id"],
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
@@ -200,7 +201,7 @@ class Chapsvision:
             for recipient in doc["recipient"]:
                 recipient_account = json.loads(
                     stix2.UserAccount(
-                        account_login=recipient,
+                        account_login=recipient.replace("@", ""),
                         object_marking_refs=[stix2.TLP_GREEN["id"]],
                         custom_properties={
                             "created_by_ref": self.identity["standard_id"],
@@ -267,7 +268,7 @@ class Chapsvision:
                 "type": "channel",
                 "id": self.helper.api.channel.generate_id(doc["profile_link"]),
                 "name": doc["profile_link"],
-                "channel_type": doc["broadcaster"],
+                "channel_types": [doc["broadcaster"]],
                 "labels": [doc["broadcaster_category"]],
                 "created_by_ref": self.identity["standard_id"],
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
@@ -404,14 +405,14 @@ class Chapsvision:
             )
             report = {
                 "id": self.helper.api.report.generate_id(
-                    report_name, current_date.isoformat()
+                    report_name, current_date.astimezone(pytz.UTC).isoformat()
                 ),
                 "type": "report",
                 "name": report_name,
                 "description": "Samples CTI - **"
                 + str(len(data["docs"]))
                 + " alerts detected**",
-                "published": current_date.isoformat(),
+                "published": current_date.astimezone(pytz.UTC).isoformat(),
                 "object_refs": [object["id"] for object in objects],
                 "created_by_ref": self.identity["standard_id"],
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
@@ -461,10 +462,12 @@ class Chapsvision:
                 bundle = self.generate_bundle(current_date, data)
                 if bundle is not None:
                     self.send_bundle(work_id, json.dumps(bundle))
-                self.helper.set_state({"last_run": current_date.isoformat()})
+                self.helper.set_state(
+                    {"last_run": current_date.astimezone(pytz.UTC).isoformat()}
+                )
 
             # Store the current timestamp as a last run
-            last_run = now.isoformat()
+            last_run = now.astimezone(pytz.UTC).isoformat()
             message = (
                 "Connector successfully run, storing last_timestamp as " + last_run
             )
