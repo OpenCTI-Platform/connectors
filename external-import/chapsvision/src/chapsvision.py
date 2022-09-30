@@ -417,12 +417,6 @@ class Chapsvision:
                 last_run = parse(current_state["last_run"])
 
             now = datetime.now()
-            friendly_name = "Chapsvision run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
-
-            # Compute the number of days from last_run to now
             delta = now - last_run
             delta_days = delta.days
             self.helper.log_info(str(delta_days) + " days to process since last run")
@@ -431,6 +425,10 @@ class Chapsvision:
                 self.helper.log_info("Need at least one day to process, doing nothing")
                 return
 
+            friendly_name = "Chapsvision run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
             for x in range(0, delta_days):
                 current_date = now - timedelta(days=delta_days - x)
                 day_from = "NOW-" + str(delta_days - x) + "DAYS"
