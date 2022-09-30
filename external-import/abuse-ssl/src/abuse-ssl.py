@@ -6,8 +6,10 @@ import requests
 import yaml
 from stix2 import Identity, IPv4Address, Indicator, Relationship, Bundle
 
+
 class AbuseSSLImportConnector:
     """Enumerates files from text, then processes them"""
+
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
@@ -17,19 +19,24 @@ class AbuseSSLImportConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.author = Identity(
-                name= get_config_variable("CONNECTOR_NAME", ["connector", "name"], config).capitalize(),
-                identity_class="organization"
-            )
+            name=get_config_variable(
+                "CONNECTOR_NAME", ["connector", "name"], config
+            ).capitalize(),
+            identity_class="organization",
+        )
         self.api_url = get_config_variable(
             "ABUSESSL_URL",
             ["abusessl", "url"],
             config,
         )
-        self.interval = get_config_variable(
-            "ABUSESSL_INTERVAL",
-            ["abusessl", "interval"],
-            config,
-        ) * 60
+        self.interval = (
+            get_config_variable(
+                "ABUSESSL_INTERVAL",
+                ["abusessl", "interval"],
+                config,
+            )
+            * 60
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -48,9 +55,7 @@ class AbuseSSLImportConnector:
                 )
                 if current_state is not None and "last_run" in current_state:
                     last_seen = datetime.fromtimestamp(current_state["last_run"])
-                    self.helper.log_info(
-                        f"Connector last ran at: {last_seen} (UTC)"
-                    )
+                    self.helper.log_info(f"Connector last ran at: {last_seen} (UTC)")
                 else:
                     self.helper.log_info("Connector has never run")
 
@@ -62,11 +67,11 @@ class AbuseSSLImportConnector:
                 self.send_bundle(bundle, work_id)
 
                 message = (
-                            "Connector successfully run ("
-                            + str((len(indicators) + len(observables) + len(relationships)))
-                            + " events have been processed), storing last_run as "
-                            + str(now)
-                        )
+                    "Connector successfully run ("
+                    + str((len(indicators) + len(observables) + len(relationships)))
+                    + " events have been processed), storing last_run as "
+                    + str(now)
+                )
                 self.helper.log_info(message)
                 self.helper.set_state(
                     {
@@ -83,12 +88,11 @@ class AbuseSSLImportConnector:
                 self.helper.log_error(str(exception))
                 time.sleep(self.interval)
 
-
     def get_ips(self, url):
         """
         Retrieves response from provided URL and grabs IPv4 addresses from resulting HTML
 
-        :param url: URL for list of IPv4 addresses 
+        :param url: URL for list of IPv4 addresses
         :return: :class:`List` of IPv4 addresses
         """
         self.helper.log_info("Enumerating IPv4 addresses")
@@ -97,13 +101,13 @@ class AbuseSSLImportConnector:
             response_text = response.text
         else:
             return response.raise_for_status()
-        
-        text_lines = response_text.split('\n')
+
+        text_lines = response_text.split("\n")
         ip_addresses = []
         for line in text_lines:
             # Ignore lines starting with '#' and empty lines
-            if not line.startswith('#') and not line == '':
-                data = line.split(',')
+            if not line.startswith("#") and not line == "":
+                data = line.split(",")
                 ip = data[1]
                 ip_addresses.append(ip)
         return ip_addresses
@@ -134,12 +138,12 @@ class AbuseSSLImportConnector:
         for observable in observables:
             indicator = Indicator(
                 name=observable.value,
-                description='Malicious SSL connections',
+                description="Malicious SSL connections",
                 created_by_ref=f"{self.author.id}",
                 confidence=self.helper.connect_confidence_level,
-                pattern_type='stix',
+                pattern_type="stix",
                 pattern=f"[ipv4:value = '{observable.value}']",
-                labels="osint"
+                labels="osint",
             )
             indicators.append(indicator)
         return indicators
@@ -156,15 +160,16 @@ class AbuseSSLImportConnector:
         relationships = []
         for i in range(len(observables)):
             relationship = Relationship(
-                relationship_type='based-on',
+                relationship_type="based-on",
                 source_ref=indicators[i].id,
-                target_ref=observables[i].id)
+                target_ref=observables[i].id,
+            )
             relationships.append(relationship)
         return relationships
 
     def create_bundle(self, observables, indicators, relationships):
         """Creates serialized STIX Bundle object from the provided lists of STIX Observables, Indicators, and Relationships
-        
+
         :param indicators: List of STIX Indicator objects
         :return: Serialized STIX Bundle object
         """
@@ -191,6 +196,7 @@ class AbuseSSLImportConnector:
                 )
             except Exception as e:
                 self.helper.log_error(str(e))
+
 
 if __name__ == "__main__":
     try:
