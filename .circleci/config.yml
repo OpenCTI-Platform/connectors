@@ -250,9 +250,9 @@ jobs:
           name: Build Docker image opencti/connector-intezer-sandbox
           command: docker build -t opencti/connector-intezer-sandbox:latest . && docker tag opencti/connector-intezer-sandbox:latest opencti/connector-intezer-sandbox:${CIRCLE_TAG}
       - run:
-         working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
-         name: Build Docker image opencti/connector-hatching-triage-sandbox
-         command: docker build -t opencti/connector-hatching-triage-sandbox:latest . && docker tag opencti/connector-hatching-triage-sandbox:latest opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
+          working_directory: ~/opencti/internal-enrichment/hatching-triage-sandbox
+          name: Build Docker image opencti/connector-hatching-triage-sandbox
+          command: docker build -t opencti/connector-hatching-triage-sandbox:latest . && docker tag opencti/connector-hatching-triage-sandbox:latest opencti/connector-hatching-triage-sandbox:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/internal-enrichment/unpac-me
           name: Build Docker image opencti/connector-unpac-me
@@ -337,6 +337,10 @@ jobs:
           working_directory: ~/opencti/external-import/chapsvision
           name: Build Docker image opencti/connector-chapsvision
           command: docker build -t opencti/connector-chapsvision:latest . && docker tag opencti/connector-chapsvision:latest opencti/connector-chapsvision:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/abuse-ssl
+          name: Build Docker image opencti/connector-abuse-ssl
+          command: docker build -t opencti/connector-abuse-ssl:latest . && docker tag opencti/connector-abuse-ssl:latest opencti/connector-abuse-ssl:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -485,6 +489,8 @@ jobs:
             docker push opencti/connector-disarm-framework:${CIRCLE_TAG}            
             docker push opencti/connector-chapsvision:latest
             docker push opencti/connector-chapsvision:${CIRCLE_TAG}
+            docker push opencti/connector-abuse-ssl:latest
+            docker push opencti/connector-abuse-ssl:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -716,9 +722,9 @@ jobs:
           name: Build Docker image opencti/connector-urlhaus-recent-payloads
           command: docker build -t opencti/connector-urlhaus-recent-payloads:rolling .
       - run:
-         working_directory: ~/opencti/internal-export-file/export-report-pdf
-         name: Build Docker image opencti/connector-export-report-pdf
-         command: docker build -t opencti/connector-export-report-pdf:rolling .
+          working_directory: ~/opencti/internal-export-file/export-report-pdf
+          name: Build Docker image opencti/connector-export-report-pdf
+          command: docker build -t opencti/connector-export-report-pdf:rolling .
       - run:
           working_directory: ~/opencti/external-import/obstracts
           name: Build Docker image opencti/connector-obstracts
@@ -783,6 +789,10 @@ jobs:
           working_directory: ~/opencti/external-import/chapsvision
           name: Build Docker image opencti/connector-chapsvision
           command: docker build -t opencti/connector-chapsvision:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/abuse-ssl
+          name: Build Docker image opencti/connector-abuse-ssl
+          command: docker build -t opencti/connector-abuse-ssl:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -858,6 +868,7 @@ jobs:
             docker push opencti/connector-misp-feed:rolling
             docker push opencti/connector-disarm-framework:rolling
             docker push opencti/connector-chapsvision:rolling
+            docker push opencti/connector-abuse-ssl:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -866,7 +877,7 @@ jobs:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   notify_rolling:
     docker:
-      - image: 'cimg/base:stable'
+      - image: "cimg/base:stable"
     steps:
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - slack/notify:
@@ -877,7 +888,7 @@ jobs:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   notify:
     docker:
-      - image: 'cimg/base:stable'
+      - image: "cimg/base:stable"
     steps:
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - slack/notify:
