@@ -53,6 +53,9 @@ class SentinelOneThreats:
             config,
         )
 
+        if isinstance(self.cooldown_seconds, str):
+            self.cooldown_seconds = int(self.cooldown_seconds)
+
         self.skip_false_positives = get_config_variable(
             "SENTINELONE_THREATS_SKIP_FALSE_POSITIVES",
             ["sentinelone_threats", "skip_false_positives"],
@@ -241,7 +244,7 @@ class SentinelOneThreats:
             self.helper.log_info(
                 f"Re-checking for new threats in {self.cooldown_seconds} seconds..."
             )
-            time.sleep(int(self.cooldown_seconds))
+            time.sleep(self.cooldown_seconds)
 
 
     def artifact_exists_opencti(self, sha1):
