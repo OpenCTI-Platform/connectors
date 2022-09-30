@@ -53,7 +53,6 @@ class SentinelOneThreats:
             config,
         )
 
-
         self.skip_false_positives = get_config_variable(
             "SENTINELONE_THREATS_SKIP_FALSE_POSITIVES",
             ["sentinelone_threats", "skip_false_positives"],
