@@ -100,6 +100,7 @@ class Chapsvision:
                 "channel_type": doc["broadcaster"],
                 "labels": [doc["broadcaster_category"]],
                 "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(channel)
         media_content = None
@@ -115,6 +116,7 @@ class Chapsvision:
                 "url": doc["link"],
                 "labels": labels,
                 "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             if "content" in doc:
                 media_content["content"] = doc["content"]
@@ -132,9 +134,10 @@ class Chapsvision:
                 "start_time": doc["publication_date"],
                 "created": doc["publication_date"],
                 "modified": doc["publication_date"],
-                "created_by_ref": self.identity["standard_id"],
                 "source_ref": channel["id"],
                 "target_ref": media_content["id"],
+                "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
         user_account = None
@@ -146,6 +149,7 @@ class Chapsvision:
                     user_id=doc["user_id"],
                     allow_custom=True,
                     account_type=doc["broadcaster"],
+                    object_marking_refs=[stix2.TLP_GREEN["id"]],
                     custom_properties={
                         "created_by_ref": self.identity["standard_id"],
                         "external_references": [
@@ -171,9 +175,10 @@ class Chapsvision:
                 "start_time": doc["publication_date"],
                 "created": doc["publication_date"],
                 "modified": doc["publication_date"],
-                "created_by_ref": self.identity["standard_id"],
                 "source_ref": media_content["id"],
                 "target_ref": user_account["id"],
+                "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
         if user_account is not None and channel is not None:
@@ -185,9 +190,10 @@ class Chapsvision:
                 "relationship_type": "belongs-to",
                 "created": doc["publication_date"],
                 "modified": doc["publication_date"],
-                "created_by_ref": self.identity["standard_id"],
                 "source_ref": channel["id"],
                 "target_ref": user_account["id"],
+                "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
         if "recipient" in doc and len(doc["recipient"]) > 0:
@@ -195,6 +201,7 @@ class Chapsvision:
                 recipient_account = json.loads(
                     stix2.UserAccount(
                         account_login=recipient,
+                        object_marking_refs=[stix2.TLP_GREEN["id"]],
                         custom_properties={
                             "created_by_ref": self.identity["standard_id"],
                         },
@@ -214,9 +221,10 @@ class Chapsvision:
                         "start_time": doc["publication_date"],
                         "created": doc["publication_date"],
                         "modified": doc["publication_date"],
-                        "created_by_ref": self.identity["standard_id"],
                         "source_ref": user_account["id"],
                         "target_ref": recipient_account["id"],
+                        "created_by_ref": self.identity["standard_id"],
+                        "object_marking_refs": [stix2.TLP_GREEN["id"]],
                     }
                     objects.append(relationship)
 
@@ -235,10 +243,11 @@ class Chapsvision:
                 "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
                 "labels": labels,
-                "created_by_ref": self.identity["standard_id"],
                 "external_references": [
                     {"source_name": doc["content_provider"], "url": doc["link"]}
                 ],
+                "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             if "content" in doc:
                 media_content["content"] = doc["content"]
@@ -261,6 +270,7 @@ class Chapsvision:
                 "channel_type": doc["broadcaster"],
                 "labels": [doc["broadcaster_category"]],
                 "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(channel)
         media_content = None
@@ -276,6 +286,7 @@ class Chapsvision:
                 "url": doc["link"],
                 "labels": labels,
                 "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             if "content" in doc:
                 media_content["content"] = doc["content"]
@@ -293,9 +304,10 @@ class Chapsvision:
                 "start_time": doc["publication_date"],
                 "created": doc["publication_date"],
                 "modified": doc["publication_date"],
-                "created_by_ref": self.identity["standard_id"],
                 "source_ref": channel["id"],
                 "target_ref": media_content["id"],
+                "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
         user_account = None
@@ -307,6 +319,7 @@ class Chapsvision:
                     user_id=doc["user_id"],
                     allow_custom=True,
                     account_type=doc["broadcaster"],
+                    object_marking_refs=[stix2.TLP_GREEN["id"]],
                     custom_properties={
                         "created_by_ref": self.identity["standard_id"],
                         "external_references": [
@@ -332,9 +345,10 @@ class Chapsvision:
                 "start_time": doc["publication_date"],
                 "created": doc["publication_date"],
                 "modified": doc["publication_date"],
-                "created_by_ref": self.identity["standard_id"],
                 "source_ref": media_content["id"],
                 "target_ref": user_account["id"],
+                "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
         if "recipient" in doc and len(doc["recipient"]) > 0:
@@ -342,6 +356,7 @@ class Chapsvision:
                 recipient_account = json.loads(
                     stix2.UserAccount(
                         account_login=recipient,
+                        object_marking_refs=[stix2.TLP_GREEN["id"]],
                         custom_properties={
                             "created_by_ref": self.identity["standard_id"],
                         },
@@ -364,6 +379,7 @@ class Chapsvision:
                         "created_by_ref": self.identity["standard_id"],
                         "source_ref": user_account["id"],
                         "target_ref": recipient_account["id"],
+                        "object_marking_refs": [stix2.TLP_GREEN["id"]],
                     }
                     objects.append(relationship)
 
@@ -397,6 +413,8 @@ class Chapsvision:
                 + " alerts detected**",
                 "published": current_date.isoformat(),
                 "object_refs": [object["id"] for object in objects],
+                "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(report)
             bundle = {"type": "bundle", "objects": objects}
