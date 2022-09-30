@@ -235,7 +235,7 @@ class SentinelOneThreats:
                 sys.exit(0)
 
             except Exception as e:
-                self.helper.log_error(traceback.format_exc())
+                self.helper.log_error(f'Exception: {e}, traceback: {traceback.format_exc()}')
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
