@@ -227,11 +227,6 @@ class SentinelOneThreats:
                                 id=response["id"], label_id=label["id"]
                             )
 
-                self.helper.log_info(
-                    f"Re-checking for new threats in {self.cooldown_seconds} seconds..."
-                )
-                time.sleep(int(self.cooldown_seconds))
-
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
@@ -242,6 +237,11 @@ class SentinelOneThreats:
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
+
+            self.helper.log_info(
+                f"Re-checking for new threats in {self.cooldown_seconds} seconds..."
+            )
+            time.sleep(int(self.cooldown_seconds))
 
 
     def artifact_exists_opencti(self, sha1):
