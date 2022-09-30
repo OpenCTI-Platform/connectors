@@ -19,7 +19,7 @@ sentinelone_threats:
   base_url: 'https://changeme.sentinelone.net' # SentinelOne host
   # SentinelOne API Token with Threats View and Download Threat permissions, WARNING: S1 tokens expire every 6 months, see README
   api_token: 'changeme'
-  cooldown_seconds: '300' # Time to wait in seconds between subsequent requests
+  cooldown_seconds: 300 # Time to wait in seconds between subsequent requests
   skip_false_positives: True # Skip uploading threat if verdict was set to false_positive
   skip_suspicious: False # Skip uploading threat if confidence level is suspicious
   skip_pua: False # Skip uploading threats classified as Potentially Unwanted Applications (PUA)
