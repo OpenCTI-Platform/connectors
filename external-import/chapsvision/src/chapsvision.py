@@ -246,7 +246,6 @@ class Chapsvision:
                 media_content["title"] = doc["title"]
             if "description" in doc:
                 media_content["x_opencti_description"] = doc["description"]
-
             objects.append(media_content)
 
         return objects
@@ -391,6 +390,7 @@ class Chapsvision:
                 "id": self.helper.api.report.generate_id(
                     report_name, current_date.isoformat()
                 ),
+                "type": "report",
                 "name": report_name,
                 "description": "Samples CTI - **"
                 + str(len(data["docs"]))
