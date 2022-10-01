@@ -5,6 +5,7 @@ import requests
 from math import ceil
 from datetime import datetime
 from dateutil.parser import parse as dtparse
+from base64 import b64decode
 
 import yaml
 from pycti import (
@@ -325,6 +326,22 @@ class CRITsConnector:
 
         if "filenames" in crits_obj and crits_obj["filenames"]:
             custom_properties["x_opencti_additional_names"] = crits_obj["filenames"]
+
+        if "filedata" in crits_obj and crits_obj["filedata"]:
+            # There's an artifact present and we should ingest it as such
+            artifact = {
+                "data": b64decode(crits_obj["filedata"]),
+                "file_name": crits_obj["filename"],
+                "x_opencti_description": crits_obj.get("description", ""),
+                "createdBy": custom_properties.get("created_by_ref", ""),
+                "objectMarking": [self.default_marking.get("id")],
+                "objectLabel": custom_properties["labels"],
+            }
+            if "mimetype" in crits_obj:
+                artifact["mime_type"] = crits_obj["mimetype"]
+
+            r = self.helper.api.stix_cyber_observable.upload_artifact(**artifact)
+            dynamic_params["content_ref"] = r["standard_id"]
 
         return stix2.File(
             hashes=hashes,
