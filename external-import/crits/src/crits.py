@@ -18,6 +18,7 @@ from pycti import (
     ThreatActor,
     Malware,
     Indicator,
+    StixCoreRelationship,
 )
 import stix2
 import validators
@@ -618,6 +619,8 @@ class CRITsConnector:
                 )
 
                 contained_objects = []
+                contained_rels = []
+                crits_stix_mapping = {}
                 for contained in report_contents_crits:
                     contained_stix = None
                     contained_custom_properties = {
@@ -629,110 +632,206 @@ class CRITsConnector:
                             collection="ips", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.ip_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Domain":
                         contained_tlo = self.make_api_getobj(
                             collection="domains", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.domain_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "RawData":
                         contained_tlo = self.make_api_getobj(
                             collection="raw_data", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.rawdata_to_text(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Sample":
                         contained_tlo = self.make_api_getobj(
                             collection="samples", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix, artifact_id = self.sample_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
                             )
                             if artifact_id:
                                 contained_objects.append(artifact_id)
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
+                            )
                     elif contained["type"] == "Campaign":
                         contained_tlo = self.make_api_getobj(
                             collection="campaigns", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.campaign_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Actor":
                         contained_tlo = self.make_api_getobj(
                             collection="actors", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.actor_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Backdoor":
                         contained_tlo = self.make_api_getobj(
                             collection="backdoors", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.backdoor_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Exploit":
                         contained_tlo = self.make_api_getobj(
                             collection="exploits", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.exploit_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Indicator":
                         contained_tlo = self.make_api_getobj(
                             collection="indicators", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.indicator_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Signature":
                         contained_tlo = self.make_api_getobj(
                             collection="signatures", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.signature_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Email":
                         contained_tlo = self.make_api_getobj(
                             collection="emails", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.email_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
                     elif contained["type"] == "Target":
                         contained_tlo = self.make_api_getobj(
                             collection="targets", objid=contained["value"]
                         )
                         if contained_tlo.ok:
+                            crits_obj = contained_tlo.json()
                             contained_stix = self.target_to_stix(
-                                crits_obj=contained_tlo.json(),
+                                crits_obj=crits_obj,
                                 custom_properties=contained_custom_properties,
+                            )
+                            crits_stix_mapping[crits_obj["_id"]] = contained_stix["id"]
+                            contained_rels.extend(
+                                [
+                                    {"from": crits_obj["_id"], "to": rel}
+                                    for rel in crits_obj["relationships"]
+                                ]
                             )
 
                     if contained_stix:
@@ -761,6 +860,28 @@ class CRITsConnector:
                             )
                             new_objects.append(new_obj)
                             contained_objects.append(new_obj["id"])
+
+                # Create and store all relationships that capture BOTH entities within this same report
+                for relation in filter(
+                    lambda x: x["from"] in crits_stix_mapping
+                    and x["to"]["value"] in crits_stix_mapping,
+                    contained_rels,
+                ):
+                    new_rel = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to",
+                            relation["from"],
+                            relation["to"]["value"],
+                        ),
+                        relationship_type="related-to",
+                        created_by_ref=srcs[0]["id"],
+                        description=relation["to"]["rel_reason"],
+                        source_ref=crits_stix_mapping[relation["from"]],
+                        target_ref=crits_stix_mapping[relation["to"]["value"]],
+                        allow_custom=True,
+                    )
+                    new_objects.append(new_rel)
+                    contained_objects.append(new_rel["id"])
 
                 report_entity = stix2.Report(
                     id=Report.generate_id(crits_obj["title"], ts),
