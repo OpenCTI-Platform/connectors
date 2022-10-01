@@ -341,7 +341,7 @@ class CRITsConnector:
                 artifact["mime_type"] = crits_obj["mimetype"]
 
             r = self.helper.api.stix_cyber_observable.upload_artifact(**artifact)
-            dynamic_params["content_ref"] = r["standard_id"]
+            dynamic_params["contains_refs"] = [r["standard_id"]]
 
         return stix2.File(
             hashes=hashes,
