@@ -75,6 +75,7 @@ class CRITsConnector:
                     id=Identity.generate_id(sname, "organization"),
                     name=sname,
                     identity_class="organization",
+                    object_marking_refs=[self.default_marking],
                 )
                 srcs.append(author)
 
@@ -607,6 +608,7 @@ class CRITsConnector:
                 description=relation["to"]["rel_reason"],
                 source_ref=crits_stix_mapping[relation["from"]],
                 target_ref=crits_stix_mapping[relation["to"]["value"]],
+                object_marking_refs=[self.default_marking],
                 allow_custom=True,
             )
             new_objects.append(new_rel)
@@ -974,6 +976,7 @@ class CRITsConnector:
                         description=relation["to"]["rel_reason"],
                         source_ref=crits_stix_mapping[relation["from"]],
                         target_ref=crits_stix_mapping[relation["to"]["value"]],
+                        object_marking_refs=[self.default_marking],
                         allow_custom=True,
                     )
                     new_objects.append(new_rel)
