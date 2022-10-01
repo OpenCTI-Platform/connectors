@@ -470,7 +470,8 @@ class Chapsvision:
                 self.helper.log_info("Processing " + day_from + " TO " + day_to)
                 data = self.query_data(day_from, day_to)
                 if "docs" not in data:
-                    raise ValueError("Error in processing data")
+                    self.helper.log_error("No docs in data, continuing anyway")
+                    continue
                 bundle = self.generate_bundle(current_date, data)
                 if bundle is not None:
                     self.send_bundle(work_id, json.dumps(bundle))
