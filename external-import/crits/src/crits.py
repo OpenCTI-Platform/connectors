@@ -327,6 +327,7 @@ class CRITsConnector:
         if "filenames" in crits_obj and crits_obj["filenames"]:
             custom_properties["x_opencti_additional_names"] = crits_obj["filenames"]
 
+        artifact_id = None
         if "filedata" in crits_obj and crits_obj["filedata"]:
             # There's an artifact present and we should ingest it as such
             artifact = {
@@ -341,13 +342,17 @@ class CRITsConnector:
                 artifact["mime_type"] = crits_obj["mimetype"]
 
             r = self.helper.api.stix_cyber_observable.upload_artifact(**artifact)
-            dynamic_params["contains_refs"] = [r["standard_id"]]
+            artifact_id = r["standard_id"]
+            dynamic_params["contains_refs"] = [artifact_id]
 
-        return stix2.File(
-            hashes=hashes,
-            object_marking_refs=[self.default_marking],
-            custom_properties=custom_properties,
-            **dynamic_params,
+        return (
+            stix2.File(
+                hashes=hashes,
+                object_marking_refs=[self.default_marking],
+                custom_properties=custom_properties,
+                **dynamic_params,
+            ),
+            artifact_id,
         )
 
     def indicator_to_stix(self, crits_obj, custom_properties):
@@ -481,7 +486,7 @@ class CRITsConnector:
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
                 elif collection == "samples":
-                    new_obj = self.sample_to_stix(
+                    new_obj, _ = self.sample_to_stix(
                         crits_obj=crits_obj, custom_properties=custom_properties
                     )
                 elif collection == "campaigns":
@@ -651,10 +656,12 @@ class CRITsConnector:
                             collection="samples", objid=contained["value"]
                         )
                         if contained_tlo.ok:
-                            contained_stix = self.sample_to_stix(
+                            contained_stix, artifact_id = self.sample_to_stix(
                                 crits_obj=contained_tlo.json(),
                                 custom_properties=contained_custom_properties,
                             )
+                            if artifact_id:
+                                contained_objects.append(artifact_id)
                     elif contained["type"] == "Campaign":
                         contained_tlo = self.make_api_getobj(
                             collection="campaigns", objid=contained["value"]
