@@ -102,6 +102,9 @@ class Chapsvision:
                 "labels": [doc["broadcaster_category"]],
                 "created_by_ref": self.identity["standard_id"],
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
+                "external_references": [
+                    {"source_name": doc["broadcaster"], "url": doc["profile_link"]}
+                ],
             }
             objects.append(channel)
         media_content = None
@@ -118,6 +121,9 @@ class Chapsvision:
                 "labels": labels,
                 "created_by_ref": self.identity["standard_id"],
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
+                "external_references": [
+                    {"source_name": doc["broadcaster"], "url": doc["link"]}
+                ],
             }
             if "content" in doc:
                 media_content["content"] = doc["content"]
@@ -244,11 +250,11 @@ class Chapsvision:
                 "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
                 "labels": labels,
+                "created_by_ref": self.identity["standard_id"],
+                "object_marking_refs": [stix2.TLP_GREEN["id"]],
                 "external_references": [
                     {"source_name": doc["content_provider"], "url": doc["link"]}
                 ],
-                "created_by_ref": self.identity["standard_id"],
-                "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             if "content" in doc:
                 media_content["content"] = doc["content"]
@@ -272,6 +278,9 @@ class Chapsvision:
                 "labels": [doc["broadcaster_category"]],
                 "created_by_ref": self.identity["standard_id"],
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
+                "external_references": [
+                    {"source_name": doc["broadcaster"], "url": doc["profile_link"]}
+                ],
             }
             objects.append(channel)
         media_content = None
@@ -288,6 +297,9 @@ class Chapsvision:
                 "labels": labels,
                 "created_by_ref": self.identity["standard_id"],
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
+                "external_references": [
+                    {"source_name": doc["broadcaster"], "url": doc["link"]}
+                ],
             }
             if "content" in doc:
                 media_content["content"] = doc["content"]
