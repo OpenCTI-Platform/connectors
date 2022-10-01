@@ -503,14 +503,15 @@ class CRITsConnector:
                 if new_obj:
                     new_objects.append(new_obj)
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                "test CRITs upload",
-            )
+            if not self.work_id:
+                self.work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id,
+                    "test CRITs upload",
+                )
 
             bundle = stix2.Bundle(objects=new_objects, allow_custom=True).serialize()
             self.helper.send_stix2_bundle(
-                bundle, update=self.update_existing_data, work_id=work_id
+                bundle, update=self.update_existing_data, work_id=self.work_id
             )
 
             # If this is the last page of the collection, then break
@@ -755,14 +756,15 @@ class CRITsConnector:
                 )
                 new_objects.append(report_entity)
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                "test CRITs upload",
-            )
+            if not self.work_id:
+                self.work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id,
+                    "test CRITs upload",
+                )
 
             bundle = stix2.Bundle(objects=new_objects, allow_custom=True).serialize()
             self.helper.send_stix2_bundle(
-                bundle, update=self.update_existing_data, work_id=work_id
+                bundle, update=self.update_existing_data, work_id=self.work_id
             )
 
             # If this is the last page of the collection, then break
@@ -799,6 +801,7 @@ class CRITsConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+        self.work_id = None
         self.crits_url = get_config_variable(
             "CRITS_URL",
             ["crits", "url"],
@@ -944,6 +947,9 @@ class CRITsConnector:
                 "targets",
             ]:
                 self.process_objects(collection=collection, since=tmp_earliest)
+
+            # Clear out the completed work id (if any)
+            self.work_id = None
 
             time.sleep(60 * self.crits_interval)
 
