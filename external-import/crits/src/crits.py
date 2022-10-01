@@ -804,7 +804,7 @@ class CRITsConnector:
 
         else:
             self.helper.log_warn(
-                'Unable to access "ips" collection, HTTP code: {c}'.format(
+                'Unable to access "events" collection, HTTP code: {c}'.format(
                     c=http_response.status_code
                 )
             )
