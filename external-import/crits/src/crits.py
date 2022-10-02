@@ -454,6 +454,10 @@ class CRITsConnector:
             new_objects = []
             content = http_response.json()
 
+            # If no work, then just return
+            if content["meta"]["total_count"] == 0:
+                return
+
             self.helper.log_info(
                 "{c}: total={t} page={n}/{m})".format(
                     c=collection,
@@ -637,6 +641,10 @@ class CRITsConnector:
         while http_response.ok:
             new_objects = []
             content = http_response.json()
+
+            # If no work, then just return
+            if content["meta"]["total_count"] == 0:
+                return
 
             self.helper.log_info(
                 "events: total={t} page={n}/{m})".format(
