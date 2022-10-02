@@ -29,8 +29,9 @@ requests library to function.
 | `connector_type`                     | `CONNECTOR_TYPE`                    | Yes          | Must be `EXTERNAL_IMPORT` (this is the connector type).                                                                                                    |
 | `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | The descriptive name for this connector                                                                                                                    |
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope: Default is 'crits'                                                                                                                        |
-| `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created entities (a number between 1 and 100).                                                                            |
+| `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | No           | The default confidence level for created entities (a number between 1 and 100, default: 50).                                                               |
 | `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
+| `connector_update_existing_data`     | `CONNECTOR_UPDATE_EXISTING_DATA`    | No           | Connector will attempt to update existing data                                                                                                             |
 | `crits_url`                          | `CRITS_URL`                         | Yes          | The URL of the CRITs instance (leave off the trailing `/`)                                                                                                 |
 | `crits_reference_url`                | `CRITS_REFERENCE_URL`               | No           | The URL to embed as an "external reference" to link imported data to the external CRITs instance                                                           |
 | `crits_user`                         | `CRITS_USER`                        | Yes          | The login username for CRITs                                                                                                                               |
@@ -38,6 +39,9 @@ requests library to function.
 | `crits_event_type`                   | `CRITS_EVENT_TYPE`                  | Yes          | When importing CRITs Events as Analysis Reports, what Report Type to give them                                                                             |
 | `crits_interval`                     | `CRITS_INTERVAL`                    | Yes          | The interval to delay between updates, in minutes                                                                                                          |
 | `crits_import_campaign_as`           | `CRITS_IMPORT_CAMPAIGN_AS`          | No           | 'Campaign' or 'IntrusionSet': What STIX2.1 type to import Campaigns as. Default: IntrusionSet                                                              |
+| `crits_timestamp_field`              | `CRITS_TIMESTAMP_FIELD`             | No           | Which fieldin the CRITs objects to use for the timestamp (default: modified)                                                                               |
+| `crits_chunk_size`                   | `CRITS_CHUNK_SIZE`                  | No           | Ingests non-event-related observables in chunks of this size, helps with memory consumption. Adjust experimentally (default: 100)                          |
+| `crits_default_marking`              | `CRITS_DEFAULT_MARKING`             | No           | Marking definition to use, case insensitive, one of ["TLP:RED", "TLP:GREEN", "TLP:AMBER", "TLP:WHITE"] (default: TLP:GREEN)                                |
 
 ### Behavior ###
 

@@ -1094,10 +1094,53 @@ class CRITsConnector:
             isNumber=False,
             default=True,
         )
-        self.crits_timestamp_field = "modified"
-        self.chunk_size = 100
+        self.crits_timestamp_field = get_config_variable(
+            "CRITS_TIMESTAMP_FIELD",
+            ["crits", "timestamp_field"],
+            config,
+            isNumber=False,
+            default="modified",
+        )
+        self.crits_chunk_size = get_config_variable(
+            "CRITS_CHUNK_SIZE",
+            ["crits", "chunk_size"],
+            config,
+            isNumber=True,
+            default=100,
+        )
+        self.crits_default_score = get_config_variable(
+            "CONNECTOR_CONFIDENCE_LEVEL",
+            ["connector", "confidence_level"],
+            config,
+            isNumber=True,
+            default=50,
+        )
+
+        # Default to TLP:GREEN
         self.default_marking = stix2.TLP_GREEN
-        self.default_score = 75
+        config_marking = get_config_variable(
+            "CRITS_DEFAULT_MARKING",
+            ["crits", "default_marking"],
+            config,
+            isNumber=False,
+            default="TLP:GREEM",
+        ).lower()
+
+        # Only change to new marking definition if it matches the naming convention
+        if config_marking == "tlp:clear" or config_marking == "tlp:white":
+            self.default_marking = stix2.TLP_WHITE
+        elif config_marking == "tlp:green":
+            self.default_marking = stix2.TLP_GREEN
+        elif config_marking == "tlp:amber":
+            self.default_marking = stix2.TLP_AMBER
+        elif config_marking == "tlp:red":
+            self.default_marking = stix2.TLP_RED
+        else:
+            self.helper.log_warn(
+                "Unrecognized marking definition {m}, defaulting to TLP:GREEN".format(
+                    m=config_marking
+                )
+            )
 
         # Test connection to <crits_url>/api/v1/events/?limit=1, which should give a JSON result
         # if the authentication is working, whether or not there's any Events in the database.
