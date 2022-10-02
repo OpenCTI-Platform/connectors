@@ -1246,6 +1246,10 @@ class CRITsConnector:
             # Clear out the completed work id (if any)
             self.work_id = None
 
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
             time.sleep(60 * self.crits_interval)
 
 
