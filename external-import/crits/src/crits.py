@@ -1228,7 +1228,11 @@ class CRITsConnector:
             if last_state and "last_run" in last_state:
                 tmp_earliest = dtparse(last_state["last_run"]).astimezone(pytz.utc)
 
-            self.helper.log_info("Running CRITs connector, last run: {t}".format(t=tmp_earliest.isoformat()))
+            self.helper.log_info(
+                "Running CRITs connector, last run: {t}".format(
+                    t=tmp_earliest.isoformat()
+                )
+            )
 
             # First, collect up reports, which will initially populate using the Report-centric object model
             self.process_events(since=tmp_earliest)
