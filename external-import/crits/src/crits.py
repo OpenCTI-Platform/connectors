@@ -59,6 +59,12 @@ INDICATOR_MAPPING = {
     "Domain": "domain-name:value",
     "URI - Domain Name": "domain-name:value",
     "URI - domain-name": "domain-name:value",
+    "MD5": "file:hashes.'MD5'",
+    "SHA1": "file:hashes.'SHA-1'",
+    "SHA256": "file:hashes.'SHA-256'",
+    "SSDEEP": "file:hashes.'SSDEEP'",
+    "URI": "url:value",
+    "User Agent": "network-traffic:extensions.'http-request-ext'.request_header.'User-Agent'",
 }
 
 
