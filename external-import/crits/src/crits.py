@@ -1123,7 +1123,7 @@ class CRITsConnector:
             ["crits", "default_marking"],
             config,
             isNumber=False,
-            default="TLP:GREEM",
+            default="TLP:GREEN",
         ).lower()
 
         # Only change to new marking definition if it matches the naming convention
