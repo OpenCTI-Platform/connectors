@@ -49,16 +49,16 @@ class Text:
 
 # Large table to map CRITs Indicator types to corresponding STIXv2.1 ones
 INDICATOR_MAPPING = {
-    "IPv4 Address": "ipv4-addr",
-    "IPv4 Subnet": "ipv4-addr",
-    "Address - ipv4-addr": "ipv4-addr",
-    "IPv6 Address": "ipv6-addr",
-    "IPv6 Subnet": "ipv6-addr",
-    "Address - ipv6-addr": "ipv6-addr",
-    "IPv6 Subnet": "ipv6-addr",
-    "Domain": "domain-name",
-    "URI - Domain Name": "domain-name",
-    "URI - domain-name": "domain-name",
+    "IPv4 Address": "ipv4-addr:value",
+    "IPv4 Subnet": "ipv4-addr:value",
+    "Address - ipv4-addr": "ipv4-addr:value",
+    "IPv6 Address": "ipv6-addr:value",
+    "IPv6 Subnet": "ipv6-addr:value",
+    "Address - ipv6-addr": "ipv6-addr:value",
+    "IPv6 Subnet": "ipv6-addr:value",
+    "Domain": "domain-name:value",
+    "URI - Domain Name": "domain-name:value",
+    "URI - domain-name": "domain-name:value",
 }
 
 
@@ -371,10 +371,10 @@ class CRITsConnector:
             # observable.
             custom_properties["x_opencti_main_observable_type"] = INDICATOR_MAPPING[
                 crits_obj["type"]
-            ]
+            ].split(":")[0]
             custom_properties["x_opencti_detection"] = False
-            pattern = "[{t}:value = '{v}']".format(
-                t=custom_properties["x_opencti_main_observable_type"],
+            pattern = "[{t} = '{v}']".format(
+                t=INDICATOR_MAPPING[crits_obj["type"]],
                 v=crits_obj["value"],
             )
             return stix2.Indicator(
