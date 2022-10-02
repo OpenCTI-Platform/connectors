@@ -45,9 +45,34 @@ requests library to function.
 
 ### Behavior ###
 
-Below will be notes explaining how this connector goes about performing the data import
+This connector is intended to help migrate data from a CRITs CTI database into OpenCTI, on a regular basis. It
+is not designed to update CRITs with data from OpenCTI. The connector will, the first time it is run, import all
+of the compatible data in the target CRITs database. Then, on subsequent runs, it will only import when things
+have changed since the last run.
+
+Each run, the connector first starts by looking for new Events to import, and imports them with their first-degree
+object relationships as contents of the report. The connector will then look for CRITs objects that are related, and
+both contained in the same Event, and it will upload a STIX relationship capturing this relationship into the
+report as well. The campaign associated with the Event, either by a first-degree relationship, or use of the
+"campaign" field on the report, will also be uploaded as a content. The connector will ignore the "campaign" field
+on other non-Event object types. In its final phase, the connector will scan for all objects and relationships that
+aren't related to an Event, and will upload those without an analysis report relationship into OpenCTI.
+
+Campaigns will be auto-created (defaulting to use the IntrusionSet type, unless specified otherwise), and Organization
+entities for each encountered Source will also be auto-created. The source.*.instances.*.reference id's will
+all be imported as external references, with additional references created to point back at CRITs. Where they are
+identified as well-formed URLs, they'll be stored as such, otherwise they'll be imported as UIDs.
+
+There are a handful of datatypes that could not be imported, due to CRITs itself not exposing their contents via
+the (never completed) REST API:
+PCAP, Certificate, Screenshot
+
+Similarly, original raw email content isn't capable of being reconstructed from the CRITs API. However, the most
+significant metadata, headers, and portions of multipart contents are capable of being imported.
 
 ### Debugging ###
+
+The connector logs useful statistics and debbuging data to the console at run-time
 
 ### Additional information
 
