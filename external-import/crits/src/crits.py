@@ -1101,14 +1101,14 @@ class CRITsConnector:
             isNumber=False,
             default="modified",
         )
-        self.crits_chunk_size = get_config_variable(
+        self.chunk_size = get_config_variable(
             "CRITS_CHUNK_SIZE",
             ["crits", "chunk_size"],
             config,
             isNumber=True,
             default=100,
         )
-        self.crits_default_score = get_config_variable(
+        self.default_score = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL",
             ["connector", "confidence_level"],
             config,
