@@ -584,7 +584,7 @@ class CRITsConnector:
             )
 
         else:
-            self.helper.log_warn(
+            self.helper.log_warning(
                 'Unable to access "{c}" collection, HTTP code: {r}'.format(
                     c=collection,
                     r=http_response.status_code,
@@ -1030,7 +1030,7 @@ class CRITsConnector:
             )
 
         else:
-            self.helper.log_warn(
+            self.helper.log_warning(
                 'Unable to access "events" collection, HTTP code: {c}'.format(
                     c=http_response.status_code
                 )
@@ -1136,7 +1136,7 @@ class CRITsConnector:
         elif config_marking == "tlp:red":
             self.default_marking = stix2.TLP_RED
         else:
-            self.helper.log_warn(
+            self.helper.log_warning(
                 "Unrecognized marking definition {m}, defaulting to TLP:GREEN".format(
                     m=config_marking
                 )
