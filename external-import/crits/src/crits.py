@@ -5,6 +5,7 @@ import requests
 from math import ceil
 from datetime import datetime
 from dateutil.parser import parse as dtparse
+import pytz
 from base64 import b64decode
 
 import yaml
@@ -1221,7 +1222,13 @@ class CRITsConnector:
             #       both elements? Neither?
             #    2) Upload the relationships - walk through containing reports, if needed
             #
-            tmp_earliest = datetime(2010, 1, 1)
+            tmp_thisrun = datetime.now(tz=pytz.utc).isoformat()
+            tmp_earliest = datetime(1000, 1, 1).astimezone(pytz.utc)
+            last_state = self.helper.get_state()
+            if last_state and "last_run" in last_state:
+                tmp_earliest = dtparse(last_state["last_run"]).astimezone(pytz.utc)
+
+            self.helper.log_info("Running CRITs connector, last run: {t}".format(t=tmp_earliest.isoformat()))
 
             # First, collect up reports, which will initially populate using the Report-centric object model
             self.process_events(since=tmp_earliest)
@@ -1242,6 +1249,17 @@ class CRITsConnector:
                 "targets",
             ]:
                 self.process_objects(collection=collection, since=tmp_earliest)
+
+            # Record the updated timestamp
+            self.helper.set_state(
+                {
+                    "last_run": tmp_thisrun,
+                }
+            )
+
+            message = "Finished CRITs connector at: {t}".format(t=tmp_thisrun)
+            self.helper.log_info(message)
+            self.helper.api.work.to_processed(self.work_id, message)
 
             # Clear out the completed work id (if any)
             self.work_id = None
