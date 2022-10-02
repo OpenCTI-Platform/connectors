@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CRITs
       - CONNECTOR_SCOPE=crits
-      - CONNECTOR_CONFIDENCE_LEVEL=75
+      - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - CRITS_URL=http://localhost
@@ -19,4 +19,7 @@ services:
       - CRITS_EVENT_TYPE=crits-event
       - CRITS_INTERVAL=60
       - CRITS_IMPORT_CAMPAIGN_AS=IntrusionSet
+      - CRITS_CHUNK_SIZE=100
+      - CRITS_TIMESTAMP_FIELD=modified
+      - CRITS_DEFAULT_MARKING=TLP:GREEN
     restart: always
