@@ -274,7 +274,9 @@ class ExportReportPdf:
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
-                        self.helper.log_warning(f"{country_code} is not a supported country code, skipping...")
+                        self.helper.log_warning(
+                            f"{country_code} is not a supported country code, skipping..."
+                        )
                         continue
 
                     targeted_countries.append(country_code)
@@ -328,9 +330,7 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor
-        bundle = self.helper.api.stix2.export_entity(
-            "Threat-Actor", entity_id, "full"
-        )
+        bundle = self.helper.api.stix2.export_entity("Threat-Actor", entity_id, "full")
 
         for bundle_obj in bundle["objects"]:
             obj_id = bundle_obj["id"]
@@ -368,7 +368,9 @@ class ExportReportPdf:
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
-                        self.helper.log_warning(f"{country_code} is not a supported country code, skipping...")
+                        self.helper.log_warning(
+                            f"{country_code} is not a supported country code, skipping..."
+                        )
                         continue
 
                     targeted_countries.append(country_code)
