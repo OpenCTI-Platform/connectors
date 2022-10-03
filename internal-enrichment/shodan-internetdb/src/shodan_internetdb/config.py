@@ -33,13 +33,8 @@ class ShodanConfig(BaseSettings):
         env="SHODAN_SSL_VERIFY",
         default=True,
     )
-    create_indicators: bool = Field(
-        description="Create indicators from observables",
-        env="SHODAN_CREATE_INDICATORS",
-        default=True,
-    )
 
-    @validator("ssl_verify", "create_indicators", pre=True)
+    @validator("ssl_verify", pre=True)
     def _bool_validator(cls, value: str) -> bool:
         """Convert a truthy/falsy value to a bool"""
 

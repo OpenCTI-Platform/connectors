@@ -5,8 +5,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Union
 
+import pycti
+import stix2
 import validators
 import yaml
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
@@ -43,6 +45,7 @@ class ShodanInternetDBConnector:
             description="Shodan is a search engine for Internet-connected devices.",
         )
         self._identity_id = self._identity["standard_id"]
+        self._object_marking_id = stix2.TLP_WHITE["id"]
 
         self._client = ShodanInternetDbClient(verify=self._config.shodan.ssl_verify)
 
@@ -61,6 +64,7 @@ class ShodanInternetDBConnector:
         """
         # Fetch the observable being processed
         entity_id = data["entity_id"]
+
         observable = self._helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:
             log.error("Observable not found with entity_id %s", entity_id)
@@ -96,58 +100,54 @@ class ShodanInternetDBConnector:
 
         # Process the result
         log.debug("Processing %s", value)
-        self._process_description(observable, result)
         self._process_domains(observable, result)
         self._process_tags(observable, result)
         self._process_vulns(observable, result)
-        self._process_indicator(observable, result)
+        self._process_note(observable, result)
 
         return "Success"
 
-    def _process_description(
+    def _process_note(
         self,
         observable: Dict[str, Any],
         result: ShodanResult,
     ) -> None:
         """
-        Update the observable description
+        Add an enrichment note to the observable
         :param observable: Observable data
         :param result: Shodan data
         :return: None
         """
-        description = observable.get("x_opencti_description") or ""
-        description = description.rstrip()
 
-        if description:
-            description += "\n\n"
+        def format_list(alist: List[Union[str, int]]) -> str:
+            """Format a list of primitives into a Markdown list"""
+            return "".join(f"\n- {name}" for name in alist) or "n/a"
 
-        description += "```"
-        description += "\nShodan InternetDB:"
-        description += "\n------------------"
-        description += "\nHostnames:"
-        description += "".join(f"\n- {name}" for name in result.hostnames) or " n/a"
-        description += "\n------------------"
-        description += "\nSoftware:"
-        description += "".join(f"\n- {name}" for name in result.cpes) or " n/a"
-        description += "\n------------------"
-        description += "\nVulnerabilities:"
-        description += "".join(f"\n- {name}" for name in result.vulns) or " n/a"
-        description += "\n------------------"
-        description += "\nPorts:"
-        description += "".join(f"\n- {name}" for name in result.ports) or " n/a"
-        description += "\n------------------"
-        description += "\n```"
-        description += "\n"
+        value = observable["value"]
+        abstract = f"Shodan InternetDB enrichment of {value}"
+        content = f"""```
+Shodan InternetDB:
+------------------
+Hostnames: {format_list(result.hostnames)}
+------------------
+Software: {format_list(result.cpes)}
+------------------
+Vulnerabilities: {format_list(result.vulns)}
+------------------
+Ports: {format_list(result.ports)}
+------------------
+```
+"""
 
-        # Update the observable so the domain/indicator can use it
-        observable["x_opencti_description"] = description
-        log.debug(f"Updating description:\n{description}")
-        self._helper.api.stix_cyber_observable.update_field(
-            id=observable["id"],
-            input={
-                "key": "x_opencti_description",
-                "value": description,
-            },
+        self._helper.api.note.create(
+            stix_id=pycti.Note.generate_id(),
+            createdBy=self._identity_id,
+            objectMarking=[self._object_marking_id],
+            confidence=self._helper.connect_confidence_level,
+            objects=[observable["id"]],
+            authors=[self._identity_id],
+            abstract=abstract,
+            content=content,
         )
 
     def _process_domains(
@@ -161,8 +161,8 @@ class ShodanInternetDBConnector:
         :param result: Shodan data
         :return: None
         """
-        markings = observable["objectMarkingIds"]
 
+        markings = observable["objectMarkingIds"]
         for name in result.hostnames:
             log.debug("Adding domain %s", name)
             domain = self._helper.api.stix_cyber_observable.create(
@@ -197,6 +197,7 @@ class ShodanInternetDBConnector:
         :param result: Shodan data
         :return: None
         """
+
         for name in result.tags:
             log.debug("Creating label %s", name)
             label = self._helper.api.label.create(value=name)
@@ -218,14 +219,18 @@ class ShodanInternetDBConnector:
         :param result: Shodan data
         :return: None
         """
-        now = datetime.now()
+        now = datetime.utcnow()
         vuln_eol = now + timedelta(days=60)
 
         for name in result.vulns:
             log.debug("Creating vulnerability %s", name)
             vuln = self._helper.api.vulnerability.create(
+                stix_id=pycti.Vulnerability.generate_id(name),
                 name=name,
                 createdBy=self._identity_id,
+                objectMarking=[self._object_marking_id],
+                confidence=self._helper.connect_confidence_level,
+                update=True,
             )
 
             log.debug("Creating vulnerability relationship")
@@ -237,46 +242,6 @@ class ShodanInternetDBConnector:
                 start_time=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 stop_time=vuln_eol.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 confidence=self._helper.connect_confidence_level,
+                objectMarking=[self._object_marking_id],
                 update=True,
             )
-
-    def _process_indicator(
-        self,
-        observable: Dict[str, Any],
-        result: ShodanResult,
-    ) -> None:
-        """
-        Create an indicator and link it back
-        :param observable: Observable data
-        :param result: Shodan data
-        :return: None
-        """
-        if not self._config.shodan.create_indicators:
-            return
-
-        value = observable["value"]
-        description = observable["x_opencti_description"]
-
-        log.debug("Creating indicator %s", value)
-        indicator = self._helper.api.indicator.create(
-            name=value,
-            description=description,
-            pattern_type="stix",
-            pattern=f"[ipv4-addr:value = '{value}']",
-            x_opencti_main_observable_type="IPv4-Addr",
-            objectLabel=result.tags,
-            createdBy=self._identity_id,
-            confidence=self._helper.connect_confidence_level,
-            x_opencti_detection=True,
-            update=True,
-        )
-
-        log.debug("Creating indicator relationship")
-        self._helper.api.stix_core_relationship.create(
-            fromId=indicator["id"],
-            toId=observable["id"],
-            relationship_type="based-on",
-            createdBy=self._identity_id,
-            confidence=self._helper.connect_confidence_level,
-            update=True,
-        )
