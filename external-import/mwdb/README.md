@@ -20,7 +20,7 @@ the RabbitMQ on the port configured in the OpenCTI platform.
 
 ## Installation
 
-Please refer to [these](https://luatix.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://luatix.notion.site/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://luatix.notion.site/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
+Please refer to [these](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://filigran.notion.site/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://filigran.notion.site/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
 
 
 ### Configuration
@@ -43,7 +43,7 @@ There are a number of configuration options, which are set either in `docker-com
 | MWDB_TAG_FILTER           | collections          |           |A regex used to filter tags which could be related to malwares ex `virusshare.*|bazaar-.*|malshare-.*|apt20\d{2}`
 | MWDB_MAX_START_RETENTION  | start_retention      | X         |A default retention if MWDB_START_DATE isn't configured is an INT and it reflects months , 6 is defualt.
 
-_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as any other Connector. You should consult the OpenCTI Connector documentation for questions about these values here: [https://luatix.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8](https://luatix.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as any other Connector. You should consult the OpenCTI Connector documentation for questions about these values here: [https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
 
 
 ### Docker

@@ -4,15 +4,15 @@
 [![CircleCI](https://circleci.com/gh/OpenCTI-Platform/connectors.svg?style=shield)](https://circleci.com/gh/OpenCTI-Platform/connectors/tree/master)
 [![Slack Status](https://slack.luatix.org/badge.svg)](https://slack.luatix.org)
 
-The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications. To know how to enable connectors on OpenCTI, please read the [dedicated documentation](https://luatix.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8).
+The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications. To know how to enable connectors on OpenCTI, please read the [dedicated documentation](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8).
 
 ## Connectors list and statuses
 
-This repository is used to host connectors that are supported by the core development team of OpenCTI. Nevertheless, the community is also developping a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the list of all available connectors and plugins in the [OpenCTI ecosystem dedicated space](https://luatix.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+This repository is used to host connectors that are supported by the core development team of OpenCTI. Nevertheless, the community is also developping a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the list of all available connectors and plugins in the [OpenCTI ecosystem dedicated space](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
 
 ## Contributing
 
-If you want to help use improve or develop new connector, please check out the **[development documentation for new connectors](https://luatix.notion.site/Connector-Development-06b2690697404b5ebc6e3556a1385940)**. If you want to make your connector available to the community, **please create a Pull Request on this repository**, then we will integrate it to the CI and in the [OpenCTI ecosystem](https://luatix.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+If you want to help use improve or develop new connector, please check out the **[development documentation for new connectors](https://filigran.notion.site/Connector-Development-06b2690697404b5ebc6e3556a1385940)**. If you want to make your connector available to the community, **please create a Pull Request on this repository**, then we will integrate it to the CI and in the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
 
 ## License
 

@@ -23,7 +23,7 @@ class TemplateConnector:
     ####
     # TODO add your code according to your connector type
     # For details: see
-    # https://luatix.notion.site/luatix/Connector-Development-06b2690697404b5ebc6e3556a1385940
+    # https://filigran.notion.site/luatix/Connector-Development-06b2690697404b5ebc6e3556a1385940
     ####
 
 
