@@ -209,11 +209,8 @@ class ExportReportPdf:
 
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
-        self.helper.api.stix_domain_object.add_file(
-            id=report_id,
-            file_name=file_name,
-            data=pdf_contents,
-            mime_type="application/pdf",
+        self.helper.api.stix_domain_object.push_entity_export(
+            report_id, file_name, pdf_contents, "application/pdf"
         )
 
     def _process_intrusion_set(self, entity_id, file_name):
@@ -277,9 +274,7 @@ class ExportReportPdf:
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
-                        self.helper.log_warning(
-                            f"{country_code} is not a supported country code, skipping..."
-                        )
+                        self.helper.log_warning(f"{country_code} is not a supported country code, skipping...")
                         continue
 
                     targeted_countries.append(country_code)
@@ -308,11 +303,8 @@ class ExportReportPdf:
 
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
-        self.helper.api.stix_domain_object.add_file(
-            id=entity_id,
-            file_name=file_name,
-            data=pdf_contents,
-            mime_type="application/pdf",
+        self.helper.api.stix_domain_object.push_entity_export(
+            entity_id, file_name, pdf_contents, "application/pdf"
         )
 
     def _process_threat_actor(self, entity_id, file_name):
@@ -336,7 +328,9 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor
-        bundle = self.helper.api.stix2.export_entity("Threat-Actor", entity_id, "full")
+        bundle = self.helper.api.stix2.export_entity(
+            "Threat-Actor", entity_id, "full"
+        )
 
         for bundle_obj in bundle["objects"]:
             obj_id = bundle_obj["id"]
@@ -374,9 +368,7 @@ class ExportReportPdf:
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
-                        self.helper.log_warning(
-                            f"{country_code} is not a supported country code, skipping..."
-                        )
+                        self.helper.log_warning(f"{country_code} is not a supported country code, skipping...")
                         continue
 
                     targeted_countries.append(country_code)
@@ -405,11 +397,8 @@ class ExportReportPdf:
 
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
-        self.helper.api.stix_domain_object.add_file(
-            id=entity_id,
-            file_name=file_name,
-            data=pdf_contents,
-            mime_type="application/pdf",
+        self.helper.api.stix_domain_object.push_entity_export(
+            entity_id, file_name, pdf_contents, "application/pdf"
         )
 
     def _set_colors(self):
