@@ -2,7 +2,7 @@
 
 [![Website](https://img.shields.io/badge/website-opencti.io-blue.svg)](https://www.opencti.io)
 [![CircleCI](https://circleci.com/gh/OpenCTI-Platform/connectors.svg?style=shield)](https://circleci.com/gh/OpenCTI-Platform/connectors/tree/master)
-[![Slack Status](https://slack.luatix.org/badge.svg)](https://slack.luatix.org)
+[![Slack Status](https://slack.filigran.io/badge.svg)](https://community.filigran.io)
 
 The following repository is used to store the OpenCTI connectors for the platform integration with other tools and applications. To know how to enable connectors on OpenCTI, please read the [dedicated documentation](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8).
 
