@@ -1,6 +1,6 @@
 version: '3'
 services:
-  abuseipdb-ipblacklist:
+  connector-abuseipdb-ipblacklist:
     image: opencti/connector-abuseipdb-ipblacklist:5.3.16
     environment:
       - OPENCTI_URL=http://opencti:8080
