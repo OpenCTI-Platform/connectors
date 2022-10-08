@@ -14,7 +14,6 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=75
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=info
-      - SHODAN_CREATE_INDICATORS=true
       - SHODAN_MAX_TLP=white
       - SHODAN_SSL_VERIFY=true
     restart: always

@@ -17,7 +17,6 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Docker Env variable      | config variable   | Default | Description                                      |
 |--------------------------|-------------------|---------|--------------------------------------------------|
-| SHODAN_CREATE_INDICATORS | create_indicators | true    | Create indicators for any observables created    |
 | SHODAN_MAX_TLP           | max_tlp           | white   | The max TLP allowed to be sent to the Shodan API |
 | SHODAN_SSL_VERIFY        | ssl_verify        | true    | Verify SSL connections to the API endpoint       |
 
