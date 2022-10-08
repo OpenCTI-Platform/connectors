@@ -15,6 +15,5 @@ connector:
   confidence_level: 75
 
 shodan:
-  create_indicators: true
   max_tlp: "white"
   ssl_verify: true
