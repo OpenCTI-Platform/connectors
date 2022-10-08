@@ -1,6 +1,6 @@
 # OpenCTI ExportReportPdf Connector
 
-OpenCTI ExportReportPdf connector allows an analyst to export all entities and observables for Report (Analysis) and Intrusion Set entities as a pdf file. This may be useful for sharing threat intelligence with an external entity in a nice, well-groomed format.
+OpenCTI ExportReportPdf connector allows exporting PDF based reports for the following entities: Report (Analysis), Intrusion Set, and Threat Actor. The PDF may be useful for sharing threat intelligence with an external entity in a nice, well-groomed format.
 
 
 #### Technical information
