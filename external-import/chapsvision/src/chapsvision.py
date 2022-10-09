@@ -345,9 +345,7 @@ class Chapsvision:
 
         # Store the current timestamp as a last run
         last_run = now.astimezone(pytz.UTC).isoformat()
-        message = (
-            "Connector successfully run, storing last_timestamp as " + last_run
-        )
+        message = "Connector successfully run, storing last_timestamp as " + last_run
         self.helper.log_info(message)
         self.helper.set_state({"last_run": last_run})
         self.helper.api.work.to_processed(work_id, message)
