@@ -15,11 +15,11 @@ RUN apk add --no-cache git poetry
 # Install package dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry env use /usr/local/bin/python3 && \
-    poetry install --no-root
+    poetry install --no-root --no-dev
 
 # Install package
 COPY src ./src
-RUN poetry install
+RUN poetry install --no-dev
 
 FROM python:3.10-alpine
 
