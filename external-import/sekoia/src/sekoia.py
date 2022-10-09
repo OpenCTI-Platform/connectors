@@ -13,7 +13,7 @@ from dateutil.parser import ParserError, parse
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
 
-## MODIFICATION BY CYRILYXE (OPENCTI 5.3.16, the 2022-08-12)
+## MODIFICATION BY CYRILYXE (OPENCTI 5.3.17, the 2022-08-12)
 # By default, the def '_load_data_sets' (line 370ish in this file) uses relative path
 #   But from a manual deployement, we have to use a Daemon for launching the service
 #   So i added a global var : gbl_scriptDir (not mandatory but for visibility purpose only)
