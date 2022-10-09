@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-intezer-sandbox:
-    image: opencti/connector-intezer-sandbox:5.3.16
+    image: opencti/connector-intezer-sandbox:5.3.17
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe

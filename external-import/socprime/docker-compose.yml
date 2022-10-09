@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-socprime:
-    image: opencti/connector-socprime:5.3.16
+    image: opencti/connector-socprime:5.3.17
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

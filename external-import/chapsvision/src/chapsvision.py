@@ -147,62 +147,6 @@ class Chapsvision:
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
-        user_account = None
-        if "user_name" in doc:
-            user_account = json.loads(
-                stix2.UserAccount(
-                    display_nbame=doc["user_name"],
-                    account_login=doc["user_account"],
-                    user_id=doc["user_id"],
-                    allow_custom=True,
-                    account_type=doc["broadcaster"],
-                    object_marking_refs=[stix2.TLP_GREEN["id"]],
-                    custom_properties={
-                        "created_by_ref": self.identity["standard_id"],
-                        "external_references": [
-                            {
-                                "source_name": doc["broadcaster"],
-                                "url": doc["profile_link"],
-                            }
-                        ],
-                    },
-                ).serialize()
-            )
-            objects.append(user_account)
-        if user_account is not None and media_content is not None:
-            relationship = {
-                "id": self.helper.api.stix_core_relationship.generate_id(
-                    "authored-by",
-                    media_content["id"],
-                    user_account["id"],
-                    doc["publication_date"],
-                ),
-                "type": "relationship",
-                "relationship_type": "authored-by",
-                "start_time": doc["publication_date"],
-                "created": doc["publication_date"],
-                "modified": doc["publication_date"],
-                "source_ref": media_content["id"],
-                "target_ref": user_account["id"],
-                "created_by_ref": self.identity["standard_id"],
-                "object_marking_refs": [stix2.TLP_GREEN["id"]],
-            }
-            objects.append(relationship)
-        if user_account is not None and channel is not None:
-            relationship = {
-                "id": self.helper.api.stix_core_relationship.generate_id(
-                    "belongs-to", channel["id"], user_account["id"]
-                ),
-                "type": "relationship",
-                "relationship_type": "belongs-to",
-                "created": doc["publication_date"],
-                "modified": doc["publication_date"],
-                "source_ref": channel["id"],
-                "target_ref": user_account["id"],
-                "created_by_ref": self.identity["standard_id"],
-                "object_marking_refs": [stix2.TLP_GREEN["id"]],
-            }
-            objects.append(relationship)
         if "recipient" in doc and len(doc["recipient"]) > 0:
             for recipient in doc["recipient"]:
                 recipient_account = json.loads(
@@ -215,25 +159,6 @@ class Chapsvision:
                     ).serialize()
                 )
                 objects.append(recipient_account)
-                if user_account is not None:
-                    relationship = {
-                        "id": self.helper.api.stix_core_relationship.generate_id(
-                            "related-to",
-                            user_account["id"],
-                            recipient_account["id"],
-                            doc["publication_date"],
-                        ),
-                        "type": "relationship",
-                        "relationship_type": "related-to",
-                        "start_time": doc["publication_date"],
-                        "created": doc["publication_date"],
-                        "modified": doc["publication_date"],
-                        "source_ref": user_account["id"],
-                        "target_ref": recipient_account["id"],
-                        "created_by_ref": self.identity["standard_id"],
-                        "object_marking_refs": [stix2.TLP_GREEN["id"]],
-                    }
-                    objects.append(relationship)
 
         return objects
 
@@ -263,7 +188,6 @@ class Chapsvision:
             if "description" in doc:
                 media_content["x_opencti_description"] = doc["description"]
             objects.append(media_content)
-
         return objects
 
     def generate_messaging(self, doc):
@@ -323,47 +247,6 @@ class Chapsvision:
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
-        user_account = None
-        if "user_name" in doc:
-            user_account = json.loads(
-                stix2.UserAccount(
-                    display_nbame=doc["user_name"],
-                    user_name=doc["user_account"],
-                    user_id=doc["user_id"],
-                    allow_custom=True,
-                    account_type=doc["broadcaster"],
-                    object_marking_refs=[stix2.TLP_GREEN["id"]],
-                    custom_properties={
-                        "created_by_ref": self.identity["standard_id"],
-                        "external_references": [
-                            {
-                                "source_name": doc["broadcaster"],
-                                "url": doc["profile_link"],
-                            }
-                        ],
-                    },
-                ).serialize()
-            )
-            objects.append(user_account)
-        if user_account is not None and media_content is not None:
-            relationship = {
-                "id": self.helper.api.stix_core_relationship.generate_id(
-                    "authored-by",
-                    media_content["id"],
-                    user_account["id"],
-                    doc["publication_date"],
-                ),
-                "type": "relationship",
-                "relationship_type": "authored-by",
-                "start_time": doc["publication_date"],
-                "created": doc["publication_date"],
-                "modified": doc["publication_date"],
-                "source_ref": media_content["id"],
-                "target_ref": user_account["id"],
-                "created_by_ref": self.identity["standard_id"],
-                "object_marking_refs": [stix2.TLP_GREEN["id"]],
-            }
-            objects.append(relationship)
         if "recipient" in doc and len(doc["recipient"]) > 0:
             for recipient in doc["recipient"]:
                 recipient_account = json.loads(
@@ -376,25 +259,6 @@ class Chapsvision:
                     ).serialize()
                 )
                 objects.append(recipient_account)
-                if user_account is not None:
-                    relationship = {
-                        "id": self.helper.api.stix_core_relationship.generate_id(
-                            "related-to",
-                            user_account["id"],
-                            recipient_account["id"],
-                            doc["publication_date"],
-                        ),
-                        "type": "relationship",
-                        "relationship_type": "related-to",
-                        "start_time": doc["publication_date"],
-                        "created": doc["publication_date"],
-                        "modified": doc["publication_date"],
-                        "created_by_ref": self.identity["standard_id"],
-                        "source_ref": user_account["id"],
-                        "target_ref": recipient_account["id"],
-                        "object_marking_refs": [stix2.TLP_GREEN["id"]],
-                    }
-                    objects.append(relationship)
 
         return objects
 
