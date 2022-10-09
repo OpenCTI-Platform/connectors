@@ -302,60 +302,55 @@ class Chapsvision:
             sys.exit(0)
 
     def process_data(self):
-        try:
-            # Get the current timestamp and check
-            current_state = self.helper.get_state()
-            if current_state is None or "last_run" not in current_state:
-                self.helper.set_state({"last_run": self.chapsvision_start_date})
-                last_run = parse(self.chapsvision_start_date)
+        # Get the current timestamp and check
+        current_state = self.helper.get_state()
+        if current_state is None or "last_run" not in current_state:
+            self.helper.set_state({"last_run": self.chapsvision_start_date})
+            last_run = parse(self.chapsvision_start_date).astimezone(pytz.UTC)
+        else:
+            last_run = parse(current_state["last_run"]).astimezone(pytz.UTC)
+
+        now = datetime.now().astimezone(pytz.UTC)
+        delta = now - last_run
+        delta_days = delta.days
+        self.helper.log_info(str(delta_days) + " days to process since last run")
+
+        if delta_days < 1:
+            self.helper.log_info("Need at least one day to process, doing nothing")
+            return
+
+        friendly_name = "Chapsvision run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+        for x in range(0, delta_days):
+            current_date = now - timedelta(days=delta_days - x)
+            day_from = "NOW-" + str(delta_days - x) + "DAYS"
+            if delta_days - x > 1:
+                day_to = "NOW-" + str(delta_days - x - 1) + "DAYS"
             else:
-                last_run = parse(current_state["last_run"])
-
-            now = datetime.now()
-            delta = now - last_run
-            delta_days = delta.days
-            self.helper.log_info(str(delta_days) + " days to process since last run")
-
-            if delta_days < 1:
-                self.helper.log_info("Need at least one day to process, doing nothing")
-                return
-
-            friendly_name = "Chapsvision run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                day_to = "NOW"
+            self.helper.log_info("Processing " + day_from + " TO " + day_to)
+            data = self.query_data(day_from, day_to)
+            if "docs" not in data:
+                self.helper.log_error("No docs in data, continuing anyway")
+                continue
+            bundle = self.generate_bundle(current_date, data)
+            if bundle is not None:
+                self.send_bundle(work_id, json.dumps(bundle))
+            self.helper.set_state(
+                {"last_run": current_date.astimezone(pytz.UTC).isoformat()}
             )
-            for x in range(0, delta_days):
-                current_date = now - timedelta(days=delta_days - x)
-                day_from = "NOW-" + str(delta_days - x) + "DAYS"
-                if delta_days - x > 1:
-                    day_to = "NOW-" + str(delta_days - x - 1) + "DAYS"
-                else:
-                    day_to = "NOW"
-                self.helper.log_info("Processing " + day_from + " TO " + day_to)
-                data = self.query_data(day_from, day_to)
-                if "docs" not in data:
-                    self.helper.log_error("No docs in data, continuing anyway")
-                    continue
-                bundle = self.generate_bundle(current_date, data)
-                if bundle is not None:
-                    self.send_bundle(work_id, json.dumps(bundle))
-                self.helper.set_state(
-                    {"last_run": current_date.astimezone(pytz.UTC).isoformat()}
-                )
+            time.sleep(60)
 
-            # Store the current timestamp as a last run
-            last_run = now.astimezone(pytz.UTC).isoformat()
-            message = (
-                "Connector successfully run, storing last_timestamp as " + last_run
-            )
-            self.helper.log_info(message)
-            self.helper.set_state({"last_run": last_run})
-            self.helper.api.work.to_processed(work_id, message)
-        except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
-            sys.exit(0)
-        except Exception as e:
-            self.helper.log_error(str(e))
+        # Store the current timestamp as a last run
+        last_run = now.astimezone(pytz.UTC).isoformat()
+        message = (
+            "Connector successfully run, storing last_timestamp as " + last_run
+        )
+        self.helper.log_info(message)
+        self.helper.set_state({"last_run": last_run})
+        self.helper.api.work.to_processed(work_id, message)
 
     def run(self):
         self.helper.log_info("Fetching Chapsvision APIs...")
@@ -370,10 +365,5 @@ class Chapsvision:
 
 
 if __name__ == "__main__":
-    try:
-        chapsvisionConnector = Chapsvision()
-        chapsvisionConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    chapsvisionConnector = Chapsvision()
+    chapsvisionConnector.run()
