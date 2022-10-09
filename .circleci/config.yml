@@ -261,8 +261,6 @@ jobs:
             docker push opencti/connector-abuseipdb:${CIRCLE_TAG}
             docker push opencti/connector-urlhaus:latest
             docker push opencti/connector-urlhaus:${CIRCLE_TAG}
-            docker push opencti/connector-urlscan:latest
-            docker push opencti/connector-urlscan:${CIRCLE_TAG}
             docker push opencti/connector-malbeacon:latest
             docker push opencti/connector-malbeacon:${CIRCLE_TAG}
       - slack/notify:
@@ -495,6 +493,8 @@ jobs:
             docker push opencti/connector-cyber-campaign-collection:${CIRCLE_TAG}
             docker push opencti/connector-socprime:latest
             docker push opencti/connector-socprime:${CIRCLE_TAG}
+            docker push opencti/connector-urlscan:latest
+            docker push opencti/connector-urlscan:${CIRCLE_TAG}
             docker push opencti/connector-maltiverse:latest
             docker push opencti/connector-maltiverse:${CIRCLE_TAG}
             docker push opencti/connector-intel471:latest
