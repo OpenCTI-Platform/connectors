@@ -147,18 +147,6 @@ class Chapsvision:
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
-        if "recipient" in doc and len(doc["recipient"]) > 0:
-            for recipient in doc["recipient"]:
-                recipient_account = json.loads(
-                    stix2.UserAccount(
-                        account_login=recipient.replace("@", ""),
-                        object_marking_refs=[stix2.TLP_GREEN["id"]],
-                        custom_properties={
-                            "created_by_ref": self.identity["standard_id"],
-                        },
-                    ).serialize()
-                )
-                objects.append(recipient_account)
 
         return objects
 
@@ -247,18 +235,6 @@ class Chapsvision:
                 "object_marking_refs": [stix2.TLP_GREEN["id"]],
             }
             objects.append(relationship)
-        if "recipient" in doc and len(doc["recipient"]) > 0:
-            for recipient in doc["recipient"]:
-                recipient_account = json.loads(
-                    stix2.UserAccount(
-                        account_login=recipient,
-                        object_marking_refs=[stix2.TLP_GREEN["id"]],
-                        custom_properties={
-                            "created_by_ref": self.identity["standard_id"],
-                        },
-                    ).serialize()
-                )
-                objects.append(recipient_account)
 
         return objects
 
