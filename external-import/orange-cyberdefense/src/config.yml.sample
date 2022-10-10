@@ -24,7 +24,7 @@ ocd:
   import_datalake: true
   import_datalake_atom_types: 'apk,as,cc,crypto,cve,domain,email,file,fqdn,iban,ip,ip_range,paste,phone_number,regkey,ssl,url'
   import_datalake_threat_types: 'ddos,fraud,hack,leak,malware,phishing,scam,scan,spam'
-  import_datalake_minimum_risk_score: 0
+  import_datalake_minimum_risk_score: 80
   import_datalake_start_date: '2022-01-01'
   create_observables: true  # Create observables from indicators
   curate_labels: true # Curated labels
