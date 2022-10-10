@@ -57,7 +57,9 @@ class CapeSandboxConnector:
             "CAPE_SANDBOX_COOLDOWN_TIME", ["cape_sandbox", "cooldown_time"], config
         )
         self._max_retries = get_config_variable(
-            "CAPE_SANDBOX_MAX_RETRIES", ["cape_sandbox", "max_retries"], config
+            "CAPE_SANDBOX_MAX_RETRIES", ["cape_sandbox", "max_retries"], config,
+            default='10',
+            isNumber=True
         )
 
         self.headers = {"Authorization": f"Token {self.token}"}
