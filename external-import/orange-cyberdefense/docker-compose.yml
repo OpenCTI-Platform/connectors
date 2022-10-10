@@ -24,7 +24,7 @@ services:
       - OCD_IMPORT_DATALAKE=true
       - OCD_IMPORT_DATALAKE_ATOM_TYPES=apk,as,cc,crypto,cve,domain,email,file,fqdn,iban,ip,ip_range,paste,phone_number,regkey,ssl,url
       - OCD_IMPORT_DATALAKE_THREAT_TYPES=ddos,fraud,hack,leak,malware,phishing,scam,scan,spam
-      - OCD_IMPORT_DATALAKE_MINIMUM_RISK_SCORE=0
+      - OCD_IMPORT_DATALAKE_MINIMUM_RISK_SCORE=80
       - OCD_IMPORT_DATALAKE_START_DATE=2022-01-01
       - OCD_CREATE_OBSERVABLES=true  # Create observables from indicators
       - OCD_CURATE_LABELS=true # Curated labels
