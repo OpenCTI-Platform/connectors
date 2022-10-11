@@ -286,9 +286,7 @@ class CapeSandboxConnector:
                     )
 
                 # Create label for cape_type
-                label = self.helper.api.label.create(
-                    value=cape_type, color="#0059f7"
-                )
+                label = self.helper.api.label.create(value=cape_type, color="#0059f7")
                 self.helper.api.stix_cyber_observable.add_label(
                     id=response["id"], label_id=label["id"]
                 )
