@@ -477,7 +477,7 @@ class CapeSandboxConnector:
                 module_path = payload_dict["module_path"]
                 sha256 = payload_dict["sha256"]
                 cape_type = payload_dict["cape_type"]
-                payload_contents = zip_file.read(sha256)
+                payload_contents = zip_file.read(f"CAPE/{sha256}")
                 mime_type = magic.from_buffer(payload_contents, mime=True)
 
                 kwargs = {
