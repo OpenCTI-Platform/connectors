@@ -211,8 +211,8 @@ class CapeSandboxConnector:
 
             # Download the zip archive of procdump files
             zip_contents = self._get_procdump_zip(task_id)
-            if "error" in zip_contents and zip_contents["error"] == "true":
-                self.helper.log_info(zip_contents["error_value"])
+            if "error" in zip_contents and zip_contents["error"] == b"true":
+                self.helper.log_info(zip_contents["error_value"].decode())
             else:
 
                 zip_obj = io.BytesIO(zip_contents)
