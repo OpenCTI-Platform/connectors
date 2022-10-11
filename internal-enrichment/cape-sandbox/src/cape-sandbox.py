@@ -62,7 +62,7 @@ class CapeSandboxConnector:
             "CAPE_SANDBOX_MAX_RETRIES",
             ["cape_sandbox", "max_retries"],
             config,
-            default="10",
+            default=10,
             isNumber=True,
         )
 
