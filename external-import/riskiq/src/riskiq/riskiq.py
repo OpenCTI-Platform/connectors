@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """RiskIQ external-import module."""
+
 import datetime
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 from typing import Any, Mapping, Optional
 
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
-import yaml
 
 from .article_importer import ArticleImporter
 from .client import RiskIQClient
@@ -63,7 +64,7 @@ class RiskIQConnector:
             confidence=self.helper.connect_confidence_level,
         )
         # Initialization of the client
-        self.client = RiskIQClient(self.base_url, user, password)
+        self.client = RiskIQClient(self.helper, self.base_url, user, password)
 
     @staticmethod
     def _current_unix_timestamp() -> int:
@@ -187,10 +188,16 @@ class RiskIQConnector:
                         f"[RiskIQ] Connector will not run, next run in {run_interval} seconds"
                     )
 
-                self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("RiskIQ connector stop")
                 sys.exit(0)
+
             except Exception as e:
                 self.helper.log_error(str(e))
                 sys.exit(0)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            self._sleep(delay_sec=run_interval)

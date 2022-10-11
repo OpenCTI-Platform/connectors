@@ -11,7 +11,7 @@ There are a number of configuration options, which are set either in `docker-com
 | --------------------|-----------------|------------
 | TAXII2_DISCOVERY_URL   | discovery_url      | Discovery URL of TAXII2 Server
 | TAXII2_USERNAME     | username        | Username credential to access TAXII Server
-| TAXXI2_PASSWORD     | password        | Password credential to access TAXII Server
+| TAXII2_PASSWORD     | password        | Password credential to access TAXII Server
 | TAXII2_v21          | v2.1            | Boolean statement to determine if the TAXII Server is V2.0 or V2.1. Defaults to False (V2.0)
 | TAXII2_COLLECTIONS  | collections     | Specify what TAXII Collections you want to poll. Syntax Detailed below
 | TAXII2_INITIAL_HISTORY| initial_history| In hours, the "lookback" window for the intial Poll. This will limit the respones only to STIX2 objects that were added to the collection during the specified lookback time. In all subsequent polls, the `interval` configuration option is used to determine the lookback window
@@ -32,7 +32,7 @@ Finally, please note that the "title" of an API Root differs from it's pathing i
 
 ## Installation
 
-Please refer to [these](https://luatix.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://luatix.notion.site/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://luatix.notion.site/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
+Please refer to [these](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://filigran.notion.site/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://filigran.notion.site/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
 
 
 ### Docker

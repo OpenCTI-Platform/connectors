@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cape:
-    image: opencti/connector-cape:5.2.1
+    image: opencti/connector-cape:5.3.17
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
@@ -9,13 +9,13 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CAPE
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - CAPE_CREATE_INDICATORS=true
       - CAPE_ENABLE_NETWORK_TRAFFIC=false # enable creation of net Traffic (Very Loud)
       - CAPE_ENABLE_REGISTRY_KEYS=false # enable creation of Created registry Keys (Very Loud)
-      - CAPE_API_URL=https://sandbox.no/apiv2/ # CAPE API EP
-      - CAPE_BASE_URL=https://sandbox.no/ # CAPE Web UI URL
+      - CAPE_API_URL=https://<CHANGEME>/apiv2/ # CAPE API EP
+      - CAPE_BASE_URL=https://<CHANGEME>/ # CAPE Web UI URL
       - CAPE_INTERVAL=30 #in Min
       - CAPE_START_TASK_ID=0 #in Min
       - CAPE_REPORT_SCORE=7

@@ -1,0 +1,19 @@
+---
+
+opencti:
+  url: ""
+  token: ""
+  json_logging: false
+
+connector:
+  id: "ChangeMe"
+  type: "INTERNAL_ENRICHMENT"
+  name: "Shodan InternetDB"
+  scope: "IPv4-Addr"
+  auto: true
+  log_level: "info"
+  confidence_level: 75
+
+shodan:
+  max_tlp: "white"
+  ssl_verify: true

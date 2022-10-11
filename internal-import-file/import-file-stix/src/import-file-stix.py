@@ -1,11 +1,13 @@
 import os
-import yaml
+import sys
 import time
-from typing import List, Dict
-from stix2 import Report, Bundle, parse
+from typing import Dict, List
+
+import yaml
+from pycti import OpenCTIConnectorHelper
+from stix2 import Bundle, Report, parse
 from stix2elevator import elevate
 from stix2elevator.options import initialize_options
-from pycti import OpenCTIConnectorHelper
 
 
 class ImportFileStix:
@@ -91,4 +93,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

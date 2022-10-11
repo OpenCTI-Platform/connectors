@@ -2,18 +2,12 @@
 """OpenCTI CrowdStrike connector core module."""
 
 import os
+import sys
 import time
 from typing import Any, Dict, List, Mapping, Optional
 
+import stix2
 import yaml
-
-from crowdstrike_client.client import CrowdStrikeClient
-
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
-
-from stix2 import Identity, MarkingDefinition  # type: ignore
-
 from crowdstrike.actor.importer import ActorImporter
 from crowdstrike.importer import BaseImporter
 from crowdstrike.indicator.importer import IndicatorImporter, IndicatorImporterConfig
@@ -27,6 +21,9 @@ from crowdstrike.utils import (
     timestamp_to_datetime,
 )
 from crowdstrike.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
+from crowdstrike_client.client import CrowdStrikeClient
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
 
 
 class CrowdStrike:
@@ -267,7 +264,7 @@ class CrowdStrike:
         return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
 
     @staticmethod
-    def _create_author() -> Identity:
+    def _create_author() -> stix2.Identity:
         return create_organization("CrowdStrike")
 
     @staticmethod
@@ -292,7 +289,7 @@ class CrowdStrike:
     @classmethod
     def _convert_tlp_to_marking_definition(
         cls, tlp_value: Optional[str]
-    ) -> MarkingDefinition:
+    ) -> stix2.MarkingDefinition:
         if tlp_value is None:
             return DEFAULT_TLP_MARKING_DEFINITION
         return get_tlp_string_marking_definition(tlp_value)
@@ -385,12 +382,23 @@ class CrowdStrike:
                         "Connector will not run, next run in: {0} seconds", next_run
                     )
 
+                if self.helper.connect_run_and_terminate:
+                    self.helper.log_info("Connector stop")
+                    sys.exit(0)
+
                 self._sleep(delay_sec=run_interval)
+
             except (KeyboardInterrupt, SystemExit):
                 self._info("CrowdStrike connector stopping...")
-                exit(0)
+                sys.exit(0)
+
             except Exception as e:  # noqa: B902
                 self._error("CrowdStrike connector internal error: {0}", str(e))
+
+                if self.helper.connect_run_and_terminate:
+                    self.helper.log_info("Connector stop")
+                    sys.exit(0)
+
                 self._sleep()
 
     def _initiate_work(self, timestamp: int) -> str:

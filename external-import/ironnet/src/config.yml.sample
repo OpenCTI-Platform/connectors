@@ -1,0 +1,24 @@
+---
+
+opencti:
+  url: ""
+  token: ""
+
+connector:
+  id: "ChangeMe"
+  type: "EXTERNAL_IMPORT"
+  name: "IronNet"
+  scope: "IronNet"
+  log_level: "info"
+  confidence_level: 90
+  update_existing_data: true
+  interval: 86400
+  loop_interval: 600
+
+ironnet:
+  api_url: "https://api.threatanalysis.io/prod/all/1d/json"
+  api_key: "ChangeMe"
+  verify: true
+  create_indicators: true
+  create_ip_indicators: true
+  ip_indicator_valid_until: "P90D"  # 90 days

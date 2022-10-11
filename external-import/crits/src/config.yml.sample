@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CRITs'
+  scope: 'crits' # MIME type or SCO
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+  update_existing_data: false
+
+crits:
+  url: 'http://localhost'
+  reference_url: ''
+  user: 'ChangeMe'
+  api_key: 'ChangeMe'
+  event_type: 'crits-event'
+  interval: 60
+  import_campaign_as: 'IntrusionSet'
+  chunk_size: 100
+  timestamp_field: "modified"
+  default_marking: "TLP:GREEN"

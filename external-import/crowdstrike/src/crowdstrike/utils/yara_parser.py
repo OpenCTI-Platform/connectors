@@ -7,10 +7,8 @@ from datetime import date
 from io import StringIO
 from typing import List, Optional
 
-from pydantic import BaseModel
-
 from crowdstrike.utils import convert_comma_separated_str_to_list
-
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 

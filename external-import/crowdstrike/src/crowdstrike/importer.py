@@ -4,9 +4,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+import stix2
 from pycti import OpenCTIConnectorHelper  # type: ignore
-
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 
 class BaseImporter(ABC):
@@ -15,8 +14,8 @@ class BaseImporter(ABC):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        author: Identity,
-        tlp_marking: MarkingDefinition,
+        author: stix2.Identity,
+        tlp_marking: stix2.MarkingDefinition,
         update_existing_data: bool,
     ) -> None:
         """Initialize CrowdStrike importer module."""
@@ -71,7 +70,7 @@ class BaseImporter(ABC):
     def _set_state(self, state: Dict[str, Any]) -> None:
         self.helper.set_state(state)
 
-    def _send_bundle(self, bundle: Bundle) -> None:
+    def _send_bundle(self, bundle: stix2.Bundle) -> None:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(
             serialized_bundle,

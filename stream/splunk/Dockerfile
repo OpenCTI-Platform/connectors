@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM python:3.10-alpine
 
 # Copy the worker
 COPY src /opt/opencti-connector-splunk

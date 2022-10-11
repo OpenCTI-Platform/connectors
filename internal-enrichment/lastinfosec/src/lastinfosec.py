@@ -1,11 +1,12 @@
 # coding: utf-8
 
-import os
-import yaml
-import requests
-import time
 import json
+import os
+import sys
+import time
 
+import requests
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -94,4 +95,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from io import BytesIO
 from typing import List, Optional
 
-
 X_OPENCTI_LOCATION_TYPE = "x_opencti_location_type"
 X_OPENCTI_ALIASES = "x_opencti_aliases"
 X_OPENCTI_REPORT_STATUS = "x_opencti_report_status"

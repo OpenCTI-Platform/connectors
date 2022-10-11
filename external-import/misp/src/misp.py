@@ -1,40 +1,93 @@
-import re
-import os
-import yaml
-import time
 import json
-
+import os
+import re
+import sys
+import pytz
+import time
 from datetime import datetime
-from pymisp import ExpandedPyMISP
-from stix2 import (
-    Bundle,
-    Identity,
-    IntrusionSet,
-    Malware,
-    Tool,
-    AttackPattern,
-    Report,
-    Indicator,
-    Relationship,
-    ExternalReference,
-    Sighting,
-    Location,
-    TLP_WHITE,
-    TLP_GREEN,
-    TLP_AMBER,
-    TLP_RED,
-    ObjectPath,
-    EqualityComparisonExpression,
-    ObservationExpression,
-    Note,
-)
 
+import stix2
+import yaml
+from dateutil.parser import parse
 from pycti import (
+    AttackPattern,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Malware,
+    Note,
     OpenCTIConnectorHelper,
+    Report,
+    StixCoreRelationship,
+    StixSightingRelationship,
+    Tool,
     get_config_variable,
-    SimpleObservable,
-    OpenCTIStix2Utils,
 )
+from pymisp import ExpandedPyMISP
+from stix2.properties import ListProperty  # type: ignore # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
+
+
+@stix2.CustomObservable(
+    "cryptocurrency-wallet",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class CryptocurrencyWallet:
+    """Cryptocurrency wallet observable."""
+
+    pass
+
+
+@stix2.CustomObservable(
+    "hostname",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Hostname:
+    """Hostname observable."""
+
+    pass
+
+
+@stix2.CustomObservable(
+    "text",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Text:
+    """Text observable."""
+
+    pass
+
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -44,11 +97,12 @@ OPENCTISTIX2 = {
         "transform": {"operation": "remove_string", "value": "AS"},
     },
     "mac-addr": {"type": "mac-addr", "path": ["value"]},
-    "hostname": {"type": "x-opencti-hostname", "path": ["value"]},
+    "hostname": {"type": "hostname", "path": ["value"]},
     "domain": {"type": "domain-name", "path": ["value"]},
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
     "url": {"type": "url", "path": ["value"]},
+    "link": {"type": "url", "path": ["value"]},
     "email-address": {"type": "email-addr", "path": ["value"]},
     "email-subject": {"type": "email-message", "path": ["subject"]},
     "mutex": {"type": "mutex", "path": ["name"]},
@@ -66,7 +120,9 @@ OPENCTISTIX2 = {
         "type": "x509-certificate",
         "path": ["serial_number"],
     },
-    "text": {"type": "x-opencti-text", "path": ["value"]},
+    "text": {"type": "text", "path": ["value"]},
+    "user-agent": {"type": "user-agent", "path": ["value"]},
+    "phone-number": {"type": "phone-number", "path": ["value"]},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
@@ -97,7 +153,7 @@ class Misp:
             False,
             "timestamp",
         )
-        self.misp_create_report = get_config_variable(
+        self.misp_create_reports = get_config_variable(
             "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
         )
         self.misp_create_indicators = get_config_variable(
@@ -110,10 +166,11 @@ class Misp:
             "MISP_CREATE_OBJECT_OBSERVABLES",
             ["misp", "create_object_observables"],
             config,
+            False,
+            False,
         )
-        self.misp_report_type = (
-            get_config_variable("MISP_REPORT_TYPE", ["misp", "report_type"], config)
-            or "MISP Event"
+        self.misp_report_type = get_config_variable(
+            "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
         )
         self.misp_import_from_date = get_config_variable(
             "MISP_IMPORT_FROM_DATE", ["misp", "import_from_date"], config
@@ -127,8 +184,17 @@ class Misp:
         self.import_creator_orgs = get_config_variable(
             "MISP_IMPORT_CREATOR_ORGS", ["misp", "import_creator_orgs"], config
         )
+        self.import_creator_orgs_not = get_config_variable(
+            "MISP_IMPORT_CREATOR_ORGS_NOT", ["misp", "import_creator_orgs_not"], config
+        )
         self.import_owner_orgs = get_config_variable(
             "MISP_IMPORT_OWNER_ORGS", ["misp", "import_owner_orgs"], config
+        )
+        self.import_owner_orgs_not = get_config_variable(
+            "MISP_IMPORT_OWNER_ORGS_NOT", ["misp", "import_owner_orgs_not"], config
+        )
+        self.import_keyword = get_config_variable(
+            "MISP_IMPORT_KEYWORD", ["misp", "MISP_IMPORT_KEYWORD"], config
         )
         self.import_distribution_levels = get_config_variable(
             "MISP_IMPORT_DISTRIBUTION_LEVELS",
@@ -184,10 +250,8 @@ class Misp:
 
     def run(self):
         while True:
-            timestamp = int(time.time())
-            # Get the last_run datetime
-            now = datetime.utcfromtimestamp(timestamp)
-            friendly_name = "MISP run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            now = datetime.now(pytz.UTC)
+            friendly_name = "MISP run @ " + now.astimezone(pytz.UTC).isoformat()
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
@@ -195,37 +259,37 @@ class Misp:
             if (
                 current_state is not None
                 and "last_run" in current_state
-                and "latest_event_timestamp" in current_state
-                and current_state["latest_event_timestamp"] is not None
+                and "last_event_timestamp" in current_state
+                and "last_event" in current_state
             ):
-                last_run = datetime.utcfromtimestamp(current_state["last_run"])
-                latest_event_timestamp = current_state["latest_event_timestamp"]
+                last_run = parse(current_state["last_run"])
+                last_event = parse(current_state["last_event"])
+                last_event_timestamp = current_state["last_event_timestamp"]
                 self.helper.log_info(
-                    "Connector last run: " + last_run.strftime("%Y-%m-%d %H:%M:%S")
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
                 )
                 self.helper.log_info(
-                    "Connector latest event timestamp: "
-                    + datetime.utcfromtimestamp(latest_event_timestamp).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
                 )
             elif current_state is not None and "last_run" in current_state:
-                last_run = datetime.utcfromtimestamp(current_state["last_run"])
-                latest_event_timestamp = current_state["last_run"]
+                last_run = parse(current_state["last_run"])
+                last_event = last_run
+                last_event_timestamp = int(last_event.timestamp())
                 self.helper.log_info(
-                    "State was incomplete. Using last_run for latest_event_timestamp"
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
                 )
                 self.helper.log_info(
-                    "Connector last run: " + last_run.strftime("%Y-%m-%d %H:%M:%S")
-                )
-                self.helper.log_info(
-                    "Connector latest event timestamp: "
-                    + datetime.utcfromtimestamp(latest_event_timestamp).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
                 )
             else:
-                latest_event_timestamp = None
+                if self.misp_import_from_date is not None:
+                    last_event = parse(self.misp_import_from_date)
+                    last_event_timestamp = int(last_event.timestamp())
+                else:
+                    last_event = now
+                    last_event_timestamp = int(now.timestamp())
                 self.helper.log_info("Connector has never run")
 
             # If import with tags
@@ -248,20 +312,16 @@ class Misp:
                     not_parameters=not_parameters if len(not_parameters) > 0 else None,
                 )
 
-            # If import from a specific date
-            import_from_date = None
-            if self.misp_import_from_date is not None:
-                import_from_date = datetime.fromisoformat(self.misp_import_from_date)
-
             # Prepare the query
             kwargs = dict()
+
+            # Put the date
+            next_event_timestamp = last_event_timestamp + 1
+            kwargs[self.misp_datetime_attribute] = next_event_timestamp
+
+            # Complex query date
             if complex_query_tag is not None:
                 kwargs["tags"] = complex_query_tag
-            if latest_event_timestamp is not None:
-                next_event_timestamp = latest_event_timestamp + 1
-                kwargs[self.misp_datetime_attribute] = next_event_timestamp
-            elif import_from_date is not None:
-                kwargs["date_from"] = import_from_date.strftime("%Y-%m-%d")
 
             # With attachments
             if self.import_with_attachments:
@@ -273,6 +333,9 @@ class Misp:
             while True:
                 kwargs["limit"] = 50
                 kwargs["page"] = current_page
+                if self.import_keyword is not None:
+                    kwargs["value"] = self.import_keyword
+                    kwargs["searchall"] = True
                 self.helper.log_info(
                     "Fetching MISP events with args: " + json.dumps(kwargs)
                 )
@@ -280,56 +343,88 @@ class Misp:
                 events = []
                 try:
                     events = self.misp.search("events", **kwargs)
+                    if isinstance(events, dict):
+                        if "errors" in events:
+                            raise ValueError(events["message"])
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(f"Error fetching misp event: {e}")
                     try:
                         events = self.misp.search("events", **kwargs)
+                        if isinstance(events, dict):
+                            if "errors" in events:
+                                raise ValueError(events["message"])
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(f"Error fetching misp event again: {e}")
+                        break
 
                 self.helper.log_info("MISP returned " + str(len(events)) + " events.")
                 number_events = number_events + len(events)
+
                 # Break if no more result
                 if len(events) == 0:
                     break
 
-                event_timestamp = self.process_events(work_id, events)
-                if event_timestamp is not None:
-                    if latest_event_timestamp is None or (
-                        latest_event_timestamp is not None
-                        and event_timestamp > latest_event_timestamp
-                    ):
-                        latest_event_timestamp = event_timestamp
+                # Process the event
+                processed_events_last_timestamp = self.process_events(work_id, events)
+                if (
+                    processed_events_last_timestamp is not None
+                    and processed_events_last_timestamp > last_event_timestamp
+                ):
+                    last_event_timestamp = processed_events_last_timestamp
+
+                # Next page
                 current_page += 1
+
+            # Loop is over, storing the state
+            # We cannot store the state before, because MISP events are NOT ordered properly
+            # and there is NO WAY to order them using their library
             message = (
                 "Connector successfully run ("
                 + str(number_events)
-                + " events have been processed), storing last_run as "
-                + str(timestamp)
-                + ", and latest_event_timestamp as "
-                + str(latest_event_timestamp)
+                + " events have been processed), storing state (last_run="
+                + now.astimezone(pytz.utc).isoformat()
+                + ", last_event="
+                + datetime.utcfromtimestamp(last_event_timestamp)
+                .astimezone(pytz.UTC)
+                .isoformat()
+                + ", last_event_timestamp="
+                + str(last_event_timestamp)
+                + ")"
             )
-            self.helper.log_info(message)
             self.helper.set_state(
                 {
-                    "last_run": timestamp,
-                    "latest_event_timestamp": latest_event_timestamp,
+                    "last_run": now.astimezone(pytz.utc).isoformat(),
+                    "last_event": datetime.utcfromtimestamp(last_event_timestamp)
+                    .astimezone(pytz.UTC)
+                    .isoformat(),
+                    "last_event_timestamp": last_event_timestamp,
                 }
             )
+            self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
             time.sleep(self.get_interval())
 
-    def process_events(self, work_id, events) -> int:
+    def process_events(self, work_id, events):
         # Prepare filters
         import_creator_orgs = None
+        import_creator_orgs_not = None
         import_owner_orgs = None
+        import_owner_orgs_not = None
         import_distribution_levels = None
         import_threat_levels = None
-        latest_event_timestamp = None
+        last_event_timestamp = None
         if self.import_creator_orgs is not None:
             import_creator_orgs = self.import_creator_orgs.split(",")
+        if self.import_creator_orgs_not is not None:
+            import_creator_orgs_not = self.import_creator_orgs_not.split(",")
         if self.import_owner_orgs is not None:
             import_owner_orgs = self.import_owner_orgs.split(",")
+        if self.import_owner_orgs_not is not None:
+            import_owner_orgs_not = self.import_owner_orgs_not.split(",")
         if self.import_distribution_levels is not None:
             import_distribution_levels = self.import_distribution_levels.split(",")
         if self.import_threat_levels is not None:
@@ -340,15 +435,11 @@ class Misp:
             event_timestamp = int(event["Event"][self.misp_datetime_attribute])
             # need to check if timestamp is more recent than the previous event since
             # events are not ordered by timestamp in API response
-            if (
-                latest_event_timestamp is None
-                or event_timestamp > latest_event_timestamp
-            ):
-                latest_event_timestamp = event_timestamp
+            if last_event_timestamp is None or event_timestamp > last_event_timestamp:
+                last_event_timestamp = event_timestamp
             # Check against filter
             if (
                 import_creator_orgs is not None
-                and not import_creator_orgs
                 and event["Event"]["Orgc"]["name"] not in import_creator_orgs
             ):
                 self.helper.log_info(
@@ -358,14 +449,33 @@ class Misp:
                 )
                 continue
             if (
+                import_creator_orgs_not is not None
+                and event["Event"]["Orgc"]["name"] in import_creator_orgs_not
+            ):
+                self.helper.log_info(
+                    "Event creator organization "
+                    + event["Event"]["Orgc"]["name"]
+                    + " in import_creator_orgs_not, do not import"
+                )
+                continue
+            if (
                 import_owner_orgs is not None
-                and not import_owner_orgs
                 and event["Event"]["Org"]["name"] not in import_owner_orgs
             ):
                 self.helper.log_info(
                     "Event owner organization "
                     + event["Event"]["Org"]["name"]
                     + " not in import_owner_orgs, do not import"
+                )
+                continue
+            if (
+                import_owner_orgs_not is not None
+                and event["Event"]["Org"]["name"] not in import_owner_orgs_not
+            ):
+                self.helper.log_info(
+                    "Event owner organization "
+                    + event["Event"]["Org"]["name"]
+                    + " in import_owner_orgs_not, do not import"
                 )
                 continue
             if (
@@ -409,7 +519,8 @@ class Misp:
 
             ### Pre-process
             # Author
-            author = Identity(
+            author = stix2.Identity(
+                id=Identity.generate_id(event["Event"]["Orgc"]["name"], "organization"),
                 name=event["Event"]["Orgc"]["name"],
                 identity_class="organization",
             )
@@ -417,10 +528,10 @@ class Misp:
             if "Tag" in event["Event"]:
                 event_markings = self.resolve_markings(event["Event"]["Tag"])
             else:
-                event_markings = [TLP_WHITE]
+                event_markings = [stix2.TLP_WHITE]
             # Elements
             event_elements = self.prepare_elements(
-                event["Event"]["Galaxy"],
+                event["Event"].get("Galaxy", []),
                 event["Event"].get("Tag", []),
                 author,
                 event_markings,
@@ -434,7 +545,7 @@ class Misp:
                 url = self.misp_reference_url + "/events/view/" + event["Event"]["uuid"]
             else:
                 url = self.misp_url + "/events/view/" + event["Event"]["uuid"]
-            event_external_reference = ExternalReference(
+            event_external_reference = stix2.ExternalReference(
                 source_name=self.helper.connect_name,
                 description=event["Event"]["info"],
                 external_id=event["Event"]["uuid"],
@@ -456,9 +567,12 @@ class Misp:
                     attribute,
                     event["Event"]["threat_level_id"],
                 )
-                if attribute["type"] == "link":
+                if (
+                    attribute["type"] == "link"
+                    and attribute["category"] == "External analysis"
+                ):
                     event_external_references.append(
-                        ExternalReference(
+                        stix2.ExternalReference(
                             source_name=attribute["category"],
                             external_id=attribute["uuid"],
                             url=attribute["value"],
@@ -476,12 +590,15 @@ class Misp:
             objects_relationships = []
             objects_observables = []
             event_threat_level = event["Event"]["threat_level_id"]
-            for object in event["Event"]["Object"]:
+            for object in event["Event"].get("Object", []):
                 attribute_external_references = []
                 for attribute in object["Attribute"]:
-                    if attribute["type"] == "link":
+                    if (
+                        attribute["type"] == "link"
+                        and attribute["category"] == "External analysis"
+                    ):
                         attribute_external_references.append(
-                            ExternalReference(
+                            stix2.ExternalReference(
                                 source_name=attribute["category"],
                                 external_id=attribute["uuid"],
                                 url=attribute["value"],
@@ -503,19 +620,18 @@ class Misp:
                             + object["Attribute"][0]["value"]
                             + ")"
                         )
-
-                    object_observable = SimpleObservable(
-                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                            "x-opencti-simple-observable"
-                        ),
-                        key="X-OpenCTI-Text.value",
+                    object_observable = Text(
                         value=object["name"] + unique_key,
-                        description=object["description"],
-                        x_opencti_score=self.threat_level_to_score(event_threat_level),
-                        labels=event_tags,
-                        created_by_ref=author,
                         object_marking_refs=event_markings,
-                        external_references=attribute_external_references,
+                        custom_properties={
+                            "description": object["description"],
+                            "x_opencti_score": self.threat_level_to_score(
+                                event_threat_level
+                            ),
+                            "labels": event_tags,
+                            "created_by_ref": author["id"],
+                            "external_references": attribute_external_references,
+                        },
                     )
                     objects_observables.append(object_observable)
                 object_attributes = []
@@ -630,8 +746,8 @@ class Misp:
                     added_observables.append(object_observable["id"])
 
             # Link all objects with each other, now so we can find the correct entity type prefix in bundle_objects
-            for object in event["Event"]["Object"]:
-                for ref in object["ObjectReference"]:
+            for object in event["Event"].get("Object", []):
+                for ref in object.get("ObjectReference", []):
                     ref_src = ref.get("source_uuid")
                     ref_target = ref.get("referenced_uuid")
                     if ref_src is not None and ref_target is not None:
@@ -641,10 +757,14 @@ class Misp:
                         )
                         if src_result is not None and target_result is not None:
                             objects_relationships.append(
-                                Relationship(
-                                    id="relationship--" + ref["uuid"],
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "related-to",
+                                        src_result["entity"]["id"],
+                                        target_result["entity"]["id"],
+                                    ),
                                     relationship_type="related-to",
-                                    created_by_ref=author,
+                                    created_by_ref=author["id"],
                                     description="Original Relationship: "
                                     + ref["relationship_type"]
                                     + "  \nComment: "
@@ -679,9 +799,18 @@ class Misp:
 
             # Create the report if needed
             # Report in STIX must have at least one object_refs
-            if self.misp_create_report and len(object_refs) > 0:
-                report = Report(
-                    id="report--" + event["Event"]["uuid"],
+            if self.misp_create_reports and len(object_refs) > 0:
+                report = stix2.Report(
+                    id=Report.generate_id(
+                        event["Event"]["info"],
+                        datetime.utcfromtimestamp(
+                            int(
+                                datetime.strptime(
+                                    str(event["Event"]["date"]), "%Y-%m-%d"
+                                ).timestamp()
+                            )
+                        ),
+                    ),
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
                     published=datetime.utcfromtimestamp(
@@ -702,7 +831,7 @@ class Misp:
                         int(event["Event"]["timestamp"])
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     report_types=[self.misp_report_type],
-                    created_by_ref=author,
+                    created_by_ref=author["id"],
                     object_marking_refs=event_markings,
                     labels=event_tags,
                     object_refs=object_refs,
@@ -714,9 +843,9 @@ class Misp:
                     allow_custom=True,
                 )
                 bundle_objects.append(report)
-                for note in event["Event"]["EventReport"]:
-                    note = Note(
-                        id="note--" + note["uuid"],
+                for note in event["Event"].get("EventReport", []):
+                    note = stix2.Note(
+                        id=Note.generate_id(),
                         confidence=self.helper.connect_confidence_level,
                         created=datetime.utcfromtimestamp(
                             int(note["timestamp"])
@@ -724,7 +853,7 @@ class Misp:
                         modified=datetime.utcfromtimestamp(
                             int(note["timestamp"])
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         object_marking_refs=event_markings,
                         abstract=note["name"],
                         content=self.process_note(note["content"], bundle_objects),
@@ -732,21 +861,13 @@ class Misp:
                         allow_custom=True,
                     )
                     bundle_objects.append(note)
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
-            try:
-                self.helper.send_stix2_bundle(
-                    bundle, work_id=work_id, update=self.update_existing_data
-                )
-            except:
-                time.sleep(60)
-                try:
-                    self.helper.send_stix2_bundle(
-                        bundle, work_id=work_id, update=self.update_existing_data
-                    )
-                except:
-                    return latest_event_timestamp
-        return latest_event_timestamp
+
+            self.helper.send_stix2_bundle(
+                bundle, work_id=work_id, update=self.update_existing_data
+            )
+            return last_event_timestamp
 
     def _get_pdf_file(self, attribute):
         if not self.import_with_attachments:
@@ -786,7 +907,7 @@ class Misp:
 
     def process_attribute(
         self,
-        author,
+        author: stix2.Identity,
         event_elements,
         event_markings,
         event_labels,
@@ -795,9 +916,17 @@ class Misp:
         attribute,
         event_threat_level,
     ):
+        if attribute["type"] == "link" and attribute["category"] == "External analysis":
+            return None
+        if attribute["type"] == "attachment":
+            return None
         resolved_attributes = self.resolve_type(attribute["type"], attribute["value"])
         if resolved_attributes is None:
             return None
+        file_name = None
+        for resolved_attribute in resolved_attributes:
+            if resolved_attribute["resolver"] == "file-name":
+                file_name = resolved_attribute["value"]
 
         for resolved_attribute in resolved_attributes:
             ### Pre-process
@@ -814,14 +943,11 @@ class Misp:
                 attribute_markings = event_markings
 
             # Elements
-            tags = []
-            galaxies = []
-            if "Tag" in attribute:
-                tags = attribute["Tag"]
-            if "Galaxy" in attribute:
-                galaxies = attribute["Galaxy"]
             attribute_elements = self.prepare_elements(
-                galaxies, tags, author, attribute_markings
+                attribute.get("Galaxy", []),
+                attribute.get("Tag", []),
+                author,
+                attribute_markings,
             )
 
             ### Create the indicator
@@ -830,7 +956,7 @@ class Misp:
             observable_value = resolved_attribute["value"]
             name = resolved_attribute["value"]
             pattern_type = "stix"
-            # observable type is yara for instance
+            # observable type is yara or sigma for instance
             if observable_resolver in PATTERNTYPES:
                 pattern_type = observable_resolver
                 pattern = observable_value
@@ -853,13 +979,13 @@ class Misp:
                             OPENCTISTIX2[observable_resolver]["transform"]["value"],
                             "",
                         )
-                lhs = ObjectPath(
+                lhs = stix2.ObjectPath(
                     OPENCTISTIX2[observable_resolver]["type"],
                     OPENCTISTIX2[observable_resolver]["path"],
                 )
                 genuine_pattern = str(
-                    ObservationExpression(
-                        EqualityComparisonExpression(lhs, observable_value)
+                    stix2.ObservationExpression(
+                        stix2.EqualityComparisonExpression(lhs, observable_value)
                     )
                 )
                 pattern = genuine_pattern
@@ -873,8 +999,8 @@ class Misp:
             indicator = None
             if self.misp_create_indicators:
                 try:
-                    indicator = Indicator(
-                        id="indicator--" + attribute["uuid"],
+                    indicator = stix2.Indicator(
+                        id=Indicator.generate_id(pattern),
                         name=name,
                         description=attribute["comment"],
                         confidence=self.helper.connect_confidence_level,
@@ -884,7 +1010,7 @@ class Misp:
                             int(attribute["timestamp"])
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                         labels=attribute_tags,
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         object_marking_refs=attribute_markings,
                         external_references=attribute_external_references,
                         created=datetime.utcfromtimestamp(
@@ -900,32 +1026,149 @@ class Misp:
                         },
                     )
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(f"Error processing indicator {name}: {e}")
             observable = None
             if self.misp_create_observables and observable_type is not None:
                 try:
-                    observable = SimpleObservable(
-                        id="x-opencti-simple-observable--" + attribute["uuid"],
-                        key=observable_type
-                        + "."
-                        + ".".join(OPENCTISTIX2[observable_resolver]["path"]),
-                        value=observable_value,
-                        description=attribute["comment"],
-                        x_opencti_score=score,
-                        labels=attribute_tags,
-                        created_by_ref=author,
-                        object_marking_refs=attribute_markings,
-                        external_references=attribute_external_references,
-                    )
+                    custom_properties = {
+                        "description": attribute["comment"],
+                        "x_opencti_score": score,
+                        "labels": attribute_tags,
+                        "created_by_ref": author["id"],
+                        "external_references": attribute_external_references,
+                    }
+                    observable = None
+                    if observable_type == "Autonomous-System":
+                        observable = stix2.AutonomousSystem(
+                            number=observable_value.replace("AS", ""),
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Mac-Addr":
+                        observable = stix2.MACAddress(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Hostname":
+                        observable = Hostname(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Domain-Name":
+                        observable = stix2.DomainName(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "IPv4-Addr":
+                        observable = stix2.IPv4Address(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "IPv6-Addr":
+                        observable = stix2.IPv6Address(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Url":
+                        observable = stix2.URL(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Email-Addr":
+                        observable = stix2.EmailAddress(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Email-Message":
+                        observable = stix2.EmailMessage(
+                            subject=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Mutex":
+                        observable = stix2.Mutex(
+                            name=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "File":
+                        if OPENCTISTIX2[observable_resolver]["path"][0] == "name":
+                            observable = stix2.File(
+                                name=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                        elif OPENCTISTIX2[observable_resolver]["path"][0] == "hashes":
+                            hashes = {}
+                            hashes[
+                                OPENCTISTIX2[observable_resolver]["path"][1]
+                            ] = observable_value
+                            observable = stix2.File(
+                                name=file_name,
+                                hashes=hashes,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                    elif observable_type == "Directory":
+                        observable = stix2.Directory(
+                            path=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Windows-Registry-Key":
+                        observable = stix2.WindowsRegistryKey(
+                            key=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Windows-Registry-Value-Type":
+                        observable = stix2.WindowsRegistryValueType(
+                            data=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
+                    elif observable_type == "X509-Certificate":
+                        if OPENCTISTIX2[observable_resolver]["path"][0] == "issuer":
+                            observable = stix2.File(
+                                issuer=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                        elif (
+                            OPENCTISTIX2[observable_resolver]["path"][1]
+                            == "serial_number"
+                        ):
+                            observable = stix2.File(
+                                serial_number=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                    elif observable_type == "Text":
+                        observable = Text(
+                            data=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.log_error(
+                        f"Error creating observable type {observable_type} with value {observable_value}: {e}"
+                    )
             sightings = []
             identities = []
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
                     if "Organisation" in misp_sighting:
-                        sighted_by = Identity(
-                            id="identity--" + misp_sighting["Organisation"]["uuid"],
+                        sighted_by = stix2.Identity(
+                            id=Identity.generate_id(
+                                misp_sighting["Organisation"]["name"], "organization"
+                            ),
                             name=misp_sighting["Organisation"]["name"],
                             identity_class="organization",
                         )
@@ -934,7 +1177,17 @@ class Misp:
                         sighted_by = None
 
                     if indicator is not None:
-                        sighting = Sighting(
+                        sighting = stix2.Sighting(
+                            id=StixSightingRelationship.generate_id(
+                                indicator["id"],
+                                sighted_by["id"],
+                                datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"])
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                datetime.utcfromtimestamp(
+                                    int(misp_sighting["date_sighting"]) + 3600
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            ),
                             sighting_of_ref=indicator["id"],
                             first_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"])
@@ -967,9 +1220,12 @@ class Misp:
             relationships = []
             if indicator is not None and observable is not None:
                 relationships.append(
-                    Relationship(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "based-on", indicator.id, observable.id
+                        ),
                         relationship_type="based-on",
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         source_ref=indicator.id,
                         target_ref=observable.id,
                         allow_custom=True,
@@ -980,9 +1236,14 @@ class Misp:
                 indicator is not None or observable is not None
             ):
                 relationships.append(
-                    Relationship(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to",
+                            object_observable.id,
+                            observable.id if observable is not None else indicator.id,
+                        ),
                         relationship_type="related-to",
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         source_ref=object_observable.id,
                         target_ref=observable.id
                         if (observable is not None)
@@ -1000,9 +1261,12 @@ class Misp:
                 threat_names[threat.name] = threat.id
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "indicates", indicator.id, threat.id
+                            ),
                             relationship_type="indicates",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=indicator.id,
                             target_ref=threat.id,
                             description=attribute["comment"],
@@ -1013,9 +1277,12 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, threat.id
+                            ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=observable.id,
                             target_ref=threat.id,
                             description=attribute["comment"],
@@ -1037,9 +1304,12 @@ class Misp:
                     threat_id = threat.id
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "indicates", indicator.id, threat_id
+                            ),
                             relationship_type="indicates",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=indicator.id,
                             target_ref=threat_id,
                             description=attribute["comment"],
@@ -1050,9 +1320,12 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, threat_id
+                            ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=observable.id,
                             target_ref=threat_id,
                             description=attribute["comment"],
@@ -1074,9 +1347,12 @@ class Misp:
                         threat_id = threat_names[threat.name]
                     else:
                         threat_id = threat.id
-                    relationship_uses = Relationship(
+                    relationship_uses = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "uses", threat_id, attack_pattern.id
+                        ),
                         relationship_type="uses",
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         source_ref=threat_id,
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
@@ -1091,7 +1367,7 @@ class Misp:
                     #             "relationship"
                     #         ),
                     #         relationship_type="indicates",
-                    #         created_by_ref=author,
+                    #         created_by_ref=author["id"],
                     #         source_ref=indicator.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
@@ -1105,7 +1381,7 @@ class Misp:
                     #             "relationship"
                     #         ),
                     #         relationship_type="related-to",
-                    #         created_by_ref=author,
+                    #         created_by_ref=author["id"],
                     #         source_ref=observable.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
@@ -1127,10 +1403,13 @@ class Misp:
                         threat_id = threat_names[threat.name]
                     else:
                         threat_id = threat.id
-                    relationship_uses = Relationship(
+                    relationship_uses = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "uses", threat_id, attack_pattern.id
+                        ),
                         relationship_type="uses",
                         confidence=self.helper.connect_confidence_level,
-                        created_by_ref=author,
+                        created_by_ref=author["id"],
                         source_ref=threat_id,
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
@@ -1144,7 +1423,7 @@ class Misp:
                     #            "relationship"
                     #        ),
                     #        relationship_type="indicates",
-                    #        created_by_ref=author,
+                    #        created_by_ref=author["id"],
                     #        source_ref=indicator.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
@@ -1158,7 +1437,7 @@ class Misp:
                     #            "relationship"
                     #        ),
                     #        relationship_type="indicates",
-                    #        created_by_ref=author,
+                    #        created_by_ref=author["id"],
                     #        source_ref=observable.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
@@ -1169,9 +1448,12 @@ class Misp:
             for sector in attribute_elements["sectors"]:
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", indicator.id, sector.id
+                            ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=indicator.id,
                             target_ref=sector.id,
                             description=attribute["comment"],
@@ -1182,9 +1464,12 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, sector.id
+                            ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=observable.id,
                             target_ref=sector.id,
                             description=attribute["comment"],
@@ -1197,9 +1482,12 @@ class Misp:
             for country in attribute_elements["countries"]:
                 if indicator is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", indicator.id, country.id
+                            ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=indicator.id,
                             target_ref=country.id,
                             description=attribute["comment"],
@@ -1210,9 +1498,12 @@ class Misp:
                     )
                 if observable is not None:
                     relationships.append(
-                        Relationship(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", observable.id, country.id
+                            ),
                             relationship_type="related-to",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             source_ref=observable.id,
                             target_ref=country.id,
                             description=attribute["comment"],
@@ -1241,7 +1532,6 @@ class Misp:
             "countries": [],
         }
         added_names = []
-        # TODO: process sector & countries from galaxies?
         for galaxy in galaxies:
             # Get the linked intrusion sets
             if (
@@ -1268,11 +1558,12 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["intrusion_sets"].append(
-                            IntrusionSet(
+                            stix2.IntrusionSet(
+                                id=IntrusionSet.generate_id(name),
                                 name=name,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 custom_properties={"x_opencti_aliases": aliases},
                             )
@@ -1291,11 +1582,12 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["tools"].append(
-                            Tool(
+                            stix2.Tool(
+                                id=Tool.generate_id(name),
                                 name=name,
                                 labels=["tool"],
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 custom_properties={"x_opencti_aliases": aliases},
                                 allow_custom=True,
@@ -1321,13 +1613,14 @@ class Misp:
                         aliases = [name]
                     if name not in added_names:
                         elements["malwares"].append(
-                            Malware(
+                            stix2.Malware(
+                                id=Malware.generate_id(name),
                                 name=name,
                                 is_family=True,
                                 aliases=aliases,
                                 labels=[galaxy["name"]],
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
                             )
@@ -1353,10 +1646,11 @@ class Misp:
                             if len(galaxy_entity["meta"]["external_id"]) > 0:
                                 x_mitre_id = galaxy_entity["meta"]["external_id"][0]
                         elements["attack_patterns"].append(
-                            AttackPattern(
+                            stix2.AttackPattern(
+                                id=AttackPattern.generate_id(name, x_mitre_id),
                                 name=name,
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 custom_properties={
                                     "x_mitre_id": x_mitre_id,
@@ -1372,11 +1666,12 @@ class Misp:
                     name = galaxy_entity["value"]
                     if name not in added_names:
                         elements["sectors"].append(
-                            Identity(
+                            stix2.Identity(
+                                id=Identity.generate_id(name, "class"),
                                 name=name,
                                 identity_class="class",
                                 description=galaxy_entity["description"],
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
                             )
@@ -1388,11 +1683,12 @@ class Misp:
                     name = galaxy_entity["description"]
                     if name not in added_names:
                         elements["countries"].append(
-                            Location(
+                            stix2.Location(
+                                id=Location.generate_id(name, "Country"),
                                 name=name,
                                 country=galaxy_entity["meta"]["ISO"],
                                 description="Imported from MISP tag",
-                                created_by_ref=author,
+                                created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
                             )
@@ -1425,10 +1721,11 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["intrusion_sets"].append(
-                        IntrusionSet(
+                        stix2.IntrusionSet(
+                            id=IntrusionSet.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1446,10 +1743,11 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["tools"].append(
-                        Tool(
+                        stix2.Tool(
+                            id=Tool.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1472,11 +1770,12 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["malwares"].append(
-                        Malware(
+                        stix2.Malware(
+                            id=Malware.generate_id(name),
                             name=name,
                             is_family=True,
                             description="Imported from MISP tag",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1492,10 +1791,11 @@ class Misp:
                     name = tag_value
                 if name not in added_names:
                     elements["attack_patterns"].append(
-                        AttackPattern(
+                        stix2.AttackPattern(
+                            id=AttackPattern.generate_id(name),
                             name=name,
                             description="Imported from MISP tag",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1507,11 +1807,12 @@ class Misp:
                 name = tag_value_split[1][:-1].strip()
                 if name not in added_names:
                     elements["sectors"].append(
-                        Identity(
+                        stix2.Identity(
+                            id=Identity.generate_id(name, "class"),
                             name=name,
                             description="Imported from MISP tag",
                             identity_class="class",
-                            created_by_ref=author,
+                            created_by_ref=author["id"],
                             object_marking_refs=markings,
                             allow_custom=True,
                         )
@@ -1523,6 +1824,8 @@ class Misp:
         types = {
             "yara": [{"resolver": "yara"}],
             "sigma": [{"resolver": "sigma"}],
+            "snort": [{"resolver": "snort"}],
+            "suricata": [{"resolver": "suricata"}],
             "md5": [{"resolver": "file-md5", "type": "File"}],
             "sha1": [{"resolver": "file-sha1", "type": "File"}],
             "sha256": [{"resolver": "file-sha256", "type": "File"}],
@@ -1544,16 +1847,16 @@ class Misp:
             "ip-dst": [{"resolver": "ipv4-addr", "type": "IPv4-Addr"}],
             "ip-src|port": [
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "text", "type": "Text"},
             ],
             "ip-dst|port": [
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "text", "type": "Text"},
             ],
-            "hostname": [{"resolver": "hostname", "type": "X-OpenCTI-Hostname"}],
+            "hostname": [{"resolver": "hostname", "type": "Hostname"}],
             "hostname|port": [
-                {"resolver": "hostname", "type": "X-OpenCTI-Hostname"},
-                {"resolver": "text", "type": "X-OpenCTI-Text"},
+                {"resolver": "hostname", "type": "Hostname"},
+                {"resolver": "text", "type": "Text"},
             ],
             "domain": [{"resolver": "domain", "type": "Domain-Name"}],
             "domain|ip": [
@@ -1565,7 +1868,13 @@ class Misp:
             "email-dst": [{"resolver": "email-address", "type": "Email-Addr"}],
             "url": [{"resolver": "url", "type": "Url"}],
             "windows-scheduled-task": [
-                {"resolver": "windows-scheduled-task", "type": "X-OpenCTI-Text"}
+                {"resolver": "windows-scheduled-task", "type": "Text"}
+            ],
+            "regkey": [{"resolver": "registry-key", "type": "Windows-Registry-Key"}],
+            "user-agent": [{"resolver": "user-agent", "type": "User-Agent"}],
+            "phone-number": [{"resolver": "phone-number", "type": "Phone-Number"}],
+            "whois-registrant-email": [
+                {"resolver": "email-address", "type": "Email-Addr"}
             ],
         }
         if type in types:
@@ -1589,7 +1898,7 @@ class Misp:
                     {"resolver": resolver_1, "type": type_1, "value": values[1]},
                 ]
             else:
-                if resolved_types[0] == "ipv4-addr":
+                if resolved_types[0]["resolver"] == "ipv4-addr":
                     resolver_0 = self.detect_ip_version(value)
                     type_0 = self.detect_ip_version(value, True)
                 else:
@@ -1605,7 +1914,7 @@ class Misp:
             return [
                 {
                     "resolver": "text",
-                    "type": "X-OpenCTI-Text",
+                    "type": "Text",
                     "value": value + " (type=" + type + ")",
                 }
             ]
@@ -1625,16 +1934,18 @@ class Misp:
     def resolve_markings(self, tags, with_default=True):
         markings = []
         for tag in tags:
+            if tag["name"] == "tlp:clear":
+                markings.append(stix2.TLP_WHITE)
             if tag["name"] == "tlp:white":
-                markings.append(TLP_WHITE)
+                markings.append(stix2.TLP_WHITE)
             if tag["name"] == "tlp:green":
-                markings.append(TLP_GREEN)
+                markings.append(stix2.TLP_GREEN)
             if tag["name"] == "tlp:amber":
-                markings.append(TLP_AMBER)
+                markings.append(stix2.TLP_AMBER)
             if tag["name"] == "tlp:red":
-                markings.append(TLP_RED)
+                markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
-            markings.append(TLP_WHITE)
+            markings.append(stix2.TLP_WHITE)
         return markings
 
     def resolve_tags(self, tags):

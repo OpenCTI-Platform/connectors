@@ -5,7 +5,6 @@ from typing import TypeVar
 
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE  # type: ignore
 
-
 T = TypeVar("T")
 
 

@@ -1,10 +1,15 @@
-import yaml
 import os
-import requests
-import pycountry
 
-from stix2 import Relationship, Location, Bundle
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+import pycountry
+import requests
+import stix2
+import yaml
+from pycti import (
+    Location,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 
 
 class IpInfoConnector:
@@ -24,8 +29,8 @@ class IpInfoConnector:
 
     def _generate_stix_bundle(self, country, city, loc, observable_id):
         # Generate stix bundle
-        country_location = Location(
-            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
+        country_location = stix2.Location(
+            id=Location.generate_id(country.name, "Country"),
             name=country.name,
             country=country.official_name
             if hasattr(country, "official_name")
@@ -40,8 +45,8 @@ class IpInfoConnector:
             },
         )
         loc_split = loc.split(",")
-        city_location = Location(
-            id=OpenCTIStix2Utils.generate_random_stix_id("location"),
+        city_location = stix2.Location(
+            id=Location.generate_id(city, "City"),
             name=city,
             country=country.official_name
             if hasattr(country, "official_name")
@@ -50,20 +55,24 @@ class IpInfoConnector:
             longitude=loc_split[1],
             custom_properties={"x_opencti_location_type": "City"},
         )
-        city_to_country = Relationship(
-            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+        city_to_country = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "located-at", city_location.id, country_location.id
+            ),
             relationship_type="located-at",
             source_ref=city_location.id,
             target_ref=country_location.id,
         )
-        observable_to_city = Relationship(
-            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+        observable_to_city = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "located-at", observable_id, city_location.id
+            ),
             relationship_type="located-at",
             source_ref=observable_id,
             target_ref=city_location.id,
             confidence=self.helper.connect_confidence_level,
         )
-        return Bundle(
+        return stix2.Bundle(
             objects=[
                 country_location,
                 city_location,
@@ -76,8 +85,13 @@ class IpInfoConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        if observable is None:
+            raise ValueError(
+                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
+            )
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
@@ -98,6 +112,10 @@ class IpInfoConnector:
             headers={"accept": "application/json", "content-type": "application/json"},
         )
         json_data = response.json()
+        if "status" in json_data and json_data["status"] == 429:
+            raise ValueError("IpInfo Rate limit exceeded")
+        if "country" not in json_data:
+            raise ValueError("Country not found, an error occurred")
         country = pycountry.countries.get(alpha_2=json_data["country"])
         if country is None:
             raise ValueError(

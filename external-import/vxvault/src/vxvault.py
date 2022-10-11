@@ -1,23 +1,14 @@
 import os
-import yaml
+import ssl
+import sys
 import time
 import urllib.request
-import certifi
-import ssl
-
 from datetime import datetime
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    SimpleObservable,
-    OpenCTIStix2Utils,
-)
 
-from stix2 import (
-    Bundle,
-    ExternalReference,
-    TLP_WHITE,
-)
+import certifi
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2 import TLP_WHITE, URL, Bundle, ExternalReference
 
 
 class VXVault:
@@ -115,18 +106,16 @@ class VXVault:
                                     url="http://vxvault.net",
                                     description="VX Vault repository URL",
                                 )
-                                stix_observable = SimpleObservable(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "x-opencti-simple-observable"
-                                    ),
-                                    key="Url.value",
+                                stix_observable = URL(
                                     value=line,
-                                    description="VX Vault URL",
-                                    x_opencti_score=80,
                                     object_marking_refs=[TLP_WHITE],
-                                    created_by_ref=self.identity["standard_id"],
-                                    x_opencti_create_indicator=self.create_indicators,
-                                    external_references=[external_reference],
+                                    custom_properties={
+                                        "description": "VX Vault URL",
+                                        "x_opencti_score": 80,
+                                        "created_by_ref": self.identity["standard_id"],
+                                        "x_opencti_create_indicator": self.create_indicators,
+                                        "external_references": [external_reference],
+                                    },
                                 )
                                 bundle_objects.append(stix_observable)
                         bundle = Bundle(
@@ -157,7 +146,6 @@ class VXVault:
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))
                         + " days"
                     )
-                    time.sleep(60)
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)
                     self.helper.log_info(
@@ -165,13 +153,17 @@ class VXVault:
                         + str(round(new_interval / 60 / 60 / 24, 2))
                         + " days"
                     )
-                    time.sleep(60)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(60)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            time.sleep(60)
 
 
 if __name__ == "__main__":
@@ -181,4 +173,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

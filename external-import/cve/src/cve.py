@@ -1,17 +1,18 @@
 # coding: utf-8
 
+import gzip
 import os
-import yaml
+import shutil
+import ssl
+import sys
 import time
 import urllib.request
-import gzip
-import shutil
-import certifi
-import ssl
-
 from datetime import datetime
-from pycti import OpenCTIConnectorHelper, get_config_variable
+
+import certifi
+import yaml
 from cvetostix2 import convert
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class Cve:
@@ -32,7 +33,12 @@ class Cve:
             "CVE_NVD_DATA_FEED", ["cve", "nvd_data_feed"], config
         )
         self.cve_history_data_feed = get_config_variable(
-            "CVE_HISTORY_DATA_FEED", ["cve", "history_data_feed"], config
+            "CVE_HISTORY_DATA_FEED",
+            ["cve", "history_data_feed"],
+            config,
+        )
+        self.cve_history_start_year = get_config_variable(
+            "CVE_HISTORY_START_YEAR", ["cve", "history_start_year"], config, True, 2002
         )
         self.cve_interval = get_config_variable(
             "CVE_INTERVAL", ["cve", "interval"], config, True
@@ -118,9 +124,13 @@ class Cve:
                 self.convert_and_send(self.cve_nvd_data_feed, work_id)
                 # If import history and never run
                 if last_run is None and self.cve_import_history:
+                    self.helper.log_info(
+                        "Connector must import the history because it has never run"
+                    )
                     now = datetime.now()
-                    years = list(range(2002, now.year + 1))
+                    years = list(range(self.cve_history_start_year, now.year + 1))
                     for year in years:
+                        self.helper.log_info("Importing year " + str(year))
                         self.convert_and_send(
                             f"{self.cve_history_data_feed}nvdcve-1.1-{year}.json.gz",
                             work_id,
@@ -145,9 +155,11 @@ class Cve:
                     + str(round(new_interval / 60 / 60 / 24, 2))
                     + " days"
                 )
+
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
-            exit(0)
+            sys.exit(0)
+
         except Exception as e:
             self.helper.log_error(str(e))
 
@@ -169,4 +181,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

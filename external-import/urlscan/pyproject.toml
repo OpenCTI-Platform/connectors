@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "urlscan"
+version = "0.0.1"
+description = "OpenCTI connector for Urlscan"
+authors = []
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^1.9.1"
+requests = "^2.28.0"
+pycti = "5.3.17"
+validators = "^0.20.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

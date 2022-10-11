@@ -13,11 +13,11 @@ ENV PYTHONFAULTHANDLER=1 \
   PATH="$PATH:/runtime/bin" \
   PYTHONPATH="$PYTHONPATH:/runtime/lib/python3.9/site-packages" \
   # Versions:
-  POETRY_VERSION=1.1.99
+  POETRY_VERSION=1.2.0b1
 
 # System deps:
 RUN apt-get update && apt-get install -y build-essential unzip wget python-dev
-RUN pip install --upgrade pip && pip install --pre "poetry>=$POETRY_VERSION"
+RUN pip install --upgrade pip && pip install --pre "poetry==$POETRY_VERSION"
 RUN python3 -m venv /runtime
 
 # Generate requirements and install dependencies.

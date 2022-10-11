@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cryptolaemus:
-    image: opencti/connector-cryptolaemus:5.2.1
+    image: opencti/connector-cryptolaemus:5.3.17
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,6 +10,6 @@ services:
       - CONNECTOR_NAME=Cryptolaemus
       - CONNECTOR_SCOPE=cryptolaemus
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
     restart: always

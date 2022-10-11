@@ -9,17 +9,17 @@ connector:
   scope: 'urlhaus_recent_payloads'
   confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
   create_indicator: False
-  update_existing_data: True
+  update_existing_data: false
   log_level: 'info'
 
 urlhaus_recent_payloads:
   api_url: 'https://urlhaus-api.abuse.ch/v1/'
   cooldown_seconds: 300 # Time to wait in seconds between subsequent requests
   include_filetypes: 'exe,zip,dll,docm,docx,doc,xls,xlsx,xlsm,js,xll' # (Optional) Only download files if file type matches. (Comma separated)
-  include_signatures: '' # (Optional) Only download files if match these signatures. (Comma separated)
+  include_signatures: '' # (Optional) Only download files if match these Yara rules. (Comma separated)
   skip_unknown_filetypes: True # Skip files with an unknown file type
-  skip_null_signature: True # Skip files that didn't match known Yara signatures
+  skip_null_signature: True # Skip files that didn't match known Yara rules
   labels: 'urlhaus' # (Optional) Labels to apply to uploaded Artifacts. (Comma separated)
   labels_color: '#54483b' # Color for labels specified above
-  signature_label_color: '#0059f7' # Color for signature match label
+  signature_label_color: '#0059f7' # Color for Yara rule match label
   filetype_label_color: '#54483b' # Color to use for filetype label

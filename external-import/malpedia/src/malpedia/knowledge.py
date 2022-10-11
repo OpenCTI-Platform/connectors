@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia Knowledge importer module."""
 
-import dateutil.parser as dp
-
 from datetime import datetime
 from typing import Any, Dict, List, Mapping, Optional
-from pydantic import ValidationError
 from urllib.parse import urlparse
 
-from .client import MalpediaClient
-from .models import Family, YaraRule, Sample, Actor
-
+import dateutil.parser as dp
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
+from pydantic import ValidationError
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+
+from .client import MalpediaClient
+from .models import Actor, Family, Sample, YaraRule
 
 
 class KnowledgeImporter:

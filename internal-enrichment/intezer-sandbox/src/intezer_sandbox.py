@@ -1,13 +1,12 @@
 # coding: utf-8
 
 import os
-import yaml
+import sys
 import time
+
+import yaml
 from intezer_api import IntezerApi
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class IntezerSandboxConnector:
@@ -173,8 +172,9 @@ class IntezerSandboxConnector:
                 "Observable not found "
                 "(may be linked to data seggregation, check your group and permissions)"
             )
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
@@ -196,4 +196,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

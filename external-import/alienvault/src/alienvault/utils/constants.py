@@ -3,7 +3,6 @@
 
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE  # type: ignore
 
-
 TLP_MARKING_DEFINITION_MAPPING = {
     "white": TLP_WHITE,
     "green": TLP_GREEN,

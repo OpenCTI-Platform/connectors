@@ -1,14 +1,22 @@
+import datetime
 import os
-import yaml
+import sys
 import time
+from urllib.parse import quote, urlparse
+
 import feedparser
 import stix2
-import datetime
-
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils, SimpleObservable
+import yaml
+from pycti import (
+    Identity,
+    Indicator,
+    Malware,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from pygrok import Grok
-from urllib.parse import urlparse, quote
+from stix2 import URL, DomainName, IPv4Address
 
 
 class Cybercrimetracker:
@@ -185,9 +193,10 @@ class Cybercrimetracker:
 
                         # Create the bundle
                         bundle_objects = list()
+                        identity_name = "CYBERCRIME-TRACKER.NET"
                         organization = stix2.Identity(
-                            id=OpenCTIStix2Utils.generate_random_stix_id("identity"),
-                            name="CYBERCRIME-TRACKER.NET",
+                            id=Identity.generate_id(identity_name, "organization"),
+                            name=identity_name,
                             identity_class="organization",
                             description="Tracker collecting and sharing daily updates of C2 IPs/Urls. http://cybercrime-tracker.net",
                         )
@@ -200,7 +209,7 @@ class Cybercrimetracker:
                             )
                             indicator_pattern = self.gen_indicator_pattern(parsed_entry)
                             malware = stix2.Malware(
-                                id=OpenCTIStix2Utils.generate_random_stix_id("malware"),
+                                id=Malware.generate_id(parsed_entry["type"]),
                                 is_family=True,
                                 name=parsed_entry["type"],
                                 description="{} malware.".format(parsed_entry["type"]),
@@ -209,9 +218,7 @@ class Cybercrimetracker:
                             indicator = None
                             if self.create_indicators:
                                 indicator = stix2.Indicator(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "indicator"
-                                    ),
+                                    id=Indicator.generate_id(indicator_pattern),
                                     name=parsed_entry["url"],
                                     description="C2 URL for: {}".format(
                                         parsed_entry["type"]
@@ -231,8 +238,16 @@ class Cybercrimetracker:
                                 )
                                 bundle_objects.append(indicator)
                                 relation = stix2.Relationship(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "relationship"
+                                    id=StixCoreRelationship.generate_id(
+                                        "indicates",
+                                        indicator.id,
+                                        malware.id,
+                                        self._time_to_datetime(
+                                            entry["published_parsed"]
+                                        ),
+                                        self._time_to_datetime(
+                                            entry["published_parsed"]
+                                        ),
                                     ),
                                     source_ref=indicator.id,
                                     target_ref=malware.id,
@@ -256,49 +271,43 @@ class Cybercrimetracker:
                                 )
                                 bundle_objects.append(relation)
                             if self.create_observables:
-                                observable_url = SimpleObservable(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "x-opencti-simple-observable"
-                                    ),
-                                    key="Url.value",
-                                    labels=["C2 Server"],
+                                observable_url = URL(
                                     value=parsed_entry["url"],
-                                    created_by_ref=organization.id,
                                     object_marking_refs=[tlp["standard_id"]],
-                                    external_references=[external_reference],
+                                    custom_properties={
+                                        "labels": ["C2 Server"],
+                                        "created_by_ref": organization.id,
+                                        "external_references": [external_reference],
+                                    },
                                 )
                                 bundle_objects.append(observable_url)
-                                observable_ip = SimpleObservable(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "x-opencti-simple-observable"
-                                    ),
-                                    key="IPv4-Addr.value",
-                                    labels=["C2 Server"],
+                                observable_ip = IPv4Address(
                                     value=parsed_entry["ip"],
-                                    created_by_ref=organization.id,
                                     object_marking_refs=[tlp["standard_id"]],
-                                    external_references=[external_reference],
+                                    custom_properties={
+                                        "labels": ["C2 Server"],
+                                        "created_by_ref": organization.id,
+                                        "external_references": [external_reference],
+                                    },
                                 )
                                 bundle_objects.append(observable_ip)
                                 observable_domain = None
                                 if "domain" in parsed_entry.keys():
-                                    observable_domain = SimpleObservable(
-                                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                                            "x-opencti-simple-observable"
-                                        ),
-                                        key="Domain-Name.value",
-                                        labels=["C2 Server"],
+                                    observable_domain = DomainName(
                                         value=parsed_entry["domain"],
-                                        created_by_ref=organization.id,
                                         object_marking_refs=[tlp["standard_id"]],
-                                        external_references=[external_reference],
+                                        custom_properties={
+                                            "labels": ["C2 Server"],
+                                            "created_by_ref": organization.id,
+                                            "external_references": [external_reference],
+                                        },
                                     )
                                     bundle_objects.append(observable_domain)
 
                                 if indicator is not None:
                                     relationship_1 = stix2.Relationship(
-                                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                                            "relationship"
+                                        id=StixCoreRelationship.generate_id(
+                                            "based-on", indicator.id, observable_url.id
                                         ),
                                         relationship_type="based-on",
                                         created_by_ref=organization.id,
@@ -308,8 +317,8 @@ class Cybercrimetracker:
                                     )
                                     bundle_objects.append(relationship_1)
                                     relationship_2 = stix2.Relationship(
-                                        id=OpenCTIStix2Utils.generate_random_stix_id(
-                                            "relationship"
+                                        id=StixCoreRelationship.generate_id(
+                                            "based-on", indicator.id, observable_ip.id
                                         ),
                                         relationship_type="based-on",
                                         created_by_ref=organization.id,
@@ -320,8 +329,10 @@ class Cybercrimetracker:
                                     bundle_objects.append(relationship_2)
                                     if observable_domain is not None:
                                         relationship_3 = stix2.Relationship(
-                                            id=OpenCTIStix2Utils.generate_random_stix_id(
-                                                "relationship"
+                                            id=StixCoreRelationship.generate_id(
+                                                "based-on",
+                                                indicator.id,
+                                                observable_domain.id,
                                             ),
                                             relationship_type="based-on",
                                             created_by_ref=organization.id,
@@ -356,7 +367,6 @@ class Cybercrimetracker:
                             str(round(self.interval, 2))
                         )
                     )
-                    time.sleep(60)
                 else:
                     new_interval = self.interval - (timestamp - last_run)
                     self.helper.log_info(
@@ -365,14 +375,19 @@ class Cybercrimetracker:
                             str(round(new_interval, 2))
                         )
                     )
-                    time.sleep(60)
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
+
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(60)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            time.sleep(60)
 
 
 if __name__ == "__main__":
@@ -382,4 +397,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

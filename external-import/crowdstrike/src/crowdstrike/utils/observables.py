@@ -3,34 +3,28 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
-from pycti import OpenCTIStix2Utils  # type: ignore
-
-from stix2 import (  # type: ignore
-    CustomObservable,
-    DomainName,
-    EmailAddress,
-    EmailMessage,
-    File,
-    IPv4Address,
-    IPv6Address,
-    Identity,
-    MarkingDefinition,
-    Mutex,
-    Process,
-    URL,
-    X509Certificate,
-)
-from stix2.properties import ListProperty, ReferenceProperty, StringProperty  # type: ignore # noqa: E501
-
 from crowdstrike.utils.constants import (
     X_OPENCTI_CREATED_BY_REF,
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
 )
-
-
-def _create_random_identifier(identifier_type: str) -> str:
-    return OpenCTIStix2Utils.generate_random_stix_id(identifier_type)
+from stix2 import DomainName  # type: ignore
+from stix2 import (
+    URL,
+    CustomObservable,
+    EmailAddress,
+    EmailMessage,
+    File,
+    Identity,
+    IPv4Address,
+    IPv6Address,
+    MarkingDefinition,
+    Mutex,
+    Process,
+    X509Certificate,
+)
+from stix2.properties import ListProperty  # type: ignore # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
 
 
 def _get_default_custom_properties(
@@ -97,7 +91,7 @@ def create_observable_domain_name(properties: ObservableProperties) -> DomainNam
 
 
 @CustomObservable(
-    "x-opencti-hostname",
+    "hostname",
     [
         ("value", StringProperty(required=True)),
         ("spec_version", StringProperty(fixed="2.1")),
@@ -198,7 +192,7 @@ def create_observable_mutex(properties: ObservableProperties) -> Mutex:
 
 
 @CustomObservable(
-    "x-opencti-cryptocurrency-wallet",
+    "cryptocurrency-wallet",
     [
         ("value", StringProperty(required=True)),
         ("spec_version", StringProperty(fixed="2.1")),
@@ -233,7 +227,6 @@ def create_observable_windows_service_name(properties: ObservableProperties) -> 
     # The Process does not have ID Contributing Properties.
     # Specification says to use UUIDv4 but for OpenCTI we will use random identifier.
     return Process(
-        id=_create_random_identifier("process"),
         object_marking_refs=properties.object_markings,
         extensions={"windows-service-ext": {"service_name": properties.value}},
         custom_properties=_get_custom_properties(properties),
@@ -274,7 +267,7 @@ def create_observable_x509_certificate_subject(
 
 
 @CustomObservable(
-    "x-opencti-user-agent",
+    "user-agent",
     [
         ("value", StringProperty(required=True)),
         ("spec_version", StringProperty(fixed="2.1")),

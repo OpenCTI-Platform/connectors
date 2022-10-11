@@ -15,15 +15,17 @@ Options:
   -q                          quiet mode
   --debug                     enable debug logging for all Python modules
 """
-
+import datetime
 import json
 import logging
 import os
+import re
 import sys
 from importlib.metadata import version
 from typing import OrderedDict
 
 import yaml
+from dateutil import parser
 from docopt import docopt
 
 from . import __DATA_DIR__, LOGGER_NAME, __version__
@@ -76,6 +78,7 @@ def __process_config(argv={}, config={}) -> dict:
             "log_level": os.environ.get("CONNECTOR_LOG_LEVEL", None),
             "confidence_level": os.environ.get("CONNECTOR_CONFIDENCE_LEVEL", None),
             "mode": os.environ.get("CONNECTOR_MODE", None),
+            "start_timestamp": os.environ.get("CONNECTOR_START_TIMESTAMP", None),
         },
         "cloud": {
             "auth": os.environ.get("CLOUD_AUTH", None),
@@ -110,6 +113,26 @@ def __process_config(argv={}, config={}) -> dict:
     if os.environ.get("CONNECTOR_JSON_CONFIG", None):
         _jsonenv = json.loads(os.environ.get("CONNECTOR_JSON_CONFIG"))
         _conf: dict = dict_merge(_conf, _jsonenv)
+
+    # check the date in ISO format and convert it to timespan
+    if (
+        "start_timestamp" in _conf["connector"].keys()
+        and _conf["connector"]["start_timestamp"]
+    ):
+        if re.match(
+            "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z",
+            _conf["connector"]["start_timestamp"],
+        ):
+            _conf["connector"]["start_timestamp"] = re.sub(
+                "\..*",
+                "",
+                str(
+                    datetime.datetime.timestamp(
+                        parser.parse(_conf["connector"]["start_timestamp"])
+                    )
+                    * 1000
+                ),
+            )
 
     return _conf
 

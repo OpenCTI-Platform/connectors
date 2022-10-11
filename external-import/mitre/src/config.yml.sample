@@ -5,16 +5,16 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'MITRE ATT&CK'
+  name: 'MITRE Datasets'
   scope: 'marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,external-reference-as-report'
-  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: true
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
   run_and_terminate: false
   log_level: 'info'
 
 mitre:
-  enterprise_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json'
-  pre_attack_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/pre-attack/pre-attack.json'
-  mobile_attack_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/mobile-attack/mobile-attack.json'
-  ics_attack_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/ics-attack/ics-attack.json'
+  enterprise_file_url: 'https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json'
+  mobile_attack_file_url: 'https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json'
+  ics_attack_file_url: 'https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json'
+  capec_file_url: 'https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json'
   interval: 7 # In days, must be strictly greater than 1

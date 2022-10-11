@@ -1,5 +1,6 @@
-import requests
 import io
+
+import requests
 
 
 class IntezerApi:
@@ -35,8 +36,7 @@ class IntezerApi:
         file_obj = io.BytesIO(file_contents)
         files = {"file": ("file_name", file_obj)}
         response = self._session.post(f"{self.base_url}/analyze", files=files)
-        assert response.status_code == 201
-
+        response.raise_for_status()
         return response.json()["result_url"]
 
     def get_analysis_report(self, result_url):

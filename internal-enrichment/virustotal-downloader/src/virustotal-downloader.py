@@ -1,13 +1,14 @@
 # coding: utf-8
 
 import os
-import yaml
+import sys
 import time
-import magic
 import urllib.request
 
-from stix2 import Bundle, Relationship
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+import magic
+import stix2
+import yaml
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 
 
 class VirustotalDownloaderConnector:
@@ -71,8 +72,10 @@ class VirustotalDownloaderConnector:
             )
 
         # Create a relationship between the StixFile and the new Artifact
-        relationship = Relationship(
-            id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+        relationship = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "related-to", observable["standard_id"], artifact_id
+            ),
             relationship_type="related-to",
             created_by_ref=self.identity,
             source_ref=observable["standard_id"],
@@ -82,7 +85,7 @@ class VirustotalDownloaderConnector:
         bundle_objects.append(relationship)
 
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
@@ -123,4 +126,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)
