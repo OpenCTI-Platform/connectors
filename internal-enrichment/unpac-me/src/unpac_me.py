@@ -1,21 +1,14 @@
 # coding: utf-8
 
 import os
-import yaml
+import sys
 import time
+
 import magic
+import stix2
+import yaml
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 from unpac_me_api_client import UnpacMeApi, UnpacMeStatus
-
-
-from stix2 import (
-    Bundle,
-    Relationship,
-)
-from pycti import (
-    OpenCTIConnectorHelper,
-    OpenCTIStix2Utils,
-    get_config_variable,
-)
 
 
 class UnpacMeConnector:
@@ -129,8 +122,10 @@ class UnpacMeConnector:
             response = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
 
             # Create Relationship between original and newly uploaded Artifact
-            relationship = Relationship(
-                id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to", response["standard_id"], observable["standard_id"]
+                ),
                 relationship_type="related-to",
                 created_by_ref=self.identity,
                 source_ref=response["standard_id"],
@@ -162,7 +157,7 @@ class UnpacMeConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
@@ -222,11 +217,13 @@ class UnpacMeConnector:
                 "Observable not found "
                 "(may be linked to data seggregation, check your group and permissions)"
             )
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
+
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
@@ -245,4 +242,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

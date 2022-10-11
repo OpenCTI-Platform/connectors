@@ -4,20 +4,19 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, NamedTuple, Optional, Set
 
-from crowdstrike_client.api.intel import Indicators, Reports
-from crowdstrike_client.api.models import Indicator
-
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
-
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-
 from crowdstrike.importer import BaseImporter
 from crowdstrike.indicator.builder import (
     IndicatorBundleBuilder,
     IndicatorBundleBuilderConfig,
 )
-from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike.utils import datetime_to_timestamp, timestamp_to_datetime
+from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
+from crowdstrike_client.api.intel import Indicators, Reports
+from crowdstrike_client.api.models import Indicator
+from pycti.connector.opencti_connector_helper import (
+    OpenCTIConnectorHelper,
+)  # type: ignore  # noqa: E501
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 
 class IndicatorImporterConfig(NamedTuple):

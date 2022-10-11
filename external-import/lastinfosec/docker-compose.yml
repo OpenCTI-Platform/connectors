@@ -10,8 +10,12 @@ services:
       - CONNECTOR_NAME=lastinfosec-CTI
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
-      - CONFIG_LIS_URL_CTI=https://api.client.lastinfosec.com/v2/stix21/getlasthour?api_key=
-      - CONFIG_LIS_APIKEY_CTI=ChangeMe
+      - CONFIG_LIS_APIKEY=ChangeMe
+      - CONNECTOR_RUN_AND_TERMINATE=False  # set to true if you want to run the connector only once
+      - CONFIG_LIS_CTI_INTERVAL=30  # The connector will run every 30 minutes to get IOCs from LastInfoSec for the last 30 minutes
+      - CONFIG_LIS_CTI_ENABLED=False  # set it to true if you want to enable LastInfoSec CTI feed
+      - CONFIG_LIS_CVE_ENABLED=False  # set it to true if you want to enable LastInfoSec CVE feed
+      - CONFIG_LIS_TACTIC_ENABLED=False  # set it to true if you want to enable LastInfoSec Tactic feed
     restart: always

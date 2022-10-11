@@ -1,21 +1,16 @@
-# -*- coding: utf-8 -*-
 """OpenCTI AlienVault importer module."""
 
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Set
 
-from pycti.connector.opencti_connector_helper import (  # type: ignore
-    OpenCTIConnectorHelper,
-)
-
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
-
+import stix2
 from alienvault.builder import PulseBundleBuilder, PulseBundleBuilderConfig
 from alienvault.client import AlienVaultClient
 from alienvault.models import Pulse
 from alienvault.utils import iso_datetime_str_to_datetime
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from stix2.exceptions import STIXError
 
 
 class PulseImporterConfig(NamedTuple):
@@ -23,8 +18,8 @@ class PulseImporterConfig(NamedTuple):
 
     helper: OpenCTIConnectorHelper
     client: AlienVaultClient
-    author: Identity
-    tlp_marking: MarkingDefinition
+    author: stix2.Identity
+    tlp_marking: stix2.MarkingDefinition
     create_observables: bool
     create_indicators: bool
     update_existing_data: bool
@@ -34,6 +29,7 @@ class PulseImporterConfig(NamedTuple):
     guess_malware: bool
     guess_cve: bool
     excluded_pulse_indicator_types: Set[str]
+    filter_indicators: bool
     enable_relationships: bool
     enable_attack_patterns_indicates: bool
 
@@ -60,6 +56,7 @@ class PulseImporter:
         self.tlp_marking = config.tlp_marking
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
+        self.filter_indicators = config.filter_indicators
         self.update_existing_data = config.update_existing_data
         self.default_latest_timestamp = config.default_latest_timestamp
         self.report_status = config.report_status
@@ -79,22 +76,62 @@ class PulseImporter:
         self.work_id = work_id
 
         self._info(
-            "Running pulse importer (update data: {0}, guess malware: {1}, guess cve: {2}, relationships: {3}, patterns_indicates: {4})...",  # noqa: E501
+            "Running pulse importer ("
+            "update data: {0}, "
+            "guess malware: {1}, "
+            "guess cve: {2}, "
+            "relationships: {3}, "
+            "patterns_indicates: {4}, "
+            "filter_indicators: {5}"
+            ")...",
             self.update_existing_data,
             self.guess_malware,
             self.guess_cve,
             self.enable_relationships,
             self.enable_attack_patterns_indicates,
+            self.filter_indicators,
         )
 
         self._clear_malware_guess_cache()
 
         latest_pulse_datetime = self._get_latest_pulse_datetime_from_state(state)
 
+        self._info("Fetching subscribed pulses...")
         pulses = self._fetch_subscribed_pulses(latest_pulse_datetime)
         pulse_count = len(pulses)
 
         self._info("{0} pulse(s) since {1}...", pulse_count, latest_pulse_datetime)
+
+        if self.filter_indicators:
+            total_remaining = 0
+            total_filtered = 0
+            for i, pulse in enumerate(pulses, start=1):
+                before_count = len(pulse.indicators)
+                pulse.indicators = [
+                    ind
+                    for ind in pulse.indicators
+                    if ind.created >= latest_pulse_datetime
+                ]
+                after_count = len(pulse.indicators)
+                total_remaining += after_count
+                total_filtered += before_count - after_count
+                self._info(
+                    "({3}/{4}) Filtered {0} indicators past {1} from {2}",
+                    total_filtered,
+                    latest_pulse_datetime,
+                    pulse.name,
+                    i,
+                    pulse_count,
+                )
+            if total_filtered > 0:
+                self._info(
+                    "Filtered {0} total indicators past {1} ({2} remaining)",
+                    total_filtered,
+                    latest_pulse_datetime,
+                    total_remaining,
+                )
+            else:
+                self._info("No indicators to filter")
 
         failed = 0
         new_state = state.copy()
@@ -162,20 +199,22 @@ class PulseImporter:
         return sorted(pulses, key=_key_func)
 
     def _process_pulse(self, pulse: Pulse) -> bool:
-        self._info("Processing pulse {0} ({1})...", pulse.name, pulse.id)
+        self._info(
+            "Processing pulse {0} ({1} indicators) ({2})",
+            pulse.name,
+            len(pulse.indicators),
+            pulse.id,
+        )
 
         pulse_bundle = self._create_pulse_bundle(pulse)
         if pulse_bundle is None:
             return False
 
-        # with open(f"bundle_{pulse.id}.json", "w") as f:
-        #     f.write(pulse_bundle.serialize(pretty=True))
-
         self._send_bundle(pulse_bundle)
 
         return True
 
-    def _create_pulse_bundle(self, pulse: Pulse) -> Optional[Bundle]:
+    def _create_pulse_bundle(self, pulse: Pulse) -> Optional[stix2.Bundle]:
         config = PulseBundleBuilderConfig(
             pulse=pulse,
             provider=self.author,
@@ -281,7 +320,7 @@ class PulseImporter:
     def _set_state(self, state: Dict[str, Any]) -> None:
         self.helper.set_state(state)
 
-    def _send_bundle(self, bundle: Bundle) -> None:
+    def _send_bundle(self, bundle: stix2.Bundle) -> None:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(
             serialized_bundle, update=self.update_existing_data, work_id=self.work_id

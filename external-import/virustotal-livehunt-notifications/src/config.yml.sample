@@ -9,7 +9,7 @@ connector:
   scope: 'virustotal_livehunt_notifications'
   confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
   create_indicator: False
-  update_existing_data: True
+  update_existing_data: false
   log_level: 'info'
 
 virustotal_livehunt_notifications:

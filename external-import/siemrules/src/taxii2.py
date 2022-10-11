@@ -1,15 +1,17 @@
 """Generic TAXII2 connector. """
 
-import os
-import time
 import json
+import os
+import sys
+import time
 from datetime import datetime, timedelta
-import yaml
-from requests.exceptions import HTTPError
+
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
-from taxii2client.exceptions import TAXIIServiceException
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from requests.exceptions import HTTPError
+from taxii2client.exceptions import TAXIIServiceException
 
 
 class Taxii2Connector:
@@ -138,6 +140,11 @@ class Taxii2Connector:
                 f"Run Complete. Sleeping until next run in " f"{self.interval} hours"
             )
             self.helper.set_state({"last_run": timestamp})
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
             time.sleep(self.get_interval())
 
     def poll_all_roots(self, coll_title):

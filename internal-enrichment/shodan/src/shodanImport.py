@@ -1,7 +1,8 @@
-import yaml
 import os
-import shodan
 from datetime import datetime, timedelta
+
+import shodan
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -314,15 +315,20 @@ class ShodanConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        if observable is None:
+            raise ValueError(
+                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
+            )
 
-        TLPs = ["TLP:WHITE"]
+        # Check TLP markings, do not submit higher than the max allowed
+        tlps = ["TLP:CLEAR"]
         if "objectMarking" in observable:
             for marking_definition in observable["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
-                    TLPs.append(marking_definition["definition"])
+                    tlps.append(marking_definition["definition"])
 
-        for TLPx in TLPs:
-            if not OpenCTIConnectorHelper.check_max_tlp(TLPx, self.max_tlp):
+        for tlp in tlps:
+            if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
                 raise ValueError(
                     "Do not send any data, TLP of the observable is greater than MAX TLP"
                 )

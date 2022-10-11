@@ -3,26 +3,26 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
-from stix2 import (  # type: ignore
-    CustomObservable,
-    DomainName,
-    EmailAddress,
-    File,
-    IPv4Address,
-    IPv6Address,
-    Identity,
-    MarkingDefinition,
-    Mutex,
-    URL,
-)
-from stix2.properties import ListProperty, ReferenceProperty, StringProperty  # type: ignore # noqa: E501
-
 from alienvault.utils.constants import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_CREATED_BY_REF,
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
 )
+from stix2 import DomainName  # type: ignore
+from stix2 import (
+    URL,
+    CustomObservable,
+    EmailAddress,
+    File,
+    Identity,
+    IPv4Address,
+    IPv6Address,
+    MarkingDefinition,
+    Mutex,
+)
+from stix2.properties import ListProperty  # type: ignore # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
 
 
 def _get_default_custom_properties(
@@ -85,7 +85,7 @@ def create_observable_domain_name(properties: ObservableProperties) -> DomainNam
 
 
 @CustomObservable(
-    "x-opencti-hostname",
+    "hostname",
     [
         ("value", StringProperty(required=True)),
         ("spec_version", StringProperty(fixed="2.1")),
@@ -198,7 +198,7 @@ def create_observable_mutex(properties: ObservableProperties) -> Mutex:
 
 
 @CustomObservable(
-    "x-opencti-cryptocurrency-wallet",
+    "cryptocurrency-wallet",
     [
         ("value", StringProperty(required=True)),
         ("spec_version", StringProperty(fixed="2.1")),

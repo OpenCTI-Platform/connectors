@@ -17,6 +17,7 @@ defaults: dict = {
         "entity_name": "Elastic CTI Cluster",
         "live_stream_id": "ChangeMe",
         "live_stream_listen_delete": True,
+        "live_stream_no_dependencies": True,
     },
     "elastic": {
         "signals": {

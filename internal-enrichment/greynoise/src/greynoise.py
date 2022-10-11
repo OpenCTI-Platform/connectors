@@ -1,8 +1,8 @@
 import os
 from time import sleep
 
-import requests
 import pycountry
+import requests
 import yaml
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -355,8 +355,9 @@ class GreyNoiseConnector:
         self.helper.log_info("process data: " + str(data))
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]

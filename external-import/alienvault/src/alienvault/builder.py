@@ -1,25 +1,10 @@
-# -*- coding: utf-8 -*-
 """OpenCTI AlienVault builder module."""
 
 import logging
 from datetime import datetime
 from typing import Callable, List, Mapping, NamedTuple, Optional, Set
 
-from stix2 import (  # type: ignore
-    AttackPattern,
-    Bundle,
-    ExternalReference,
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Malware,
-    MarkingDefinition,
-    Relationship,
-    Report,
-    Vulnerability,
-)
-from stix2.v21 import _DomainObject, _Observable  # type: ignore
-
+import stix2
 from alienvault.models import Pulse, PulseIndicator
 from alienvault.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
@@ -55,7 +40,7 @@ from alienvault.utils import (
     create_vulnerability_external_reference,
     get_tlp_string_marking_definition,
 )
-
+from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 log = logging.getLogger(__name__)
 
@@ -64,17 +49,17 @@ class Observation(NamedTuple):
     """Observation."""
 
     observable: Optional[_Observable]
-    indicator: Optional[Indicator]
-    relationship: Optional[Relationship]
+    indicator: Optional[stix2.Indicator]
+    relationship: Optional[stix2.Relationship]
 
 
 class PulseBundleBuilderConfig(NamedTuple):
     """Pulse bundle builder configuration."""
 
     pulse: Pulse
-    provider: Identity
+    provider: stix2.Identity
     source_name: str
-    object_markings: List[MarkingDefinition]
+    object_markings: List[stix2.MarkingDefinition]
     create_observables: bool
     create_indicators: bool
     confidence_level: int
@@ -134,18 +119,13 @@ class PulseBundleBuilder:
         config: PulseBundleBuilderConfig,
     ) -> None:
         """Initialize pulse bundle builder."""
-        pulse = config.pulse
-        self.pulse = pulse
-
-        provider = config.provider
-        self.pulse_author = self._determine_pulse_author(pulse, provider)
-        self.provider = provider
-
+        self.pulse = config.pulse
+        self.provider = config.provider
+        self.pulse_author = self._determine_pulse_author(self.pulse, self.provider)
         self.source_name = config.source_name
-
-        object_markings = config.object_markings
-        self.object_markings = self._determine_pulse_tlp(pulse, object_markings)
-
+        self.object_markings = self._determine_pulse_tlp(
+            self.pulse, config.object_markings
+        )
         self.confidence_level = config.confidence_level
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
@@ -164,7 +144,9 @@ class PulseBundleBuilder:
         return not self.enable_attack_patterns_indicates
 
     @staticmethod
-    def _determine_pulse_author(pulse: Pulse, provider: Identity) -> Identity:
+    def _determine_pulse_author(
+        pulse: Pulse, provider: stix2.Identity
+    ) -> stix2.Identity:
         pulse_author = pulse.author_name
         if not pulse_author:
             return provider
@@ -174,8 +156,8 @@ class PulseBundleBuilder:
 
     @staticmethod
     def _determine_pulse_tlp(
-        pulse: Pulse, default_object_markings: List[MarkingDefinition]
-    ) -> List[MarkingDefinition]:
+        pulse: Pulse, default_object_markings: List[stix2.MarkingDefinition]
+    ) -> List[stix2.MarkingDefinition]:
         pulse_tlp = pulse.tlp
         try:
             return [get_tlp_string_marking_definition(pulse_tlp)]
@@ -183,14 +165,14 @@ class PulseBundleBuilder:
             log.warning("Unable to determine TLP for pulse: %s", str(e))
             return default_object_markings
 
-    def _create_authors(self) -> List[Identity]:
+    def _create_authors(self) -> List[stix2.Identity]:
         authors = []
         if self.pulse_author is not self.provider:
             authors.append(self.provider)
         authors.append(self.pulse_author)
         return authors
 
-    def _create_intrusion_sets(self) -> List[IntrusionSet]:
+    def _create_intrusion_sets(self) -> List[stix2.IntrusionSet]:
         intrusion_sets = []
         adversary = self.pulse.adversary
         if adversary is not None and adversary:
@@ -198,12 +180,12 @@ class PulseBundleBuilder:
             intrusion_sets.append(intrusion_set)
         return intrusion_sets
 
-    def _create_intrusion_set(self, name: str) -> IntrusionSet:
+    def _create_intrusion_set(self, name: str) -> stix2.IntrusionSet:
         return create_intrusion_set(
             name, self.pulse_author, self.confidence_level, self.object_markings
         )
 
-    def _create_malwares(self) -> List[Malware]:
+    def _create_malwares(self) -> List[stix2.Malware]:
         malware_list = []
 
         # Create malwares based on guessed malwares.
@@ -221,7 +203,9 @@ class PulseBundleBuilder:
 
         return malware_list
 
-    def _create_malware(self, name: str, malware_id: Optional[str] = None) -> Malware:
+    def _create_malware(
+        self, name: str, malware_id: Optional[str] = None
+    ) -> stix2.Malware:
         return create_malware(
             name,
             self.pulse_author,
@@ -232,7 +216,7 @@ class PulseBundleBuilder:
 
     def _create_uses_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
-    ) -> List[Relationship]:
+    ) -> List[stix2.Relationship]:
         if self._no_relationships():
             return []
 
@@ -244,7 +228,7 @@ class PulseBundleBuilder:
             self.object_markings,
         )
 
-    def _create_target_sectors(self) -> List[Identity]:
+    def _create_target_sectors(self) -> List[stix2.Identity]:
         target_sectors = []
         for industry in self.pulse.industries:
             if not industry:
@@ -255,7 +239,7 @@ class PulseBundleBuilder:
 
     def _create_targets_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
-    ) -> List[Relationship]:
+    ) -> List[stix2.Relationship]:
         if self._no_relationships():
             return []
 
@@ -267,7 +251,7 @@ class PulseBundleBuilder:
             self.object_markings,
         )
 
-    def _create_target_countries(self) -> List[Identity]:
+    def _create_target_countries(self) -> List[stix2.Identity]:
         target_countries = []
         for target_country in self.pulse.targeted_countries:
             if not target_country:
@@ -277,10 +261,10 @@ class PulseBundleBuilder:
             target_countries.append(country)
         return target_countries
 
-    def _create_country(self, name: str) -> Identity:
+    def _create_country(self, name: str) -> stix2.Identity:
         return create_country(name, self.pulse_author)
 
-    def _create_attack_patterns(self) -> List[AttackPattern]:
+    def _create_attack_patterns(self) -> List[stix2.AttackPattern]:
         attack_patterns = []
         for attack_id in self.pulse.attack_ids:
             attack_id_clean = attack_id.strip()
@@ -291,7 +275,7 @@ class PulseBundleBuilder:
             attack_patterns.append(attack_pattern)
         return attack_patterns
 
-    def _create_attack_pattern(self, name: str) -> AttackPattern:
+    def _create_attack_pattern(self, name: str) -> stix2.AttackPattern:
         external_references = create_attack_pattern_external_reference(name)
 
         return create_attack_pattern(
@@ -302,7 +286,7 @@ class PulseBundleBuilder:
             self.object_markings,
         )
 
-    def _create_vulnerabilities(self) -> List[Vulnerability]:
+    def _create_vulnerabilities(self) -> List[stix2.Vulnerability]:
         vulnerabilities = []
 
         for guessed_cve in self.guessed_cves:
@@ -338,7 +322,7 @@ class PulseBundleBuilder:
     ) -> List[PulseIndicator]:
         return list(filter(filter_func, pulse_indicators))
 
-    def _create_vulnerability(self, name) -> Vulnerability:
+    def _create_vulnerability(self, name) -> stix2.Vulnerability:
         external_references = create_vulnerability_external_reference(name)
 
         return create_vulnerability(
@@ -432,7 +416,7 @@ class PulseBundleBuilder:
         ) -> bool:
             indicator_type = pulse_indicator.type
             if indicator_type in excluded_types:
-                log.info(
+                log.debug(
                     "Excluding pulse indicator '%s' (%s)",
                     pulse_indicator.indicator,
                     indicator_type,
@@ -461,7 +445,7 @@ class PulseBundleBuilder:
         valid_from: datetime,
         labels: List[str],
         main_observable_type: Optional[str] = None,
-    ) -> Indicator:
+    ) -> stix2.Indicator:
         return create_indicator(
             pattern,
             pattern_type,
@@ -492,7 +476,7 @@ class PulseBundleBuilder:
 
         return final_description
 
-    def _create_yara_indicators(self) -> List[Indicator]:
+    def _create_yara_indicators(self) -> List[stix2.Indicator]:
         if not self.create_indicators:
             return []
 
@@ -532,7 +516,7 @@ class PulseBundleBuilder:
 
     def _create_indicates_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
-    ) -> List[Relationship]:
+    ) -> List[stix2.Relationship]:
         if self._no_relationships():
             return []
         new_targets = targets
@@ -552,7 +536,7 @@ class PulseBundleBuilder:
 
     def _create_based_on_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
-    ) -> List[Relationship]:
+    ) -> List[stix2.Relationship]:
         return create_based_on_relationships(
             self.pulse_author,
             sources,
@@ -561,7 +545,7 @@ class PulseBundleBuilder:
             self.object_markings,
         )
 
-    def _create_report(self, objects: List[_DomainObject]) -> Report:
+    def _create_report(self, objects: List[_DomainObject]) -> stix2.Report:
         external_references = self._create_report_external_references()
         labels = self._get_labels()
 
@@ -581,7 +565,7 @@ class PulseBundleBuilder:
             x_opencti_report_status=self.report_status,
         )
 
-    def _create_report_external_references(self) -> List[ExternalReference]:
+    def _create_report_external_references(self) -> List[stix2.ExternalReference]:
         external_references = [self._create_pulse_external_reference()]
 
         for reference in self.pulse.references:
@@ -594,14 +578,14 @@ class PulseBundleBuilder:
 
         return external_references
 
-    def _create_pulse_external_reference(self) -> ExternalReference:
+    def _create_pulse_external_reference(self) -> stix2.ExternalReference:
         pulse_id = self.pulse.id
         pulse_url = self.pulse.url
         return self._create_external_reference(pulse_url, external_id=pulse_id)
 
     def _create_external_reference(
         self, url: str, external_id: Optional[str] = None
-    ) -> ExternalReference:
+    ) -> stix2.ExternalReference:
         return create_external_reference(self.source_name, url, external_id=external_id)
 
     def _get_labels(self) -> List[str]:
@@ -612,10 +596,10 @@ class PulseBundleBuilder:
             labels.append(tag)
         return labels
 
-    def _create_reports(self, objects: List[_DomainObject]) -> List[Report]:
+    def _create_reports(self, objects: List[_DomainObject]) -> List[stix2.Report]:
         return [self._create_report(objects)]
 
-    def build(self) -> Bundle:
+    def build(self) -> stix2.Bundle:
         """Build pulse bundle."""
         # Prepare STIX2 bundle.
         bundle_objects = []
@@ -780,7 +764,8 @@ class PulseBundleBuilder:
 
         # XXX: Without allow_custom=True the observable with the custom property
         # will cause an unexpected property (x_opencti_score) error.
-        return Bundle(objects=bundle_objects, allow_custom=True)
+        log.info(f"Bundling {len(bundle_objects)} objects")
+        return stix2.Bundle(objects=bundle_objects, allow_custom=True)
 
-    def _create_dummy_object(self) -> Identity:
+    def _create_dummy_object(self) -> stix2.Identity:
         return create_organization(self._DUMMY_OBJECT_NAME, self.pulse_author)

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-threatmatch:
-    image: opencti/connector-threatmatch:5.2.1
+    image: opencti/connector-threatmatch:5.3.17
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

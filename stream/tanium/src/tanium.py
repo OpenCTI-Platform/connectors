@@ -2,15 +2,15 @@
 # Tanium Connector for OpenCTI                 #
 ################################################
 
-import os
-import yaml
 import json
+import os
 
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from intel_cache import IntelCache
+import yaml
 from import_manager import IntelManager
-from tanium_api_handler import TaniumApiHandler
+from intel_cache import IntelCache
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from sightings import Sightings
+from tanium_api_handler import TaniumApiHandler
 
 
 class TaniumConnector:
@@ -86,23 +86,27 @@ class TaniumConnector:
         try:
             data = json.loads(msg.data)["data"]
         except:
-            raise ValueError("Cannot process the message: " + msg)
+            raise ValueError("Cannot process the message")
         # Handle creation
         if msg.event == "create":
             if data["type"] == "indicator":
                 self.helper.log_info(
-                    "[CREATE] Processing indicator {" + data["x_opencti_id"] + "}"
+                    "[CREATE] Processing indicator {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
                 )
                 self.import_manager.import_intel_from_indicator(data)
             elif data["type"] in [
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
-                "x-opencti-hostname",
+                "hostname",
                 "process",
             ]:
                 self.helper.log_info(
-                    "[CREATE] Processing observable {" + data["x_opencti_id"] + "}"
+                    "[CREATE] Processing observable {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
                 )
                 self.import_manager.import_intel_from_observable(data)
             elif data["type"] in ["file", "artifact"]:
@@ -115,20 +119,24 @@ class TaniumConnector:
         if msg.event == "update":
             if data["type"] == "indicator":
                 self.helper.log_info(
-                    "[UPDATE] Processing indicator {" + data["x_opencti_id"] + "}"
+                    "[UPDATE] Processing indicator {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
                 )
                 self.import_manager.import_intel_from_indicator(data, True)
             elif data["type"] in [
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
-                "x-opencti-hostname",
+                "hostname",
                 "file",
                 "artifact",
                 "process",
             ]:
                 self.helper.log_info(
-                    "[UPDATE] Processing observable {" + data["x_opencti_id"] + "}"
+                    "[UPDATE] Processing observable {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
                 )
                 self.import_manager.import_intel_from_observable(data, True)
             return
@@ -140,7 +148,7 @@ class TaniumConnector:
                 "ipv4-addr",
                 "ipv6-addr",
                 "domain-name",
-                "x-opencti-hostname",
+                "hostname",
             ]:
                 self.import_manager.delete_intel(data)
             elif data["type"] in ["file", "artifact"]:

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cybercrimetracker:
-    image: opencti/connector-cybercrime-tracker:5.2.1
+    image: opencti/connector-cybercrime-tracker:5.3.17
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=Cybercrime-Tracker
       - CONNECTOR_SCOPE=cybercrime-tracker
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - CYBERCRIME_TRACKER_FEED_URL=http://cybercrime-tracker.net/rss.xml
       - CYBERCRIME_TRACKER_TLP=WHITE

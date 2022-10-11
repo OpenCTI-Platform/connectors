@@ -4,15 +4,6 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Mapping, Optional
 
-from crowdstrike_client.api.intel import Reports
-from crowdstrike_client.api.models import Response
-from crowdstrike_client.api.models.base import Entity
-from crowdstrike_client.api.models.report import Report
-
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
-
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-
 from crowdstrike.importer import BaseImporter
 from crowdstrike.report.builder import ReportBundleBuilder
 from crowdstrike.utils import (
@@ -21,6 +12,14 @@ from crowdstrike.utils import (
     paginate,
     timestamp_to_datetime,
 )
+from crowdstrike_client.api.intel import Reports
+from crowdstrike_client.api.models import Response
+from crowdstrike_client.api.models.base import Entity
+from crowdstrike_client.api.models.report import Report
+from pycti.connector.opencti_connector_helper import (
+    OpenCTIConnectorHelper,
+)  # type: ignore  # noqa: E501
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 
 class ReportImporter(BaseImporter):

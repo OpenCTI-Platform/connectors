@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
 """VirusTotal enrichment module."""
-import datetime
 import json
 from pathlib import Path
-from typing import Optional
 
-import plyara
-import plyara.utils
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Indicator
+import stix2
 import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
+from .builder import VirusTotalBuilder
 from .client import VirusTotalClient
+from .indicator_config import IndicatorConfig
 
 
 class VirusTotalConnector:
     """VirusTotal connector."""
 
-    _CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
+    _SOURCE_NAME = "VirusTotal"
     _API_URL = "https://www.virustotal.com/api/v3"
 
     def __init__(self):
@@ -34,25 +32,60 @@ class VirusTotalConnector:
         self.max_tlp = get_config_variable(
             "VIRUSTOTAL_MAX_TLP", ["virustotal", "max_tlp"], config
         )
+        self.author = stix2.Identity(
+            name=self._SOURCE_NAME,
+            identity_class="Organization",
+            description="VirusTotal",
+            confidence=self.helper.connect_confidence_level,
+        )
 
-        self.client = VirusTotalClient(self._API_URL, token)
+        self.client = VirusTotalClient(self.helper, self._API_URL, token)
 
         # Cache to store YARA rulesets.
         self.yara_cache = {}
 
-    def _create_yara_indicator(
-        self, yara: dict, valid_from: Optional[int] = None
-    ) -> Optional[Indicator]:
-        """Create an indicator containing the YARA rule from VirusTotal."""
-        valid_from_date = (
-            datetime.datetime.min
-            if valid_from is None
-            else datetime.datetime.utcfromtimestamp(valid_from)
-        )
-        ruleset_id = yara.get("ruleset_id", "No ruleset id provided")
-        self.helper.log_info(f"[VirusTotal] Retrieving ruleset {ruleset_id}")
+        self.bundle = [self.author]
 
-        # Lookup in the cache for the ruleset id, otherwise, request VirusTotal API.
+        self.confidence_level = get_config_variable(
+            "CONNECTOR_CONFIDENCE_LEVEL",
+            ["connector", "confidence_level"],
+            config,
+            True,
+        )
+
+        # File/Artifact specific settings
+        self.file_create_note_full_report = get_config_variable(
+            "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT",
+            ["virustotal", "file_create_note_full_report"],
+            config,
+        )
+        self.file_indicator_config = IndicatorConfig.load_indicator_config(
+            config, "FILE"
+        )
+
+        # IP specific settings
+        self.ip_indicator_config = IndicatorConfig.load_indicator_config(config, "IP")
+
+        # Domain specific settings
+        self.domain_indicator_config = IndicatorConfig.load_indicator_config(
+            config, "DOMAIN"
+        )
+
+        # Url specific settings
+        self.url_indicator_config = IndicatorConfig.load_indicator_config(config, "URL")
+
+    def _retrieve_yara_ruleset(self, ruleset_id: str) -> dict:
+        """
+        Retrieve yara ruleset.
+
+        If the yara is not in the cache, make an API call.
+
+        Returns
+        -------
+        dict
+            YARA ruleset object.
+        """
+        self.helper.log_debug(f"[VirusTotal] Retrieving ruleset {ruleset_id}")
         if ruleset_id in self.yara_cache:
             self.helper.log_debug(f"Retrieving YARA ruleset {ruleset_id} from cache.")
             ruleset = self.yara_cache[ruleset_id]
@@ -60,153 +93,167 @@ class VirusTotalConnector:
             self.helper.log_debug(f"Retrieving YARA ruleset {ruleset_id} from API.")
             ruleset = self.client.get_yara_ruleset(ruleset_id)
             self.yara_cache[ruleset_id] = ruleset
-
-        # Parse the rules to find the correct one.
-        parser = plyara.Plyara()
-        rules = parser.parse_string(ruleset["data"]["attributes"]["rules"])
-        rule_name = yara.get("rule_name", "No ruleset name provided")
-        rule = [r for r in rules if r["rule_name"] == rule_name]
-        if len(rule) == 0:
-            self.helper.log_warning(f"No YARA rule for rule name {rule_name}")
-            return None
-
-        return self.helper.api.indicator.create(
-            name=yara.get("rule_name", "No rulename provided"),
-            description=json.dumps(
-                {
-                    "description": yara.get("description", "No description provided"),
-                    "author": yara.get("author", "No author provided"),
-                    "source": yara.get("source", "No source provided"),
-                    "ruleset_id": ruleset_id,
-                    "ruleset_name": yara.get(
-                        "ruleset_name", "No ruleset name provided"
-                    ),
-                }
-            ),
-            pattern=plyara.utils.rebuild_yara_rule(rule[0]),
-            pattern_type="yara",
-            valid_from=self.helper.api.stix2.format_date(valid_from_date),
-            x_opencti_main_observable_type="StixFile",
-        )
+        return ruleset
 
     def _process_file(self, observable):
         json_data = self.client.get_file_info(observable["observable_value"])
-        if json_data is None:
-            raise ValueError("An error has occurred")
+        assert json_data
         if "error" in json_data:
-            if json_data["error"]["code"] == "QuotaExceededError":
-                self.helper.log_error(
-                    "Quota limit reached, dropping the query to avoid queuing"
-                )
-                raise ValueError(
-                    "Quota limit reached, dropping the query to avoid queuing"
-                )
-            elif json_data["error"]["code"] == "NotFoundError":
-                self.helper.log_info("File not found on VirusTotal.")
-                return "File not found on VirusTotal."
-            else:
-                raise ValueError(json_data["error"]["message"])
-        if "data" in json_data:
-            data = json_data["data"]
-            attributes = data["attributes"]
-            # Update the current observable
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=observable["id"],
-                input={"key": "hashes.MD5", "value": attributes["md5"]},
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={"key": "hashes.SHA-1", "value": attributes["sha1"]},
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={"key": "hashes.SHA-256", "value": attributes["sha256"]},
-            )
-            if observable["entity_type"] == "StixFile":
-                self.helper.api.stix_cyber_observable.update_field(
-                    id=final_observable["id"],
-                    input={"key": "size", "value": str(attributes["size"])},
-                )
-                if observable["name"] is None and len(attributes["names"]) > 0:
-                    self.helper.api.stix_cyber_observable.update_field(
-                        id=final_observable["id"],
-                        input={"key": "name", "value": attributes["names"][0]},
-                    )
-                    del attributes["names"][0]
+            raise ValueError(json_data["error"]["message"])
+        if "data" not in json_data or "attributes" not in json_data["data"]:
+            raise ValueError("An error has occurred.")
 
-            if len(attributes["names"]) > 0:
-                self.helper.api.stix_cyber_observable.update_field(
-                    id=final_observable["id"],
-                    input={
-                        "key": "x_opencti_additional_names",
-                        "value": attributes["names"],
-                    },
-                )
+        builder = VirusTotalBuilder(
+            self.helper, self.author, observable, json_data["data"]
+        )
 
-            # Create external reference
-            external_reference = self.helper.api.external_reference.create(
-                source_name="VirusTotal",
-                url="https://www.virustotal.com/gui/file/" + attributes["sha256"],
-                description=attributes["magic"],
+        builder.update_hashes()
+
+        # Set the size and names (main and additional)
+        if observable["entity_type"] == "StixFile":
+            builder.update_size()
+
+        builder.update_names(
+            observable["entity_type"] == "StixFile"
+            and (observable["name"] is None or len(observable["name"]) == 0)
+        )
+
+        builder.create_indicator_based_on(
+            self.file_indicator_config,
+            f"""[file:hashes.'SHA-256' = '{json_data["data"]["attributes"]["sha256"]}']""",
+        )
+
+        # Create labels from tags
+        builder.update_labels()
+
+        # Add YARA rules (only if a rule is given).
+        for yara in json_data["data"]["attributes"].get(
+            "crowdsourced_yara_results", []
+        ):
+            ruleset = self._retrieve_yara_ruleset(
+                yara.get("ruleset_id", "No ruleset id provided")
+            )
+            builder.create_yara(
+                yara,
+                ruleset,
+                json_data["data"]["attributes"].get("creation_date", None),
             )
 
-            # Create tags
-            for tag in attributes["tags"]:
-                tag_vt = self.helper.api.label.create(value=tag, color="#0059f7")
-                self.helper.api.stix_cyber_observable.add_label(
-                    id=final_observable["id"], label_id=tag_vt["id"]
-                )
-
-            self.helper.api.stix_cyber_observable.add_external_reference(
-                id=final_observable["id"],
-                external_reference_id=external_reference["id"],
+        # Create a Note with the full report
+        if self.file_create_note_full_report:
+            builder.create_note(
+                "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
             )
+        return builder.send_bundle()
 
-            if "crowdsourced_yara_results" in attributes:
-                self.helper.log_info("[VirusTotal] adding yara results to file.")
+    def _process_ip(self, observable):
+        json_data = self.client.get_ip_info(observable["observable_value"])
+        assert json_data
+        if "error" in json_data:
+            raise ValueError(json_data["error"]["message"])
+        if "data" not in json_data or "attributes" not in json_data["data"]:
+            raise ValueError("An error has occurred.")
 
-                # Add YARA rules (only if a rule is given).
-                yaras = list(
-                    filter(
-                        None,
-                        [
-                            self._create_yara_indicator(
-                                yara, attributes.get("creation_date", None)
-                            )
-                            for yara in attributes["crowdsourced_yara_results"]
-                        ],
-                    )
-                )
+        builder = VirusTotalBuilder(
+            self.helper, self.author, observable, json_data["data"]
+        )
 
-                self.helper.log_debug(f"[VirusTotal] Indicators created: {yaras}")
+        builder.create_asn_belongs_to()
+        builder.create_location_located_at()
 
-                # Create the relationships (`related-to`) between the yaras and the file.
-                for yara in yaras:
-                    self.helper.api.stix_core_relationship.create(
-                        fromId=final_observable["id"],
-                        toId=yara["id"],
-                        relationship_type="related-to",
-                    )
+        builder.create_indicator_based_on(
+            self.ip_indicator_config,
+            f"""[ipv4-addr:value = '{observable["observable_value"]}']""",
+        )
+        builder.create_notes()
+        return builder.send_bundle()
 
-            return "File found on VirusTotal, knowledge attached."
+    def _process_domain(self, observable):
+        json_data = self.client.get_domain_info(observable["observable_value"])
+        assert json_data
+        if "error" in json_data:
+            raise ValueError(json_data["error"]["message"])
+        if "data" not in json_data or "attributes" not in json_data["data"]:
+            raise ValueError("An error has occurred.")
+
+        builder = VirusTotalBuilder(
+            self.helper, self.author, observable, json_data["data"]
+        )
+
+        # Create IPv4 address observables for each A record
+        # and a Relationship between them and the observable.
+        for ip in [
+            r["value"]
+            for r in json_data["data"]["attributes"]["last_dns_records"]
+            if r["type"] == "A"
+        ]:
+            self.helper.log_debug(
+                f'[VirusTotal] adding ip {ip} to domain {observable["observable_value"]}'
+            )
+            builder.create_ip_resolves_to(ip)
+
+        builder.create_indicator_based_on(
+            self.domain_indicator_config,
+            f"""[domain-name:value = '{observable["observable_value"]}']""",
+        )
+        builder.create_notes()
+        return builder.send_bundle()
+
+    def _process_url(self, observable):
+        json_data = self.client.get_url_info(observable["observable_value"])
+        assert json_data
+        if "error" in json_data:
+            raise ValueError(json_data["error"]["message"])
+        if "data" not in json_data or "attributes" not in json_data["data"]:
+            raise ValueError("An error has occurred.")
+
+        builder = VirusTotalBuilder(
+            self.helper, self.author, observable, json_data["data"]
+        )
+
+        builder.create_indicator_based_on(
+            self.ip_indicator_config,
+            f"""[url:value = '{observable["observable_value"]}']""",
+        )
+        builder.create_notes()
+        return builder.send_bundle()
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:
             raise ValueError(
-                "Observable not found (or the connectors does not has access to this observable)"
+                "Observable not found (or the connector does not has access to this observable, "
+                "check the group of the connector user)"
             )
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
+
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-        return self._process_file(observable)
+
+        self.helper.log_debug(
+            f"[VirusTotal] starting enrichment of observable: {observable}"
+        )
+        match observable["entity_type"]:
+            case "StixFile" | "Artifact":
+                return self._process_file(observable)
+            case "IPv4-Addr":
+                return self._process_ip(observable)
+            case "Domain-Name":
+                return self._process_domain(observable)
+            case "Url":
+                return self._process_url(observable)
+            case _:
+                raise ValueError(
+                    f'{observable["entity_type"]} is not a supported entity type.'
+                )
 
     def start(self):
         """Start the main loop."""

@@ -1,8 +1,12 @@
-import os, time, yaml
+import os
+import sys
+import time
 from datetime import datetime
-from pycti import OpenCTIConnectorHelper, get_config_variable
+
+import yaml
 from cape.cape import cuckoo, cuckooReport
 from cape.telemetry import openCTIInterface
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class capeConnector:
@@ -175,6 +179,10 @@ class capeConnector:
             self.helper.log_info(
                 f"Run Complete. Sleeping until next run in " f"{self.interval} Minutes"
             )
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
 
             time.sleep(self.get_interval())
 

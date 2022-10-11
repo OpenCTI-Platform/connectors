@@ -1,14 +1,13 @@
-import os
-import yaml
-import time
-import vt
 import io
-import magic
+import os
+import sys
+import time
 from datetime import datetime
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+
+import magic
+import vt
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class VirustotalLivehuntNotifications:
@@ -254,15 +253,18 @@ class VirustotalLivehuntNotifications:
 
                 self.helper.log_info("No new Livehunt Notifications found...")
 
-                time.sleep(self.cooldown_seconds)
-
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(self.cooldown_seconds)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            time.sleep(self.cooldown_seconds)
 
     def delete_livehunt_notification(self, notification_id):
         """
@@ -321,4 +323,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Maltiverse'
+  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1' # MIME type or SCO
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+maltiverse:
+  user:MAIL
+  passwd:CHANGEME
+  feeds:"VdhZV34B4jHUXfKt_gDi"
+  poll_interval:4

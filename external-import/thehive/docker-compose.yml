@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-thehive:
-    image: opencti/connector-thehive:5.2.1
+    image: opencti/connector-thehive:5.3.17
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=TheHive
       - CONNECTOR_SCOPE=thehive
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - THEHIVE_URL=https://thehive.changeme.com
       - THEHIVE_API_KEY=ChangeMe
