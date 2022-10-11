@@ -167,7 +167,7 @@ class CapeSandboxConnector:
             )
 
         # Create a Note containing the TrID results
-g
+
         trid_json = None
         if report.get("trid"):
             trid_json = json.dumps(report["trid"], indent=2)
@@ -181,7 +181,6 @@ g
                 object_refs=[final_observable["standard_id"]],
             )
             bundle_objects.append(note)
-
 
         # Attach the TTPs
         for tactic_dict in report["ttps"]:
