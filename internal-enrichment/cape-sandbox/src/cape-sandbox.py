@@ -216,7 +216,6 @@ class CapeSandboxConnector:
 
             # Download the zip archive of procdump files
             zip_contents = self._get_procdump_zip(task_id)
-
             zip_obj = io.BytesIO(zip_contents)
 
             # Extract with "infected" password
@@ -292,8 +291,12 @@ class CapeSandboxConnector:
                 )
 
                 # Create relationship between uploaded procdump Artifact and original
-                relationship = Relationship(
-                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        response["standard_id"],
+                        final_observable["standard_id"],
+                    ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=response["standard_id"],
@@ -307,27 +310,25 @@ class CapeSandboxConnector:
                     for tactic in attck_dict:
                         tp_list = attck_dict[tactic]
                         for tp in tp_list:
-                            attack_pattern = AttackPattern(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "attack-pattern"
-                                ),
+                            attack_pattern = stix2.AttackPattern(
+                                id=AttackPattern.generate_id(tactic, tp),
                                 created_by_ref=self.identity,
                                 name=tactic,
                                 custom_properties={
                                     "x_mitre_id": tp,
                                 },
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
 
-                            relationship = Relationship(
-                                id=OpenCTIStix2Utils.generate_random_stix_id(
-                                    "relationship"
+                            relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "uses", response["standard_id"], attack_pattern.id
                                 ),
                                 relationship_type="uses",
                                 created_by_ref=self.identity,
                                 source_ref=response["standard_id"],
                                 target_ref=attack_pattern.id,
-                                object_marking_refs=[TLP_WHITE],
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
                             bundle_objects.append(attack_pattern)
                             bundle_objects.append(relationship)
