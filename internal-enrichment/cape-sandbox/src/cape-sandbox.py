@@ -216,134 +216,131 @@ class CapeSandboxConnector:
 
             # Download the zip archive of procdump files
             zip_contents = self._get_procdump_zip(task_id)
-            if "error" in zip_contents and zip_contents["error"] == b"true":
-                self.helper.log_info(zip_contents["error_value"].decode())
-            else:
 
-                zip_obj = io.BytesIO(zip_contents)
+            zip_obj = io.BytesIO(zip_contents)
 
-                # Extract with "infected" password
-                zip_file = pyzipper.AESZipFile(zip_obj)
-                zip_file.setpassword(b"infected")
+            # Extract with "infected" password
+            zip_file = pyzipper.AESZipFile(zip_obj)
+            zip_file.setpassword(b"infected")
 
-                # Process each entry in the procdump key
-                for procdump_dict in report["procdump"]:
+            # Process each entry in the procdump key
+            for procdump_dict in report["procdump"]:
 
-                    # If less noise was specified
-                    if self.less_noise:
-                        # and no Yara matches, skip this procdump
-                        if not procdump_dict["cape_yara"] or not procdump_dict["yara"]:
-                            continue
+                # If less noise was specified
+                if self.less_noise:
+                    # and no Yara matches, skip this procdump
+                    if not procdump_dict["cape_yara"] or not procdump_dict["yara"]:
+                        continue
 
-                    sha256 = procdump_dict["sha256"]
-                    cape_type = procdump_dict["cape_type"]
-                    module_path = procdump_dict["module_path"]
-                    procdump_contents = zip_file.read(sha256)
-                    mime_type = magic.from_buffer(procdump_contents, mime=True)
+                sha256 = procdump_dict["sha256"]
+                cape_type = procdump_dict["cape_type"]
+                module_path = procdump_dict["module_path"]
+                procdump_contents = zip_file.read(sha256)
+                mime_type = magic.from_buffer(procdump_contents, mime=True)
 
-                    kwargs = {
-                        "file_name": module_path,
-                        "data": procdump_contents,
-                        "mime_type": mime_type,
-                        "x_opencti_description": cape_type,
-                    }
-                    response = self.helper.api.stix_cyber_observable.upload_artifact(
-                        **kwargs
-                    )
-                    self.helper.log_info(
-                        f'Uploaded procdump with sha256 "{sha256}" and type "{cape_type}".'
-                    )
+                kwargs = {
+                    "file_name": module_path,
+                    "data": procdump_contents,
+                    "mime_type": mime_type,
+                    "x_opencti_description": cape_type,
+                }
+                response = self.helper.api.stix_cyber_observable.upload_artifact(
+                    **kwargs
+                )
+                self.helper.log_info(
+                    f'Uploaded procdump with sha256 "{sha256}" and type "{cape_type}".'
+                )
 
-                    # Build labels
-                    yara_rules = []
-                    cape_yara_rules = []
-                    yara_rules.extend(
-                        [yara_dict["name"] for yara_dict in procdump_dict["yara"]]
-                    )
-                    cape_yara_rules.extend(
-                        [yara_dict["name"] for yara_dict in procdump_dict["cape_yara"]]
-                    )
-                    cape_yara_rules.extend(
-                        [
-                            yara_dict["meta"]["cape_type"]
-                            for yara_dict in procdump_dict["cape_yara"]
-                        ]
-                    )
+                # Build labels
+                yara_rules = []
+                cape_yara_rules = []
+                yara_rules.extend(
+                    [yara_dict["name"] for yara_dict in procdump_dict["yara"]]
+                )
+                cape_yara_rules.extend(
+                    [yara_dict["name"] for yara_dict in procdump_dict["cape_yara"]]
+                )
+                cape_yara_rules.extend(
+                    [
+                        yara_dict["meta"]["cape_type"]
+                        for yara_dict in procdump_dict["cape_yara"]
+                    ]
+                )
 
-                    # Create and apply yara rule based labels
-                    for yara_rule in yara_rules:
-                        label = self.helper.api.label.create(
-                            value=yara_rule, color="#0059f7"
-                        )
-                        self.helper.api.stix_cyber_observable.add_label(
-                            id=response["id"], label_id=label["id"]
-                        )
-
-                    # Create and apply cape yara rule based labels
-                    for cape_yara_rule in cape_yara_rules:
-                        label = self.helper.api.label.create(
-                            value=cape_yara_rule, color="#ff8178"
-                        )
-                        self.helper.api.stix_cyber_observable.add_label(
-                            id=response["id"], label_id=label["id"]
-                        )
-
-                    # Create label for cape_type
+                # Create and apply yara rule based labels
+                for yara_rule in yara_rules:
                     label = self.helper.api.label.create(
-                        value=cape_type, color="#0059f7"
+                        value=yara_rule, color="#0059f7"
                     )
                     self.helper.api.stix_cyber_observable.add_label(
                         id=response["id"], label_id=label["id"]
                     )
 
-                    # Create relationship between uploaded procdump Artifact and original
-                    relationship = Relationship(
-                        id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
-                        relationship_type="related-to",
-                        created_by_ref=self.identity,
-                        source_ref=response["standard_id"],
-                        target_ref=final_observable["standard_id"],
+                # Create and apply cape yara rule based labels
+                for cape_yara_rule in cape_yara_rules:
+                    label = self.helper.api.label.create(
+                        value=cape_yara_rule, color="#ff8178"
                     )
-                    bundle_objects.append(relationship)
+                    self.helper.api.stix_cyber_observable.add_label(
+                        id=response["id"], label_id=label["id"]
+                    )
 
-                    # Handle Flare CAPA TTPs
-                    if "flare_capa" in procdump_dict and procdump_dict["flare_capa"]:
-                        attck_dict = procdump_dict["flare_capa"]["ATTCK"]
-                        for tactic in attck_dict:
-                            tp_list = attck_dict[tactic]
-                            for tp in tp_list:
-                                attack_pattern = AttackPattern(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "attack-pattern"
-                                    ),
-                                    created_by_ref=self.identity,
-                                    name=tactic,
-                                    custom_properties={
-                                        "x_mitre_id": tp,
-                                    },
-                                    object_marking_refs=[TLP_WHITE],
-                                )
+                # Create label for cape_type
+                label = self.helper.api.label.create(
+                    value=cape_type, color="#0059f7"
+                )
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=response["id"], label_id=label["id"]
+                )
 
-                                relationship = Relationship(
-                                    id=OpenCTIStix2Utils.generate_random_stix_id(
-                                        "relationship"
-                                    ),
-                                    relationship_type="uses",
-                                    created_by_ref=self.identity,
-                                    source_ref=response["standard_id"],
-                                    target_ref=attack_pattern.id,
-                                    object_marking_refs=[TLP_WHITE],
-                                )
-                                bundle_objects.append(attack_pattern)
-                                bundle_objects.append(relationship)
+                # Create relationship between uploaded procdump Artifact and original
+                relationship = Relationship(
+                    id=OpenCTIStix2Utils.generate_random_stix_id("relationship"),
+                    relationship_type="related-to",
+                    created_by_ref=self.identity,
+                    source_ref=response["standard_id"],
+                    target_ref=final_observable["standard_id"],
+                )
+                bundle_objects.append(relationship)
 
-                    else:
-                        self.helper.log_info(
-                            f"Could not find flare_capa key or was empty in procdump {sha256}."
-                        )
+                # Handle Flare CAPA TTPs
+                if "flare_capa" in procdump_dict and procdump_dict["flare_capa"]:
+                    attck_dict = procdump_dict["flare_capa"]["ATTCK"]
+                    for tactic in attck_dict:
+                        tp_list = attck_dict[tactic]
+                        for tp in tp_list:
+                            attack_pattern = AttackPattern(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "attack-pattern"
+                                ),
+                                created_by_ref=self.identity,
+                                name=tactic,
+                                custom_properties={
+                                    "x_mitre_id": tp,
+                                },
+                                object_marking_refs=[TLP_WHITE],
+                            )
 
-                # Close the zip file
-                zip_file.close()
+                            relationship = Relationship(
+                                id=OpenCTIStix2Utils.generate_random_stix_id(
+                                    "relationship"
+                                ),
+                                relationship_type="uses",
+                                created_by_ref=self.identity,
+                                source_ref=response["standard_id"],
+                                target_ref=attack_pattern.id,
+                                object_marking_refs=[TLP_WHITE],
+                            )
+                            bundle_objects.append(attack_pattern)
+                            bundle_objects.append(relationship)
+
+                else:
+                    self.helper.log_info(
+                        f"Could not find flare_capa key or was empty in procdump {sha256}."
+                    )
+
+            # Close the zip file
+            zip_file.close()
 
         else:
             self.helper.log_info(
