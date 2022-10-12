@@ -129,11 +129,11 @@ class VmrayAnalyzerConnector:
                     # Skip submissions with errors
                     if existing_submission["submission_has_errors"]:
                         continue
+                    submission_id = existing_submission.get("submission_id")
                     # Wait for existing submission if not yet finished
                     if not existing_submission["submission_finished"]:
-                        self._wait_for_analyses([existing_submission])
+                        self._wait_for_submission(submission_id)
 
-                    submission_id = existing_submission.get("submission_id")
                     break
 
         # No existing analysis, force re-analysis
@@ -143,12 +143,11 @@ class VmrayAnalyzerConnector:
                 "POST", "/rest/sample/submit", params
             )
             self.helper.log_debug(json.dumps(submit_dict, indent=2))
-            submissions = submit_dict.get("submissions")
             submission_id = submit_dict.get("submissions")[0].get("submission_id")
             sample_id = submit_dict["samples"][0]["sample_id"]
 
             # Wait for the analyses to finish
-            self._wait_for_analyses(submissions)
+            self._wait_for_submission(submission_id)
 
         # Get the sample report
         sample_dict = self.vmray_analyzer_client.call(
@@ -300,9 +299,11 @@ class VmrayAnalyzerConnector:
                                 )
                                 relationship = stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
-                                        "uses", observable["standard_id"], url_stix.id
+                                        "related-to",
+                                        observable["standard_id"],
+                                        url_stix.id,
                                     ),
-                                    relationship_type="uses",
+                                    relationship_type="related-to",
                                     created_by_ref=self.identity,
                                     source_ref=observable["standard_id"],
                                     target_ref=url_stix.id,
@@ -391,41 +392,28 @@ class VmrayAnalyzerConnector:
             )
         return self._process_observable(observable)
 
-    def _wait_for_analyses(self, submission_list, sleep_interval=10):
+    def _wait_for_submission(self, submission_id, sleep_interval=1):
         """
         Wait for an analysis to finish.
 
-        submission_list: a list of submissions to wait for
+        submission_id: an int submission id to wait for
         sleep_interval: seconds to sleep between subsequent requests
         returns: none
         """
 
-        pending_submissions = submission_list
         while True:
-            # for all pending submissions, check if they have finished
-            for submission in pending_submissions:
-                try:
-                    submission_data = self.vmray_analyzer_client.call(
-                        "GET", f'/rest/submission/{submission["submission_id"]}'
-                    )
-
-                    if submission_data["submission_finished"]:
-                        self.helper.log_info(
-                            f'Submission {submission["submission_id"]} finished.'
-                        )
-                        pending_submissions.remove(submission)
-
-                    if not pending_submissions:
-                        self.helper.log_info(f"No pending submissions remaining.")
-                        break
-
-                except VMRayRESTAPIError:
-                    break
-
-            self.helper.log_info(
-                f"Checking for pending submissions in {sleep_interval} seconds."
+            submission_data = self.vmray_analyzer_client.call(
+                "GET", f"/rest/submission/{submission_id}"
             )
-            time.sleep(sleep_interval)
+
+            if submission_data["submission_finished"]:
+                self.helper.log_info(f"Submission {submission_id} finished.")
+                break
+            else:
+                self.helper.log_info(
+                    f"Submission {submission_id} not yet finished, re-checking in {sleep_interval} seconds."
+                )
+                time.sleep(sleep_interval)
 
     def _get_sha256(self, contents):
         """
