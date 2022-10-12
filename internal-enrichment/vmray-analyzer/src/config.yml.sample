@@ -6,7 +6,7 @@ connector:
   id: 'VMRay_Analyzer'
   type: 'INTERNAL_ENRICHMENT'
   name: 'VMRay Analyzer'
-  scope: 'Artifact,Url'
+  scope: 'Artifact'
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
