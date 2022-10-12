@@ -424,7 +424,7 @@ class VmrayAnalyzerConnector:
                 except VMRayRESTAPIError:
                     break
 
-            self.helper.log_info(f'Checking for pending submissions in {} seconds.')
+            self.helper.log_info(f'Checking for pending submissions in {sleep_interval} seconds.')
             time.sleep(sleep_interval)
 
     def _get_sha256(self, contents):
