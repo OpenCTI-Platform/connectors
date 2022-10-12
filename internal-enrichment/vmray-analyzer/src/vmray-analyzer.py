@@ -1,23 +1,17 @@
 # coding: utf-8
 
-import io
 import ipaddress
 import json
 import os
-import re
 import sys
 import time
-import magic
 import stix2
 import yaml
 from pycti import (
-    AttackPattern,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
 )
-from stix2.properties import ListProperty  # type: ignore # noqa: E501
-from stix2.properties import ReferenceProperty, StringProperty
 from vmray.rest_api import VMRayRESTAPI, VMRayRESTAPIError
 from hashlib import sha256
 from zipfile import ZipFile
