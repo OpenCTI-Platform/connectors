@@ -1,0 +1,23 @@
+opencti:
+  url: 'ChangeMe'
+  token: 'ChangeMe'
+
+connector:
+  id: 'VMRay_Analyzer'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'VMRay Analyzer'
+  scope: 'Artifact,Url'
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+vmray_analyzer:
+  server: 'https://us.cloud.vmray.com'
+  api_key: 'ChangeMe'
+  shareable: false # Sample can be shared with public/VirusTotal
+  reanalyze: true # Reanalyze sample if analyses already exist
+  default_color: '#54483b' # Default label color
+  classifications_color: '#54483b' # Label color for classifications
+  threat_names_color: '#0059f7' # Label color for threat names
+  default_tlp: 'TLP:CLEAR'
+  max_tlp: 'TLP:AMBER'
