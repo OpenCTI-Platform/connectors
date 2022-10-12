@@ -7,11 +7,7 @@ import sys
 import time
 import stix2
 import yaml
-from pycti import (
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 from vmray.rest_api import VMRayRESTAPI, VMRayRESTAPIError
 from hashlib import sha256
 from zipfile import ZipFile
@@ -414,17 +410,21 @@ class VmrayAnalyzerConnector:
                     )
 
                     if submission_data["submission_finished"]:
-                        self.helper.log_info(f'Submission {submission["submission_id"]} finished.')
+                        self.helper.log_info(
+                            f'Submission {submission["submission_id"]} finished.'
+                        )
                         pending_submissions.remove(submission)
 
                     if not pending_submissions:
-                        self.helper.log_info(f'No pending submissions remaining.')
+                        self.helper.log_info(f"No pending submissions remaining.")
                         break
 
                 except VMRayRESTAPIError:
                     break
 
-            self.helper.log_info(f'Checking for pending submissions in {sleep_interval} seconds.')
+            self.helper.log_info(
+                f"Checking for pending submissions in {sleep_interval} seconds."
+            )
             time.sleep(sleep_interval)
 
     def _get_sha256(self, contents):
