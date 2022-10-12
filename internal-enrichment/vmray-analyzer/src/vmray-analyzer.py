@@ -100,9 +100,7 @@ class VmrayAnalyzerConnector:
             self.reanalyze == True or self.reanalyze == "true"
         )  # noqa: E712
 
-        if observable["entity_type"] == "Url":
-            params["sample_url"] = observable["observable_value"]
-        elif observable["entity_type"] == "Artifact":
+        if observable["entity_type"] == "Artifact":
             # Download the Artifact from OpenCTI
             file_name = observable["importFiles"][0]["name"]
             file_id = observable["importFiles"][0]["id"]
@@ -122,7 +120,7 @@ class VmrayAnalyzerConnector:
         sample_id = None
 
         # Check to see if there's an existing submission and reanalyze is False
-        if observable["entity_type"] != "Url" and not params["reanalyze"]:
+        if not params["reanalyze"]:
             existing_samples = self.vmray_analyzer_client.call(
                 "GET", f"/rest/sample/sha256/{file_sha256}"
             )

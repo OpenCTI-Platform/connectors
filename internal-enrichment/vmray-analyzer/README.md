@@ -6,7 +6,6 @@ This connector supports enrichment of observables via VMRay Analyzer.
 The connector works for the following observable types:
 
 * Artifact
-* Url
 
 ## Installation
 
