@@ -395,7 +395,7 @@ class VmrayAnalyzerConnector:
             )
         return self._process_observable(observable)
 
-    def _wait_for_analyses(self, submission_list, sleep_interval=1):
+    def _wait_for_analyses(self, submission_list, sleep_interval=10):
         """
         Wait for an analysis to finish.
 
@@ -414,15 +414,18 @@ class VmrayAnalyzerConnector:
                     )
 
                     if submission_data["submission_finished"]:
+                        self.helper.log_info(f'Submission {submission["submission_id"]} finished.')
                         pending_submissions.remove(submission)
 
                     if not pending_submissions:
+                        self.helper.log_info(f'No pending submissions remaining.')
                         break
-
-                    time.sleep(sleep_interval)
 
                 except VMRayRESTAPIError:
                     break
+
+            self.helper.log_info(f'Checking for pending submissions in {} seconds.')
+            time.sleep(sleep_interval)
 
     def _get_sha256(self, contents):
         """
