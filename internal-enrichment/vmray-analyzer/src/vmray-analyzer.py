@@ -122,7 +122,7 @@ class VmrayAnalyzerConnector:
         sample_id = None
 
         # Check to see if there's an existing submission and reanalyze is False
-        if not params["reanalyze"]:
+        if observable["entity_type"] != "Url" and not params["reanalyze"]:
             existing_samples = self.vmray_analyzer_client.call(
                 "GET", f"/rest/sample/sha256/{file_sha256}"
             )
