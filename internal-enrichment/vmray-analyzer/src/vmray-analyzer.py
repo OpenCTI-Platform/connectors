@@ -234,7 +234,7 @@ class VmrayAnalyzerConnector:
                     with zipfile_obj.open(file_name) as pdf:
                         self.helper.api.external_reference.add_file(
                             id=self.external_reference["id"],
-                            file_name="report.pdf",
+                            file_name=f"{analysis_id}-report.pdf",
                             data=pdf.read(),
                             mime_type="application/pdf",
                         )
