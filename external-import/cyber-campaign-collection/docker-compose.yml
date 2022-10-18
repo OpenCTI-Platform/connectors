@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-mitre:
+  connector-cyber-campaign-collection:
     image: opencti/connector-cyber-campaign-collection:5.3.17
     environment:
       - OPENCTI_URL=http://localhost
