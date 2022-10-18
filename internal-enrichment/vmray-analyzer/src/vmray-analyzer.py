@@ -220,7 +220,7 @@ class VmrayAnalyzerConnector:
             # Upload the full analysis archive
             self.helper.api.external_reference.add_file(
                 id=self.external_reference["id"],
-                file_name=f"{analysis_id}_full_analysis.zip",
+                file_name=f"{analysis_id}-full-analysis.zip",
                 data=analysis_archive,
                 mime_type="application/zip",
             )
