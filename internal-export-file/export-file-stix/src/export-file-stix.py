@@ -29,7 +29,7 @@ class ExportFileStix:
             self.helper.log_info(
                 "Exporting: " + entity_id + "(" + export_type + ") to " + file_name
             )
-            bundle = self.helper.api.stix2.export_entity(
+            bundle = self.helper.api_impersonate.stix2.export_entity(
                 entity_type, entity_id, export_type, max_marking
             )
             json_bundle = json.dumps(bundle, indent=4)
@@ -59,7 +59,7 @@ class ExportFileStix:
                 + " to "
                 + file_name
             )
-            bundle = self.helper.api.stix2.export_list(
+            bundle = self.helper.api_impersonate.stix2.export_list(
                 entity_type,
                 list_params["search"],
                 list_params["filters"],

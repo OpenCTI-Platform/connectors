@@ -116,7 +116,7 @@ class ExportReportPdf:
         Process a Report entity and upload as pdf.
         """
         # Get the Report
-        report_dict = self.helper.api.report.read(id=entity_id)
+        report_dict = self.helper.api_impersonate.report.read(id=entity_id)
 
         # Extract values for inclusion in output pdf
         report_marking = report_dict.get("objectMarking", None)
@@ -159,7 +159,9 @@ class ExportReportPdf:
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
                 obj_entity_type
             ):
-                observable_dict = self.helper.api.stix_cyber_observable.read(id=obj_id)
+                observable_dict = (
+                    self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
+                )
 
                 # If only include indicators and
                 # the observable doesn't have an indicator, skip it
@@ -234,7 +236,7 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the intrusion set
-        intrusion_set_objs = self.helper.api.stix2.export_entity(
+        intrusion_set_objs = self.helper.api_impersonate.stix2.export_entity(
             "Intrusion-Set", entity_id, "full"
         )
 
@@ -330,7 +332,9 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor
-        bundle = self.helper.api.stix2.export_entity("Threat-Actor", entity_id, "full")
+        bundle = self.helper.api_impersonate.stix2.export_entity(
+            "Threat-Actor", entity_id, "full"
+        )
 
         for bundle_obj in bundle["objects"]:
             obj_id = bundle_obj["id"]
@@ -441,37 +445,37 @@ class ExportReportPdf:
         returns: a function or None if entity type is not supported
         """
         reader = {
-            "stix-domain-object": self.helper.api.stix_domain_object.read,
-            "attack-pattern": self.helper.api.attack_pattern.read,
-            "campaign": self.helper.api.campaign.read,
-            "event": self.helper.api.event.read,
-            "note": self.helper.api.note.read,
-            "observed-data": self.helper.api.observed_data.read,
-            "organization": self.helper.api.identity.read,
-            "opinion": self.helper.api.opinion.read,
-            "report": self.helper.api.report.read,
-            "sector": self.helper.api.identity.read,
-            "system": self.helper.api.identity.read,
-            "course-of-action": self.helper.api.course_of_action.read,
-            "identity": self.helper.api.identity.read,
-            "indicator": self.helper.api.indicator.read,
-            "individual": self.helper.api.identity.read,
-            "infrastructure": self.helper.api.infrastructure.read,
-            "intrusion-set": self.helper.api.intrusion_set.read,
-            "malware": self.helper.api.malware.read,
-            "threat-actor": self.helper.api.threat_actor.read,
-            "tool": self.helper.api.tool.read,
-            "channel": self.helper.api.channel.read,
-            "narrative": self.helper.api.narrative.read,
-            "language": self.helper.api.language.read,
-            "vulnerability": self.helper.api.vulnerability.read,
-            "incident": self.helper.api.incident.read,
-            "city": self.helper.api.location.read,
-            "country": self.helper.api.location.read,
-            "region": self.helper.api.location.read,
-            "position": self.helper.api.location.read,
-            "location": self.helper.api.location.read,
-            "relationship": self.helper.api.stix_core_relationship.read,
+            "stix-domain-object": self.helper.api_impersonate.stix_domain_object.read,
+            "attack-pattern": self.helper.api_impersonate.attack_pattern.read,
+            "campaign": self.helper.api_impersonate.campaign.read,
+            "event": self.helper.api_impersonate.event.read,
+            "note": self.helper.api_impersonate.note.read,
+            "observed-data": self.helper.api_impersonate.observed_data.read,
+            "organization": self.helper.api_impersonate.identity.read,
+            "opinion": self.helper.api_impersonate.opinion.read,
+            "report": self.helper.api_impersonate.report.read,
+            "sector": self.helper.api_impersonate.identity.read,
+            "system": self.helper.api_impersonate.identity.read,
+            "course-of-action": self.helper.api_impersonate.course_of_action.read,
+            "identity": self.helper.api_impersonate.identity.read,
+            "indicator": self.helper.api_impersonate.indicator.read,
+            "individual": self.helper.api_impersonate.identity.read,
+            "infrastructure": self.helper.api_impersonate.infrastructure.read,
+            "intrusion-set": self.helper.api_impersonate.intrusion_set.read,
+            "malware": self.helper.api_impersonate.malware.read,
+            "threat-actor": self.helper.api_impersonate.threat_actor.read,
+            "tool": self.helper.api_impersonate.tool.read,
+            "channel": self.helper.api_impersonate.channel.read,
+            "narrative": self.helper.api_impersonate.narrative.read,
+            "language": self.helper.api_impersonate.language.read,
+            "vulnerability": self.helper.api_impersonate.vulnerability.read,
+            "incident": self.helper.api_impersonate.incident.read,
+            "city": self.helper.api_impersonate.location.read,
+            "country": self.helper.api_impersonate.location.read,
+            "region": self.helper.api_impersonate.location.read,
+            "position": self.helper.api_impersonate.location.read,
+            "location": self.helper.api_impersonate.location.read,
+            "relationship": self.helper.api_impersonate.stix_core_relationship.read,
         }
         return reader.get(entity_type.lower(), None)
 
