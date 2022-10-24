@@ -114,15 +114,21 @@ class ExportFileCsv:
                 + ") to "
                 + file_name
             )
-            entity_data = self.helper.api.stix_domain_object.read(id=entity_id)
+            entity_data = self.helper.api_impersonate.stix_domain_object.read(
+                id=entity_id
+            )
             if entity_data is None:
-                entity_data = self.helper.api.stix_cyber_observable.read(id=entity_id)
+                entity_data = self.helper.api_impersonate.stix_cyber_observable.read(
+                    id=entity_id
+                )
             entities_list = []
             if "objectsIds" in entity_data:
                 for id in entity_data["objectsIds"]:
-                    entity = self.helper.api.stix_domain_object.read(id=id)
+                    entity = self.helper.api_impersonate.stix_domain_object.read(id=id)
                     if entity is None:
-                        entity = self.helper.api.stix_cyber_observable.read(id=id)
+                        entity = self.helper.api_impersonate.stix_cyber_observable.read(
+                            id=id
+                        )
                     if entity is not None:
                         del entity["objectLabelIds"]
                         entities_list.append(entity)
@@ -201,31 +207,31 @@ class ExportFileCsv:
 
             # List
             lister = {
-                "Stix-Domain-Object": self.helper.api.stix_domain_object.list,
-                "Attack-Pattern": self.helper.api.attack_pattern.list,
-                "Campaign": self.helper.api.campaign.list,
-                "Event": self.helper.api.event.list,
-                "Note": self.helper.api.note.list,
-                "Observed-Data": self.helper.api.observed_data.list,
-                "Opinion": self.helper.api.opinion.list,
-                "Report": self.helper.api.report.list,
-                "Course-Of-Action": self.helper.api.course_of_action.list,
-                "Identity": self.helper.api.identity.list,
-                "Indicator": self.helper.api.indicator.list,
-                "Infrastructure": self.helper.api.infrastructure.list,
-                "Intrusion-Set": self.helper.api.intrusion_set.list,
-                "Location": self.helper.api.location.list,
-                "Language": self.helper.api.language.list,
-                "Malware": self.helper.api.malware.list,
-                "Threat-Actor": self.helper.api.threat_actor.list,
-                "Tool": self.helper.api.tool.list,
-                "Channel": self.helper.api.channel.list,
-                "Narrative": self.helper.api.narrative.list,
-                "Vulnerability": self.helper.api.vulnerability.list,
-                "Incident": self.helper.api.incident.list,
-                "Stix-Cyber-Observable": self.helper.api.stix_cyber_observable.list,
-                "Stix-Core-Relationship": self.helper.api.stix_core_relationship.list,
-                "stix-core-relationship": self.helper.api.stix_core_relationship.list,
+                "Stix-Domain-Object": self.helper.api_impersonate.stix_domain_object.list,
+                "Attack-Pattern": self.helper.api_impersonate.attack_pattern.list,
+                "Campaign": self.helper.api_impersonate.campaign.list,
+                "Event": self.helper.api_impersonate.event.list,
+                "Note": self.helper.api_impersonate.note.list,
+                "Observed-Data": self.helper.api_impersonate.observed_data.list,
+                "Opinion": self.helper.api_impersonate.opinion.list,
+                "Report": self.helper.api_impersonate.report.list,
+                "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
+                "Identity": self.helper.api_impersonate.identity.list,
+                "Indicator": self.helper.api_impersonate.indicator.list,
+                "Infrastructure": self.helper.api_impersonate.infrastructure.list,
+                "Intrusion-Set": self.helper.api_impersonate.intrusion_set.list,
+                "Location": self.helper.api_impersonate.location.list,
+                "Language": self.helper.api_impersonate.language.list,
+                "Malware": self.helper.api_impersonate.malware.list,
+                "Threat-Actor": self.helper.api_impersonate.threat_actor.list,
+                "Tool": self.helper.api_impersonate.tool.list,
+                "Channel": self.helper.api_impersonate.channel.list,
+                "Narrative": self.helper.api_impersonate.narrative.list,
+                "Vulnerability": self.helper.api_impersonate.vulnerability.list,
+                "Incident": self.helper.api_impersonate.incident.list,
+                "Stix-Cyber-Observable": self.helper.api_impersonate.stix_cyber_observable.list,
+                "Stix-Core-Relationship": self.helper.api_impersonate.stix_core_relationship.list,
+                "stix-core-relationship": self.helper.api_impersonate.stix_core_relationship.list,
             }
             do_list = lister.get(
                 final_entity_type,
