@@ -8,8 +8,6 @@ import time
 import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
-from hashlib import sha256
-from zipfile import ZipFile
 from io import BytesIO
 import jbxapi
 
