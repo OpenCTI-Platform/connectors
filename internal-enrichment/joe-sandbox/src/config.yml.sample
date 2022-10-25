@@ -14,6 +14,7 @@ connector:
 joe_sandbox:
   report_types: 'html,iochtml,iocjson,iocxml,unpackpe,stix,ida,misp,pdf,misp,pcap,maec,memdumps,json,xml'
   api_url: ''
+  api_key: ''
   analysis_url: ''
   accept_tac: true
   api_timeout: 30

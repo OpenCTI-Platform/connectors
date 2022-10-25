@@ -18,6 +18,7 @@ services:
       # Cloud Pro: https://jbxcloud.joesecurity.org/api
       # Cloud Basic: https://joesandbox.com/api
       - JOE_SANDBOX_API_URL=https://jbxcloud.joesecurity.org/api
+      - JOE_SANDBOX_API_KEY=ChangeMe
       # Cloud Pro: https://jbxcloud.joesecurity.org/analysis
       # Cloud Basic: https://joesandbox.com/analysis
       - JOE_SANDBOX_ANALYSIS_URL=https://jbxcloud.joesecurity.org/analysis
