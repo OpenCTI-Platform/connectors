@@ -38,7 +38,9 @@ list represents the supported list of analysis reports:
 * pdf
 * misp
 * pcap
+* pcapunified
+* pcapsslinspection
 * maec
 * memdumps
-* json
-* xml
+* json (not available for Joe Sandbox Cloud Basic)
+* xml (not available for Joe Sandbox Cloud Basic)
