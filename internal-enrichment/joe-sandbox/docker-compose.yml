@@ -14,7 +14,7 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       # Download/upload as external ref files for these report types
       # json/xml are only allowed to be used with Joe Sandbox Cloud Pro
-      - JOE_SANDBOX_REPORT_TYPES=html,iochtml,iocjson,iocxml,unpackpe,stix,ida,misp,pdf,misp,pcap,maec,memdumps,json,xml,pcapunified,pcapsslinspection
+      - JOE_SANDBOX_REPORT_TYPES=html,iochtml,iocjson,iocxml,unpackpe,stix,ida,pdf,misp,pcap,maec,memdumps,json,xml,pcapunified,pcapsslinspection
       # Cloud Pro: https://jbxcloud.joesecurity.org/api
       # Cloud Basic: https://joesandbox.com/api
       - JOE_SANDBOX_API_URL=https://jbxcloud.joesecurity.org/api

@@ -36,7 +36,6 @@ list represents the supported list of analysis reports:
 * ida
 * misp
 * pdf
-* misp
 * pcap
 * pcapunified
 * pcapsslinspection

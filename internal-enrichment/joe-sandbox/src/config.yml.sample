@@ -12,7 +12,7 @@ connector:
   log_level: 'info'
 
 joe_sandbox:
-  report_types: 'html,iochtml,iocjson,iocxml,unpackpe,stix,ida,misp,pdf,misp,pcap,maec,memdumps,json,xml,pcapunified,pcapsslinspection'
+  report_types: 'html,iochtml,iocjson,iocxml,unpackpe,stix,ida,pdf,misp,pcap,maec,memdumps,json,xml,pcapunified,pcapsslinspection'
   api_url: ''
   api_key: ''
   analysis_url: ''
