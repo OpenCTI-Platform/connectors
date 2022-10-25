@@ -526,6 +526,31 @@ class JoeSandboxConnector:
                     )
 
             # Only available in Cloud Pro
+            if "lightjsonfixed" in self._report_types:
+                try:
+                    name, json_report = self.joe_sandbox_client.analysis_download(
+                        webid, "lightjsonfixed", password=self._encrypt_with_password
+                    )
+
+                    # Handle the JSON report
+                    bundle_objects = self._process_json_report(
+                        self, observable, json_report
+                    )
+
+                    # Upload the full JSON report to the external reference files
+                    json_report = json.loads(json_report)
+                    self.helper.api.external_reference.add_file(
+                        id=external_reference["id"],
+                        file_name=name,
+                        data=json.dumps(json_report, indent=2),
+                        mime_type="application/json",
+                    )
+                except Exception as e:
+                    self.helper.log_info(
+                        f"Failed to retrieve lightjsonfixed report, exception: {e}"
+                    )
+
+            # Only available in Cloud Pro
             if "xml" in self._report_types:
                 try:
                     # Upload the full JSON report to the external reference files
@@ -541,6 +566,24 @@ class JoeSandboxConnector:
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve xml report, exception: {e}"
+                    )
+
+            # Only available in Cloud Pro
+            if "lightxml" in self._report_types:
+                try:
+                    # Upload the full JSON report to the external reference files
+                    name, lightxml = self.joe_sandbox_client.analysis_download(
+                        webid, "lightxml", password=self._encrypt_with_password
+                    )
+                    self.helper.api.external_reference.add_file(
+                        id=external_reference["id"],
+                        file_name=name,
+                        data=lightxml,
+                        mime_type="application/xml",
+                    )
+                except Exception as e:
+                    self.helper.log_info(
+                        f"Failed to retrieve lightxml report, exception: {e}"
                     )
 
             if "unpackpe" in self._report_types:
