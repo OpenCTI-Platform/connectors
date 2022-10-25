@@ -43,3 +43,5 @@ list represents the supported list of analysis reports:
 * memdumps
 * json (not available for Joe Sandbox Cloud Basic)
 * xml (not available for Joe Sandbox Cloud Basic)
+* lightjsonfixed (not available for Joe Sandbox Cloud Basic)
+* lightxml (not available for Joe Sandbox Cloud Basic)
