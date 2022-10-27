@@ -59,7 +59,11 @@ class CapeSandboxConnector:
             "CAPE_SANDBOX_COOLDOWN_TIME", ["cape_sandbox", "cooldown_time"], config
         )
         self._max_retries = get_config_variable(
-            "CAPE_SANDBOX_MAX_RETRIES", ["cape_sandbox", "max_retries"], config
+            "CAPE_SANDBOX_MAX_RETRIES",
+            ["cape_sandbox", "max_retries"],
+            config,
+            default=10,
+            isNumber=True,
         )
 
         self.headers = {"Authorization": f"Token {self.token}"}
@@ -163,14 +167,20 @@ class CapeSandboxConnector:
             )
 
         # Create a Note containing the TrID results
-        trid_json = json.dumps(report["trid"], indent=2)
-        note = stix2.Note(
-            abstract="TrID Analysis",
-            content=f"```\n{trid_json}\n```",
-            created_by_ref=self.identity,
-            object_refs=[final_observable["standard_id"]],
-        )
-        bundle_objects.append(note)
+
+        trid_json = None
+        if report.get("trid"):
+            trid_json = json.dumps(report["trid"], indent=2)
+        elif target.get("trid"):
+            trid_json = json.dumps(target["trid"], indent=2)
+        if trid_json:
+            note = Note(
+                abstract="TrID Analysis",
+                content=f"```\n{trid_json}\n```",
+                created_by_ref=self.identity,
+                object_refs=[final_observable["standard_id"]],
+            )
+            bundle_objects.append(note)
 
         # Attach the TTPs
         for tactic_dict in report["ttps"]:
@@ -467,7 +477,7 @@ class CapeSandboxConnector:
                 module_path = payload_dict["module_path"]
                 sha256 = payload_dict["sha256"]
                 cape_type = payload_dict["cape_type"]
-                payload_contents = zip_file.read(sha256)
+                payload_contents = zip_file.read(f"CAPE/{sha256}")
                 mime_type = magic.from_buffer(payload_contents, mime=True)
 
                 kwargs = {
