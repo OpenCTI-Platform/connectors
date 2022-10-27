@@ -126,7 +126,7 @@ class ReportParser(object):
     def _parse_html(self, file_data: IO) -> Dict[str, Dict]:
         parse_info = {}
         soup = BeautifulSoup(file_data, "html.parser")
-        buf = io.StringIO(soup.get_text())
+        buf = io.StringIO(soup.get_text(separator=" "))
         for text in buf.readlines():
             parse_info.update(self._parse(text))
         return parse_info
