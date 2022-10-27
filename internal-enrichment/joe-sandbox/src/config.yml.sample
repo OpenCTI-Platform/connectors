@@ -1,0 +1,61 @@
+opencti:
+  url: 'ChangeMe'
+  token: 'ChangeMe'
+
+connector:
+  id: 'Joe_Sandbox'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Joe Sandbox'
+  scope: 'Artifact,Url'
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+joe_sandbox:
+  report_types: 'executive,html,iochtml,iocjson,iocxml,unpackpe,stix,ida,pdf,pdfexecutive,misp,pcap,maec,memdumps,json,lightjsonfixed,xml,lightxml,pcapunified,pcapsslinspection'
+  api_url: ''
+  api_key: ''
+  analysis_url: ''
+  accept_tac: true
+  api_timeout: 30
+  verify_ssl: true
+  api_retries: 5
+  proxies:
+  user_agent: 'OpenCTI'
+  systems: 'w10x64_office'
+  analysis_time: 300
+  internet_access: true
+  internet_simulation: true
+  hybrid_code_analysis: true
+  hybrid_decompilation: true
+  report_cache: false
+  apk_instrumentation: false
+  amsi_unpacking: true
+  ssl_inspection: true
+  vba_instrumentation: false
+  js_instrumentation: false
+  java_jar_tracing: false
+  dotnet_tracing: false
+  start_as_normal_user: false
+  system_date:
+  language_and_locale:
+  localized_internet_country:
+  email_notification:
+  archive_no_unpack: false
+  hypervisor_based_inspection: false
+  fast_mode: false
+  secondary_results: true
+  cookbook_file_path:
+  document_password: '1234'
+  archive_password: 'infected'
+  command_line_argument:
+  live_interaction: false
+  encrypt_with_password:
+  browser: false
+  url_reputation: false
+  export_to_jbxview: false
+  delete_after_days: 30
+  priority:
+  default_tlp: 'TLP:CLEAR'
+  yara_color: '#0059f7'
+  default_color: '#54483b'
