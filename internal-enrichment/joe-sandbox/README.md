@@ -27,6 +27,7 @@ For any identified malware configuration, Note entities are created.
 An external reference will contain all of the analysis reports. The following
 list represents the supported list of analysis reports:
 
+* executive (HTML Management)
 * html
 * iochtml
 * iocjson
@@ -36,6 +37,7 @@ list represents the supported list of analysis reports:
 * ida
 * misp
 * pdf
+* pdfexecutive (PDF Management)
 * pcap
 * pcapunified
 * pcapsslinspection

@@ -431,6 +431,23 @@ class JoeSandboxConnector:
                 id=observable["id"], external_reference_id=external_reference["id"]
             )
 
+            # Upload the html management report to the external reference files
+            if "executive" in self._report_types:
+                try:
+                    name, executive_report = self.joe_sandbox_client.analysis_download(
+                        webid, "executive", password=self._encrypt_with_password
+                    )
+                    self.helper.api.external_reference.add_file(
+                        id=external_reference["id"],
+                        file_name=name,
+                        data=executive_report,
+                        mime_type="text/html",
+                    )
+                except Exception as e:
+                    self.helper.log_info(
+                        f"Failed to retrieve html report, exception: {e}"
+                    )
+
             # Upload the html report to the external reference files
             if "html" in self._report_types:
                 try:
@@ -668,6 +685,23 @@ class JoeSandboxConnector:
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve pdf report, exception: {e}"
+                    )
+
+            if "pdfexecutive" in self._report_types:
+                try:
+                    # Upload the full pdf report
+                    name, pdfexecutive = self.joe_sandbox_client.analysis_download(
+                        webid, "pdfexecutive", password=self._encrypt_with_password
+                    )
+                    self.helper.api.external_reference.add_file(
+                        id=external_reference["id"],
+                        file_name=name,
+                        data=pdfexecutive,
+                        mime_type="application/pdf",
+                    )
+                except Exception as e:
+                    self.helper.log_info(
+                        f"Failed to retrieve pdf management (pdfexecutive) report, exception: {e}"
                     )
 
             if "pcap" in self._report_types:
