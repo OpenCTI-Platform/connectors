@@ -15,6 +15,7 @@ import stix2
 import yaml
 from pycti import (
     AttackPattern,
+    Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
@@ -174,7 +175,8 @@ class CapeSandboxConnector:
         elif target.get("trid"):
             trid_json = json.dumps(target["trid"], indent=2)
         if trid_json:
-            note = Note(
+            note = stix2.Note(
+                id=Note.generate_id(),
                 abstract="TrID Analysis",
                 content=f"```\n{trid_json}\n```",
                 created_by_ref=self.identity,
