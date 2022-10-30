@@ -867,7 +867,7 @@ class Misp:
             self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, update=self.update_existing_data
             )
-            return last_event_timestamp
+        return last_event_timestamp
 
     def _get_pdf_file(self, attribute):
         if not self.import_with_attachments:
