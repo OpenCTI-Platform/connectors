@@ -12,35 +12,16 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           name: install dependencies
-          command: pip install black --user
+          command: pip install black isort --user
       - run:
           name: confirm black version
           command: black --version
       - run:
-          name: run black check
-          command: black --check .
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-      - ms-teams/report:
-          only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
-  ensure_imports_sorted:
-    docker:
-      - image: cimg/python:3.10
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
-      - run:
-          name: install dependencies
-          command: pip install isort --user
-      - run:
-          name: confirm isort version
-          command: isort --version
-      - run:
           name: run isort check
           command: isort --profile black --check .
+      - run:
+          name: run black check
+          command: black --check .
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -971,7 +952,6 @@ workflows:
   opencti:
     jobs:
       - ensure_formatting
-      - ensure_imports_sorted
       - linter
       - build_1:
           filters:
