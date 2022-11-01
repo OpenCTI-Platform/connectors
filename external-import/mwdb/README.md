@@ -2,16 +2,16 @@
 
 ## Description
 
-MWDB is an opensource malware collector and databases.  https://mwdb.readthedocs.io/en/latest/user-guide/1-Introduction-to-MWDB.html     
-  
-This connector ingests malware feeds in order to import Observables and Indicator related to malwares and their configurations.  
+MWDB is an opensource malware collector and databases.  https://mwdb.readthedocs.io/en/latest/user-guide/1-Introduction-to-MWDB.html
+
+This connector ingests malware feeds in order to import Observables and Indicator related to malwares and their configurations.
 
 * MWDB Documentation: [https://mwdb.readthedocs.io/en/latest/user-guide/1-Introduction-to-MWDB.html](https://mwdb.readthedocs.io/en/latest/user-guide/1-Introduction-to-MWDB.html)
 * MWDB Repository: [https://github.com/CERT-Polska/mwdb-core](https://github.com/CERT-Polska/mwdb-core)
 
 This connector was built using the TAXII2 connector for [OpenCTI](https://github.com/OpenCTI-Platform/opencti) as a base.
 
-### Prerequisites 
+### Prerequisites
 
 A MWDB instance and user with a token who could query the API and use `older_than` parameter.
 
@@ -38,8 +38,8 @@ There are a number of configuration options, which are set either in `docker-com
 | MWDB_CREATE_OBSERVABLES   | create_observables   |           |True or False , enable the creation of observables
 | MWDB_UPDATE_EXISTING_DATA | update_existing_data |           |True or False , updates the data
 | MWDB_ORG_DESCRIPTION      | org_description      | X         |Organization name, which will be refered to data injected
-| MWDB_ORG_NAME             | org_name             | X         |Organization description 
-| MWDB_START_DATE           | start_date           |           |A Starting date used to run the first time. ex 2022-06-27T00:00:00.000Z 
+| MWDB_ORG_NAME             | org_name             | X         |Organization description
+| MWDB_START_DATE           | start_date           |           |A Starting date used to run the first time. ex 2022-06-27T00:00:00.000Z
 | MWDB_TAG_FILTER           | collections          |           |A regex used to filter tags which could be related to malwares ex `virusshare.*|bazaar-.*|malshare-.*|apt20\d{2}`
 | MWDB_MAX_START_RETENTION  | start_retention      | X         |A default retention if MWDB_START_DATE isn't configured is an INT and it reflects months , 6 is defualt.
 

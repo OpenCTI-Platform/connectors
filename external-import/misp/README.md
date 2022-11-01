@@ -77,12 +77,12 @@ INFO:root:Fetching MISP events with args: {"tags": {"OR": ["APT", "Threat Type:A
 ```
 Take the query and do a curl test to see if MISP actually returns any events.
 ```
-curl -i 
--H "Accept: application/json" 
--H "content-type: application/json" 
+curl -i
+-H "Accept: application/json"
+-H "content-type: application/json"
 -H "Authorization: YOUR API KEY"
 --data '{"tags": {"OR": ["APT", "Threat Type:APT"]}, "date_from": "2020-06-16", "limit": 50, "page": 1}'
--X POST 
+-X POST
 http://YOURMISP.SERVER
 ```
 You can also save your tags in a tags.json file and then simply reference curl to the file with `--data "@tags.json"`

@@ -15,4 +15,3 @@ shodan:
   token: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
   create_indicators: true
-  

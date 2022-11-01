@@ -1,6 +1,6 @@
 # OpenCTI Tanium Connector
 
-This connector allows organizations to feed the **Tanium Intels** using OpenCTI knowledge. 
+This connector allows organizations to feed the **Tanium Intels** using OpenCTI knowledge.
 
 This connector leverages the OpenCTI *events stream*, so it consumes knowledge in real time and, depending on its settings, create detection and hunting intel pieces in the Tanium platform.
 

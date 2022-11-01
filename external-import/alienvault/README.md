@@ -1,7 +1,7 @@
 # OpenCTI AlienVault Connector
 
 The OpenCTI AlienVault connector can be used to import knowledge from the Alien Labs Open Threat Exchange (OTX) platform.
-The connector leverages the OTX DirectConnect API to get the threat data of the subscribed pulses. 
+The connector leverages the OTX DirectConnect API to get the threat data of the subscribed pulses.
 
 **Note**: Requires joining the OTX threat intelligence community.
 
