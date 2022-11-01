@@ -12,3 +12,9 @@ repos:
     rev: v3.4.0
     hooks:
     -   id: check-yaml
+-   repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+    - id: isort
+      name: isort (python)
+      arts: ['--profile black']

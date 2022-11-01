@@ -16,9 +16,9 @@ from crowdstrike_client.api.intel import Reports
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.base import Entity
 from crowdstrike_client.api.models.report import Report
-from pycti.connector.opencti_connector_helper import (
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
     OpenCTIConnectorHelper,
-)  # type: ignore  # noqa: E501
+)
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 

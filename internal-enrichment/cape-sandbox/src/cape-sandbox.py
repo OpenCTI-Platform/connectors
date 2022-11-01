@@ -362,7 +362,7 @@ class CapeSandboxConnector:
                     )
                     bundle_objects.append(note)
 
-                    if not "address" in config_dict[detection_name]:
+                    if "address" not in config_dict[detection_name]:
                         self.helper.log_info(
                             f'Could not find an "address" key in {detection_name} config.'
                         )

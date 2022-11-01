@@ -1,6 +1,6 @@
 # OpenCTI abuseipdb ipblacklist
 
-The connector uses the AbuseIPDB API to collect IPlist above a specified risk score. 
+The connector uses the AbuseIPDB API to collect IPlist above a specified risk score.
 If you're using a free API key, you must use the 10K limitation in the parameters.
 
 ## Installation
@@ -28,12 +28,12 @@ If you're using a free API key, you must use the 10K limitation in the parameter
 | `ABUSEIPDB_INTERVAL`                 | `ABUSEIPDB_LIMIT`                | Yes          | interval between 2 collect itself                                                                                                                |
 ### Debugging ###
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector --> 
+<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
 ### Additional information
 
-<!-- 
-Any additional information about this connector 
+<!--
+Any additional information about this connector
 * What information is ingested/updated/changed
 * What should the user take into account when using this connector
 * ...

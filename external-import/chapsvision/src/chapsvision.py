@@ -1,16 +1,16 @@
+import base64
+import json
 import os
 import sys
-import uuid
 import time
-import pytz
-import base64
-import stix2
-import requests
-import json
+import uuid
 from datetime import datetime, timedelta
-from dateutil.parser import parse
 
+import pytz
+import requests
+import stix2
 import yaml
+from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

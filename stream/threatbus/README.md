@@ -61,7 +61,7 @@ Build a local container image to run the latest version of the connector via Doc
 docker build -t opencti/connector-threatbus:rolling .
 ```
 
-If you started your OpenCTI setup using docker-compose, you can simply add a service snip for this connector to your OpenCTI `docker-compose-dev.yaml`. See the `docker-compose.yaml` file in this folder for an example. Change the image tag to `:rolling` to use the container you just built in the step above. 
+If you started your OpenCTI setup using docker-compose, you can simply add a service snip for this connector to your OpenCTI `docker-compose-dev.yaml`. See the `docker-compose.yaml` file in this folder for an example. Change the image tag to `:rolling` to use the container you just built in the step above.
 
 
 ### Install and Run Threat Bus

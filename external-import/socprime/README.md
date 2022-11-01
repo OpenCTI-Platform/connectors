@@ -1,7 +1,7 @@
 # OpenCTI SOC Prime Connector
 
 The OpenCTI SOC Prime connector can be used to import Sigma rules from the SOC Prime Platform.
-The connector leverages the SOC Prime Continuous Content Management API to get the rules. 
+The connector leverages the SOC Prime Continuous Content Management API to get the rules.
 
 
 ## Installation

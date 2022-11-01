@@ -19,7 +19,7 @@ This connector runs four streams at this time:
 
 Each stream can be enabled or disabled and configured separately (see "Configuration" section for more details).
 
-## Prerequisites 
+## Prerequisites
 
 Intel 471 account with API credentials.
 
@@ -42,7 +42,7 @@ Configuration options can be set as environment variables, and in `docker-compos
 | INTEL471_INTERVAL_YARA              | interval_yara              | Same as INTEL471_INTERVAL_INDICATORS variable, but for YARA rules.
 | INTEL471_INITIAL_HISTORY_YARA       | initial_history_yara       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for YARA rules.
 
-_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.   
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
 For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
 
 ## Installation
@@ -64,7 +64,7 @@ Then, start the docker container with the provided `docker-compose.yml` or integ
 
 ## Usage
 
-Navigate to **Data->Connectors->Intel471** and observe completed works and works in progress. They should start to appear after 
+Navigate to **Data->Connectors->Intel471** and observe completed works and works in progress. They should start to appear after
 configured intervals, if new data was available in Titan.
 
 To see the indicators created by `Intel471IndicatorsStream`, `Intel471IOCsStream` and `Intel471YARAStream`, navigate to **Observations->Indicators**.

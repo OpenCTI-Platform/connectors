@@ -18,9 +18,9 @@ from dateutil.parser import parse
 from pycti import (
     OpenCTIConnectorHelper,
     Report,
-    get_config_variable,
     StixCoreRelationship,
     Vulnerability,
+    get_config_variable,
 )
 
 atom_types_mapping = {

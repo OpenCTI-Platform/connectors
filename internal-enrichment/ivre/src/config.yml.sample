@@ -17,10 +17,10 @@ ivre:
   db_url_passive: # mongodb://host/ivre or http://user:password@host/cgi
   db_url_scans: # mongodb://host/ivre or http://user:password@host/cgi
   max_tlp: 'TLP:RED'
-  use_data: # true or false 
-  use_passive: # true or false 
-  use_passive_as: # true or false 
-  use_passive_domain: # true or false 
-  use_scans: # true or false 
-  use_scans_as: # true or false 
-  use_scans_domain: # true or false 
+  use_data: # true or false
+  use_passive: # true or false
+  use_passive_as: # true or false
+  use_passive_domain: # true or false
+  use_scans: # true or false
+  use_scans_as: # true or false
+  use_scans_domain: # true or false

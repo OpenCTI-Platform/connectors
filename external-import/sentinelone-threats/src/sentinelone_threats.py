@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import traceback
+
 import magic
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -179,7 +180,7 @@ class SentinelOneThreats:
 
                         # If include certain extensions and not in the list, skip processing
                         if self.include_file_extensions:
-                            if not file_ext in self.include_file_extensions:
+                            if file_ext not in self.include_file_extensions:
                                 self.helper.log_info(
                                     f"Skipping as it did not match a file extension in the included list: {file_ext}"
                                 )

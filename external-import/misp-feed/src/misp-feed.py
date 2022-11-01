@@ -1,15 +1,18 @@
 import json
 import os
+import re
 import ssl
 import sys
 import time
-import re
 import urllib.request
-import stix2
-import pytz
-import yaml
-import certifi
+from datetime import datetime
+from typing import Optional
 
+import certifi
+import pytz
+import stix2
+import yaml
+from dateutil.parser import parse
 from pycti import (
     AttackPattern,
     Identity,
@@ -25,9 +28,6 @@ from pycti import (
     Tool,
     get_config_variable,
 )
-from dateutil.parser import parse
-from datetime import datetime
-from typing import Optional
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
 
@@ -1388,8 +1388,7 @@ class MispFeed:
 
     def _find_type_by_uuid(self, uuid, bundle_objects):
         # filter by uuid
-        i_find = lambda o: o.id.endswith("--" + uuid)
-        i_result = list(filter(i_find, bundle_objects))
+        i_result = list(filter(lambda o: o.id.endswith("--" + uuid), bundle_objects))
 
         if len(i_result) > 0:
             uuid = i_result[0]["id"]

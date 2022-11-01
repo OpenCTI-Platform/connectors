@@ -158,7 +158,7 @@ class ThreatBusConnector(object):
         @param indicator The STIX-2 Indicator
         """
         ioc_dct = json.loads(indicator.serialize())
-        ioc_dct["name"] = ioc_dct.get("name", indicator.id)  #  default to UUID
+        ioc_dct["name"] = ioc_dct.get("name", indicator.id)  # default to UUID
         ioc_dct["stix_id"] = indicator.id
         del ioc_dct["id"]
         obs_type = ioc_dct.get("x_opencti_main_observable_type", "Unknown")

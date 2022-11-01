@@ -12,7 +12,6 @@ from titan_client.titan_stix.exceptions import EmptyBundle
 
 from .. import HelperRequest
 
-
 HERE = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(HERE, "..", "..", "__version__")) as fh:
     version = fh.read().strip()

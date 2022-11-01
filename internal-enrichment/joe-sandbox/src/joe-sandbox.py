@@ -5,11 +5,12 @@ import json
 import os
 import sys
 import time
+from io import BytesIO
+
+import jbxapi
 import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
-from io import BytesIO
-import jbxapi
 
 
 class JoeSandboxConnector:

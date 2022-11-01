@@ -29,14 +29,14 @@ The LastInfoSec `CTI` connector can be configured with the following global vari
 | `lastinfosec.cti.is_enabled`     | `CONFIG_LIS_CTI_ENABLED`         | False             | Set it to True to enable the LastInfoSec CTI connector                                                          |
 | `lastinfosec.cti.interval`       | `CONFIG_LIS_CTI_INTERVAL`        | 30                | url minutes argument. Example: 30: The connector will run every 30 minutes to get IOCs for the last 30 minutes  |
 
-This LastInfosec's CVE Feed is collected hourly. It contains STIXv2.1 bundles with new or updated vulnerability objects.  
+This LastInfosec's CVE Feed is collected hourly. It contains STIXv2.1 bundles with new or updated vulnerability objects.
 The LastInfoSec `CVE` connector can be configured with the following global variable(s):
 
 | Config Parameter                 | Docker env var                   | Default           | Description                                                                                                     |
 | ---------------------------------| -------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
 | `lastinfosec.cve.is_enabled`     | `CONFIG_LIS_CVE_ENABLED`         | False             | Set it to True to enable the LastInfoSec CVE connector                                                          |
 
-This LastInfosec's CTI TACTIC Feed is collected daily in order to add the intelligence about Malware and Intrusion-Set. It contains STIXv2.1 bundles with Malware or Intrusion-set objects with their relations to Malware, Intrusion-set, Vulnerabilities, Attack-Pattern and Identity objects.  
+This LastInfosec's CTI TACTIC Feed is collected daily in order to add the intelligence about Malware and Intrusion-Set. It contains STIXv2.1 bundles with Malware or Intrusion-set objects with their relations to Malware, Intrusion-set, Vulnerabilities, Attack-Pattern and Identity objects.
 The LastInfoSec `TACTIC` connector can be configured with the following global variable(s):
 
 | Config Parameter                 | Docker env var                   | Default           | Description                                                                                                     |

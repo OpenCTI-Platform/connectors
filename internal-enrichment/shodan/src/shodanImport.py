@@ -142,7 +142,7 @@ class ShodanConnector:
     def _generate_vulns(self, shodanHostResponse):
         vulns = []
 
-        if not "vulns" in shodanHostResponse:
+        if "vulns" not in shodanHostResponse:
             return []
 
         for vuln in shodanHostResponse["vulns"]:
