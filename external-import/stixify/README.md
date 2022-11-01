@@ -15,7 +15,7 @@ This connector was built using the TAXII2 connector for [OpenCTI](https://github
 
 ## Configuration
 
-### Prerequisites 
+### Prerequisites
 
 A Stixify account with API access enabled.
 

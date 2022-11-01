@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
 import os
 import time
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from datetime import datetime, timezone
+
 import requests
 import yaml
-from stix2 import Identity, IPv4Address, Indicator, Relationship, Bundle
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2 import Bundle, Identity, Indicator, IPv4Address, Relationship
 
 
 class AbuseSSLImportConnector:

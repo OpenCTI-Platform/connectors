@@ -2,10 +2,10 @@ import json
 import os
 import re
 import sys
-import pytz
 import time
 from datetime import datetime
 
+import pytz
 import stix2
 import yaml
 from dateutil.parser import parse
@@ -2004,8 +2004,7 @@ class Misp:
 
     def find_type_by_uuid(self, uuid, bundle_objects):
         # filter by uuid
-        i_find = lambda o: o.id.endswith("--" + uuid)
-        i_result = list(filter(i_find, bundle_objects))
+        i_result = list(filter(lambda o: o.id.endswith("--" + uuid), bundle_objects))
 
         if len(i_result) > 0:
             uuid = i_result[0]["id"]

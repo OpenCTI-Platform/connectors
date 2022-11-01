@@ -13,9 +13,9 @@ from crowdstrike.utils import datetime_to_timestamp, timestamp_to_datetime
 from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_client.api.intel import Indicators, Reports
 from crowdstrike_client.api.models import Indicator
-from pycti.connector.opencti_connector_helper import (
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
     OpenCTIConnectorHelper,
-)  # type: ignore  # noqa: E501
+)
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 

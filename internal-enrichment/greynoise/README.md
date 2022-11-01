@@ -1,6 +1,6 @@
 # OpenCTI GreyNoise Connector
 
-GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity. 
+GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.
 
 The purpose of this connector is to answer to this question : "Is everyone else seeing this stuff, or is it just me?"
 
@@ -33,17 +33,17 @@ If you are using it independently, remember that the connector will try to conne
 | `greynoise_name`							| `GREYNOISE_NAME`               		| Yes       | The GreyNoise organization name                                                                              |
 | `greynoise_description`					| `GREYNOISE_DESCRIPTION`               | Yes       | The GreyNoise organization description                                                                              |
 | `greynoise_sighting_not_seen`				| `GREYNOISE_SIGHTING_NOT_SEEN`			| Yes       | Must be `true` or `false` to enable or disable the creation of a sighting with `count=0` when an IP has not been seen.
-| `greynoise_spoofable_confidence_level`	| `GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL`| Yes       | The confidence level for created sighting (a number between 0 and 100) when activity could be spoofed (the IP has failed to complete a full TCP connection).    
+| `greynoise_spoofable_confidence_level`	| `GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL`| Yes       | The confidence level for created sighting (a number between 0 and 100) when activity could be spoofed (the IP has failed to complete a full TCP connection).
 
 
 ## Behavior
 
-- Create a GreyNoise `Organization` if it doesn't exist with `GREYNOISE_NAME`  and `GREYNOISE_DESCRIPTION`  
+- Create a GreyNoise `Organization` if it doesn't exist with `GREYNOISE_NAME`  and `GREYNOISE_DESCRIPTION`
 - If the IPv4 is a network: do noting (not implemented)
-- Call the GreyNoise API for the IPv4 
-- If the IPv4 is knew by GreyNoise: 
-  - if the activity could be spoofed: create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=1` and `confidence=GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL` 
-  - if the activity could not be spoofed: create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=1` and `confidence=CONNECTOR_CONFIDENCE_LEVEL` 
+- Call the GreyNoise API for the IPv4
+- If the IPv4 is knew by GreyNoise:
+  - if the activity could be spoofed: create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=1` and `confidence=GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL`
+  - if the activity could not be spoofed: create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=1` and `confidence=CONNECTOR_CONFIDENCE_LEVEL`
 - If the IPv4 is not knew by GreyNoise:
-  - if `GREYNOISE_SIGHTING_NOT_SEEN=true`: create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=0` and `confidence=CONNECTOR_CONFIDENCE_LEVEL` 
+  - if `GREYNOISE_SIGHTING_NOT_SEEN=true`: create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=0` and `confidence=CONNECTOR_CONFIDENCE_LEVEL`
   - if `GREYNOISE_SIGHTING_NOT_SEEN=false`: do nothing.

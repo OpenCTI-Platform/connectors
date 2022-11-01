@@ -389,7 +389,7 @@ class cuckooReportNetwork:
 
     def getHTTPEX(self):
         requests = []
-        if not "http_ex" in self.json:
+        if "http_ex" not in self.json:
             return []
 
         for reqObj in self.json["http_ex"]:
@@ -630,7 +630,7 @@ class cuckooReport:
 
     def getReportSignatures(self):
         signatures = []
-        if not "signatures" in self.report_json:
+        if "signatures" not in self.report_json:
             return []
         for sig in self.report_json["signatures"]:
             sigObj: cuckooReportSignature = cuckooReportSignature(sig)
@@ -640,7 +640,7 @@ class cuckooReport:
 
     def getReportExtracted(self):
         ExtractedObjects = []
-        if not "extracted" in self.report_json:
+        if "extracted" not in self.report_json:
             return []
         for objx in self.report_json["extracted"]:
             extObj: cuckooReportExtracted = cuckooReportExtracted(objx)
@@ -650,7 +650,7 @@ class cuckooReport:
 
     def getReportDropped(self):
         DroppedObjects = []
-        if not "dropped" in self.report_json:
+        if "dropped" not in self.report_json:
             return []
         for objx in self.report_json["dropped"]:
             dropObj: cuckooReportDropped = cuckooReportDropped(objx)
@@ -660,7 +660,7 @@ class cuckooReport:
 
     def getReportBuffer(self):
         BufferObjects = []
-        if not "buffer" in self.report_json:
+        if "buffer" not in self.report_json:
             return []
         for objx in self.report_json["buffer"]:
             bufObj: cuckooReportBuffer = cuckooReportBuffer(objx)

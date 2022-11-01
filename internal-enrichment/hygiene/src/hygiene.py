@@ -127,7 +127,7 @@ class HygieneConnector:
 
         # If not found and the domain is a subdomain, search with the parent.
         use_parent = False
-        if not result and self.enrich_subdomains == True:
+        if not result and self.enrich_subdomains is True:
             if observable_type == "Domain-Name":
                 ext = tldextract.extract(observable_value)
                 if observable_value != ext.domain + "." + ext.suffix:
@@ -162,7 +162,7 @@ class HygieneConnector:
                 self.helper.api.stix_cyber_observable.add_label(
                     id=observable["id"],
                     label_id=self.label_hygiene["id"]
-                    if use_parent == False
+                    if use_parent is False
                     else self.label_hygiene_parent["id"],
                 )
                 self.helper.api.stix_cyber_observable.update_field(
@@ -173,7 +173,7 @@ class HygieneConnector:
                     self.helper.api.stix_domain_object.add_label(
                         id=indicator_id,
                         label_id=self.label_hygiene["id"]
-                        if use_parent == False
+                        if use_parent is False
                         else self.label_hygiene_parent["id"],
                     )
                     self.helper.api.stix_domain_object.update_field(

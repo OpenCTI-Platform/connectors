@@ -12,10 +12,13 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           name: install dependencies
-          command: pip install black --user
+          command: pip install black isort --user
       - run:
           name: confirm black version
           command: black --version
+      - run:
+          name: run isort check
+          command: isort --profile black --check .
       - run:
           name: run black check
           command: black --check .
@@ -432,7 +435,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/ironnet
           name: Build Docker image opencti/connector-ironnet
-          command: docker build -t opencti/connector-ironnet:latest . && docker tag opencti/connector-ironnet:latest opencti/connector-ironnet:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-ironnet:latest . && docker tag opencti/connector-ironnet:latest opencti/connector-ironnet:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -508,7 +511,7 @@ jobs:
             docker push opencti/connector-misp-feed:latest
             docker push opencti/connector-misp-feed:${CIRCLE_TAG}
             docker push opencti/connector-disarm-framework:latest
-            docker push opencti/connector-disarm-framework:${CIRCLE_TAG}            
+            docker push opencti/connector-disarm-framework:${CIRCLE_TAG}
             docker push opencti/connector-chapsvision:latest
             docker push opencti/connector-chapsvision:${CIRCLE_TAG}
             docker push opencti/connector-abuse-ssl:latest
@@ -520,7 +523,7 @@ jobs:
           template: basic_fail_1
       - ms-teams/report:
           only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL          
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   build_rolling_1:
     working_directory: ~/opencti
     docker:
@@ -716,7 +719,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: sudo apt-get update -qq && sudo apt install curl gettext-base          
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/external-import/sekoia
           name: Build Docker image opencti/connector-sekoia
@@ -872,7 +875,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/ironnet
           name: Build Docker image opencti/connector-ironnet
-          command: docker build -t opencti/connector-ironnet:rolling .          
+          command: docker build -t opencti/connector-ironnet:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -921,7 +924,7 @@ jobs:
           template: basic_fail_1
       - ms-teams/report:
           only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL          
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   notify_rolling:
     docker:
       - image: "cimg/base:stable"
@@ -961,7 +964,7 @@ workflows:
             tags:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
-              ignore: /.*/              
+              ignore: /.*/
       - build_rolling_1:
           requires:
             - ensure_formatting
@@ -977,7 +980,7 @@ workflows:
           filters:
             branches:
               only:
-                - master                
+                - master
       - notify_rolling:
           requires:
             - build_rolling_1
