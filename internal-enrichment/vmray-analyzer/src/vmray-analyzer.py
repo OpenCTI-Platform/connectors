@@ -90,10 +90,10 @@ class VmrayAnalyzerConnector:
         params = {}
         # Must be boolean
         params["shareable"] = (
-            self.shareable == True or self.shareable == "true"
+            self.shareable is True or self.shareable == "true"
         )  # noqa: E712
         params["reanalyze"] = (
-            self.reanalyze == True or self.reanalyze == "true"
+            self.reanalyze is True or self.reanalyze == "true"
         )  # noqa: E712
 
         if observable["entity_type"] == "Artifact":

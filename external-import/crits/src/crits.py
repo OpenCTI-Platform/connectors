@@ -24,6 +24,7 @@ from pycti import (
 import stix2
 import validators
 
+
 # Used from external-import/misp to cover importing Raw Data objects
 @stix2.CustomObservable(
     "text",
@@ -270,7 +271,7 @@ class CRITsConnector:
                         received_lines.append(header_line[hbreak + 2 :])
                     elif hname == "Content-Type":
                         dynamic_params["content_type"] = header_line[hbreak + 2 :]
-                    elif not hname in [
+                    elif hname not in [
                         "Content-Type",
                         "From",
                         "Sender",
@@ -281,7 +282,7 @@ class CRITsConnector:
                         "Date",
                         "Message-ID",
                     ]:
-                        if not hname in additional_headers:
+                        if hname not in additional_headers:
                             additional_headers[hname] = header_line[hbreak + 2 :]
                         elif isinstance(additional_headers[hname], str):
                             additional_headers[hname] = [

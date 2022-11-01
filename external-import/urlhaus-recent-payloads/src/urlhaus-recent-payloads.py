@@ -152,7 +152,7 @@ class URLHausRecentPayloads:
 
                     # If the artifact doesn't have an included file type, skip processing
                     if self.include_filetypes:
-                        if not file_type in self.include_filetypes:
+                        if file_type not in self.include_filetypes:
                             self.helper.log_info(
                                 f"Skipping {sha256} as it did not match a file type in the included list: {file_type}"
                             )
@@ -160,7 +160,7 @@ class URLHausRecentPayloads:
 
                     # If the artifact doesn't have an included signature, skip processing
                     if self.include_signatures:
-                        if not signature in self.include_signatures:
+                        if signature not in self.include_signatures:
                             self.helper.log_info(
                                 f"Skipping {sha256} as it did not match a signature in the included list: {signature}"
                             )
