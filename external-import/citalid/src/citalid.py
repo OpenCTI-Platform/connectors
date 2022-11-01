@@ -3,9 +3,9 @@ import os
 import sys
 import time
 from datetime import datetime
-from dateutil.parser import parse
 
 import yaml
+from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

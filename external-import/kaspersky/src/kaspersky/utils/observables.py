@@ -2,30 +2,15 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional, Union
 
-from kaspersky.utils.common import (
-    DEFAULT_X_OPENCTI_SCORE,
-    X_OPENCTI_CREATED_BY_REF,
-    X_OPENCTI_DESCRIPTION,
-    X_OPENCTI_LABELS,
-    X_OPENCTI_SCORE,
-    is_ip_address,
-    is_ipv4_address,
-)
+from kaspersky.utils.common import (DEFAULT_X_OPENCTI_SCORE,
+                                    X_OPENCTI_CREATED_BY_REF,
+                                    X_OPENCTI_DESCRIPTION, X_OPENCTI_LABELS,
+                                    X_OPENCTI_SCORE, is_ip_address,
+                                    is_ipv4_address)
 from stix2 import DomainName  # type: ignore
-from stix2 import (
-    URL,
-    CustomObservable,
-    EmailAddress,
-    EmailMessage,
-    File,
-    Identity,
-    IPv4Address,
-    IPv6Address,
-    MarkingDefinition,
-    Mutex,
-    Process,
-    X509Certificate,
-)
+from stix2 import (URL, CustomObservable, EmailAddress, EmailMessage, File,
+                   Identity, IPv4Address, IPv6Address, MarkingDefinition,
+                   Mutex, Process, X509Certificate)
 from stix2.properties import ListProperty  # type: ignore  # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
 

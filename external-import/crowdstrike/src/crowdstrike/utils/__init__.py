@@ -6,71 +6,41 @@ import calendar
 import functools
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generator,
-    List,
-    Mapping,
-    NamedTuple,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import (Any, Callable, Dict, Generator, List, Mapping, NamedTuple,
+                    Optional, Tuple, Union)
 
 import stix2
-from crowdstrike.utils.constants import (
-    DEFAULT_X_OPENCTI_SCORE,
-    TLP_MARKING_DEFINITION_MAPPING,
-    X_OPENCTI_ALIASES,
-    X_OPENCTI_FILES,
-    X_OPENCTI_LOCATION_TYPE,
-    X_OPENCTI_MAIN_OBSERVABLE_TYPE,
-    X_OPENCTI_REPORT_STATUS,
-    X_OPENCTI_SCORE,
-    T,
-)
+from crowdstrike.utils.constants import (DEFAULT_X_OPENCTI_SCORE,
+                                         TLP_MARKING_DEFINITION_MAPPING,
+                                         X_OPENCTI_ALIASES, X_OPENCTI_FILES,
+                                         X_OPENCTI_LOCATION_TYPE,
+                                         X_OPENCTI_MAIN_OBSERVABLE_TYPE,
+                                         X_OPENCTI_REPORT_STATUS,
+                                         X_OPENCTI_SCORE, T)
 from crowdstrike.utils.indicators import (
-    IndicatorPattern,
-    create_indicator_pattern_cryptocurrency_wallet,
+    IndicatorPattern, create_indicator_pattern_cryptocurrency_wallet,
     create_indicator_pattern_domain_name,
     create_indicator_pattern_email_address,
     create_indicator_pattern_email_message_subject,
-    create_indicator_pattern_file_md5,
-    create_indicator_pattern_file_name,
-    create_indicator_pattern_file_sha1,
-    create_indicator_pattern_file_sha256,
-    create_indicator_pattern_hostname,
-    create_indicator_pattern_ipv4_address,
-    create_indicator_pattern_ipv6_address,
-    create_indicator_pattern_mutex,
-    create_indicator_pattern_url,
-    create_indicator_pattern_user_agent,
+    create_indicator_pattern_file_md5, create_indicator_pattern_file_name,
+    create_indicator_pattern_file_sha1, create_indicator_pattern_file_sha256,
+    create_indicator_pattern_hostname, create_indicator_pattern_ipv4_address,
+    create_indicator_pattern_ipv6_address, create_indicator_pattern_mutex,
+    create_indicator_pattern_url, create_indicator_pattern_user_agent,
     create_indicator_pattern_windows_service_name,
     create_indicator_pattern_x509_certificate_serial_number,
-    create_indicator_pattern_x509_certificate_subject,
-)
+    create_indicator_pattern_x509_certificate_subject)
 from crowdstrike.utils.observables import (
-    ObservableProperties,
-    create_observable_cryptocurrency_wallet,
-    create_observable_domain_name,
-    create_observable_email_address,
-    create_observable_email_message_subject,
-    create_observable_file_md5,
-    create_observable_file_name,
-    create_observable_file_sha1,
-    create_observable_file_sha256,
-    create_observable_hostname,
-    create_observable_ipv4_address,
-    create_observable_ipv6_address,
-    create_observable_mutex,
-    create_observable_url,
-    create_observable_user_agent,
-    create_observable_windows_service_name,
+    ObservableProperties, create_observable_cryptocurrency_wallet,
+    create_observable_domain_name, create_observable_email_address,
+    create_observable_email_message_subject, create_observable_file_md5,
+    create_observable_file_name, create_observable_file_sha1,
+    create_observable_file_sha256, create_observable_hostname,
+    create_observable_ipv4_address, create_observable_ipv6_address,
+    create_observable_mutex, create_observable_url,
+    create_observable_user_agent, create_observable_windows_service_name,
     create_observable_x509_certificate_serial_number,
-    create_observable_x509_certificate_subject,
-)
+    create_observable_x509_certificate_subject)
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.download import Download
 from crowdstrike_client.api.models.report import Entity, Report
@@ -79,7 +49,8 @@ from pycti import Identity, Indicator, IntrusionSet, Location, Malware
 from pycti import Report as PyCTIReport
 from pycti import StixCoreRelationship, Vulnerability
 from pycti.utils.constants import LocationTypes  # type: ignore
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
+from stix2.v21 import (_DomainObject, _Observable,  # type: ignore
+                       _RelationshipObject)
 
 logger = logging.getLogger(__name__)
 

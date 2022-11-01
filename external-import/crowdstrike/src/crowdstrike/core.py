@@ -10,20 +10,19 @@ import stix2
 import yaml
 from crowdstrike.actor.importer import ActorImporter
 from crowdstrike.importer import BaseImporter
-from crowdstrike.indicator.importer import IndicatorImporter, IndicatorImporterConfig
+from crowdstrike.indicator.importer import (IndicatorImporter,
+                                            IndicatorImporterConfig)
 from crowdstrike.report.importer import ReportImporter
 from crowdstrike.rule.yara_master_importer import YaraMasterImporter
-from crowdstrike.utils import (
-    convert_comma_separated_str_to_list,
-    create_organization,
-    get_tlp_string_marking_definition,
-    is_timestamp_in_future,
-    timestamp_to_datetime,
-)
+from crowdstrike.utils import (convert_comma_separated_str_to_list,
+                               create_organization,
+                               get_tlp_string_marking_definition,
+                               is_timestamp_in_future, timestamp_to_datetime)
 from crowdstrike.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 from crowdstrike_client.client import CrowdStrikeClient
 from pycti import OpenCTIConnectorHelper  # type: ignore
-from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
+from pycti.connector.opencti_connector_helper import \
+    get_config_variable  # type: ignore
 
 
 class CrowdStrike:

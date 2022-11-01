@@ -10,7 +10,8 @@ from typing import Dict
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
 import yaml
-from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes, get_config_variable
+from pycti import (OpenCTIConnectorHelper, StixCyberObservableTypes,
+                   get_config_variable)
 from requests.exceptions import HTTPError
 from taxii2client.exceptions import TAXIIServiceException
 

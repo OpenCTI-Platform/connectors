@@ -3,7 +3,8 @@ from typing import List, Optional, Union
 
 import pycti
 import requests
-from stix2 import AttackPattern, Filter, Malware, MemoryStore, ThreatActor, Tool
+from stix2 import (AttackPattern, Filter, Malware, MemoryStore, ThreatActor,
+                   Tool)
 
 
 class MitreAttack:

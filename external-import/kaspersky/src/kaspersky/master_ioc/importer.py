@@ -8,13 +8,10 @@ from kaspersky.client import KasperskyClient
 from kaspersky.importer import BaseImporter
 from kaspersky.master_ioc.builder import IndicatorGroupBundleBuilder
 from kaspersky.models import OpenIOCCSV, OpenIOCCSVIndicator
-from kaspersky.utils import (
-    convert_openioc_csv_to_openioc_csv_model,
-    datetime_to_timestamp,
-    datetime_utc_now,
-    is_current_weekday_before_datetime,
-    timestamp_to_datetime,
-)
+from kaspersky.utils import (convert_openioc_csv_to_openioc_csv_model,
+                             datetime_to_timestamp, datetime_utc_now,
+                             is_current_weekday_before_datetime,
+                             timestamp_to_datetime)
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore

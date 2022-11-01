@@ -5,14 +5,16 @@ import json
 import os
 import sys
 import time
+from fnmatch import fnmatch
+from hashlib import sha256
+from io import BytesIO
+from zipfile import ZipFile
+
 import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from pycti import (OpenCTIConnectorHelper, StixCoreRelationship,
+                   get_config_variable)
 from vmray.rest_api import VMRayRESTAPI
-from hashlib import sha256
-from zipfile import ZipFile
-from io import BytesIO
-from fnmatch import fnmatch
 
 
 class VmrayAnalyzerConnector:

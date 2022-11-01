@@ -10,16 +10,12 @@ import stix2
 import yaml
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter, PulseImporterConfig
-from alienvault.utils import (
-    convert_comma_separated_str_to_list,
-    create_organization,
-    get_tlp_string_marking_definition,
-)
+from alienvault.utils import (convert_comma_separated_str_to_list,
+                              create_organization,
+                              get_tlp_string_marking_definition)
 from alienvault.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from pycti.connector.opencti_connector_helper import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti.connector.opencti_connector_helper import (OpenCTIConnectorHelper,
+                                                      get_config_variable)
 
 
 class AlienVault:

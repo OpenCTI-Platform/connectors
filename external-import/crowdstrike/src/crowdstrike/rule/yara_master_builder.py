@@ -4,27 +4,17 @@
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
-from crowdstrike.utils import (
-    create_indicates_relationships,
-    create_indicator,
-    create_intrusion_sets_from_names,
-    create_malware,
-    create_object_refs,
-    create_stix2_report_from_report,
-    create_uses_relationships,
-)
+from crowdstrike.utils import (create_indicates_relationships,
+                               create_indicator,
+                               create_intrusion_sets_from_names,
+                               create_malware, create_object_refs,
+                               create_stix2_report_from_report,
+                               create_uses_relationships)
 from crowdstrike.utils.report_fetcher import FetchedReport
 from crowdstrike.utils.yara_parser import YaraRule
 from crowdstrike_client.api.models.report import Report
-from stix2 import (
-    Bundle,
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Malware,
-    MarkingDefinition,
-    Relationship,
-)
+from stix2 import (Bundle, Identity, Indicator, IntrusionSet, Malware,
+                   MarkingDefinition, Relationship)
 from stix2 import Report as STIXReport  # type: ignore
 from stix2.v21 import _DomainObject  # type: ignore
 

@@ -4,13 +4,10 @@ import logging
 from typing import List, Optional, Union
 
 from kaspersky.models import YaraRule
-from kaspersky.utils import (
-    create_object_refs,
-    create_report,
-    create_yara_indicator,
-    datetime_utc_now,
-)
-from stix2 import Bundle, Identity, Indicator, MarkingDefinition, Report  # type: ignore
+from kaspersky.utils import (create_object_refs, create_report,
+                             create_yara_indicator, datetime_utc_now)
+from stix2 import (Bundle, Identity, Indicator,  # type: ignore
+                   MarkingDefinition, Report)
 from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
 
 log = logging.getLogger(__name__)

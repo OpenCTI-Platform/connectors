@@ -1,4 +1,5 @@
 from datetime import datetime
+
 import requests
 from requests.exceptions import HTTPError
 

@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import traceback
+
 import magic
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable

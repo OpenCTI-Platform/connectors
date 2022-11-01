@@ -2,71 +2,48 @@
 
 import base64
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Union
+from typing import (Any, Callable, Dict, List, Mapping, NamedTuple, Optional,
+                    Union)
 
 import stix2
-from kaspersky.utils.common import (
-    DEFAULT_X_OPENCTI_SCORE,
-    X_OPENCTI_FILES,
-    X_OPENCTI_LOCATION_TYPE,
-    X_OPENCTI_MAIN_OBSERVABLE_TYPE,
-    X_OPENCTI_REPORT_STATUS,
-    X_OPENCTI_SCORE,
-)
+from kaspersky.utils.common import (DEFAULT_X_OPENCTI_SCORE, X_OPENCTI_FILES,
+                                    X_OPENCTI_LOCATION_TYPE,
+                                    X_OPENCTI_MAIN_OBSERVABLE_TYPE,
+                                    X_OPENCTI_REPORT_STATUS, X_OPENCTI_SCORE)
 from kaspersky.utils.indicators import (
-    IndicatorPattern,
-    create_indicator_pattern_cryptocurrency_wallet,
+    IndicatorPattern, create_indicator_pattern_cryptocurrency_wallet,
     create_indicator_pattern_domain_name,
     create_indicator_pattern_email_address,
     create_indicator_pattern_email_message_subject,
-    create_indicator_pattern_file_md5,
-    create_indicator_pattern_file_name,
-    create_indicator_pattern_file_sha1,
-    create_indicator_pattern_file_sha256,
-    create_indicator_pattern_hostname,
-    create_indicator_pattern_ip_address,
-    create_indicator_pattern_mutex,
-    create_indicator_pattern_network_activity,
-    create_indicator_pattern_url,
-    create_indicator_pattern_user_agent,
+    create_indicator_pattern_file_md5, create_indicator_pattern_file_name,
+    create_indicator_pattern_file_sha1, create_indicator_pattern_file_sha256,
+    create_indicator_pattern_hostname, create_indicator_pattern_ip_address,
+    create_indicator_pattern_mutex, create_indicator_pattern_network_activity,
+    create_indicator_pattern_url, create_indicator_pattern_user_agent,
     create_indicator_pattern_windows_service_display_name,
     create_indicator_pattern_windows_service_name,
     create_indicator_pattern_x509_certificate_issuer,
     create_indicator_pattern_x509_certificate_serial_number,
-    create_indicator_pattern_x509_certificate_subject,
-)
+    create_indicator_pattern_x509_certificate_subject)
 from kaspersky.utils.observables import (
-    ObservableProperties,
-    create_observable_cryptocurrency_wallet,
-    create_observable_domain_name,
-    create_observable_email_address,
-    create_observable_email_message_subject,
-    create_observable_file_md5,
-    create_observable_file_name,
-    create_observable_file_sha1,
-    create_observable_file_sha256,
-    create_observable_hostname,
-    create_observable_ip_address,
-    create_observable_mutex,
-    create_observable_network_activity,
-    create_observable_url,
+    ObservableProperties, create_observable_cryptocurrency_wallet,
+    create_observable_domain_name, create_observable_email_address,
+    create_observable_email_message_subject, create_observable_file_md5,
+    create_observable_file_name, create_observable_file_sha1,
+    create_observable_file_sha256, create_observable_hostname,
+    create_observable_ip_address, create_observable_mutex,
+    create_observable_network_activity, create_observable_url,
     create_observable_user_agent,
     create_observable_windows_service_display_name,
     create_observable_windows_service_name,
     create_observable_x509_certificate_issuer,
     create_observable_x509_certificate_serial_number,
-    create_observable_x509_certificate_subject,
-)
-from pycti import (
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Location,
-    Report,
-    StixCoreRelationship,
-)
+    create_observable_x509_certificate_subject)
+from pycti import (Identity, Indicator, IntrusionSet, Location, Report,
+                   StixCoreRelationship)
 from pycti.utils.constants import LocationTypes  # type: ignore
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
+from stix2.v21 import (_DomainObject, _Observable,  # type: ignore
+                       _RelationshipObject)
 
 _TLP_MARKING_DEFINITION_MAPPING = {
     "white": stix2.TLP_WHITE,

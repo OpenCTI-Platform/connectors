@@ -10,7 +10,8 @@ from typing import Any, Dict, Iterable, List, Set
 import requests
 import yaml
 from dateutil.parser import ParserError, parse
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+from pycti import (OpenCTIConnectorHelper, OpenCTIStix2Utils,
+                   get_config_variable)
 from requests import RequestException
 
 ## MODIFICATION BY CYRILYXE (OPENCTI 5.3.17, the 2022-08-12)

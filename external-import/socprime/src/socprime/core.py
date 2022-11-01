@@ -6,22 +6,12 @@ from typing import Any, Dict, List, Mapping, Optional, Union
 
 import pycti
 import yaml
-from pycti.connector.opencti_connector_helper import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti.connector.opencti_connector_helper import (OpenCTIConnectorHelper,
+                                                      get_config_variable)
 from socprime.mitre_attack import MitreAttack
 from socprime.tdm_api_client import ApiClient
-from stix2 import (
-    AttackPattern,
-    Bundle,
-    Identity,
-    Indicator,
-    Malware,
-    Relationship,
-    ThreatActor,
-    Tool,
-)
+from stix2 import (AttackPattern, Bundle, Identity, Indicator, Malware,
+                   Relationship, ThreatActor, Tool)
 
 
 class SocprimeConnector:

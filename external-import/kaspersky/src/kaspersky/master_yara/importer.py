@@ -8,14 +8,10 @@ from kaspersky.client import KasperskyClient
 from kaspersky.importer import BaseImporter
 from kaspersky.master_yara.builder import YaraRuleGroupBundleBuilder
 from kaspersky.models import Yara, YaraRule
-from kaspersky.utils import (
-    YaraRuleUpdater,
-    convert_yara_rules_to_yara_model,
-    datetime_to_timestamp,
-    datetime_utc_now,
-    is_current_weekday_before_datetime,
-    timestamp_to_datetime,
-)
+from kaspersky.utils import (YaraRuleUpdater, convert_yara_rules_to_yara_model,
+                             datetime_to_timestamp, datetime_utc_now,
+                             is_current_weekday_before_datetime,
+                             timestamp_to_datetime)
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore

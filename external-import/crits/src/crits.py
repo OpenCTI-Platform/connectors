@@ -1,28 +1,19 @@
 import os
 import sys
 import time
-import requests
-from math import ceil
-from datetime import datetime
-from dateutil.parser import parse as dtparse
-import pytz
 from base64 import b64decode
+from datetime import datetime
+from math import ceil
 
-import yaml
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    Identity,
-    Report,
-    Campaign,
-    IntrusionSet,
-    ThreatActor,
-    Malware,
-    Indicator,
-    StixCoreRelationship,
-)
+import pytz
+import requests
 import stix2
 import validators
+import yaml
+from dateutil.parser import parse as dtparse
+from pycti import (Campaign, Identity, Indicator, IntrusionSet, Malware,
+                   OpenCTIConnectorHelper, Report, StixCoreRelationship,
+                   ThreatActor, get_config_variable)
 
 
 # Used from external-import/misp to cover importing Raw Data objects

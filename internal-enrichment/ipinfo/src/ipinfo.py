@@ -4,12 +4,8 @@ import pycountry
 import requests
 import stix2
 import yaml
-from pycti import (
-    Location,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from pycti import (Location, OpenCTIConnectorHelper, StixCoreRelationship,
+                   get_config_variable)
 
 
 class IpInfoConnector:

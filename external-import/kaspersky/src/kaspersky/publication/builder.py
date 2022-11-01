@@ -4,38 +4,23 @@ import logging
 from datetime import datetime
 from typing import List, Mapping, Optional, Set, Union
 
-from kaspersky.models import OpenIOC, OpenIOCIndicatorItem, Publication, Yara, YaraRule
-from kaspersky.utils import (
-    Observation,
-    ObservationConfig,
-    ObservationFactory,
-    convert_openioc_xml_to_openioc_model,
-    convert_yara_rules_to_yara_model,
-    create_country,
-    create_file_pdf,
-    create_indicates_relationships,
-    create_intrusion_set,
-    create_object_refs,
-    create_organization,
-    create_region,
-    create_report,
-    create_sector,
-    create_targets_relationships,
-    create_yara_indicator,
-    decode_base64_gzip_to_bytes,
-    decode_base64_gzip_to_string,
-    get_observation_factory_by_openioc_search,
-)
+from kaspersky.models import (OpenIOC, OpenIOCIndicatorItem, Publication, Yara,
+                              YaraRule)
+from kaspersky.utils import (Observation, ObservationConfig,
+                             ObservationFactory,
+                             convert_openioc_xml_to_openioc_model,
+                             convert_yara_rules_to_yara_model, create_country,
+                             create_file_pdf, create_indicates_relationships,
+                             create_intrusion_set, create_object_refs,
+                             create_organization, create_region, create_report,
+                             create_sector, create_targets_relationships,
+                             create_yara_indicator,
+                             decode_base64_gzip_to_bytes,
+                             decode_base64_gzip_to_string,
+                             get_observation_factory_by_openioc_search)
 from stix2 import IntrusionSet  # type: ignore
-from stix2 import (
-    Bundle,
-    Identity,
-    Indicator,
-    Location,
-    MarkingDefinition,
-    Relationship,
-    Report,
-)
+from stix2 import (Bundle, Identity, Indicator, Location, MarkingDefinition,
+                   Relationship, Report)
 from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
 
 log = logging.getLogger(__name__)

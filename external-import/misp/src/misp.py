@@ -2,28 +2,17 @@ import json
 import os
 import re
 import sys
-import pytz
 import time
 from datetime import datetime
 
+import pytz
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import (
-    AttackPattern,
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Location,
-    Malware,
-    Note,
-    OpenCTIConnectorHelper,
-    Report,
-    StixCoreRelationship,
-    StixSightingRelationship,
-    Tool,
-    get_config_variable,
-)
+from pycti import (AttackPattern, Identity, Indicator, IntrusionSet, Location,
+                   Malware, Note, OpenCTIConnectorHelper, Report,
+                   StixCoreRelationship, StixSightingRelationship, Tool,
+                   get_config_variable)
 from pymisp import ExpandedPyMISP
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
