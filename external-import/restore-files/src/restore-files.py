@@ -8,8 +8,7 @@ import sys
 from pathlib import Path
 
 import yaml
-from pycti import (OpenCTIConnectorHelper, OpenCTIStix2Splitter,
-                   get_config_variable)
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Splitter, get_config_variable
 
 
 def ref_extractors(objects):

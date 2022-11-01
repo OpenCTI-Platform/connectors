@@ -7,8 +7,13 @@ from typing import Optional
 import plyara
 import plyara.utils
 import stix2
-from pycti import (ExternalReference, Location, Note, OpenCTIConnectorHelper,
-                   StixCoreRelationship)
+from pycti import (
+    ExternalReference,
+    Location,
+    Note,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+)
 
 from .indicator_config import IndicatorConfig
 

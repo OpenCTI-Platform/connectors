@@ -11,9 +11,18 @@ import stix2
 import validators
 import yaml
 from dateutil.parser import parse as dtparse
-from pycti import (Campaign, Identity, Indicator, IntrusionSet, Malware,
-                   OpenCTIConnectorHelper, Report, StixCoreRelationship,
-                   ThreatActor, get_config_variable)
+from pycti import (
+    Campaign,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Malware,
+    OpenCTIConnectorHelper,
+    Report,
+    StixCoreRelationship,
+    ThreatActor,
+    get_config_variable,
+)
 
 
 # Used from external-import/misp to cover importing Raw Data objects

@@ -15,8 +15,13 @@ import yaml
 from bs4 import BeautifulSoup
 from datalake import Datalake, Output
 from dateutil.parser import parse
-from pycti import (OpenCTIConnectorHelper, Report, StixCoreRelationship,
-                   Vulnerability, get_config_variable)
+from pycti import (
+    OpenCTIConnectorHelper,
+    Report,
+    StixCoreRelationship,
+    Vulnerability,
+    get_config_variable,
+)
 
 atom_types_mapping = {
     "apk": "Unknown",

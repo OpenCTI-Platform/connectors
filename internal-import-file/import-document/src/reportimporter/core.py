@@ -6,12 +6,20 @@ from typing import Callable, Dict, List
 
 import stix2
 import yaml
-from pycti import (OpenCTIConnectorHelper, Report, StixCoreRelationship,
-                   get_config_variable)
+from pycti import (
+    OpenCTIConnectorHelper,
+    Report,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from pydantic import BaseModel
-from reportimporter.constants import (ENTITY_CLASS, OBSERVABLE_CLASS,
-                                      RESULT_FORMAT_CATEGORY,
-                                      RESULT_FORMAT_MATCH, RESULT_FORMAT_TYPE)
+from reportimporter.constants import (
+    ENTITY_CLASS,
+    OBSERVABLE_CLASS,
+    RESULT_FORMAT_CATEGORY,
+    RESULT_FORMAT_MATCH,
+    RESULT_FORMAT_TYPE,
+)
 from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
 from reportimporter.util import MyConfigParser

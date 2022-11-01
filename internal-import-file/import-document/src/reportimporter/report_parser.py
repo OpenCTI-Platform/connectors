@@ -9,14 +9,21 @@ from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 from pycti import OpenCTIConnectorHelper
-from reportimporter.constants import (ENTITY_CLASS, MIME_CSV, MIME_HTML,
-                                      MIME_MD, MIME_PDF, MIME_TXT,
-                                      OBSERVABLE_CLASS,
-                                      OBSERVABLE_DETECTION_CUSTOM_REGEX,
-                                      OBSERVABLE_DETECTION_LIBRARY,
-                                      RESULT_FORMAT_CATEGORY,
-                                      RESULT_FORMAT_MATCH, RESULT_FORMAT_RANGE,
-                                      RESULT_FORMAT_TYPE)
+from reportimporter.constants import (
+    ENTITY_CLASS,
+    MIME_CSV,
+    MIME_HTML,
+    MIME_MD,
+    MIME_PDF,
+    MIME_TXT,
+    OBSERVABLE_CLASS,
+    OBSERVABLE_DETECTION_CUSTOM_REGEX,
+    OBSERVABLE_DETECTION_LIBRARY,
+    RESULT_FORMAT_CATEGORY,
+    RESULT_FORMAT_MATCH,
+    RESULT_FORMAT_RANGE,
+    RESULT_FORMAT_TYPE,
+)
 from reportimporter.models import Entity, Observable
 from reportimporter.util import library_mapping
 

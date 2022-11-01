@@ -40,7 +40,7 @@ jobs:
           command: isort --version
       - run:
           name: run isort check
-          command: isort --check .
+          command: isort --profile black --check .
       - slack/notify:
           event: fail
           template: basic_fail_1

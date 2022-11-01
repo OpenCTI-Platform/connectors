@@ -12,14 +12,19 @@ import pycti
 import stix2
 import validators
 import yaml
-from pycti.connector.opencti_connector_helper import (OpenCTIConnectorHelper,
-                                                      get_config_variable)
+from pycti.connector.opencti_connector_helper import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 from stix2.v21 import _Observable as Observable  # noqa
 
 from .client import UrlscanClient
 from .loop import ConnectorLoop
-from .patterns import (IndicatorPattern, create_indicator_pattern_domain_name,
-                       create_indicator_pattern_url)
+from .patterns import (
+    IndicatorPattern,
+    create_indicator_pattern_domain_name,
+    create_indicator_pattern_url,
+)
 
 __all__ = [
     "UrlscanConnector",

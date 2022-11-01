@@ -7,8 +7,14 @@ from urllib.parse import quote, urlparse
 import feedparser
 import stix2
 import yaml
-from pycti import (Identity, Indicator, Malware, OpenCTIConnectorHelper,
-                   StixCoreRelationship, get_config_variable)
+from pycti import (
+    Identity,
+    Indicator,
+    Malware,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from pygrok import Grok
 from stix2 import URL, DomainName, IPv4Address
 

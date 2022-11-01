@@ -12,8 +12,12 @@ from hashlib import sha256
 import magic
 import stix2
 import yaml
-from pycti import (AttackPattern, OpenCTIConnectorHelper, StixCoreRelationship,
-                   get_config_variable)
+from pycti import (
+    AttackPattern,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from stix2 import URL, CustomObservable, DomainName, EmailAddress, IPv4Address
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty

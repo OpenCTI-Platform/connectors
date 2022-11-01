@@ -13,8 +13,13 @@ import pyzipper
 import requests
 import stix2
 import yaml
-from pycti import (AttackPattern, Note, OpenCTIConnectorHelper,
-                   StixCoreRelationship, get_config_variable)
+from pycti import (
+    AttackPattern,
+    Note,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from stix2 import DomainName, IPv4Address
 
 

@@ -4,37 +4,42 @@
 import logging
 from typing import List, Mapping, NamedTuple, Optional, Set
 
-from crowdstrike.utils import (DEFAULT_X_OPENCTI_SCORE,
-                               OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
-                               OBSERVATION_FACTORY_DOMAIN_NAME,
-                               OBSERVATION_FACTORY_EMAIL_ADDRESS,
-                               OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT,
-                               OBSERVATION_FACTORY_FILE_MD5,
-                               OBSERVATION_FACTORY_FILE_NAME,
-                               OBSERVATION_FACTORY_FILE_SHA1,
-                               OBSERVATION_FACTORY_FILE_SHA256,
-                               OBSERVATION_FACTORY_IPV4_ADDRESS,
-                               OBSERVATION_FACTORY_MUTEX,
-                               OBSERVATION_FACTORY_URL,
-                               OBSERVATION_FACTORY_USER_AGENT,
-                               ObservableProperties, ObservationFactory,
-                               create_based_on_relationships,
-                               create_indicates_relationships,
-                               create_indicator,
-                               create_intrusion_sets_from_names,
-                               create_kill_chain_phase, create_malware,
-                               create_object_refs, create_sector,
-                               create_stix2_report_from_report,
-                               create_targets_relationships,
-                               create_uses_relationships, create_vulnerability,
-                               create_vulnerability_external_references)
+from crowdstrike.utils import (
+    DEFAULT_X_OPENCTI_SCORE,
+    OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
+    OBSERVATION_FACTORY_DOMAIN_NAME,
+    OBSERVATION_FACTORY_EMAIL_ADDRESS,
+    OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT,
+    OBSERVATION_FACTORY_FILE_MD5,
+    OBSERVATION_FACTORY_FILE_NAME,
+    OBSERVATION_FACTORY_FILE_SHA1,
+    OBSERVATION_FACTORY_FILE_SHA256,
+    OBSERVATION_FACTORY_IPV4_ADDRESS,
+    OBSERVATION_FACTORY_MUTEX,
+    OBSERVATION_FACTORY_URL,
+    OBSERVATION_FACTORY_USER_AGENT,
+    ObservableProperties,
+    ObservationFactory,
+    create_based_on_relationships,
+    create_indicates_relationships,
+    create_indicator,
+    create_intrusion_sets_from_names,
+    create_kill_chain_phase,
+    create_malware,
+    create_object_refs,
+    create_sector,
+    create_stix2_report_from_report,
+    create_targets_relationships,
+    create_uses_relationships,
+    create_vulnerability,
+    create_vulnerability_external_references,
+)
 from crowdstrike.utils.report_fetcher import FetchedReport
 from crowdstrike_client.api.models import Indicator
 from crowdstrike_client.api.models.report import Report
 from stix2 import Bundle, Identity
 from stix2 import Indicator as STIXIndicator  # type: ignore
-from stix2 import (IntrusionSet, KillChainPhase, Malware, MarkingDefinition,
-                   Relationship)
+from stix2 import IntrusionSet, KillChainPhase, Malware, MarkingDefinition, Relationship
 from stix2 import Report as STIXReport
 from stix2 import Vulnerability
 from stix2.v21 import _DomainObject, _Observable  # type: ignore

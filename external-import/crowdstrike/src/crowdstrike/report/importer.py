@@ -6,15 +6,19 @@ from typing import Any, Dict, Generator, List, Mapping, Optional
 
 from crowdstrike.importer import BaseImporter
 from crowdstrike.report.builder import ReportBundleBuilder
-from crowdstrike.utils import (create_file_from_download,
-                               datetime_to_timestamp, paginate,
-                               timestamp_to_datetime)
+from crowdstrike.utils import (
+    create_file_from_download,
+    datetime_to_timestamp,
+    paginate,
+    timestamp_to_datetime,
+)
 from crowdstrike_client.api.intel import Reports
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.base import Entity
 from crowdstrike_client.api.models.report import Report
-from pycti.connector.opencti_connector_helper import \
-    OpenCTIConnectorHelper  # type: ignore  # noqa: E501
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+    OpenCTIConnectorHelper,
+)
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 

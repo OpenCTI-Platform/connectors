@@ -9,8 +9,7 @@ import requests
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import (Indicator, Note, OpenCTIConnectorHelper, Report,
-                   get_config_variable)
+from pycti import Indicator, Note, OpenCTIConnectorHelper, Report, get_config_variable
 from requests.auth import HTTPBasicAuth
 
 

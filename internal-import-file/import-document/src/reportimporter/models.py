@@ -6,9 +6,12 @@ from typing import Any, Dict, List, Optional, Pattern
 
 from pycti import OpenCTIConnectorHelper
 from pydantic import BaseModel, validator
-from reportimporter.constants import (COMMENT_INDICATOR, CONFIG_PATH,
-                                      OBSERVABLE_DETECTION_CUSTOM_REGEX,
-                                      OBSERVABLE_DETECTION_OPTIONS)
+from reportimporter.constants import (
+    COMMENT_INDICATOR,
+    CONFIG_PATH,
+    OBSERVABLE_DETECTION_CUSTOM_REGEX,
+    OBSERVABLE_DETECTION_OPTIONS,
+)
 
 
 class Observable(BaseModel):

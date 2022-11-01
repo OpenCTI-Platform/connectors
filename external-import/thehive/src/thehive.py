@@ -6,10 +6,23 @@ from datetime import datetime
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import (Incident, OpenCTIConnectorHelper, StixCoreRelationship,
-                   StixSightingRelationship, get_config_variable)
-from stix2 import (URL, AutonomousSystem, CustomObservable, DomainName,
-                   EmailMessage, File, IPv4Address, WindowsRegistryKey)
+from pycti import (
+    Incident,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    StixSightingRelationship,
+    get_config_variable,
+)
+from stix2 import (
+    URL,
+    AutonomousSystem,
+    CustomObservable,
+    DomainName,
+    EmailMessage,
+    File,
+    IPv4Address,
+    WindowsRegistryKey,
+)
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
 from thehive4py.api import TheHiveApi

@@ -10,8 +10,7 @@ from urllib import parse
 import certifi
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import (TLP_WHITE, Bundle, ExternalReference, IPv4Address,
-                   IPv6Address)
+from stix2 import TLP_WHITE, Bundle, ExternalReference, IPv4Address, IPv6Address
 
 
 class abuseipdbipblacklistimport:

@@ -3,8 +3,7 @@
 from enum import Enum
 from typing import List, NamedTuple, Union
 
-from stix2 import (EqualityComparisonExpression, ObjectPath,
-                   ObservationExpression)
+from stix2 import EqualityComparisonExpression, ObjectPath, ObservationExpression
 
 __all__ = [
     "create_indicator_pattern_url",

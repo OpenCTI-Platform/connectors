@@ -10,11 +10,13 @@ from kaspersky.client import KasperskyClient
 from kaspersky.master_ioc.importer import MasterIOCImporter
 from kaspersky.master_yara.importer import MasterYaraImporter
 from kaspersky.publication.importer import PublicationImporter
-from kaspersky.utils import (DEFAULT_TLP_MARKING_DEFINITION,
-                             convert_comma_separated_str_to_list,
-                             create_organization,
-                             get_tlp_string_marking_definition,
-                             timestamp_to_datetime)
+from kaspersky.utils import (
+    DEFAULT_TLP_MARKING_DEFINITION,
+    convert_comma_separated_str_to_list,
+    create_organization,
+    get_tlp_string_marking_definition,
+    timestamp_to_datetime,
+)
 from pycti import OpenCTIConnectorHelper, get_config_variable  # type: ignore
 from stix2 import Identity, MarkingDefinition  # type: ignore
 

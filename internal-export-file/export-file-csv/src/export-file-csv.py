@@ -7,8 +7,7 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from pycti.utils.constants import (IdentityTypes, LocationTypes,
-                                   StixCyberObservableTypes)
+from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 
 class ExportFileCsv:

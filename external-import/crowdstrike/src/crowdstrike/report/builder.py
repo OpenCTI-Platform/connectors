@@ -4,20 +4,33 @@
 import logging
 from typing import List, Mapping, Optional, Tuple, Union
 
-from crowdstrike.utils import (create_external_reference,
-                               create_intrusion_set_from_name, create_malware,
-                               create_object_refs, create_organization,
-                               create_regions_and_countries_from_entities,
-                               create_sectors_from_entities,
-                               create_stix2_report_from_report,
-                               create_targets_relationships,
-                               create_uses_relationships,
-                               datetime_utc_epoch_start, datetime_utc_now,
-                               normalize_start_time_and_stop_time)
+from crowdstrike.utils import (
+    create_external_reference,
+    create_intrusion_set_from_name,
+    create_malware,
+    create_object_refs,
+    create_organization,
+    create_regions_and_countries_from_entities,
+    create_sectors_from_entities,
+    create_stix2_report_from_report,
+    create_targets_relationships,
+    create_uses_relationships,
+    datetime_utc_epoch_start,
+    datetime_utc_now,
+    normalize_start_time_and_stop_time,
+)
 from crowdstrike_client.api.models.base import Entity
 from crowdstrike_client.api.models.report import Actor, Report
-from stix2 import (Bundle, ExternalReference, Identity, IntrusionSet, Location,
-                   Malware, MarkingDefinition, Relationship)
+from stix2 import (
+    Bundle,
+    ExternalReference,
+    Identity,
+    IntrusionSet,
+    Location,
+    Malware,
+    MarkingDefinition,
+    Relationship,
+)
 from stix2 import Report as STIXReport  # type: ignore
 from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
 
