@@ -2,11 +2,11 @@
 
 The OpenCTI RiskIQ connector can be used to import knowledge from the [RiskIQ API](https://api.riskiq.net).
 
-The connector import RiskIQ's articles. An article is stored as a STIX `Report`, containing multiples `Indicators`. 
+The connector import RiskIQ's articles. An article is stored as a STIX `Report`, containing multiples `Indicators`.
 
 By default, the connector runs every day, starting from the last state. The saved state is the `createdDate` of the inserted article.
 
-For each `Report`, the following observable are implemented: 
+For each `Report`, the following observable are implemented:
 
 - `File` (for hashes: MD5, SHA-1, SHA-256)
 - `Domain`
@@ -14,11 +14,11 @@ For each `Report`, the following observable are implemented:
 - `File`
 - `IPv4Address`
 - `Mutex`
-- `X509Certificate` 
+- `X509Certificate`
 
 ## Configuration
 
-The connector can be configured with the following variables: 
+The connector can be configured with the following variables:
 
 | Config Parameter  | Docker env var         | Default                           | Description                                                                                                       |
 | ----------------- | ---------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |

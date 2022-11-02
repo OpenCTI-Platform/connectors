@@ -12,14 +12,16 @@ connector:
   log_level: 'info'
 
 ocd:
-  worldwatch_api_login: 'ChangeMe'
-  worldwatch_api_key: 'ChangeMe'
+  portal_api_login: 'ChangeMe'
+  portal_api_key: 'ChangeMe'
   datalake_login: 'ChangeMe'
   datalake_password: 'ChangeMe'
   vulnerabilities_login: 'ChangeMe'
   vulnerabilities_password: 'ChangeMe'
   import_worldwatch: true
   import_worldwatch_start_date: '2022-01-01'
+  import_cybercrime: true
+  import_cybercrime_start_date: '2022-01-01'
   import_vulnerabilities: false
   import_datalake: true
   import_datalake_atom_types: 'apk,as,cc,crypto,cve,domain,email,file,fqdn,iban,ip,ip_range,paste,phone_number,regkey,ssl,url'

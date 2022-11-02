@@ -1,15 +1,15 @@
 import base64
 import datetime
 import os
+import re
 import sys
 import time
-import re
+
 import requests
 import stix2
 import yaml
 from dateutil.parser import parse
-
-from pycti import Note, Report, Indicator, OpenCTIConnectorHelper, get_config_variable
+from pycti import Indicator, Note, OpenCTIConnectorHelper, Report, get_config_variable
 from requests.auth import HTTPBasicAuth
 
 

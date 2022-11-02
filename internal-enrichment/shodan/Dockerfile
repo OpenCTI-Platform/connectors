@@ -12,5 +12,5 @@ RUN apk --no-cache add git build-base libmagic libffi-dev && \
 
 # Expose and entrypoint
 COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh 
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

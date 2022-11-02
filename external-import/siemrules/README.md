@@ -15,7 +15,7 @@ This connector was built using the TAXII2 connector for [OpenCTI](https://github
 
 ## Configuration
 
-### Prerequisites 
+### Prerequisites
 
 An SIEM Rules account with API access enabled.
 

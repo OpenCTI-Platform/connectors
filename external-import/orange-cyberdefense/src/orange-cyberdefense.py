@@ -6,6 +6,8 @@ import sys
 import time
 import uuid
 import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
+from io import StringIO
 from urllib import request
 
 import html2text
@@ -16,12 +18,36 @@ from bs4 import BeautifulSoup
 from datalake import Datalake, Output
 from dateutil.parser import parse
 from pycti import (
+    Incident,
+    Note,
     OpenCTIConnectorHelper,
     Report,
-    get_config_variable,
     StixCoreRelationship,
     Vulnerability,
+    get_config_variable,
 )
+
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.strict = False
+        self.convert_charrefs = True
+        self.text = StringIO()
+
+    def handle_data(self, d):
+        self.text.write(d)
+
+    def get_data(self):
+        return self.text.getvalue()
+
+
+def strip_tags(html):
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
+
 
 atom_types_mapping = {
     "apk": "Unknown",
@@ -66,17 +92,17 @@ class OrangeCyberDefense:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        self.ocd_worldwatch_api_url = "https://api-tdc.cert.orangecyberdefense.com/v1"
+        self.ocd_portal_api_url = "https://api-tdc.cert.orangecyberdefense.com/v1"
         self.ocd_vulnerabilities_api_url = ""
         self.ocd_datalake_api_url = (
             "https://datalake.cert.orangecyberdefense.com/api/v2"
         )
 
-        self.ocd_worldwatch_api_login = get_config_variable(
-            "OCD_WORLDWATCH_API_LOGIN", ["ocd", "worldwatch_api_login"], config
+        self.ocd_portal_api_login = get_config_variable(
+            "OCD_PORTAL_API_LOGIN", ["ocd", "portal_api_login"], config
         )
-        self.ocd_worldwatch_api_key = get_config_variable(
-            "OCD_WORLDWATCH_API_KEY", ["ocd", "worldwatch_api_key"], config
+        self.ocd_portal_api_key = get_config_variable(
+            "OCD_PORTAL_API_KEY", ["ocd", "portal_api_key"], config
         )
         self.ocd_datalake_login = get_config_variable(
             "OCD_DATALAKE_LOGIN", ["ocd", "datalake_login"], config
@@ -96,6 +122,14 @@ class OrangeCyberDefense:
         self.ocd_import_worldwatch_start_date = get_config_variable(
             "OCD_IMPORT_WORLDWATCH_START_DATE",
             ["ocd", "import_worldwatch_start_date"],
+            config,
+        )
+        self.ocd_import_cybercrime = get_config_variable(
+            "OCD_IMPORT_CYBERCRIME", ["ocd", "import_cybercrime"], config, False, True
+        )
+        self.ocd_import_cybercrime_start_date = get_config_variable(
+            "OCD_IMPORT_CYBERCRIME_START_DATE",
+            ["ocd", "import_cybercrime_start_date"],
             config,
         )
         self.ocd_import_vulnerabilities = get_config_variable(
@@ -164,7 +198,7 @@ class OrangeCyberDefense:
             x_opencti_order=99,
             x_opencti_color="#ff7900",
         )
-        self.worldwatch_auth_token = None
+        self.portal_auth_token = None
         self.datalake_instance = Datalake(
             username=self.ocd_datalake_login, password=self.ocd_datalake_password
         )
@@ -173,25 +207,25 @@ class OrangeCyberDefense:
     def get_interval(self):
         return int(self.ocd_interval) * 60
 
-    def _get_worldwatch_token(self):
+    def _get_portal_token(self):
         data = str.encode(
             '{"username": "'
-            + self.ocd_worldwatch_api_login
+            + self.ocd_portal_api_login
             + '", "password": "'
-            + self.ocd_worldwatch_api_key
+            + self.ocd_portal_api_key
             + '"}',
             "utf-8",
             "escape",
         )
         query = request.Request(
-            self.ocd_worldwatch_api_url + "/auth/",
+            self.ocd_portal_api_url + "/auth/",
             method="POST",
             data=data,
             headers={"Content-Type": "application/json"},
         )
         with request.urlopen(query) as response:
             content = json.loads(response.read().decode("utf-8"))
-        self.worldwatch_auth_token = content["token"]
+        self.portal_auth_token = content["token"]
 
     def _curate_labels(self, labels):
         curated_labels = []
@@ -417,7 +451,9 @@ class OrangeCyberDefense:
 
     def _generate_report(self, report):
         objects = []
-        curated_title = report["title"].replace("Updated - ", "")
+        curated_title = strip_tags(
+            report["title"].replace("Updated - ", "").replace("MAJ - ", "")
+        )
         self.helper.log_info(
             'Genearing report "'
             + curated_title
@@ -528,14 +564,15 @@ class OrangeCyberDefense:
 
     def _import_worldwatch(self, work_id, current_state):
         # Get the token
-        self._get_worldwatch_token()
+        self._get_portal_token()
         # Query params
-        url = self.ocd_worldwatch_api_url + "/cybalerts/"
+        url = self.ocd_portal_api_url + "/cybalerts/"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": "Token " + self.worldwatch_auth_token,
+            "Authorization": "Token " + self.portal_auth_token,
         }
         params = (
+            ("offer_name", "World Watch"),
             ("timestamp_updated_since", current_state["worldwatch"]),
             ("ordering", "timestamp_updated"),
         )
@@ -564,7 +601,7 @@ class OrangeCyberDefense:
                 current_state["worldwatch"] = last_report_time
                 self.helper.set_state(current_state)
             url = str(data["next"])
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(url, headers=headers)
             data = json.loads(response.content)
             if "next" not in data:
                 data["next"] = None
@@ -588,6 +625,263 @@ class OrangeCyberDefense:
                 self.helper.log_error(str(e))
             last_report_timestamp = parse(last_report_time).timestamp() + 1
             current_state["worldwatch"] = (
+                datetime.datetime.fromtimestamp(last_report_timestamp)
+                .astimezone()
+                .isoformat()
+            )
+            self.helper.set_state(current_state)
+        return current_state
+
+    def _gen_severity(self, severity):
+        if severity == 1:
+            return "low"
+        if severity == 2:
+            return "medium"
+        if severity == 3:
+            return "medium"
+        if severity == 4:
+            return "high"
+        if severity == 4:
+            return "critical"
+
+    def _generate_incident(self, incident):
+        objects = []
+        curated_title = strip_tags(
+            incident["title"].replace("Updated - ", "").replace("MAJ - ", "")
+        )
+        self.helper.log_info(
+            'Genearing incident "'
+            + curated_title
+            + '" ('
+            + incident["timestamp_updated"]
+            + ")"
+        )
+        external_references = []
+        external_reference = stix2.ExternalReference(
+            source_name="Orange Cyberdefense",
+            url="https://portal.cert.orangecyberdefense.com/cybercrime/"
+            + str(incident["id"]),
+        )
+        external_references.append(external_reference)
+        analysis_blocks = [
+            x for x in incident["incident_blocks"] if x["type"] == "analysis"
+        ][::-1]
+        technical_blocks = [
+            x
+            for x in incident["incident_blocks"]
+            if x["type"] == "technical_information"
+        ][::-1]
+        if len(analysis_blocks) == 0:
+            return []
+        analysis_html = ""
+        for block in analysis_blocks:
+            analysis_html = analysis_html + block["content"]
+        technical_html = ""
+        for block in technical_blocks:
+            technical_html = technical_html + block["content"]
+        text_maker = html2text.HTML2Text()
+        text_maker.body_width = 0
+        text_maker.ignore_links = False
+        text_maker.ignore_images = False
+        text_maker.ignore_tables = False
+        text_maker.ignore_emphasis = False
+        text_maker.skip_internal_links = False
+        text_maker.inline_links = True
+        text_maker.protect_links = True
+        text_maker.mark_code = True
+        analysis_md = text_maker.handle(analysis_html)
+        analysis_md = analysis_md.replace("](//", "](https://")
+        technical_md = text_maker.handle(technical_html)
+        technical_md = technical_md.replace("](//", "](https://")
+        soup = BeautifulSoup(technical_html, features="lxml")
+        links = soup.find_all("a")
+        for tag in links:
+            link = tag.get("href", None)
+            if link is not None and "orangecyberdefense.com" not in link:
+                external_reference = stix2.ExternalReference(
+                    source_name=incident["source_name"], url=link
+                )
+                external_references.append(external_reference)
+        file_analysis = {
+            "name": "analysis.html",
+            "mime_type": "text/html",
+            "data": base64.b64encode(analysis_html.encode("utf-8")).decode("utf-8"),
+        }
+        file_technical = {
+            "name": "technical_appendix.html",
+            "mime_type": "text/html",
+            "data": base64.b64encode(technical_html.encode("utf-8")).decode("utf-8"),
+        }
+        labels = [incident["services"][0]["name"], incident["risk"]]
+        incident_stix = stix2.Incident(
+            id=Incident.generate_id(curated_title),
+            name=curated_title,
+            incident_type=incident["services"][0]["offer_name"],
+            description=analysis_md,
+            created_by_ref=self.identity["standard_id"],
+            confidence=self.helper.connect_confidence_level,
+            external_references=external_references,
+            created=parse(incident["timestamp_detected"]),
+            modified=parse(incident["timestamp_updated"]),
+            first_seen=parse(incident["timestamp_detected"]),
+            last_seen=parse(incident["timestamp_updated"]),
+            source=incident["source_name"],
+            severity=self._gen_severity(incident["severity"]),
+            labels=labels,
+            allow_custom=True,
+            object_marking_refs=[
+                stix2.TLP_GREEN.get("id"),
+                self.marking["standard_id"],
+            ],
+            x_opencti_files=[file_analysis, file_technical],
+        )
+        objects.append(incident_stix)
+        custom_properties = {
+            "description": "Observable related to an incident.",
+            "x_opencti_score": incident["severity"] * 20,
+            "labels": labels,
+            "created_by_ref": self.identity["standard_id"],
+            "external_references": external_references,
+        }
+        url_stix = None
+        if (
+            "url" in incident
+            and incident["url"] is not None
+            and len(incident["url"]) > 0
+        ):
+            url_stix = stix2.URL(
+                value=incident["url"],
+                object_marking_refs=[
+                    stix2.TLP_GREEN.get("id"),
+                    self.marking["standard_id"],
+                ],
+                custom_properties=custom_properties,
+            )
+            objects.append(url_stix)
+        if url_stix is not None:
+            incident_url_relation = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    url_stix.get("id"),
+                    incident_stix.get("id"),
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.identity["standard_id"],
+                confidence=self.helper.connect_confidence_level,
+                source_ref=url_stix.get("id"),
+                target_ref=incident_stix.get("id"),
+                object_marking_refs=[
+                    stix2.TLP_GREEN.get("id"),
+                    self.marking["standard_id"],
+                ],
+                allow_custom=True,
+            )
+            objects.append(incident_url_relation)
+
+        detection_date = parse(incident["timestamp_detected"])
+        detection_date = detection_date.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) - datetime.timedelta(days=detection_date.weekday())
+        report_stix = stix2.Report(
+            id=Report.generate_id(curated_title, detection_date),
+            name="Weekly cybercrime alerts and incidents ("
+            + detection_date.strftime("%Y-%m-%d")
+            + ")",
+            report_types=["threat-report"],
+            created_by_ref=self.identity["standard_id"],
+            confidence=self.helper.connect_confidence_level,
+            created=detection_date,
+            published=detection_date,
+            modified=detection_date,
+            object_refs=[x["id"] for x in objects],
+            labels=["cybercrime", "ocd"],
+            allow_custom=True,
+            object_marking_refs=[
+                stix2.TLP_GREEN.get("id"),
+                self.marking["standard_id"],
+            ],
+        )
+        objects.append(report_stix)
+        if len(technical_md) > 2:
+            note_stix = stix2.Note(
+                id=Note.generate_id(),
+                abstract="Technical information about this alert.",
+                content=technical_md,
+                created_by_ref=self.identity["standard_id"],
+                object_marking_refs=[
+                    stix2.TLP_GREEN.get("id"),
+                    self.marking["standard_id"],
+                ],
+                object_refs=[incident_stix.get("id")],
+            )
+            objects.append(note_stix)
+        return objects
+
+    def _import_cybercrime(self, work_id, current_state):
+        # Get the token
+        self._get_portal_token()
+        # Query params
+        url = self.ocd_portal_api_url + "/cybalerts/"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Token " + self.portal_auth_token,
+        }
+        params = (
+            ("timestamp_updated_since", current_state["cybercrime"]),
+            ("ordering", "timestamp_updated"),
+        )
+        self.helper.log_info("Iterating " + url)
+        self.helper.log_info(str(params))
+        response = requests.get(url, headers=headers, params=params)
+        data = json.loads(response.content)
+        while data["next"] is not None:
+            self.helper.log_info("Iterating " + data["next"])
+            for report in data["results"]:
+                service = report["services"][0]["name"]
+                date = parse(report["timestamp_updated"]).date()
+                last_report_time = report["timestamp_updated"]
+                if date > datetime.datetime.now().date() or service == "World Watch":
+                    continue
+                try:
+                    incident_objects = self._generate_incident(report)
+                    self.helper.send_stix2_bundle(
+                        stix2.Bundle(
+                            objects=incident_objects,
+                            allow_custom=True,
+                        ).serialize(),
+                        update=self.update_existing_data,
+                        work_id=work_id,
+                    )
+                except Exception as e:
+                    self.helper.log_error(str(e))
+                current_state["cybercrime"] = last_report_time
+                self.helper.set_state(current_state)
+            url = str(data["next"])
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = json.loads(response.content)
+            if "next" not in data:
+                data["next"] = None
+        for report in data["results"]:
+            service = report["services"][0]["name"]
+            last_report_time = report["timestamp_updated"]
+            date = parse(report["timestamp_updated"]).date()
+            if date > datetime.datetime.now().date() or service == "World Watch":
+                continue
+            try:
+                incident_objects = self._generate_incident(report)
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(
+                        objects=incident_objects,
+                        allow_custom=True,
+                    ).serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+            except Exception as e:
+                self.helper.log_error(str(e))
+            last_report_timestamp = parse(last_report_time).timestamp() + 1
+            current_state["cybercrime"] = (
                 datetime.datetime.fromtimestamp(last_report_timestamp)
                 .astimezone()
                 .isoformat()
@@ -746,6 +1040,9 @@ class OrangeCyberDefense:
                             "worldwatch": parse(self.ocd_import_worldwatch_start_date)
                             .astimezone()
                             .isoformat(),
+                            "cybercrime": parse(self.ocd_import_cybercrime_start_date)
+                            .astimezone()
+                            .isoformat(),
                             "datalake": parse(self.ocd_import_datalake_start_date)
                             .astimezone()
                             .isoformat(),
@@ -763,6 +1060,14 @@ class OrangeCyberDefense:
                         + str(current_state["worldwatch"])
                     )
                     new_state = self._import_worldwatch(work_id, current_state)
+                    self.helper.log_info("Setting new state " + str(new_state))
+                    self.helper.set_state(new_state)
+                if self.ocd_import_cybercrime:
+                    self.helper.log_info(
+                        "Get Cybercrime alerts since "
+                        + str(current_state["cybercrime"])
+                    )
+                    new_state = self._import_cybercrime(work_id, current_state)
                     self.helper.log_info("Setting new state " + str(new_state))
                     self.helper.set_state(new_state)
                 if self.ocd_import_vulnerabilities:

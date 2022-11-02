@@ -5,14 +5,15 @@ import json
 import os
 import sys
 import time
+from fnmatch import fnmatch
+from hashlib import sha256
+from io import BytesIO
+from zipfile import ZipFile
+
 import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 from vmray.rest_api import VMRayRESTAPI
-from hashlib import sha256
-from zipfile import ZipFile
-from io import BytesIO
-from fnmatch import fnmatch
 
 
 class VmrayAnalyzerConnector:
@@ -90,10 +91,10 @@ class VmrayAnalyzerConnector:
         params = {}
         # Must be boolean
         params["shareable"] = (
-            self.shareable == True or self.shareable == "true"
+            self.shareable is True or self.shareable == "true"
         )  # noqa: E712
         params["reanalyze"] = (
-            self.reanalyze == True or self.reanalyze == "true"
+            self.reanalyze is True or self.reanalyze == "true"
         )  # noqa: E712
 
         if observable["entity_type"] == "Artifact":

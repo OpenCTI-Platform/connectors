@@ -1,6 +1,6 @@
 # OpenCTI Splunk connector
 
-This connector allows organizations to feed a **Splunk** KV Store using OpenCTI knowledge. 
+This connector allows organizations to feed a **Splunk** KV Store using OpenCTI knowledge.
 
 ## Installation
 

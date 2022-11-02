@@ -1,7 +1,7 @@
 # OpenCTI Template Connector
 
-<!-- 
-General description of the connector 
+<!--
+General description of the connector
 * What it does
 * How it works
 * Special requirements
@@ -31,12 +31,12 @@ General description of the connector
 
 ### Debugging ###
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector --> 
+<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
 ### Additional information
 
-<!-- 
-Any additional information about this connector 
+<!--
+Any additional information about this connector
 * What information is ingested/updated/changed
 * What should the user take into account when using this connector
 * ...

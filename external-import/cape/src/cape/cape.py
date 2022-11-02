@@ -424,7 +424,7 @@ class cuckooReportNetwork:
 
     def getHTTPEX(self):
         requests = []
-        if not "http_ex" in self.json:
+        if "http_ex" not in self.json:
             return []
 
         for reqObj in self.json["http_ex"]:
@@ -742,7 +742,7 @@ class cuckooReport:
 
     def getReportTTPs(self):
         TTPs = []
-        if not "ttps" in self.report_json:
+        if "ttps" not in self.report_json:
             return []
         for sig in self.report_json["ttps"]:
             sigObj: cuckooReportTTP = cuckooReportTTP(sig)
@@ -752,7 +752,7 @@ class cuckooReport:
 
     def getReportSignatures(self):
         signatures = []
-        if not "signatures" in self.report_json:
+        if "signatures" not in self.report_json:
             return []
         for sig in self.report_json["signatures"]:
             sigObj: cuckooReportSignature = cuckooReportSignature(sig)
