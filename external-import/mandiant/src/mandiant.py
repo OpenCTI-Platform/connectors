@@ -206,14 +206,17 @@ class Mandiant:
             url_base = url_base + "&" + "next=" + str(next_pointer)
             self.helper.log_info("URL URL + NEXT " + url_base)
 
-        pattern = "%Y-%m-%d %H:%M:%S"
-        epoch_start_date = int(
-            time.mktime(
-                time.strptime(
-                    str(self.mandiant_import_start_date + " 00:00:00"), pattern
+        if start_epoch:
+            epoch_start_date = start_epoch
+        else:
+            pattern = "%Y-%m-%d %H:%M:%S"
+            epoch_start_date = int(
+                time.mktime(
+                    time.strptime(
+                        str(self.mandiant_import_start_date + " 00:00:00"), pattern
+                    )
                 )
             )
-        )
         #         epoch_start_date = int(time.mktime(time.strptime(self.mandiant_import_start_date+" 00:00:00",pattern)))
         url_base = url_base + "&" + "start_epoch=" + str(epoch_start_date)
         self.helper.log_info("URL BASE " + url_base)
@@ -221,6 +224,10 @@ class Mandiant:
         r = requests.get(url_base, headers=headers)
         if r.status_code == 200:
             return r.json()
+
+        elif r.status_code == 204:
+            raise ValueError("There is not data to process")
+            sys.exit(0)
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
             self._get_token()
             #             return self._query(url, limit, offset, start_epoch, end_epoch, True)
@@ -228,7 +235,11 @@ class Mandiant:
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
         else:
+            self.helper.log_debug(
+                "Failed the first querynext function and did not get a Http 200 response"
+            )
             result = r.json()
+            self.helper.log_debug(str(result.get("error")))
             if result and "error" in result:
                 if "future" in result["error"]:
                     return None
@@ -521,15 +532,19 @@ class Mandiant:
         url = self.mandiant_api_url + "/v4/reports"
         no_more_result = False
         limit = 100
+        # state_now = int(time.time())
         reports_type_filter = self.mandiant_report_types_ignored
         self.helper.log_info("Reports to ignore  " + str(reports_type_filter))
         # current_state_count = current_state["report"]
         # new_state_count = ""
-        next_pointer = current_state["report"]
-        while no_more_result is False:
-            self.helper.log_info("Iterating with next pointer" + next_pointer)
+        next_pointer = ""
+        start_time = current_state["report"]
+        self.helper.log_debug("Existing report state " + str(start_time))
 
-            result = self._querynext(url, limit, next_pointer=next_pointer)
+        while no_more_result is False:
+            result = self._querynext(
+                url, limit, next_pointer=next_pointer, start_epoch=start_time
+            )
             result_count = len(result["objects"])
             if (
                 result is not None
@@ -537,6 +552,8 @@ class Mandiant:
                 and result_count > 0
             ):
 
+                epoch_in_past = datetime.datetime.now() - datetime.timedelta(hours=+2)
+                state_now = int(epoch_in_past.timestamp())
                 for reportOut in result["objects"]:
                     # Ignoring reports that are not listed in the parameters.
                     if reportOut.get("report_type") in reports_type_filter:
@@ -859,16 +876,22 @@ class Mandiant:
 
                             self.helper.log_info("ERROR: " + str(e))
 
+                next_pointer = result.get("next")
+                self.helper.log_debug("Report next_pointer ID " + str(next_pointer))
             else:
                 no_more_result = True
                 self.helper.log_info("No more results")
+                # next_pointer = result.get("next")
+                # self.helper.log_debug("Next pointer " + next_pointer)
+                next_pointer = None
+                try:
+                    setting_state = state_now
+                except:
+                    setting_state = start_time
+                self.helper.log_info("Setting Report state to " + str(setting_state))
+                current_state["report"] = setting_state
 
-            next_pointer = result.get("next")
-            self.helper.log_debug("Next pointer " + next_pointer)
-
-            current_state["report"] = next_pointer
-
-            self.helper.set_state(current_state)
+                self.helper.set_state(current_state)
 
         return current_state
 
