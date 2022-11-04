@@ -1,8 +1,21 @@
 # OpenCTI Recorded Future Feeds Connector
-*Contact jonah.feldman@recordedfuture.com with questions*
+
 ## Description
 
 This connector converts Recorded Future Analyst Notes to STIX2 and imports them into OpenCTI at regular intervals
+
+## Terms of Use
+The following code is provided for demonstration purposes only, and should
+not be used without independent verification. Recorded Future makes no
+representations or warranties, express, implied, statutory, or otherwise,
+regarding this code, and provides it strictly "as-is".
+Recorded Future shall not be liable for, and you assume all risk of
+using the foregoing.
+
+## Acquiring an API token
+A Recorded Future API token is required for this integration. You must be a client to acquire an API token.
+For more information, please contact your Recorded Future Account Executive, Intelligence Services Representative,
+or Sales Engineer
 
 ## Data Model
 
