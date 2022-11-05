@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:4000'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Recorded Future Analyst Notes' # Required
+  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
+  confidence_level: 5
+  update_existing_data: True
+  log_level: 'info'
+
+rf-notes:
+  token: 'ChangeMe' # Required
+  initial_lookback: 240 #Required, in hours
+  interval: 24 # Required, in hours
+  pull_signatures: False #Pull Yara/Snort/Sigma rules into OpenCTI. optional
+  insikt_only: True #optional
+  topic: 'ChangeMe' #optional
+
