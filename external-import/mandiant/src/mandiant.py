@@ -639,7 +639,7 @@ class Mandiant:
                                 published=publish_date,
                                 labels=[
                                     report.get("tmhAccuracyRanking"),
-                                    "News Analisys",
+                                    "News Analysis",
                                 ],
                                 confidence=self.helper.connect_confidence_level,
                                 created_by_ref=self.identity["standard_id"],
@@ -682,7 +682,7 @@ class Mandiant:
                                 self.helper.log_info("ERROR: " + str(e))
                         except Exception as e:
                             self.helper.log_info(
-                                "Failed to process News Analyis Report "
+                                "Failed to process News Analysis Report "
                                 + str(reportOut.get("report_id"))
                             )
 
