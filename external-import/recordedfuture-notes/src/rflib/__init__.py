@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 ############################## TERMS OF USE ####################################
 # The following code is provided for demonstration purposes only, and should   #
@@ -8,3 +9,15 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
+from ._version import __version__ as APP_VERSION
+from .rf_client import RFClient
+from .rf_notes_to_stix2 import (
+    TTP,
+    URL,
+    Domain,
+    FileHash,
+    Identity,
+    IPAddress,
+    Malware,
+    StixNote,
+)
