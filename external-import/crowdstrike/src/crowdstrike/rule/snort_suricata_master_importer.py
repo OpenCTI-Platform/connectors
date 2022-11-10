@@ -9,7 +9,9 @@ from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
 from crowdstrike_client.api.intel import Reports, Rules
 from crowdstrike_client.api.models.download import Download
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+    OpenCTIConnectorHelper,
+)
 from requests import RequestException
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore
@@ -76,7 +78,11 @@ class SnortMasterImporter(BaseImporter):
         latest_e_tag = snort_master.e_tag
         latest_last_modified = snort_master.last_modified
 
-        if last_modified is not None and latest_last_modified is not None and last_modified >= latest_last_modified:
+        if (
+            last_modified is not None
+            and latest_last_modified is not None
+            and last_modified >= latest_last_modified
+        ):
             self._info("Snort master not modified, skipping...")
             return state
 
@@ -139,8 +145,12 @@ class SnortMasterImporter(BaseImporter):
         self._info("Clearing report fetcher cache...")
         self.report_fetcher.clear_cache()
 
-    def _fetch_snort_master(self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None) -> SnortMaster:
-        download = self._fetch_latest_snort_master(e_tag=e_tag, last_modified=last_modified)
+    def _fetch_snort_master(
+        self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
+    ) -> SnortMaster:
+        download = self._fetch_latest_snort_master(
+            e_tag=e_tag, last_modified=last_modified
+        )
         return SnortMaster(
             rules=self._parse_download(download),
             e_tag=download.e_tag,
@@ -151,7 +161,9 @@ class SnortMasterImporter(BaseImporter):
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
     ) -> Download:
         rule_set_type = "snort-suricata-master"
-        return self.rules_api.get_latest_file(rule_set_type, e_tag=e_tag, last_modified=last_modified)
+        return self.rules_api.get_latest_file(
+            rule_set_type, e_tag=e_tag, last_modified=last_modified
+        )
 
     def _parse_download(self, download: Download) -> List[SnortRule]:
         snort_str = self._unzip_content(download.content)
@@ -218,7 +230,9 @@ class SnortMasterImporter(BaseImporter):
             groups.append((key, list(group)))
         return groups
 
-    def _process_snort_rule_group(self, snort_rule_group: Tuple[str, List[SnortRule]]) -> int:
+    def _process_snort_rule_group(
+        self, snort_rule_group: Tuple[str, List[SnortRule]]
+    ) -> int:
         group = snort_rule_group[0]
         self._info("Processing Snort rule group '{0}'...", group)
 
@@ -230,7 +244,9 @@ class SnortMasterImporter(BaseImporter):
         for snort_rule in snort_rules:
             fetched_reports = self._get_reports_by_code(snort_rule.reports)
 
-            snort_rule_bundle = self._create_snort_rule_bundle(snort_rule, fetched_reports)
+            snort_rule_bundle = self._create_snort_rule_bundle(
+                snort_rule, fetched_reports
+            )
             if snort_rule_bundle is None:
                 failed_count += 1
 
@@ -250,7 +266,9 @@ class SnortMasterImporter(BaseImporter):
 
         return failed_count
 
-    def _update_if_needed(self, new_rule: SnortRule, existing_rule: Tuple[str, SnortRule]) -> bool:
+    def _update_if_needed(
+        self, new_rule: SnortRule, existing_rule: Tuple[str, SnortRule]
+    ) -> bool:
         new_rule_name = new_rule.name
         indicator_id, current_rule = existing_rule
         if self._needs_updating(current_rule, new_rule):
@@ -286,7 +304,9 @@ class SnortMasterImporter(BaseImporter):
             return None
 
         if len(rules) > 1:
-            self._error("Indicator '{0}' pattern contains more than one Snort rules", name)
+            self._error(
+                "Indicator '{0}' pattern contains more than one Snort rules", name
+            )
             return None
 
         return indicator_id, rules[0]
@@ -316,7 +336,9 @@ class SnortMasterImporter(BaseImporter):
 
         return False
 
-    def _update_indicator_pattern(self, indicator_id: str, new_indicator_pattern: str) -> bool:
+    def _update_indicator_pattern(
+        self, indicator_id: str, new_indicator_pattern: str
+    ) -> bool:
         updated = self.helper.api.stix_domain_object.update_field(
             id=indicator_id,
             input={"key": self._KEY_INDICATOR_PATTERN, "value": new_indicator_pattern},
@@ -332,7 +354,9 @@ class SnortMasterImporter(BaseImporter):
             self._error("Failed to fetch reports {0}: {1}", codes, e)
             return []
 
-    def _create_snort_rule_bundle(self, rule: SnortRule, reports: List[FetchedReport]) -> Optional[Bundle]:
+    def _create_snort_rule_bundle(
+        self, rule: SnortRule, reports: List[FetchedReport]
+    ) -> Optional[Bundle]:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]
