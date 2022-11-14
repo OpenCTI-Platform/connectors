@@ -446,6 +446,7 @@ class ExportReportPdf:
         returns: a function or None if entity type is not supported
         """
         reader = {
+            "stix-core-object": self.helper.api_impersonate.stix_core_object.read,
             "stix-domain-object": self.helper.api_impersonate.stix_domain_object.read,
             "attack-pattern": self.helper.api_impersonate.attack_pattern.read,
             "campaign": self.helper.api_impersonate.campaign.read,

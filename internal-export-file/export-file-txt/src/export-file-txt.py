@@ -102,6 +102,15 @@ class ExportFileTxt:
                 self.helper.api.stix_cyber_observable.push_list_export(
                     file_name, observable_values_bytes, json.dumps(list_params)
                 )
+            elif entity_type == "Stix-Core-Object":
+                entities_values = [f["name"] for f in entities_list if "name" in f]
+                entities_values_bytes = "\n".join(entities_values)
+                self.helper.api.stix_core_object.push_list_export(
+                    entity_type,
+                    file_name,
+                    entities_values_bytes,
+                    json.dumps(list_params),
+                )
             else:
                 entities_values = [f["name"] for f in entities_list if "name" in f]
                 entities_values_bytes = "\n".join(entities_values)
