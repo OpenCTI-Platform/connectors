@@ -4,11 +4,6 @@
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
-from crowdstrike_client.api.models.report import Report
-from stix2 import Bundle, Identity, Indicator, MarkingDefinition
-from stix2 import Report as STIXReport  # type: ignore
-from stix2.v21 import _DomainObject  # type: ignore
-
 from crowdstrike.utils import (
     create_indicator,
     create_object_refs,
@@ -16,6 +11,10 @@ from crowdstrike.utils import (
 )
 from crowdstrike.utils.report_fetcher import FetchedReport
 from crowdstrike.utils.snort_parser import SnortRule
+from crowdstrike_client.api.models.report import Report
+from stix2 import Bundle, Identity, Indicator, MarkingDefinition
+from stix2 import Report as STIXReport  # type: ignore
+from stix2.v21 import _DomainObject  # type: ignore
 
 
 class SnortRuleBundleBuilder:
