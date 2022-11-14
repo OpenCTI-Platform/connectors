@@ -6,7 +6,7 @@ connector:
   id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
   name: 'Intel471'
-  scope:'malware,vulnerability,indicator'
+  scope: 'malware,vulnerability,indicator'
   confidence_level: 70
   update_existing_data: False
   log_level: 'info'
