@@ -41,6 +41,7 @@ class ExportFileTxt:
 
         # List
         lister = {
+            "Stix-Core-Object": self.helper.api_impersonate.stix_core_object.list,
             "Stix-Domain-Object": self.helper.api_impersonate.stix_domain_object.list,
             "Attack-Pattern": self.helper.api_impersonate.attack_pattern.list,
             "Campaign": self.helper.api_impersonate.campaign.list,
@@ -49,7 +50,7 @@ class ExportFileTxt:
             "Observed-Data": self.helper.api_impersonate.observed_data.list,
             "Opinion": self.helper.api_impersonate.opinion.list,
             "Report": self.helper.api_impersonate.report.list,
-            "Grouping": self.helper.api.grouping.list,
+            "Grouping": self.helper.api_impersonate.grouping.list,
             "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
             "Identity": self.helper.api_impersonate.identity.list,
             "Language": self.helper.api_impersonate.language.list,

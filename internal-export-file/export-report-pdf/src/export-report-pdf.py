@@ -455,7 +455,7 @@ class ExportReportPdf:
             "organization": self.helper.api_impersonate.identity.read,
             "opinion": self.helper.api_impersonate.opinion.read,
             "report": self.helper.api_impersonate.report.read,
-            "grouping": self.helper.api.grouping.read,
+            "grouping": self.helper.api_impersonate.grouping.read,
             "sector": self.helper.api_impersonate.identity.read,
             "system": self.helper.api_impersonate.identity.read,
             "course-of-action": self.helper.api_impersonate.course_of_action.read,
