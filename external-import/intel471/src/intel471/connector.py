@@ -38,7 +38,7 @@ class Intel471Connector:
             "INTEL471_API_USERNAME", ["intel471", "api_username"], config
         )
         api_key = get_config_variable(
-            "INTEL471_API_KEY", ["intel471", "api_username"], config
+            "INTEL471_API_KEY", ["intel471", "api_key"], config
         )
 
         for stream_class in (
