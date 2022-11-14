@@ -12,6 +12,7 @@ from crowdstrike.actor.importer import ActorImporter
 from crowdstrike.importer import BaseImporter
 from crowdstrike.indicator.importer import IndicatorImporter, IndicatorImporterConfig
 from crowdstrike.report.importer import ReportImporter
+from crowdstrike.rule.snort_suricata_master_importer import SnortMasterImporter
 from crowdstrike.rule.yara_master_importer import YaraMasterImporter
 from crowdstrike.utils import (
     convert_comma_separated_str_to_list,
@@ -58,6 +59,7 @@ class CrowdStrike:
     _CONFIG_SCOPE_REPORT = "report"
     _CONFIG_SCOPE_INDICATOR = "indicator"
     _CONFIG_SCOPE_YARA_MASTER = "yara_master"
+    _CONFIG_SCOPE_SNORT_SURICATA_MASTER = "snort_suricata_master"
 
     _CONFIG_REPORT_STATUS_MAPPING = {
         "new": 0,
@@ -253,6 +255,20 @@ class CrowdStrike:
             )
 
             importers.append(yara_master_importer)
+
+        if self._CONFIG_SCOPE_SNORT_SURICATA_MASTER in scopes:
+            snort_master_importer = SnortMasterImporter(
+                self.helper,
+                client.intel_api.rules,
+                client.intel_api.reports,
+                author,
+                tlp_marking,
+                update_existing_data,
+                report_status,
+                report_type,
+            )
+
+            importers.append(snort_master_importer)
 
         self.importers = importers
 
