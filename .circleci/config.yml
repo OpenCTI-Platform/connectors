@@ -441,6 +441,10 @@ jobs:
           name: Build Docker image opencti/connector-recordedfuture-notes
           command: docker build -t opencti/connector-recordedfuture-notes:latest . && docker tag opencti/connector-recordedfuture-notes:latest opencti/connector-recordedfuture-notes:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/opencsam
+          name: Build Docker image opencti/connector-opencsam
+          command: docker build -t opencti/connector-opencsam:latest . && docker tag opencti/connector-opencsam:latest opencti/connector-opencsam:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -524,6 +528,8 @@ jobs:
             docker push opencti/connector-ironnet:${CIRCLE_TAG}
             docker push opencti/connector-recordedfuture-notes:latest
             docker push opencti/connector-recordedfuture-notes:${CIRCLE_TAG}
+            docker push opencti/connector-opencsam:latest
+            docker push opencti/connector-opencsam:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -887,6 +893,10 @@ jobs:
           name: Build Docker image opencti/connector-recordedfuture-notes
           command: docker build -t opencti/connector-recordedfuture-notes:rolling .
       - run:
+          working_directory: ~/opencti/external-import/opencsam
+          name: Build Docker image opencti/connector-opencsam
+          command: docker build -t opencti/connector-opencsam:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -930,6 +940,7 @@ jobs:
             docker push opencti/connector-abuse-ssl:rolling
             docker push opencti/connector-ironnet:rolling
             docker push opencti/connector-recordedfuture-notes:rolling
+            docker push opencti/connector-opencsam:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
