@@ -2,10 +2,12 @@ import json
 import os
 import sys
 import time
-import pytz
+from datetime import datetime
+from datetime import time as datetime_time
+from datetime import timedelta
 from urllib.parse import urlparse
-from datetime import datetime, timedelta, time as datetime_time
 
+import pytz
 import requests
 import stix2
 import yaml
