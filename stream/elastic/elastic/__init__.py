@@ -1,6 +1,6 @@
 import os
 
-__version__ = "5.3.17"
+__version__ = "5.4.0"
 LOGGER_NAME = "elastic"
 RE_DATEMATH = (
     r"\{(?P<modulo>.*now[^{]*)(?:\{(?P<format>[^|]*)(?:\|(?P<offset>[^}]+))?\})?\}"
