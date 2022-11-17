@@ -18,4 +18,5 @@ opencsam:
   api_key: 'ChangeMe'
   import_start_date: '2022-01-01'
   organization: 'ChangeMe'
+  tags: 'ransomware,breach,incident'
   interval: 5 # Required, in minutes
