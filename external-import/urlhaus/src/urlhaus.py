@@ -1,15 +1,16 @@
 import csv
+import datetime
 import os
 import ssl
 import sys
 import time
 import urllib.request
-from datetime import datetime
 
 import certifi
+import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import TLP_WHITE, URL, Bundle, ExternalReference
+from dateutil.parser import parse
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 
 
 class URLhaus:
@@ -35,6 +36,13 @@ class URLhaus:
         self.create_indicators = get_config_variable(
             "URLHAUS_CREATE_INDICATORS",
             ["urlhaus", "create_indicators"],
+            config,
+            False,
+            True,
+        )
+        self.threats_from_labels = get_config_variable(
+            "URLHAUS_THREATS_FROM_LABELS",
+            ["urlhaus", "threats_from_labels"],
             config,
             False,
             True,
@@ -67,7 +75,7 @@ class URLhaus:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.datetime.utcfromtimestamp(last_run).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -80,7 +88,7 @@ class URLhaus:
                     > ((int(self.urlhaus_interval) - 1) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
+                    now = datetime.datetime.utcfromtimestamp(timestamp)
                     friendly_name = "URLhaus run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
@@ -103,16 +111,20 @@ class URLhaus:
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
                         # id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
+                        i = 0
                         for row in rdr:
+                            i = i + 1
+                            if i > 10:
+                                break
                             if row[3] == "online" or self.urlhaus_import_offline:
-                                external_reference = ExternalReference(
+                                external_reference = stix2.ExternalReference(
                                     source_name="Abuse.ch URLhaus",
                                     url=row[7],
                                     description="URLhaus repository URL",
                                 )
-                                stix_observable = URL(
+                                stix_observable = stix2.URL(
                                     value=row[2],
-                                    object_marking_refs=[TLP_WHITE],
+                                    object_marking_refs=[stix2.TLP_WHITE],
                                     custom_properties={
                                         "description": "Threat: "
                                         + row[5]
@@ -128,8 +140,50 @@ class URLhaus:
                                     },
                                 )
                                 bundle_objects.append(stix_observable)
+                                if self.threats_from_labels:
+                                    for label in row[6].split(","):
+                                        if label:
+                                            threat = (
+                                                self.helper.api.stix_domain_object.read(
+                                                    filters=[
+                                                        {
+                                                            "key": "name",
+                                                            "values": [label],
+                                                        }
+                                                    ],
+                                                    first=1,
+                                                )
+                                            )
+                                            if threat is not None:
+                                                date = parse(row[1])
+                                                relation = stix2.Relationship(
+                                                    id=StixCoreRelationship.generate_id(
+                                                        "related-to",
+                                                        stix_observable.id,
+                                                        threat["standard_id"],
+                                                        date,
+                                                        date,
+                                                    ),
+                                                    source_ref=stix_observable.id,
+                                                    target_ref=threat["standard_id"],
+                                                    relationship_type="related-to",
+                                                    start_time=date,
+                                                    stop_time=date
+                                                    + datetime.timedelta(0, 3),
+                                                    confidence=self.helper.connect_confidence_level,
+                                                    created_by_ref=self.identity[
+                                                        "standard_id"
+                                                    ],
+                                                    object_marking_refs=[
+                                                        stix2.TLP_WHITE
+                                                    ],
+                                                    created=date,
+                                                    modified=date,
+                                                    allow_custom=True,
+                                                )
+                                                bundle_objects.append(relation)
                         fp.close()
-                        bundle = Bundle(
+                        bundle = stix2.Bundle(
                             objects=bundle_objects, allow_custom=True
                         ).serialize()
                         self.helper.send_stix2_bundle(

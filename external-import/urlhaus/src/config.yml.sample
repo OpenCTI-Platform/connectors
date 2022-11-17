@@ -15,4 +15,5 @@ urlhaus:
   csv_url: 'https://urlhaus.abuse.ch/downloads/csv_recent/'
   import_offline: true
   create_indicators: true
+  threats_from_labels: true
   interval: 3 # In days, must be strictly greater than 1
