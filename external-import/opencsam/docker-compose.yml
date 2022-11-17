@@ -18,5 +18,6 @@ services:
       - OPENCSAM_API_KEY=ChangeMe
       - OPENCSAM_IMPORT_START_DATE=2022-01-01
       - OPENCSAM_ORGANIZATION=ChangeMe
+      - OPENCSAM_TAGS=ransomware,breach,incident
       - OPENCSAM_INTERVAL=5 # Required, in minutes
     restart: always

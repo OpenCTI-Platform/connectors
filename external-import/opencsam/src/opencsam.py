@@ -47,6 +47,11 @@ class OpenCSAM:
             ["opencsam", "organization"],
             config,
         )
+        self.opencsam_tags = get_config_variable(
+            "OPENCSAM_TAGS",
+            ["opencsam", "tags"],
+            config,
+        ).split(",")
         self.opencsam_interval = get_config_variable(
             "OPENCSAM_INTERVAL", ["opencsam", "interval"], config, True
         )
@@ -60,20 +65,32 @@ class OpenCSAM:
     def get_interval(self):
         return int(self.opencsam_interval) * 60
 
+    def common_data(self, list1, list2):
+        result = False
+        for x in list1:
+            for y in list2:
+                if x == y:
+                    result = True
+                    return result
+        return result
+
     def _generate_objects(self, source):
         objects = []
         external_references = []
+        domain = urlparse(source["source_link_news"]).netloc
+        if domain is None or len(domain) < 3:
+            domain = "OpenCSAM"
         external_reference = stix2.ExternalReference(
-            source_name=urlparse(source["source_link_news"]).netloc, url=source["link"]
+            source_name=domain,
+            url=source["link"],
         )
         external_references.append(external_reference)
         identity_stix = stix2.Identity(
-            id=Identity.generate_id(
-                urlparse(source["source_link_news"]).netloc, "organization"
-            ),
-            name=urlparse(source["source_link_news"]).netloc,
+            id=Identity.generate_id(domain, "organization"),
+            name=domain,
             identity_class="organization",
         )
+        objects.append(identity_stix)
         incident_stix = stix2.Incident(
             id=Incident.generate_id(source["title"]),
             name=source["title"],
@@ -125,7 +142,14 @@ class OpenCSAM:
             for hit in data["hits"]["hits"]:
                 source = hit["_source"]
                 last_news_time = source["published"]
-                objects = objects + self._generate_objects(source)
+                if self.common_data(source["tags"], self.opencsam_tags):
+                    objects = objects + self._generate_objects(source)
+                else:
+                    self.helper.log_info(
+                        '"'
+                        + source["title"]
+                        + '" does not contain correct tags, not adding...'
+                    )
             from_param = from_param + 1000
             params = (
                 ("source", "news"),
@@ -138,13 +162,20 @@ class OpenCSAM:
             )
             response = requests.get(url, headers=headers, params=params)
             data = json.loads(response.content)
-            print(data)
         identity_stix = stix2.Identity(
             id=Identity.generate_id(self.opencsam_organization, "organization"),
             name=self.opencsam_organization,
             identity_class="organization",
         )
-        name = "CTI daily news digest (" + str(len(objects)) + " news detected)"
+        objects.append(identity_stix)
+        ids = []
+        final_objects = []
+        for object in objects:
+            if object["id"] not in ids:
+                ids.append(object["id"])
+                final_objects.append(object)
+        number_of_incidents = len([x for x in objects if x["type"] == "incident"])
+        name = "CTI daily news digest (" + str(number_of_incidents) + " news detected)"
         report_stix = stix2.Report(
             id=Report.generate_id(name, end_date),
             name=name,
@@ -159,10 +190,10 @@ class OpenCSAM:
             allow_custom=True,
             object_marking_refs=[stix2.TLP_GREEN.get("id")],
         )
-        objects.append(report_stix)
+        final_objects.append(report_stix)
         self.helper.send_stix2_bundle(
             stix2.Bundle(
-                objects=objects,
+                objects=final_objects,
                 allow_custom=True,
             ).serialize(),
             update=self.update_existing_data,
