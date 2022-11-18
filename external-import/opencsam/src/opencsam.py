@@ -116,11 +116,7 @@ class OpenCSAM:
         last_news_time = start_date
         # Query params
         url = self.opencsam_api_url + "/search/"
-        headers = {
-            "Content-Type": "application/json",
-            "Bearer": self.opencsam_api_key,
-            "Cookie": "csrftoken=I9sm9w5gHsdRkpqWvaCxrXHflunS8mN2d7Nvfbv29U0B3i1po19pcgCyD9TXEXNG; sessionid=hmbqb2fdsil4fvit5pfesq498ly7bmte; _pk_id.1.662a=4440956b77677637.1668631308.; _pk_ses.1.662a=1",
-        }
+        headers = {"Content-Type": "application/json", "Bearer": self.opencsam_api_key}
         from_param = 0
         params = (
             ("source", "news"),
