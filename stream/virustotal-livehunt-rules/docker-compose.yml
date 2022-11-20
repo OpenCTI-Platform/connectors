@@ -1,0 +1,20 @@
+version: "3"
+services:
+  connector-virustotal-livehunt-stream:
+    image: opencti/connector-virustotal-livehunt-stream:5.3.17
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream for ("Type=Indicator" AND "Indicator type=YARA")
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - "CONNECTOR_NAME=OpenCTI Virustotal Live Hunting"
+      - CONNECTOR_SCOPE=Virustotal
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - VIRUSTOTAL_LIVEHUNT_TOKEN=ChangeMe
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATION_EMAILS=[] #Example: ["wcoyte@acme.com", "rrunner@acme.com"]
+      - VIRUSTOTAL_LIVEHUNT_SHARED_OWNERS=[] # VirusTotal users or groups ID to share rule with. Example: ["johndd", "jimtold"]
+    restart: always
