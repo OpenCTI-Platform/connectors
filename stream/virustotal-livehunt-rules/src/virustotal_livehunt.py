@@ -1,10 +1,11 @@
+import ast
 import json
 import os
 import queue
-import ast
+from time import sleep
+
 import yaml
 from client import VirusTotalClient
-from time import sleep
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 q = queue.Queue()
