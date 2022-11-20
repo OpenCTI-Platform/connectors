@@ -111,11 +111,7 @@ class URLhaus:
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
                         # id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
-                        i = 0
                         for row in rdr:
-                            i = i + 1
-                            if i > 10:
-                                break
                             if row[3] == "online" or self.urlhaus_import_offline:
                                 external_reference = stix2.ExternalReference(
                                     source_name="Abuse.ch URLhaus",
