@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Virustotal client module."""
-import json
 import ast
+import json
+
 import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
