@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
+  name: 'VirusTotal LiveHunts'
+  scope: 'yara' # Reserved
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+virustotal_livehunt:
+  token: 'ChangeMe' # See https://www.virustotal.com/gui/user/YOURUSERNAME/apikey
+  notification_emails: 'ChangeMe'
+  shared_owners: 'ChangeMe'
