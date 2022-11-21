@@ -1,7 +1,8 @@
-import requests
-import urllib
-import validators
 import logging
+import urllib
+
+import requests
+import validators
 
 
 def intelixlookup(token, type, observable, regionuri) -> dict:
