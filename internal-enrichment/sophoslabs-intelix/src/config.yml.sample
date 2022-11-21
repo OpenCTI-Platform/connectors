@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name:  'SophosLabs Intelix Lookup'
+  scope: Url,IPv4-Addr,Domain,File,File-Sha256,Artifact
+  confidence_level: 50
+  log_level: 'info'
+
+sophoslabsintelixlookup:
+  url: 'https://api.labs.sophos.com/doc/index.html'
+  name: 'SophosLabs Intelix Lookup'
+  intelix_client_id: ChangeMe
+  intelix_client_secret: ChangeMe
+  intelix_region_uri: 'https://us.api.labs.sophos.com'
