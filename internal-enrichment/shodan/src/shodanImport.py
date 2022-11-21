@@ -93,13 +93,13 @@ class ShodanConnector:
                         "issuer": ", ".join(
                             (
                                 f"{k}={v}"
-                                for k, v in sslObject["cert"]["subject"].items()
+                                for k, v in sslObject["cert"]["issuer"].items()
                             )
                         ),
                         "validity_not_before": issued.isoformat().split(".")[0] + "Z",
                         "validity_not_after": expires.isoformat().split(".")[0] + "Z",
                         "subject": ", ".join(
-                            (f"{k}={v}" for k, v in sslObject["cert"]["issuer"].items())
+                            (f"{k}={v}" for k, v in sslObject["cert"]["subject"].items())
                         ),
                         "serial_number": ":".join(
                             [
