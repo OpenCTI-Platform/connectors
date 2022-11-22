@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 from typing import Callable, Dict, List
 
+import humps
 import stix2
 import yaml
 from pycti import (
@@ -194,8 +195,10 @@ class ReportImporter:
                             f"found. Is the CVE Connector activated?"
                         )
                         continue
-
-                    entities.append(entity["standard_id"])
+                    entity_stix_bundle = self.helper.api.stix2.export_entity(
+                        entity["entity_type"], entity["id"]
+                    )
+                    entities = entities + entity_stix_bundle["objects"]
                 elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
                     entity = self.helper.api.attack_pattern.read(
                         filters={
@@ -209,8 +212,10 @@ class ReportImporter:
                             f"found. Is the MITRE Connector activated?"
                         )
                         continue
-
-                    entities.append(entity["standard_id"])
+                    entity_stix_bundle = self.helper.api.stix2.export_entity(
+                        entity["entity_type"], entity["id"]
+                    )
+                    entities = entities + entity_stix_bundle["objects"]
                 else:
                     observable = None
                     if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
@@ -325,7 +330,11 @@ class ReportImporter:
                         observables.append(observable)
 
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
-                entities.append(match[RESULT_FORMAT_MATCH])
+                stix_type = humps.pascalize(match[RESULT_FORMAT_CATEGORY])
+                entity_stix_bundle = self.helper.api.stix2.export_entity(
+                    stix_type, match[RESULT_FORMAT_MATCH]
+                )
+                entities = entities + entity_stix_bundle["objects"]
             else:
                 self.helper.log_info("Odd data received: {}".format(match))
 
@@ -335,13 +344,14 @@ class ReportImporter:
         self,
         entity: Dict,
         observables: List,
-        entities_ids: List,
+        entities: List,
         bypass_validation: bool,
         file_name: str,
     ) -> int:
-        if len(observables) == 0 and len(entities_ids) == 0:
+        if len(observables) == 0 and len(entities) == 0:
             return 0
         observables_ids = [o["id"] for o in observables]
+        entities_ids = [o["id"] for o in entities]
         if entity is not None:
             entity_stix_bundle = self.helper.api.stix2.export_entity(
                 entity["entity_type"], entity["id"]
@@ -456,9 +466,16 @@ class ReportImporter:
                 },
             )
             observables.append(report)
+        observables = observables + entities
         bundles_sent = []
         if len(observables) > 0:
-            bundle = stix2.Bundle(objects=observables, allow_custom=True).serialize()
+            ids = []
+            final_objects = []
+            for object in observables:
+                if object["id"] not in ids:
+                    ids.append(object["id"])
+                    final_objects.append(object)
+            bundle = stix2.Bundle(objects=final_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle=bundle,
                 update=True,
