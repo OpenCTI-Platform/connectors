@@ -28,6 +28,7 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_key`                               | `MISP_KEY`                        | Yes          | The MISP instance key.                                                                               |
 | `misp_ssl_verify`                        | `MISP_SSL_VERIFY`                 | Yes          | A boolean (`True` or `False`), check if the SSL certificate is valid when using `https`.             |
 | `misp_datetime_attribute`                | `MISP_DATETIME_ATTRIBUTE`         | Yes          | The attribute to be used in filter to query new MISP events.                                         |
+| `misp_report_description_attribute_filter`                | `MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER`         | No          |  Filter to be used to find the attribute with report description (example: "type=comment,category=Internal reference").                                         |
 | `misp_create_reports`                    | `MISP_CREATE_REPORTS`             | Yes          | A boolean (`True` or `False`), create reports for each imported MISP event.                          |
 | `misp_create_object_observables`         | `MISP_CREATE_OBJECT_OBSERVABLES`         | Yes          | A boolean (`True` or `False`), create a text observable for each imported MISP object.               |
 | `misp_create_observables`                | `MISP_CREATE_OBSERVABLES`         | Yes          | A boolean (`True` or `False`), create an observable for each imported MISP attribute.                |
