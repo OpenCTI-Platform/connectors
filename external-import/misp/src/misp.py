@@ -140,17 +140,19 @@ def filter_event_attributes(event, **filters):
             attributes.append(attribute)
     return attributes
 
+
 def parse_filter_config(config):
     filters = dict()
 
     if not config:
         return filters
 
-    for item in config.split(','):
-        key, value = item.split('=')
+    for item in config.split(","):
+        key, value = item.split("=")
         filters[key] = value
 
     return filters
+
 
 class Misp:
     def __init__(self):
@@ -178,12 +180,14 @@ class Misp:
             False,
             "timestamp",
         )
-        self.misp_report_description_attribute_filter = parse_filter_config(get_config_variable(
-            "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER",
-            ["misp", "report_description_attribute_filter"],
-            config,
-            # "type=comment,category=Internal reference"
-        ))
+        self.misp_report_description_attribute_filter = parse_filter_config(
+            get_config_variable(
+                "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER",
+                ["misp", "report_description_attribute_filter"],
+                config,
+                # "type=comment,category=Internal reference"
+            )
+        )
 
         self.misp_create_reports = get_config_variable(
             "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
@@ -833,8 +837,12 @@ class Misp:
             # Report in STIX must have at least one object_refs
             if self.misp_create_reports and len(object_refs) > 0:
 
-                attributes = filter_event_attributes(event, **self.misp_report_description_attribute_filter)
-                description = attributes[0]['value'] if attributes else event["Event"]["info"]
+                attributes = filter_event_attributes(
+                    event, **self.misp_report_description_attribute_filter
+                )
+                description = (
+                    attributes[0]["value"] if attributes else event["Event"]["info"]
+                )
 
                 report = stix2.Report(
                     id=Report.generate_id(
