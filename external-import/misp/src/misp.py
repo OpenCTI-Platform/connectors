@@ -1133,6 +1133,7 @@ class Misp:
                     elif observable_type == "Email-Message":
                         observable = stix2.EmailMessage(
                             subject=observable_value,
+                            is_multipart=True,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
