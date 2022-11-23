@@ -10,7 +10,8 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 WORKDIR /opt/build
 
 # Install poetry
-RUN apk add --no-cache git poetry
+RUN apk add --no-cache git
+RUN pip3 install poetry
 
 # Install package dependencies
 COPY pyproject.toml poetry.lock ./
