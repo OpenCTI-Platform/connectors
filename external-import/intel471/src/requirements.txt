@@ -1,4 +1,4 @@
-pycti==5.4.0
+pycti==5.4.1
 stix2~=3.0.1
 APScheduler~=3.8.1
 Titan-Client==1.19.2.1
