@@ -673,6 +673,7 @@ class Misp:
                 + event_elements["attack_patterns"]
                 + event_elements["sectors"]
                 + event_elements["countries"]
+                + event_elements["regions"]
             )
             for event_element in all_event_elements:
                 if event_element["id"] not in added_object_refs:
@@ -721,6 +722,7 @@ class Misp:
                     + indicator["attribute_elements"]["attack_patterns"]
                     + indicator["attribute_elements"]["sectors"]
                     + indicator["attribute_elements"]["countries"]
+                    + indicator["attribute_elements"]["regions"]
                 )
                 for attribute_element in all_attribute_elements:
                     if attribute_element["id"] not in added_object_refs:
@@ -1530,6 +1532,7 @@ class Misp:
             "attack_patterns": [],
             "sectors": [],
             "countries": [],
+            "regions": [],
         }
         added_names = []
         for galaxy in galaxies:
@@ -1677,6 +1680,7 @@ class Misp:
                             )
                         )
                         added_names.append(name)
+
             # Get the linked countries
             if galaxy["namespace"] == "misp" and galaxy["name"] == "Country":
                 for galaxy_entity in galaxy["GalaxyCluster"]:
@@ -1694,6 +1698,22 @@ class Misp:
                             )
                         )
                         added_names.append(name)
+
+            # Get the linked regions
+            if galaxy["namespace"] == "misp" and galaxy["type"] == "region" and galaxy["name"] == "Regions UN M49":
+                for galaxy_entity in galaxy["GalaxyCluster"]:
+                    name = galaxy_entity["value"].split(' - ')[1]
+                    if name not in added_names:
+                        elements["regions"].append(
+                            stix2.Location(
+                                id=Location.generate_id(name, "Region"),
+                                name=name,
+                                region=name,
+                                allow_custom=True,
+                            )
+                        )
+                        added_names.append(name)
+
         for tag in tags:
             # Get the linked intrusion sets
             if (
@@ -1983,6 +2003,7 @@ class Misp:
                 and not tag["name"].startswith("misp-galaxy:malpedia")
                 and not tag["name"].startswith("misp-galaxy:sector")
                 and not tag["name"].startswith("misp-galaxy:country")
+                and not tag["name"].startswith("misp-galaxy:region")
             ):
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
