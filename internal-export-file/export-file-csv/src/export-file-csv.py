@@ -206,6 +206,7 @@ class ExportFileCsv:
                 final_entity_type = "Stix-Cyber-Observable"
 
             # List
+            print(list_params)
             lister = {
                 "Stix-Core-Object": self.helper.api_impersonate.stix_core_object.list,
                 "Stix-Domain-Object": self.helper.api_impersonate.stix_domain_object.list,
