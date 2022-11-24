@@ -33,6 +33,7 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_create_object_observables`         | `MISP_CREATE_OBJECT_OBSERVABLES`         | Yes          | A boolean (`True` or `False`), create a text observable for each imported MISP object.               |
 | `misp_create_observables`                | `MISP_CREATE_OBSERVABLES`         | Yes          | A boolean (`True` or `False`), create an observable for each imported MISP attribute.                |
 | `misp_create_indicators`                 | `MISP_CREATE_INDICATORS`          | Yes          | A boolean (`True` or `False`), create an indicator for each imported MISP attribute.                 |
+| `misp_create_tags_as_labels`             | `MISP_CREATE_TAGS_AS_LABELS`          | No          | A boolean (`True` or `False`), create tags as labels.                 |
 | `misp_report_class`                      | `MISP_REPORT_CLASS`               | No           | If `create_reports` is `True`, specify the `report_class` (category), default is `MISP Event`        |
 | `misp_import_from_date`                  | `MISP_IMPORT_FROM_DATE`           | No           | A date formatted `YYYY-MM-DD`, only import events created after this date.                           |
 | `misp_import_tags`                       | `MISP_IMPORT_TAGS`                | No           | A list of tags separated with `,`, only import events with these tags.                               |
