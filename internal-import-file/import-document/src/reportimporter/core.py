@@ -4,7 +4,6 @@ import time
 from datetime import datetime
 from typing import Callable, Dict, List
 
-import humps
 import stix2
 import yaml
 from pycti import (
