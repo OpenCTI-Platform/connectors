@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections import Counter
 from pathlib import Path
-from typing import Iterator, NamedTuple, Optional
+from typing import Iterator, NamedTuple
 from urllib.parse import urlparse
 
 import pycti
@@ -51,13 +51,13 @@ class UrlscanConnector:
             "URLSCAN_URL",
             ["urlscan", "url"],
             config,
-        )  # type: Optional[str]
+        )
 
         urlscan_api_key = get_config_variable(
             "URLSCAN_API_KEY",
             ["urlscan", "api_key"],
             config,
-        )  # type: Optional[str]
+        )
 
         self._create_indicators = get_config_variable(
             "URLSCAN_CREATE_INDICATORS",
