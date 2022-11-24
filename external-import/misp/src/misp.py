@@ -206,7 +206,10 @@ class Misp:
             False,
         )
         self.misp_create_tags_as_labels = get_config_variable(
-            "MISP_CREATE_TAGS_AS_LABELS", ["misp", "create_tags_as_labels"], config, default=True
+            "MISP_CREATE_TAGS_AS_LABELS",
+            ["misp", "create_tags_as_labels"],
+            config,
+            default=True,
         )
         self.misp_report_type = get_config_variable(
             "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
@@ -1748,9 +1751,13 @@ class Misp:
                         added_names.append(name)
 
             # Get the linked regions
-            if galaxy["namespace"] == "misp" and galaxy["type"] == "region" and galaxy["name"] == "Regions UN M49":
+            if (
+                galaxy["namespace"] == "misp"
+                and galaxy["type"] == "region"
+                and galaxy["name"] == "Regions UN M49"
+            ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
-                    name = galaxy_entity["value"].split(' - ')[1]
+                    name = galaxy_entity["value"].split(" - ")[1]
                     if name not in added_names:
                         elements["regions"].append(
                             stix2.Location(
