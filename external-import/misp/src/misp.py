@@ -205,6 +205,9 @@ class Misp:
             False,
             False,
         )
+        self.misp_create_tags_as_labels = get_config_variable(
+            "MISP_CREATE_TAGS_AS_LABELS", ["misp", "create_tags_as_labels"], config, default=True
+        )
         self.misp_report_type = get_config_variable(
             "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
         )
@@ -1995,6 +1998,10 @@ class Misp:
 
     def resolve_tags(self, tags):
         opencti_tags = []
+
+        if not self.misp_create_tags_as_labels:
+            return opencti_tags
+
         for tag in tags:
             if (
                 tag["name"] != "tlp:white"
