@@ -198,7 +198,15 @@ class ReportImporter:
                     entity_stix_bundle = self.helper.api.stix2.export_entity(
                         entity["entity_type"], entity["id"]
                     )
-                    entities = entities + entity_stix_bundle["objects"]
+                    if len(entity_stix_bundle["objects"]) == 0:
+                        raise ValueError("Entity cannot be found or exported")
+                    entity_stix = [
+                        object
+                        for object in entity_stix_bundle["objects"]
+                        if "x_opencti_id" in object
+                        and object["x_opencti_id"] == entity["id"]
+                    ][0]
+                    entities.append(entity_stix)
                 elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
                     entity = self.helper.api.attack_pattern.read(
                         filters={
@@ -215,7 +223,15 @@ class ReportImporter:
                     entity_stix_bundle = self.helper.api.stix2.export_entity(
                         entity["entity_type"], entity["id"]
                     )
-                    entities = entities + entity_stix_bundle["objects"]
+                    if len(entity_stix_bundle["objects"]) == 0:
+                        raise ValueError("Entity cannot be found or exported")
+                    entity_stix = [
+                        object
+                        for object in entity_stix_bundle["objects"]
+                        if "x_opencti_id" in object
+                        and object["x_opencti_id"] == entity["id"]
+                    ][0]
+                    entities.append(entity_stix)
                 else:
                     observable = None
                     if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
@@ -330,11 +346,21 @@ class ReportImporter:
                         observables.append(observable)
 
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
-                stix_type = humps.pascalize(match[RESULT_FORMAT_CATEGORY])
+                stix_type = "-".join(
+                    x[:1].upper() + x[1:]
+                    for x in match[RESULT_FORMAT_CATEGORY].split("_")
+                )
                 entity_stix_bundle = self.helper.api.stix2.export_entity(
                     stix_type, match[RESULT_FORMAT_MATCH]
                 )
-                entities = entities + entity_stix_bundle["objects"]
+                if len(entity_stix_bundle["objects"]) == 0:
+                    raise ValueError("Entity cannot be found or exported")
+                entity_stix = [
+                    object
+                    for object in entity_stix_bundle["objects"]
+                    if object["id"] == match[RESULT_FORMAT_MATCH]
+                ][0]
+                entities.append(entity_stix)
             else:
                 self.helper.log_info("Odd data received: {}".format(match))
 
@@ -350,8 +376,17 @@ class ReportImporter:
     ) -> int:
         if len(observables) == 0 and len(entities) == 0:
             return 0
-        observables_ids = [o["id"] for o in observables]
-        entities_ids = [o["id"] for o in entities]
+        ids = []
+        observables_ids = []
+        entities_ids = []
+        for o in observables:
+            if o["id"] not in ids:
+                observables_ids.append(o["id"])
+                ids.append(o["id"])
+        for e in entities:
+            if e["id"] not in ids:
+                entities_ids.append(e["id"])
+                ids.append(e["id"])
         if entity is not None:
             entity_stix_bundle = self.helper.api.stix2.export_entity(
                 entity["entity_type"], entity["id"]
@@ -475,6 +510,7 @@ class ReportImporter:
                 if object["id"] not in ids:
                     ids.append(object["id"])
                     final_objects.append(object)
+            print(final_objects)
             bundle = stix2.Bundle(objects=final_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle=bundle,
