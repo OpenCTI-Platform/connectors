@@ -1,0 +1,13 @@
+- scope: Report
+  rules:
+  - label: cloud
+    search: "cloud"
+    attributes:
+    - name
+    - description
+
+  - label: mobile
+    search: "mobile"
+    attributes:
+    - name
+    - description
