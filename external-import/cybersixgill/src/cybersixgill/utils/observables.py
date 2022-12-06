@@ -3,22 +3,12 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
-from cybersixgill.utils.constants import (
-    DEFAULT_X_OPENCTI_SCORE,
-    X_OPENCTI_CREATED_BY_REF,
-    X_OPENCTI_LABELS,
-    X_OPENCTI_SCORE,
-)
+from cybersixgill.utils.constants import (DEFAULT_X_OPENCTI_SCORE,
+                                          X_OPENCTI_CREATED_BY_REF,
+                                          X_OPENCTI_LABELS, X_OPENCTI_SCORE)
 from stix2 import DomainName  # type: ignore
-from stix2 import (
-    URL,
-    CustomObservable,
-    File,
-    Identity,
-    IPv4Address,
-    IPv6Address,
-    MarkingDefinition,
-)
+from stix2 import (URL, CustomObservable, File, Identity, IPv4Address,
+                   IPv6Address, MarkingDefinition)
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
 
