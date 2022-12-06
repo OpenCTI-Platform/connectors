@@ -7,12 +7,13 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
 import yaml
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti.connector.opencti_connector_helper import \
+    get_config_variable  # type: ignore
 
 from cybersixgill.client import CybersixgillClient
 from cybersixgill.importer import IndicatorImporter, IndicatorImporterConfig
 from cybersixgill.utils import create_organization, timestamp_to_datetime
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
 
 
 class Cybersixgill:

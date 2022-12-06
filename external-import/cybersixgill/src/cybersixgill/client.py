@@ -1,10 +1,12 @@
 """OpenCTI Cybersixgill client module."""
 
-from sixgill.sixgill_feed_client import SixgillFeedClient
-from sixgill.sixgill_constants import FeedStream
-from sixgill.sixgill_utils import is_indicator
-from .utils.constants import CHANNEL_ID
 import re
+
+from sixgill.sixgill_constants import FeedStream
+from sixgill.sixgill_feed_client import SixgillFeedClient
+from sixgill.sixgill_utils import is_indicator
+
+from .utils.constants import CHANNEL_ID
 
 __all__ = [
     "CybersixgillClient",

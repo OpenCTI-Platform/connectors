@@ -4,40 +4,26 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional
 
 import stix2
-from cybersixgill.utils.constants import (
-    DEFAULT_X_OPENCTI_SCORE,
-    X_OPENCTI_MAIN_OBSERVABLE_TYPE,
-    X_OPENCTI_SCORE,
-)
+from cybersixgill.utils.constants import (DEFAULT_X_OPENCTI_SCORE,
+                                          X_OPENCTI_MAIN_OBSERVABLE_TYPE,
+                                          X_OPENCTI_SCORE)
 from cybersixgill.utils.indicators import (
-    IndicatorPattern,
-    create_indicator_pattern_domain_name,
-    create_indicator_pattern_file_md5,
-    create_indicator_pattern_file_name,
-    create_indicator_pattern_file_sha1,
-    create_indicator_pattern_file_sha256,
-    create_indicator_pattern_hostname,
-    create_indicator_pattern_ipv4_address,
-    create_indicator_pattern_ipv6_address,
-    create_indicator_pattern_url,
-)
-from cybersixgill.utils.observables import (
-    ObservableProperties,
-    create_observable_domain_name,
-    create_observable_file_md5,
-    create_observable_file_name,
-    create_observable_file_sha1,
-    create_observable_file_sha256,
-    create_observable_hostname,
-    create_observable_ipv4_address,
-    create_observable_ipv6_address,
-    create_observable_url,
-)
-from pycti import (
-    Identity,
-    Indicator,
-    StixCoreRelationship,
-)
+    IndicatorPattern, create_indicator_pattern_domain_name,
+    create_indicator_pattern_file_md5, create_indicator_pattern_file_name,
+    create_indicator_pattern_file_sha1, create_indicator_pattern_file_sha256,
+    create_indicator_pattern_hostname, create_indicator_pattern_ipv4_address,
+    create_indicator_pattern_ipv6_address, create_indicator_pattern_url)
+from cybersixgill.utils.observables import (ObservableProperties,
+                                            create_observable_domain_name,
+                                            create_observable_file_md5,
+                                            create_observable_file_name,
+                                            create_observable_file_sha1,
+                                            create_observable_file_sha256,
+                                            create_observable_hostname,
+                                            create_observable_ipv4_address,
+                                            create_observable_ipv6_address,
+                                            create_observable_url)
+from pycti import Identity, Indicator, StixCoreRelationship
 from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 
