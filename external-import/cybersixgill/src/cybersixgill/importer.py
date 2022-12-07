@@ -4,11 +4,10 @@ from datetime import datetime
 from typing import Any, Dict, NamedTuple, Optional
 
 import stix2
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2.exceptions import STIXError
-
 from cybersixgill.builder import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
 from cybersixgill.client import CybersixgillClient
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from stix2.exceptions import STIXError
 
 
 class IndicatorImporterConfig(NamedTuple):
