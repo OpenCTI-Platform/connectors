@@ -7,18 +7,22 @@ from typing import List, Mapping, NamedTuple, Optional
 import stix2
 from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
-from cybersixgill.utils import (OBSERVATION_FACTORY_DOMAIN_NAME,
-                                OBSERVATION_FACTORY_FILE_MD5,
-                                OBSERVATION_FACTORY_FILE_SHA1,
-                                OBSERVATION_FACTORY_FILE_SHA256,
-                                OBSERVATION_FACTORY_HOSTNAME,
-                                OBSERVATION_FACTORY_IPV4_ADDRESS,
-                                OBSERVATION_FACTORY_IPV6_ADDRESS,
-                                OBSERVATION_FACTORY_URL, ObservableProperties,
-                                ObservationFactory,
-                                create_based_on_relationships,
-                                create_external_reference, create_indicator,
-                                create_organization)
+from cybersixgill.utils import (
+    OBSERVATION_FACTORY_DOMAIN_NAME,
+    OBSERVATION_FACTORY_FILE_MD5,
+    OBSERVATION_FACTORY_FILE_SHA1,
+    OBSERVATION_FACTORY_FILE_SHA256,
+    OBSERVATION_FACTORY_HOSTNAME,
+    OBSERVATION_FACTORY_IPV4_ADDRESS,
+    OBSERVATION_FACTORY_IPV6_ADDRESS,
+    OBSERVATION_FACTORY_URL,
+    ObservableProperties,
+    ObservationFactory,
+    create_based_on_relationships,
+    create_external_reference,
+    create_indicator,
+    create_organization,
+)
 
 log = logging.getLogger(__name__)
 
