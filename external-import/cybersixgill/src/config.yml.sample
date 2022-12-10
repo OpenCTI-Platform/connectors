@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Cybersixgill Darkfeed'
+  scope: 'cybersixgill' # MIME type or SCO
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+  update_existing_data: True
+
+cybersixgill:
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  create_observables: true
+  create_indicators: true
+  enable_relationships: true
+  fetch_size: 2000
+  interval_sec: 300    # Seconds
