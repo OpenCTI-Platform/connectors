@@ -193,6 +193,14 @@ jobs:
           name: Build Docker image opencti/connector-malbeacon
           command: docker build -t opencti/connector-malbeacon:latest . && docker tag opencti/connector-malbeacon:latest opencti/connector-malbeacon:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/crowdsec
+          name: Build Docker image opencti/connector-crowdsec
+          command: docker build -t opencti/connector-crowdsec:latest . && docker tag opencti/connector-crowdsec:latest opencti/connector-crowdsec:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/sophoslabs-intelix
+          name: Build Docker image opencti/connector-sophoslabs-intelix
+          command: docker build -t opencti/connector-sophoslabs-intelix:latest . && docker tag opencti/connector-sophoslabs-intelix:latest opencti/connector-sophoslabs-intelix:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -266,6 +274,10 @@ jobs:
             docker push opencti/connector-urlhaus:${CIRCLE_TAG}
             docker push opencti/connector-malbeacon:latest
             docker push opencti/connector-malbeacon:${CIRCLE_TAG}
+            docker push opencti/connector-crowdsec:latest
+            docker push opencti/connector-crowdsec:${CIRCLE_TAG}
+            docker push opencti/connector-sophoslabs-intelix:latest
+            docker push opencti/connector-sophoslabs-intelix:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -445,6 +457,14 @@ jobs:
           name: Build Docker image opencti/connector-opencsam
           command: docker build -t opencti/connector-opencsam:latest . && docker tag opencti/connector-opencsam:latest opencti/connector-opencsam:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/joe-sandbox
+          name: Build Docker image opencti/connector-joe-sandbox
+          command: docker build -t opencti/connector-joe-sandbox:latest . && docker tag opencti/connector-joe-sandbox:latest opencti/connector-joe-sandbox:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/crits
+          name: Build Docker image opencti/connector-crits
+          command: docker build -t opencti/connector-crits:latest . && docker tag opencti/connector-crits:latest opencti/connector-crits:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -530,6 +550,10 @@ jobs:
             docker push opencti/connector-recordedfuture-notes:${CIRCLE_TAG}
             docker push opencti/connector-opencsam:latest
             docker push opencti/connector-opencsam:${CIRCLE_TAG}
+            docker push opencti/connector-joe-sandbox:latest
+            docker push opencti/connector-joe-sandbox:${CIRCLE_TAG}
+            docker push opencti/connector-crits:latest
+            docker push opencti/connector-crits:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -681,6 +705,14 @@ jobs:
           name: Build Docker image opencti/connector-malbeacon
           command: docker build -t opencti/connector-malbeacon:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/crowdsec
+          name: Build Docker image opencti/connector-crowdsec
+          command: docker build -t opencti/connector-crowdsec:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/sophoslabs-intelix
+          name: Build Docker image opencti/connector-sophoslabs-intelix
+          command: docker build -t opencti/connector-sophoslabs-intelix:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -718,6 +750,8 @@ jobs:
             docker push opencti/connector-abuseipdb:rolling
             docker push opencti/connector-urlhaus:rolling
             docker push opencti/connector-malbeacon:rolling
+            docker push opencti/connector-crowdsec:rolling
+            docker push opencti/connector-sophoslabs-intelix:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -897,6 +931,14 @@ jobs:
           name: Build Docker image opencti/connector-opencsam
           command: docker build -t opencti/connector-opencsam:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/joe-sandbox
+          name: Build Docker image opencti/connector-joe-sandbox
+          command: docker build -t opencti/connector-joe-sandbox:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/crits
+          name: Build Docker image opencti/connector-crits
+          command: docker build -t opencti/connector-crits:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -941,6 +983,8 @@ jobs:
             docker push opencti/connector-ironnet:rolling
             docker push opencti/connector-recordedfuture-notes:rolling
             docker push opencti/connector-opencsam:rolling
+            docker push opencti/connector-joe-sandbox:rolling
+            docker push opencti/connector-crits:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

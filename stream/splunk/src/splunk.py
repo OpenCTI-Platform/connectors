@@ -106,6 +106,7 @@ class SplunkConnector:
                 "splunk", "query", "{}", payload["pattern"]
             )
             payload["splunk_queries"] = response
+            print(payload)
         if method == "get":
             r = requests.get(
                 url,
