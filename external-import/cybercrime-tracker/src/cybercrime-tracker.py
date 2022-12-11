@@ -2,6 +2,7 @@ import datetime
 import os
 import sys
 import time
+import traceback
 from urllib.parse import quote, urlparse
 
 import feedparser
@@ -51,6 +52,8 @@ class Cybercrimetracker:
         self.connector_tlp = get_config_variable(
             "CYBERCRIME_TRACKER_TLP", ["cybercrime-tracker", "tlp"], config
         )
+        if self.connector_tlp == "WHITE":
+            self.connector_tlp = "CLEAR"
         self.create_indicators = get_config_variable(
             "CYBERCRIME_TRACKER_CREATE_INDICATORS",
             ["cybercrime-tracker", "create_indicators"],
@@ -350,8 +353,8 @@ class Cybercrimetracker:
                             update=self.update_existing_data,
                             work_id=work_id,
                         )
-                    except Exception as e:
-                        self.helper.log_error(str(e))
+                    except Exception:
+                        self.helper.log_error(traceback.format_exc())
 
                     # Store the current timestamp as a last run
                     message = (
@@ -380,8 +383,8 @@ class Cybercrimetracker:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
-            except Exception as e:
-                self.helper.log_error(str(e))
+            except Exception:
+                self.helper.log_error(traceback.format_exc())
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
@@ -394,7 +397,7 @@ if __name__ == "__main__":
     try:
         cybercrimetrackerConnector = Cybercrimetracker()
         cybercrimetrackerConnector.run()
-    except Exception as e:
-        print(e)
+    except Exception:
+        print(traceback.format_exc())
         time.sleep(10)
         sys.exit(0)
