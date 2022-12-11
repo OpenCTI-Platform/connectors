@@ -21,3 +21,4 @@ splunk:
   ssl_verify: true
   app: 'search'
   kv_store_name: 'opencti'
+  ignore_types: 'label,marking-definition,identity'
