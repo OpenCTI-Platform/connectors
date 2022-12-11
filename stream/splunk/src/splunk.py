@@ -45,6 +45,9 @@ class SplunkConnector:
         self.splunk_kv_store_name = get_config_variable(
             "SPLUNK_KV_STORE_NAME", ["splunk", "kv_store_name"], config
         )
+        self.splunk_ignore_types = get_config_variable(
+            "SPLUNK_IGNORE_TYPES", ["splunk", "ignore_types"], config
+        ).split(",")
 
         if (
             self.helper.connect_live_stream_id is None
@@ -101,12 +104,31 @@ class SplunkConnector:
             and payload["type"] == "indicator"
             and payload["pattern_type"].startswith("stix")
         ):
-            translation = stix_translation.StixTranslation()
-            response = translation.translate(
-                "splunk", "query", "{}", payload["pattern"]
-            )
-            payload["splunk_queries"] = response
-            print(payload)
+            try:
+                translation = stix_translation.StixTranslation()
+                response = translation.translate(
+                    "splunk", "query", "{}", payload["pattern"]
+                )
+                payload["splunk_queries"] = response
+                parsed = translation.translate(
+                    "splunk", "parse", "{}", payload["pattern"]
+                )
+                if "parsed_stix" in parsed:
+                    payload["mapped_values"] = []
+                    for value in parsed["parsed_stix"]:
+                        formatted_value = {}
+                        formatted_value[value["attribute"]] = value["value"]
+                        payload["mapped_values"].append(formatted_value)
+            except:
+                try:
+                    splitted = payload["pattern"].split(" = ")
+                    key = splitted[0].replace("[", "")
+                    value = splitted[1].replace("'", "").replace("]", "")
+                    formatted_value = {}
+                    formatted_value[key] = value
+                    payload["mapped_values"] = [formatted_value]
+                except:
+                    pass
         if method == "get":
             r = requests.get(
                 url,
@@ -192,6 +214,11 @@ class SplunkConnector:
         except:
             raise ValueError("Cannot process the message: " + msg)
         # Handle creation
+        if data["type"] in self.splunk_ignore_types:
+            self.helper.log_info(
+                "[EVENT] Ignoring received event with type " + data["type"]
+            )
+            return None
         if msg.event == "create":
             self.helper.log_info(
                 "[CREATE] Processing data {"

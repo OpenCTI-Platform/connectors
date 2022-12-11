@@ -21,4 +21,5 @@ services:
       - SPLUNK_SSL_VERIFY=true
       - SPLUNK_APP=search
       - SPLUNK_KV_STORE_NAME=opencti
+      - SPLUNK_IGNORE_TYPES=label,marking-definition,identity
     restart: always
