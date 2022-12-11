@@ -128,6 +128,7 @@ class SplunkConnector:
                     formatted_value[key] = value
                     payload["mapped_values"] = [formatted_value]
                 except:
+                    payload["mapped_values"] = []
                     pass
         if method == "get":
             r = requests.get(
