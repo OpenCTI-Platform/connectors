@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Flashpoint'
+  scope: 'flashpoint'
+  confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  run_and_terminate: false
+  log_level: 'info'
+
+flashpoint:
+  api_key: 'ChangeMe'
+  import_apt: true
+  import_malware: true
+  import_start_date: '2022-01-01'
+  import_indicators: true
+  interval: 5 # In minutes
