@@ -31,26 +31,27 @@ class TaggerConnector:
         entity_id = data.get("entity_id")
 
         for definition in self.definitions:
+            for scope in definition["scopes"]:
 
-            entity_type = definition["scope"].lower()
-            api = getattr(self.helper.api, entity_type)
-            entity = api.read(id=entity_id)
+                entity_type = scope.lower()
+                api = getattr(self.helper.api, entity_type)
+                entity = api.read(id=entity_id)
 
-            if not entity:
-                continue
+                if not entity:
+                    continue
 
-            for rule in definition["rules"]:
-                flags = load_re_flags(rule)
+                for rule in definition["rules"]:
+                    flags = load_re_flags(rule)
 
-                for attribute in rule["attributes"]:
-                    if not re.search(rule["search"], entity[attribute], flags=flags):
-                        continue
+                    for attribute in rule["attributes"]:
+                        if not re.search(rule["search"], entity[attribute], flags=flags):
+                            continue
 
-                    self.helper.api.stix_domain_object.add_label(
-                        id=entity_id,
-                        label_name=rule["label"]
-                    )
-                    break
+                        self.helper.api.stix_domain_object.add_label(
+                            id=entity_id,
+                            label_name=rule["label"]
+                        )
+                        break
 
 
 if __name__ == "__main__":
