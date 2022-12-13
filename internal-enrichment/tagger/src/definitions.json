@@ -1,13 +1,14 @@
 - scope: Report
   rules:
   - label: cloud
-    search: "cloud"
+    search: "[cC]loud"
     attributes:
     - name
     - description
 
   - label: mobile
-    search: "mobile"
+    search: "mobile|android|apk"
+    flags:
+    - IGNORECASE
     attributes:
     - name
-    - description

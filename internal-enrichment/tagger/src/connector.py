@@ -1,15 +1,28 @@
-import stix2
 import json
+import re
 
 from pycti import OpenCTIConnectorHelper
 from pycti import get_config_variable
+
+
+def load_re_flags(rule):
+    """Load the regular expression flags from a rule definition."""
+
+    config = rule.get("flags") or []
+
+    flags = 0
+    for flag in config:
+        flag = getattr(re, flag)
+        flags |= flag
+
+    return flags
 
 
 class TaggerConnector:
 
     def __init__(self):
         self.helper = OpenCTIConnectorHelper({})
-        self.definitions = json.loads(get_config_variable("TAGGER_DEFINITIONS", []))     
+        self.definitions = json.loads(get_config_variable("TAGGER_DEFINITIONS", []))
 
     def start(self):
         self.helper.listen(self._process_message)
@@ -27,10 +40,10 @@ class TaggerConnector:
                 continue
 
             for rule in definition["rules"]:
-                for attribute in rule["attributes"]:
+                flags = load_re_flags(rule)
 
-                    # FIXME: improve search capability
-                    if rule["search"] not in entity[attribute]:                   
+                for attribute in rule["attributes"]:
+                    if not re.search(rule["search"], entity[attribute], flags=flags):
                         continue
 
                     self.helper.api.stix_domain_object.add_label(
