@@ -12,3 +12,4 @@ Pipfile*
 .venv
 *.key
 *.crt
+.env
