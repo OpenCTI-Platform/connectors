@@ -1,4 +1,4 @@
-# OpenCTI Mandiant Connector
+# Mandiant Connector
 
 This connector connects to the Mandiant Advantage API V4 and gather all data from a given date.
 
@@ -6,15 +6,39 @@ This connector connects to the Mandiant Advantage API V4 and gather all data fro
 
 The connector can be configured with the following variables:
 
-| Config Parameter | Docker env var | Default | Description |
-| ---------------------------- | ---------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `api_url` | `MANDIANT_API_URL` | `https://api.intelligence.mandiant.com` | The base URL for the Mandiant API. |
-| `api_v4_key_id` | `MANDIANT_API_V4_KEY_ID` | `ChangeMe` | The Mandiant API client ID. |
-| `api_v4_key_secret` | `MANDIANT_API_V4_KEY_SECRET` | `ChangeMe` | The Mandiant API client secret. |
-| `collections` | `MANDIANT_COLLECTIONS` | `actor,malware,indicator,vulnerability,report` | Specify what Collections you want to pull. |
-| `threat_actor_as_intrusion_set` | `MANDIANT_THREAT_ACTOR_AS_INTRUSION_SET` | `true` | If true, then threat actors will be added to intrusion set. |
-| `days_before_start` | `MANDIANT_DAYS_BEFORE_START` | `89` | The Mandiant API limits the import start date to be less than 90 days. |
-| `interval` | `MANDIANT_INTERVAL` | `60` | In minutes, the amount of time between each run of the connector. |
-| `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | `false` | If true, then the connector will update existing data. |
-| `report_types_ignored` | `MANDIANT_REPORT_TYPES_IGNORED` | `Vulnerability Report` | This ignores certain report types, the amount of reports daily and the amount of repetitive software creating extensive delay processing reports. |
-| `mscore` | `MANDIANT_MSCORE` | `0` | Defines the minimum Indicator Confidence Score to return. A good starting point is 80 if looking for malicious indicators. |
+| Env var | Default | Description |
+| - | - | - |
+| `MANDIANT_API_URL` | https://api.intelligence.mandiant.com | URL for the Mandiant API |
+| `MANDIANT_API_V4_KEY_ID` | | Mandiant API Key ID |
+| `MANDIANT_API_V4_KEY_SECRET` | | Mandiant API Key Secret |
+| `MANDIANT_INTERVAL` | 1 | Number of the days between each collection. |
+| `MANDIANT_IMPORT_START_DATE` | 2023-01-01 | Date to start collect data |
+| `MANDIANT_COLLECTIONS` | actor,malware,indicator,vulnerability,report | Type of data to be collected |
+| `MANDIANT_REPORT_TYPES_IGNORED` | News Analysis| Type of data to be collected |
+
+### Collections
+
+* actor
+* malware
+* indicator
+* vulnerability
+* report
+
+### Report Types
+
+* Actor Profile
+* Country Profile
+* Event Coverage/Implication
+* Executive Perspective
+* ICS Security Roundup
+* Industry Reporting
+* Malware Profile
+* Network Activity Reports
+* News Analysis
+* Patch Report
+* TTP Deep Dive
+* Threat Activity Alert
+* Threat Activity Report
+* Trends and Forecasting
+* Vulnerability Report
+* Weekly Vulnerability Exploitation Report
