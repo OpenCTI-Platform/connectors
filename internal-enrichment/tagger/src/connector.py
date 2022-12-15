@@ -1,8 +1,7 @@
 import json
 import re
 
-from pycti import OpenCTIConnectorHelper
-from pycti import get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 def load_re_flags(rule):
@@ -19,7 +18,6 @@ def load_re_flags(rule):
 
 
 class TaggerConnector:
-
     def __init__(self):
         self.helper = OpenCTIConnectorHelper({})
         self.definitions = json.loads(get_config_variable("TAGGER_DEFINITIONS", []))
@@ -44,12 +42,13 @@ class TaggerConnector:
                     flags = load_re_flags(rule)
 
                     for attribute in rule["attributes"]:
-                        if not re.search(rule["search"], entity[attribute], flags=flags):
+                        if not re.search(
+                            rule["search"], entity[attribute], flags=flags
+                        ):
                             continue
 
                         self.helper.api.stix_domain_object.add_label(
-                            id=entity_id,
-                            label_name=rule["label"]
+                            id=entity_id, label_name=rule["label"]
                         )
                         break
 

@@ -210,7 +210,7 @@ class SplunkConnector:
         return "Sent " + str(len(self.splunk_url)) + " jobs for execution"
 
     def _process_message(self, msg):
-        
+
         try:
             data = json.loads(msg.data)["data"]
             # Handle creation
@@ -221,7 +221,9 @@ class SplunkConnector:
                     + "}"
                 )
                 # Do any processing needed
-                data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "id", data
+                )
 
                 # Distribute the works on parallel threads for ingestion
                 return self._distribute_works(
@@ -234,7 +236,9 @@ class SplunkConnector:
                     + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
                     + "}"
                 )
-                data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "id", data
+                )
                 return self._distribute_works(
                     "post",
                     "/data/"
@@ -262,18 +266,10 @@ class SplunkConnector:
             return None
 
         except Exception as e:
-            
-            self.helper.log_error(
-                    "[ERROR] Failed processing data {"
-                    + str(e)
-                    + "}"
-                )
-            self.helper.log_error(
-                    "[ERROR] Message data {"
-                    + str(msg)
-                    + "}"
-                )
-            return None 
+
+            self.helper.log_error("[ERROR] Failed processing data {" + str(e) + "}")
+            self.helper.log_error("[ERROR] Message data {" + str(msg) + "}")
+            return None
 
     def start(self):
         self.helper.listen_stream(self._process_message)

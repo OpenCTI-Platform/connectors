@@ -205,6 +205,10 @@ jobs:
           name: Build Docker image opencti/connector-flashpoint
           command: docker build -t opencti/connector-flashpoint:latest . && docker tag opencti/connector-flashpoint:latest opencti/connector-flashpoint:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/tagger
+          name: Build Docker image opencti/connector-tagger
+          command: docker build -t opencti/connector-tagger:latest . && docker tag opencti/connector-tagger:latest opencti/connector-tagger:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -284,6 +288,8 @@ jobs:
             docker push opencti/connector-sophoslabs-intelix:${CIRCLE_TAG}
             docker push opencti/connector-flashpoint:latest
             docker push opencti/connector-flashpoint:${CIRCLE_TAG}
+            docker push opencti/connector-tagger:latest
+            docker push opencti/connector-tagger:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -723,6 +729,10 @@ jobs:
           name: Build Docker image opencti/connector-flashpoint
           command: docker build -t opencti/connector-flashpoint:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/tagger
+          name: Build Docker image opencti/connector-tagger
+          command: docker build -t opencti/connector-tagger:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -763,6 +773,7 @@ jobs:
             docker push opencti/connector-crowdsec:rolling
             docker push opencti/connector-sophoslabs-intelix:rolling
             docker push opencti/connector-flashpoint:rolling
+            docker push opencti/connector-tagger:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
