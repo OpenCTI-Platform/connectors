@@ -210,62 +210,70 @@ class SplunkConnector:
         return "Sent " + str(len(self.splunk_url)) + " jobs for execution"
 
     def _process_message(self, msg):
+        
         try:
             data = json.loads(msg.data)["data"]
-        except:
-            raise ValueError("Cannot process the message: " + msg)
-        # Handle creation
-        if data["type"] in self.splunk_ignore_types:
-            self.helper.log_info(
-                "[EVENT] Ignoring received event with type " + data["type"]
-            )
-            return None
-        if msg.event == "create":
-            self.helper.log_info(
-                "[CREATE] Processing data {"
-                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                + "}"
-            )
-            # Do any processing needed
-            data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+            # Handle creation
+            if msg.event == "create":
+                self.helper.log_info(
+                    "[CREATE] Processing data {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
+                )
+                # Do any processing needed
+                data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
 
-            # Distribute the works on parallel threads for ingestion
-            return self._distribute_works(
-                "post", "/data/" + self.splunk_kv_store_name, data, True
-            )
-        # Handle update
-        if msg.event == "update":
-            self.helper.log_info(
-                "[UPDATE] Processing data {"
-                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                + "}"
-            )
-            data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            return self._distribute_works(
-                "post",
-                "/data/"
-                + self.splunk_kv_store_name
-                + "/"
-                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
-                data,
-                True,
-            )
-        # Handle delete
-        elif msg.event == "delete":
-            self.helper.log_info(
-                "[DELETE] Processing data {"
-                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                + "}"
-            )
-            return self._distribute_works(
-                "delete",
-                "/data/"
-                + self.splunk_kv_store_name
-                + "/"
-                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
-                data,
-            )
-        return None
+                # Distribute the works on parallel threads for ingestion
+                return self._distribute_works(
+                    "post", "/data/" + self.splunk_kv_store_name, data, True
+                )
+            # Handle update
+            if msg.event == "update":
+                self.helper.log_info(
+                    "[UPDATE] Processing data {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
+                )
+                data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                return self._distribute_works(
+                    "post",
+                    "/data/"
+                    + self.splunk_kv_store_name
+                    + "/"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
+                    data,
+                    True,
+                )
+            # Handle delete
+            elif msg.event == "delete":
+                self.helper.log_info(
+                    "[DELETE] Processing data {"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                    + "}"
+                )
+                return self._distribute_works(
+                    "delete",
+                    "/data/"
+                    + self.splunk_kv_store_name
+                    + "/"
+                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
+                    data,
+                )
+            return None
+
+        except Exception as e:
+            
+            self.helper.log_error(
+                    "[ERROR] Failed processing data {"
+                    + str(e)
+                    + "}"
+                )
+            self.helper.log_error(
+                    "[ERROR] Message data {"
+                    + str(msg)
+                    + "}"
+                )
+            return None 
 
     def start(self):
         self.helper.listen_stream(self._process_message)
