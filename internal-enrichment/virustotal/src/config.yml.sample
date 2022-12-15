@@ -14,6 +14,7 @@ connector:
 virustotal:
   token: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
+  replace_with_lower_score: false # Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).
 
   # File/Artifact specific config settings
   file_create_note_full_report: true # Whether or not to include the full report as a Note

@@ -25,18 +25,18 @@ class VirusTotalBuilder:
         self,
         helper: OpenCTIConnectorHelper,
         author: stix2.Identity,
+        replace_with_lower_score: bool,
         observable: dict,
         data: dict,
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
         self.author = author
+        self.replace_with_lower_score = replace_with_lower_score
         self.bundle = [self.author]
         self.observable = observable
         self.attributes = data["attributes"]
-        self.score = VirusTotalBuilder._compute_score(
-            self.attributes["last_analysis_stats"]
-        )
+        self.score = self._compute_score(self.attributes["last_analysis_stats"])
 
         # Update score of observable.
         self.helper.api.stix_cyber_observable.update_field(
@@ -55,8 +55,7 @@ class VirusTotalBuilder:
         else:
             self.external_reference = None
 
-    @staticmethod
-    def _compute_score(stats: dict) -> int:
+    def _compute_score(self, stats: dict) -> int:
         """
         Compute the score for the observable.
 
@@ -72,13 +71,20 @@ class VirusTotalBuilder:
         int
             Score, in percent, rounded.
         """
-        return round(
+        vt_score = round(
             (
                 stats["malicious"]
                 / (stats["harmless"] + stats["undetected"] + stats["malicious"])
             )
             * 100
         )
+        if self.replace_with_lower_score:
+            return vt_score
+        self.create_note(
+            "VirusTotal Score",
+            f"```\n{vt_score}\n```",
+        )
+        return max(vt_score, self.observable["x_opencti_score"])
 
     def create_asn_belongs_to(self):
         """Create AutonomousSystem and Relationship between the observable."""
