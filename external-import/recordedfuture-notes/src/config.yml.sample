@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'Recorded Future Analyst Notes' # Required
-  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
+  scope: 'recorded-future'
   confidence_level: 5
   update_existing_data: True
   log_level: 'info'
