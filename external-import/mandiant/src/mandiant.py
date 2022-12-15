@@ -73,7 +73,7 @@ class Mandiant:
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Mandiant",
-            description="Mandiant is recognized by enterprises, governments and law enforcement agencies worldwide as the market leader in threat intelligence and expertise gained on the frontlines of cyber security. ",
+            description="Mandiant is recognized by enterprises, governments and law enforcement agencies worldwide as the market leader in threat intelligence and expertise gained on the frontlines of cyber security.",
         )
 
         # self.marking = self.helper.api.marking_definition.create(
@@ -551,7 +551,6 @@ class Mandiant:
                 )
                 offset = offset + limit
                 current_state["actor"] = offset
-                self.helper.set_state(current_state)
             else:
                 no_more_result = True
         return current_state
@@ -673,7 +672,6 @@ class Mandiant:
                 )
                 offset = offset + limit
                 current_state["malware"] = offset
-                self.helper.set_state(current_state)
             else:
                 no_more_result = True
         return current_state
@@ -754,7 +752,6 @@ class Mandiant:
             start_epoch = end_epoch
             end_epoch = start_epoch + 3600
             current_state["vulnerability"] = int(start_epoch)
-            self.helper.set_state(current_state)
         return current_state
 
     def _import_indicator(self, work_id, current_state):
@@ -1171,9 +1168,6 @@ class Mandiant:
                     setting_state = start_time
                 self.helper.log_info("Setting Report state to " + str(setting_state))
                 current_state["report"] = setting_state
-
-                self.helper.set_state(current_state)
-
         return current_state
 
     def run(self):
