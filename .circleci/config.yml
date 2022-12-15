@@ -845,6 +845,10 @@ jobs:
           name: Build Docker image opencti/connector-cape-sandbox
           command: docker build -t opencti/connector-cape-sandbox:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/domaintools
+          name: Build Docker image opencti/connector-domaintools
+          command: docker build -t opencti/connector-domaintools:rolling .
+      - run:
           working_directory: ~/opencti/internal-enrichment/intezer-sandbox
           name: Build Docker image opencti/connector-intezer-sandbox
           command: docker build -t opencti/connector-intezer-sandbox:rolling .
@@ -978,6 +982,7 @@ jobs:
             docker push opencti/connector-restore-files:rolling
             docker push opencti/connector-virustotal-livehunt-notifications:rolling
             docker push opencti/connector-cape-sandbox:rolling
+            docker push opencti/connector-domaintools:rolling
             docker push opencti/connector-intezer-sandbox:rolling
             docker push opencti/connector-hatching-triage-sandbox:rolling
             docker push opencti/connector-unpac-me:rolling
