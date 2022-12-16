@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'MITRE Datasets'
-  scope: 'marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,external-reference-as-report'
+  scope: 'marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,x-mitre-data-component,x-mitre-data-source,external-reference-as-report'
   confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: false
   run_and_terminate: false

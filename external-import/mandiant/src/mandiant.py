@@ -662,14 +662,15 @@ class Mandiant:
                                 objects.append(stix_relationship)
                     except Exception as e:
                         self.helper.log_error(str(e))
-                self.helper.send_stix2_bundle(
-                    stix2.Bundle(
-                        objects=objects,
-                        allow_custom=True,
-                    ).serialize(),
-                    update=self.update_existing_data,
-                    work_id=work_id,
-                )
+                if len(objects) > 0:
+                    self.helper.send_stix2_bundle(
+                        stix2.Bundle(
+                            objects=objects,
+                            allow_custom=True,
+                        ).serialize(),
+                        update=self.update_existing_data,
+                        work_id=work_id,
+                    )
                 offset = offset + limit
                 current_state["malware"] = offset
             else:
@@ -739,14 +740,15 @@ class Mandiant:
                         vulnerabilities.append(stix_vulnerability)
                     except Exception as e:
                         self.helper.log_error(str(e))
-                self.helper.send_stix2_bundle(
-                    stix2.Bundle(
-                        objects=vulnerabilities,
-                        allow_custom=True,
-                    ).serialize(),
-                    update=self.update_existing_data,
-                    work_id=work_id,
-                )
+                if len(vulnerabilities) > 0:
+                    self.helper.send_stix2_bundle(
+                        stix2.Bundle(
+                            objects=vulnerabilities,
+                            allow_custom=True,
+                        ).serialize(),
+                        update=self.update_existing_data,
+                        work_id=work_id,
+                    )
             elif end_epoch > int(time.time()):
                 no_more_result = True
             start_epoch = end_epoch
@@ -833,14 +835,15 @@ class Mandiant:
                             indicators.append(stix_indicator)
                     except Exception as e:
                         self.helper.log_error(str(e))
-                self.helper.send_stix2_bundle(
-                    stix2.Bundle(
-                        objects=indicators,
-                        allow_custom=True,
-                    ).serialize(),
-                    update=self.update_existing_data,
-                    work_id=work_id,
-                )
+                if len(indicators) > 0:
+                    self.helper.send_stix2_bundle(
+                        stix2.Bundle(
+                            objects=indicators,
+                            allow_custom=True,
+                        ).serialize(),
+                        update=self.update_existing_data,
+                        work_id=work_id,
+                    )
             elif end_epoch > int(time.time()):
                 no_more_result = True
             start_epoch = end_epoch
