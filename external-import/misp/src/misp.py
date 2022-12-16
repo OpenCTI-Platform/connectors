@@ -897,7 +897,12 @@ class Misp:
                 bundle_objects.append(report)
                 for note in event["Event"].get("EventReport", []):
                     note = stix2.Note(
-                        id=Note.generate_id(),
+                        id=Note.generate_id(
+                            datetime.utcfromtimestamp(int(note["timestamp"])).strftime(
+                                "%Y-%m-%dT%H:%M:%SZ"
+                            ),
+                            self.process_note(note["content"], bundle_objects),
+                        ),
                         confidence=self.helper.connect_confidence_level,
                         created=datetime.utcfromtimestamp(
                             int(note["timestamp"])
