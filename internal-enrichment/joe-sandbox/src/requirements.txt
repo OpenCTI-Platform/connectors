@@ -1,2 +1,2 @@
-pycti==5.4.1
+pycti==5.5.0
 jbxapi==3.18.0

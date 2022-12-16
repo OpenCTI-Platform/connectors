@@ -99,7 +99,7 @@ class Mandiant:
     def _get_token(self):
         headers = {
             "accept": "application/json",
-            "x-app-name": "opencti-connector-5.4.1",
+            "x-app-name": "opencti-connector-5.5.0",
         }
         r = requests.post(
             self.mandiant_api_url + "/token",
@@ -901,8 +901,6 @@ class Mandiant:
                             report_id = Report.generate_id(
                                 report["reportId"], publish_date
                             )
-                            note_id = Note.generate_id()
-                            self.helper.log_debug("Note ID " + str(note_id))
 
                             # Getting PDF for report
                             file = None
@@ -926,10 +924,13 @@ class Mandiant:
 
                             # Cleaning HTML Tags
                             note = self.cleanhtml(report["isightComment"])
+                            note_id = Note.generate_id(publish_date, note)
+                            self.helper.log_debug("Note ID " + str(note_id))
                             stix_note = stix2.Note(
                                 id=note_id,
                                 abstract="ANALYST COMMENT",
                                 content=note,
+                                created=publish_date,
                                 created_by_ref=self.identity["standard_id"],
                                 object_refs=[report_id],
                             )

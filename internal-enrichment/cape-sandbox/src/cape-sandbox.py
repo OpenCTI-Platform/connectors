@@ -1,5 +1,5 @@
 # coding: utf-8
-
+import datetime
 import io
 import json
 import os
@@ -176,7 +176,9 @@ class CapeSandboxConnector:
             trid_json = json.dumps(target["trid"], indent=2)
         if trid_json:
             note = stix2.Note(
-                id=Note.generate_id(),
+                id=Note.generate_id(
+                    datetime.datetime.now().isoformat(), f"```\n{trid_json}\n```"
+                ),
                 abstract="TrID Analysis",
                 content=f"```\n{trid_json}\n```",
                 created_by_ref=self.identity,
