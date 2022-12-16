@@ -469,7 +469,7 @@ jobs:
           name: Build Docker image opencti/connector-opencsam
           command: docker build -t opencti/connector-opencsam:latest . && docker tag opencti/connector-opencsam:latest opencti/connector-opencsam:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/joe-sandbox
+          working_directory: ~/opencti/internal-enrichment/joe-sandbox
           name: Build Docker image opencti/connector-joe-sandbox
           command: docker build -t opencti/connector-joe-sandbox:latest . && docker tag opencti/connector-joe-sandbox:latest opencti/connector-joe-sandbox:${CIRCLE_TAG}
       - run:
