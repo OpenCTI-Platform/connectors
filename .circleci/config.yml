@@ -97,6 +97,10 @@ jobs:
           name: Build Docker image opencti/connector-cape
           command: docker build -t opencti/connector-cape:latest . && docker tag opencti/connector-cape:latest opencti/connector-cape:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/domaintools
+          name: Build Docker image opencti/connector-domaintools
+          command: docker build -t opencti/connector-domaintools:latest . && docker tag opencti/connector-domaintools:latest opencti/connector-domaintools:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/external-import/misp
           name: Build Docker image opencti/connector-misp
           command: docker build -t opencti/connector-misp:latest . && docker tag opencti/connector-misp:latest opencti/connector-misp:${CIRCLE_TAG}
@@ -234,6 +238,8 @@ jobs:
             docker push opencti/connector-cuckoo:${CIRCLE_TAG}
             docker push opencti/connector-cape:latest
             docker push opencti/connector-cape:${CIRCLE_TAG}
+            docker push opencti/connector-domaintools:latest
+            docker push opencti/connector-domaintools:${CIRCLE_TAG}            
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
             docker push opencti/connector-mitre:latest
