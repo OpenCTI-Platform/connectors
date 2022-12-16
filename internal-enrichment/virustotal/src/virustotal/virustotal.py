@@ -32,6 +32,11 @@ class VirusTotalConnector:
         self.max_tlp = get_config_variable(
             "VIRUSTOTAL_MAX_TLP", ["virustotal", "max_tlp"], config
         )
+        self.replace_with_lower_score = get_config_variable(
+            "VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE",
+            ["virustotal", "replace_with_lower_score"],
+            config,
+        )
         self.author = stix2.Identity(
             name=self._SOURCE_NAME,
             identity_class="Organization",
@@ -104,7 +109,11 @@ class VirusTotalConnector:
             raise ValueError("An error has occurred.")
 
         builder = VirusTotalBuilder(
-            self.helper, self.author, observable, json_data["data"]
+            self.helper,
+            self.author,
+            self.replace_with_lower_score,
+            observable,
+            json_data["data"],
         )
 
         builder.update_hashes()
@@ -155,7 +164,11 @@ class VirusTotalConnector:
             raise ValueError("An error has occurred.")
 
         builder = VirusTotalBuilder(
-            self.helper, self.author, observable, json_data["data"]
+            self.helper,
+            self.author,
+            self.replace_with_lower_score,
+            observable,
+            json_data["data"],
         )
 
         builder.create_asn_belongs_to()
@@ -177,7 +190,11 @@ class VirusTotalConnector:
             raise ValueError("An error has occurred.")
 
         builder = VirusTotalBuilder(
-            self.helper, self.author, observable, json_data["data"]
+            self.helper,
+            self.author,
+            self.replace_with_lower_score,
+            observable,
+            json_data["data"],
         )
 
         # Create IPv4 address observables for each A record
@@ -208,7 +225,11 @@ class VirusTotalConnector:
             raise ValueError("An error has occurred.")
 
         builder = VirusTotalBuilder(
-            self.helper, self.author, observable, json_data["data"]
+            self.helper,
+            self.author,
+            self.replace_with_lower_score,
+            observable,
+            json_data["data"],
         )
 
         builder.create_indicator_based_on(
