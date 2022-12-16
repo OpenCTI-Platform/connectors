@@ -78,7 +78,6 @@ class VirusTotalBuilder:
             )
             * 100
         )
-        
         if self.observable["x_opencti_score"] and not self.replace_with_lower_score:
             if vt_score < self.observable["x_opencti_score"]:
                 self.create_note(
