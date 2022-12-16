@@ -276,7 +276,7 @@ class VirusTotalBuilder:
         self.helper.log_debug(f"[VirusTotal] creating note with abstract {abstract}")
         self.bundle.append(
             stix2.Note(
-                id=Note.generate_id(),
+                id=Note.generate_id(datetime.datetime.now().isoformat(), content),
                 abstract=abstract,
                 content=content,
                 created_by_ref=self.author,

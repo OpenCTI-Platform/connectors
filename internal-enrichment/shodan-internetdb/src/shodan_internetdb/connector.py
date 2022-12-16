@@ -140,7 +140,7 @@ Ports: {format_list(result.ports)}
 """
 
         self._helper.api.note.create(
-            stix_id=pycti.Note.generate_id(),
+            stix_id=pycti.Note.generate_id(datetime.now().isoformat(), content),
             createdBy=self._identity_id,
             objectMarking=[self._object_marking_id],
             confidence=self._helper.connect_confidence_level,

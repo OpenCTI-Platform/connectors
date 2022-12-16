@@ -804,9 +804,11 @@ class OrangeCyberDefense:
         objects.append(report_stix)
         if len(technical_md) > 2:
             note_stix = stix2.Note(
-                id=Note.generate_id(),
+                id=Note.generate_id(detection_date, technical_md),
                 abstract="Technical information about this alert.",
                 content=technical_md,
+                created=detection_date,
+                modified=detection_date,
                 created_by_ref=self.identity["standard_id"],
                 object_marking_refs=[
                     stix2.TLP_GREEN.get("id"),
