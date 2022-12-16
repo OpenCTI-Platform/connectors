@@ -89,7 +89,7 @@ class VirusTotalClient:
         Returns
         -------
         dict
-            File object, see https://developers.virustotal.com/reference/files.
+            File object, see https://developers.virustotal.com/reference/files
         """
         url = f"{self.url}/files/{hash256}"
         return self._query(url)
