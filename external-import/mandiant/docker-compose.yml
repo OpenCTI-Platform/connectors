@@ -16,7 +16,7 @@ services:
       - MANDIANT_API_V4_KEY_ID=ChangeMe
       - MANDIANT_API_V4_KEY_SECRET=ChangeMe
       - MANDIANT_COLLECTIONS=actor,malware,indicator,vulnerability,report
-      - MANDIANT_IMPORT_START_DATE=2022-04-01 # Max 90 days in the past, limitation of Mandiant API for indicators
+      - MANDIANT_IMPORT_START_DATE=2022-04-01
       - MANDIANT_THREAT_ACTOR_AS_INTRUSION_SET=true
       - MANDIANT_INTERVAL=60 # Required, in minutes
       - "MANDIANT_REPORT_TYPES_IGNORED=Vulnerability Report" # Separated by commas, highly suggest to ignore "Vulnerability Report" due the amount of reports daily and the amount of repetitive software creating extensive delay processing reports.
