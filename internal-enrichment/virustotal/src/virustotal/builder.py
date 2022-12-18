@@ -477,11 +477,14 @@ class VirusTotalBuilder:
             )
             del names[0]
         if len(names) > 0:
+            if "name" in self.observable:
+                names = [n for n in names if n != self.observable["name"]]
             self.helper.api.stix_cyber_observable.update_field(
                 id=self.observable["id"],
                 input={
                     "key": "x_opencti_additional_names",
-                    "value": [n for n in names if n != self.observable["name"]],
+                    "value": names,
+                    "operation": "add",
                 },
             )
 
