@@ -19,4 +19,4 @@ mandiant:
   import_start_date: '2022-04-01'
   threat_actor_as_intrusion_set: true
   report_types_ignored: 'Vulnerability Report' # Separated by commas, highly suggest to ignore "Vulnerability Report" due the amount of reports daily and the amount of repetitive software creating extensive delay processing reports.
-  interval: 5 # Required, in minutes
+  interval: 60 # Required, in minutes

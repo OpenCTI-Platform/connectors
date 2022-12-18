@@ -651,8 +651,8 @@ class Mandiant:
                         stix_vulnerability = stix2.Vulnerability(
                             id=vulnerability["id"],
                             name=self._redacted_as_none("cve_id", vulnerability),
-                            description=self._redacted_as_none(
-                                "description", vulnerability
+                            description=self.cleanhtml(
+                                self._redacted_as_none("description", vulnerability)
                             ),
                             created=self._redacted_as_none(
                                 "publish_date", vulnerability
@@ -858,8 +858,6 @@ class Mandiant:
                 and result["objects"] is not None
                 and len(result["objects"]) > 0
             ):
-                epoch_in_past = datetime.datetime.now() - datetime.timedelta(hours=+2)
-                state_now = int(epoch_in_past.timestamp())
                 for reportOut in result["objects"]:
                     # Ignoring reports that are not listed in the parameters.
                     if (
@@ -879,19 +877,11 @@ class Mandiant:
                                 "Processing report ID "
                                 + str(reportOut.get("report_id"))
                             )
-
-                            # Bundle object
                             bundle_objects = []
-
-                            # Converting the publishDate to datetime format.
                             publish_date = parse(report["publishDate"])
-
-                            # Generating the Report and Note ID to be used in the required field object_refs.
                             report_id = Report.generate_id(
                                 report["reportId"], publish_date
                             )
-
-                            # Getting PDF for report
                             file = None
                             try:
                                 report_pdf = self._getreportpdf(url_report)
@@ -908,8 +898,6 @@ class Mandiant:
                                     + str(reportOut.get("report_id"))
                                 )
                                 self.helper.log_info("ERROR: " + str(e))
-
-                            # Cleaning HTML Tags
                             note = self.cleanhtml(report["isightComment"])
                             note_id = Note.generate_id(publish_date, note)
                             self.helper.log_debug("Note ID " + str(note_id))
@@ -1129,7 +1117,6 @@ class Mandiant:
                             self.helper.send_stix2_bundle(
                                 bundle.serialize(),
                                 update=self.update_existing_data,
-                                # bypass_split = True,
                                 work_id=work_id,
                             )
                         except Exception as e:
