@@ -78,14 +78,14 @@ class VirusTotalBuilder:
             )
             * 100
         )
-        if self.replace_with_lower_score:
-            return vt_score
-        if vt_score < self.observable["x_opencti_score"]:
-            self.create_note(
-                "VirusTotal Score",
-                f"```\n{vt_score}\n```",
-            )
-        return max(vt_score, self.observable["x_opencti_score"])
+        if self.observable["x_opencti_score"] and not self.replace_with_lower_score:
+            if vt_score < self.observable["x_opencti_score"]:
+                self.create_note(
+                    "VirusTotal Score",
+                    f"```\n{vt_score}\n```",
+                )
+                return self.observable["x_opencti_score"]
+        return vt_score
 
     def create_asn_belongs_to(self):
         """Create AutonomousSystem and Relationship between the observable."""
