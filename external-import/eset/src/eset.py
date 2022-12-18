@@ -113,6 +113,7 @@ class Eset:
                                 self.helper.connect_confidence_level
                             )
                     if object["type"] == "indicator":
+                        object["name"] = object["pattern"]
                         object["pattern_type"] = "stix"
                         object["pattern"] = (
                             object["pattern"]
