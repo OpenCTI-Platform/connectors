@@ -267,7 +267,6 @@ class Silobreaker:
                                 created_by_ref=self.identity["standard_id"],
                             )
                             objects.append(organization_stix)
-                            victims.append(organization_stix)
                         if entity["Type"] == "Vulnerability":
                             vulnerability_stix = stix2.Vulnerability(
                                 id=Vulnerability.generate_id(entity["Description"]),
