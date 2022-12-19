@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Silobreaker Cyber Threat Intelligence'
+  scope: 'silobreaker'
+  confidence_level: 25 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  log_level: 'info'
+
+silobreaker:
+  api_url: 'https://api.silobreaker.com'
+  api_key: 'ChangeMe'
+  api_shared: 'ChangeMe'
+  import_start_date: '2022-04-01'
+  interval: 60 # Required, in minutes
