@@ -217,6 +217,10 @@ jobs:
           name: Build Docker image opencti/connector-eset
           command: docker build -t opencti/connector-eset:latest . && docker tag opencti/connector-eset:latest opencti/connector-eset:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/silobreaker
+          name: Build Docker image opencti/connector-silobreaker
+          command: docker build -t opencti/connector-silobreaker:latest . && docker tag opencti/connector-silobreaker:latest opencti/connector-silobreaker:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -302,6 +306,8 @@ jobs:
             docker push opencti/connector-tagger:${CIRCLE_TAG}
             docker push opencti/connector-eset:latest
             docker push opencti/connector-eset:${CIRCLE_TAG}
+            docker push opencti/connector-silobreaker:latest
+            docker push opencti/connector-silobreaker:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -749,6 +755,10 @@ jobs:
           name: Build Docker image opencti/connector-eset
           command: docker build -t opencti/connector-eset:rolling .
       - run:
+          working_directory: ~/opencti/external-import/silobreaker
+          name: Build Docker image opencti/connector-silobreaker
+          command: docker build -t opencti/connector-silobreaker:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -791,6 +801,7 @@ jobs:
             docker push opencti/connector-flashpoint:rolling
             docker push opencti/connector-tagger:rolling
             docker push opencti/connector-eset:rolling
+            docker push opencti/connector-silobreaker:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

@@ -99,38 +99,41 @@ class Eset:
             end_date = datetime.datetime.utcfromtimestamp(end_epoch).astimezone(
                 pytz.utc
             )
-            for item in client.poll(
-                collection + " (stix2)", begin_date=begin_date, end_date=end_date
-            ):
-                if not item.content:  # Skip empty packages.
-                    continue
-                parsed_content = json.loads(item.content)
-                objects = []
-                for object in parsed_content["objects"]:
-                    if "confidence" in object_types_with_confidence:
-                        if "confidence" not in object:
-                            object["confidence"] = int(
-                                self.helper.connect_confidence_level
+            try:
+                for item in client.poll(
+                    collection + " (stix2)", begin_date=begin_date, end_date=end_date
+                ):
+                    if not item.content:  # Skip empty packages.
+                        continue
+                    parsed_content = json.loads(item.content)
+                    objects = []
+                    for object in parsed_content["objects"]:
+                        if "confidence" in object_types_with_confidence:
+                            if "confidence" not in object:
+                                object["confidence"] = int(
+                                    self.helper.connect_confidence_level
+                                )
+                        if object["type"] == "indicator":
+                            object["name"] = object["pattern"]
+                            object["pattern_type"] = "stix"
+                            object["pattern"] = (
+                                object["pattern"]
+                                .replace("SHA1", "'SHA-1'")
+                                .replace("SHA256", "'SHA-256'")
                             )
-                    if object["type"] == "indicator":
-                        object["name"] = object["pattern"]
-                        object["pattern_type"] = "stix"
-                        object["pattern"] = (
-                            object["pattern"]
-                            .replace("SHA1", "'SHA-1'")
-                            .replace("SHA256", "'SHA-256'")
-                        )
-                        if self.eset_create_observables:
-                            object[
-                                "x_opencti_create_observables"
-                            ] = self.eset_create_observables
-                    objects.append(object)
-                parsed_content["objects"] = objects
-                self.helper.send_stix2_bundle(
-                    json.dumps(parsed_content),
-                    update=self.update_existing_data,
-                    work_id=work_id,
-                )
+                            if self.eset_create_observables:
+                                object[
+                                    "x_opencti_create_observables"
+                                ] = self.eset_create_observables
+                        objects.append(object)
+                    parsed_content["objects"] = objects
+                    self.helper.send_stix2_bundle(
+                        json.dumps(parsed_content),
+                        update=self.update_existing_data,
+                        work_id=work_id,
+                    )
+            except Exception as e:
+                self.helper.log_error(str(e))
             if end_epoch > int(time.time()):
                 no_more_result = True
             else:
