@@ -9,13 +9,13 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
+import html2text
 import pytz
 import stix2
 import yaml
 from dateutil.parser import parse
 from pycti import (
     Identity,
-    Incident,
     IntrusionSet,
     Location,
     Malware,
@@ -25,6 +25,28 @@ from pycti import (
     Vulnerability,
     get_config_variable,
 )
+from stix2.properties import ListProperty  # type: ignore # noqa: E501
+from stix2.properties import ReferenceProperty, StringProperty
+
+
+@stix2.CustomObservable(
+    "hostname",
+    [
+        ("value", StringProperty(required=True)),
+        ("spec_version", StringProperty(fixed="2.1")),
+        (
+            "object_marking_refs",
+            ListProperty(
+                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+            ),
+        ),
+    ],
+    ["value"],
+)
+class Hostname:
+    """Hostname observable."""
+
+    pass
 
 
 class Silobreaker:
@@ -114,12 +136,28 @@ class Silobreaker:
             responseJson = response.read()
         return json.loads(responseJson.decode("utf-8"))
 
+    def _convert_to_markdown(self, content):
+        text_maker = html2text.HTML2Text()
+        text_maker.body_width = 0
+        text_maker.ignore_links = False
+        text_maker.ignore_images = False
+        text_maker.ignore_tables = False
+        text_maker.ignore_emphasis = False
+        text_maker.skip_internal_links = False
+        text_maker.inline_links = True
+        text_maker.protect_links = True
+        text_maker.mark_code = True
+        content_md = text_maker.handle(content)
+        content_md = content_md.replace("hxxps", "https")
+        content_md = content_md.replace("](//", "](https://")
+        return content_md
+
     def _import_documents(self, work_id, delta_days):
         url = (
             self.silobreaker_api_url
             + "/search/documents?q=list:threat%20publications%20AND%20entitytype:malware%20OR%20entitytype:threatactor%20fromdate:-"
             + str(delta_days)
-            + "&extras=inmemevidence&pagesize=5000&includeEntities=True"
+            + "&extras=documentTeasers%2CdocumentXml&pagesize=5000&includeEntities=True&entityCount=200"
         )
         data = self._query("GET", url)
         if "Items" in data:
@@ -134,7 +172,26 @@ class Silobreaker:
                     users = []
                     used = []
                     victims = []
+                    observables = []
                     entities = item["Extras"]["RelatedEntities"]["Items"]
+                    external_references = []
+                    external_references.append(
+                        stix2.ExternalReference(
+                            source_name="Silobreaker", url=item["SilobreakerUrl"]
+                        )
+                    )
+                    if "SourceUrl" in item:
+                        external_references.append(
+                            stix2.ExternalReference(
+                                source_name=item["Publisher"], url=item["SourceUrl"]
+                            )
+                        )
+                    custom_properties = {
+                        "x_opencti_score": 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "external_references": external_references,
+                        "x_opencti_create_indicator": True,
+                    }
                     for entity in entities:
                         if entity["Type"] == "ThreatActor":
                             actor_stix = stix2.IntrusionSet(
@@ -159,17 +216,18 @@ class Silobreaker:
                             objects.append(malware_stix)
                             threats.append(malware_stix)
                             used.append(malware_stix)
-                        if entity["Type"] == "Incident":
-                            incident_stix = stix2.Incident(
-                                id=Incident.generate_id(entity["Description"]),
+                        if entity["Type"] == "Person":
+                            individual_stix = stix2.Identity(
+                                id=Identity.generate_id(
+                                    entity["Description"], "individual"
+                                ),
                                 name=entity["Description"],
+                                identity_class="individual",
                                 description=entity["Description"],
                                 created_by_ref=self.identity["standard_id"],
                                 object_marking_refs=[stix2.TLP_AMBER.get("id")],
                             )
-                            objects.append(incident_stix)
-                            threats.append(incident_stix)
-                            users.append(incident_stix)
+                            objects.append(individual_stix)
                         if entity["Type"] == "Country":
                             country_stix = stix2.Location(
                                 id=Location.generate_id(
@@ -204,6 +262,7 @@ class Silobreaker:
                                     entity["Description"], "organization"
                                 ),
                                 name=entity["Description"],
+                                identity_class="organization",
                                 description=entity["Description"],
                                 created_by_ref=self.identity["standard_id"],
                             )
@@ -218,6 +277,42 @@ class Silobreaker:
                             )
                             objects.append(vulnerability_stix)
                             victims.append(vulnerability_stix)
+                        if entity["Type"] == "Domain":
+                            domain_stix = stix2.DomainName(
+                                value=entity["Description"],
+                                allow_custom=True,
+                                object_marking_refs=[stix2.TLP_AMBER.get("id")],
+                                custom_properties=custom_properties,
+                            )
+                            objects.append(domain_stix)
+                            observables.append(domain_stix)
+                        if entity["Type"] == "IPv4":
+                            ip_stix = stix2.IPv4Address(
+                                value=entity["Description"],
+                                allow_custom=True,
+                                object_marking_refs=[stix2.TLP_AMBER.get("id")],
+                                custom_properties=custom_properties,
+                            )
+                            objects.append(ip_stix)
+                            observables.append(ip_stix)
+                        if entity["Type"] == "Subdomain":
+                            hostname_stix = Hostname(
+                                value=entity["Description"],
+                                allow_custom=True,
+                                object_marking_refs=[stix2.TLP_AMBER.get("id")],
+                                custom_properties=custom_properties,
+                            )
+                            objects.append(hostname_stix)
+                            observables.append(hostname_stix)
+                        if entity["Type"] == "Email":
+                            email_stix = stix2.EmailAddress(
+                                value=entity["Description"],
+                                allow_custom=True,
+                                object_marking_refs=[stix2.TLP_AMBER.get("id")],
+                                custom_properties=custom_properties,
+                            )
+                            objects.append(email_stix)
+                            observables.append(email_stix)
                     if len(threats) > 0 and len(victims) > 0:
                         for threat in threats:
                             for victim in victims:
@@ -254,18 +349,42 @@ class Silobreaker:
                                     start_time=item["PublicationDate"],
                                 )
                                 objects.append(relationship_stix)
+                    if len(threats) > 0 and len(observables) > 0:
+                        for threat in threats:
+                            for observable in observables:
+                                relationship_stix = stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "related-to",
+                                        observable.get("id"),
+                                        threat.get("id"),
+                                        item["PublicationDate"],
+                                    ),
+                                    relationship_type="related-to",
+                                    source_ref=observable.get("id"),
+                                    target_ref=threat.get("id"),
+                                    object_marking_refs=[stix2.TLP_AMBER.get("id")],
+                                    created_by_ref=self.identity["standard_id"],
+                                    start_time=item["PublicationDate"],
+                                )
+                                objects.append(relationship_stix)
                     if len(objects) > 0:
+                        description = self._convert_to_markdown(
+                            item["Extras"]["DocumentTeasers"]["HtmlSnippet"]
+                        )
                         report_stix = stix2.Report(
                             id=Report.generate_id(
                                 item["Description"], item["PublicationDate"]
                             ),
                             name=item["Description"],
+                            description=description,
+                            report_types=[item["Type"]],
                             published=item["PublicationDate"],
                             created=item["PublicationDate"],
                             modified=item["PublicationDate"],
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_AMBER.get("id")],
                             object_refs=[object["id"] for object in objects],
+                            external_references=external_references,
                         )
                         objects.append(report_stix)
                         bundle = stix2.Bundle(

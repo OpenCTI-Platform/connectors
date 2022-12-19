@@ -5,7 +5,8 @@ COPY src /opt/opencti-connector-silobreaker
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxslt libxslt-dev libxml2 libxml2-dev && \
     cd /opt/opencti-connector-silobreaker && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
