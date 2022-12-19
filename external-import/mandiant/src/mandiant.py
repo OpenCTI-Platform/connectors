@@ -1190,6 +1190,13 @@ class Mandiant:
                     new_state = self._import_vulnerability(work_id, current_state)
                     self.helper.log_info("Setting new state " + str(new_state))
                     self.helper.set_state(new_state)
+                if "report" in self.mandiant_collections:
+                    current_state = self.helper.get_state()
+                    self.helper.log_info(
+                        "Get REPORT after position " + str(current_state["report"])
+                    )
+                    new_state = self._import_report(work_id, current_state)
+                    self.helper.set_state(new_state)
                 if "indicator" in self.mandiant_collections:
                     current_state = self.helper.get_state()
                     self.helper.log_info(
@@ -1197,13 +1204,6 @@ class Mandiant:
                         + str(current_state["indicator"])
                     )
                     new_state = self._import_indicator(work_id, current_state)
-                    self.helper.set_state(new_state)
-                if "report" in self.mandiant_collections:
-                    current_state = self.helper.get_state()
-                    self.helper.log_info(
-                        "Get REPORT after position " + str(current_state["report"])
-                    )
-                    new_state = self._import_report(work_id, current_state)
                     self.helper.set_state(new_state)
 
                 message = "End of synchronization"
