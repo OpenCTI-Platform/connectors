@@ -17,6 +17,7 @@ services:
       - VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE=false # Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).
       # File/Artifact specific config settings
       - VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT=true # Whether or not to include the full report as a Note
+      - VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS=false # Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of
       - VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for File/Artifact based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
       - VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
       - VIRUSTOTAL_FILE_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true

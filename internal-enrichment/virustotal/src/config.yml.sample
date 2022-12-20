@@ -18,6 +18,7 @@ virustotal:
 
   # File/Artifact specific config settings
   file_create_note_full_report: true # Whether or not to include the full report as a Note
+  file_upload_unseen_artifacts=false # Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of
   file_indicator_create_positives: 0 # Create an indicator for File/Artifact based observables once this positive threshold is reached. Note: specify 0 to disable indicator creation
   file_indicator_valid_minutes: 2880 # How long the indicator is valid for in minutes
   file_indicator_detect: true # Whether or not to set detection for the indicator to true
