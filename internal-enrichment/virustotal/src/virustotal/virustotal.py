@@ -108,26 +108,44 @@ class VirusTotalConnector:
     def _process_file(self, observable):
         json_data = self.client.get_file_info(observable["observable_value"])
         assert json_data
-        if "error" in json_data and json_data["error"]["code"] == "NotFoundError" and self.file_upload_unseen_artifacts:
-            self.helper.log_debug(f"The file {observable['observable_value']} was not found in VirusTotal repositories")
+        if (
+            "error" in json_data
+            and json_data["error"]["code"] == "NotFoundError"
+            and self.file_upload_unseen_artifacts
+        ):
+            self.helper.log_debug(
+                f"The file {observable['observable_value']} was not found in VirusTotal repositories"
+            )
             # File must be smaller than 32MB for VirusTotal upload
             if observable["importFiles"][0]["size"] > 33554432:
-                raise ValueError("The file attempting to be uploaded is greater than VirusTotal's 32MB limit")
+                raise ValueError(
+                    "The file attempting to be uploaded is greater than VirusTotal's 32MB limit"
+                )
             artifact_url = f'{self.helper.opencti_url}/storage/get/{observable["importFiles"][0]["id"]}'
             try:
                 artifact = self.helper.api.fetch_opencti_file(artifact_url, binary=True)
             except Exception as err:
-                raise ValueError(f"[VirusTotal] Error occurred while fetching artifact from OpenCTI: {err}")
+                raise ValueError(
+                    f"[VirusTotal] Error occurred while fetching artifact from OpenCTI: {err}"
+                )
             try:
-                analysis_id = self.client.upload_artifact(observable["importFiles"][0]["name"], artifact)
+                analysis_id = self.client.upload_artifact(
+                    observable["importFiles"][0]["name"], artifact
+                )
                 # Attempting to get the file info immediately queues the artifact for more immediate analysis
                 json_data = self.client.get_file_info(observable["observable_value"])
             except Exception as err:
-                raise ValueError(f"[VirusTotal] Error occurred uploading artifact to VirusTotal: {err}")
+                raise ValueError(
+                    f"[VirusTotal] Error occurred uploading artifact to VirusTotal: {err}"
+                )
             try:
-                self.client.check_upload_status(observable["observable_value"], analysis_id)
+                self.client.check_upload_status(
+                    observable["observable_value"], analysis_id
+                )
             except Exception as err:
-                raise ValueError(f"[VirusTotal] Error occurred while waiting for VirusTotal to analyze artifact: {err}")
+                raise ValueError(
+                    f"[VirusTotal] Error occurred while waiting for VirusTotal to analyze artifact: {err}"
+                )
             json_data = self.client.get_file_info(observable["observable_value"])
             assert json_data
         if "error" in json_data:

@@ -165,21 +165,25 @@ class VirusTotalClient:
             The ID returned by VirustTotal for the analysis job of the artifact
         """
         url = f"{self.url}/analyses/{analysis_id}"
-        delay = 10 # in seconds
+        delay = 10  # in seconds
         total_attempts = 10
-        i=0
+        i = 0
         while i < total_attempts:
             current_status = self._query(url)["data"]["attributes"]["status"]
             i += 1
             if not current_status == "completed":
-                self.helper.log_debug(f"[VirusTotal] Uploaded artifact {name} current VirusTotal "
-                                      f"analysis status: {current_status}. Checking status update "
-                                      f"attempt #{i} of {total_attempts} in {i*delay} seconds.")
-                sleep(i*delay)
+                self.helper.log_debug(
+                    f"[VirusTotal] Uploaded artifact {name} current VirusTotal "
+                    f"analysis status: {current_status}. Checking status update "
+                    f"attempt #{i} of {total_attempts} in {i*delay} seconds."
+                )
+                sleep(i * delay)
             else:
                 return
-        raise ValueError(f"The uploaded artifact {name} was not analyzed by VirusTotal before the"
-                          "timeout was reached. Please try enriching the file again at a later time.")
+        raise ValueError(
+            f"The uploaded artifact {name} was not analyzed by VirusTotal before the"
+            "timeout was reached. Please try enriching the file again at a later time."
+        )
 
     def get_yara_ruleset(self, ruleset_id) -> dict:
         """
