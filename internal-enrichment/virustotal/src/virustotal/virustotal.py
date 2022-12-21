@@ -133,7 +133,7 @@ class VirusTotalConnector:
                     observable["importFiles"][0]["name"], artifact
                 )
                 # Attempting to get the file info immediately queues the artifact for more immediate analysis
-                json_data = self.client.get_file_info(observable["observable_value"])
+                self.client.get_file_info(observable["observable_value"])
             except Exception as err:
                 raise ValueError(
                     f"[VirusTotal] Error occurred uploading artifact to VirusTotal: {err}"

@@ -165,23 +165,28 @@ class VirusTotalClient:
             The ID returned by VirustTotal for the analysis job of the artifact
         """
         url = f"{self.url}/analyses/{analysis_id}"
-        delay = 10  # in seconds
+        retry_delay = 30  # in seconds
+        minimum_retry_delay = 60  # in seconds
+        maximum_retry_delay = 180  # in seconds
         total_attempts = 10
         i = 0
         while i < total_attempts:
             current_status = self._query(url)["data"]["attributes"]["status"]
+            current_retry_delay = min(
+                (i * retry_delay + minimum_retry_delay), maximum_retry_delay
+            )
             i += 1
             if not current_status == "completed":
                 self.helper.log_debug(
                     f"[VirusTotal] Uploaded artifact {name} current VirusTotal "
                     f"analysis status: {current_status}. Checking status update "
-                    f"attempt #{i} of {total_attempts} in {i*delay} seconds."
+                    f"attempt #{i} of {total_attempts} in {current_retry_delay} seconds."
                 )
-                sleep(i * delay)
+                sleep(current_retry_delay)
             else:
                 return
         raise ValueError(
-            f"The uploaded artifact {name} was not analyzed by VirusTotal before the"
+            f"The uploaded artifact {name} was not analyzed by VirusTotal before the "
             "timeout was reached. Please try enriching the file again at a later time."
         )
 
