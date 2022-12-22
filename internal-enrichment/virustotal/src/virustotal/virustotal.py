@@ -117,10 +117,11 @@ class VirusTotalConnector:
             "error" in json_data
             and json_data["error"]["code"] == "NotFoundError"
             and self.file_upload_unseen_artifacts
+            and observable["entity_type"] == "Artifact"
         ):
-            self.helper.log_debug(
-                f"The file {observable['observable_value']} was not found in VirusTotal repositories"
-            )
+            message = f"The file {observable['observable_value']} was not found in VirusTotal repositories. Beginning upload and analysis"
+            self.helper.api.work.to_received(self.helper.work_id, message)
+            self.helper.log_debug(message)
             # File must be smaller than 32MB for VirusTotal upload
             if observable["importFiles"][0]["size"] > 33554432:
                 raise ValueError(
