@@ -509,7 +509,6 @@ class ReportImporter:
                 if object["id"] not in ids:
                     ids.append(object["id"])
                     final_objects.append(object)
-            print(final_objects)
             bundle = stix2.Bundle(objects=final_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle=bundle,
