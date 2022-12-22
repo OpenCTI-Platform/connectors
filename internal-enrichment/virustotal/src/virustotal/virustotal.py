@@ -69,6 +69,11 @@ class VirusTotalConnector:
             ["virustotal", "file_upload_unseen_artifacts"],
             config,
         )
+        self.file_wait_for_artifact_analysis_completion = get_config_variable(
+            "VIRUSTOTAL_FILE_WAIT_FOR_ARTIFACT_ANALYSIS_COMPLETION",
+            ["virustotal", "file_wait_for_artifact_analysis_completion"],
+            config,
+        )
         self.file_indicator_config = IndicatorConfig.load_indicator_config(
             config, "FILE"
         )
@@ -138,14 +143,19 @@ class VirusTotalConnector:
                 raise ValueError(
                     f"[VirusTotal] Error occurred uploading artifact to VirusTotal: {err}"
                 )
-            try:
-                self.client.check_upload_status(
-                    observable["observable_value"], analysis_id
-                )
-            except Exception as err:
-                raise ValueError(
-                    f"[VirusTotal] Error occurred while waiting for VirusTotal to analyze artifact: {err}"
-                )
+            if self.file_wait_for_artifact_analysis_completion:
+                try:
+                    self.client.check_upload_status(
+                        observable["observable_value"], analysis_id
+                    )
+                except Exception as err:
+                    raise ValueError(
+                        f"[VirusTotal] Error occurred while waiting for VirusTotal to analyze artifact: {err}"
+                    )
+            else:
+                message = f"{observable['observable_value']} was an unseen artifact submitted for analysis but connector skipping waiting for analysis completion. Enrichment will likely fail in next step but can be rerun later with success. Change configuration setting if you would like the connector to wait for artifact analysis completion"
+                self.helper.api.work.to_processed(self.helper.work_id, message)
+                self.helper.log_debug(message)
             json_data = self.client.get_file_info(observable["observable_value"])
             assert json_data
         if "error" in json_data:
