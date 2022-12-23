@@ -27,20 +27,17 @@ class LastInfoSec:
         )
 
         self.lastinfosec_cti_enabled = get_config_variable(
-            "CONFIG_LIS_CTI_ENABLED", ["lastinfosec", "cti", "is_enabled"], config
+            "CONFIG_LIS_CTI_ENABLED", ["lastinfosec", "cti_is_enabled"], config
         )
         self.lastinfosec_cti_interval = get_config_variable(
-            "CONFIG_LIS_CTI_INTERVAL", ["lastinfosec", "cti", "interval"], config
+            "CONFIG_LIS_CTI_INTERVAL", ["lastinfosec", "cti_interval"], config
         )
-
         self.lastinfosec_cve_enabled = get_config_variable(
-            "CONFIG_LIS_CVE_ENABLED", ["lastinfosec", "cve", "is_enabled"], config
+            "CONFIG_LIS_CVE_ENABLED", ["lastinfosec", "cve_is_enabled"], config
         )
-
         self.lastinfosec_tactic_enabled = get_config_variable(
-            "CONFIG_LIS_TACTIC_ENABLED", ["lastinfosec", "tactic", "is_enabled"], config
+            "CONFIG_LIS_TACTIC_ENABLED", ["lastinfosec", "tactic_is_enabled"], config
         )
-
         self.opencti_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config
         )

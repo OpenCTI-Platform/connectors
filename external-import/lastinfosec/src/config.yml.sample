@@ -14,10 +14,7 @@ connector:
 
 lastinfosec:
   api_key: 'ChangeMe'
-  cti:
-    is_enabled: False  # Set to true if you want to import lastinfosec iocs feed
-    interval: 30 # url minutes argument. Example: 30: The connector will run every 30 minutes to get IOCs for the last 30 minutes
-  cve:  # vulnerability feed
-    is_enabled: False  # Set to true if you want to import lastinfosec cve feed
-  tactic:  # tactic feed
-    is_enabled: False  # Set to true if you want to import lastinfosec tactic feed
+  cti_is_enabled: False  # Set to true if you want to import lastinfosec iocs feed
+  cti_interval: 30 # url minutes argument. Example: 30: The connector will run every 30 minutes to get IOCs for the last 30 minutes
+  cve_is_enabled: False  # Set to true if you want to import lastinfosec cve feed
+  tactic_is_enabled: False  # Set to true if you want to import lastinfosec tactic feed
