@@ -56,7 +56,9 @@ class VirusTotalClient:
         http.mount("https://", adapter)
         response = None
         try:
-            response = http.get(url, headers=self.headers | {"content-type": "application/json"})
+            response = http.get(
+                url, headers=self.headers | {"content-type": "application/json"}
+            )
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")
