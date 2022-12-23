@@ -54,10 +54,9 @@ class VirusTotalClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
         http.mount("https://", adapter)
-        self.headers["content-type"] = "application/json"
         response = None
         try:
-            response = http.get(url, headers=self.headers)
+            response = http.get(url, headers=self.headers | {"content-type": "application/json"})
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")
@@ -94,7 +93,6 @@ class VirusTotalClient:
         JSON or None
             The result of the query, as JSON or None in case of failure.
         """
-        self.headers.pop("content-type", None)
         response = None
         try:
             response = requests.post(url, files=files, headers=self.headers)
