@@ -53,7 +53,7 @@ class Mitre:
     def get_interval(self):
         return int(self.mitre_interval) * 60 * 60 * 24
 
-    def retrieve_data(self, url: str) -> Optional[str]:
+    def retrieve_data(self, url: str) -> Optional[dict]:
         """
         Retrieve data from the given url.
 
@@ -68,7 +68,8 @@ class Mitre:
             A string with the content or None in case of failure.
         """
         try:
-            return (
+            # Fetch json bundle from MITRE
+            serialized_bundle = (
                 urllib.request.urlopen(
                     url,
                     context=ssl.create_default_context(cafile=certifi.where()),
@@ -76,6 +77,21 @@ class Mitre:
                 .read()
                 .decode("utf-8")
             )
+            # Convert the data to python dictionary
+            stix_bundle = json.loads(serialized_bundle)
+            # Filter every revoked MITRE elements
+            not_revoked_objects = list(
+                filter(
+                    lambda stix: stix["revoked"] is False
+                    if "revoked" in stix
+                    else True,
+                    stix_bundle["objects"],
+                )
+            )
+            stix_bundle["objects"] = not_revoked_objects
+            # Add default confidence for each object that require this field
+            self.add_confidence_to_bundle_objects(stix_bundle)
+            return stix_bundle
         except (
             urllib.error.URLError,
             urllib.error.HTTPError,
@@ -85,7 +101,7 @@ class Mitre:
         return None
 
     # Add confidence to every object in a bundle
-    def add_confidence_to_bundle_objects(self, serialized_bundle: str) -> str:
+    def add_confidence_to_bundle_objects(self, stix_bundle: dict):
         # the list of object types for which the confidence has to be added
         # (skip marking-definition, identity, external-reference-as-report)
         object_types_with_confidence = [
@@ -100,13 +116,11 @@ class Mitre:
             "report",
             "relationship",
         ]
-        stix_bundle = json.loads(serialized_bundle)
         for obj in stix_bundle["objects"]:
             object_type = obj["type"]
             if object_type in object_types_with_confidence:
                 # self.helper.log_info(f"Adding confidence to {object_type} object")
                 obj["confidence"] = int(self.helper.connect_confidence_level)
-        return json.dumps(stix_bundle)
 
     def process_data(self):
         try:
@@ -139,10 +153,7 @@ class Mitre:
                     and len(self.mitre_enterprise_file_url) > 0
                 ):
                     enterprise_data = self.retrieve_data(self.mitre_enterprise_file_url)
-                    enterprise_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(enterprise_data)
-                    )
-                    self.send_bundle(work_id, enterprise_data_with_confidence)
+                    self.send_bundle(work_id, enterprise_data)
 
                 # MITRE mobile attack file url
                 if (
@@ -152,10 +163,7 @@ class Mitre:
                     mobile_attack_data = self.retrieve_data(
                         self.mitre_mobile_attack_file_url
                     )
-                    mobile_attack_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(mobile_attack_data)
-                    )
-                    self.send_bundle(work_id, mobile_attack_data_with_confidence)
+                    self.send_bundle(work_id, mobile_attack_data)
 
                 # MITRE ICS attack file url
                 if (
@@ -163,10 +171,7 @@ class Mitre:
                     and len(self.mitre_ics_attack_file_url) > 0
                 ):
                     ics_attack_data = self.retrieve_data(self.mitre_ics_attack_file_url)
-                    ics_attack_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(ics_attack_data)
-                    )
-                    self.send_bundle(work_id, ics_attack_data_with_confidence)
+                    self.send_bundle(work_id, ics_attack_data)
 
                 # MITRE CAPEC attack file url
                 if (
@@ -174,10 +179,7 @@ class Mitre:
                     and len(self.mitre_capec_file_url) > 0
                 ):
                     capec_data = self.retrieve_data(self.mitre_capec_file_url)
-                    capec_data_with_confidence = self.add_confidence_to_bundle_objects(
-                        capec_data
-                    )
-                    self.send_bundle(work_id, capec_data_with_confidence)
+                    self.send_bundle(work_id, capec_data)
 
                 # Store the current timestamp as a last run
                 message = "Connector successfully run, storing last_run as " + str(
@@ -215,10 +217,10 @@ class Mitre:
                 self.process_data()
                 time.sleep(60)
 
-    def send_bundle(self, work_id: str, serialized_bundle: str) -> None:
+    def send_bundle(self, work_id: str, stix_bundle: dict) -> None:
         try:
             self.helper.send_stix2_bundle(
-                serialized_bundle,
+                json.dumps(stix_bundle),
                 entities_types=self.helper.connect_scope,
                 update=self.update_existing_data,
                 work_id=work_id,
