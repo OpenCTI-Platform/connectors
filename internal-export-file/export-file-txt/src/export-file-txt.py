@@ -85,6 +85,7 @@ class ExportFileTxt:
             else None,
             fromId=list_params["fromId"] if "fromId" in list_params else None,
             toId=list_params["toId"] if "toId" in list_params else None,
+            elementId=list_params["elementId"] if "elementId" in list_params else None,
             fromTypes=list_params["fromTypes"] if "fromTypes" in list_params else None,
             toTypes=list_params["toTypes"] if "toTypes" in list_params else None,
             types=list_params["types"] if "types" in list_params else None,
