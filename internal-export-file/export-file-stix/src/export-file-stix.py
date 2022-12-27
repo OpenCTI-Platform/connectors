@@ -67,12 +67,13 @@ class ExportFileStix:
                 list_params["orderMode"],
                 max_marking,
                 list_params.get("types"),
+                list_params.get("elementId"),
                 list_params.get("fromId"),
                 list_params.get("toId"),
+                list_params.get("elementWithTargetTypes"),
                 list_params.get("fromTypes"),
                 list_params.get("toTypes"),
                 list_params.get("relationship_type"),
-                list_params.get("elementId"),
             )
             json_bundle = json.dumps(bundle, indent=4)
             self.helper.log_info(
