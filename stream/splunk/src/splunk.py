@@ -91,21 +91,12 @@ class SplunkConnector:
         payload=None,
         is_json=False,
     ):
-        if (
-            "type" in payload
-            and payload["type"] in self.splunk_ignore_types
-        ):
+        if "type" in payload and payload["type"] in self.splunk_ignore_types:
             self.helper.log_info("Ignoring " + payload["id"])
             return
-            
+
         self.helper.log_info(
-            "Query "
-            + method
-            + " on "
-            + uri
-            + " (url="
-            + splunk_url
-            + ")"
+            "Query " + method + " on " + uri + " (url=" + splunk_url + ")"
         )
         url = (
             splunk_url
@@ -134,7 +125,9 @@ class SplunkConnector:
                     payload["mapped_values"] = []
                     for value in parsed["parsed_stix"]:
                         formatted_value = {}
-                        formatted_value[sanitize_key(value["attribute"])] = value["value"]
+                        formatted_value[sanitize_key(value["attribute"])] = value[
+                            "value"
+                        ]
                         payload["mapped_values"].append(formatted_value)
             except:
                 try:
@@ -150,9 +143,7 @@ class SplunkConnector:
         if method == "get":
             r = requests.get(
                 url,
-                headers={
-                    "Authorization": "Bearer " + splunk_token
-                },
+                headers={"Authorization": "Bearer " + splunk_token},
                 params=payload,
                 verify=self.splunk_ssl_verify,
             )
@@ -162,7 +153,7 @@ class SplunkConnector:
                     url,
                     headers={
                         "Authorization": "Bearer " + splunk_token,
-                        "content-type": "application/json"
+                        "content-type": "application/json",
                     },
                     json=payload,
                     verify=self.splunk_ssl_verify,
@@ -170,18 +161,14 @@ class SplunkConnector:
             else:
                 r = requests.post(
                     url,
-                    headers={
-                        "Authorization": "Bearer " + splunk_token
-                    },
+                    headers={"Authorization": "Bearer " + splunk_token},
                     data=payload,
                     verify=self.splunk_ssl_verify,
                 )
         elif method == "delete":
             r = requests.delete(
                 url,
-                headers={
-                    "Authorization": "Bearer " + splunk_token
-                },
+                headers={"Authorization": "Bearer " + splunk_token},
                 verify=self.splunk_ssl_verify,
             )
         else:
@@ -211,10 +198,7 @@ class SplunkConnector:
 
     def _distribute_works(self, method, uri, data, is_json=False):
         for x, url in enumerate(self.splunk_url):
-            if (
-                len(self.splunk_token) - 1 < x
-                or len(self.splunk_owner) - 1 < x
-            ):
+            if len(self.splunk_token) - 1 < x or len(self.splunk_owner) - 1 < x:
                 raise ValueError(
                     "Token or owner do not have the same number of items as URLs"
                 )
