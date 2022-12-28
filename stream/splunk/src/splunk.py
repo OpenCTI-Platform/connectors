@@ -91,6 +91,13 @@ class SplunkConnector:
         payload=None,
         is_json=False,
     ):
+        if (
+            "type" in payload
+            and payload["type"] in self.splunk_ignore_types
+        ):
+            self.helper.log_info("Ignoring " + payload["id"])
+            return
+            
         self.helper.log_info(
             "Query "
             + method
