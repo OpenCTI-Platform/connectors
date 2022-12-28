@@ -15,6 +15,22 @@ from stix_shifter.stix_translation import stix_translation
 q = queue.Queue()
 
 
+def sanitize_key(key):
+    """Sanitize key name for Splunk usage
+
+    Splunk KV store keys cannot contain ".". Also, keys containing
+    unusual characters like "'" make their usage less convenient
+    when writing SPL queries.
+
+    Args:
+        key (str): value to sanitize
+
+    Returns:
+        str: sanitized result
+    """
+    return key.replace(".", ":").replace("'", "")
+
+
 class SplunkConnector:
     def __init__(self):
         # Initialize parameters and OpenCTI helper
@@ -111,12 +127,12 @@ class SplunkConnector:
                     payload["mapped_values"] = []
                     for value in parsed["parsed_stix"]:
                         formatted_value = {}
-                        formatted_value[value["attribute"]] = value["value"]
+                        formatted_value[sanitize_key(value["attribute"])] = value["value"]
                         payload["mapped_values"].append(formatted_value)
             except:
                 try:
                     splitted = payload["pattern"].split(" = ")
-                    key = splitted[0].replace("[", "")
+                    key = sanitize_key(splitted[0].replace("[", ""))
                     value = splitted[1].replace("'", "").replace("]", "")
                     formatted_value = {}
                     formatted_value[key] = value
