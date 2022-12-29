@@ -15,6 +15,22 @@ from stix_shifter.stix_translation import stix_translation
 q = queue.Queue()
 
 
+def sanitize_key(key):
+    """Sanitize key name for Splunk usage
+
+    Splunk KV store keys cannot contain ".". Also, keys containing
+    unusual characters like "'" make their usage less convenient
+    when writing SPL queries.
+
+    Args:
+        key (str): value to sanitize
+
+    Returns:
+        str: sanitized result
+    """
+    return key.replace(".", ":").replace("'", "")
+
+
 class SplunkConnector:
     def __init__(self):
         # Initialize parameters and OpenCTI helper
@@ -29,11 +45,8 @@ class SplunkConnector:
         self.splunk_url = get_config_variable(
             "SPLUNK_URL", ["splunk", "url"], config
         ).split(",")
-        self.splunk_login = get_config_variable(
-            "SPLUNK_LOGIN", ["splunk", "login"], config
-        ).split(",")
-        self.splunk_password = get_config_variable(
-            "SPLUNK_PASSWORD", ["splunk", "password"], config
+        self.splunk_token = get_config_variable(
+            "SPLUNK_TOKEN", ["splunk", "token"], config
         ).split(",")
         self.splunk_owner = get_config_variable(
             "SPLUNK_OWNER", ["splunk", "owner"], config
@@ -71,24 +84,19 @@ class SplunkConnector:
     def _query(
         self,
         splunk_url,
-        splunk_login,
-        splunk_password,
+        splunk_token,
         splunk_owner,
         method,
         uri,
         payload=None,
         is_json=False,
     ):
+        if "type" in payload and payload["type"] in self.splunk_ignore_types:
+            self.helper.log_info("Ignoring " + payload["id"])
+            return
+
         self.helper.log_info(
-            "Query "
-            + method
-            + " on "
-            + uri
-            + " (url="
-            + splunk_url
-            + ", login="
-            + splunk_login
-            + ")"
+            "Query " + method + " on " + uri + " (url=" + splunk_url + ")"
         )
         url = (
             splunk_url
@@ -117,12 +125,14 @@ class SplunkConnector:
                     payload["mapped_values"] = []
                     for value in parsed["parsed_stix"]:
                         formatted_value = {}
-                        formatted_value[value["attribute"]] = value["value"]
+                        formatted_value[sanitize_key(value["attribute"])] = value[
+                            "value"
+                        ]
                         payload["mapped_values"].append(formatted_value)
             except:
                 try:
                     splitted = payload["pattern"].split(" = ")
-                    key = splitted[0].replace("[", "")
+                    key = sanitize_key(splitted[0].replace("[", ""))
                     value = splitted[1].replace("'", "").replace("]", "")
                     formatted_value = {}
                     formatted_value[key] = value
@@ -133,31 +143,32 @@ class SplunkConnector:
         if method == "get":
             r = requests.get(
                 url,
-                auth=(splunk_login, splunk_password),
+                headers={"Authorization": "Bearer " + splunk_token},
                 params=payload,
                 verify=self.splunk_ssl_verify,
             )
         elif method == "post":
             if is_json:
-                headers = {"content-type": "application/json"}
                 r = requests.post(
                     url,
-                    auth=(splunk_login, splunk_password),
-                    headers=headers,
+                    headers={
+                        "Authorization": "Bearer " + splunk_token,
+                        "content-type": "application/json",
+                    },
                     json=payload,
                     verify=self.splunk_ssl_verify,
                 )
             else:
                 r = requests.post(
                     url,
-                    auth=(splunk_login, splunk_password),
+                    headers={"Authorization": "Bearer " + splunk_token},
                     data=payload,
                     verify=self.splunk_ssl_verify,
                 )
         elif method == "delete":
             r = requests.delete(
                 url,
-                auth=(splunk_login, splunk_password),
+                headers={"Authorization": "Bearer " + splunk_token},
                 verify=self.splunk_ssl_verify,
             )
         else:
@@ -176,8 +187,7 @@ class SplunkConnector:
             item = q.get()
             self._query(
                 item["splunk_url"],
-                item["splunk_login"],
-                item["splunk_password"],
+                item["splunk_token"],
                 item["splunk_owner"],
                 item["method"],
                 item["uri"],
@@ -188,18 +198,13 @@ class SplunkConnector:
 
     def _distribute_works(self, method, uri, data, is_json=False):
         for x, url in enumerate(self.splunk_url):
-            if (
-                len(self.splunk_login) - 1 < x
-                or len(self.splunk_password) - 1 < x
-                or len(self.splunk_owner) - 1 < x
-            ):
+            if len(self.splunk_token) - 1 < x or len(self.splunk_owner) - 1 < x:
                 raise ValueError(
-                    "Login, password or owner do not have the same number of items as URLs"
+                    "Token or owner do not have the same number of items as URLs"
                 )
             item = {
                 "splunk_url": url,
-                "splunk_login": self.splunk_login[x],
-                "splunk_password": self.splunk_password[x],
+                "splunk_token": self.splunk_token[x],
                 "splunk_owner": self.splunk_owner[x],
                 "method": method,
                 "uri": uri,
