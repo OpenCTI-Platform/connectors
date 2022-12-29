@@ -71,13 +71,18 @@ class VirusTotalBuilder:
         int
             Score, in percent, rounded.
         """
-        vt_score = round(
-            (
-                stats["malicious"]
-                / (stats["harmless"] + stats["undetected"] + stats["malicious"])
+        try:
+            vt_score = round(
+                (
+                    stats["malicious"]
+                    / (stats["harmless"] + stats["undetected"] + stats["malicious"])
+                )
+                * 100
             )
-            * 100
-        )
+        except ZeroDivisionError:
+            raise ValueError(
+                "Cannot compute score. VirusTotal may have no record of the observable or it is currently being processed"
+            )
         if self.observable["x_opencti_score"] and not self.replace_with_lower_score:
             if vt_score < self.observable["x_opencti_score"]:
                 self.create_note(
