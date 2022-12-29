@@ -64,6 +64,16 @@ class VirusTotalConnector:
             ["virustotal", "file_create_note_full_report"],
             config,
         )
+        self.file_upload_unseen_artifacts = get_config_variable(
+            "VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS",
+            ["virustotal", "file_upload_unseen_artifacts"],
+            config,
+        )
+        self.file_wait_for_artifact_analysis_completion = get_config_variable(
+            "VIRUSTOTAL_FILE_WAIT_FOR_ARTIFACT_ANALYSIS_COMPLETION",
+            ["virustotal", "file_wait_for_artifact_analysis_completion"],
+            config,
+        )
         self.file_indicator_config = IndicatorConfig.load_indicator_config(
             config, "FILE"
         )
@@ -103,6 +113,52 @@ class VirusTotalConnector:
     def _process_file(self, observable):
         json_data = self.client.get_file_info(observable["observable_value"])
         assert json_data
+        if (
+            "error" in json_data
+            and json_data["error"]["code"] == "NotFoundError"
+            and self.file_upload_unseen_artifacts
+            and observable["entity_type"] == "Artifact"
+        ):
+            message = f"The file {observable['observable_value']} was not found in VirusTotal repositories. Beginning upload and analysis"
+            self.helper.api.work.to_received(self.helper.work_id, message)
+            self.helper.log_debug(message)
+            # File must be smaller than 32MB for VirusTotal upload
+            if observable["importFiles"][0]["size"] > 33554432:
+                raise ValueError(
+                    "The file attempting to be uploaded is greater than VirusTotal's 32MB limit"
+                )
+            artifact_url = f'{self.helper.opencti_url}/storage/get/{observable["importFiles"][0]["id"]}'
+            try:
+                artifact = self.helper.api.fetch_opencti_file(artifact_url, binary=True)
+            except Exception as err:
+                raise ValueError(
+                    f"[VirusTotal] Error occurred while fetching artifact from OpenCTI: {err}"
+                )
+            try:
+                analysis_id = self.client.upload_artifact(
+                    observable["importFiles"][0]["name"], artifact
+                )
+                # Attempting to get the file info immediately queues the artifact for more immediate analysis
+                self.client.get_file_info(observable["observable_value"])
+            except Exception as err:
+                raise ValueError(
+                    f"[VirusTotal] Error occurred uploading artifact to VirusTotal: {err}"
+                )
+            if self.file_wait_for_artifact_analysis_completion:
+                try:
+                    self.client.check_upload_status(
+                        observable["observable_value"], analysis_id
+                    )
+                except Exception as err:
+                    raise ValueError(
+                        f"[VirusTotal] Error occurred while waiting for VirusTotal to analyze artifact: {err}"
+                    )
+            else:
+                message = f"{observable['observable_value']} was an unseen artifact submitted for analysis but connector skipping waiting for analysis completion. Enrichment will likely fail in next step but can be rerun later with success. Change configuration setting if you would like the connector to wait for artifact analysis completion"
+                self.helper.api.work.to_processed(self.helper.work_id, message)
+                self.helper.log_debug(message)
+            json_data = self.client.get_file_info(observable["observable_value"])
+            assert json_data
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
         if "data" not in json_data or "attributes" not in json_data["data"]:
