@@ -218,6 +218,7 @@ class ExportFileCsv:
                 "Opinion": self.helper.api_impersonate.opinion.list,
                 "Report": self.helper.api_impersonate.report.list,
                 "Grouping": self.helper.api_impersonate.grouping.list,
+                "Case": self.helper.api_impersonate.case.list,
                 "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
                 "Identity": self.helper.api_impersonate.identity.list,
                 "Indicator": self.helper.api_impersonate.indicator.list,
