@@ -26,4 +26,5 @@ This connector allows organizations to feed a **Splunk** KV Store using OpenCTI 
 | `splunk_owner`                       | `SPLUNK_OWNER`                      | Yes          | The Splunk KV store owners as array (same order as URLs)                                      |
 | `splunk_ssl_verify`                  | `SPLUNK_SSL_VERIFY`                 | Yes          | Enable the SSL certificate check for all instances (default: `true`)                          |
 | `splunk_app`                         | `SPLUNK_APP`                        | Yes          | The app of the KV Store for all instances.                                                    |
-| `splunk_kv_store_name`               | `SPLUNK_KV_STORE_NAME`              | Yes          | The name of the KV Store for all instances.                                                                    |
+| `splunk_kv_store_name`               | `SPLUNK_KV_STORE_NAME`              | Yes          | The name of the KV Store for all instances.                                                   |
+| `splunk_ignore_types`                | `SPLUNK_IGNORE_TYPES`               | Yes          | The list of entity types to ignore.                                                           |
