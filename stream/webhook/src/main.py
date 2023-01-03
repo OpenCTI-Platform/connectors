@@ -2,11 +2,11 @@ import os
 import sys
 import time
 import yaml
-import requests
-from requests.adapters import HTTPAdapter, Retry
+import json
+import asyncio
 from datetime import datetime, timedelta
-from multiprocessing.pool import Pool
 
+from aiohttp_retry import RetryClient, ListRetry
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -20,9 +20,9 @@ class WebhookConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        self.graphql_polling_interval = get_config_variable(
+        self.graphql_polling_interval = int(get_config_variable(
             "WEBHOOK_GRAPHQL_POLLING_INTERVAL", ["webhook", "graphql_polling_interval"], config
-        )
+        ))
         self.graphql_query = get_config_variable(
             "WEBHOOK_GRAPHQL_QUERY", ["webhook", "graphql_query"], config
         )
@@ -32,37 +32,34 @@ class WebhookConnector:
         self.url = get_config_variable(
             "WEBHOOK_URL", ["webhook", "url"], config
         )
-        self.unsuccessful_retry_interval = get_config_variable(
+        self.unsuccessful_retry_interval = int(get_config_variable(
             "WEBHOOK_UNSUCCESSFUL_RETRY_INTERVAL", ["webhook", "unsuccessful_retry_interval"], config
-        )
-        self.unsuccessful_retry_attempts = get_config_variable(
+        ))
+        self.unsuccessful_retry_attempts = int(get_config_variable(
             "WEBHOOK_UNSUCCESSFUL_RETRY_ATTEMPTS", ["webhook", "unsuccessful_retry_attempts"], config
-        )
+        ))
         self.ignore_duplicates = get_config_variable(
             "WEBHOOK_IGNORE_DUPLICATES", ["webhook", "ignore_duplicates"], config
         )
-        self.session = requests.Session()
-        retries = Retry(total=self.unsuccessful_retry_attempts,
-            backoff_factor=self.unsuccessful_retry_interval,
-            backoff_max=self.unsuccessful_retry_interval)
-        self.session.mount('http', HTTPAdapter(max_retries=retries))
-        # if self.url.lower().startswith('https'):
-        #     self.session.mount('https://', HTTPAdapter(max_retries=retries))
-        # else:
-        #     self.session.mount('http://', HTTPAdapter(max_retries=retries))
 
-    def _make_web_call(self, webhook):
+    async def _make_web_call(self, session, url):
         try:
-            self.session.get(webhook)
+            async with session.get(url) as response:
+                if self.helper.log_level == "debug":
+                    r = await response.read()
+                    self.helper.log_debug(f"[Webhook] {r}")
         except Exception as e:
-            self.helper.log_error(f"[Webhook] The call to URL {webhook} failed with error: {e}")
+            self.helper.log_error(f"[Webhook] Error occurred while running webhook for URL {url}: {e}")
 
-    def run(self):
+
+    async def run(self):
         self.helper.log_info("[Webhook] Webhook connector started")
         last_poll_time = datetime.now() - timedelta(seconds=self.graphql_polling_interval)
-        while True:
-            with Pool() as pool:
-                graphql_query = self.graphql_query.replace('LAST_POLL_TIME', last_poll_time)
+        webcall_results = set()
+        retry_options = ListRetry([self.unsuccessful_retry_interval] * self.unsuccessful_retry_attempts)
+        async with RetryClient(raise_for_status=True, retry_options=retry_options) as session:
+            while True:
+                graphql_query = self.graphql_query.replace('LAST_POLL_TIME', last_poll_time.isoformat())
                 try:
                     query_results = self.helper.api.query(graphql_query)
                     # instead set this to the meta query time from GraphQL query
@@ -74,19 +71,26 @@ class WebhookConnector:
                 except Exception as e:
                     self.helper.log_debug(f"[Webhook] No new data found")
                 webhooks = []
-                for item in relevant_results:
-                    current_webhook = eval('f"{}"'.format(self.url))
-                    print(current_webhook)
-                    webhooks.append(current_webhook)
-                if self.ignore_duplicates:
-                    webhooks = list(set(webhooks))
-                pool.map_async(self._make_web_call, webhooks)
-                time.sleep(self.graphql_polling_interval)
+                if type(relevant_results) == list:
+                    for item in relevant_results:
+                        current_webhook = eval('f"{}"'.format(self.url))
+                        webhooks.append(current_webhook)
+                    if self.ignore_duplicates:
+                        webhooks = list(set(webhooks))
+                else:
+                    webhooks.append(eval('f"{}"'.format(self.url)))
+                if len(webhooks) > 0:
+                    self.helper.log_debug(f"[Webhook] {json.dumps(webhooks, indent=2)}")
+                    for webhook in webhooks:
+                        webcall = asyncio.create_task(self._make_web_call(session, webhook))
+                        webcall_results.add(webcall)
+                        webcall.add_done_callback(webcall_results.discard)
+                await asyncio.sleep(self.graphql_polling_interval)
 
 if __name__ == "__main__":
     try:
         connector = WebhookConnector()
-        connector.run()
+        asyncio.run(connector.run())
     except Exception as e:
         print(e)
         time.sleep(10)
