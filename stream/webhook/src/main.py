@@ -4,7 +4,6 @@ import time
 import yaml
 import json
 import asyncio
-from datetime import datetime, timedelta
 
 from aiohttp_retry import RetryClient, ListRetry
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -54,16 +53,17 @@ class WebhookConnector:
 
     async def run(self):
         self.helper.log_info("[Webhook] Webhook connector started")
-        last_poll_time = datetime.now() - timedelta(seconds=self.graphql_polling_interval)
+        last_poll_time = str((time.time() - self.graphql_polling_interval)*1000)
         webcall_results = set()
         retry_options = ListRetry([self.unsuccessful_retry_interval] * self.unsuccessful_retry_attempts)
         async with RetryClient(raise_for_status=True, retry_options=retry_options) as session:
             while True:
-                graphql_query = self.graphql_query.replace('LAST_POLL_TIME', last_poll_time.isoformat())
+                graphql_query = self.graphql_query.replace('LAST_POLL_TIME', last_poll_time)
+                graphql_query = eval("f'{}'".format(graphql_query))
                 try:
                     query_results = self.helper.api.query(graphql_query)
                     # instead set this to the meta query time from GraphQL query
-                    last_poll_time = datetime.now()
+                    last_poll_time = str(time.time()*1000)
                 except Exception as e:
                     raise Exception(f"[Webhook] Error occurred attempting to fetch results from GraphQL: {e}")
                 try:
