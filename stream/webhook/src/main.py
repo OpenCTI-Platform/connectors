@@ -55,8 +55,8 @@ class WebhookConnector:
         self.helper.log_info("[Webhook] Webhook connector started")
         last_poll_time = str((time.time() - self.graphql_polling_interval)*1000)
         webcall_results = set()
-        retry_options = ListRetry([self.unsuccessful_retry_interval] * self.unsuccessful_retry_attempts)
-        async with RetryClient(raise_for_status=True, retry_options=retry_options) as session:
+        retry_options = ListRetry([self.unsuccessful_retry_interval] * self.unsuccessful_retry_attempts, exceptions={Exception})
+        async with RetryClient(raise_for_status=False, retry_options=retry_options) as session:
             while True:
                 graphql_query = self.graphql_query.replace('LAST_POLL_TIME', last_poll_time)
                 graphql_query = eval("f'{}'".format(graphql_query))
@@ -65,7 +65,8 @@ class WebhookConnector:
                     # instead set this to the meta query time from GraphQL query
                     last_poll_time = str(time.time()*1000)
                 except Exception as e:
-                    raise Exception(f"[Webhook] Error occurred attempting to fetch results from GraphQL: {e}")
+                    self.helper.log_error(f"[Webhook] Error occurred attempting to fetch results from GraphQL: {e}")
+                    continue
                 try:
                     relevant_results = eval("query_results{}".format(self.graphql_returned_data_location))
                 except Exception as e:
