@@ -1,11 +1,11 @@
+import asyncio
+import json
 import os
 import sys
 import time
-import yaml
-import json
-import asyncio
 
-from aiohttp_retry import RetryClient, ListRetry
+import yaml
+from aiohttp_retry import ListRetry, RetryClient
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
