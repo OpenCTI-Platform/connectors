@@ -62,15 +62,16 @@ class WebhookConnector:
                 graphql_query = eval("f'{}'".format(graphql_query))
                 try:
                     query_results = self.helper.api.query(graphql_query)
-                    # instead set this to the meta query time from GraphQL query
+                    self.helper.log_debug(f"[Webhook] GraphQL query results: {json.dumps(query_results, indent=2)}")
+                    # Would be nice if GraphQL returned query completion time to use here to avoid any potential network latency issues
                     last_poll_time = str(time.time()*1000)
                 except Exception as e:
                     self.helper.log_error(f"[Webhook] Error occurred attempting to fetch results from GraphQL: {e}")
                     continue
                 try:
                     relevant_results = eval("query_results{}".format(self.graphql_returned_data_location))
-                except Exception as e:
-                    self.helper.log_debug(f"[Webhook] No new data found")
+                except Exception:
+                    self.helper.log_debug("[Webhook] No new data found")
                 webhooks = []
                 if type(relevant_results) == list:
                     for item in relevant_results:
@@ -81,7 +82,7 @@ class WebhookConnector:
                 else:
                     webhooks.append(eval('f"{}"'.format(self.url)))
                 if len(webhooks) > 0:
-                    self.helper.log_debug(f"[Webhook] {json.dumps(webhooks, indent=2)}")
+                    self.helper.log_debug(f"[Webhook] Webhooks to be called: {json.dumps(webhooks, indent=2)}")
                     for webhook in webhooks:
                         webcall = asyncio.create_task(self._make_web_call(session, webhook))
                         webcall_results.add(webcall)
