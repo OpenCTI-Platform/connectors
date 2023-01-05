@@ -55,7 +55,7 @@ class WebhookConnector:
 
     async def _make_web_call(self, session, url):
         try:
-            async with session.get(url) as response:
+            async with session.get(url, ssl=False) as response:
                 if self.helper.log_level == "debug":
                     r = await response.read()
                     self.helper.log_debug(f"[Webhook] {r}")
