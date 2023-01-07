@@ -81,26 +81,30 @@ class Mitre:
             # Convert the data to python dictionary
             stix_bundle = json.loads(serialized_bundle)
             stix_objects = stix_bundle["objects"]
-            revoked_ids = []
+            # First find all revoked ids
+            revoked_objects = list(
+                filter(
+                    lambda stix: "revoked" in stix and stix["revoked"] is True,
+                    stix_objects,
+                )
+            )
+            revoked_ids = list(map(lambda stix: stix["id"], revoked_objects))
 
             def filter_stix_revoked(stix):
                 # Pure revoke
-                if "revoked" in stix and stix["revoked"] is True:
-                    revoked_ids.append(stix["id"])
+                if stix["id"] in revoked_ids:
                     return False
                 # Side of relationship revoked
                 if stix["type"] == "relationship" and (
                     stix["source_ref"] in revoked_ids
                     or stix["target_ref"] in revoked_ids
                 ):
-                    revoked_ids.append(stix["id"])
                     return False
                 # Side of sighting revoked
                 if stix["type"] == "sighting" and (
                     stix["sighting_of_ref"] in revoked_ids
                     or any(ref in revoked_ids for ref in stix["where_sighted_refs"])
                 ):
-                    revoked_ids.append(stix["id"])
                     return False
                 return True
 
