@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-webhook:
+    image: opencti/connector-webhook:5.5.0
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=Webhook
+      - CONNECTOR_SCOPE=webhook
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - WEBHOOK_GRAPHQL_POLLING_INTERVAL=5 # In seconds. How often the connector polls the GraphQL API to look for changes.
+      - WEBHOOK_GRAPHQL_QUERY={{works(filters:[{{key:completed_time,operator:"gt",values:["LAST_POLL_TIME"]}}]){{edges{{node{{event_source_id}}}}}}}} # The query to make to the GraphQL endpoint. The GraphQL query should include a time filter aspect to it to ensure that results coming back are only new since the last poll. The variable 'LAST_POLL_TIME' in the query string will be replaced with the time of the last successfully executed poll in epoch milliseconds. The query is evaluated as a python format string before being queried so that complex logic can be included in the query; because of this, use single curly braces ( { ) for python interpretation and double curly braces for GraphQL interpretation ( {{ ). GraphQL also requires double quotes ( " ) be used for declarations.
+      - WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION=['data']['works']['edges'] # Where to look for data in a successfully returned query. If the data does not exist or returns an empty array/string, the connector will ignore it. Use single quotes ( ' ) for string declarations.
+      - WEBHOOK_URL=http://localhost?id={item['node']['event_source_id']} # The URL to call when returned data is successfully found. The connector will iterate through a returned data array or single piece of data from the WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION variable with callable data variable named "item". The url is evaluated as a python format string before being called so that complex logic can be included in the call; because of this, use single curly braces ( { ) for python interpretation and double curly braces ( {{ ) for a single curly brace literal ( { ). Use single quotes ( ' ) for string declarations.
+      - WEBHOOK_UNSUCCESSFUL_RETRY_INTERVAL=5 # In seconds. If the webhook call is unsuccessful, retry after this many seconds
+      - WEBHOOK_UNSUCCESSFUL_RETRY_ATTEMPTS=5 # If the webhook call is unsuccessful, retry no more than this many times.
+      - WEBHOOK_IGNORE_DUPLICATES=true # If duplicate webhook calls exist in the poll, only call each once.
+    restart: always
+    depends_on:
+      - opencti
