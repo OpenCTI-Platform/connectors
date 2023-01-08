@@ -2,6 +2,7 @@
 """VirusTotal enrichment module."""
 import json
 from pathlib import Path
+from time import sleep
 
 import stix2
 import yaml
@@ -122,6 +123,13 @@ class VirusTotalConnector:
             message = f"The file {observable['observable_value']} was not found in VirusTotal repositories. Beginning upload and analysis"
             self.helper.api.work.to_received(self.helper.work_id, message)
             self.helper.log_debug(message)
+            # Larger files can sometimes take a few seconds to propogate through the system and be added to the observable
+            # It appears to be about 1 second for every 30-50MB
+            if not len(observable["importFiles"]):
+                sleep(5)
+                observable = self.helper.api.stix_cyber_observable.read(
+                    id=observable["id"]
+                )
             # File must be smaller than 32MB for VirusTotal upload
             if observable["importFiles"][0]["size"] > 33554432:
                 raise ValueError(
