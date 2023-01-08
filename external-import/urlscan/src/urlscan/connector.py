@@ -113,7 +113,15 @@ class UrlscanConnector:
             obs1 = self._create_url_observable(url, "Urlscan.io URL")
             bundle_objects.extend(filter(None, [*obs1]))
 
+            # This could potentially check for just "blob:"
+            if url.startswith("blob:http"):
+                url = url[5:]
+
             hostname = urlparse(url).hostname
+            if hostname is None:
+                log.warning("Could not parse url: %s", hostname)
+                continue
+
             if validators.domain(hostname):
                 obs2 = self._create_domain_observable(hostname, "Urlscan.io Domain")
                 bundle_objects.extend(filter(None, [*obs2]))
