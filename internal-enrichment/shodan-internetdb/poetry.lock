@@ -107,8 +107,8 @@ category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.5.2-py3-none-any.whl", hash = "sha256:2634119e6c2c5dee3d3d0ea0c189c6d19030ed935c0843d57f3157a1288b830c"},
-    {file = "pycti-5.5.2.tar.gz", hash = "sha256:90059e5864a43711063db8b0ab81d7ba8d885b2521719fe9e89a7f327384e901"},
+    {file = "pycti-5.5.2-py3-none-any.whl", hash = "sha256:99ffb692e21d3406ca3eef6cb4131138c903b7dda62f7827d3488b34752c7a04"},
+    {file = "pycti-5.5.2.tar.gz", hash = "sha256:8f87445f39e3fdf8cb196541b0165a3c7a07c8394f29b6a92f5250811cd1ddce"},
 ]
 
 [package.dependencies]
@@ -632,4 +632,4 @@ test = ["flake8 (>=2.4.0)", "isort (>=4.2.2)", "pytest (>=2.2.3)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "0962a6fb78588012f9c603b595039d8003e5336eef08a0a08d2d6806af6f648d"
+content-hash = "b5ffac62d1428ec6322c3d05d1d88300d453e46e085d96b96f75756be0109aed"
