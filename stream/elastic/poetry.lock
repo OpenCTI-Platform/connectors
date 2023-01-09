@@ -395,14 +395,14 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.5.1"
+version = "5.5.2"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.5.1-py3-none-any.whl", hash = "sha256:2634119e6c2c5dee3d3d0ea0c189c6d19030ed935c0843d57f3157a1288b830c"},
-    {file = "pycti-5.5.1.tar.gz", hash = "sha256:90059e5864a43711063db8b0ab81d7ba8d885b2521719fe9e89a7f327384e901"},
+    {file = "pycti-5.5.2-py3-none-any.whl", hash = "sha256:2634119e6c2c5dee3d3d0ea0c189c6d19030ed935c0843d57f3157a1288b830c"},
+    {file = "pycti-5.5.2.tar.gz", hash = "sha256:90059e5864a43711063db8b0ab81d7ba8d885b2521719fe9e89a7f327384e901"},
 ]
 
 [package.dependencies]
