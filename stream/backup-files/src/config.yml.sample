@@ -9,7 +9,6 @@ connector:
   live_stream_listen_delete: true
   name: 'BackupFiles'
   scope: 'backup'
-  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 backup:
