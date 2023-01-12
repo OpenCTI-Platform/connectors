@@ -157,7 +157,7 @@ class Silobreaker:
             self.silobreaker_api_url
             + "/search/documents?q=list:threat%20publications%20AND%20entitytype:malware%20OR%20entitytype:threatactor%20fromdate:-"
             + str(delta_days)
-            + "&extras=documentTeasers%2CdocumentXml&pagesize=5000&includeEntities=True&entityCount=200"
+            + "&extras=documentTeasers%2CdocumentXml%2CDocumentFullText&pagesize=100&includeEntities=True&entityCount=200"
         )
         data = self._query("GET", url)
         if "Items" in data:
@@ -370,6 +370,23 @@ class Silobreaker:
                         description = self._convert_to_markdown(
                             item["Extras"]["DocumentTeasers"]["HtmlSnippet"]
                         )
+                        file = None
+                        if (
+                            "DocumentFullText" in item["Extras"]
+                            and "HtmlFullText" in item["Extras"]["DocumentFullText"]
+                        ):
+                            file = {
+                                "name": "report.html",
+                                "mime_type": "text/html",
+                                "data": base64.b64encode(
+                                    item["Extras"]["DocumentFullText"][
+                                        "HtmlFullText"
+                                    ].encode("utf-8")
+                                ).decode("utf-8"),
+                            }
+                            self._convert_to_markdown(
+                                item["Extras"]["DocumentFullText"]["HtmlFullText"]
+                            )
                         report_stix = stix2.Report(
                             id=Report.generate_id(
                                 item["Description"], item["PublicationDate"]
@@ -384,12 +401,16 @@ class Silobreaker:
                             object_marking_refs=[stix2.TLP_AMBER.get("id")],
                             object_refs=[object["id"] for object in objects],
                             external_references=external_references,
+                            allow_custom=True,
+                            x_opencti_files=[file] if file is not None else [],
                         )
+                        print(report_stix)
                         objects.append(report_stix)
                         bundle = stix2.Bundle(
                             objects=objects,
                             allow_custom=True,
                         )
+                        print(bundle.serialize())
                         self.helper.send_stix2_bundle(
                             bundle.serialize(),
                             update=self.update_existing_data,
