@@ -2022,6 +2022,8 @@ class Misp:
                 markings.append(stix2.TLP_GREEN)
             if tag["name"] == "tlp:amber":
                 markings.append(stix2.TLP_AMBER)
+            if tag["name"] == "tlp:amber+strict":
+                markings.append(stix2.TLP_AMBER)
             if tag["name"] == "tlp:red":
                 markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
@@ -2039,6 +2041,7 @@ class Misp:
                 tag["name"] != "tlp:white"
                 and tag["name"] != "tlp:green"
                 and tag["name"] != "tlp:amber"
+                and tag["name"] != "tlp:amber+strict"
                 and tag["name"] != "tlp:red"
                 and not tag["name"].startswith("misp-galaxy:threat-actor")
                 and not tag["name"].startswith("misp-galaxy:mitre-threat-actor")
