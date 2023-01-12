@@ -16,6 +16,7 @@ services:
       - ESET_USERNAME=ChangeMe
       - ESET_PASSWORD=ChangeMe
       - ESET_COLLECTIONS=ei.misp,ei.cc,ei.urls
+      - ESET_IMPORT_APT_REPORTS=true
       - ESET_IMPORT_START_DATE=2022-04-01
       - ESET_CREATE_OBSERVABLES=true
       - ESET_INTERVAL=60 # Required, in minutes
