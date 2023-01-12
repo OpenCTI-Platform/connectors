@@ -1,3 +1,4 @@
+import base64
 import datetime
 import json
 import os
@@ -5,10 +6,14 @@ import sys
 import time
 
 import cabby
+import eti_api
 import pytz
+import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, Report, get_config_variable
+
+TMP_DIR = "TMP"
 
 
 class Eset:
@@ -33,7 +38,14 @@ class Eset:
         )
         self.eset_collections = get_config_variable(
             "ESET_COLLECTIONS", ["eset", "collections"], config
-        ).split(",")
+        )
+        self.eset_import_apt_reports = get_config_variable(
+            "ESET_IMPORT_APT_REPORTS",
+            ["eset", "import_apt_reports"],
+            config,
+            False,
+            True,
+        )
         self.eset_import_start_date = get_config_variable(
             "ESET_IMPORT_START_DATE",
             ["eset", "import_start_date"],
@@ -60,9 +72,87 @@ class Eset:
         self.added_after = int(parse(self.eset_import_start_date).timestamp())
         # Init variables
         self.cache = {}
+        if self.eset_collections is not None:
+            self.eset_collections = self.eset_collections.split(",")
+
+        # Create temporary dir and initialize logging.
+        if sys.version_info.major == 2:  # Compatibility with Python 2.7.
+            if not os.path.isdir(TMP_DIR):
+                os.makedirs(TMP_DIR)
+        else:
+            os.makedirs(TMP_DIR, exist_ok=True)
 
     def get_interval(self):
         return int(self.eset_interval) * 60
+
+    def _download_all_report_stuff(self, connection, report, base_path):
+        """Download xml, pdf and adds (if available) from given *report* into paths starting with *base_path*."""
+        for fmt in ["pdf", "xml", "adds"]:
+            ext = fmt if fmt != "adds" else "zip"
+            connection.get_report(report, fmt, file_path="{}.{}".format(base_path, ext))
+
+    def _import_reports(self, work_id, start_epoch):
+        connection = eti_api.Connection(
+            username=self.eset_username,
+            password=self.eset_password,
+            host="eti.eset.com",
+        )
+        from_date = datetime.datetime.utcfromtimestamp(start_epoch).astimezone(pytz.utc)
+        i = 0
+        for report in connection.list_reports(
+            type="all", datetimefrom=from_date.isoformat()
+        ):
+            bundle_objects = []
+            if report["status"] != "finished":
+                self.helper.log_info("Finished")
+                continue  # Skip not generated reports.
+            i += 1
+            file_path = os.path.join(TMP_DIR, "{}_{:02d}".format("all", i))
+            self._download_all_report_stuff(connection, report, file_path)
+            if os.path.isfile(file_path + ".pdf"):
+                name = report["filename"].replace(".pdf", "")
+                date = parse(report["date"])
+                with open(file_path + ".pdf", "rb") as f:
+                    file_data_encoded = base64.b64encode(f.read())
+                file = {
+                    "name": report["filename"],
+                    "data": file_data_encoded.decode("utf-8"),
+                    "mime_type": "application/pdf",
+                }
+                stix_report = stix2.Report(
+                    id=Report.generate_id(name, date),
+                    name=name,
+                    report_types=["APT Report"],
+                    description=name,
+                    published=date,
+                    labels=["apt", "eset"],
+                    confidence=self.helper.connect_confidence_level,
+                    created_by_ref=self.identity["standard_id"],
+                    object_refs=[self.identity["standard_id"]],
+                    allow_custom=True,
+                    x_opencti_files=[file],
+                    object_marking_refs=[stix2.TLP_AMBER.get("id")],
+                )
+                bundle_objects.append(stix_report)
+                try:
+                    self.helper.log_debug("Objects to be sent " + str(bundle_objects))
+                    self.helper.send_stix2_bundle(
+                        stix2.Bundle(
+                            objects=bundle_objects,
+                            allow_custom=True,
+                        ).serialize(),
+                        update=self.update_existing_data,
+                        bypass_split=True,
+                        work_id=work_id,
+                    )
+                except Exception as e:
+                    self.helper.log_info("Failed to process report " + name)
+                    self.helper.log_info("ERROR: " + str(e))
+                os.remove(file_path + ".pdf")
+                if os.path.isfile(file_path + ".xml"):
+                    os.remove(file_path + ".xml")
+                if os.path.isfile(file_path + ".zip"):
+                    os.remove(file_path + ".zip")
 
     def _import_collection(self, collection, work_id, start_epoch):
         object_types_with_confidence = [
@@ -155,10 +245,14 @@ class Eset:
                     self.helper.set_state({"last_run": self.added_after})
                 # Get collections
                 current_state = self.helper.get_state()
-                for collection in self.eset_collections:
-                    self._import_collection(
-                        collection, work_id, current_state["last_run"]
-                    )
+
+                if self.eset_collections is not None:
+                    for collection in self.eset_collections:
+                        self._import_collection(
+                            collection, work_id, current_state["last_run"]
+                        )
+                if self.eset_import_apt_reports:
+                    self._import_reports(work_id, current_state["last_run"])
                 self.helper.set_state({"last_run": timestamp})
                 message = "End of synchronization"
                 self.helper.api.work.to_processed(work_id, message)
