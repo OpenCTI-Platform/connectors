@@ -16,6 +16,7 @@ eset:
   username: 'ChangeMe'
   password: 'ChangeMe'
   collections: 'ei.misp,ei.cc,ei.urls'
+  import_apt_reports: true
   import_start_date: '2022-04-01'
   create_observables: true
   interval: 60 # Required, in minutes
