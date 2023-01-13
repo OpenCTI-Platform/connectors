@@ -384,7 +384,7 @@ class Silobreaker:
                                     ].encode("utf-8")
                                 ).decode("utf-8"),
                             }
-                            self._convert_to_markdown(
+                            description = self._convert_to_markdown(
                                 item["Extras"]["DocumentFullText"]["HtmlFullText"]
                             )
                         report_stix = stix2.Report(
@@ -404,13 +404,11 @@ class Silobreaker:
                             allow_custom=True,
                             x_opencti_files=[file] if file is not None else [],
                         )
-                        print(report_stix)
                         objects.append(report_stix)
                         bundle = stix2.Bundle(
                             objects=objects,
                             allow_custom=True,
                         )
-                        print(bundle.serialize())
                         self.helper.send_stix2_bundle(
                             bundle.serialize(),
                             update=self.update_existing_data,
