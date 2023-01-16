@@ -3,6 +3,7 @@ import ssl
 import sys
 import time
 import urllib.request
+import re
 from datetime import datetime
 
 import certifi
@@ -100,6 +101,13 @@ class VXVault:
                             for line in fp:
                                 count += 1
                                 if count <= 3:
+                                    continue
+                                line=line.strip()
+                                matchHtmlTag = re.search(r'^<\/?\w+>', line)
+                                if matchHtmlTag:
+                                    continue
+                                matchBlankLine = re.search(r'^\s*$', line)
+                                if matchBlankLine:
                                     continue
                                 external_reference = ExternalReference(
                                     source_name="VX Vault",
