@@ -1,13 +1,14 @@
 import os
+import re
 import ssl
 import sys
 import time
 import urllib.request
-import re
 from datetime import datetime
 
 import certifi
 import yaml
+
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import TLP_WHITE, URL, Bundle, ExternalReference
 
@@ -74,7 +75,7 @@ class VXVault:
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
                     (timestamp - last_run)
-                    > ((int(self.vxvault_interval) - 1) * 60 * 60 * 24)
+                    < ((int(self.vxvault_interval) - 1) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.utcfromtimestamp(timestamp)
