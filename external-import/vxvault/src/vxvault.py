@@ -75,7 +75,7 @@ class VXVault:
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
                     (timestamp - last_run)
-                    < ((int(self.vxvault_interval) - 1) * 60 * 60 * 24)
+                    > ((int(self.vxvault_interval) - 1) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.utcfromtimestamp(timestamp)
