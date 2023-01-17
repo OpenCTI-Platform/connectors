@@ -1,4 +1,5 @@
 import os
+import re
 import ssl
 import sys
 import time
@@ -7,6 +8,7 @@ from datetime import datetime
 
 import certifi
 import yaml
+
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import TLP_WHITE, URL, Bundle, ExternalReference
 
@@ -100,6 +102,13 @@ class VXVault:
                             for line in fp:
                                 count += 1
                                 if count <= 3:
+                                    continue
+                                line=line.strip()
+                                matchHtmlTag = re.search(r'^<\/?\w+>', line)
+                                if matchHtmlTag:
+                                    continue
+                                matchBlankLine = re.search(r'^\s*$', line)
+                                if matchBlankLine:
                                     continue
                                 external_reference = ExternalReference(
                                     source_name="VX Vault",
