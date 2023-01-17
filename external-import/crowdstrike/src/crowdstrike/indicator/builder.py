@@ -378,7 +378,6 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            start_time=self.first_seen,
         )
 
     def _create_indicates_relationships(
