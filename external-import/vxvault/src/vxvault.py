@@ -103,11 +103,11 @@ class VXVault:
                                 count += 1
                                 if count <= 3:
                                     continue
-                                line=line.strip()
-                                matchHtmlTag = re.search(r'^<\/?\w+>', line)
+                                line = line.strip()
+                                matchHtmlTag = re.search(r"^<\/?\w+>", line)
                                 if matchHtmlTag:
                                     continue
-                                matchBlankLine = re.search(r'^\s*$', line)
+                                matchBlankLine = re.search(r"^\s*$", line)
                                 if matchBlankLine:
                                     continue
                                 external_reference = ExternalReference(
