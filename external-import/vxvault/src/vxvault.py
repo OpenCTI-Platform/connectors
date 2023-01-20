@@ -8,7 +8,6 @@ from datetime import datetime
 
 import certifi
 import yaml
-
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import TLP_WHITE, URL, Bundle, ExternalReference
 
