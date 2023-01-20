@@ -63,7 +63,7 @@ class VTConnector:
             data = json.loads(msg.data)["data"]
 
         except:
-            raise ValueError("Cannot process the message: " + msg)
+            raise ValueError("Cannot process the message: " + str(msg))
 
         # Handle creation
         if (
