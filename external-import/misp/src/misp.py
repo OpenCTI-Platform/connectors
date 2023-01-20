@@ -2014,17 +2014,18 @@ class Misp:
     def resolve_markings(self, tags, with_default=True):
         markings = []
         for tag in tags:
-            if tag["name"] == "tlp:clear":
+            tag_name = tag["name"].lower()
+            if tag_name == "tlp:clear":
                 markings.append(stix2.TLP_WHITE)
-            if tag["name"] == "tlp:white":
+            if tag_name == "tlp:white":
                 markings.append(stix2.TLP_WHITE)
-            if tag["name"] == "tlp:green":
+            if tag_name == "tlp:green":
                 markings.append(stix2.TLP_GREEN)
-            if tag["name"] == "tlp:amber":
+            if tag_name == "tlp:amber":
                 markings.append(stix2.TLP_AMBER)
-            if tag["name"] == "tlp:amber+strict":
+            if tag_name == "tlp:amber+strict":
                 markings.append(stix2.TLP_AMBER)
-            if tag["name"] == "tlp:red":
+            if tag_name == "tlp:red":
                 markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
             markings.append(stix2.TLP_WHITE)
