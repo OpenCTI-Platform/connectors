@@ -60,6 +60,14 @@ class MWDB:
             True,
         )
 
+        self.verify_ssl = get_config_variable(
+            "MWDB_SSL_VERIFY",
+            ["mwdb", "ssl_verify"],
+            config,
+            False,
+            True,
+        )
+
         self.create_observables = get_config_variable(
             "MWDB_CREATE_OBSERVABLES",
             ["mwdb", "create_observables"],
@@ -337,41 +345,43 @@ class MWDB:
             fullsearch = self.helper.api.malware.read(
                 filter={"key": "name", "values": [taglabel.lower().strip()]}
             )
-            for malwsearc in fullsearch:
-                if (
-                    malwsearc["name"].lower().strip()
-                    == taglabel.lower().strip().replace(" ", "")
-                    or malwsearc["name"].lower().strip() == taglabel.lower()
-                ):
-                    ### create relation and continue indicates
-                    relatsions = Relationship(
-                        source_ref=sample["observable"]["id"],
-                        target_ref=cve["id"],
-                        relationship_type="related-to",
-                        created_by_ref=self.identity["standard_id"],
-                    )
-                    relatsions.append(relationship)
+            if fullsearch:
+                for malwsearc in fullsearch:
+                    if (
+                        malwsearc["name"].lower().strip()
+                        == taglabel.lower().strip().replace(" ", "")
+                        or malwsearc["name"].lower().strip() == taglabel.lower()
+                    ):
+                        ### create relation and continue indicates
+                        relatsions = Relationship(
+                            source_ref=sample["observable"]["id"],
+                            target_ref=cve["id"],
+                            relationship_type="related-to",
+                            created_by_ref=self.identity["standard_id"],
+                        )
+                        relatsions.append(relationship)
 
             ## second search for intrusion set like APT
             fullsearch = self.helper.api.intrusion_set.read(
                 filter={"key": "name", "values": [taglabel.lower().strip()]}
             )
-            for intrusion in fullsearch:
-                if intrusion[
-                    "name"
-                ].lower().strip() == taglabel.lower().strip() or intrusion[
-                    "name"
-                ].lower().strip() == taglabel.lower().strip().replace(
-                    " ", ""
-                ):
-                    relatsions = Relationship(
-                        source_ref=sample["observable"]["id"],
-                        target_ref=cve["id"],
-                        relationship_type="related-to",
-                        created_by_ref=self.identity["standard_id"],
-                    )
-                    relatsions.append(relationship)
-                    ### create relation and continue related-to
+            if fullsearch:
+                for intrusion in fullsearch:
+                    if intrusion[
+                        "name"
+                    ].lower().strip() == taglabel.lower().strip() or intrusion[
+                        "name"
+                    ].lower().strip() == taglabel.lower().strip().replace(
+                        " ", ""
+                    ):
+                        relatsions = Relationship(
+                            source_ref=sample["observable"]["id"],
+                            target_ref=cve["id"],
+                            relationship_type="related-to",
+                            created_by_ref=self.identity["standard_id"],
+                        )
+                        relatsions.append(relationship)
+                        ### create relation and continue related-to
         return relatsions
 
     def process_virus(self, malware):
@@ -488,11 +498,13 @@ class MWDB:
                 len(virus["mal_tag"]["extra"]) > 0
                 and str(self.create_observables).capitalize() == "True"
             ):
-                for relationextra in self.process_extratag(
+                extra_tag = self.process_extratag(
                     virus["mal_tag"]["extra"], virus
-                ):
-                    if relationextra:
-                        bundle_objects.append(relationextra)
+                )
+                if extra_tag:
+                    for relationextra in extra_tag:
+                        if relationextra:
+                            bundle_objects.append(relationextra)
 
             updateopencti = str(self.update_existing_data).capitalize() == "True"
             bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
@@ -549,7 +561,7 @@ class MWDB:
                     search_path = "api/file" + querysearch + "&older_than=" + lasthash
 
                 auth = {"Authorization": "Bearer " + self.mwdb_token}
-                resp = requests.get(self.mwdb_url + search_path, headers=auth)
+                resp = requests.get(self.mwdb_url + search_path, headers=auth, verify=bool(self.verify_ssl))
                 if resp.status_code == 200:
                     malws = resp.json()
 
@@ -566,6 +578,7 @@ class MWDB:
             self.helper.set_state(state)
 
         except Exception as e:
+            print(f"++++++++ ->{malware}")
             self.helper.log_error(str(e))
         return
 
