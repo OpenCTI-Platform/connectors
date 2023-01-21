@@ -580,7 +580,6 @@ class MWDB:
             self.helper.set_state(state)
 
         except Exception as e:
-            print(f"++++++++ ->{malware}")
             self.helper.log_error(str(e))
         return
 
