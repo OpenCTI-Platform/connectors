@@ -498,9 +498,7 @@ class MWDB:
                 len(virus["mal_tag"]["extra"]) > 0
                 and str(self.create_observables).capitalize() == "True"
             ):
-                extra_tag = self.process_extratag(
-                    virus["mal_tag"]["extra"], virus
-                )
+                extra_tag = self.process_extratag(virus["mal_tag"]["extra"], virus)
                 if extra_tag:
                     for relationextra in extra_tag:
                         if relationextra:
@@ -561,7 +559,11 @@ class MWDB:
                     search_path = "api/file" + querysearch + "&older_than=" + lasthash
 
                 auth = {"Authorization": "Bearer " + self.mwdb_token}
-                resp = requests.get(self.mwdb_url + search_path, headers=auth, verify=bool(self.verify_ssl))
+                resp = requests.get(
+                    self.mwdb_url + search_path,
+                    headers=auth,
+                    verify=bool(self.verify_ssl),
+                )
                 if resp.status_code == 200:
                     malws = resp.json()
 
