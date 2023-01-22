@@ -42,6 +42,8 @@ There are a number of configuration options, which are set either in `docker-com
 | MWDB_START_DATE           | start_date           |           |A Starting date used to run the first time. ex 2022-06-27T00:00:00.000Z
 | MWDB_TAG_FILTER           | collections          |           |A regex used to filter tags which could be related to malwares ex `virusshare.*|bazaar-.*|malshare-.*|apt20\d{2}`
 | MWDB_MAX_START_RETENTION  | start_retention      | X         |A default retention if MWDB_START_DATE isn't configured is an INT and it reflects months , 6 is defualt.
+| MWDB_MAX_START_RETENTION  | start_retention      | X         |A default retention if MWDB_START_DATE isn't configured is an INT and it reflects months , 6 is defualt.
+| MWDB_SSL_VERIFY           | ssl_verify           | X         |True or False , enable the ssl verify flag for any MWDB api requests
 
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as any other Connector. You should consult the OpenCTI Connector documentation for questions about these values here: [https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
 

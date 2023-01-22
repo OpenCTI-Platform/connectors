@@ -21,6 +21,6 @@ mwdb:
   start_date: '2022-04-01T00:00:00'  # ISO 8601
   org_description: 'ChangeMe'
   org_name: 'ChangeMe'
-  start_date: '2022-04-01T00:00:00'
+  ssl_verify: False
   tag_filter: 'virusshare.*|bazaar-.*|malshare-.*|apt20\d{2}'
   start_retention: 5
