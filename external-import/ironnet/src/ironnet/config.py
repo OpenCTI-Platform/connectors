@@ -76,8 +76,8 @@ class IronNetConfig(BaseSettings):
         default=True,
     )
     create_ip_indicators: bool = Field(
-        description="Create indicators from observables",
-        env="IRONNET_CREATE_INDICATORS",
+        description="Create IP indicators from observables",
+        env="IRONNET_CREATE_IP_INDICATORS",
         default=False,
     )
     ip_indicator_valid_until: timedelta = Field(
