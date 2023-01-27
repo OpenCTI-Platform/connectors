@@ -2,6 +2,7 @@
 """Virustotal client module."""
 import asyncio
 import base64
+import hashlib
 import json
 import urllib.parse
 
@@ -230,10 +231,12 @@ class VirusTotalClient:
         dict
             URL Object, see https://developers.virustotal.com/reference/url-object
         """
-        endpoint_url = (
-            f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}"
-        )
-        return self._query(endpoint_url)
+        base64_url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}"
+        results = self._query(base64_url)
+        if "error" in results:
+            sha256_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}"
+            results = self._query(sha256_url)
+        return results
 
     def upload_url(self, url) -> str:
         """
