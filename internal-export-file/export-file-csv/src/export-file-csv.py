@@ -97,7 +97,8 @@ class ExportFileCsv:
 
     def _process_message(self, data):
         file_name = data["file_name"]
-        export_scope = data["export_scope"]  # single or list
+        export_scope = data["export_scope"]  # query or selection or single
+        self.helper.log_info('export_scope' + export_scope)
         export_type = data["export_type"]  # Simple or Full
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
         entity_type = data["entity_type"]
@@ -160,7 +161,7 @@ class ExportFileCsv:
                 + ") to "
                 + file_name
             )
-        else:
+        else:  # export_scope = 'query'
             list_params = data["list_params"]
             self.helper.log_info(
                 "Exporting list: "
