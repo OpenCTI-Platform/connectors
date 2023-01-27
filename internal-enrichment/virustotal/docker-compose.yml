@@ -25,10 +25,12 @@ services:
       - VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for IPv4 based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
       - VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
       - VIRUSTOTAL_IP_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+      - VIRUSTOTAL_IP_ADD_RELATIONSHIPS=true # Whether or not to add ASN and location resolution relationships
       # Domain specific config settings
       - VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Domain based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
       - VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
       - VIRUSTOTAL_DOMAIN_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+      - VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS=true # Whether or not to add IP resolution relationships
       # URL specific config settings
       - VIRUSTOTAL_URL_UPLOAD_UNSEEN=false # Whether to upload URLs that VirusTotal has no record of for analysis
       - VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Url based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
