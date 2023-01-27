@@ -80,9 +80,19 @@ class VirusTotalConnector:
         )
 
         # IP specific settings
+        self.ip_add_relationships = get_config_variable(
+            "VIRUSTOTAL_IP_ADD_RELATIONSHIPS",
+            ["virustotal", "ip_add_relationships"],
+            config,
+        )
         self.ip_indicator_config = IndicatorConfig.load_indicator_config(config, "IP")
 
         # Domain specific settings
+        self.domain_add_relationships = get_config_variable(
+            "VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS",
+            ["virustotal", "domain_add_relationships"],
+            config,
+        )
         self.domain_indicator_config = IndicatorConfig.load_indicator_config(
             config, "DOMAIN"
         )
@@ -235,8 +245,9 @@ class VirusTotalConnector:
             json_data["data"],
         )
 
-        builder.create_asn_belongs_to()
-        builder.create_location_located_at()
+        if self.ip_add_relationships:
+            builder.create_asn_belongs_to()
+            builder.create_location_located_at()
 
         builder.create_indicator_based_on(
             self.ip_indicator_config,
@@ -261,17 +272,18 @@ class VirusTotalConnector:
             json_data["data"],
         )
 
-        # Create IPv4 address observables for each A record
-        # and a Relationship between them and the observable.
-        for ip in [
-            r["value"]
-            for r in json_data["data"]["attributes"]["last_dns_records"]
-            if r["type"] == "A"
-        ]:
-            self.helper.log_debug(
-                f'[VirusTotal] adding ip {ip} to domain {observable["observable_value"]}'
-            )
-            builder.create_ip_resolves_to(ip)
+        if self.domain_add_relationships:
+            # Create IPv4 address observables for each A record
+            # and a Relationship between them and the observable.
+            for ip in [
+                r["value"]
+                for r in json_data["data"]["attributes"]["last_dns_records"]
+                if r["type"] == "A"
+            ]:
+                self.helper.log_debug(
+                    f'[VirusTotal] adding ip {ip} to domain {observable["observable_value"]}'
+                )
+                builder.create_ip_resolves_to(ip)
 
         builder.create_indicator_based_on(
             self.domain_indicator_config,
