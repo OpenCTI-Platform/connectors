@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Virustotal client module."""
 import asyncio
-import hashlib
+import base64
 import json
 import urllib.parse
 
@@ -230,7 +230,9 @@ class VirusTotalClient:
         dict
             URL Object, see https://developers.virustotal.com/reference/url-object
         """
-        endpoint_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}"
+        endpoint_url = (
+            f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}"
+        )
         return self._query(endpoint_url)
 
     def upload_url(self, url) -> str:
@@ -292,3 +294,18 @@ class VirusTotalClient:
             f"The uploaded {upload_type} {name} was not analyzed by VirusTotal before the "
             f"timeout was reached. Please try enriching the {upload_type} again at a later time."
         )
+
+    @staticmethod
+    def base64_encode_no_padding(contents):
+        """
+        Base64 encode a string and remove padding.
+        Parameters
+        ----------
+        contents : str
+            String to encode.
+        Returns
+        -------
+        str
+            Base64 encoded string without padding
+        """
+        return base64.b64encode(contents.encode()).decode().replace("=", "")
