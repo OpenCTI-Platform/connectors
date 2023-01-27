@@ -167,7 +167,7 @@ class ExportFileCsv:
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
                 self.helper.log_info('selected_ids' + str(selected_ids))
-                list_filters = 'via selected_ids'
+                list_filters = 'selected_ids'
                 entities_list = []
 
                 for entity_id in selected_ids:

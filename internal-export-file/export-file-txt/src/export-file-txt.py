@@ -31,7 +31,7 @@ class ExportFileTxt:
             selected_ids = data["selected_ids"]
             self.helper.log_info('selected_ids' + str(selected_ids))
             entities_list = []
-            list_filters = 'via selected_ids'
+            list_filters = 'selected_ids'
 
             for entity_id in selected_ids:
                 entity_data = self.helper.api_impersonate.stix_domain_object.read(
