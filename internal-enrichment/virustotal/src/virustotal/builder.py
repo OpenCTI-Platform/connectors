@@ -312,7 +312,7 @@ class VirusTotalBuilder:
                 )}\n```""",
             )
 
-        if "categories" in self.attributes:
+        if "categories" in self.attributes and len(self.attributes["categories"]) > 0:
             self.create_note(
                 "VirusTotal Categories",
                 f'```\n{json.dumps(self.attributes["categories"], indent=2)}\n```',
