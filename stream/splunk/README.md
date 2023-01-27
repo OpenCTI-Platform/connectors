@@ -23,6 +23,7 @@ This connector allows organizations to feed a **Splunk** KV Store using OpenCTI 
 | `splunk_url`                         | `SPLUNK_URL`                        | Yes          | The Splunk instances REST API URLs as array                                                   |
 | `splunk_login`                       | `SPLUNK_LOGIN`                      | Yes          | The Splunk login users as array (same order as URLs)                                          |
 | `splunk_password`                    | `SPLUNK_PASSWORD`                   | Yes          | The Splunk passwords as array (same order as URLs)                                            |
+| `splunk_token`                    | `SPLUNK_TOKEN`                   | Yes          | The Splunk token for your user that you can create on your splunk instance                                            |
 | `splunk_owner`                       | `SPLUNK_OWNER`                      | Yes          | The Splunk KV store owners as array (same order as URLs)                                      |
 | `splunk_ssl_verify`                  | `SPLUNK_SSL_VERIFY`                 | Yes          | Enable the SSL certificate check for all instances (default: `true`)                          |
 | `splunk_app`                         | `SPLUNK_APP`                        | Yes          | The app of the KV Store for all instances.                                                    |

@@ -18,6 +18,7 @@ splunk:
   login: 'Login1,Login2'
   password: 'Password1,Password2'
   owner: 'nobody,nobody'
+  token:'token of your user'
   ssl_verify: true
   app: 'search'
   kv_store_name: 'opencti'
