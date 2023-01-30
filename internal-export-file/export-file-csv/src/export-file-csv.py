@@ -177,6 +177,12 @@ class ExportFileCsv:
                                 id=entity_id
                             )
                         )
+                    if entity_data is None:
+                        entity_data = (
+                            self.helper.api_impersonate.stix_core_relationship.read(
+                                id=entity_id
+                            )
+                        )
                     entities_list.append(entity_data)
 
             else:  # export_scope = 'query'
