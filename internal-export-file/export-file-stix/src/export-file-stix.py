@@ -54,8 +54,7 @@ class ExportFileStix:
         else:  # export_scope = 'query' or 'selection'
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
-                self.helper.log_info('selected_ids' + str(selected_ids))
-                list_filters = 'selected_ids'
+                list_filters = "selected_ids"
                 entities_list = []
 
                 for entity_id in selected_ids:
@@ -63,12 +62,16 @@ class ExportFileStix:
                         id=entity_id
                     )
                     if entity_data is None:
-                        entity_data = self.helper.api_impersonate.stix_cyber_observable.read(
-                            id=entity_id
+                        entity_data = (
+                            self.helper.api_impersonate.stix_cyber_observable.read(
+                                id=entity_id
+                            )
                         )
                     entities_list.append(entity_data)
 
-                bundle = self.helper.api_impersonate.stix2.export_selected(entities_list, max_marking)
+                bundle = self.helper.api_impersonate.stix2.export_selected(
+                    entities_list, max_marking
+                )
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]

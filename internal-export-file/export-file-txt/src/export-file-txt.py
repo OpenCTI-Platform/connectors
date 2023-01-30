@@ -20,8 +20,6 @@ class ExportFileTxt:
         self.helper = OpenCTIConnectorHelper(config)
 
     def _process_message(self, data):
-        self.helper.log_info('data' + str(data))
-
         file_name = data["file_name"]
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
         entity_type = data["entity_type"]
@@ -33,26 +31,23 @@ class ExportFileTxt:
 
         elif export_scope == "selection":
             selected_ids = data["selected_ids"]
-            self.helper.log_info('selected_ids' + str(selected_ids))
             entities_list = []
-            list_filters = 'selected_ids'
+            list_filters = "selected_ids"
 
             for entity_id in selected_ids:
                 entity_data = self.helper.api_impersonate.stix_domain_object.read(
                     id=entity_id
                 )
                 if entity_data is None:
-                    entity_data = self.helper.api_impersonate.stix_cyber_observable.read(
-                        id=entity_id
+                    entity_data = (
+                        self.helper.api_impersonate.stix_cyber_observable.read(
+                            id=entity_id
+                        )
                     )
-                self.helper.log_info('entity_data' + str(entity_data))
-
                 entities_list.append(entity_data)
 
-        else:      # export_scope = 'query'
+        else:  # export_scope = 'query'
             list_params = data["list_params"]
-            self.helper.log_info(data)
-
             final_entity_type = entity_type
             if StixCyberObservableTypes.has_value(entity_type):
                 if list_params["filters"] is not None:
@@ -110,20 +105,22 @@ class ExportFileTxt:
                 relationship_type=list_params["relationship_type"]
                 if "relationship_type" in list_params
                 else None,
-                elementId=list_params["elementId"] if "elementId" in list_params else None,
+                elementId=list_params["elementId"]
+                if "elementId" in list_params
+                else None,
                 fromId=list_params["fromId"] if "fromId" in list_params else None,
                 toId=list_params["toId"] if "toId" in list_params else None,
                 elementWithTargetTypes=list_params["elementWithTargetTypes"]
                 if "elementWithTargetTypes" in list_params
                 else None,
-                fromTypes=list_params["fromTypes"] if "fromTypes" in list_params else None,
+                fromTypes=list_params["fromTypes"]
+                if "fromTypes" in list_params
+                else None,
                 toTypes=list_params["toTypes"] if "toTypes" in list_params else None,
                 types=list_params["types"] if "types" in list_params else None,
                 getAll=True,
             )
             self.helper.log_info("Uploading: " + entity_type + " to " + file_name)
-            self.helper.log_info('entities_list' + str(entities_list))
-
             list_filters = json.dumps(list_params)
 
         if entities_list is not None:

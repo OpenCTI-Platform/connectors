@@ -98,7 +98,6 @@ class ExportFileCsv:
     def _process_message(self, data):
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
-        self.helper.log_info('export_scope' + export_scope)
         export_type = data["export_type"]  # Simple or Full
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
         entity_type = data["entity_type"]
@@ -165,8 +164,7 @@ class ExportFileCsv:
         else:  # list export: export_scope = 'query' or 'selection'
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
-                self.helper.log_info('selected_ids' + str(selected_ids))
-                list_filters = 'selected_ids'
+                list_filters = "selected_ids"
                 entities_list = []
 
                 for entity_id in selected_ids:
@@ -174,8 +172,10 @@ class ExportFileCsv:
                         id=entity_id
                     )
                     if entity_data is None:
-                        entity_data = self.helper.api_impersonate.stix_cyber_observable.read(
-                            id=entity_id
+                        entity_data = (
+                            self.helper.api_impersonate.stix_cyber_observable.read(
+                                id=entity_id
+                            )
                         )
                     entities_list.append(entity_data)
 
@@ -259,7 +259,9 @@ class ExportFileCsv:
                 do_list = lister.get(
                     final_entity_type,
                     lambda **kwargs: self.helper.log_error(
-                        'Unknown object type "' + final_entity_type + '", doing nothing...'
+                        'Unknown object type "'
+                        + final_entity_type
+                        + '", doing nothing...'
                     ),
                 )
                 entities_list = do_list(
@@ -281,7 +283,9 @@ class ExportFileCsv:
                     fromTypes=list_params["fromTypes"]
                     if "fromTypes" in list_params
                     else None,
-                    toTypes=list_params["toTypes"] if "toTypes" in list_params else None,
+                    toTypes=list_params["toTypes"]
+                    if "toTypes" in list_params
+                    else None,
                     types=list_params["types"] if "types" in list_params else None,
                     getAll=True,
                 )
