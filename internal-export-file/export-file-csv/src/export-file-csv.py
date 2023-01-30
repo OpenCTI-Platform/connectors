@@ -104,7 +104,6 @@ class ExportFileCsv:
         entity_type = data["entity_type"]
 
         if export_scope == "single":
-            self.helper.log_info('SINGLE')
             entity_id = data["entity_id"]
             self.helper.log_info(
                 "Exporting: "

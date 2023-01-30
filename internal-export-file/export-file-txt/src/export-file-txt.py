@@ -21,13 +21,17 @@ class ExportFileTxt:
 
     def _process_message(self, data):
         self.helper.log_info('data' + str(data))
+
         file_name = data["file_name"]
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
         entity_type = data["entity_type"]
 
         export_scope = data["export_scope"]
 
-        if export_scope == "selection":
+        if export_scope == "single":
+            raise ValueError("This connector only supports list exports")
+
+        elif export_scope == "selection":
             selected_ids = data["selected_ids"]
             self.helper.log_info('selected_ids' + str(selected_ids))
             entities_list = []
