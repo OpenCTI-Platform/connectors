@@ -30,6 +30,7 @@ class ExportFileCsv:
 
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
+        self.helper.log_info('data' + str(data))
         headers = sorted(set().union(*(d.keys() for d in data)))
         if "hashes" in headers:
             headers = headers + [
@@ -261,6 +262,7 @@ class ExportFileCsv:
                     "Stix-Cyber-Observable": self.helper.api_impersonate.stix_cyber_observable.list,
                     "Stix-Core-Relationship": self.helper.api_impersonate.stix_core_relationship.list,
                     "stix-core-relationship": self.helper.api_impersonate.stix_core_relationship.list,
+                    "stix-sighting-relationship": self.helper.api_impersonate.stix_sighting_relationship.list,
                 }
                 do_list = lister.get(
                     final_entity_type,
@@ -303,6 +305,7 @@ class ExportFileCsv:
                 new_entities_list = [entity for entity in entities_list if element_id in entity["objectsIds"]]
                 entities_list = new_entities_list
 
+            self.helper.log_info('entities_list' + str(entities_list))
             csv_data = self.export_dict_list_to_csv(entities_list)
             self.helper.log_info(
                 "Uploading: " + entity_type + "/" + export_type + " to " + file_name
