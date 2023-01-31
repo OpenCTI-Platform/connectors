@@ -143,7 +143,7 @@ class AbuseSSLImportConnector:
                 created_by_ref=f"{self.author.id}",
                 confidence=self.helper.connect_confidence_level,
                 pattern_type="stix",
-                pattern=f"[ipv4:value = '{observable.value}']",
+                pattern=f"[ipv4-addr:value = '{observable.value}']",
                 labels="osint",
             )
             indicators.append(indicator)
