@@ -30,7 +30,6 @@ class ExportFileCsv:
 
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
-        self.helper.log_info('data' + str(data))
         headers = sorted(set().union(*(d.keys() for d in data)))
         if "hashes" in headers:
             headers = headers + [
@@ -302,10 +301,13 @@ class ExportFileCsv:
 
             element_id = data["element_id"]
             if element_id:  # filtering of the data to keep those in the container
-                new_entities_list = [entity for entity in entities_list if element_id in entity["objectsIds"]]
+                new_entities_list = [
+                    entity
+                    for entity in entities_list
+                    if element_id in entity["objectsIds"]
+                ]
                 entities_list = new_entities_list
 
-            self.helper.log_info('entities_list' + str(entities_list))
             csv_data = self.export_dict_list_to_csv(entities_list)
             self.helper.log_info(
                 "Uploading: " + entity_type + "/" + export_type + " to " + file_name

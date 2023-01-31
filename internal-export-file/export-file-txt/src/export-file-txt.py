@@ -20,12 +20,9 @@ class ExportFileTxt:
         self.helper = OpenCTIConnectorHelper(config)
 
     def _process_message(self, data):
-        self.helper.log_info("txt export")
-        self.helper.log_info("data" + str(data))
         file_name = data["file_name"]
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
         entity_type = data["entity_type"]
-        self.helper.log_info("entity_type" + entity_type)
         export_scope = data["export_scope"]
 
         if export_scope == "single":
@@ -60,7 +57,7 @@ class ExportFileTxt:
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
                 final_entity_type = entity_type
-                if final_entity_type != '':
+                if final_entity_type != "":
                     if StixCyberObservableTypes.has_value(entity_type):
                         if list_params["filters"] is not None:
                             list_params["filters"].append(
@@ -107,10 +104,11 @@ class ExportFileTxt:
                 do_list = lister.get(
                     final_entity_type,
                     lambda **kwargs: self.helper.log_error(
-                        'Unknown object type "' + final_entity_type + '", doing nothing...'
+                        'Unknown object type "'
+                        + final_entity_type
+                        + '", doing nothing...'
                     ),
                 )
-                self.helper.log_info("list_params" + str(list_params))
                 entities_list = do_list(
                     search=list_params["search"],
                     filters=list_params["filters"],
@@ -130,7 +128,9 @@ class ExportFileTxt:
                     fromTypes=list_params["fromTypes"]
                     if "fromTypes" in list_params
                     else None,
-                    toTypes=list_params["toTypes"] if "toTypes" in list_params else None,
+                    toTypes=list_params["toTypes"]
+                    if "toTypes" in list_params
+                    else None,
                     types=list_params["types"] if "types" in list_params else None,
                     getAll=True,
                 )
@@ -139,13 +139,13 @@ class ExportFileTxt:
 
             if entities_list is not None:
                 # treatment of data in a container
-                self.helper.log_info("element_id" + str(element_id))
-                self.helper.log_info("entities_list" + str(entities_list))
                 if element_id:
-                    self.helper.log_info("entities_list objectsIds" + str([f["objectsIds"] for f in entities_list if f["objectsIds"]]))
-                    new_entities_list = [entity for entity in entities_list if element_id in entity["objectsIds"]]
+                    new_entities_list = [
+                        entity
+                        for entity in entities_list
+                        if element_id in entity["objectsIds"]
+                    ]
                     entities_list = new_entities_list
-                self.helper.log_info("new_entities_list" + str([f["name"] for f in entities_list if "name" in f]))
 
                 if entity_type == "Stix-Cyber-Observable":
                     observable_values = [
