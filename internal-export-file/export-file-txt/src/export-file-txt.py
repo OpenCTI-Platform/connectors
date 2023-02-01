@@ -28,9 +28,9 @@ class ExportFileTxt:
         if export_scope == "single":
             raise ValueError("This connector only supports list exports")
 
-        if entity_type == "stix-sighting-relationship" or entity_type == "ObservedData":
+        if entity_type == "stix-sighting-relationship" or entity_type == "ObservedData" or entity_type == "Artifact":
             raise ValueError(
-                "Text/plain export not available for Sightings and Observed Data"
+                "Text/plain export is not available for this entity type."
             )
             # to do: print defaultValue (instead of name) for sightings
 
@@ -142,15 +142,13 @@ class ExportFileTxt:
                 list_filters = json.dumps(list_params)
 
             if entities_list is not None:
-                if "element_id" in data:  # treatment of data in a container
+                if "element_id" in data and entity_type == "Report":  # treatment of reports in entity>Analysis
                     element_id = data["element_id"]
-                    if (
-                        element_id
-                    ):  # filtering of the data to keep those in the container
+                    if element_id:  # filtering of the data to keep those in the container
                         new_entities_list = [
                             entity
                             for entity in entities_list
-                            if element_id in entity["objectsIds"]
+                            if ("objectsIds" in entity) and (element_id in entity["objectsIds"])
                         ]
                         entities_list = new_entities_list
 
