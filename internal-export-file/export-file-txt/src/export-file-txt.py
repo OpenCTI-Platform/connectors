@@ -28,9 +28,13 @@ class ExportFileTxt:
         if export_scope == "single":
             raise ValueError("This connector only supports list exports")
 
-        else:  # export_scope = 'selection' or 'query'
-            element_id = data["element_id"]
+        if entity_type == "stix-sighting-relationship" or entity_type == "ObservedData":
+            raise ValueError(
+                "Text/plain export not available for Sightings and Observed Data"
+            )
+            # to do: print defaultValue (instead of name) for sightings
 
+        else:  # export_scope = 'selection' or 'query'
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
                 entities_list = []
@@ -78,7 +82,7 @@ class ExportFileTxt:
                     "Channel": self.helper.api_impersonate.channel.list,
                     "Event": self.helper.api_impersonate.event.list,
                     "Note": self.helper.api_impersonate.note.list,
-                    "Observed-Data": self.helper.api_impersonate.observed_data.list,
+                    "ObservedData": self.helper.api_impersonate.observed_data.list,
                     "Opinion": self.helper.api_impersonate.opinion.list,
                     "Report": self.helper.api_impersonate.report.list,
                     "Grouping": self.helper.api_impersonate.grouping.list,
@@ -138,14 +142,17 @@ class ExportFileTxt:
                 list_filters = json.dumps(list_params)
 
             if entities_list is not None:
-                # treatment of data in a container
-                if element_id:
-                    new_entities_list = [
-                        entity
-                        for entity in entities_list
-                        if element_id in entity["objectsIds"]
-                    ]
-                    entities_list = new_entities_list
+                if "element_id" in data:  # treatment of data in a container
+                    element_id = data["element_id"]
+                    if (
+                        element_id
+                    ):  # filtering of the data to keep those in the container
+                        new_entities_list = [
+                            entity
+                            for entity in entities_list
+                            if element_id in entity["objectsIds"]
+                        ]
+                        entities_list = new_entities_list
 
                 if entity_type == "Stix-Cyber-Observable":
                     observable_values = [

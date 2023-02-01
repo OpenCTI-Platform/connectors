@@ -240,7 +240,7 @@ class ExportFileCsv:
                     "Channel": self.helper.api_impersonate.channel.list,
                     "Event": self.helper.api_impersonate.event.list,
                     "Note": self.helper.api_impersonate.note.list,
-                    "Observed-Data": self.helper.api_impersonate.observed_data.list,
+                    "ObservedData": self.helper.api_impersonate.observed_data.list,
                     "Opinion": self.helper.api_impersonate.opinion.list,
                     "Report": self.helper.api_impersonate.report.list,
                     "Grouping": self.helper.api_impersonate.grouping.list,
@@ -299,34 +299,44 @@ class ExportFileCsv:
 
                 list_filters = json.dumps(list_params)
 
-            element_id = data["element_id"]
-            if element_id:  # filtering of the data to keep those in the container
-                new_entities_list = [
-                    entity
-                    for entity in entities_list
-                    if element_id in entity["objectsIds"]
-                ]
-                entities_list = new_entities_list
+            if "element_id" in data:
+                element_id = data["element_id"]
+                if element_id:  # filtering of the data to keep those in the container
+                    new_entities_list = [
+                        entity
+                        for entity in entities_list
+                        if element_id in entity["objectsIds"]
+                    ]
+                    entities_list = new_entities_list
 
-            csv_data = self.export_dict_list_to_csv(entities_list)
-            self.helper.log_info(
-                "Uploading: " + entity_type + "/" + export_type + " to " + file_name
-            )
-            if entity_type == "Stix-Cyber-Observable":
-                self.helper.api.stix_cyber_observable.push_list_export(
-                    file_name, csv_data, list_filters
+            if entities_list is not None:
+                csv_data = self.export_dict_list_to_csv(entities_list)
+                self.helper.log_info(
+                    "Uploading: " + entity_type + "/" + export_type + " to " + file_name
                 )
-            elif entity_type == "Stix-Core-Object":
-                self.helper.api.stix_core_object.push_list_export(
-                    entity_type, file_name, csv_data, list_filters
+                if entity_type == "Stix-Cyber-Observable":
+                    self.helper.api.stix_cyber_observable.push_list_export(
+                        file_name, csv_data, list_filters
+                    )
+                elif entity_type == "Stix-Core-Object":
+                    self.helper.api.stix_core_object.push_list_export(
+                        entity_type, file_name, csv_data, list_filters
+                    )
+                else:
+                    self.helper.api.stix_domain_object.push_list_export(
+                        entity_type, file_name, csv_data, list_filters
+                    )
+                self.helper.log_info(
+                    "Export done: "
+                    + entity_type
+                    + "/"
+                    + export_type
+                    + " to "
+                    + file_name
                 )
             else:
-                self.helper.api.stix_domain_object.push_list_export(
-                    entity_type, file_name, csv_data, list_filters
-                )
-            self.helper.log_info(
-                "Export done: " + entity_type + "/" + export_type + " to " + file_name
-            )
+                raise ValueError("An error occurred, the list is empty")
+
         return "Export done"
 
     # Start the main loop

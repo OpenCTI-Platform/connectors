@@ -52,7 +52,10 @@ class ExportFileStix:
             )
 
         else:  # export_scope = 'query' or 'selection'
-            element_id = data["element_id"]
+            if "element_id" in data:
+                element_id = data["element_id"]
+            else:
+                element_id = None
 
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
