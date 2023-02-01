@@ -299,13 +299,16 @@ class ExportFileCsv:
 
                 list_filters = json.dumps(list_params)
 
-            if "element_id" in data and entity_type == 'Report':   # treatment of reports in entity>Analysis
+            if (
+                "element_id" in data and entity_type == "Report"
+            ):  # treatment of reports in entity>Analysis
                 element_id = data["element_id"]
                 if element_id:  # filtering of the data to keep those in the container
                     new_entities_list = [
                         entity
                         for entity in entities_list
-                        if ("objectsIds" in entity) and (element_id in entity["objectsIds"])
+                        if ("objectsIds" in entity)
+                        and (element_id in entity["objectsIds"])
                     ]
                     entities_list = new_entities_list
 
