@@ -264,7 +264,6 @@ class ExportReportPdf:
 
         # Generate the svg img contents for the targets map
         if "relationship" in context["entities"]:
-
             # Create world map
             world_map = World()
             world_map.title = "Targeted Countries"
@@ -360,7 +359,6 @@ class ExportReportPdf:
 
         # Generate the svg img contents for the targets map
         if "relationship" in context["entities"]:
-
             # Create world map
             world_map = World()
             world_map.title = "Targeted Countries"

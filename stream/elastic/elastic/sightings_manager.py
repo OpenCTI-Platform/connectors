@@ -101,12 +101,10 @@ class SignalsManager(Thread):
             return self.author_id
 
     def run(self) -> None:
-
         logger.info("Signals manager thread starting")
 
         """Main loop"""
         while not self.shutdown_event.is_set():
-
             logger.debug("Searching for new signals")
 
             # Look for new Threat Match Signals from Elastic SIEM
@@ -195,11 +193,9 @@ class SignalsManager(Thread):
 
             # Loop through signal hits and create new sightings
             for k, v in ids_dict.items():
-
                 # Check if indicator exists
                 indicator = self.helper.api.indicator.read(id=k)
                 if indicator:
-
                     logger.info("Found matching indicator in OpenCTI")
                     stix_id = indicator["standard_id"]
 

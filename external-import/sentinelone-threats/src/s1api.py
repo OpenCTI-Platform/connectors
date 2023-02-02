@@ -36,7 +36,6 @@ class SentinelOneApi:
         last_cursor = None
         while True:
             try:
-
                 if last_cursor:
                     params.pop("createdAt__gt", None)
                     params["cursor"] = last_cursor

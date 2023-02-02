@@ -188,7 +188,6 @@ class CapeSandboxConnector:
 
         # Attach the TTPs
         for tactic_dict in report["ttps"]:
-
             attack_id = tactic_dict["ttp"]
             signature = tactic_dict["signature"]
 
@@ -217,7 +216,6 @@ class CapeSandboxConnector:
 
         # Handle procdumps and attach any Flare CAPA TTPs
         if "procdump" in report and report["procdump"]:
-
             # Download the zip archive of procdump files
             zip_contents = self._get_procdump_zip(task_id)
             zip_obj = io.BytesIO(zip_contents)
@@ -228,7 +226,6 @@ class CapeSandboxConnector:
 
             # Process each entry in the procdump key
             for procdump_dict in report["procdump"]:
-
                 # If less noise was specified
                 if self.less_noise:
                     # and no Yara matches, skip this procdump
@@ -466,7 +463,6 @@ class CapeSandboxConnector:
             and "payloads" in report["CAPE"]
             and report["CAPE"]["payloads"]
         ):
-
             # Download the zip archive of payloads
             zip_contents = self._get_payloads_zip(task_id)
             zip_obj = io.BytesIO(zip_contents)
@@ -477,7 +473,6 @@ class CapeSandboxConnector:
 
             # Process each payload
             for payload_dict in report["CAPE"]["payloads"]:
-
                 module_path = payload_dict["module_path"]
                 sha256 = payload_dict["sha256"]
                 cape_type = payload_dict["cape_type"]
@@ -608,7 +603,6 @@ class CapeSandboxConnector:
         # Wait until analysis is finished
         status = None
         while True:
-
             # Get the task's status
             response_dict = self._get_status(task_id)
             status = response_dict["data"]

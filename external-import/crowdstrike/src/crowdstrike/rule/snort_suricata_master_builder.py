@@ -90,7 +90,6 @@ class SnortRuleBundleBuilder:
         )
 
     def _create_reports(self, objects: List[_DomainObject]) -> List[STIXReport]:
-
         reports = []
         for rule_report in self.reports:
             report = self._create_report(
@@ -108,7 +107,6 @@ class SnortRuleBundleBuilder:
         objects: List[_DomainObject],
         files: List[Mapping[str, str]],
     ) -> STIXReport:
-
         return create_stix2_report_from_report(
             report,
             self.source_name,

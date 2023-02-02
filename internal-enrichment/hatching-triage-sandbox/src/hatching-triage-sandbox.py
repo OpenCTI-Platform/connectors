@@ -128,7 +128,6 @@ class HatchingTriageSandboxConnector:
         # Create labels from the tags
         if "tags" in overview_dict["analysis"]:
             for tag in overview_dict["analysis"]["tags"]:
-
                 # Set the label color depending on tag type
                 # Note: Only certain tags are separated by a colon
                 # Those are the tags we are colorizing
@@ -162,7 +161,6 @@ class HatchingTriageSandboxConnector:
         # Process extracted key
         extracted_list = overview_dict.get("extracted", [])
         for extracted_dict in extracted_list:
-
             # Handle config
             if "config" in extracted_dict:
                 if "rule" not in extracted_dict["config"]:

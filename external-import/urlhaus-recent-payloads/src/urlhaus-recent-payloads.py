@@ -105,7 +105,6 @@ class URLHausRecentPayloads:
         self.helper.log_info("Starting URLHaus Recent Payloads Connector")
         while True:
             try:
-
                 current_state = self.helper.get_state()
                 last_first_seen_datetime = None
                 if current_state is not None and "last_first_seen" in current_state:

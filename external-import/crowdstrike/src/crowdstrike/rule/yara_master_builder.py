@@ -198,7 +198,6 @@ class YaraRuleBundleBuilder:
         objects: List[_DomainObject],
         files: List[Mapping[str, str]],
     ) -> STIXReport:
-
         return create_stix2_report_from_report(
             report,
             self.source_name,

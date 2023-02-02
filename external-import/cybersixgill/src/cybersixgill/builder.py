@@ -204,7 +204,6 @@ class IndicatorBundleBuilder:
 
     @staticmethod
     def _create_indicator_description(indicator) -> str:
-
         indicator_description = indicator.get("description")
 
         final_description = (
