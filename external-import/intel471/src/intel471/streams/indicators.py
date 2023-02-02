@@ -4,7 +4,6 @@ from .common import Intel471Stream
 
 
 class Intel471IndicatorsStream(Intel471Stream):
-
     label = "indicators"
     api_payload_objects_key = "indicators"
     api_class_name = "IndicatorsApi"

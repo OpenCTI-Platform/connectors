@@ -9,7 +9,6 @@ class IntezerApi:
     """
 
     def __init__(self, api_key):
-
         self.base_url = "https://analyze.intezer.com/api/v2-0"
 
         access_token = self._get_access_token(api_key)

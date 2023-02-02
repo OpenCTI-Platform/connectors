@@ -215,7 +215,6 @@ class SplunkConnector:
         return "Sent " + str(len(self.splunk_url)) + " jobs for execution"
 
     def _process_message(self, msg):
-
         try:
             data = json.loads(msg.data)["data"]
             # Handle creation
@@ -271,7 +270,6 @@ class SplunkConnector:
             return None
 
         except Exception as e:
-
             self.helper.log_error("[ERROR] Failed processing data {" + str(e) + "}")
             self.helper.log_error("[ERROR] Message data {" + str(msg) + "}")
             return None

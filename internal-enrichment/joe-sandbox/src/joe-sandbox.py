@@ -266,7 +266,6 @@ class JoeSandboxConnector:
         self.helper.api.label.create(value="dynamic", color=default_color)
 
     def _process_observable(self, observable):
-
         params = {
             # JOE SANDBOX DEFAULT PARAMETERS, see https://github.com/joesecurity/jbxapi/blob/master/jbxapi.py
             # See https://jbxcloud.joesecurity.org/#windows for all the available systems
@@ -395,7 +394,6 @@ class JoeSandboxConnector:
         """
 
         while True:
-
             # Sleep for a second before attempting to check on the analyses
             time.sleep(1)
 

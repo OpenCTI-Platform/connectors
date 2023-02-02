@@ -127,7 +127,6 @@ class Cybercrimetracker:
             return False
 
     def gen_indicator_pattern(self, parsed_entry):
-
         if "domain" in parsed_entry.keys():
             indicator_pattern = (
                 "[ipv4-addr:value='{}'] ".format(parsed_entry["ip"])

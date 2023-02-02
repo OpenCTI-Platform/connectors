@@ -12,7 +12,6 @@ q = queue.Queue()
 
 
 class VTConnector:
-
     _SOURCE_NAME = "VirusTotal"
     _API_URL = "https://www.virustotal.com/api/v3"
 
@@ -71,7 +70,6 @@ class VTConnector:
             and data.get("type") == "indicator"
             and data.get("pattern_type") == "yara"
         ):
-
             extensions_data = data.get("extensions")
             for each_extenstion in extensions_data:
                 self.helper.log_info("Handle create message")
@@ -80,7 +78,6 @@ class VTConnector:
                         data.get("extensions").get(each_extenstion).get("detection")
                     )
                     if detection_value == True:
-
                         rule = data.get("pattern")
                         name = data.get("name")
                         response = self.client.create_vt_livehunt_rule(
@@ -88,7 +85,6 @@ class VTConnector:
                         )
 
                         if response.status_code == 200:
-
                             response_data = response.json()
                             rule_id_created = response_data.get("data").get("id")
 
@@ -136,7 +132,6 @@ class VTConnector:
             and data.get("type") == "indicator"
             and data.get("pattern_type") == "yara"
         ):
-
             self.helper.log_info("Handle update to create message")
 
             # Getting Rule
@@ -150,7 +145,6 @@ class VTConnector:
 
             extensions_data = data.get("extensions")
             for each_extenstion in extensions_data:
-
                 # try:
                 detection_value = (
                     data.get("extensions").get(each_extenstion).get("detection")
@@ -171,7 +165,6 @@ class VTConnector:
                         name, rule, self.notification_emails
                     )
                     if response.status_code == 200:
-
                         response_data = response.json()
                         rule_id_created = response_data.get("data").get("id")
 
@@ -220,7 +213,6 @@ class VTConnector:
                         name, rule, self.notification_emails
                     )
                     if response.status_code == 200:
-
                         response_data = response.json()
                         rule_id_created = response_data.get("data").get("id")
 
@@ -279,7 +271,6 @@ class VTConnector:
             and data.get("type") == "indicator"
             and data.get("pattern_type") == "yara"
         ):
-
             self.helper.log_info("Handle delete message")
 
             name = data.get("name")

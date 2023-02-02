@@ -57,7 +57,6 @@ class StixManager(object):
     def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
-
         try:
             # Submit to Elastic index
 
@@ -497,7 +496,6 @@ class IntelManager(object):
         return _document
 
     def delete_cti_event(self, data: dict) -> None:
-
         logger.debug(f"Deleting {data}")
         _result: dict = {}
 

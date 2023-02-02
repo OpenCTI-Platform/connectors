@@ -128,7 +128,6 @@ class SentinelOneThreats:
         self.helper.log_info("Starting SentinelOne Threats Connector")
         while True:
             try:
-
                 current_state = self.helper.get_state()
                 last_created_at = None
                 if current_state is not None and "last_created_at" in current_state:

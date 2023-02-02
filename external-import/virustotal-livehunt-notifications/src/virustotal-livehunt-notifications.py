@@ -106,7 +106,6 @@ class VirustotalLivehuntNotifications:
         self.helper.log_info("Starting Virustotal Livehunt Notifications Connector")
         while True:
             try:
-
                 # Use filter in API call to only get notifications after
                 # the last time stamp
                 url = "/intelligence/hunting_notification_files"
@@ -114,7 +113,6 @@ class VirustotalLivehuntNotifications:
                 files_iterator = self.vt_client.iterator(url)
 
                 for vtobj in files_iterator:
-
                     notification_id = vtobj._context_attributes["notification_id"]
 
                     # For debugging purposes

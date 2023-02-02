@@ -323,7 +323,6 @@ class MWDB:
     def process_extratag(self, attributes_extra, sample):
         relatsions = []
         for taglabel in attributes_extra:
-
             if self.tag_filter:
                 if re.match(self.tag_filter, taglabel.lower()):
                     continue
@@ -553,7 +552,6 @@ class MWDB:
             lasthash = ""
             files_to_import = True
             while files_to_import:
-
                 search_path = "api/file" + querysearch
                 if lasthash:
                     search_path = "api/file" + querysearch + "&older_than=" + lasthash

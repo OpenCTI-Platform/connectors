@@ -22,7 +22,6 @@ gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
 
 
 class Sekoia(object):
-
     limit = 200
 
     def __init__(self):
