@@ -233,7 +233,6 @@ class IntelManager(object):
 
                 self.write_idx = _alias
             else:
-                logger.info(f"Alias {_alias} already exists or not being used")
                 _settings = "{}"
 
             self.es_client.index(index=_initial_idx, body=_settings)
