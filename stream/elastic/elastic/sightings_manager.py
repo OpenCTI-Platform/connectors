@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 from logging import getLogger
 from threading import Event, Thread
+from packaging import version
 
 from elasticsearch import Elasticsearch, NotFoundError
 from elasticsearch_dsl import Search
@@ -170,7 +171,12 @@ class SignalsManager(Thread):
                             )
                             continue
 
-                    _timestamp = hit["_source"]["signal"]["original_time"]
+                    ecs_version_lt8 = version.parse(hit["_source"]["ecs"]["version"]) < version.parse("8.0.0")
+                    if ecs_version_lt8:
+                        _timestamp = hit["_source"]["signal"]["original_time"]
+                    else:
+                        _timestamp = hit["_source"]["kibana.alert.original_time"]
+
                     if _opencti_id not in ids_dict:
                         ids_dict[_opencti_id] = {
                             "first_seen": _timestamp,
