@@ -194,9 +194,7 @@ POST /_security/api_key?pretty
           "opencti*"
         ],
         "privileges": [
-          "all",
-          "manage_follow_index",
-          "view_index_metadata" 
+          "all"
         ],
         "field_security": {
           "grant": [
