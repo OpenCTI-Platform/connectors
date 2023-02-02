@@ -30,6 +30,7 @@ class ExportFileTxt:
 
         if (
             entity_type == "stix-sighting-relationship"
+            or entity_type == "stix-core-relationship"
             or entity_type == "ObservedData"
             or entity_type == "Artifact"
         ):
