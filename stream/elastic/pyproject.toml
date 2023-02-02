@@ -23,6 +23,7 @@ elasticsearch-dsl = ">=7.0.0,<8.0.0"
 python-datemath = "^1.5.5"
 arrow = "^1.1.1"
 PyYAML = "^6.0"
+packaging = "^22.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"
