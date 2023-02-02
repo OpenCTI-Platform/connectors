@@ -2,10 +2,10 @@ import json
 from datetime import timedelta
 from logging import getLogger
 from threading import Event, Thread
-from packaging import version
 
 from elasticsearch import Elasticsearch, NotFoundError
 from elasticsearch_dsl import Search
+from packaging import version
 from pycti import OpenCTIConnectorHelper
 from scalpl import Cut
 
@@ -171,7 +171,9 @@ class SignalsManager(Thread):
                             )
                             continue
 
-                    ecs_version_lt8 = version.parse(hit["_source"]["ecs"]["version"]) < version.parse("8.0.0")
+                    ecs_version_lt8 = version.parse(
+                        hit["_source"]["ecs"]["version"]
+                    ) < version.parse("8.0.0")
                     if ecs_version_lt8:
                         _timestamp = hit["_source"]["signal"]["original_time"]
                     else:
