@@ -1,9 +1,9 @@
 import re
 import urllib.parse
-from arrow import Arrow
 from datetime import datetime, timezone
 from logging import getLogger
 
+from arrow import Arrow
 from datemath import dm
 from elasticsearch import Elasticsearch, NotFoundError, RequestError
 from pycti import OpenCTIConnectorHelper
@@ -71,7 +71,9 @@ class StixManager(object):
                 if m.get("modulo", None) is not None:
                     _fmt = m.get("format") or DM_DEFAULT_FMT
                     logger.debug(f"{m['modulo']} -> {_fmt}")
-                    _val = dm(m.get("modulo"), now=Arrow.fromdatetime(timestamp)).format(_fmt)
+                    _val = dm(
+                        m.get("modulo"), now=Arrow.fromdatetime(timestamp)
+                    ).format(_fmt)
                     _write_idx = self.pattern.sub(_val, _write_idx)
 
             # Submit to Elastic index
@@ -475,7 +477,9 @@ class IntelManager(object):
                 if m.get("modulo", None) is not None:
                     _fmt = m.get("format") or DM_DEFAULT_FMT
                     logger.debug(f"{m['modulo']} -> {_fmt}")
-                    _val = dm(m.get("modulo"), now=Arrow.fromdatetime(timestamp)).format(_fmt)
+                    _val = dm(
+                        m.get("modulo"), now=Arrow.fromdatetime(timestamp)
+                    ).format(_fmt)
                     _write_idx = self.pattern.sub(_val, _write_idx)
 
             # Submit to Elastic index
