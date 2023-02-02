@@ -37,4 +37,11 @@ COPY --from=builder /runtime /runtime
 # Expose and entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+
+# Add Tini
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+
+# Run your program under Tini
+ENTRYPOINT ["/tini", "--", "/entrypoint.sh"]
