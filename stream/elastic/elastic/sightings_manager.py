@@ -61,7 +61,9 @@ class SignalsManager(Thread):
             "elastic.signals.lookback_interval", DEFAULT_LOOKBACK
         )
 
-        assert self.es_client.ping()
+        if not self.config.get("output.elasticsearch.reduced_privileges", True):
+            assert self.es_client.ping()
+
         self.signals_search: dict = (
             Search(using=self.es_client, index=self.search_idx)
             .from_dict(_query)

@@ -45,6 +45,10 @@ output.elasticsearch:
   # `setup.template.pattern` if you change the output index.
   #index: "opencti-{now/d}"
 
+  # Set the following flag to "true" if the elasticsearch access do not have cluster 
+  # "monitor" privileges
+  #reduced_privileges: false 
+
 # ====================== Index Lifecycle Management (ILM) ======================
 
 # Configure index lifecycle management (ILM). These settings create a write
