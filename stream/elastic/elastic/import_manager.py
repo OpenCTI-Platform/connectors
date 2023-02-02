@@ -253,7 +253,10 @@ class IntelManager(object):
             id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         )
 
-        logger.debug(entity)
+        if entity is None:
+            id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+            logger.warning(f"For document id {id}, entity is '{entity}'. Skipping.")
+            return None
 
         _result: dict = {}
         _document: Cut = {}
@@ -274,7 +277,7 @@ class IntelManager(object):
                     f"Retrieving document id: {OpenCTIConnectorHelper.get_attribute_in_extension('id', data)}"
                 )
                 _result = self.es_client.get(
-                    index=self.idx_pattern,
+                    index=self.write_idx,
                     id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
                     doc_type="_doc",
                 )
@@ -501,7 +504,7 @@ class IntelManager(object):
 
         try:
             _result = self.es_client.delete(
-                index=self.idx_pattern,
+                index=self.write_idx,
                 id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
                 doc_type="_doc",
             )
