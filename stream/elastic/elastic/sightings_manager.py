@@ -107,12 +107,7 @@ class SignalsManager(Thread):
     def run(self) -> None:
         logger.info("Signals manager thread starting")
 
-<<<<<<< HEAD
-        """Main loop"""
-        while not self.shutdown_event.is_set():
-            logger.debug("Searching for new signals")
-=======
-        try: 
+        try:
             """Main loop"""
             while not self.shutdown_event.is_set():
 
@@ -143,7 +138,6 @@ class SignalsManager(Thread):
 
                         if _doc["found"] is not True:
                             continue
->>>>>>> 27606f69... allow signal_manager to kill itself
 
                         if (
                             "threatintel" in _doc["_source"]
@@ -238,72 +232,9 @@ class SignalsManager(Thread):
                             update=False,
                         )
 
-<<<<<<< HEAD
-                    ecs_version_lt8 = version.parse(
-                        hit["_source"]["ecs"]["version"]
-                    ) < version.parse("8.0.0")
-                    if ecs_version_lt8:
-                        _timestamp = hit["_source"]["signal"]["original_time"]
-                    else:
-                        _timestamp = hit["_source"]["kibana.alert.original_time"]
-
-                    if _opencti_id not in ids_dict:
-                        ids_dict[_opencti_id] = {
-                            "first_seen": _timestamp,
-                            "last_seen": _timestamp,
-                            "count": 1,
-                        }
-                    else:
-                        ids_dict[_opencti_id]["count"] += 1
-
-                        if _timestamp < ids_dict[_opencti_id]["first_seen"]:
-                            ids_dict[_opencti_id]["first_seen"] = _timestamp
-                        elif _timestamp > ids_dict[_opencti_id]["last_seen"]:
-                            ids_dict[_opencti_id]["last_seen"] = _timestamp
-
-            # Loop through signal hits and create new sightings
-            for k, v in ids_dict.items():
-                # Check if indicator exists
-                indicator = self.helper.api.indicator.read(id=k)
-                if indicator:
-                    logger.info("Found matching indicator in OpenCTI")
-                    stix_id = indicator["standard_id"]
-
-                    entity_id = self._get_elastic_entity()
-                    confidence = int(
-                        self.config.get("connector.confidence_level", "80")
-                    )
-
-                    logger.debug(f"Creating sighting from {stix_id} -> {entity_id}")
-
-                    # Create new Sighting
-                    self.helper.api.stix_sighting_relationship.create(
-                        fromId=stix_id,
-                        toId=entity_id,
-                        stix_id=None,
-                        description="Threat Match sighting from Elastic SIEM",
-                        first_seen=v["first_seen"],
-                        last_seen=v["last_seen"],
-                        count=v["count"],
-                        x_opencti_negative=False,
-                        created=None,
-                        modified=None,
-                        confidence=confidence,
-                        created_by=entity_id,
-                        object_marking=None,
-                        object_label=None,
-                        external_references=None,
-                        update=False,
-                    )
-
-            # Wait allows us to return earlier during a shutdown
-            logger.debug(f"Sleeping for {self.interval} seconds")
-            self.shutdown_event.wait(self.interval)
-=======
                 # Wait allows us to return earlier during a shutdown
                 logger.debug(f"Sleeping for {self.interval} seconds")
                 self.shutdown_event.wait(self.interval)
         except:
             traceback.print_exception(*sys.exc_info())
             os.kill(os.getpid(), signal.SIGTERM)
->>>>>>> 27606f69... allow signal_manager to kill itself
