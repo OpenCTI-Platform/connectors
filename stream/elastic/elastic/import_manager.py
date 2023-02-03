@@ -1,5 +1,6 @@
 import re
 import urllib.parse
+import warnings
 from datetime import datetime, timezone
 from logging import getLogger
 
@@ -140,18 +141,19 @@ class IntelManager(object):
         from string import Template
 
         logger.info("Setting up Elasticsearch for OpenCTI Connector")
-        assert self.es_client.ping()
+        if not self.config.get("output.elasticsearch.reduced_privileges", True):
+            assert self.es_client.ping()
 
         _ilm_enabled: bool = self.config.get("setup.ilm.enabled", True)
         _policy_name: str = self.config.get("setup.ilm.policy_name", "opencti")
         _policy: str = None
 
-        try:
-            _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
-        except NotFoundError as err:
-            logger.warning(f"HTTP {err.status_code}: {err.info['error']['reason']}")
-
         if _ilm_enabled is True:
+            try:
+                _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
+            except NotFoundError as err:
+                logger.warning(f"HTTP {err.status_code}: {err.info['error']['reason']}")
+
             # Create ILM policy if needed
             if (_policy is None) or (
                 self.config.get("setup.ilm.overwrite", None) is True
@@ -184,14 +186,11 @@ class IntelManager(object):
 
         # Create initial index, if needed
         logger.debug(f"Checking if index pattern exists: {self.idx_pattern}")
-        if (
-            len(
-                self.es_client.indices.resolve_index(name=self.idx_pattern).get(
-                    "indices", []
-                )
-            )
-            < 1
-        ):
+        with warnings.catch_warnings(record=True) as w:
+            matching_indices = self.es_client.indices.resolve_index(
+                name=self.idx_pattern).get("indices", [])
+        
+        if len(matching_indices) < 1:
             logger.debug("No indices matching pattern exist.")
 
             if _ilm_enabled is True:
@@ -236,7 +235,6 @@ class IntelManager(object):
 
                 self.write_idx = _alias
             else:
-                logger.info(f"Alias {_alias} already exists or not being used")
                 _settings = "{}"
 
             self.es_client.index(index=_initial_idx, body=_settings)
