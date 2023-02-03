@@ -75,6 +75,34 @@ class ExportFileTxt:
                                 {"key": "entity_type", "values": [entity_type]}
                             ]
                         final_entity_type = "Stix-Cyber-Observable"
+                    if final_entity_type == "Analysis":
+                        if list_params["filters"] is not None:
+                            list_params["filters"].append(
+                                {
+                                    "key": "entity_type",
+                                    "values": [
+                                        "Report",
+                                        "Grouping",
+                                        "Note",
+                                        "Observed-Data",
+                                        "Opinion",
+                                    ],
+                                }
+                            )
+                        else:
+                            list_params["filters"] = [
+                                {
+                                    "key": "entity_type",
+                                    "values": [
+                                        "Report",
+                                        "Grouping",
+                                        "Note",
+                                        "Observed-Data",
+                                        "Opinion",
+                                    ],
+                                }
+                            ]
+                        final_entity_type = "Stix-Domain-Object"
 
                 # List
                 lister = {
@@ -146,8 +174,8 @@ class ExportFileTxt:
 
             if entities_list is not None:
                 if (
-                    "element_id" in data and entity_type == "Report"
-                ):  # treatment of reports in entity>Analysis
+                    "element_id" in data and entity_type == "Analysis"
+                ):  # treatment of elements in entity>Analysis
                     element_id = data["element_id"]
                     if (
                         element_id
