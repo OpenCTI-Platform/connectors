@@ -1479,7 +1479,7 @@ class MispFeed:
         event_external_references = []
         indicators = []
         # Get attributes of event
-        for attribute in event["Event"]["Attribute"]:
+        for attribute in event["Event"].get("Attribute", []):
             indicator = self._process_attribute(
                 author,
                 event_elements,
