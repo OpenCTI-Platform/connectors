@@ -31,6 +31,24 @@ def days_to_seconds(days):
     return int(days) * 24 * 60 * 60
 
 
+def filter_stix_revoked(revoked_ids, stix):
+    # Pure revoke
+    if stix["id"] in revoked_ids:
+        return False
+    # Side of relationship revoked
+    if stix["type"] == "relationship" and (
+        stix["source_ref"] in revoked_ids or stix["target_ref"] in revoked_ids
+    ):
+        return False
+    # Side of sighting revoked
+    if stix["type"] == "sighting" and (
+        stix["sighting_of_ref"] in revoked_ids
+        or any(ref in revoked_ids for ref in stix["where_sighted_refs"])
+    ):
+        return False
+    return True
+
+
 class Mitre:
     """Mitre connector."""
 
@@ -41,7 +59,7 @@ class Mitre:
         )
         self.mitre_interval = get_config_variable("MITRE_INTERVAL", [""], isNumber=True)
 
-        self.mitre_urls = [
+        urls = [
             get_config_variable(
                 "MITRE_ENTERPRISE_FILE_URL", [""], default=MITRE_ENTERPRISE_FILE_URL
             ),
@@ -57,6 +75,8 @@ class Mitre:
                 "MITRE_CAPEC_FILE_URL", [""], default=MITRE_CAPEC_FILE_URL
             ),
         ]
+
+        self.mitre_urls = list(filter(lambda url: url is not False, urls))
 
         self.interval = days_to_seconds(self.mitre_interval)
 
@@ -91,34 +111,20 @@ class Mitre:
             # First find all revoked ids
             revoked_objects = list(
                 filter(
-                    lambda stix: "revoked" in stix and stix["revoked"] is True,
+                    lambda stix: stix.get("revoked", False) is True
+                    or stix.get("x_capec_status", "") == "Deprecated",
                     stix_objects,
                 )
             )
             revoked_ids = list(map(lambda stix: stix["id"], revoked_objects))
 
-            def filter_stix_revoked(stix):
-                # Pure revoke
-                if stix["id"] in revoked_ids:
-                    return False
-                # Side of relationship revoked
-                if stix["type"] == "relationship" and (
-                    stix["source_ref"] in revoked_ids
-                    or stix["target_ref"] in revoked_ids
-                ):
-                    return False
-                # Side of sighting revoked
-                if stix["type"] == "sighting" and (
-                    stix["sighting_of_ref"] in revoked_ids
-                    or any(ref in revoked_ids for ref in stix["where_sighted_refs"])
-                ):
-                    return False
-                return True
-
             # Filter every revoked MITRE elements
             not_revoked_objects = list(
-                filter(lambda stix: filter_stix_revoked(stix), stix_objects)
+                filter(
+                    lambda stix: filter_stix_revoked(revoked_ids, stix), stix_objects
+                )
             )
+
             stix_bundle["objects"] = not_revoked_objects
             # Add default confidence for each object that require this field
             self.add_confidence_to_bundle_objects(stix_bundle)
@@ -164,7 +170,7 @@ class Mitre:
             self.helper.log_debug("Connector will not run this time.")
             return
 
-        self.helper.log_info("Connector will run now {time_now}.")
+        self.helper.log_info(f"Connector will run now {time_now}.")
         friendly_name = f"MITRE run @ {time_now}"
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
