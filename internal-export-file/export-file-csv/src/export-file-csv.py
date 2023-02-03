@@ -240,7 +240,7 @@ class ExportFileCsv:
                     "Channel": self.helper.api_impersonate.channel.list,
                     "Event": self.helper.api_impersonate.event.list,
                     "Note": self.helper.api_impersonate.note.list,
-                    "ObservedData": self.helper.api_impersonate.observed_data.list,
+                    "Observed-Data": self.helper.api_impersonate.observed_data.list,
                     "Opinion": self.helper.api_impersonate.opinion.list,
                     "Report": self.helper.api_impersonate.report.list,
                     "Grouping": self.helper.api_impersonate.grouping.list,
