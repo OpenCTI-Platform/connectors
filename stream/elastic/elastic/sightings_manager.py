@@ -1,4 +1,8 @@
+import os
+import sys
 import json
+import signal
+import traceback
 from datetime import timedelta
 from logging import getLogger
 from threading import Event, Thread
@@ -103,72 +107,138 @@ class SignalsManager(Thread):
     def run(self) -> None:
         logger.info("Signals manager thread starting")
 
+<<<<<<< HEAD
         """Main loop"""
         while not self.shutdown_event.is_set():
             logger.debug("Searching for new signals")
+=======
+        try: 
+            """Main loop"""
+            while not self.shutdown_event.is_set():
 
-            # Look for new Threat Match Signals from Elastic SIEM
-            results = self.es_client.search(
-                index=self.search_idx, body=self.signals_search
-            )
-            ids_dict = {}
+                logger.debug("Searching for new signals")
 
-            # Parse the results
-            for hit in results["hits"]["hits"]:
-                # This depends on ECS mappings >= 1.11
-                for indicator in hit["_source"]["threat"]["enrichments"]:
-                    # Get original threatintel document
-                    try:
-                        _doc = self.es_client.get(
-                            index=indicator["matched"]["index"],
-                            id=indicator["matched"]["id"],
-                        )
-                    except NotFoundError as err:
-                        logger.error(
-                            f"ThreatIntel document for {indicator['matched']['atomic'][0]} was not found",
-                            err,
-                        )
-                        continue
+                # Look for new Threat Match Signals from Elastic SIEM
+                results = self.es_client.search(
+                    index=self.search_idx, body=self.signals_search
+                )
+                ids_dict = {}
 
-                    if _doc["found"] is not True:
-                        continue
-
-                    if (
-                        "threatintel" in _doc["_source"]
-                        and "opencti" in _doc["_source"]["threatintel"]
-                    ):
-                        _opencti_id = _doc["_source"]["threatintel"]["opencti"][
-                            "internal_id"
-                        ]
-                    else:
-                        logger.info(
-                            "Signal for threatintel document doesn't have opencti reference. Searching for matched indicator"
-                        )
-                        # This probably isn't perfect, but should get us close-ish
-                        _filters = [
-                            {
-                                "key": "pattern_type",
-                                "operator": "match",
-                                "values": ["STIX"],
-                            },
-                            {
-                                "key": "pattern",
-                                "operator": "match",
-                                "values": [indicator["matched"]["atomic"]],
-                            },
-                        ]
-
-                        _cti_indicator = self.helper.api.indicator.read(
-                            filters=_filters
-                        )
-                        if _cti_indicator:
-                            _opencti_id = _cti_indicator["id"]
-                        else:
-                            logger.warn(
-                                f"Unable to find matching indicator in OpenCTI for: {indicator['matched']['atomic']}"
+                # Parse the results
+                for hit in results["hits"]["hits"]:
+                    # This depends on ECS mappings >= 1.11
+                    for indicator in hit["_source"]["threat"]["enrichments"]:
+                        # Get original threatintel document
+                        try:
+                            _doc = self.es_client.get(
+                                index=indicator["matched"]["index"],
+                                id=indicator["matched"]["id"],
+                            )
+                        except NotFoundError as err:
+                            logger.error(
+                                f"ThreatIntel document for {indicator['matched']['atomic'][0]} was not found",
+                                err,
                             )
                             continue
 
+                        if _doc["found"] is not True:
+                            continue
+>>>>>>> 27606f69... allow signal_manager to kill itself
+
+                        if (
+                            "threatintel" in _doc["_source"]
+                            and "opencti" in _doc["_source"]["threatintel"]
+                        ):
+                            _opencti_id = _doc["_source"]["threatintel"]["opencti"][
+                                "internal_id"
+                            ]
+                        else:
+                            logger.info(
+                                "Signal for threatintel document doesn't have opencti reference. Searching for matched indicator"
+                            )
+                            # This probably isn't perfect, but should get us close-ish
+                            _filters = [
+                                {
+                                    "key": "pattern_type",
+                                    "operator": "match",
+                                    "values": ["STIX"],
+                                },
+                                {
+                                    "key": "pattern",
+                                    "operator": "match",
+                                    "values": [indicator["matched"]["atomic"]],
+                                },
+                            ]
+
+                            _cti_indicator = self.helper.api.indicator.read(
+                                filters=_filters
+                            )
+                            if _cti_indicator:
+                                _opencti_id = _cti_indicator["id"]
+                            else:
+                                logger.warn(
+                                    f"Unable to find matching indicator in OpenCTI for: {indicator['matched']['atomic']}"
+                                )
+                                continue
+
+                        ecs_version_lt8 = version.parse(hit["_source"]["ecs"]["version"]) < version.parse("8.0.0")
+                        if ecs_version_lt8:
+                            _timestamp = hit["_source"]["signal"]["original_time"]
+                        else:
+                            _timestamp = hit["_source"]["kibana.alert.original_time"]
+
+                        if _opencti_id not in ids_dict:
+                            ids_dict[_opencti_id] = {
+                                "first_seen": _timestamp,
+                                "last_seen": _timestamp,
+                                "count": 1,
+                            }
+                        else:
+                            ids_dict[_opencti_id]["count"] += 1
+
+                            if _timestamp < ids_dict[_opencti_id]["first_seen"]:
+                                ids_dict[_opencti_id]["first_seen"] = _timestamp
+                            elif _timestamp > ids_dict[_opencti_id]["last_seen"]:
+                                ids_dict[_opencti_id]["last_seen"] = _timestamp
+
+                # Loop through signal hits and create new sightings
+                for k, v in ids_dict.items():
+
+                    # Check if indicator exists
+                    indicator = self.helper.api.indicator.read(id=k)
+                    if indicator:
+
+                        logger.info("Found matching indicator in OpenCTI")
+                        stix_id = indicator["standard_id"]
+
+                        entity_id = self._get_elastic_entity()
+                        confidence = int(
+                            self.config.get("connector.confidence_level", "80")
+                        )
+
+                        logger.debug(f"Creating sighting from {stix_id} -> {entity_id}")
+
+                        # Create new Sighting
+                        self.helper.api.stix_sighting_relationship.create(
+                            fromId=stix_id,
+                            toId=entity_id,
+                            stix_id=None,
+                            description="Threat Match sighting from Elastic SIEM",
+                            first_seen=v["first_seen"],
+                            last_seen=v["last_seen"],
+                            count=v["count"],
+                            x_opencti_negative=False,
+                            created=None,
+                            modified=None,
+                            confidence=confidence,
+                            created_by=entity_id,
+                            object_marking=None,
+                            object_label=None,
+                            external_references=None,
+                            update=False,
+                        )
+
+<<<<<<< HEAD
                     ecs_version_lt8 = version.parse(
                         hit["_source"]["ecs"]["version"]
                     ) < version.parse("8.0.0")
@@ -229,3 +299,11 @@ class SignalsManager(Thread):
             # Wait allows us to return earlier during a shutdown
             logger.debug(f"Sleeping for {self.interval} seconds")
             self.shutdown_event.wait(self.interval)
+=======
+                # Wait allows us to return earlier during a shutdown
+                logger.debug(f"Sleeping for {self.interval} seconds")
+                self.shutdown_event.wait(self.interval)
+        except:
+            traceback.print_exception(*sys.exc_info())
+            os.kill(os.getpid(), signal.SIGTERM)
+>>>>>>> 27606f69... allow signal_manager to kill itself
