@@ -97,7 +97,7 @@ class ExportFileCsv:
 
     def _process_message(self, data):
         file_name = data["file_name"]
-        export_scope = data["export_scope"]  # single or list
+        export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
         entity_type = data["entity_type"]
@@ -160,132 +160,186 @@ class ExportFileCsv:
                 + ") to "
                 + file_name
             )
-        else:
-            list_params = data["list_params"]
-            self.helper.log_info(
-                "Exporting list: "
-                + entity_type
-                + "/"
-                + export_type
-                + " to "
-                + file_name
-            )
 
-            final_entity_type = entity_type
-            if IdentityTypes.has_value(entity_type):
-                if list_params["filters"] is not None:
-                    list_params["filters"].append(
-                        {"key": "entity_type", "values": [entity_type]}
+        else:  # list export: export_scope = 'query' or 'selection'
+            if export_scope == "selection":
+                selected_ids = data["selected_ids"]
+                list_filters = "selected_ids"
+                entities_list = []
+
+                for entity_id in selected_ids:
+                    entity_data = self.helper.api_impersonate.stix_domain_object.read(
+                        id=entity_id
                     )
-                else:
-                    list_params["filters"] = [
-                        {"key": "entity_type", "values": [entity_type]}
-                    ]
-                final_entity_type = "Identity"
+                    if entity_data is None:
+                        entity_data = (
+                            self.helper.api_impersonate.stix_cyber_observable.read(
+                                id=entity_id
+                            )
+                        )
+                    if entity_data is None:
+                        entity_data = (
+                            self.helper.api_impersonate.stix_core_relationship.read(
+                                id=entity_id
+                            )
+                        )
+                    entities_list.append(entity_data)
 
-            if LocationTypes.has_value(entity_type):
-                if list_params["filters"] is not None:
-                    list_params["filters"].append(
-                        {"key": "entity_type", "values": [entity_type]}
-                    )
-                else:
-                    list_params["filters"] = [
-                        {"key": "entity_type", "values": [entity_type]}
-                    ]
-                final_entity_type = "Location"
-
-            if StixCyberObservableTypes.has_value(entity_type):
-                if list_params["filters"] is not None:
-                    list_params["filters"].append(
-                        {"key": "entity_type", "values": [entity_type]}
-                    )
-                else:
-                    list_params["filters"] = [
-                        {"key": "entity_type", "values": [entity_type]}
-                    ]
-                final_entity_type = "Stix-Cyber-Observable"
-
-            # List
-            print(list_params)
-            lister = {
-                "Stix-Core-Object": self.helper.api_impersonate.stix_core_object.list,
-                "Stix-Domain-Object": self.helper.api_impersonate.stix_domain_object.list,
-                "Attack-Pattern": self.helper.api_impersonate.attack_pattern.list,
-                "Campaign": self.helper.api_impersonate.campaign.list,
-                "Channel": self.helper.api_impersonate.channel.list,
-                "Event": self.helper.api_impersonate.event.list,
-                "Note": self.helper.api_impersonate.note.list,
-                "Observed-Data": self.helper.api_impersonate.observed_data.list,
-                "Opinion": self.helper.api_impersonate.opinion.list,
-                "Report": self.helper.api_impersonate.report.list,
-                "Grouping": self.helper.api_impersonate.grouping.list,
-                "Case": self.helper.api_impersonate.case.list,
-                "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
-                "Identity": self.helper.api_impersonate.identity.list,
-                "Indicator": self.helper.api_impersonate.indicator.list,
-                "Infrastructure": self.helper.api_impersonate.infrastructure.list,
-                "Intrusion-Set": self.helper.api_impersonate.intrusion_set.list,
-                "Location": self.helper.api_impersonate.location.list,
-                "Language": self.helper.api_impersonate.language.list,
-                "Malware": self.helper.api_impersonate.malware.list,
-                "Threat-Actor": self.helper.api_impersonate.threat_actor.list,
-                "Tool": self.helper.api_impersonate.tool.list,
-                "Narrative": self.helper.api_impersonate.narrative.list,
-                "Vulnerability": self.helper.api_impersonate.vulnerability.list,
-                "Incident": self.helper.api_impersonate.incident.list,
-                "Stix-Cyber-Observable": self.helper.api_impersonate.stix_cyber_observable.list,
-                "Stix-Core-Relationship": self.helper.api_impersonate.stix_core_relationship.list,
-                "stix-core-relationship": self.helper.api_impersonate.stix_core_relationship.list,
-            }
-            do_list = lister.get(
-                final_entity_type,
-                lambda **kwargs: self.helper.log_error(
-                    'Unknown object type "' + final_entity_type + '", doing nothing...'
-                ),
-            )
-            entities_list = do_list(
-                search=list_params["search"],
-                filters=list_params["filters"],
-                orderBy=list_params["orderBy"],
-                orderMode=list_params["orderMode"],
-                relationship_type=list_params["relationship_type"]
-                if "relationship_type" in list_params
-                else None,
-                elementId=list_params["elementId"]
-                if "elementId" in list_params
-                else None,
-                fromId=list_params["fromId"] if "fromId" in list_params else None,
-                toId=list_params["toId"] if "toId" in list_params else None,
-                elementWithTargetTypes=list_params["elementWithTargetTypes"]
-                if "elementWithTargetTypes" in list_params
-                else None,
-                fromTypes=list_params["fromTypes"]
-                if "fromTypes" in list_params
-                else None,
-                toTypes=list_params["toTypes"] if "toTypes" in list_params else None,
-                types=list_params["types"] if "types" in list_params else None,
-                getAll=True,
-            )
-
-            csv_data = self.export_dict_list_to_csv(entities_list)
-            self.helper.log_info(
-                "Uploading: " + entity_type + "/" + export_type + " to " + file_name
-            )
-            if entity_type == "Stix-Cyber-Observable":
-                self.helper.api.stix_cyber_observable.push_list_export(
-                    file_name, csv_data, json.dumps(list_params)
+            else:  # export_scope = 'query'
+                list_params = data["list_params"]
+                self.helper.log_info(
+                    "Exporting list: "
+                    + entity_type
+                    + "/"
+                    + export_type
+                    + " to "
+                    + file_name
                 )
-            elif entity_type == "Stix-Core-Object":
-                self.helper.api.stix_core_object.push_list_export(
-                    entity_type, file_name, csv_data, json.dumps(list_params)
+
+                final_entity_type = entity_type
+                if IdentityTypes.has_value(entity_type):
+                    if list_params["filters"] is not None:
+                        list_params["filters"].append(
+                            {"key": "entity_type", "values": [entity_type]}
+                        )
+                    else:
+                        list_params["filters"] = [
+                            {"key": "entity_type", "values": [entity_type]}
+                        ]
+                    final_entity_type = "Identity"
+
+                if LocationTypes.has_value(entity_type):
+                    if list_params["filters"] is not None:
+                        list_params["filters"].append(
+                            {"key": "entity_type", "values": [entity_type]}
+                        )
+                    else:
+                        list_params["filters"] = [
+                            {"key": "entity_type", "values": [entity_type]}
+                        ]
+                    final_entity_type = "Location"
+
+                if StixCyberObservableTypes.has_value(entity_type):
+                    if list_params["filters"] is not None:
+                        list_params["filters"].append(
+                            {"key": "entity_type", "values": [entity_type]}
+                        )
+                    else:
+                        list_params["filters"] = [
+                            {"key": "entity_type", "values": [entity_type]}
+                        ]
+                    final_entity_type = "Stix-Cyber-Observable"
+
+                # List
+                print(list_params)
+                lister = {
+                    "Stix-Core-Object": self.helper.api_impersonate.stix_core_object.list,
+                    "Stix-Domain-Object": self.helper.api_impersonate.stix_domain_object.list,
+                    "Attack-Pattern": self.helper.api_impersonate.attack_pattern.list,
+                    "Campaign": self.helper.api_impersonate.campaign.list,
+                    "Channel": self.helper.api_impersonate.channel.list,
+                    "Event": self.helper.api_impersonate.event.list,
+                    "Note": self.helper.api_impersonate.note.list,
+                    "Observed-Data": self.helper.api_impersonate.observed_data.list,
+                    "Opinion": self.helper.api_impersonate.opinion.list,
+                    "Report": self.helper.api_impersonate.report.list,
+                    "Grouping": self.helper.api_impersonate.grouping.list,
+                    "Case": self.helper.api_impersonate.case.list,
+                    "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
+                    "Identity": self.helper.api_impersonate.identity.list,
+                    "Indicator": self.helper.api_impersonate.indicator.list,
+                    "Infrastructure": self.helper.api_impersonate.infrastructure.list,
+                    "Intrusion-Set": self.helper.api_impersonate.intrusion_set.list,
+                    "Location": self.helper.api_impersonate.location.list,
+                    "Language": self.helper.api_impersonate.language.list,
+                    "Malware": self.helper.api_impersonate.malware.list,
+                    "Threat-Actor": self.helper.api_impersonate.threat_actor.list,
+                    "Tool": self.helper.api_impersonate.tool.list,
+                    "Narrative": self.helper.api_impersonate.narrative.list,
+                    "Vulnerability": self.helper.api_impersonate.vulnerability.list,
+                    "Incident": self.helper.api_impersonate.incident.list,
+                    "Stix-Cyber-Observable": self.helper.api_impersonate.stix_cyber_observable.list,
+                    "Stix-Core-Relationship": self.helper.api_impersonate.stix_core_relationship.list,
+                    "stix-core-relationship": self.helper.api_impersonate.stix_core_relationship.list,
+                    "stix-sighting-relationship": self.helper.api_impersonate.stix_sighting_relationship.list,
+                }
+                do_list = lister.get(
+                    final_entity_type,
+                    lambda **kwargs: self.helper.log_error(
+                        'Unknown object type "'
+                        + final_entity_type
+                        + '", doing nothing...'
+                    ),
+                )
+                entities_list = do_list(
+                    search=list_params["search"],
+                    filters=list_params["filters"],
+                    orderBy=list_params["orderBy"],
+                    orderMode=list_params["orderMode"],
+                    relationship_type=list_params["relationship_type"]
+                    if "relationship_type" in list_params
+                    else None,
+                    elementId=list_params["elementId"]
+                    if "elementId" in list_params
+                    else None,
+                    fromId=list_params["fromId"] if "fromId" in list_params else None,
+                    toId=list_params["toId"] if "toId" in list_params else None,
+                    elementWithTargetTypes=list_params["elementWithTargetTypes"]
+                    if "elementWithTargetTypes" in list_params
+                    else None,
+                    fromTypes=list_params["fromTypes"]
+                    if "fromTypes" in list_params
+                    else None,
+                    toTypes=list_params["toTypes"]
+                    if "toTypes" in list_params
+                    else None,
+                    types=list_params["types"] if "types" in list_params else None,
+                    getAll=True,
+                )
+
+                list_filters = json.dumps(list_params)
+
+            if (
+                "element_id" in data and entity_type == "Report"
+            ):  # treatment of reports in entity>Analysis
+                element_id = data["element_id"]
+                if element_id:  # filtering of the data to keep those in the container
+                    new_entities_list = [
+                        entity
+                        for entity in entities_list
+                        if ("objectsIds" in entity)
+                        and (element_id in entity["objectsIds"])
+                    ]
+                    entities_list = new_entities_list
+
+            if entities_list is not None:
+                csv_data = self.export_dict_list_to_csv(entities_list)
+                self.helper.log_info(
+                    "Uploading: " + entity_type + "/" + export_type + " to " + file_name
+                )
+                if entity_type == "Stix-Cyber-Observable":
+                    self.helper.api.stix_cyber_observable.push_list_export(
+                        file_name, csv_data, list_filters
+                    )
+                elif entity_type == "Stix-Core-Object":
+                    self.helper.api.stix_core_object.push_list_export(
+                        entity_type, file_name, csv_data, list_filters
+                    )
+                else:
+                    self.helper.api.stix_domain_object.push_list_export(
+                        entity_type, file_name, csv_data, list_filters
+                    )
+                self.helper.log_info(
+                    "Export done: "
+                    + entity_type
+                    + "/"
+                    + export_type
+                    + " to "
+                    + file_name
                 )
             else:
-                self.helper.api.stix_domain_object.push_list_export(
-                    entity_type, file_name, csv_data, json.dumps(list_params)
-                )
-            self.helper.log_info(
-                "Export done: " + entity_type + "/" + export_type + " to " + file_name
-            )
+                raise ValueError("An error occurred, the list is empty")
+
         return "Export done"
 
     # Start the main loop
