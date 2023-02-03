@@ -186,10 +186,11 @@ class IntelManager(object):
 
         # Create initial index, if needed
         logger.debug(f"Checking if index pattern exists: {self.idx_pattern}")
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             matching_indices = self.es_client.indices.resolve_index(
-                name=self.idx_pattern).get("indices", [])
-        
+                name=self.idx_pattern
+            ).get("indices", [])
+
         if len(matching_indices) < 1:
             logger.debug("No indices matching pattern exist.")
 

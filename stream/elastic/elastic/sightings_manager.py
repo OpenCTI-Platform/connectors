@@ -1,7 +1,7 @@
-import os
-import sys
 import json
+import os
 import signal
+import sys
 import traceback
 from datetime import timedelta
 from logging import getLogger
@@ -112,7 +112,6 @@ class SignalsManager(Thread):
         try:
             """Main loop"""
             while not self.shutdown_event.is_set():
-
                 logger.debug("Searching for new signals")
 
                 # Look for new Threat Match Signals from Elastic SIEM
@@ -177,7 +176,9 @@ class SignalsManager(Thread):
                                 )
                                 continue
 
-                        ecs_version_lt8 = version.parse(hit["_source"]["ecs"]["version"]) < version.parse("8.0.0")
+                        ecs_version_lt8 = version.parse(
+                            hit["_source"]["ecs"]["version"]
+                        ) < version.parse("8.0.0")
                         if ecs_version_lt8:
                             _timestamp = hit["_source"]["signal"]["original_time"]
                         else:
@@ -199,11 +200,9 @@ class SignalsManager(Thread):
 
                 # Loop through signal hits and create new sightings
                 for k, v in ids_dict.items():
-
                     # Check if indicator exists
                     indicator = self.helper.api.indicator.read(id=k)
                     if indicator:
-
                         logger.info("Found matching indicator in OpenCTI")
                         stix_id = indicator["standard_id"]
 
