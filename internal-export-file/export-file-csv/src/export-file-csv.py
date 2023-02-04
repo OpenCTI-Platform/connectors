@@ -230,6 +230,35 @@ class ExportFileCsv:
                         ]
                     final_entity_type = "Stix-Cyber-Observable"
 
+                if final_entity_type == "Analysis":
+                    if list_params["filters"] is not None:
+                        list_params["filters"].append(
+                            {
+                                "key": "entity_type",
+                                "values": [
+                                    "Report",
+                                    "Grouping",
+                                    "Note",
+                                    "Observed-Data",
+                                    "Opinion",
+                                ],
+                            }
+                        )
+                    else:
+                        list_params["filters"] = [
+                            {
+                                "key": "entity_type",
+                                "values": [
+                                    "Report",
+                                    "Grouping",
+                                    "Note",
+                                    "Observed-Data",
+                                    "Opinion",
+                                ],
+                            }
+                        ]
+                    final_entity_type = "Stix-Domain-Object"
+
                 # List
                 print(list_params)
                 lister = {
@@ -300,8 +329,8 @@ class ExportFileCsv:
                 list_filters = json.dumps(list_params)
 
             if (
-                "element_id" in data and entity_type == "Report"
-            ):  # treatment of reports in entity>Analysis
+                "element_id" in data and entity_type == "Analysis"
+            ):  # treatment of elements in entity>Analysis
                 element_id = data["element_id"]
                 if element_id:  # filtering of the data to keep those in the container
                     new_entities_list = [
