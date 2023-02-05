@@ -230,7 +230,7 @@ class ExportFileCsv:
                         ]
                     final_entity_type = "Stix-Cyber-Observable"
 
-                if final_entity_type == "Analysis":
+                if final_entity_type == "Container":
                     if list_params["filters"] is not None:
                         list_params["filters"].append(
                             {
@@ -241,6 +241,7 @@ class ExportFileCsv:
                                     "Note",
                                     "Observed-Data",
                                     "Opinion",
+                                    "Case",
                                 ],
                             }
                         )
@@ -254,13 +255,14 @@ class ExportFileCsv:
                                     "Note",
                                     "Observed-Data",
                                     "Opinion",
+                                    "Case",
+                                    "Case",
                                 ],
                             }
                         ]
                     final_entity_type = "Stix-Domain-Object"
 
                 # List
-                print(list_params)
                 lister = {
                     "Stix-Core-Object": self.helper.api_impersonate.stix_core_object.list,
                     "Stix-Domain-Object": self.helper.api_impersonate.stix_domain_object.list,

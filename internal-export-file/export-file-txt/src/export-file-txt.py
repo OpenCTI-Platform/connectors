@@ -75,7 +75,8 @@ class ExportFileTxt:
                                 {"key": "entity_type", "values": [entity_type]}
                             ]
                         final_entity_type = "Stix-Cyber-Observable"
-                    if final_entity_type == "Analysis":
+
+                    if final_entity_type == "Container":
                         if list_params["filters"] is not None:
                             list_params["filters"].append(
                                 {
@@ -86,6 +87,7 @@ class ExportFileTxt:
                                         "Note",
                                         "Observed-Data",
                                         "Opinion",
+                                        "Case",
                                     ],
                                 }
                             )
@@ -99,6 +101,7 @@ class ExportFileTxt:
                                         "Note",
                                         "Observed-Data",
                                         "Opinion",
+                                        "Case",
                                     ],
                                 }
                             ]
