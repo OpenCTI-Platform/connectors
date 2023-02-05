@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-import-document:
-    image: opencti/connector-import-document:5.5.2
+    image: opencti/connector-import-document:5.5.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
