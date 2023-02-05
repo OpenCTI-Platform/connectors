@@ -173,21 +173,6 @@ class ExportFileTxt:
                 list_filters = json.dumps(list_params)
 
             if entities_list is not None:
-                if (
-                    "element_id" in data and entity_type == "Analysis"
-                ):  # treatment of elements in entity>Analysis
-                    element_id = data["element_id"]
-                    if (
-                        element_id
-                    ):  # filtering of the data to keep those in the container
-                        new_entities_list = [
-                            entity
-                            for entity in entities_list
-                            if ("objectsIds" in entity)
-                            and (element_id in entity["objectsIds"])
-                        ]
-                        entities_list = new_entities_list
-
                 if entity_type == "Stix-Cyber-Observable":
                     observable_values = [
                         f["observable_value"]
