@@ -325,21 +325,7 @@ class ExportFileCsv:
                     types=list_params["types"] if "types" in list_params else None,
                     getAll=True,
                 )
-
                 list_filters = json.dumps(list_params)
-
-            if (
-                "element_id" in data and entity_type == "Analysis"
-            ):  # treatment of elements in entity>Analysis
-                element_id = data["element_id"]
-                if element_id:  # filtering of the data to keep those in the container
-                    new_entities_list = [
-                        entity
-                        for entity in entities_list
-                        if ("objectsIds" in entity)
-                        and (element_id in entity["objectsIds"])
-                    ]
-                    entities_list = new_entities_list
 
             if entities_list is not None:
                 csv_data = self.export_dict_list_to_csv(entities_list)
