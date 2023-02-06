@@ -93,6 +93,9 @@ class URLhaus:
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
+
+                    if self.threats_from_labels:
+                        treat_cache = {}
                     try:
                         response = urllib.request.urlopen(
                             self.urlhaus_csv_url,
@@ -139,23 +142,30 @@ class URLhaus:
                                 if self.threats_from_labels:
                                     for label in row[6].split(","):
                                         if label:
-                                            custom_attributes = """
-                                                id
-                                                standard_id
-                                                entity_type
-                                            """
-                                            threat = (
-                                                self.helper.api.stix_domain_object.read(
-                                                    filters=[
-                                                        {
-                                                            "key": "name",
-                                                            "values": [label],
-                                                        }
-                                                    ],
-                                                    first=1,
-                                                    customAttributes=custom_attributes,
+
+                                            # implementing a primitive caching
+                                            try:
+                                                threat = treat_cache[label]
+                                            except KeyError:
+                                                custom_attributes = """
+                                                    id
+                                                    standard_id
+                                                    entity_type
+                                                """
+                                                threat = (
+                                                    self.helper.api.stix_domain_object.read(
+                                                        filters=[
+                                                            {
+                                                                "key": "name",
+                                                                "values": [label],
+                                                            }
+                                                        ],
+                                                        first=1,
+                                                        customAttributes=custom_attributes,
+                                                    )
                                                 )
-                                            )
+                                                treat_cache[label] = threat
+
                                             if threat is not None:
                                                 date = parse(row[1])
                                                 relation = stix2.Relationship(
