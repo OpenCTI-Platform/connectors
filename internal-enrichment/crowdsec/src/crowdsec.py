@@ -72,7 +72,7 @@ class CrowdSecConnector:
                 self.helper.log_warning(
                     f"CrowdSec CTI returned {resp.status_code} response status code. Retrying.."
                 )
-            sleep(2 ** i)
+            sleep(2**i)
 
     def get_or_create_crowdsec_ent_id(self) -> int:
         if getattr(self, "crowdsec_id", None) is not None:
