@@ -7,6 +7,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "cachetools"
+version = "5.3.0"
+description = "Extensible memoizing collections and decorators"
+category = "main"
+optional = false
+python-versions = "~=3.7"
+
+[[package]]
 name = "certifi"
 version = "2022.12.7"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -62,13 +70,14 @@ twisted = ["twisted"]
 
 [[package]]
 name = "pycti"
-version = "5.5.3"
+version = "5.5.4"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
+cachetools = ">=5.3.0,<5.4.0"
 datefinder = ">=0.7.3,<0.8.0"
 pika = ">=1.3.1,<1.4.0"
 python-json-logger = ">=2.0.4,<2.1.0"
@@ -276,11 +285,15 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "dae6577b27bb2e4bc2c508becc1222d0a2113cdf646ce04163003330ba62dc77"
+content-hash = "717394f1896ae61e8cfd4c9d59ae4f18d2e2529f88e76e66dbda72416627d1f3"
 
 [metadata.files]
 antlr4-python3-runtime = [
     {file = "antlr4-python3-runtime-4.9.3.tar.gz", hash = "sha256:f224469b4168294902bb1efa80a8bf7855f24c99aef99cbefc1bcd3cce77881b"},
+]
+cachetools = [
+    {file = "cachetools-5.3.0-py3-none-any.whl", hash = "sha256:429e1a1e845c008ea6c85aa35d4b98b65d6a9763eeef3e37e92728a12d1de9d4"},
+    {file = "cachetools-5.3.0.tar.gz", hash = "sha256:13dfddc7b8df938c21a940dfa6557ce6e94a2f1cdfa58eb90c805721d58f2c14"},
 ]
 certifi = [
     {file = "certifi-2022.12.7-py3-none-any.whl", hash = "sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18"},
@@ -388,8 +401,8 @@ pika = [
     {file = "pika-1.3.1.tar.gz", hash = "sha256:beb19ff6dd1547f99a29acc2c6987ebb2ba7c44bf44a3f8e305877c5ef7d2fdc"},
 ]
 pycti = [
-    {file = "pycti-5.5.3-py3-none-any.whl", hash = "sha256:b7706212794a9b6b5e04b76f2857f2575c2b2d96c2e28570e5d00fd2650113bb"},
-    {file = "pycti-5.5.3.tar.gz", hash = "sha256:2caea83c2ff5d7b2b82c2704123fafd7d77e90c056219fb2ed4ae97d01ae6090"},
+    {file = "pycti-5.5.4-py3-none-any.whl", hash = "sha256:fa20afe8401fa79f0c11ba05800152d6844335b36d845147f65d729fe6ac2875"},
+    {file = "pycti-5.5.4.tar.gz", hash = "sha256:d4805921c85f95a6908d6cfd8ea75742677260493c030c64aa7ff964173598ee"},
 ]
 pydantic = [
     {file = "pydantic-1.10.4-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b5635de53e6686fe7a44b5cf25fcc419a0d5e5c1a1efe73d49d48fe7586db854"},
