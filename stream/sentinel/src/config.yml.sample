@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'Sentinel'
+  scope: 'sentinel' # MIME type or SCO
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+  live_stream_id: 'live'
+
+sentinel:
+  tenant_id: 'ChangeMe' 
+  client_id: 'ChangeMe' 
+  client_secret: 'ChangeMe' 
+  login_url: 'https://login.microsoft.com'
+  resource_url: 'https://graph.microsoft.com'
+  request_url: '/beta/security/tiIndicators' 
+  confidence_level: 50 
+  expire_time: 30
+  target_product: 'Azure Sentinel' 
+  action: allow 
+  tlp_level: amber 
+  passiveOnly: "True" 
