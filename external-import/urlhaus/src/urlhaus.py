@@ -93,6 +93,9 @@ class URLhaus:
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
+
+                    if self.threats_from_labels:
+                        treat_cache = {}
                     try:
                         response = urllib.request.urlopen(
                             self.urlhaus_csv_url,
@@ -139,17 +142,24 @@ class URLhaus:
                                 if self.threats_from_labels:
                                     for label in row[6].split(","):
                                         if label:
-                                            threat = (
-                                                self.helper.api.stix_domain_object.read(
-                                                    filters=[
-                                                        {
-                                                            "key": "name",
-                                                            "values": [label],
-                                                        }
-                                                    ],
-                                                    first=1,
+
+                                            # implementing a primitive caching
+                                            try:
+                                                threat = treat_cache[label]
+                                            except KeyError:
+                                                threat = (
+                                                    self.helper.api.stix_domain_object.read(
+                                                        filters=[
+                                                            {
+                                                                "key": "name",
+                                                                "values": [label],
+                                                            }
+                                                        ],
+                                                        first=1,
+                                                    )
                                                 )
-                                            )
+                                                treat_cache[label] = threat
+
                                             if threat is not None:
                                                 date = parse(row[1])
                                                 relation = stix2.Relationship(
