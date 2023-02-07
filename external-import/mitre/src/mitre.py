@@ -39,7 +39,7 @@ class Mitre:
             "MITRE_ICS_ATTACK_FILE_URL", ["mitre", "ics_attack_file_url"], config
         )
         self.mitre_capec_file_url = get_config_variable(
-            "MITRE_CAPEC_FILE_URL", ["mitre", "capeck_file_url"], config
+            "MITRE_CAPEC_FILE_URL", ["mitre", "capec_file_url"], config
         )
         self.mitre_interval = get_config_variable(
             "MITRE_INTERVAL", ["mitre", "interval"], config, True
