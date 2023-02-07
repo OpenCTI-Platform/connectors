@@ -33,9 +33,11 @@ class ExportFileTxt:
             or entity_type == "stix-core-relationship"
             or entity_type == "Observed-Data"
             or entity_type == "Artifact"
+            or entity_type == "Note"
+            or entity_type == "Opinion"
         ):
             raise ValueError("Text/plain export is not available for this entity type.")
-            # to do: print defaultValue (instead of name) for sightings
+            # to do: print defaultValue (instead of name)
 
         else:  # export_scope = 'selection' or 'query'
             if export_scope == "selection":
