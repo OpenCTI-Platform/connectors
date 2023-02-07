@@ -5,7 +5,7 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper
-from pycti.utils.constants import StixCyberObservableTypes
+from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 
 class ExportFileTxt:
@@ -63,8 +63,31 @@ class ExportFileTxt:
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
+
                 final_entity_type = entity_type
                 if final_entity_type != "":
+                    if IdentityTypes.has_value(entity_type):
+                        if list_params["filters"] is not None:
+                            list_params["filters"].append(
+                                {"key": "entity_type", "values": [entity_type]}
+                            )
+                        else:
+                            list_params["filters"] = [
+                                {"key": "entity_type", "values": [entity_type]}
+                            ]
+                        final_entity_type = "Identity"
+
+                    if LocationTypes.has_value(entity_type):
+                        if list_params["filters"] is not None:
+                            list_params["filters"].append(
+                                {"key": "entity_type", "values": [entity_type]}
+                            )
+                        else:
+                            list_params["filters"] = [
+                                {"key": "entity_type", "values": [entity_type]}
+                            ]
+                        final_entity_type = "Location"
+
                     if StixCyberObservableTypes.has_value(entity_type):
                         if list_params["filters"] is not None:
                             list_params["filters"].append(
