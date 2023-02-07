@@ -261,7 +261,6 @@ class ExportFileCsv:
                             }
                         ]
                     final_entity_type = "Stix-Domain-Object"
-
                 # List
                 lister = {
                     "Stix-Core-Object": self.helper.api_impersonate.stix_core_object.list,
