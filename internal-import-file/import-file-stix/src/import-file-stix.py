@@ -7,7 +7,7 @@ from typing import Dict, List
 
 import yaml
 from pycti import OpenCTIConnectorHelper
-from stix2 import Bundle, Report
+from stix2 import Report
 from stix2elevator import elevate
 from stix2elevator.options import initialize_options
 
