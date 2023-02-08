@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import time
+import traceback
 
 import requests
 import stix2
@@ -463,7 +464,7 @@ class Mandiant:
                                 objects.append(stix_tool)
                                 objects.append(stix_relationship)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(traceback.format_exc())
                 self.helper.send_stix2_bundle(
                     stix2.Bundle(
                         objects=objects,
@@ -584,7 +585,7 @@ class Mandiant:
                                 objects.append(stix_vulnerability)
                                 objects.append(stix_relationship)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(traceback.format_exc())
                 if len(objects) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -665,7 +666,7 @@ class Mandiant:
                         )
                         vulnerabilities.append(stix_vulnerability)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(traceback.format_exc())
                 if len(vulnerabilities) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -809,7 +810,7 @@ class Mandiant:
                                     )
                                     objects.append(stix_relationship)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(traceback.format_exc())
                 if len(objects) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -971,7 +972,7 @@ class Mandiant:
                                 "Failed to process News Analysis Report "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                     else:
                         stix_bundle = None
                         try:
@@ -1107,7 +1108,7 @@ class Mandiant:
                                 "Failed to process News Analyis Report "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                         # Creating and sending the bundle to OCTI
                         try:
                             bundle = stix2.Bundle(
@@ -1124,7 +1125,7 @@ class Mandiant:
                                 "Failed to process this report ID "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                 next_pointer = result.get("next")
                 self.helper.log_debug("Report next_pointer ID " + str(next_pointer))
             elif end_epoch > int(time.time()):
@@ -1220,7 +1221,7 @@ class Mandiant:
                 sys.exit(0)
 
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.log_error(traceback.format_exc())
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
@@ -1234,6 +1235,6 @@ if __name__ == "__main__":
         mandiantConnector = Mandiant()
         mandiantConnector.run()
     except Exception as e:
-        print(e)
+        print(traceback.format_exc())
         time.sleep(10)
         sys.exit(0)
