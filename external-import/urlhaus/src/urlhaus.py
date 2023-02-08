@@ -60,7 +60,7 @@ class URLhaus:
         )
 
     def get_interval(self, offset=0):
-        return (float(self.urlhaus_interval) + offset) * 60 * 60 * 24
+        return (float(self.urlhaus_interval) * 60 * 60 * 24 ) + offset
 
     def next_run(self, seconds):
         return
@@ -122,6 +122,8 @@ class URLhaus:
                             self.helper.log_info("'last_processed_entry' state not found, setting it to epoch start.")
                             last_processed_entry = 0  # start of the epoch
                         
+                        last_processed_entry_running_max = last_processed_entry
+                        
                         for i, row in enumerate(rdr):
                             entry_date = parse(row[1])
 
@@ -131,7 +133,7 @@ class URLhaus:
                             # skip entry if newer events already processed in the past
                             if last_processed_entry > entry_date.timestamp():
                                 continue
-                            last_processed_entry = entry_date.timestamp()
+                            last_processed_entry_running_max = max(entry_date.timestamp(), last_processed_entry_running_max)
 
                             if row[3] == "online" or self.urlhaus_import_offline:
                                 external_reference = stix2.ExternalReference(
@@ -227,7 +229,7 @@ class URLhaus:
                         timestamp
                     )
                     self.helper.log_info(message)
-                    self.helper.set_state({"last_run": timestamp, "last_processed_entry": last_processed_entry})
+                    self.helper.set_state({"last_run": timestamp, "last_processed_entry": last_processed_entry_running_max})
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
