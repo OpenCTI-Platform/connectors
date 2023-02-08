@@ -11,6 +11,7 @@ from typing import NamedTuple, Optional
 import pycti
 import stix2
 import yaml
+from pycti import Indicator
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import _Observable as Observable  # noqa
 
@@ -184,6 +185,7 @@ class IronNetConnector:
 
             log.debug("Creating indicator: %s", pattern)
             sdo = stix2.Indicator(
+                id=Indicator.generate_id(pattern),
                 pattern_type="stix",
                 pattern=pattern,
                 name=value,
