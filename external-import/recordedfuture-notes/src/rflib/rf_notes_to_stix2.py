@@ -14,12 +14,12 @@ from datetime import datetime
 import stix2.v21
 from pycti import (
     AttackPattern,
-    Indicator,
-    StixCoreRelationship,
     Identity,
-    ThreatActor,
+    Indicator,
     Malware,
     Report,
+    StixCoreRelationship,
+    ThreatActor,
     Vulnerability,
 )
 
