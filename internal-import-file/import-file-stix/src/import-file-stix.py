@@ -1,11 +1,13 @@
+import json
 import os
 import sys
 import time
+import uuid
 from typing import Dict, List
 
 import yaml
 from pycti import OpenCTIConnectorHelper
-from stix2 import Bundle, Report, parse
+from stix2 import Bundle, Report
 from stix2elevator import elevate
 from stix2elevator.options import initialize_options
 
@@ -37,16 +39,18 @@ class ImportFileStix:
         if entity_id:
             self.helper.log_info("Contextual import.")
 
-            bundle = parse(file_content, allow_custom=True)["objects"]
-
+            bundle = json.loads(file_content)["objects"]
             if self._contains_report(bundle):
                 self.helper.log_info("Bundle contains report.")
             else:
                 self.helper.log_info("No Report in Stix file. Updating current report")
                 bundle = self._update_report(bundle, entity_id)
-
-            file_content = Bundle(objects=bundle, allow_custom=True).serialize()
-
+            bundle = {
+                "type": "bundle",
+                "id": "bundle--" + str(uuid.uuid4()),
+                "objects": bundle,
+            }
+            file_content = json.dumps(bundle)
         bundles_sent = self.helper.send_stix2_bundle(
             file_content,
             bypass_validation=bypass_validation,
