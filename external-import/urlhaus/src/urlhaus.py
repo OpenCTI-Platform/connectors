@@ -58,8 +58,8 @@ class URLhaus:
             description="abuse.ch is operated by a random swiss guy fighting malware for non-profit, running a couple of projects helping internet service providers and network operators protecting their infrastructure from malware.",
         )
 
-    def get_interval(self):
-        return int(self.urlhaus_interval) * 60 * 60 * 24
+    def get_interval(self, offset=0):
+        return (float(self.urlhaus_interval) * 60 * 60 * 24 ) + offset
 
     def next_run(self, seconds):
         return
@@ -114,7 +114,26 @@ class URLhaus:
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
                         # id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
-                        for row in rdr:
+                        
+                        if  current_state is not None and "last_processed_entry" in current_state:
+                            last_processed_entry = current_state["last_processed_entry"]  # epoch time format
+                        else:
+                            self.helper.log_info("'last_processed_entry' state not found, setting it to epoch start.")
+                            last_processed_entry = 0  # start of the epoch
+                        
+                        last_processed_entry_running_max = last_processed_entry
+                        
+                        for i, row in enumerate(rdr):
+                            entry_date = parse(row[1])
+
+                            if i % 5000 == 0: 
+                                self.helper.log_info(f"Process entry {i} with dateadded='{entry_date.strftime('%Y-%m-%d %H:%M:%S')}'")
+
+                            # skip entry if newer events already processed in the past
+                            if last_processed_entry > entry_date.timestamp():
+                                continue
+                            last_processed_entry_running_max = max(entry_date.timestamp(), last_processed_entry_running_max)
+
                             if row[3] == "online" or self.urlhaus_import_offline:
                                 external_reference = stix2.ExternalReference(
                                     source_name="Abuse.ch URLhaus",
@@ -216,7 +235,7 @@ class URLhaus:
                         timestamp
                     )
                     self.helper.log_info(message)
-                    self.helper.set_state({"last_run": timestamp})
+                    self.helper.set_state({"last_run": timestamp, "last_processed_entry": last_processed_entry_running_max})
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
