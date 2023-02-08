@@ -4,7 +4,7 @@ chardet
 datefinder
 idna
 pika
-pycti==5.5.4
+pycti==5.5.5
 python-dateutil
 python-magic
 pytz

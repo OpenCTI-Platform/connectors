@@ -78,7 +78,7 @@ twisted = ["twisted"]
 
 [[package]]
 name = "pycti"
-version = "5.5.4"
+version = "5.5.5"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
@@ -307,7 +307,7 @@ test = ["flake8 (>=2.4.0)", "isort (>=4.2.2)", "pytest (>=2.2.3)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "4739a3afdb4e8ef511d1e962b7ca7a656cb22fa5695cb1583563e62ffe04a08f"
+content-hash = "1579295ad9e4b328a1ce87156606f2d61c56723b08f897a4b6560df69e095412"
 
 [metadata.files]
 antlr4-python3-runtime = [
@@ -427,8 +427,8 @@ pika = [
     {file = "pika-1.3.1.tar.gz", hash = "sha256:beb19ff6dd1547f99a29acc2c6987ebb2ba7c44bf44a3f8e305877c5ef7d2fdc"},
 ]
 pycti = [
-    {file = "pycti-5.5.4-py3-none-any.whl", hash = "sha256:fa20afe8401fa79f0c11ba05800152d6844335b36d845147f65d729fe6ac2875"},
-    {file = "pycti-5.5.4.tar.gz", hash = "sha256:d4805921c85f95a6908d6cfd8ea75742677260493c030c64aa7ff964173598ee"},
+    {file = "pycti-5.5.5-py3-none-any.whl", hash = "sha256:9d66205d485ead950f3b0592166fce1db68dc2c80e3a7e7267d41a4c70b07dc1"},
+    {file = "pycti-5.5.5.tar.gz", hash = "sha256:04d1a7306a06d758c9e86c7bf93b2bb17530d7ff21d54f0ad99c1fe0edeb9e9b"},
 ]
 pydantic = [
     {file = "pydantic-1.10.4-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b5635de53e6686fe7a44b5cf25fcc419a0d5e5c1a1efe73d49d48fe7586db854"},

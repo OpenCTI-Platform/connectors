@@ -15,7 +15,7 @@ elastic = 'elastic.console:main'
 [tool.poetry.dependencies]
 python = "^3.9"
 elasticsearch = "^7.17.9"
-pycti = "5.5.4"
+pycti = "5.5.5"
 scalpl = "^0.4.2"
 docopt = "^0.6.2"
 python-json-logger = "^2.0.1"
