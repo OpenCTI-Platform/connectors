@@ -3,9 +3,15 @@ import time
 from datetime import datetime, timezone
 
 import requests
+import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Bundle, Identity, Indicator, IPv4Address, Relationship
+from pycti import (
+    Identity,
+    Indicator,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 
 
 class AbuseSSLImportConnector:
@@ -19,10 +25,12 @@ class AbuseSSLImportConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        self.author = Identity(
-            name=get_config_variable(
-                "CONNECTOR_NAME", ["connector", "name"], config
-            ).capitalize(),
+        name = get_config_variable(
+            "CONNECTOR_NAME", ["connector", "name"], config
+        ).capitalize()
+        self.author = stix2.Identity(
+            id=Identity.generate_id(name, "organization"),
+            name=name,
             identity_class="organization",
         )
         self.api_url = get_config_variable(
@@ -123,7 +131,7 @@ class AbuseSSLImportConnector:
         self.helper.log_info("Creating STIX Observables")
         observables = []
         for ip in ip_addresses:
-            observable = IPv4Address(value=ip)
+            observable = stix2.IPv4Address(value=ip)
             observables.append(observable)
         return observables
 
@@ -137,13 +145,15 @@ class AbuseSSLImportConnector:
         self.helper.log_info("Creating STIX Indicators")
         indicators = []
         for observable in observables:
-            indicator = Indicator(
+            pattern = f"[ipv4-addr:value = '{observable.value}']"
+            indicator = stix2.Indicator(
+                id=Indicator.generate_id(pattern),
                 name=observable.value,
                 description="Malicious SSL connections",
                 created_by_ref=f"{self.author.id}",
                 confidence=self.helper.connect_confidence_level,
                 pattern_type="stix",
-                pattern=f"[ipv4-addr:value = '{observable.value}']",
+                pattern=pattern,
                 labels="osint",
             )
             indicators.append(indicator)
@@ -160,7 +170,10 @@ class AbuseSSLImportConnector:
         self.helper.log_info("Creating STIX Relationships")
         relationships = []
         for i in range(len(observables)):
-            relationship = Relationship(
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on", indicators[i].id, observables[i].id
+                ),
                 relationship_type="based-on",
                 source_ref=indicators[i].id,
                 target_ref=observables[i].id,
@@ -175,7 +188,9 @@ class AbuseSSLImportConnector:
         :return: Serialized STIX Bundle object
         """
         self.helper.log_info("Creating STIX Bundle")
-        bundle = Bundle(self.author, observables, indicators, relationships).serialize()
+        bundle = stix2.Bundle(
+            self.author, observables, indicators, relationships
+        ).serialize()
         return bundle
 
     def send_bundle(self, bundle, work_id):
