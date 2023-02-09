@@ -113,7 +113,7 @@ class Mandiant:
         return object[key]
 
     def _process_aliases(self, object):
-        if "aliases" in object:
+        if "aliases" in object and object["aliases"] != "redacted":
             aliases = []
             for alias in object["aliases"]:
                 aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
@@ -548,7 +548,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_identity)
                                 objects.append(stix_relationship)
-                        if "cve" in result_malware:
+                        if "cve" in result_malware and result_malware['cve'] != "redacted":
                             for cve in result_malware["cve"]:
                                 stix_vulnerability = stix2.Vulnerability(
                                     id=cve["id"],
