@@ -112,8 +112,11 @@ class Mandiant:
             return None
         return object[key]
 
+    def _exists_and_not_redacted(self, key, object):
+        return key in object and object[key] != "redacted"
+
     def _process_aliases(self, object):
-        if "aliases" in object and object["aliases"] != "redacted":
+        if self._exists_and_not_redacted("aliases", object):
             aliases = []
             for alias in object["aliases"]:
                 aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
@@ -234,7 +237,7 @@ class Mandiant:
                         objects.append(stix_actor)
                         # Get the actor
                         result_actor = self._query(url + "/" + actor["id"])
-                        if "industries" in result_actor:
+                        if self._exists_and_not_redacted("industries", result_actor):
                             for industry in result_actor["industries"]:
                                 stix_identity = stix2.Identity(
                                     id=industry["id"],
@@ -271,7 +274,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_identity)
                                 objects.append(stix_relationship)
-                        if "cve" in result_actor:
+                        if self._exists_and_not_redacted("cve", result_actor):
                             for cve in result_actor["cve"]:
                                 stix_vulnerability = stix2.Vulnerability(
                                     id=cve["id"],
@@ -307,8 +310,8 @@ class Mandiant:
                                 )
                                 objects.append(stix_vulnerability)
                                 objects.append(stix_relationship)
-                        if "locations" in result_actor:
-                            if "source" in result_actor["locations"]:
+                        if self._exists_and_not_redacted("locations", result_actor):
+                            if self._exists_and_not_redacted("source", result_actor["locations"]):
                                 for source in result_actor["locations"]["source"]:
                                     if "country" in source:
                                         stix_location = stix2.Location(
@@ -350,7 +353,7 @@ class Mandiant:
                                         )
                                         objects.append(stix_location)
                                         objects.append(stix_relationship)
-                            if "target" in result_actor["locations"]:
+                            if self._exists_and_not_redacted("target", result_actor["locations"]):
                                 for target in result_actor["locations"]["target"]:
                                     if "country" in target:
                                         stix_location = stix2.Location(
@@ -392,7 +395,7 @@ class Mandiant:
                                         )
                                         objects.append(stix_location)
                                         objects.append(stix_relationship)
-                        if "malware" in result_actor:
+                        if self._exists_and_not_redacted("malware", result_actor):
                             for malware in result_actor["malware"]:
                                 stix_malware = stix2.Malware(
                                     id=malware["id"],
@@ -428,7 +431,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_malware)
                                 objects.append(stix_relationship)
-                        if "tool" in result_actor:
+                        if self._exists_and_not_redacted("tool", result_actor):
                             for tool in result_actor["tool"]:
                                 stix_tool = stix2.Tool(
                                     id=tool["id"],
@@ -511,7 +514,7 @@ class Mandiant:
                         objects.append(stix_malware)
                         # Get the malware
                         result_malware = self._query(url + "/" + malware["id"])
-                        if "industries" in result_malware:
+                        if self._exists_and_not_redacted("industries", result_malware):
                             for industry in result_malware["industries"]:
                                 stix_identity = stix2.Identity(
                                     id=industry["id"],
@@ -548,7 +551,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_identity)
                                 objects.append(stix_relationship)
-                        if "cve" in result_malware and result_malware['cve'] != "redacted":
+                        if self._exists_and_not_redacted("cve", result_malware):
                             for cve in result_malware["cve"]:
                                 stix_vulnerability = stix2.Vulnerability(
                                     id=cve["id"],
