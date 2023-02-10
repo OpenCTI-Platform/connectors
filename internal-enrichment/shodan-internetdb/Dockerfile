@@ -9,6 +9,9 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 
 WORKDIR /opt/build
 
+# Install build deps
+RUN apk add --no-cache musl-dev gcc libffi-dev
+
 # Install poetry
 RUN apk add --no-cache git
 RUN pip3 install poetry
