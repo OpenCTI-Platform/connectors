@@ -228,7 +228,7 @@ class URLhaus:
                             os.remove(
                                 os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
                             )
-                    except Exception as e:
+                    except Exception:
                         self.helper.log_error(traceback.format_exc())
                     # Store the current timestamp as a last run
                     message = "Connector successfully run, storing last_run as " + str(
@@ -253,7 +253,7 @@ class URLhaus:
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
-            except Exception as e:
+            except Exception:
                 self.helper.log_error(traceback.format_exc())
 
             if self.helper.connect_run_and_terminate:
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     try:
         URLhausConnector = URLhaus()
         URLhausConnector.run()
-    except Exception as e:
+    except Exception:
         print(traceback.format_exc())
         time.sleep(10)
         sys.exit(0)
