@@ -82,6 +82,8 @@ class Mandiant:
         self.cache = {}
 
     def cleanhtml(self, raw_html):
+        if raw_html is None:
+            return None
         CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
         cleantext = re.sub(CLEANR, "", raw_html)
         return cleantext
@@ -113,16 +115,19 @@ class Mandiant:
         return object[key]
 
     def _exists_and_not_redacted(self, key, object):
-        return key in object and object[key] != "redacted"
+        # in contrast to self._redacted_as_none that returns a 'NoneType', 
+        # this function returns a boolean
+        return key in object and object[key] != "redacted"        
 
     def _process_aliases(self, object):
-        if self._exists_and_not_redacted("aliases", object):
-            aliases = []
-            for alias in object["aliases"]:
-                aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
-            object["aliases"] = aliases
-            return self._redacted_as_none("aliases", object)
-        return None
+        if not self._exists_and_not_redacted("aliases", object):
+            return None 
+        aliases = []
+        for alias in object["aliases"]:
+            aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
+        object["aliases"] = aliases
+        return self._redacted_as_none("aliases", object)
+        
 
     def _query(
         self,
