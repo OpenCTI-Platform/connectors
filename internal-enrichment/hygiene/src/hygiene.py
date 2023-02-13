@@ -198,7 +198,23 @@ class HygieneConnector:
 
     def _process_message(self, data) -> str:
         entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+
+        custom_attributes = """
+            id
+            observable_value
+            entity_type
+            indicators {
+              edges {
+                node {
+                  id
+                }
+              }
+            }
+        """
+        observable = self.helper.api.stix_cyber_observable.read(
+            id=entity_id, customAttributes=custom_attributes
+        )
+
         if observable is None:
             raise ValueError(
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
