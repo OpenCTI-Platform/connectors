@@ -199,6 +199,7 @@ class IntelManager(object):
                 _alias = self.config.get("setup.ilm.rollover_alias", "opencti")
                 _ilm_pattern = self.config.get("setup.ilm.pattern", "{now/d}-000001")
                 _initial_idx = f"{_alias}-{_ilm_pattern}"
+                logger.info(f"Using alias '{_alias}'")
             else:
                 _initial_idx = self.config.get(
                     "output.elasticsearch.index", "opencti-{now/d}"
@@ -217,8 +218,6 @@ class IntelManager(object):
             #     _val = dm(m.get("modulo")).format(_fmt)
             #     logger.debug(f"Timestamp string from arrow {_val}")
             #     _initial_idx = self.pattern.sub(_val, _initial_idx)
-
-            logger.info(f"Initial index: {_initial_idx}\nAlias: {_alias}")
 
             if _ilm_enabled is True and (
                 not self.es_client.indices.exists_alias(
