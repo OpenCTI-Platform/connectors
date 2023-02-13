@@ -5,7 +5,6 @@ import ssl
 import sys
 import time
 import urllib.request
-import traceback
 
 import certifi
 import stix2
@@ -32,7 +31,7 @@ class URLhaus:
             "URLHAUS_IMPORT_OFFLINE", ["urlhaus", "import_offline"], config, False, True
         )
         self.urlhaus_interval = get_config_variable(
-            "URLHAUS_INTERVAL", ["urlhaus", "interval"], config, False
+            "URLHAUS_INTERVAL", ["urlhaus", "interval"], config, True
         )
         self.create_indicators = get_config_variable(
             "URLHAUS_CREATE_INDICATORS",
@@ -59,8 +58,8 @@ class URLhaus:
             description="abuse.ch is operated by a random swiss guy fighting malware for non-profit, running a couple of projects helping internet service providers and network operators protecting their infrastructure from malware.",
         )
 
-    def get_interval(self, offset=0):
-        return (float(self.urlhaus_interval) * 60 * 60 * 24 ) + offset
+    def get_interval(self):
+        return int(self.urlhaus_interval) * 60 * 60 * 24
 
     def next_run(self, seconds):
         return
@@ -84,18 +83,16 @@ class URLhaus:
                     last_run = None
                     self.helper.log_info("Connector has never run")
                 # If the last_run is more than interval-1 day
-                if last_run is None or ((timestamp - last_run) > self.get_interval(offset=-1)):
+                if last_run is None or (
+                    (timestamp - last_run)
+                    > ((int(self.urlhaus_interval) - 1) * 60 * 60 * 24)
+                ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.datetime.utcfromtimestamp(timestamp)
                     friendly_name = "URLhaus run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
-
-                    # initialize the threat cache with each run
-                    if self.threats_from_labels:
-                        treat_cache = {}
-
                     try:
                         response = urllib.request.urlopen(
                             self.urlhaus_csv_url,
@@ -113,28 +110,8 @@ class URLhaus:
                         )
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
-                        ## the csv-file hast the following columns 
                         # id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
-                        
-                        if  current_state is not None and "last_processed_entry" in current_state:
-                            last_processed_entry = current_state["last_processed_entry"]  # epoch time format
-                        else:
-                            self.helper.log_info("'last_processed_entry' state not found, setting it to epoch start.")
-                            last_processed_entry = 0  # start of the epoch
-                        
-                        last_processed_entry_running_max = last_processed_entry
-                        
-                        for i, row in enumerate(rdr):
-                            entry_date = parse(row[1])
-
-                            if i % 5000 == 0: 
-                                self.helper.log_info(f"Process entry {i} with dateadded='{entry_date.strftime('%Y-%m-%d %H:%M:%S')}'")
-
-                            # skip entry if newer events already processed in the past
-                            if last_processed_entry > entry_date.timestamp():
-                                continue
-                            last_processed_entry_running_max = max(entry_date.timestamp(), last_processed_entry_running_max)
-
+                        for row in rdr:
                             if row[3] == "online" or self.urlhaus_import_offline:
                                 external_reference = stix2.ExternalReference(
                                     source_name="Abuse.ch URLhaus",
@@ -162,38 +139,32 @@ class URLhaus:
                                 if self.threats_from_labels:
                                     for label in row[6].split(","):
                                         if label:
-
-                                            # implementing a primitive caching
-                                            try:
-                                                threat = treat_cache[label]
-                                            except KeyError:
-                                                threat = (
-                                                    self.helper.api.stix_domain_object.read(
-                                                        filters=[
-                                                            {
-                                                                "key": "name",
-                                                                "values": [label],
-                                                            }
-                                                        ],
-                                                        first=1,
-                                                    )
+                                            threat = (
+                                                self.helper.api.stix_domain_object.read(
+                                                    filters=[
+                                                        {
+                                                            "key": "name",
+                                                            "values": [label],
+                                                        }
+                                                    ],
+                                                    first=1,
                                                 )
-                                                treat_cache[label] = threat
-
+                                            )
                                             if threat is not None:
+                                                date = parse(row[1])
                                                 relation = stix2.Relationship(
                                                     id=StixCoreRelationship.generate_id(
                                                         "related-to",
                                                         stix_observable.id,
                                                         threat["standard_id"],
-                                                        entry_date,
-                                                        entry_date,
+                                                        date,
+                                                        date,
                                                     ),
                                                     source_ref=stix_observable.id,
                                                     target_ref=threat["standard_id"],
                                                     relationship_type="related-to",
-                                                    start_time=entry_date,
-                                                    stop_time=entry_date
+                                                    start_time=date,
+                                                    stop_time=date
                                                     + datetime.timedelta(0, 3),
                                                     confidence=self.helper.connect_confidence_level,
                                                     created_by_ref=self.identity[
@@ -202,8 +173,8 @@ class URLhaus:
                                                     object_marking_refs=[
                                                         stix2.TLP_WHITE
                                                     ],
-                                                    created=entry_date,
-                                                    modified=entry_date,
+                                                    created=date,
+                                                    modified=date,
                                                     allow_custom=True,
                                                 )
                                                 bundle_objects.append(relation)
@@ -223,13 +194,13 @@ class URLhaus:
                                 os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
                             )
                     except Exception as e:
-                        self.helper.log_error(traceback.format_exc())
+                        self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
                     message = "Connector successfully run, storing last_run as " + str(
                         timestamp
                     )
                     self.helper.log_info(message)
-                    self.helper.set_state({"last_run": timestamp, "last_processed_entry": last_processed_entry_running_max})
+                    self.helper.set_state({"last_run": timestamp})
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
@@ -248,7 +219,7 @@ class URLhaus:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
             except Exception as e:
-                self.helper.log_error(traceback.format_exc())
+                self.helper.log_error(str(e))
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
@@ -262,6 +233,6 @@ if __name__ == "__main__":
         URLhausConnector = URLhaus()
         URLhausConnector.run()
     except Exception as e:
-        print(traceback.format_exc())
+        print(e)
         time.sleep(10)
         sys.exit(0)
