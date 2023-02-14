@@ -85,7 +85,7 @@ To verify that Analyst Notes have downloaded, navigate to the reports tab in the
 
 ### Issue: Version de-synchronization
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==5.3.1`. If you don't, the OpenCTI SDK will likely fail to initialize
+Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==5.5.6`. If you don't, the OpenCTI SDK will likely fail to initialize
 
 
 ### Issue: IPV6 support

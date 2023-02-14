@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Correct working directory
-cd /opt/opencti-connector-mitre
+cd /opt/opencti-connector-sentinel
 
 # Start the connector
-python3 mitre.py
+python3 sentinel.py

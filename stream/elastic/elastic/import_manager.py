@@ -1,8 +1,10 @@
 import re
 import urllib.parse
+import warnings
 from datetime import datetime, timezone
 from logging import getLogger
 
+from arrow import Arrow
 from datemath import dm
 from elasticsearch import Elasticsearch, NotFoundError, RequestError
 from pycti import OpenCTIConnectorHelper
@@ -56,7 +58,6 @@ class StixManager(object):
     def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
-
         try:
             # Submit to Elastic index
 
@@ -70,7 +71,9 @@ class StixManager(object):
                 if m.get("modulo", None) is not None:
                     _fmt = m.get("format") or DM_DEFAULT_FMT
                     logger.debug(f"{m['modulo']} -> {_fmt}")
-                    _val = dm(m.get("modulo"), now=timestamp).format(_fmt)
+                    _val = dm(
+                        m.get("modulo"), now=Arrow.fromdatetime(timestamp)
+                    ).format(_fmt)
                     _write_idx = self.pattern.sub(_val, _write_idx)
 
             # Submit to Elastic index
@@ -138,18 +141,19 @@ class IntelManager(object):
         from string import Template
 
         logger.info("Setting up Elasticsearch for OpenCTI Connector")
-        assert self.es_client.ping()
+        if not self.config.get("output.elasticsearch.reduced_privileges", True):
+            assert self.es_client.ping()
 
         _ilm_enabled: bool = self.config.get("setup.ilm.enabled", True)
         _policy_name: str = self.config.get("setup.ilm.policy_name", "opencti")
         _policy: str = None
 
-        try:
-            _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
-        except NotFoundError as err:
-            logger.warning(f"HTTP {err.status_code}: {err.info['error']['reason']}")
-
         if _ilm_enabled is True:
+            try:
+                _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
+            except NotFoundError as err:
+                logger.warning(f"HTTP {err.status_code}: {err.info['error']['reason']}")
+
             # Create ILM policy if needed
             if (_policy is None) or (
                 self.config.get("setup.ilm.overwrite", None) is True
@@ -182,14 +186,12 @@ class IntelManager(object):
 
         # Create initial index, if needed
         logger.debug(f"Checking if index pattern exists: {self.idx_pattern}")
-        if (
-            len(
-                self.es_client.indices.resolve_index(name=self.idx_pattern).get(
-                    "indices", []
-                )
-            )
-            < 1
-        ):
+        with warnings.catch_warnings(record=True):
+            matching_indices = self.es_client.indices.resolve_index(
+                name=self.idx_pattern
+            ).get("indices", [])
+
+        if len(matching_indices) < 1:
             logger.debug("No indices matching pattern exist.")
 
             if _ilm_enabled is True:
@@ -197,6 +199,7 @@ class IntelManager(object):
                 _alias = self.config.get("setup.ilm.rollover_alias", "opencti")
                 _ilm_pattern = self.config.get("setup.ilm.pattern", "{now/d}-000001")
                 _initial_idx = f"{_alias}-{_ilm_pattern}"
+                logger.info(f"Using alias '{_alias}'")
             else:
                 _initial_idx = self.config.get(
                     "output.elasticsearch.index", "opencti-{now/d}"
@@ -216,8 +219,6 @@ class IntelManager(object):
             #     logger.debug(f"Timestamp string from arrow {_val}")
             #     _initial_idx = self.pattern.sub(_val, _initial_idx)
 
-            logger.info(f"Initial index: {_initial_idx}\nAlias: {_alias}")
-
             if _ilm_enabled is True and (
                 not self.es_client.indices.exists_alias(
                     index=self.idx_pattern, name=_alias
@@ -234,7 +235,6 @@ class IntelManager(object):
 
                 self.write_idx = _alias
             else:
-                logger.info(f"Alias {_alias} already exists or not being used")
                 _settings = "{}"
 
             self.es_client.index(index=_initial_idx, body=_settings)
@@ -253,7 +253,10 @@ class IntelManager(object):
             id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         )
 
-        logger.debug(entity)
+        if entity is None:
+            id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+            logger.warning(f"For document id {id}, entity is '{entity}'. Skipping.")
+            return None
 
         _result: dict = {}
         _document: Cut = {}
@@ -274,7 +277,7 @@ class IntelManager(object):
                     f"Retrieving document id: {OpenCTIConnectorHelper.get_attribute_in_extension('id', data)}"
                 )
                 _result = self.es_client.get(
-                    index=self.idx_pattern,
+                    index=self.write_idx,
                     id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
                     doc_type="_doc",
                 )
@@ -471,7 +474,9 @@ class IntelManager(object):
                 if m.get("modulo", None) is not None:
                     _fmt = m.get("format") or DM_DEFAULT_FMT
                     logger.debug(f"{m['modulo']} -> {_fmt}")
-                    _val = dm(m.get("modulo"), now=timestamp).format(_fmt)
+                    _val = dm(
+                        m.get("modulo"), now=Arrow.fromdatetime(timestamp)
+                    ).format(_fmt)
                     _write_idx = self.pattern.sub(_val, _write_idx)
 
             # Submit to Elastic index
@@ -489,7 +494,6 @@ class IntelManager(object):
         return _document
 
     def delete_cti_event(self, data: dict) -> None:
-
         logger.debug(f"Deleting {data}")
         _result: dict = {}
 
@@ -501,7 +505,7 @@ class IntelManager(object):
 
         try:
             _result = self.es_client.delete(
-                index=self.idx_pattern,
+                index=self.write_idx,
                 id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
                 doc_type="_doc",
             )

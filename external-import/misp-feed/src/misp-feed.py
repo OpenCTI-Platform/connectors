@@ -677,22 +677,25 @@ class MispFeed:
             resolved_types = types[type]
             if len(resolved_types) == 2:
                 values = value.split("|")
-                if resolved_types[0]["resolver"] == "ipv4-addr":
-                    resolver_0 = self._detect_ip_version(values[0])
-                    type_0 = self._detect_ip_version(values[0], True)
+                if len(values) == 2:
+                    if resolved_types[0]["resolver"] == "ipv4-addr":
+                        resolver_0 = self._detect_ip_version(values[0])
+                        type_0 = self._detect_ip_version(values[0], True)
+                    else:
+                        resolver_0 = resolved_types[0]["resolver"]
+                        type_0 = resolved_types[0]["type"]
+                    if resolved_types[1]["resolver"] == "ipv4-addr":
+                        resolver_1 = self._detect_ip_version(values[1])
+                        type_1 = self._detect_ip_version(values[1], True)
+                    else:
+                        resolver_1 = resolved_types[1]["resolver"]
+                        type_1 = resolved_types[1]["type"]
+                    return [
+                        {"resolver": resolver_0, "type": type_0, "value": values[0]},
+                        {"resolver": resolver_1, "type": type_1, "value": values[1]},
+                    ]
                 else:
-                    resolver_0 = resolved_types[0]["resolver"]
-                    type_0 = resolved_types[0]["type"]
-                if resolved_types[1]["resolver"] == "ipv4-addr":
-                    resolver_1 = self._detect_ip_version(values[1])
-                    type_1 = self._detect_ip_version(values[1], True)
-                else:
-                    resolver_1 = resolved_types[1]["resolver"]
-                    type_1 = resolved_types[1]["type"]
-                return [
-                    {"resolver": resolver_0, "type": type_0, "value": values[0]},
-                    {"resolver": resolver_1, "type": type_1, "value": values[1]},
-                ]
+                    return None
             else:
                 if resolved_types[0] == "ipv4-addr":
                     resolver_0 = self._detect_ip_version(value)
@@ -1476,7 +1479,7 @@ class MispFeed:
         event_external_references = []
         indicators = []
         # Get attributes of event
-        for attribute in event["Event"]["Attribute"]:
+        for attribute in event["Event"].get("Attribute", []):
             indicator = self._process_attribute(
                 author,
                 event_elements,

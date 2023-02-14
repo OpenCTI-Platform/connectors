@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-export-report-pdf:
-    image: opencti/connector-export-report-pdf:5.5.2
+    image: opencti/connector-export-report-pdf:5.5.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

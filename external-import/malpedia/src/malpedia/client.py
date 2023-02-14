@@ -8,7 +8,6 @@ from pycti import OpenCTIConnectorHelper
 
 
 class MalpediaClient:
-
     _DEFAULT_API_URL = "https://malpedia.caad.fkie.fraunhofer.de/api/"
 
     def __init__(self, helper: OpenCTIConnectorHelper, api_key: str) -> None:

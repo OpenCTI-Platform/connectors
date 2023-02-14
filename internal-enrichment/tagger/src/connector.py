@@ -30,7 +30,6 @@ class TaggerConnector:
 
         for definition in self.definitions:
             for scope in definition["scopes"]:
-
                 entity_type = scope.lower()
                 api = getattr(self.helper.api, entity_type)
                 entity = api.read(id=entity_id)

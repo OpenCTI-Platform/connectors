@@ -77,7 +77,7 @@ class UnknownIndicator(StixIndicator):
         super().__init__(**kwargs)
 
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
-        raise NotImplementedError
+        raise NotImplementedError(f"Handler not found for data '{data}'")
 
 
 class ArtifactIndicator(StixIndicator):
@@ -384,7 +384,6 @@ class NetworkTrafficIndicator(StixIndicator):
         self.protocols: List[str] = None
 
     def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
-
         from ipaddress import ip_address, ip_network
 
         obj: dict[str, str] = {}

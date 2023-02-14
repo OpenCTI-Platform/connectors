@@ -113,7 +113,6 @@ class IndicatorImporter:
         return self._filter_darkfeed_data(df_data)
 
     def _filter_darkfeed_data(self, df_data):
-
         for indicator in df_data:
             post_id = (
                 f"https://portal.cybersixgill.com/#/search?dateRange=01%2F01%2F1990-now&q=_id:{indicator.get('sixgill_postid', '')}"

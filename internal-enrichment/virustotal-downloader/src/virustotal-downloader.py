@@ -35,7 +35,6 @@ class VirustotalDownloaderConnector:
         self.headers = {"x-apikey": api_key}
 
     def _process_hash(self, observable):
-
         hash_value = observable["observable_value"]
         artifact_id = None
         bundle_objects = []
@@ -104,7 +103,6 @@ class VirustotalDownloaderConnector:
             )
 
     def _process_message(self, data):
-
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:

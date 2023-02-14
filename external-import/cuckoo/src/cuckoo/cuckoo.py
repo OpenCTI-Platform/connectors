@@ -97,7 +97,6 @@ class cuckooReportTarget:
 
 class cuckooReportSignature:
     def __init__(self, signature_json):
-
         self.json = signature_json
 
         # Get Basic info
@@ -404,7 +403,6 @@ class cuckooReportNetwork:
 
 class cuckooReportBehaviorSummary:
     def __init__(self, report_json):
-
         self.json = report_json["behavior"]["summary"]
 
         # Get Basic info
@@ -535,7 +533,6 @@ class cuckooReportBehaviorSummary:
 
 class cuckooReportProcess:
     def __init__(self, process_json):
-
         self.json = process_json
 
         # Get Basic info
@@ -590,7 +587,6 @@ class cuckooReport:
             self.network = None
 
         if "behavior" in report_json:
-
             if "processtree" in report_json["behavior"]:
                 self.process = self.getProcesses(report_json["behavior"]["processtree"])
             else:

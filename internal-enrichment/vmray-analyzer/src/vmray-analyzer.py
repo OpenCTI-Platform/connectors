@@ -86,7 +86,6 @@ class VmrayAnalyzerConnector:
         self.external_reference = None
 
     def _process_observable(self, observable):
-
         # Build params for the submission
         params = {}
         # Must be boolean

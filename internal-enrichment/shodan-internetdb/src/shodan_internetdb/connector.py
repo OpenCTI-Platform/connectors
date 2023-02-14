@@ -65,7 +65,24 @@ class ShodanInternetDBConnector:
         # Fetch the observable being processed
         entity_id = data["entity_id"]
 
-        observable = self._helper.api.stix_cyber_observable.read(id=entity_id)
+        custom_attributes = """
+            id
+            entity_type
+            objectMarking {
+              edges {
+                node {
+                  id
+                  definition_type
+                  definition
+                }
+              }
+            }
+            observable_value
+        """
+        observable = self._helper.api.stix_cyber_observable.read(
+            id=entity_id, customAttributes=custom_attributes
+        )
+
         if observable is None:
             log.error("Observable not found with entity_id %s", entity_id)
             return "Observable not found"

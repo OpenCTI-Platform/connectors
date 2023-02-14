@@ -128,7 +128,6 @@ class ShodanConnector:
         domains = []
 
         for domain in shodanHostResponse["domains"]:
-
             domainX = self.helper.api.stix_cyber_observable.create(
                 observableData={
                     "type": "domain-name",
@@ -169,7 +168,6 @@ class ShodanConnector:
         return orgX
 
     def _convert_shodan_to_stix(self, shodanHostResponse, observable):
-
         # --------------------------------------------------------------------
         #  Helpers
         # --------------------------------------------------------------------

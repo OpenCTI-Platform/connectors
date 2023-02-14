@@ -1,5 +1,4 @@
 import json
-import os
 import ssl
 import sys
 import time
@@ -8,38 +7,40 @@ from datetime import datetime
 from typing import Optional
 
 import certifi
-import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+CONFIG_SECTORS_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json"
+CONFIG_GEOGRAPHY_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json"
+# CONFIG_COMPANIES_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json"
 
 
 class OpenCTI:
     def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        # Extra config
-        self.opencti_sectors_file_url = get_config_variable(
-            "CONFIG_SECTORS_FILE_URL", ["config", "sectors_file_url"], config
-        )
-        self.opencti_geography_file_url = get_config_variable(
-            "CONFIG_GEOGRAPHY_FILE_URL", ["config", "geography_file_url"], config
-        )
-        self.opencti_interval = get_config_variable(
-            "CONFIG_INTERVAL", ["config", "interval"], config, True
-        )
+        self.helper = OpenCTIConnectorHelper({})
         self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
+            "CONNECTOR_UPDATE_EXISTING_DATA", []
         )
+        self.interval = get_config_variable("CONFIG_INTERVAL", [], isNumber=True)
+        self.remove_creator = get_config_variable("CONFIG_REMOVE_CREATOR", [])
+
+        urls = [
+            get_config_variable(
+                "CONFIG_SECTORS_FILE_URL", [""], default=CONFIG_SECTORS_FILE_URL
+            ),
+            get_config_variable(
+                "CONFIG_GEOGRAPHY_FILE_URL",
+                [""],
+                default=CONFIG_GEOGRAPHY_FILE_URL,
+            ),
+            # get_config_variable(
+            #     "CONFIG_COMPANIES_FILE_URL", [""], default=CONFIG_COMPANIES_FILE_URL
+            # )
+        ]
+
+        self.urls = list(filter(lambda url: url is not False, urls))
 
     def get_interval(self):
-        return int(self.opencti_interval) * 60 * 60 * 24
+        return int(self.interval) * 60 * 60 * 24
 
     def retrieve_data(self, url: str) -> Optional[str]:
         """
@@ -56,7 +57,7 @@ class OpenCTI:
             A string with the content or None in case of failure.
         """
         try:
-            return (
+            return json.loads(
                 urllib.request.urlopen(
                     url,
                     context=ssl.create_default_context(cafile=certifi.where()),
@@ -72,18 +73,21 @@ class OpenCTI:
             self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
         return None
 
-    # Add confidence to every object in a bundle
-    def add_confidence_to_bundle_objects(self, serialized_bundle: str) -> str:
-        # the list of object types for which the confidence has to be added
-        # (skip marking-definition, identity, external-reference-as-report)
-        object_types_with_confidence = ["identity", "location", "relationship"]
-        stix_bundle = json.loads(serialized_bundle)
-        for obj in stix_bundle["objects"]:
-            object_type = obj["type"]
-            if object_type in object_types_with_confidence:
-                # self.helper.log_info(f"Adding confidence to {object_type} object")
-                obj["confidence"] = int(self.helper.connect_confidence_level)
-        return json.dumps(stix_bundle)
+    def add_confidence(self, bundle: dict) -> dict:
+        confidence = int(self.helper.connect_confidence_level)
+        types = ["identity", "location", "relationship"]
+
+        for obj in bundle["objects"]:
+            if obj["type"] in types:
+                obj["confidence"] = confidence
+
+        return bundle
+
+    def creator_removal(self, bundle: dict) -> dict:
+        for obj in bundle["objects"]:
+            if "created_by_ref" in obj:
+                del obj["created_by_ref"]
+        return bundle
 
     def process_data(self):
         try:
@@ -101,8 +105,7 @@ class OpenCTI:
                 self.helper.log_info("Connector has never run")
             # If the last_run is more than interval-1 day
             if last_run is None or (
-                (timestamp - last_run)
-                > ((int(self.opencti_interval) - 1) * 60 * 60 * 24)
+                (timestamp - last_run) > ((int(self.interval) - 1) * 60 * 60 * 24)
             ):
                 now = datetime.utcfromtimestamp(timestamp)
                 friendly_name = "OpenCTI datasets run @ " + now.strftime(
@@ -111,26 +114,18 @@ class OpenCTI:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-                try:
-                    sectors_data = self.retrieve_data(self.opencti_sectors_file_url)
-                    sectors_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(sectors_data)
-                    )
-                    self.send_bundle(work_id, sectors_data_with_confidence)
-                except Exception as e:
-                    self.helper.log_error(str(e))
-                try:
-                    geography_data = self.retrieve_data(self.opencti_geography_file_url)
-                    geography_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(geography_data)
-                    )
-                    self.send_bundle(work_id, geography_data_with_confidence)
-                except Exception as e:
-                    self.helper.log_error(str(e))
-                # Store the current timestamp as a last run
-                message = "Connector successfully run, storing last_run as " + str(
-                    timestamp
-                )
+
+                for url in self.urls:
+                    try:
+                        data = self.retrieve_data(url)
+                        data = self.add_confidence(data)
+                        if self.remove_creator:
+                            data = self.creator_removal(data)
+                        self.send_bundle(work_id, data)
+                    except Exception as e:
+                        self.helper.log_error(str(e))
+
+                message = f"Connector successfully run, storing last_run as {timestamp}"
                 self.helper.log_info(message)
                 self.helper.set_state({"last_run": timestamp})
                 self.helper.api.work.to_processed(work_id, message)
@@ -152,10 +147,10 @@ class OpenCTI:
         except Exception as e:
             self.helper.log_error(str(e))
 
-    def send_bundle(self, work_id: str, serialized_bundle: str) -> None:
+    def send_bundle(self, work_id: str, data: dict) -> None:
         try:
             self.helper.send_stix2_bundle(
-                serialized_bundle,
+                json.dumps(data),
                 entities_types=self.helper.connect_scope,
                 update=self.update_existing_data,
                 work_id=work_id,

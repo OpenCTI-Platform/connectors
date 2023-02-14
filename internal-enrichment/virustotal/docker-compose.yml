@@ -1,7 +1,7 @@
-version: '3'
+version: "3"
 services:
   connector-virustotal:
-    image: opencti/connector-virustotal:5.5.2
+    image: opencti/connector-virustotal:5.5.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -18,10 +18,6 @@ services:
       # File/Artifact specific config settings
       - VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT=true # Whether or not to include the full report as a Note
       - VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS=false # Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of
-      ##### WAIT_FOR_ARTIFACT_ANALYSIS_COMPLETION DETAILS ##### VirusTotal (VT) analysis of a new file can take tens of minutes to process dependent on size and priority in the VT analysis queue. Since this connector is a blocking process, it will attempt to wait a maximum of 25 minutes for analysis of the artifact to finish before enriching it with VT data. This delay will push all other calls being sent to VT into this connector's queue until the analysis is complete. If your VT connector is set to automatic enrichment above (CONNECTOR_AUTO=true) and you expect it to be making requests to the VT API frequently, it is suggested you:
-      # 1) Disable the delaying block by changing the below VIRUSTOTAL_FILE_WAIT_FOR_ARTIFACT_ANALYSIS_COMPLETION to false. This will upload the artifact but will very likely require manually rerunning enrichment at a later time since the artifact is not analyzed immediately.
-      # 2) Change the number of replicas of this connector in the docker-compose yaml file (deploy->replicas) so that as one VT connector waits for analysis to finish, another one can concurrently fetch results from the VT API.
-      - VIRUSTOTAL_FILE_WAIT_FOR_ARTIFACT_ANALYSIS_COMPLETION=true # If upload unseen artifacts is enabled, have the connector wait for analysis completion and enrichment (within 25 minute timeout)
       - VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for File/Artifact based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
       - VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
       - VIRUSTOTAL_FILE_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
@@ -29,11 +25,14 @@ services:
       - VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for IPv4 based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
       - VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
       - VIRUSTOTAL_IP_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+      - VIRUSTOTAL_IP_ADD_RELATIONSHIPS=true # Whether or not to add ASN and location resolution relationships
       # Domain specific config settings
       - VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Domain based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
       - VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
       - VIRUSTOTAL_DOMAIN_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+      - VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS=true # Whether or not to add IP resolution relationships
       # URL specific config settings
+      - VIRUSTOTAL_URL_UPLOAD_UNSEEN=false # Whether to upload URLs that VirusTotal has no record of for analysis
       - VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Url based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
       - VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
       - VIRUSTOTAL_URL_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true

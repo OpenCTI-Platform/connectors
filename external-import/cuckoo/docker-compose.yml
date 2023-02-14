@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cuckoo:
-    image: opencti/connector-cuckoo:5.5.2
+    image: opencti/connector-cuckoo:5.5.4
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME

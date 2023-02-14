@@ -164,7 +164,6 @@ class UnpacMeConnector:
             return "Nothing to attach"
 
     def _process_file(self, observable):
-
         if not observable["importFiles"]:
             raise ValueError(f"No files found for {observable['observable_value']}")
 
@@ -178,7 +177,6 @@ class UnpacMeConnector:
 
         # Wait for the analysis to finish
         while True:
-
             response = self.unpacme_client.status(upload=upload)
 
             if response == UnpacMeStatus.COMPLETE:

@@ -39,7 +39,6 @@ class ReportParser(object):
         entity_list: List[Entity],
         observable_list: List[Observable],
     ):
-
         self.helper = helper
         self.entity_list = entity_list
         self.observable_list = observable_list

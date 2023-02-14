@@ -369,8 +369,12 @@ class Misp:
             if self.import_with_attachments:
                 kwargs["with_attachments"] = self.import_with_attachments
 
-            # Query with pagination of 100
-            current_page = 1
+            # Query with pagination of 50
+            current_state = self.helper.get_state()
+            if "current_page" in current_state:
+                current_page = current_state["current_page"]
+            else:
+                current_page = 1
             number_events = 0
             while True:
                 kwargs["limit"] = 50
@@ -416,7 +420,8 @@ class Misp:
 
                 # Next page
                 current_page += 1
-
+                current_state["current_page"] = current_page
+                self.helper.set_state(current_state)
             # Loop is over, storing the state
             # We cannot store the state before, because MISP events are NOT ordered properly
             # and there is NO WAY to order them using their library
@@ -431,7 +436,7 @@ class Misp:
                 .isoformat()
                 + ", last_event_timestamp="
                 + str(last_event_timestamp)
-                + ")"
+                + ", current_page=1)"
             )
             self.helper.set_state(
                 {
@@ -440,6 +445,7 @@ class Misp:
                     .astimezone(pytz.UTC)
                     .isoformat(),
                     "last_event_timestamp": last_event_timestamp,
+                    "current_page": 1,
                 }
             )
             self.helper.log_info(message)
@@ -844,7 +850,6 @@ class Misp:
             # Create the report if needed
             # Report in STIX must have at least one object_refs
             if self.misp_create_reports and len(object_refs) > 0:
-
                 attributes = filter_event_attributes(
                     event, **self.misp_report_description_attribute_filter
                 )
@@ -1961,22 +1966,25 @@ class Misp:
             resolved_types = types[type]
             if len(resolved_types) == 2:
                 values = value.split("|")
-                if resolved_types[0]["resolver"] == "ipv4-addr":
-                    resolver_0 = self.detect_ip_version(values[0])
-                    type_0 = self.detect_ip_version(values[0], True)
+                if len(values) == 2:
+                    if resolved_types[0]["resolver"] == "ipv4-addr":
+                        resolver_0 = self.detect_ip_version(values[0])
+                        type_0 = self.detect_ip_version(values[0], True)
+                    else:
+                        resolver_0 = resolved_types[0]["resolver"]
+                        type_0 = resolved_types[0]["type"]
+                    if resolved_types[1]["resolver"] == "ipv4-addr":
+                        resolver_1 = self.detect_ip_version(values[1])
+                        type_1 = self.detect_ip_version(values[1], True)
+                    else:
+                        resolver_1 = resolved_types[1]["resolver"]
+                        type_1 = resolved_types[1]["type"]
+                    return [
+                        {"resolver": resolver_0, "type": type_0, "value": values[0]},
+                        {"resolver": resolver_1, "type": type_1, "value": values[1]},
+                    ]
                 else:
-                    resolver_0 = resolved_types[0]["resolver"]
-                    type_0 = resolved_types[0]["type"]
-                if resolved_types[1]["resolver"] == "ipv4-addr":
-                    resolver_1 = self.detect_ip_version(values[1])
-                    type_1 = self.detect_ip_version(values[1], True)
-                else:
-                    resolver_1 = resolved_types[1]["resolver"]
-                    type_1 = resolved_types[1]["type"]
-                return [
-                    {"resolver": resolver_0, "type": type_0, "value": values[0]},
-                    {"resolver": resolver_1, "type": type_1, "value": values[1]},
-                ]
+                    return None
             else:
                 if resolved_types[0]["resolver"] == "ipv4-addr":
                     resolver_0 = self.detect_ip_version(value)

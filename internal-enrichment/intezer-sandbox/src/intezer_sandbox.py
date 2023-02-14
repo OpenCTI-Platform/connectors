@@ -71,7 +71,6 @@ class IntezerSandboxConnector:
         )
 
     def _process_report(self, observable, report):
-
         self.helper.log_info(report)
 
         # Create external reference
@@ -88,7 +87,6 @@ class IntezerSandboxConnector:
 
         # Attach family name as label if present
         if "family_name" in report["result"] and report["result"]["family_name"]:
-
             family_label = self.helper.api.label.create(
                 value=report["result"]["family_name"], color=self.family_color
             )
@@ -114,7 +112,6 @@ class IntezerSandboxConnector:
         return "Nothing to attach"
 
     def _process_file(self, observable):
-
         if not observable["importFiles"]:
             raise ValueError(f"No files found for {observable['observable_value']}")
 
@@ -133,7 +130,6 @@ class IntezerSandboxConnector:
         status = None
         report = None
         while True:
-
             report = self.intezer_client.get_analysis_report(result_url)
             status = report["status"]
 

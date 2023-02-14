@@ -16,7 +16,7 @@ from pycti import Malware, OpenCTIConnectorHelper, get_config_variable
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "5.5.2"
+__version__ = "5.5.4"
 BANNER = f"""
 
 
@@ -323,7 +323,6 @@ class MWDB:
     def process_extratag(self, attributes_extra, sample):
         relatsions = []
         for taglabel in attributes_extra:
-
             if self.tag_filter:
                 if re.match(self.tag_filter, taglabel.lower()):
                     continue
@@ -553,7 +552,6 @@ class MWDB:
             lasthash = ""
             files_to_import = True
             while files_to_import:
-
                 search_path = "api/file" + querysearch
                 if lasthash:
                     search_path = "api/file" + querysearch + "&older_than=" + lasthash

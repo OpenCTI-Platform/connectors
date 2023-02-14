@@ -139,6 +139,11 @@ class URLhaus:
                                 if self.threats_from_labels:
                                     for label in row[6].split(","):
                                         if label:
+                                            custom_attributes = """
+                                                id
+                                                standard_id
+                                                entity_type
+                                            """
                                             threat = (
                                                 self.helper.api.stix_domain_object.read(
                                                     filters=[
@@ -148,6 +153,7 @@ class URLhaus:
                                                         }
                                                     ],
                                                     first=1,
+                                                    customAttributes=custom_attributes,
                                                 )
                                             )
                                             if threat is not None:
