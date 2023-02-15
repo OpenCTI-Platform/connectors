@@ -1,4 +1,5 @@
 import json
+import os
 import ssl
 import sys
 import time
@@ -7,6 +8,7 @@ from datetime import datetime
 from typing import Optional
 
 import certifi
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 CONFIG_SECTORS_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json"
@@ -14,33 +16,50 @@ CONFIG_GEOGRAPHY_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/
 # CONFIG_COMPANIES_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json"
 
 
+def days_to_seconds(days):
+    return int(days) * 24 * 60 * 60
+
+
 class OpenCTI:
     def __init__(self):
-        self.helper = OpenCTIConnectorHelper({})
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA", []
+        # Instantiate the connector helper from config
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config = (
+            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            if os.path.isfile(config_file_path)
+            else {}
         )
-        self.interval = get_config_variable("CONFIG_INTERVAL", [], isNumber=True)
-        self.remove_creator = get_config_variable("CONFIG_REMOVE_CREATOR", [])
-
+        self.helper = OpenCTIConnectorHelper(config)
+        self.update_existing_data = get_config_variable(
+            "CONNECTOR_UPDATE_EXISTING_DATA",
+            ["connector", "update_existing_data"],
+            config,
+        )
+        self.config_interval = get_config_variable(
+            "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True
+        )
+        self.remove_creator = get_config_variable(
+            "CONFIG_REMOVE_CREATOR", ["config", "remove_creator"], config, default=False
+        )
         urls = [
             get_config_variable(
-                "CONFIG_SECTORS_FILE_URL", [""], default=CONFIG_SECTORS_FILE_URL
+                "CONFIG_SECTORS_FILE_URL",
+                ["config", "sectors_file_url"],
+                config,
+                default=CONFIG_SECTORS_FILE_URL,
             ),
             get_config_variable(
                 "CONFIG_GEOGRAPHY_FILE_URL",
-                [""],
+                ["config", "geography_file_url"],
+                config,
                 default=CONFIG_GEOGRAPHY_FILE_URL,
             ),
             # get_config_variable(
             #     "CONFIG_COMPANIES_FILE_URL", [""], default=CONFIG_COMPANIES_FILE_URL
             # )
         ]
-
         self.urls = list(filter(lambda url: url is not False, urls))
-
-    def get_interval(self):
-        return int(self.interval) * 60 * 60 * 24
+        self.interval = days_to_seconds(self.config_interval)
 
     def retrieve_data(self, url: str) -> Optional[str]:
         """
@@ -131,11 +150,11 @@ class OpenCTI:
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(
                     "Last_run stored, next run in: "
-                    + str(round(self.get_interval() / 60 / 60 / 24, 2))
+                    + str(round(self.interval / 60 / 60 / 24, 2))
                     + " days"
                 )
             else:
-                new_interval = self.get_interval() - (timestamp - last_run)
+                new_interval = self.interval - (timestamp - last_run)
                 self.helper.log_info(
                     "Connector will not run, next run in: "
                     + str(round(new_interval / 60 / 60 / 24, 2))

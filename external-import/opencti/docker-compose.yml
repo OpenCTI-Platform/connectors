@@ -7,12 +7,12 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=OpenCTI Datasets
+      - "CONNECTOR_NAME=OpenCTI Datasets"
       - CONNECTOR_SCOPE=marking-definition,identity,location
       - CONNECTOR_CONFIDENCE_LEVEL=90
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=info
-      - CONFIG_INTERVAL=7
-      - CONFIG_REMOVE_CREATOR=true
+      - CONFIG_INTERVAL=7 # In days
+      - CONFIG_REMOVE_CREATOR=false
     restart: always
