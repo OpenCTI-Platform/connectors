@@ -114,7 +114,12 @@ def process(connector, work_id, current_state):
 
     connector.helper.log_info(f"Start collecting indicators from {start_epoch} ...")
 
-    for indicator in connector.api.indicators(start_epoch=start_epoch):
+    parameters = {
+        "start_epoch": start_epoch,
+        "gte_mscore": connector.mandiant_indicator_minimum_score,
+    }
+
+    for indicator in connector.api.indicators(**parameters):
         stix_indicator = create_indicator(connector, indicator)
         items = [stix_indicator]
 

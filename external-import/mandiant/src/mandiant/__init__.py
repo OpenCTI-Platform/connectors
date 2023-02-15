@@ -24,7 +24,6 @@ class Mandiant:
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA", [""]
         )
-
         self.mandiant_api_url = get_config_variable(
             "MANDIANT_API_URL", [""], default=MANDIANT_API_URL
         )
@@ -48,6 +47,9 @@ class Mandiant:
         self.mandiant_report_types_ignored = get_config_variable(
             "MANDIANT_REPORT_TYPES_IGNORED", [""], default="News Analysis"
         ).split(",")
+        self.mandiant_indicator_minimum_score = get_config_variable(
+            "MANDIANT_INDICATOR_MINIMUM_SCORE", [""], default=80
+        )
 
         self.mandiant_interval = int(self.mandiant_interval) * 60
         self.mandiant_import_start_date = int(

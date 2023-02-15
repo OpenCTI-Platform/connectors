@@ -15,6 +15,7 @@ The connector can be configured with the following variables:
 | `MANDIANT_IMPORT_START_DATE` | 2023-01-01 | Date to start collect data |
 | `MANDIANT_COLLECTIONS` | actor,malware,indicator,vulnerability,report | Type of data to be collected |
 | `MANDIANT_REPORT_TYPES_IGNORED` | News Analysis| Type of data to be collected |
+| `MANDIANT_INDICATOR_MINIMUM_SCORE` | 80 | Minimum score (based on mscore) that an indicator must have to be processed |
 
 ### Collections
 
