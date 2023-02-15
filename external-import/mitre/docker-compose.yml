@@ -7,11 +7,11 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=MITRE Datasets
+      - "CONNECTOR_NAME=MITRE Datasets"
       - CONNECTOR_SCOPE=tool,report,malware,identity,campaign,intrusion-set,attack-pattern,course-of-action,x-mitre-data-source,x-mitre-data-component,x-mitre-matrix,x-mitre-tactic,x-mitre-collection
       - CONNECTOR_CONFIDENCE_LEVEL=75
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=info
-      - MITRE_INTERVAL=7
+      - MITRE_INTERVAL=7 # In days
     restart: always
