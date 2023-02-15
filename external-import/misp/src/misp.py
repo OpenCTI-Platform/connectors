@@ -371,7 +371,7 @@ class Misp:
 
             # Query with pagination of 50
             current_state = self.helper.get_state()
-            if "current_page" in current_state:
+            if current_state is not None and "current_page" in current_state:
                 current_page = current_state["current_page"]
             else:
                 current_page = 1
