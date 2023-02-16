@@ -202,7 +202,6 @@ class Mitre:
                 entities_types=self.helper.connect_scope,
                 update=self.update_existing_data,
                 work_id=work_id,
-                bypass_split=True,
             )
 
         message = f"Connector successfully run, storing last_run as {time_now}"
