@@ -3,41 +3,39 @@ services:
   connector-misp:
     image: opencti/connector-misp:5.6.2
     environment:
-      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      - OPENCTI_URL=http://localhost
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_NAME=MISP
       - CONNECTOR_SCOPE=misp
-      - CONNECTOR_CONFIDENCE_LEVEL=25 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
-      - MISP_URL=http://localhost # Required
-      - MISP_REFERENCE_URL= # Optional, will be used to create external reference to MISP event (default is "url")
-      - MISP_KEY=ChangeMe # Required
-      - MISP_SSL_VERIFY=false # Required
-      - MISP_DATETIME_ATTRIBUTE=timestamp # Required, filter to be used in query for new MISP events
-      - MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER= # Optional, filter to be used to find the attribute with report description (example: "type=comment,category=Internal reference")
-      - MISP_CREATE_REPORTS=true # Required, create report for MISP event
-      - MISP_CREATE_INDICATORS=true # Required, create indicators from attributes
-      - MISP_CREATE_OBSERVABLES=true # Required, create observables from attributes
-      - MISP_CREATE_OBJECT_OBSERVABLES=true # Required, create text observables for MISP objects
-      - MISP_CREATE_TAGS_AS_LABELS=true # Optional, create tags as labels
-      - MISP_REPORT_TYPE=misp-event # Optional, report_class if creating report for event
-      - MISP_IMPORT_FROM_DATE=2000-01-01 # Required, import all event from this date
-      - MISP_IMPORT_TAGS=opencti:import,type:osint # Optional, list of tags used for import events
-      - MISP_IMPORT_TAGS_NOT= # Optional, list of tags to not include
-      - MISP_IMPORT_CREATOR_ORGS= # Optional, only import events created by those orgs (put the identifiers here)
-      - MISP_IMPORT_CREATOR_ORGS_NOT= # Optional, do not import events created by those orgs (put the identifiers here)
-      - MISP_IMPORT_OWNER_ORGS= # Optional, only import events owned by those orgs (put the identifiers here)
-      - MISP_IMPORT_OWNER_ORGS_NOT= # Optional, do not import events owned by those orgs (put the identifiers here)
-      - MISP_IMPORT_KEYWORD= # Optional, search only events based on a keyword
-      - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3 # Optional, only import events with the given distribution levels
-      - MISP_IMPORT_THREAT_LEVELS=1,2,3,4 # Optional only import events with the given threat levels
+      - CONNECTOR_CONFIDENCE_LEVEL=80
+      - MISP_URL=http://localhost
+      - MISP_SSL_VERIFY=false
+      - MISP_KEY=ChangeMe
+      - MISP_INTERVAL=1
+      - MISP_REPORT_TYPE=misp-event
+      - MISP_REFERENCE_URL=
+      - MISP_IMPORT_ATTRIBUTES_WITH_WARNINGS=false
+      - MISP_CONVERT_THREATACTOR_TO_INTRUSIONSET=true
+      - MISP_CREATE_OBSERVABLES=true
+      - MISP_CREATE_REPORTS=true
+      - MISP_DATETIME_ATTRIBUTE=timestamp
+      - MISP_DEFAULT_INDICATORS_SCORE=80
+      - MISP_IMPORT_CREATOR_ORGS_NOT=
+      - MISP_IMPORT_CREATOR_ORGS=
+      - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3,4,5
+      - MISP_IMPORT_FROM_DATE=2000-01-01
+      - MISP_IMPORT_KEYWORD=
       - MISP_IMPORT_ONLY_PUBLISHED=false
-      - MISP_IMPORT_WITH_ATTACHMENTS=false # Optional, try to import a PDF file from the attachment attribute
-      - MISP_IMPORT_TO_IDS_NO_SCORE=40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
-      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false #  Optional, import unsupported observable as x_opencti_text
-      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT=false #  Optional, import unsupported observable as x_opencti_text just with the value
-      - MISP_INTERVAL=1 # Required, in minutes
+      - MISP_IMPORT_OWNER_ORGS_NOT=
+      - MISP_IMPORT_OWNER_ORGS=
+      - MISP_IMPORT_TAGS_NOT=
+      - MISP_IMPORT_TAGS=
+      - MISP_IMPORT_THREAT_LEVELS
+      - MISP_IMPORT_THREAT_LEVELS=1,2,3,4
+      - MISP_IMPORT_WITH_ATTACHMENTS=true
+      - MISP_REPORT_DESCRIPTION_FILTER=
     restart: always
