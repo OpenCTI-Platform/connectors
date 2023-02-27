@@ -1,4 +1,5 @@
 import json
+import os
 import ssl
 import sys
 import time
@@ -7,6 +8,7 @@ from datetime import datetime
 from typing import Optional
 
 import certifi
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 MITRE_ENTERPRISE_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
@@ -53,31 +55,42 @@ class Mitre:
     """Mitre connector."""
 
     def __init__(self):
-        self.helper = OpenCTIConnectorHelper({})
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA", []
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config = (
+            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            if os.path.isfile(config_file_path)
+            else {}
         )
-        self.mitre_interval = get_config_variable("MITRE_INTERVAL", [""], isNumber=True)
-
+        self.helper = OpenCTIConnectorHelper(config)
+        self.update_existing_data = get_config_variable(
+            "CONNECTOR_UPDATE_EXISTING_DATA", ["connector", "update_existing_data"]
+        )
+        self.mitre_interval = get_config_variable(
+            "MITRE_INTERVAL", ["mitre", "interval"], config, isNumber=True
+        )
         urls = [
             get_config_variable(
-                "MITRE_ENTERPRISE_FILE_URL", [""], default=MITRE_ENTERPRISE_FILE_URL
+                "MITRE_ENTERPRISE_FILE_URL",
+                ["mitre", "enterprise_file_url"],
+                default=MITRE_ENTERPRISE_FILE_URL,
             ),
             get_config_variable(
                 "MITRE_MOBILE_ATTACK_FILE_URL",
-                [""],
+                ["mitre", "mobile_attack_file_url"],
                 default=MITRE_MOBILE_ATTACK_FILE_URL,
             ),
             get_config_variable(
-                "MITRE_ICS_ATTACK_FILE_URL", [""], default=MITRE_ICS_ATTACK_FILE_URL
+                "MITRE_ICS_ATTACK_FILE_URL",
+                ["mitre", "ics_attack_file_url"],
+                default=MITRE_ICS_ATTACK_FILE_URL,
             ),
             get_config_variable(
-                "MITRE_CAPEC_FILE_URL", [""], default=MITRE_CAPEC_FILE_URL
+                "MITRE_CAPEC_FILE_URL",
+                ["mitre", "capec_file_url"],
+                default=MITRE_CAPEC_FILE_URL,
             ),
         ]
-
         self.mitre_urls = list(filter(lambda url: url is not False, urls))
-
         self.interval = days_to_seconds(self.mitre_interval)
 
     def retrieve_data(self, url: str) -> Optional[dict]:
@@ -189,7 +202,6 @@ class Mitre:
                 entities_types=self.helper.connect_scope,
                 update=self.update_existing_data,
                 work_id=work_id,
-                bypass_split=True,
             )
 
         message = f"Connector successfully run, storing last_run as {time_now}"
