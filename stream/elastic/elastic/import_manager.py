@@ -525,9 +525,13 @@ class IntelManager(object):
         from .stix2ecs import StixIndicator
 
         try:
-            item = StixIndicator.parse_pattern(entity["pattern"])[0]
+            items = StixIndicator.parse_pattern(entity["pattern"]) 
+            if len(items) > 1:
+                types = ",".join([i.typename for i in items])
+                logger.warning(f"Encountered indicator with more than one comparison expression ({types}). Using only the first one ({items[0].typename})")
+            item = items[0]
         except NotImplementedError as e:
-            logger.warning(e)
+            logger.error(e)
             return {}
 
         _indicator = item.get_ecs_indicator()
