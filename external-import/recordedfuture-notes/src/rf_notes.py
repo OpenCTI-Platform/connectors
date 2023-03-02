@@ -13,10 +13,10 @@ import os
 import time
 import traceback
 from datetime import datetime
-import yaml
-from rflib import StixNote, RFClient, APP_VERSION
 
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from rflib import APP_VERSION, RFClient, StixNote
 
 
 class RFNotes:
@@ -33,27 +33,38 @@ class RFNotes:
         )
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
-        self.rf_token = get_config_variable("RECORDED_FUTURE_TOKEN", ["rf-notes", "token"], config)
+        self.rf_token = get_config_variable(
+            "RECORDED_FUTURE_TOKEN", ["rf-notes", "token"], config
+        )
         self.rf_initial_lookback = get_config_variable(
-            "RECORDED_FUTURE_INITIAL_LOOKBACK", ["rf-notes", "initial_lookback"], config, True
+            "RECORDED_FUTURE_INITIAL_LOOKBACK",
+            ["rf-notes", "initial_lookback"],
+            config,
+            True,
         )
         self.rf_interval = get_config_variable(
             "RECORDED_FUTURE_INTERVAL", ["rf-notes", "interval"], config, True
         )
-        self.tlp = get_config_variable('RECORDED_FUTURE_TLP', ["rf-notes", "TLP"], config)
+        self.tlp = get_config_variable(
+            "RECORDED_FUTURE_TLP", ["rf-notes", "TLP"], config
+        )
 
         self.rf_pull_signatures = get_config_variable(
-            'RECORDED_FUTURE_PULL_SIGNATURES', ["rf-notes", "pull_signatures"], config
+            "RECORDED_FUTURE_PULL_SIGNATURES", ["rf-notes", "pull_signatures"], config
         )
         self.rf_insikt_only = get_config_variable(
-            'RECORDED_FUTURE_INSIKT_ONLY', ["rf-notes", "insikt_only"], config
+            "RECORDED_FUTURE_INSIKT_ONLY", ["rf-notes", "insikt_only"], config
         )
-        self.rf_topic = get_config_variable('RECORDED_FUTURE_TOPIC', ["rf-notes", "topic"], config)
+        self.rf_topic = get_config_variable(
+            "RECORDED_FUTURE_TOPIC", ["rf-notes", "topic"], config
+        )
         self.rf_person_to_TA = get_config_variable(
-            'RECORDED_FUTUTRE_PERSON_TO_TA', ["rf-notes", "person_to_TA"], config
+            "RECORDED_FUTUTRE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
         )
         self.rf_TA_to_intrusion_set = get_config_variable(
-            'RECORDED_FUTURE_TA_TO_INTRUSION_SET', ["rf-notes", "TA_to_intrusion_set"], config
+            "RECORDED_FUTURE_TA_TO_INTRUSION_SET",
+            ["rf-notes", "TA_to_intrusion_set"],
+            config,
         )
 
         self.update_existing_data = get_config_variable(
@@ -64,7 +75,7 @@ class RFNotes:
         self.rfapi = RFClient(
             self.rf_token,
             self.helper,
-            header=f'OpenCTI-notes/{APP_VERSION}',
+            header=f"OpenCTI-notes/{APP_VERSION}",
         )
         # In a crisis, smash glass and uncomment this line of code
         # self.helper.config['uri'] = self.helper.config['uri'].replace('rabbitmq', '172.19.0.6')
@@ -80,16 +91,16 @@ class RFNotes:
             current_state = self.helper.get_state()
             tas = self.rfapi.get_threat_actors()
             if current_state is not None and "last_run" in current_state:
-                last_run = datetime.utcfromtimestamp(current_state["last_run"]).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                last_run = datetime.utcfromtimestamp(
+                    current_state["last_run"]
+                ).strftime("%Y-%m-%d %H:%M:%S")
                 self.helper.log_info("Connector last run: " + last_run)
                 published = self.rf_interval
             else:
                 last_run = None
                 msg = (
-                    'Connector has never run. Doing initial pull of'
-                    f'{self.rf_initial_lookback} hours'
+                    "Connector has never run. Doing initial pull of"
+                    f"{self.rf_initial_lookback} hours"
                 )
                 self.helper.log_info(msg)
                 published = self.rf_initial_lookback
@@ -105,26 +116,32 @@ class RFNotes:
     def convert_and_send(self, published, tas):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
         self.helper.log_info(
-            f'Pull Signatures is is {str(self.rf_pull_signatures)} of type '
-            f'{type(self.rf_pull_signatures)}'
+            f"Pull Signatures is is {str(self.rf_pull_signatures)} of type "
+            f"{type(self.rf_pull_signatures)}"
         )
         self.helper.log_info(
-            f'Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}'
+            f"Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
         )
-        self.helper.log_info(f'Topic is {str(self.rf_topic)} of type {type(self.rf_topic)}')
+        self.helper.log_info(
+            f"Topic is {str(self.rf_topic)} of type {type(self.rf_topic)}"
+        )
 
         notes = self.rfapi.get_notes(
             published, self.rf_pull_signatures, self.rf_insikt_only, self.rf_topic
         )
-        self.helper.log_info(f'fetched {len(notes)} Analyst notes from API')
+        self.helper.log_info(f"fetched {len(notes)} Analyst notes from API")
         for note in notes:
             stixnote = StixNote(
-                self.helper, tas, self.tlp, self.rf_person_to_TA, self.rf_TA_to_intrusion_set
+                self.helper,
+                tas,
+                self.tlp,
+                self.rf_person_to_TA,
+                self.rf_TA_to_intrusion_set,
             )
             stixnote.from_json(note)
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
-                'Sending Bundle to server with ' + str(len(bundle.objects)) + ' objects'
+                "Sending Bundle to server with " + str(len(bundle.objects)) + " objects"
             )
             self.helper.send_stix2_bundle(
                 bundle.serialize(),

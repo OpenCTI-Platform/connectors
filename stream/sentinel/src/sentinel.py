@@ -60,11 +60,19 @@ class SentinelConnector:
     def _process_message(self, msg):
         data = json.loads(msg.data)["data"]
         # Generate oAuth token on create events for specific IOC type.
-        if ((msg.event == "create") and (data["type"] == "ipv4-addr" or data["type"] == "url" or data["type"] == "domain-name" or data["type"] == "ipv6-addr" or data["type"] == "email-addr" or data["type"] == "file")) or (msg.event == "delete"):
+        if (
+            (msg.event == "create")
+            and (
+                data["type"] == "ipv4-addr"
+                or data["type"] == "url"
+                or data["type"] == "domain-name"
+                or data["type"] == "ipv6-addr"
+                or data["type"] == "email-addr"
+                or data["type"] == "file"
+            )
+        ) or (msg.event == "delete"):
             try:
-                url = (
-                    f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
-                )
+                url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
                 oauth_data = {
                     "client_id": self.client_id,
                     "client_secret": self.client_secret,
@@ -88,7 +96,7 @@ class SentinelConnector:
                 # Check on type of IOC for Creation events
                 # Update events is a future plan msg.event == 'update'
                 # https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta#indicator-observables
-                if (msg.event == "create"):
+                if msg.event == "create":
                     if data["type"] == "ipv4-addr":
                         ioc_type = "networkIPv4"
                     elif data["type"] == "url":
@@ -113,7 +121,9 @@ class SentinelConnector:
                     elif (
                         OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
                         < self.confidence_level
-                        and OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
+                        and OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "score", data
+                        )
                         != 0
                     ):
                         action = "alert"
@@ -142,16 +152,22 @@ class SentinelConnector:
                     updated_at = OpenCTIConnectorHelper.get_attribute_in_extension(
                         "updated_at", data
                     )
-                    datetime_object = datetime.strptime(updated_at, "%Y-%m-%dT%H:%M:%S.%fZ")
-                    days=int(self.expire_time)
+                    datetime_object = datetime.strptime(
+                        updated_at, "%Y-%m-%dT%H:%M:%S.%fZ"
+                    )
+                    days = int(self.expire_time)
                     age = timedelta(days)
                     expire_datetime = datetime_object + age
-                    expirationDateTime = str(expire_datetime.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    expirationDateTime = str(
+                        expire_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    )
 
                     # Tags - applies all tags
                     tags = []
                     if (
-                        OpenCTIConnectorHelper.get_attribute_in_extension("labels", data)
+                        OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "labels", data
+                        )
                         is not None
                     ):
                         for i in range(
@@ -171,7 +187,9 @@ class SentinelConnector:
                     # https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta#threattype-values
                     threatType = "WatchList"
                     if (
-                        OpenCTIConnectorHelper.get_attribute_in_extension("labels", data)
+                        OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "labels", data
+                        )
                         is not None
                     ):
                         for i in range(
@@ -263,22 +281,26 @@ class SentinelConnector:
                     # https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta#tlplevel-values
                     if self.tlp_level:
                         tlpLevel = self.tlp_level
-                    elif "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed" in str(
-                        data
+                    elif (
+                        "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
+                        in str(data)
                     ):
                         tlpLevel = "red"
-                    elif "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37" in str(
-                        data
-                    ) or "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82" in str(
-                        data
+                    elif (
+                        "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
+                        in str(data)
+                        or "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+                        in str(data)
                     ):
                         tlpLevel = "amber"
-                    elif "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da" in str(
-                        data
+                    elif (
+                        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+                        in str(data)
                     ):
                         tlpLevel = "green"
-                    elif "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9" in str(
-                        data
+                    elif (
+                        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+                        in str(data)
                     ):
                         tlpLevel = "white"
                     else:
@@ -309,11 +331,15 @@ class SentinelConnector:
                     if msg.event == "create":
                         self.helper.log_info(
                             "[CREATE] Processing data {"
-                            + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                            + OpenCTIConnectorHelper.get_attribute_in_extension(
+                                "id", data
+                            )
                             + "}"
                         )
                         # Do any processing needed
-                        data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension(
+                        data[
+                            "_key"
+                        ] = OpenCTIConnectorHelper.get_attribute_in_extension(
                             "id", data
                         )
 
@@ -525,7 +551,9 @@ class SentinelConnector:
                     for i in range(len(getIOC["value"])):
                         if getIOC["value"][i][
                             "externalId"
-                        ] == OpenCTIConnectorHelper.get_attribute_in_extension("id", data):
+                        ] == OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "id", data
+                        ):
                             ioc_id = getIOC["value"][i]["id"]
                             response = requests.delete(
                                 self.resource_url + self.request_url + "/" + ioc_id,
@@ -544,7 +572,9 @@ class SentinelConnector:
                     if did_delete == 0:
                         self.helper.log_info(
                             "[DELETE] ID {"
-                            + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                            + OpenCTIConnectorHelper.get_attribute_in_extension(
+                                "id", data
+                            )
                             + "} Not found on "
                             + self.target_product
                         )
