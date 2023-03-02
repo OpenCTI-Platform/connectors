@@ -1,21 +1,8 @@
 # OpenCTI Recorded Future Feeds Connector
-
+*Contact jonah.feldman@recordedfuture.com with questions*
 ## Description
 
 This connector converts Recorded Future Analyst Notes to STIX2 and imports them into OpenCTI at regular intervals
-
-## Terms of Use
-The following code is provided for demonstration purposes only, and should
-not be used without independent verification. Recorded Future makes no
-representations or warranties, express, implied, statutory, or otherwise,
-regarding this code, and provides it strictly "as-is".
-Recorded Future shall not be liable for, and you assume all risk of
-using the foregoing.
-
-## Acquiring an API token
-A Recorded Future API token is required for this integration. You must be a client to acquire an API token.
-For more information, please contact your Recorded Future Account Executive, Intelligence Services Representative,
-or Sales Engineer
 
 ## Data Model
 
@@ -64,9 +51,12 @@ Please note that if you don't want to use an optional variable, best practice is
 | RECORDED_FUTURE_TOKEN   | token      | API Token for Recorded Future. Required
 | RECORDED_FUTURE_INITIAL_LOOKBACK     | initial_lookback        | The numeric timeframe the connector will search for Analyst Notes on the first run, in hours. Required
 | RECORDED_FUTURE_INTERVAL          | interval            | The numeric interval (in hours) between scheduled executions of the connector. Required
+| RECORDED_FUTURE_TLP | TLP | TLP marking of the report. One of White, Green, Amber, Red
 | RECORDED_FUTURE_PULL_SIGNATURES     | pull_signatures        | A boolean flag of whether to pull YARA, SIGMA, and SNORT rules from hunting packages into OpenCTI. Defaults to False
 | RECORDED_FUTURE_INSIKT_ONLY     | insikt_only        | A boolean flag of whether to pull analyst notes only from the Insikt research team, or whether to include notes written by Users. Defaults to True
 | RECORDED_FUTURE_TOPIC     | topic        | Filter Analyst Notes on a specific topic. Topics can be found [here](https://support.recordedfuture.com/hc/en-us/articles/360006361774-Analyst-Note-API). You **must** use the topic RFID, for example aUyI9M. Only one topic per connector is allowed. Optional
+| RECORDED_FUTUTRE_PERSON_TO_TA | person_to_TA | Converts all Recorded Future entities of type person to STIX object "Threat Actor" instead of individual. DO NOT USE unless you **really** know what you're doing
+| RECORDED_FUTURE_TA_TO_INTRUSION_SET| TA_to_intrusion_set | Converts all Recorded Future Threat Actors to STIX Object "Intrusion Set" instead of "Threat Actor". DO NOT USE unless you **really** know what you're doing
 
 
 
@@ -85,7 +75,7 @@ To verify that Analyst Notes have downloaded, navigate to the reports tab in the
 
 ### Issue: Version de-synchronization
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==5.5.6`. If you don't, the OpenCTI SDK will likely fail to initialize
+Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==5.3.1`. If you don't, the OpenCTI SDK will likely fail to initialize
 
 
 ### Issue: IPV6 support
