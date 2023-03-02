@@ -115,19 +115,18 @@ class Mandiant:
         return object[key]
 
     def _exists_and_not_redacted(self, key, object):
-        # in contrast to self._redacted_as_none that returns a 'NoneType', 
+        # in contrast to self._redacted_as_none that returns a 'NoneType',
         # this function returns a boolean
-        return key in object and object[key] != "redacted"        
+        return key in object and object[key] != "redacted"
 
     def _process_aliases(self, object):
         if not self._exists_and_not_redacted("aliases", object):
-            return None 
+            return None
         aliases = []
         for alias in object["aliases"]:
             aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
         object["aliases"] = aliases
         return self._redacted_as_none("aliases", object)
-        
 
     def _query(
         self,
@@ -316,7 +315,9 @@ class Mandiant:
                                 objects.append(stix_vulnerability)
                                 objects.append(stix_relationship)
                         if self._exists_and_not_redacted("locations", result_actor):
-                            if self._exists_and_not_redacted("source", result_actor["locations"]):
+                            if self._exists_and_not_redacted(
+                                "source", result_actor["locations"]
+                            ):
                                 for source in result_actor["locations"]["source"]:
                                     if "country" in source:
                                         stix_location = stix2.Location(
@@ -358,7 +359,9 @@ class Mandiant:
                                         )
                                         objects.append(stix_location)
                                         objects.append(stix_relationship)
-                            if self._exists_and_not_redacted("target", result_actor["locations"]):
+                            if self._exists_and_not_redacted(
+                                "target", result_actor["locations"]
+                            ):
                                 for target in result_actor["locations"]["target"]:
                                     if "country" in target:
                                         stix_location = stix2.Location(
