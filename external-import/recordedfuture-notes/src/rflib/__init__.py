@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 ############################## TERMS OF USE ####################################
 # The following code is provided for demonstration purposes only, and should   #
