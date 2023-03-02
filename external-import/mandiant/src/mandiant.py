@@ -474,7 +474,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_tool)
                                 objects.append(stix_relationship)
-                    except Exception as e:
+                    except Exception:
                         self.helper.log_error(traceback.format_exc())
                 self.helper.send_stix2_bundle(
                     stix2.Bundle(
@@ -595,7 +595,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_vulnerability)
                                 objects.append(stix_relationship)
-                    except Exception as e:
+                    except Exception:
                         self.helper.log_error(traceback.format_exc())
                 if len(objects) > 0:
                     self.helper.send_stix2_bundle(
@@ -676,7 +676,7 @@ class Mandiant:
                             custom_properties=custom_properties,
                         )
                         vulnerabilities.append(stix_vulnerability)
-                    except Exception as e:
+                    except Exception:
                         self.helper.log_error(traceback.format_exc())
                 if len(vulnerabilities) > 0:
                     self.helper.send_stix2_bundle(
@@ -820,7 +820,7 @@ class Mandiant:
                                         created_by_ref=self.identity["standard_id"],
                                     )
                                     objects.append(stix_relationship)
-                    except Exception as e:
+                    except Exception:
                         self.helper.log_error(traceback.format_exc())
                 if len(objects) > 0:
                     self.helper.send_stix2_bundle(
@@ -978,7 +978,7 @@ class Mandiant:
                                     + str(reportOut.get("report_id"))
                                 )
                                 self.helper.log_info("ERROR: " + str(e))
-                        except Exception as e:
+                        except Exception:
                             self.helper.log_info(
                                 "Failed to process News Analysis Report "
                                 + str(reportOut.get("report_id"))
@@ -1114,7 +1114,7 @@ class Mandiant:
                                             + str(reportOut.get("report_id"))
                                         )
                                         self.helper.log_info("ERROR: " + str(e))
-                        except Exception as e:
+                        except Exception:
                             self.helper.log_info(
                                 "Failed to process News Analyis Report "
                                 + str(reportOut.get("report_id"))
@@ -1131,7 +1131,7 @@ class Mandiant:
                                 update=self.update_existing_data,
                                 work_id=work_id,
                             )
-                        except Exception as e:
+                        except Exception:
                             self.helper.log_info(
                                 "Failed to process this report ID "
                                 + str(reportOut.get("report_id"))
@@ -1231,7 +1231,7 @@ class Mandiant:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
-            except Exception as e:
+            except Exception:
                 self.helper.log_error(traceback.format_exc())
 
                 if self.helper.connect_run_and_terminate:
@@ -1245,7 +1245,7 @@ if __name__ == "__main__":
     try:
         mandiantConnector = Mandiant()
         mandiantConnector.run()
-    except Exception as e:
+    except Exception:
         print(traceback.format_exc())
         time.sleep(10)
         sys.exit(0)
