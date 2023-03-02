@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import time
+import traceback
 
 import requests
 import stix2
@@ -81,6 +82,8 @@ class Mandiant:
         self.cache = {}
 
     def cleanhtml(self, raw_html):
+        if raw_html is None:
+            return None
         CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
         cleantext = re.sub(CLEANR, "", raw_html)
         return cleantext
@@ -111,14 +114,20 @@ class Mandiant:
             return None
         return object[key]
 
+    def _exists_and_not_redacted(self, key, object):
+        # in contrast to self._redacted_as_none that returns a 'NoneType', 
+        # this function returns a boolean
+        return key in object and object[key] != "redacted"        
+
     def _process_aliases(self, object):
-        if "aliases" in object:
-            aliases = []
-            for alias in object["aliases"]:
-                aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
-            object["aliases"] = aliases
-            return self._redacted_as_none("aliases", object)
-        return None
+        if not self._exists_and_not_redacted("aliases", object):
+            return None 
+        aliases = []
+        for alias in object["aliases"]:
+            aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
+        object["aliases"] = aliases
+        return self._redacted_as_none("aliases", object)
+        
 
     def _query(
         self,
@@ -233,7 +242,7 @@ class Mandiant:
                         objects.append(stix_actor)
                         # Get the actor
                         result_actor = self._query(url + "/" + actor["id"])
-                        if "industries" in result_actor:
+                        if self._exists_and_not_redacted("industries", result_actor):
                             for industry in result_actor["industries"]:
                                 stix_identity = stix2.Identity(
                                     id=industry["id"],
@@ -270,7 +279,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_identity)
                                 objects.append(stix_relationship)
-                        if "cve" in result_actor:
+                        if self._exists_and_not_redacted("cve", result_actor):
                             for cve in result_actor["cve"]:
                                 stix_vulnerability = stix2.Vulnerability(
                                     id=cve["id"],
@@ -306,8 +315,8 @@ class Mandiant:
                                 )
                                 objects.append(stix_vulnerability)
                                 objects.append(stix_relationship)
-                        if "locations" in result_actor:
-                            if "source" in result_actor["locations"]:
+                        if self._exists_and_not_redacted("locations", result_actor):
+                            if self._exists_and_not_redacted("source", result_actor["locations"]):
                                 for source in result_actor["locations"]["source"]:
                                     if "country" in source:
                                         stix_location = stix2.Location(
@@ -349,7 +358,7 @@ class Mandiant:
                                         )
                                         objects.append(stix_location)
                                         objects.append(stix_relationship)
-                            if "target" in result_actor["locations"]:
+                            if self._exists_and_not_redacted("target", result_actor["locations"]):
                                 for target in result_actor["locations"]["target"]:
                                     if "country" in target:
                                         stix_location = stix2.Location(
@@ -391,7 +400,7 @@ class Mandiant:
                                         )
                                         objects.append(stix_location)
                                         objects.append(stix_relationship)
-                        if "malware" in result_actor:
+                        if self._exists_and_not_redacted("malware", result_actor):
                             for malware in result_actor["malware"]:
                                 stix_malware = stix2.Malware(
                                     id=malware["id"],
@@ -427,7 +436,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_malware)
                                 objects.append(stix_relationship)
-                        if "tool" in result_actor:
+                        if self._exists_and_not_redacted("tool", result_actor):
                             for tool in result_actor["tool"]:
                                 stix_tool = stix2.Tool(
                                     id=tool["id"],
@@ -463,7 +472,7 @@ class Mandiant:
                                 objects.append(stix_tool)
                                 objects.append(stix_relationship)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(traceback.format_exc())
                 self.helper.send_stix2_bundle(
                     stix2.Bundle(
                         objects=objects,
@@ -510,7 +519,7 @@ class Mandiant:
                         objects.append(stix_malware)
                         # Get the malware
                         result_malware = self._query(url + "/" + malware["id"])
-                        if "industries" in result_malware:
+                        if self._exists_and_not_redacted("industries", result_malware):
                             for industry in result_malware["industries"]:
                                 stix_identity = stix2.Identity(
                                     id=industry["id"],
@@ -547,7 +556,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_identity)
                                 objects.append(stix_relationship)
-                        if "cve" in result_malware:
+                        if self._exists_and_not_redacted("cve", result_malware):
                             for cve in result_malware["cve"]:
                                 stix_vulnerability = stix2.Vulnerability(
                                     id=cve["id"],
@@ -584,7 +593,7 @@ class Mandiant:
                                 objects.append(stix_vulnerability)
                                 objects.append(stix_relationship)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(traceback.format_exc())
                 if len(objects) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -665,7 +674,7 @@ class Mandiant:
                         )
                         vulnerabilities.append(stix_vulnerability)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(traceback.format_exc())
                 if len(vulnerabilities) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -809,7 +818,7 @@ class Mandiant:
                                     )
                                     objects.append(stix_relationship)
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        self.helper.log_error(traceback.format_exc())
                 if len(objects) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -971,7 +980,7 @@ class Mandiant:
                                 "Failed to process News Analysis Report "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                     else:
                         stix_bundle = None
                         try:
@@ -1107,7 +1116,7 @@ class Mandiant:
                                 "Failed to process News Analyis Report "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                         # Creating and sending the bundle to OCTI
                         try:
                             bundle = stix2.Bundle(
@@ -1124,7 +1133,7 @@ class Mandiant:
                                 "Failed to process this report ID "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                 next_pointer = result.get("next")
                 self.helper.log_debug("Report next_pointer ID " + str(next_pointer))
             elif end_epoch > int(time.time()):
@@ -1220,7 +1229,7 @@ class Mandiant:
                 sys.exit(0)
 
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.log_error(traceback.format_exc())
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
@@ -1234,6 +1243,6 @@ if __name__ == "__main__":
         mandiantConnector = Mandiant()
         mandiantConnector.run()
     except Exception as e:
-        print(e)
+        print(traceback.format_exc())
         time.sleep(10)
         sys.exit(0)
