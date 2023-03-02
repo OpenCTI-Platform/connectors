@@ -8,28 +8,28 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
-import json
-
 import requests
 import requests.exceptions
+import json
 
-API_BASE = "https://api.recordedfuture.com"
-CONNECT_BASE = API_BASE + "/v2"
-DETECTION_SEARCH = API_BASE + "/detection-rule/search"
-NOTES_BASE = CONNECT_BASE + "/analystnote"
-NOTES_SEARCH = NOTES_BASE + "/search"
-FUSION_FILE_BASE = CONNECT_BASE + "/fusion/files"
-THREAT_ACTOR_PATH = "/public/opencti/threat_actors.json"
-INSIKT_SOURCE = "VKz42X"
+
+API_BASE = 'https://api.recordedfuture.com'
+CONNECT_BASE = API_BASE + '/v2'
+DETECTION_SEARCH = API_BASE + '/detection-rule/search'
+NOTES_BASE = CONNECT_BASE + '/analystnote'
+NOTES_SEARCH = NOTES_BASE + '/search'
+FUSION_FILE_BASE = CONNECT_BASE + '/fusion/files'
+THREAT_ACTOR_PATH = '/public/opencti/threat_actors.json'
+INSIKT_SOURCE = 'VKz42X'
 
 
 class RFClient:
     """class for talking to the RF API, specifically pulling analyst notes"""
 
-    def __init__(self, token, helper, header="PS_Custom_Script/0.0"):
+    def __init__(self, token, helper, header='PS_Custom_Script/0.0'):
         """Inits function"""
         self.token = token
-        headers = {"X-RFToken": token, "User-Agent": header}
+        headers = {'X-RFToken': token, 'User-Agent': header}
         self.session = requests.Session()
         self.session.headers.update(headers)
         self.helper = helper
@@ -53,33 +53,33 @@ class RFClient:
             a list of dicts of notes
         #TODO: add pagination for notes
         """
-        note_params = {"published": f"-{published}h", "limit": limit}
+        note_params = {'published': f'-{published}h', 'limit': limit}
         if insikt_only:
-            note_params["source"] = INSIKT_SOURCE
+            note_params['source'] = INSIKT_SOURCE
         if topic:
-            note_params["topic"] = topic
+            note_params['topic'] = topic
         res = self.session.get(NOTES_SEARCH, params=note_params)
         res.raise_for_status()
         notes = []
-        for note in res.json()["data"]["results"]:
-            attributes = note["attributes"]
+        for note in res.json()['data']['results']:
+            attributes = note['attributes']
             msg = f'Processing note "{attributes["title"]}"'
             self.helper.log_info(msg)
-            if pull_signatures and "attachment" in attributes:
+            if pull_signatures and 'attachment' in attributes:
                 try:
-                    result = self.get_attachment(note["id"])
-                    attributes["attachment_content"] = result["rules"][0]["content"]
-                    attributes["attachment_type"] = result["type"]
+                    result = self.get_attachment(note['id'])
+                    attributes['attachment_content'] = result['rules'][0]['content']
+                    attributes['attachment_type'] = result['type']
                 except requests.exceptions.HTTPError as err:
-                    if "403" in str(err):
-                        msg = "Your API token does not have permission to pull Detection Rules"
+                    if '403' in str(err):
+                        msg = 'Your API token does not have permission to pull Detection Rules'
                         self.helper.log_error(msg)
                     else:
                         raise err
                 except (KeyError, IndexError):
                     self.helper.log_error(
-                        "Problem with API response for detection"
-                        "rule for note {}. Rule will not be added".format(note["id"])
+                        'Problem with API response for detection'
+                        'rule for note {}. Rule will not be added'.format(note['id'])
                     )
             notes.append(note)
         return notes
@@ -91,11 +91,11 @@ class RFClient:
         Returns:
             The string of the detection rule
         """
-        query = {"filter": {"doc_id": f"doc:{doc_id}"}, "limit": 1}
+        query = {"filter": {"doc_id": f'doc:{doc_id}'}, 'limit': 1}
 
         res = self.session.post(DETECTION_SEARCH, json=query)
         res.raise_for_status()
-        return res.json()["result"][0]
+        return res.json()['result'][0]
 
     def get_fusion_file(self, path: str) -> str:
         """Gets a fusion file provided a path
@@ -104,7 +104,7 @@ class RFClient:
         Returns
             The body of the file as a string
         """
-        res = self.session.get(FUSION_FILE_BASE, params={"path": path})
+        res = self.session.get(FUSION_FILE_BASE, params={'path': path})
         res.raise_for_status()
         return res.text
 
@@ -116,5 +116,5 @@ class RFClient:
         res = self.get_fusion_file(THREAT_ACTOR_PATH)
         ret = set()
         for entity in json.loads(res):
-            ret.add(entity["entity"])
+            ret.add(entity['entity'])
         return ret
