@@ -63,7 +63,9 @@ class Mitre:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA", ["connector", "update_existing_data"]
+            "CONNECTOR_UPDATE_EXISTING_DATA",
+            ["connector", "update_existing_data"],
+            config,
         )
         self.mitre_interval = get_config_variable(
             "MITRE_INTERVAL", ["mitre", "interval"], config, isNumber=True
@@ -72,21 +74,25 @@ class Mitre:
             get_config_variable(
                 "MITRE_ENTERPRISE_FILE_URL",
                 ["mitre", "enterprise_file_url"],
+                config,
                 default=MITRE_ENTERPRISE_FILE_URL,
             ),
             get_config_variable(
                 "MITRE_MOBILE_ATTACK_FILE_URL",
                 ["mitre", "mobile_attack_file_url"],
+                config,
                 default=MITRE_MOBILE_ATTACK_FILE_URL,
             ),
             get_config_variable(
                 "MITRE_ICS_ATTACK_FILE_URL",
                 ["mitre", "ics_attack_file_url"],
+                config,
                 default=MITRE_ICS_ATTACK_FILE_URL,
             ),
             get_config_variable(
                 "MITRE_CAPEC_FILE_URL",
                 ["mitre", "capec_file_url"],
+                config,
                 default=MITRE_CAPEC_FILE_URL,
             ),
         ]
