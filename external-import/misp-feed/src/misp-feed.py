@@ -199,6 +199,15 @@ class MispFeed:
                 default=False,
             )
         )
+        self.import_unsupported_observables_as_text_transparent = bool(
+            get_config_variable(
+                "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
+                ["misp", "import_unsupported_observables_as_text_transparent"],
+                config,
+                isNumber=False,
+                default=True,
+            )
+        )
         self.misp_feed_interval = get_config_variable(
             "MISP_FEED_INTERVAL", ["misp_feed", "interval"], config, True
         )
@@ -1534,29 +1543,47 @@ class MispFeed:
 
             object_observable = None
             if self.misp_feed_create_object_observables:
-                unique_key = ""
-                if len(object["Attribute"]) > 0:
-                    unique_key = (
-                        " ("
-                        + object["Attribute"][0]["type"]
-                        + "="
-                        + object["Attribute"][0]["value"]
-                        + ")"
+                if self.import_unsupported_observables_as_text_transparent:
+                    if len(object["Attribute"]) > 0:
+                        value = object["Attribute"][0]["value"]
+                        object_observable = Text(
+                            value=value,
+                            object_marking_refs=event_markings,
+                            custom_properties={
+                                "description": object["description"],
+                                "x_opencti_score": self._threat_level_to_score(
+                                    event_threat_level
+                                ),
+                                "labels": event_tags,
+                                "created_by_ref": author["id"],
+                                "external_references": attribute_external_references,
+                            },
+                        )
+                        objects_observables.append(object_observable)
+                else:
+                    unique_key = ""
+                    if len(object["Attribute"]) > 0:
+                        unique_key = (
+                            " ("
+                            + object["Attribute"][0]["type"]
+                            + "="
+                            + object["Attribute"][0]["value"]
+                            + ")"
+                        )
+                    object_observable = Text(
+                        value=object["name"] + unique_key,
+                        object_marking_refs=event_markings,
+                        custom_properties={
+                            "description": object["description"],
+                            "x_opencti_score": self._threat_level_to_score(
+                                event_threat_level
+                            ),
+                            "labels": event_tags,
+                            "created_by_ref": author["id"],
+                            "external_references": attribute_external_references,
+                        },
                     )
-                object_observable = Text(
-                    value=object["name"] + unique_key,
-                    object_marking_refs=event_markings,
-                    custom_properties={
-                        "description": object["description"],
-                        "x_opencti_score": self._threat_level_to_score(
-                            event_threat_level
-                        ),
-                        "labels": event_tags,
-                        "created_by_ref": author["id"],
-                        "external_references": attribute_external_references,
-                    },
-                )
-                objects_observables.append(object_observable)
+                    objects_observables.append(object_observable)
             object_attributes = []
             for attribute in object["Attribute"]:
                 indicator = self._process_attribute(
