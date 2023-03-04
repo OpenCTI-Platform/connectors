@@ -420,7 +420,10 @@ class Misp:
 
                 # Next page
                 current_page += 1
-                current_state["current_page"] = current_page
+                if current_state is not None:
+                    current_state["current_page"] = current_page
+                else:
+                    current_state = {"current_page": current_page}
                 self.helper.set_state(current_state)
             # Loop is over, storing the state
             # We cannot store the state before, because MISP events are NOT ordered properly
