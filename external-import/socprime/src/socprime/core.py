@@ -2,6 +2,7 @@ import datetime
 import os
 import sys
 import time
+import json
 from typing import Any, Dict, List, Mapping, Optional, Union
 
 import pycti
@@ -362,7 +363,7 @@ class SocprimeConnector:
                 if not isinstance(x, self._stix_object_types_to_udate)
             ]
         ).serialize()
-        if bundle:
+        if bundle and json.loads(bundle).get("objects"):
             self.helper.send_stix2_bundle(bundle, update=False, work_id=work_id)
 
         bundle = Bundle(
@@ -372,7 +373,7 @@ class SocprimeConnector:
                 if isinstance(x, self._stix_object_types_to_udate)
             ]
         ).serialize()
-        if bundle:
+        if bundle and json.loads(bundle).get("objects"):
             self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
 
     def run(self):
