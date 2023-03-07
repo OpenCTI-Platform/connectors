@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-chapsvision:
-    image: opencti/connector-chapsvision:5.5.4
+    image: opencti/connector-chapsvision:5.6.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

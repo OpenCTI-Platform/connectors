@@ -94,7 +94,7 @@ class Mandiant:
     def _get_token(self):
         headers = {
             "accept": "application/json",
-            "x-app-name": "opencti-connector-5.5.4",
+            "x-app-name": "opencti-connector-5.6.0",
         }
         r = requests.post(
             self.mandiant_api_url + "/token",
@@ -145,7 +145,7 @@ class Mandiant:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": app_header,
-            "x-app-name": "opencti-connector-5.5.4",
+            "x-app-name": "opencti-connector-5.6.0",
         }
         params = {}
         if limit is not None:
@@ -177,7 +177,7 @@ class Mandiant:
     def _getreportpdf(self, url, retry=False):
         headers = {
             "accept": "application/pdf",
-            "x-app-name": "opencti-connector-5.5.4",
+            "x-app-name": "opencti-connector-5.6.0",
             "authorization": "Bearer " + self.auth_token,
         }
         r = requests.get(url, headers=headers)
