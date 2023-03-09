@@ -4,8 +4,8 @@ import os
 import ssl
 import sys
 import time
-import urllib.request
 import traceback
+import urllib.request
 
 import certifi
 import stix2
