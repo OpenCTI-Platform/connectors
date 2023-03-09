@@ -60,7 +60,7 @@ class URLhaus:
         )
 
     def get_interval(self, offset=0):
-        return (float(self.urlhaus_interval) * 60 * 60 * 24 ) + offset
+        return (float(self.urlhaus_interval) * 60 * 60 * 24) + offset
 
     def next_run(self, seconds):
         return
@@ -84,7 +84,9 @@ class URLhaus:
                     last_run = None
                     self.helper.log_info("Connector has never run")
                 # If the last_run is more than interval-1 day
-                if last_run is None or ((timestamp - last_run) > self.get_interval(offset=-1)):
+                if last_run is None or (
+                    (timestamp - last_run) > self.get_interval(offset=-1)
+                ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.datetime.utcfromtimestamp(timestamp)
                     friendly_name = "URLhaus run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
@@ -113,27 +115,38 @@ class URLhaus:
                         )
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
-                        ## the csv-file hast the following columns 
+                        ## the csv-file hast the following columns
                         # id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
-                        
-                        if  current_state is not None and "last_processed_entry" in current_state:
-                            last_processed_entry = current_state["last_processed_entry"]  # epoch time format
+
+                        if (
+                            current_state is not None
+                            and "last_processed_entry" in current_state
+                        ):
+                            last_processed_entry = current_state[
+                                "last_processed_entry"
+                            ]  # epoch time format
                         else:
-                            self.helper.log_info("'last_processed_entry' state not found, setting it to epoch start.")
+                            self.helper.log_info(
+                                "'last_processed_entry' state not found, setting it to epoch start."
+                            )
                             last_processed_entry = 0  # start of the epoch
-                        
+
                         last_processed_entry_running_max = last_processed_entry
-                        
+
                         for i, row in enumerate(rdr):
                             entry_date = parse(row[1])
 
-                            if i % 5000 == 0: 
-                                self.helper.log_info(f"Process entry {i} with dateadded='{entry_date.strftime('%Y-%m-%d %H:%M:%S')}'")
+                            if i % 5000 == 0:
+                                self.helper.log_info(
+                                    f"Process entry {i} with dateadded='{entry_date.strftime('%Y-%m-%d %H:%M:%S')}'"
+                                )
 
                             # skip entry if newer events already processed in the past
                             if last_processed_entry > entry_date.timestamp():
                                 continue
-                            last_processed_entry_running_max = max(entry_date.timestamp(), last_processed_entry_running_max)
+                            last_processed_entry_running_max = max(
+                                entry_date.timestamp(), last_processed_entry_running_max
+                            )
 
                             if row[3] == "online" or self.urlhaus_import_offline:
                                 external_reference = stix2.ExternalReference(
@@ -162,7 +175,6 @@ class URLhaus:
                                 if self.threats_from_labels:
                                     for label in row[6].split(","):
                                         if label:
-
                                             # implementing a primitive caching
                                             try:
                                                 threat = treat_cache[label]
@@ -172,17 +184,15 @@ class URLhaus:
                                                     standard_id
                                                     entity_type
                                                 """
-                                                threat = (
-                                                    self.helper.api.stix_domain_object.read(
-                                                        filters=[
-                                                            {
-                                                                "key": "name",
-                                                                "values": [label],
-                                                            }
-                                                        ],
-                                                        first=1,
-                                                        customAttributes=custom_attributes,
-                                                    )
+                                                threat = self.helper.api.stix_domain_object.read(
+                                                    filters=[
+                                                        {
+                                                            "key": "name",
+                                                            "values": [label],
+                                                        }
+                                                    ],
+                                                    first=1,
+                                                    customAttributes=custom_attributes,
                                                 )
                                                 treat_cache[label] = threat
 
@@ -235,7 +245,12 @@ class URLhaus:
                         timestamp
                     )
                     self.helper.log_info(message)
-                    self.helper.set_state({"last_run": timestamp, "last_processed_entry": last_processed_entry_running_max})
+                    self.helper.set_state(
+                        {
+                            "last_run": timestamp,
+                            "last_processed_entry": last_processed_entry_running_max,
+                        }
+                    )
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
