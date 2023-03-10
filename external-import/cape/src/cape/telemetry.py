@@ -1,6 +1,3 @@
-import json
-from datetime import datetime
-
 from cape.cape import (
     cuckooPayload,
     cuckooReport,
@@ -13,11 +10,12 @@ from cape.cape import (
     cuckooReportTTP,
     cuckooTarget,
 )
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from datetime import datetime
 from pycti import (
-        Note as pyctiNote,
-        Report as pyctiReport,
+    Note as pyctiNote,
+    Report as pyctiReport,
 )
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import DomainName, IPv4Address
 from stix2.v21 import (
     TLP_AMBER,
@@ -393,9 +391,7 @@ class openCTIInterface:
                 tlps.append(TLP_RED["id"])
 
         report = Report(
-            id=pyctiReport.generate_id(
-                name, f"```{self.report.info.started}```"
-            ),
+            id=pyctiReport.generate_id(name, f"```{self.report.info.started}```"),
             name=name,
             report_types="sandbox-report",
             published=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -615,7 +611,6 @@ class openCTIInterface:
             bundle_ids.append(payload[1])
             payload_relations.append(payload[2])
 
-
         if int(self.report.malscore) >= self.ReportScore:
             # Create Report and link All ATPs/Cyber Obs/Payload
             report = self.createCuckooReport(self.report, IDs, ext_ref)
@@ -626,15 +621,16 @@ class openCTIInterface:
                     content += f"{match.description}\n"
                 note = Note(
                     id=pyctiNote.generate_id(
-                        #f"```{self.report.info.started}```", f"```\nYara - {self.report.target.file.sha256}\n```"
-                        None, f"```\nSignatures - {self.report.target.file.sha256}\n```"
+                        # f"```{self.report.info.started}```", f"```\nYara - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nSignatures - {self.report.target.file.sha256}\n```",
                     ),
                     abstract=f"[Signatures]\t{self.report.target.file.sha256}",
                     content=f"```\n{content}\n```",
-                    #content=f"```\n{self.report.target.file.yara}\n```",
+                    # content=f"```\n{self.report.target.file.yara}\n```",
                     created_by_ref=self.identity,
                     object_refs=[report.id],
-                    #object_refs=[payload[0]["id"]],
+                    # object_refs=[payload[0]["id"]],
                 )
                 bundle_ids.append(note)
 
@@ -644,15 +640,16 @@ class openCTIInterface:
                     content += f"{match['meta']['description']}\n"
                 note = Note(
                     id=pyctiNote.generate_id(
-                        #f"```{self.report.info.started}```", f"```\nYara - {self.report.target.file.sha256}\n```"
-                        None, f"```\nYara - {self.report.target.file.sha256}\n```"
+                        # f"```{self.report.info.started}```", f"```\nYara - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nYara - {self.report.target.file.sha256}\n```",
                     ),
                     abstract=f"[Yara]\t{self.report.target.file.sha256}",
                     content=f"```\n{content}\n```",
-                    #content=f"```\n{self.report.target.file.yara}\n```",
+                    # content=f"```\n{self.report.target.file.yara}\n```",
                     created_by_ref=self.identity,
                     object_refs=[report.id],
-                    #object_refs=[payload[0]["id"]],
+                    # object_refs=[payload[0]["id"]],
                 )
                 bundle_ids.append(note)
 
@@ -662,16 +659,17 @@ class openCTIInterface:
                     content += f"{match['meta']['description']}\n"
                 note = Note(
                     id=pyctiNote.generate_id(
-                        #f"```{self.report.info.started}```", f"```\nCape_Yara - {self.report.target.file.sha256}\n```"
-                        None, f"```\nCape_Yara - {self.report.target.file.sha256}\n```"
+                        # f"```{self.report.info.started}```", f"```\nCape_Yara - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nCape_Yara - {self.report.target.file.sha256}\n```",
                     ),
                     abstract=f"[Cape_Yara]\t{self.report.target.file.sha256}",
-                    #abstract=f"{report.name} - Cape_Yara - {self.report.target.file.sha256}",
+                    # abstract=f"{report.name} - Cape_Yara - {self.report.target.file.sha256}",
                     content=f"```\n{content}\n```",
-                    #content=f"```\n{self.report.target.file.cape_yara}\n```",
+                    # content=f"```\n{self.report.target.file.cape_yara}\n```",
                     created_by_ref=self.identity,
                     object_refs=[report.id],
-                    #object_refs=[payload[0]["id"]],
+                    # object_refs=[payload[0]["id"]],
                 )
                 bundle_ids.append(note)
 
@@ -681,15 +679,16 @@ class openCTIInterface:
                     content += f"{match}\n"
                 note = Note(
                     id=pyctiNote.generate_id(
-                        #f"```{self.report.info.started}```", f"```\nClamav - {self.report.target.file.sha256}\n```"
-                        None, f"```\nClamav - {self.report.target.file.sha256}\n```"
+                        # f"```{self.report.info.started}```", f"```\nClamav - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nClamav - {self.report.target.file.sha256}\n```",
                     ),
                     abstract=f"[Clamav]\t{self.report.target.file.sha256}",
                     content=f"```\n{content}\n```",
-                    #content=f"```\n{self.report.target.file.clamav}\n```",
+                    # content=f"```\n{self.report.target.file.clamav}\n```",
                     created_by_ref=self.identity,
                     object_refs=[report.id],
-                    #object_refs=[payload[0]["id"]],
+                    # object_refs=[payload[0]["id"]],
                 )
                 bundle_ids.append(note)
 
@@ -699,16 +698,17 @@ class openCTIInterface:
                     content += f"{match}\n"
                 note = Note(
                     id=pyctiNote.generate_id(
-                        #f"```{self.report.info.started}```", f"```\nTrID - {self.report.target.file.sha256}\n```"
-                        None, f"```\nTrID - {self.report.target.file.sha256}\n```"
+                        # f"```{self.report.info.started}```", f"```\nTrID - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nTrID - {self.report.target.file.sha256}\n```",
                     ),
                     abstract=f"[TrID]\t{self.report.target.file.sha256}",
-                    #abstract=f"{report.name} - TrID Analysis - {self.report.target.file.sha256}",
+                    # abstract=f"{report.name} - TrID Analysis - {self.report.target.file.sha256}",
                     content=f"```\n{content}\n```",
-                    #content=f"```\n{self.report.target.file.trid}\n```",
+                    # content=f"```\n{self.report.target.file.trid}\n```",
                     created_by_ref=self.identity,
                     object_refs=[report.id],
-                    #object_refs=[payload[0]["id"]],
+                    # object_refs=[payload[0]["id"]],
                 )
                 bundle_ids.append(note)
 
