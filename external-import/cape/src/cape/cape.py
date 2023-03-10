@@ -69,21 +69,28 @@ class cuckooTarget:
         self.yara = self.getYara()
         self.cape_yara = self.getCapeYara()
         self.clamav = self.getclamav()
+        self.trid = self.json["trid"]
 
     def getYara(self):
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def getCapeYara(self):
         yara_matches = []
         for match in self.json["cape_yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def getclamav(self):
         clam_matches = []
         for match in self.json["clamav"]:
-            clam_matches.append({"name": match["name"], "meta": match["meta"]})
+            if isinstance(match, dict):
+                clam_matches.append({"name": match["name"], "meta": match["meta"]})
+            else:
+                clam_matches.append(match)
+        return clam_matches
 
     def __str__(self):
         return self.name
@@ -115,6 +122,7 @@ class cuckooReportSignature:
         self.name = self.json["name"]
         self.confidence = self.json["confidence"]
         self.references = self.json["references"]
+        self.data = self.json["data"]
         self.new_data = self.json["new_data"]
         self.alert = self.json["alert"]
         self.severity = self.json["severity"]
@@ -140,6 +148,7 @@ class cuckooReportExtracted:
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def __str__(self):
         return f"[{str(self.pid)}][{self.category}] {self.raw.split('/')[-1]}"
@@ -169,6 +178,7 @@ class cuckooReportDropped:
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def __str__(self):
         return self.name
@@ -196,6 +206,7 @@ class cuckooReportBuffer:
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def __str__(self):
         return self.name
@@ -645,21 +656,28 @@ class cuckooPayload:
         self.yara = self.getYara()
         self.cape_yara = self.getCapeYara()
         self.clamav = self.getclamav()
+        self.trid = self.json["trid"]
 
     def getYara(self):
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def getCapeYara(self):
         yara_matches = []
         for match in self.json["cape_yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def getclamav(self):
         clam_matches = []
         for match in self.json["clamav"]:
-            clam_matches.append({"name": match["name"], "meta": match["meta"]})
+            if isinstance(match, dict):
+                clam_matches.append({"name": match["name"], "meta": match["meta"]})
+            else:
+                clam_matches.append(match)
+        return clam_matches
 
     def __str__(self):
         return self.name
