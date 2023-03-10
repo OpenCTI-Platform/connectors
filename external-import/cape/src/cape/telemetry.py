@@ -3,16 +3,38 @@ from datetime import datetime
 from pycti import Note as pyctiNote
 from pycti import Report as pyctiReport
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2 import DomainName, IPv4Address
-from stix2.v21 import (TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, Bundle,
-                       DomainName, ExternalReference, File, Indicator,
-                       IPv4Address, Malware, NetworkTraffic, Note, Process,
-                       Relationship, Report, WindowsRegistryKey)
+from stix2.v21 import (
+    TLP_AMBER,
+    TLP_GREEN,
+    TLP_RED,
+    TLP_WHITE,
+    Bundle,
+    DomainName,
+    ExternalReference,
+    File,
+    Indicator,
+    IPv4Address,
+    Malware,
+    NetworkTraffic,
+    Note,
+    Process,
+    Relationship,
+    Report,
+    WindowsRegistryKey,
+)
 
-from cape.cape import (cuckooPayload, cuckooReport, cuckooReportDomain,
-                       cuckooReportHost, cuckooReportICMP, cuckooReportNetwork,
-                       cuckooReportProcess, cuckooReportTCPUDP,
-                       cuckooReportTTP, cuckooTarget)
+from cape.cape import (
+    cuckooPayload,
+    cuckooReport,
+    cuckooReportDomain,
+    cuckooReportHost,
+    cuckooReportICMP,
+    cuckooReportNetwork,
+    cuckooReportProcess,
+    cuckooReportTCPUDP,
+    cuckooReportTTP,
+    cuckooTarget,
+)
 
 
 class openCTIInterface:
