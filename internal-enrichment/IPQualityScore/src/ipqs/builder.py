@@ -4,15 +4,8 @@
 from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
-from stix2 import (
-    AutonomousSystem,
-    Bundle,
-    # DomainName,
-    Identity,
-    Indicator,
-    IPv4Address,
-    Relationship,
-)
+from stix2 import (AutonomousSystem, Bundle, Identity, Indicator, IPv4Address,
+                   Relationship)
 
 
 class IPQSBuilder:
