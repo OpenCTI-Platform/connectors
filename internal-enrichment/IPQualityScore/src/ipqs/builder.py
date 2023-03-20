@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 """IPQS builder module."""
 
-from stix2 import Identity, IPv4Address, DomainName, Relationship, AutonomousSystem, Indicator, Bundle
 from datetime import datetime
 
-from pycti import (
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship
+from stix2 import (
+    AutonomousSystem,
+    Bundle,
+    # DomainName,
+    Identity,
+    Indicator,
+    IPv4Address,
+    Relationship,
 )
 
 
@@ -14,11 +19,11 @@ class IPQSBuilder:
     """IPQS builder."""
 
     def __init__(
-            self,
-            helper: OpenCTIConnectorHelper,
-            author: Identity,
-            observable: dict,
-            score: int
+        self,
+        helper: OpenCTIConnectorHelper,
+        author: Identity,
+        observable: dict,
+        score: int,
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
@@ -79,41 +84,9 @@ class IPQSBuilder:
         )
         self.bundle += [ipv4_stix, relationship]
 
-    def create_domain_resolves_to(self, domain: str):
-        """
-        Create the Domain-Name and link it to the observable.
-
-        Parameters
-        ----------
-        domain : str
-            Domain-Name to link.
-        """
-        self.helper.log_debug(f"[IPQS] creating ipv4-address {domain}")
-        ipv4_stix = DomainName(
-            value=domain,
-            custom_properties={
-                "created_by_ref": self.author.id,
-                "x_opencti_score": self.score,
-            },
-        )
-        relationship = Relationship(
-            id=StixCoreRelationship.generate_id(
-                "resolves-to",
-                self.observable["standard_id"],
-                ipv4_stix.id,
-            ),
-            relationship_type="resolves-to",
-            created_by_ref=self.author,
-            source_ref=self.observable["standard_id"],
-            target_ref=ipv4_stix.id,
-            confidence=self.helper.connect_confidence_level,
-            allow_custom=True,
-        )
-        self.bundle += [ipv4_stix]
-
     def create_asn_belongs_to(self, asn):
         """Create AutonomousSystem and Relationship between the observable."""
-        self.helper.log_debug(f'[IPQS] creating asn {asn}')
+        self.helper.log_debug(f"[IPQS] creating asn {asn}")
         as_stix = AutonomousSystem(
             number=asn,
             name=asn,
@@ -135,11 +108,11 @@ class IPQSBuilder:
         self.bundle += [as_stix, relationship]
 
     def create_indicator_based_on(
-            self,
-            labels,
-            pattern: str,
-            indicator_value: str,
-            description: str,
+        self,
+        labels,
+        pattern: str,
+        indicator_value: str,
+        description: str,
     ):
         """
         Create an Indicator.
@@ -153,9 +126,7 @@ class IPQSBuilder:
 
         # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
 
-        self.helper.log_debug(
-            f"[IPQS] creating indicator with pattern {pattern}"
-        )
+        self.helper.log_debug(f"[IPQS] creating indicator with pattern {pattern}")
 
         indicator = Indicator(
             created_by_ref=self.author,
@@ -169,7 +140,7 @@ class IPQSBuilder:
             custom_properties={
                 "x_opencti_score": self.score,
             },
-            labels=labels['value']
+            labels=labels["value"],
         )
         relationship = Relationship(
             id=StixCoreRelationship.generate_id(
@@ -216,7 +187,7 @@ class IPQSBuilder:
             self.invalid: self.rf_red,
             self.disposable: self.rf_red,
             self.malware: self.rf_red,
-            self.phishing: self.rf_red
+            self.phishing: self.rf_red,
         }
         return mapper.get(criticality, self.rf_white)
 
@@ -263,9 +234,9 @@ class IPQSBuilder:
     def url_risk_scoring(self, malware, phishing):
         """method to create calculate verdict for URL/Domain"""
         risk_criticality = ""
-        if malware == 'True':
+        if malware == "True":
             risk_criticality = self.malware
-        elif phishing == 'True':
+        elif phishing == "True":
             risk_criticality = self.phishing
         elif self.score >= 90:
             risk_criticality = self.high
@@ -303,9 +274,7 @@ class IPQSBuilder:
 
     def update_labels(self, tag, hex_color):
         """Update the labels."""
-        self.helper.log_debug(
-            f'[IPQS] updating labels.'
-        )
+        self.helper.log_debug("[IPQS] updating labels.")
 
         tag_vt = self.helper.api.label.create(value=tag, color=hex_color)
         self.helper.api.stix_cyber_observable.add_label(
@@ -313,27 +282,3 @@ class IPQSBuilder:
         )
 
         return tag_vt
-
-    def update_names(self, desc):
-        """
-        Update the description.
-
-        """
-        self.helper.log_debug(
-            f'[IPQS] updating description'
-        )
-        description = ''
-
-        for item in desc:
-            description = description + f"- **{item}:**    {desc[item]} \n"
-
-        description = self.observable.get('x_opencti_description') + description if self.observable.get(
-            'x_opencti_description') else description
-
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.observable["id"],
-            input={
-                "key": "x_opencti_description",
-                "value": description
-            },
-        )
