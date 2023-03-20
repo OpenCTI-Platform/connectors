@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
 """IPQS enrichment module."""
 from os import path
+
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
-from yaml import load, FullLoader
+from yaml import FullLoader, load
+
 from .builder import IPQSBuilder
 from .client import IPQSClient
-from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class IPQSConnector:
     """IPQS connector."""
 
     _SOURCE_NAME = "IPQS"
-    _IP_ENRICH = 'ip'
-    _URL_ENRICH = 'url'
-    _EMAIL_ENRICH = 'email'
-    _PHONE_ENRICH = 'phone'
+    _IP_ENRICH = "ip"
+    _URL_ENRICH = "url"
+    _EMAIL_ENRICH = "email"
+    _PHONE_ENRICH = "phone"
 
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = path.dirname(path.abspath(__file__)) + "/config.yml"
-        # config_file_path = "/home/ubuntu-vm/Desktop/new_ipqs/ipqs/src/config.yml.sample"
 
         config = (
-            load(open(config_file_path), Loader=FullLoader)
+            load(open(config_file_path, encoding="utf-8"), Loader=FullLoader)
             if path.isfile(config_file_path)
             else {}
         )
@@ -66,29 +67,28 @@ class IPQSConnector:
         """
         Enriches the IP
         """
-        response = self.client.get_ipqs_info(self._IP_ENRICH, observable["observable_value"])
-
-        builder = IPQSBuilder(
-            self.helper,
-            self.author,
-            observable,
-            response.get('fraud_score')
+        response = self.client.get_ipqs_info(
+            self._IP_ENRICH, observable["observable_value"]
         )
 
-        # if response.get('host') != 'N/A':
-        #     builder.create_indicator_based_on(
-        #         f"""[domain-name:value = '{response.get('host')}']""",
-        #         response.get('host')
-        #     )
-        if self.ip_add_relationships:
-            builder.create_asn_belongs_to(response.get('ASN'))
-            # builder.create_domain_resolves_to(response.get('host'))
+        builder = IPQSBuilder(
+            self.helper, self.author, observable, response.get("fraud_score")
+        )
 
-        res_format = ''
-        for ip_enrich_field in self.client.ip_enrich_fields:
+        if self.ip_add_relationships:
+            builder.create_asn_belongs_to(response.get("ASN"))
+
+        res_format = ""
+        for (
+            ip_enrich_field,
+            ip_enrich_field_value,
+        ) in self.client.ip_enrich_fields.items():
             if ip_enrich_field in response:
-                ip_enrich_field_value = response.get(ip_enrich_field)
-                res_format = res_format + f"- **{self.client.ip_enrich_fields[ip_enrich_field]}:**    {ip_enrich_field_value} \n"
+                enrich_field_value = response.get(ip_enrich_field)
+                res_format = (
+                    res_format
+                    + f"- **{ip_enrich_field_value}:**    {enrich_field_value} \n"
+                )
 
         labels = builder.ip_address_risk_scoring()
 
@@ -96,10 +96,8 @@ class IPQSConnector:
             labels,
             f"""[ipv4-addr:value = '{observable["observable_value"]}']""",
             observable["observable_value"],
-            res_format
+            res_format,
         )
-
-        # builder.update_names(res_format)
 
         return builder.send_bundle()
 
@@ -107,98 +105,112 @@ class IPQSConnector:
         """
         Enriches the Email.
         """
-        response = self.client.get_ipqs_info(self._EMAIL_ENRICH, observable["observable_value"])
-
-        builder = IPQSBuilder(
-            self.helper,
-            self.author,
-            observable,
-            response.get('fraud_score')
+        response = self.client.get_ipqs_info(
+            self._EMAIL_ENRICH, observable["observable_value"]
         )
 
-        res_format = ''
-        for email_enrich_field in self.client.email_enrich_fields:
-            if email_enrich_field in response:
-                email_enrich_field_value = response.get(email_enrich_field)
-                res_format = res_format + f"- **{self.client.email_enrich_fields[email_enrich_field]}:**    {email_enrich_field_value} \n"
+        builder = IPQSBuilder(
+            self.helper, self.author, observable, response.get("fraud_score")
+        )
 
-        labels = builder.email_address_risk_scoring(response.get('disposable'), response.get('valid'))
+        res_format = ""
+        for (
+            email_enrich_field,
+            email_enrich_field_value,
+        ) in self.client.email_enrich_fields.items():
+            if email_enrich_field in response:
+                enrich_field_value = response.get(email_enrich_field)
+                res_format = (
+                    res_format
+                    + f"- **{email_enrich_field_value}:**    {enrich_field_value} \n"
+                )
+
+        labels = builder.email_address_risk_scoring(
+            response.get("disposable"), response.get("valid")
+        )
 
         builder.create_indicator_based_on(
             labels,
             f"""[email-addr:value = '{observable["observable_value"]}']""",
             observable["observable_value"],
-            res_format
+            res_format,
         )
-        # builder.update_names(res_format)
 
         return builder.send_bundle()
 
     def _process_url(self, observable):
-        response = self.client.get_ipqs_info(self._URL_ENRICH, observable["observable_value"])
-
-        builder = IPQSBuilder(
-            self.helper,
-            self.author,
-            observable,
-            response.get('risk_score')
+        response = self.client.get_ipqs_info(
+            self._URL_ENRICH, observable["observable_value"]
         )
 
-        if self.domain_add_relationships and observable["entity_type"] == 'Domain-Name':
-            if response.get('ip_address') != 'N/A':
-                builder.create_ip_resolves_to(response.get('ip_address'))
-            # if response.get('domain') != 'N/A':
-            #     builder.create_domain_resolves_to(response.get('domain'))
+        builder = IPQSBuilder(
+            self.helper, self.author, observable, response.get("risk_score")
+        )
 
-        res_format = ''
-        for url_enrich_field in self.client.url_enrich_fields:
+        if self.domain_add_relationships and observable["entity_type"] == "Domain-Name":
+            if response.get("ip_address") != "N/A":
+                builder.create_ip_resolves_to(response.get("ip_address"))
+
+        res_format = ""
+        for (
+            url_enrich_field,
+            url_enrich_field_value,
+        ) in self.client.url_enrich_fields.items():
             if url_enrich_field in response:
-                url_enrich_field_value = response.get(url_enrich_field)
-                res_format = res_format + f"- **{self.client.url_enrich_fields[url_enrich_field]}:**    {url_enrich_field_value} \n"
+                enrich_field_value = response.get(url_enrich_field)
+                res_format = (
+                    res_format
+                    + f"- **{url_enrich_field_value}:**    {enrich_field_value} \n"
+                )
 
-        labels = builder.url_risk_scoring(response.get('malware'), response.get('phishing'))
+        labels = builder.url_risk_scoring(
+            response.get("malware"), response.get("phishing")
+        )
 
         builder.create_indicator_based_on(
             labels,
             f"""[{observable["entity_type"].lower()}:value = '{observable["observable_value"]}']""",
             observable["observable_value"],
-            res_format
+            res_format,
         )
-        # builder.update_names(res_format)
 
         return builder.send_bundle()
 
     def _process_phone(self, observable):
-        response = self.client.get_ipqs_info(self._PHONE_ENRICH, observable["observable_value"])
-
-        builder = IPQSBuilder(
-            self.helper,
-            self.author,
-            observable,
-            response.get('fraud_score')
+        response = self.client.get_ipqs_info(
+            self._PHONE_ENRICH, observable["observable_value"]
         )
 
-        res_format = ''
-        for phone_enrich_field in self.client.phone_enrich_fields:
-            if phone_enrich_field in response:
-                phone_enrich_field_value = response.get(phone_enrich_field)
-                res_format = res_format + f"- **{self.client.phone_enrich_fields[phone_enrich_field]}:**    {phone_enrich_field_value} \n"
+        builder = IPQSBuilder(
+            self.helper, self.author, observable, response.get("fraud_score")
+        )
 
-        labels = builder.phone_address_risk_scoring(response.get('valid'), response.get('active'))
+        res_format = ""
+        for (
+            phone_enrich_field,
+            phone_enrich_field_value,
+        ) in self.client.phone_enrich_fields.items():
+            if phone_enrich_field in response:
+                enrich_field_value = response.get(phone_enrich_field)
+                res_format = (
+                    res_format
+                    + f"- **{phone_enrich_field_value}:**    {enrich_field_value} \n"
+                )
+
+        labels = builder.phone_address_risk_scoring(
+            response.get("valid"), response.get("active")
+        )
 
         builder.create_indicator_based_on(
             labels,
             f"""[phone-number:value = '{observable["observable_value"]}']""",
             observable["observable_value"],
-            res_format
+            res_format,
         )
-
-        # builder.update_names(res_format)
 
         return builder.send_bundle()
 
     def _process_message(self, data):
-
         observable = self.helper.api.stix_cyber_observable.read(id=data["entity_id"])
 
         if observable is None:
@@ -207,9 +219,7 @@ class IPQSConnector:
                 "check the group of the connector user)"
             )
 
-        self.helper.log_debug(
-            f"[IPQS] starting enrichment of observable: {observable}"
-        )
+        self.helper.log_debug(f"[IPQS] starting enrichment of observable: {observable}")
 
         match observable["entity_type"]:
             case "IPv4-Addr":
@@ -227,4 +237,5 @@ class IPQSConnector:
 
     # Start the main loop
     def start(self):
+        """Main method to start."""
         self.helper.listen(self._process_message)
