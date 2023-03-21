@@ -852,7 +852,7 @@ class Mandiant:
         url = self.mandiant_api_url + "/v4/reports"
         no_more_result = False
         limit = 1000
-        start_epoch = current_state["report"]
+        start_epoch = int((current_state["report"]).strip() or 0)
         end_epoch = start_epoch + 3600
         next = None
         while no_more_result is False:
