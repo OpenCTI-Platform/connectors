@@ -254,7 +254,7 @@ class Report:
                 "created_by_ref": self.identity["id"],
                 "object_refs": [report.get("id")],
                 "object_marking_refs": report["object_marking_refs"],
-                "note_types": ["analysis"],
+                "note_types": ["analysis", "external"],
             }
         )
 
