@@ -31,7 +31,8 @@ def clean_intrusionset_aliases(object):
     aliases = []
     for alias in object["aliases"]:
         _alias = re.sub(r"[\(\[].*?[\)\]]", "", alias["name"]).strip()
-        aliases.append(_alias)
+        if _alias != "redacted":
+            aliases.append(_alias)
     return aliases
 
 
