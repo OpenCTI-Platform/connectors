@@ -33,7 +33,8 @@ MAPPING = {
 
 def create_stix_relationship(connector, stix_indicator, indicator, attribution):
     attribution_id = attribution["id"]
-    if connector.mandiant_threat_actor_as_intrusion_set:
+
+    if "threat-actor" in attribution["id"]:
         attribution_id = attribution["id"].replace("threat-actor", "intrusion-set")
 
     start_time = indicator.get("first_seen", None)
