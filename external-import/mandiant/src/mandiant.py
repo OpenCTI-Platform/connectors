@@ -20,6 +20,16 @@ from pycti import (
 )
 from requests.auth import HTTPBasicAuth
 
+def parseInt(valInput,helper=false, valDefault = 0):
+    if isinstance(valInput,int):
+        valOutput = valInput
+    elif isinstance(valInput,str):
+        valOutput = int(valInput.strip() or valDefault)
+    else:
+        if helper:
+            helper.log_info(f"[parseInt] the input type is not managed : type={type(valInput)}")
+        valOutput = valDefault
+    return valOutput
 
 class Mandiant:
     def __init__(self):
@@ -616,7 +626,7 @@ class Mandiant:
         url = self.mandiant_api_url + "/v4/vulnerability"
         no_more_result = False
         limit = 1000
-        start_epoch = current_state["vulnerability"]
+        start_epoch =  parseInt(current_state["vulnerability"],self.helper)
         end_epoch = start_epoch + 3600
         next = None
         while no_more_result is False:
@@ -708,7 +718,7 @@ class Mandiant:
         url = self.mandiant_api_url + "/v4/indicator"
         no_more_result = False
         limit = 1000
-        start_epoch = current_state["indicator"]
+        start_epoch =  parseInt(current_state["indicator"],self.helper)
         end_epoch = start_epoch + 3600
         next = None
         while no_more_result is False:
@@ -852,7 +862,7 @@ class Mandiant:
         url = self.mandiant_api_url + "/v4/reports"
         no_more_result = False
         limit = 1000
-        start_epoch = int((current_state["report"]).strip() or 0)
+        start_epoch =  parseInt(current_state["report"],self.helper) 
         end_epoch = start_epoch + 3600
         next = None
         while no_more_result is False:
