@@ -25,14 +25,23 @@ def cleanhtml(raw_html):
 
 
 def clean_intrusionset_aliases(object):
-    if "aliases" not in object or len(object["aliases"]) == 0:
-        return None
-
     aliases = []
+    rule = r"[\(\[].*?[\)\]]"
+
+    if "aliases" not in object:
+        return aliases
+
+    if object["aliases"] == "redacted":
+        return aliases
+
     for alias in object["aliases"]:
-        _alias = re.sub(r"[\(\[].*?[\)\]]", "", alias["name"]).strip()
-        if _alias != "redacted":
-            aliases.append(_alias)
+        name = alias["name"]
+        name = re.sub(rule, "", name)
+        name = name.strip()
+
+        if name != "redacted":
+            aliases.append(name)
+
     return aliases
 
 
