@@ -8,6 +8,7 @@ from . import utils
 def process(connector, work_id, current_state):
     start_epoch = current_state.get("report")
     confidence = connector.helper.connect_confidence_level
+    identity = connector.identity
 
     if start_epoch == 0:
         start_epoch = connector.mandiant_import_start_date
@@ -37,7 +38,7 @@ def process(connector, work_id, current_state):
         connector.helper.log_debug("Collecting PDF report ...")
         report_pdf = connector.api.report(report_id, mode="pdf")
 
-        report = Report(report_bundle, report_details, report_pdf, confidence)
+        report = Report(report_bundle, report_details, report_pdf, confidence, identity)
         bundle = report.process()
 
         if bundle is None:
@@ -65,19 +66,13 @@ def process(connector, work_id, current_state):
 
 
 class Report:
-    def __init__(self, bundle, details, pdf, confidence):
+    def __init__(self, bundle, details, pdf, confidence, identity):
         self.bundle = bundle
         self.details = details
         self.pdf = pdf
         self.confidence = confidence
+        self.identity = identity
         self.report_id = details.get("report_id", details.get("reportId", None))
-
-        for identity in utils.retrieve_all(self.bundle, "type", "identity"):
-            if (
-                "Mandiant, Inc." == identity["name"]
-                and "organization" == identity["identity_class"]
-            ):
-                self.identity = identity
 
     def process(self):
         self.save_files()

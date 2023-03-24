@@ -56,13 +56,10 @@ class Mandiant:
             parse(self.mandiant_import_start_date).timestamp()
         )
 
-        # FIXME: replace this identity by the Mandiant official identity
         self.identity = self.helper.api.identity.create(
+            id="identity--28dc7d92-5db5-57d8-9c82-e151d743bb93",
             type="Organization",
-            name="Mandiant",
-            description="Mandiant is recognized by enterprises, governments and "
-            "law enforcement agencies worldwide as the market leader in threat "
-            "intelligence and expertise gained on the frontlines of cyber security.",
+            name="Mandiant, Inc",
         )
 
         self.api = MandiantAPI(
