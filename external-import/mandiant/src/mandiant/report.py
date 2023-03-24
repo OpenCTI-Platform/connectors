@@ -15,7 +15,7 @@ def process(connector, work_id, current_state):
     connector.helper.log_info("Start collecting reports ...")
 
     for report in connector.api.reports(start_epoch=start_epoch, limit=50):
-        report_id = report.get("report_id")
+        report_id = report.get("report_id", report.get("reportId", None))
         report_type = report.get("report_type", report.get("reportType", None))
 
         connector.helper.log_info(
@@ -70,7 +70,7 @@ class Report:
         self.details = details
         self.pdf = pdf
         self.confidence = confidence
-        self.report_id = details.get("report_id")
+        self.report_id = details.get("report_id", details.get("reportId", None))
 
         for identity in utils.retrieve_all(self.bundle, "type", "identity"):
             if (
