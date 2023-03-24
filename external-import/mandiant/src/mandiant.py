@@ -20,6 +20,16 @@ from pycti import (
 )
 from requests.auth import HTTPBasicAuth
 
+def parseInt(valInput,helper=False, valDefault = 1167609600):
+    if isinstance(valInput,int):
+        valOutput = valInput
+    elif isinstance(valInput,str):
+        valOutput = int(valInput.strip() or valDefault)
+    else:
+        if helper:
+            helper.log_info(f"[parseInt] the input type is not managed : type={type(valInput)}")
+        valOutput = valDefault
+    return valOutput
 
 class Mandiant:
     def __init__(self):
@@ -160,6 +170,7 @@ class Mandiant:
             params["end_epoch"] = str(int(end_epoch))
 
         r = requests.get(url, params=params, headers=headers)
+        
         if r.status_code == 200:
             return r.json()
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
@@ -172,7 +183,10 @@ class Mandiant:
             if result and "error" in result:
                 if "future" in result["error"]:
                     return None
-            raise ValueError("An unknown error occurred")
+                if "message" in result["error"]:
+                    raise ValueError((result["error"])["message"])
+                else:
+                    raise ValueError("An unknown error occurred")
 
     def _getreportpdf(self, url, retry=False):
         headers = {
@@ -616,7 +630,7 @@ class Mandiant:
         url = self.mandiant_api_url + "/v4/vulnerability"
         no_more_result = False
         limit = 1000
-        start_epoch = current_state["vulnerability"]
+        start_epoch =  parseInt(current_state["vulnerability"],self.helper)
         end_epoch = start_epoch + 3600
         next = None
         while no_more_result is False:
@@ -708,7 +722,7 @@ class Mandiant:
         url = self.mandiant_api_url + "/v4/indicator"
         no_more_result = False
         limit = 1000
-        start_epoch = current_state["indicator"]
+        start_epoch =  parseInt(current_state["indicator"],self.helper)
         end_epoch = start_epoch + 3600
         next = None
         while no_more_result is False:
@@ -852,7 +866,7 @@ class Mandiant:
         url = self.mandiant_api_url + "/v4/reports"
         no_more_result = False
         limit = 1000
-        start_epoch = current_state["report"]
+        start_epoch =  parseInt(current_state["report"],self.helper) 
         end_epoch = start_epoch + 3600
         next = None
         while no_more_result is False:
