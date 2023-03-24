@@ -16,7 +16,7 @@ from pycti import (
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
-    get_config_variable,
+    get_config_variable
 )
 from requests.auth import HTTPBasicAuth
 
@@ -170,7 +170,6 @@ class Mandiant:
             params["end_epoch"] = str(int(end_epoch))
 
         r = requests.get(url, params=params, headers=headers)
-        
         if r.status_code == 200:
             return r.json()
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
