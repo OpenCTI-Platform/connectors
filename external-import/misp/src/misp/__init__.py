@@ -357,7 +357,7 @@ class MISP:
         data = dict(
             attachments=[],
             references=[],
-            notes=[],
+            note={},
             sectors=[],
             description="",
             report_objects=[],
@@ -375,12 +375,12 @@ class MISP:
         self.confidence = self.helper.connect_confidence_level
 
         if self.convert_threatactor_to_intrusionset:
-            self.transform_threatactor_to_intrusionset(env)
+            self.transform_threatactor_to_intrusionset(env, data)
 
         if self.create_observables:
             self.create_observables_from_indicators(event, env, data)
 
-        self.create_notes(env, data["notes"])
+        self.create_note(env, data)
         self.update_report(env, event, data)
         self.apply_markings(env)
 
@@ -496,14 +496,12 @@ class MISP:
 
         return attachments
 
-    def transform_threatactor_to_intrusionset(self, env):
+    def transform_threatactor_to_intrusionset(self, env, data):
         intrusionset_keys = stix2.IntrusionSet._properties.keys()
         datasource = env.source.data_sources[0]._data
 
         for threatactor in env.query(FILTER_THREATACTOR):
-
             properties = {}
-            custom_properties = {}
 
             for key in dict(threatactor):
 
@@ -511,13 +509,26 @@ class MISP:
                     continue
 
                 if key.startswith("x_"):
-                    custom_properties[key] = threatactor[key]
+                    _key = key
+                    _key = _key.replace("_cfr_", "")
+                    _key = _key.replace("x_misp", "")
+                    _key = _key.replace("_", " ")
+                    _key = _key.strip().title()
+
+                    value = threatactor[key]
+                    if type(value) != list:
+                        value = [value]
+
+                    if _key in data["note"]:
+                        data["note"][_key] += value
+                    else:
+                        data["note"][_key] = value
 
                 if key in intrusionset_keys:
                     properties[key] = threatactor[key]
 
             intrusionset = stix2.IntrusionSet(
-                **properties, custom_properties=properties
+                **properties, custom_properties=properties, allow_custom=True
             )
 
             env.add(intrusionset)
@@ -566,28 +577,31 @@ class MISP:
             report_types=self.report_type,
             external_references=references,
             object_refs=object_refs,
-            custom_properties={
-                # "x_opencti_report_status": 2,
-                "x_opencti_files": attachments
-            },
+            custom_properties={"x_opencti_files": attachments},
             confidence=self.confidence,
         )
         env.add(report)
 
-    def create_notes(self, env, attributes):
-        for attribute in attributes:
-            env.add(
-                stix2.Note(
-                    abstract="Analysis",
-                    content=attribute["value"],
-                    confidence=self.confidence,
-                    created_by_ref=self.identity.id,
-                    object_refs=[self.report],
-                    object_marking_refs=self.report.get("object_marking_refs", []),
-                    note_types=["analysis"],
-                    allow_custom=True,
-                )
+    def create_note(self, env, data):
+        text = ""
+
+        for title, value in data["note"].items():
+            _value = set(value)
+            _value = "* " + "\n* ".join(_value)
+            text += f"\n##### {title}\n{_value}"
+
+        env.add(
+            stix2.Note(
+                abstract="Analysis",
+                content=text,
+                confidence=self.confidence,
+                created_by_ref=self.identity.id,
+                object_refs=[self.report],
+                object_marking_refs=self.report.get("object_marking_refs", []),
+                note_types=["external", "analysis"],
+                allow_custom=True,
             )
+        )
 
     def has_description(self, attribute):
         for key, value in self.description_filter.items():
@@ -619,7 +633,7 @@ class MISP:
                 attribute["category"] == "External analysis"
                 and attribute["type"] == "text"
             ):
-                data["notes"].append(attribute)
+                data["note"]["Analysis"] = [attribute["value"]]
 
             elif self.has_description(attribute):
                 data["description"] = attribute["value"]
