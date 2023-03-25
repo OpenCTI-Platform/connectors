@@ -426,8 +426,9 @@ class MISP:
         parser.parse_misp_event(_event)
 
         for item in parser.stix_objects:
-            env.add(item)
-            data["report_objects"].append(item["id"])
+            if stix2.utils.is_sco(item):
+                env.add(item)
+                data["report_objects"].append(item["id"])
 
     def create_relationship(self, env):
         intrusionsets = []
