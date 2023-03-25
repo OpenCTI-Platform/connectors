@@ -368,6 +368,7 @@ class MISP:
 
         parser = MISPtoSTIX()
         parser.parse_misp_event(event)
+
         env.add(parser.stix_objects)
 
         self.report = env.query(FILTER_REPORT)[0]
@@ -387,7 +388,7 @@ class MISP:
         if self.default_indicators_score:
             self.set_default_indicators_score(env)
 
-        # self.create_relationship(source, destination, relationship)
+        self.create_relationship(env)
 
         if not self.create_reports:
             self.remove_report(env)
@@ -424,30 +425,67 @@ class MISP:
         parser = MISPtoSTIX()
         parser.parse_misp_event(_event)
 
-        env.add(parser.stix_objects)
+        for item in parser.stix_objects:
+            env.add(item)
+            data["report_objects"].append(item["id"])
 
-        data["report_objects"] += [item["id"] for item in parser.stix_objects]
+    def create_relationship(self, env):
+        intrusionsets = []
+        for intrusionset in env.query(FILTER_INTRUSIONSET):
+            intrusionsets.append(intrusionset)
 
-    # def create_relationship(self, env):
-    #     intrusionsets = []
-    #     for intrusionset in env.query(FILTER_INTRUSIONSET):
-    #         intrusionsets.append(intrusionset)
+        mapping = {
+            "location": {
+                "relationship": "targets",
+                "direction": "to"
+            },
+            "attack-pattern": {
+                "relationship": "uses",
+                "direction": "to"
+            },
+            "identity": {
+                "relationship": "targets",
+                "direction": "to"
+            },
+            "indicator": {
+                "relationship": "indicates",
+                "direction": "from"
+            },
+            "malware": {
+                "relationship": "uses",
+                "direction": "to"
+            },
+            "tool": {
+                "relationship": "uses",
+                "direction": "to"
+            },
+            "vulnerability": {
+                "relationship": "targets",
+                "direction": "to"
+            }
+        }
 
-    #     mapping = {
-    #         'threat-actor': 'attributed-to',
-    #         'infrastructure':
-    #     }
+        for item in env.query():
 
-    #     for item in env.query():
-    #         if stix2.utils.is_sco(item) or item.type == 'indicator':
-    #             for intrusionset in intrusionsets:
-    #                 relationship = stix2.Relationship(
-    #                     relationship_type=relationship,
-    #                     source_ref=source.id,
-    #                     target_ref=destination.id,
-    #                     created_by_ref=self.identity.id,
-    #                     allow_custom=True,
-    #                 )
+            if item.type not in mapping.keys():
+                continue
+
+            relationship = mapping[item.type]["relationship"]
+            direction = mapping[item.type]["direction"]
+
+            for intrusionset in intrusionsets:
+                source = intrusionset if direction == "to" else item
+                destination = item if direction == "to" else intrusionset
+
+                env.add(
+                    stix2.Relationship(
+                        relationship_type=relationship,
+                        source_ref=source.id,
+                        target_ref=destination.id,
+                        created_by_ref=self.identity.id,
+                        allow_custom=True,
+                    )
+                )
 
     def remove_report(self, env):
         datasource = env.source.data_sources[0]._data
