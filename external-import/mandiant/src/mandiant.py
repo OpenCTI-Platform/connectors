@@ -164,7 +164,7 @@ class Mandiant:
             params["start_epoch"] = str(int(start_epoch))
         if end_epoch is not None:
             params["end_epoch"] = str(int(end_epoch))
-        
+
         r = requests.get(url, params=params, headers=headers)
         if r.status_code == 200:
             return r.json()
