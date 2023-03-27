@@ -70,6 +70,9 @@ class Mandiant:
             config,
         ).split(",")
         self.added_after = int(parse(self.mandiant_import_start_date).timestamp())
+        self.mandiant_mscore = get_config_variable(
+            "MANDIANT_MSCORE", ["mandiant", "mscore"], config,
+        )
 
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -132,6 +135,7 @@ class Mandiant:
         self,
         url,
         limit=None,
+        gte_mscore=None,
         offset=None,
         next=None,
         start_epoch=None,
@@ -150,6 +154,8 @@ class Mandiant:
         params = {}
         if limit is not None:
             params["limit"] = str(limit)
+        if gte_mscore is not None:
+            params["gte_mscore"] = str(int(gte_mscore))
         if offset is not None:
             params["offset"] = str(offset)
         if next is not None:
@@ -158,13 +164,13 @@ class Mandiant:
             params["start_epoch"] = str(int(start_epoch))
         if end_epoch is not None:
             params["end_epoch"] = str(int(end_epoch))
-
+        
         r = requests.get(url, params=params, headers=headers)
         if r.status_code == 200:
             return r.json()
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
             self._get_token()
-            return self._query(url, limit, offset, next, start_epoch, end_epoch, True)
+            return self._query(url, limit, gte_mscore, offset, next, start_epoch, end_epoch, True)
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
         else:
@@ -710,6 +716,7 @@ class Mandiant:
         limit = 1000
         start_epoch = current_state["indicator"]
         end_epoch = start_epoch + 3600
+        gte_mscore = self.mandiant_mscore
         next = None
         while no_more_result is False:
             self.helper.log_info(
@@ -720,7 +727,7 @@ class Mandiant:
                 + ", next="
                 + str(next)
             )
-            result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            result = self._query(url, limit, gte_mscore, None, next, start_epoch, end_epoch)
             if (
                 result is not None
                 and result["indicators"] is not None
