@@ -13,4 +13,3 @@ Pipfile*
 *.key
 *.crt
 .env
-.vs
