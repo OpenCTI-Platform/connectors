@@ -42,7 +42,7 @@ class Mandiant:
             "MANDIANT_IMPORT_START_DATE", [""], default="2023-01-01"
         )
         self.mandiant_interval = get_config_variable(
-            "MANDIANT_INTERVAL", [""], isNumber=True, default=1
+            "MANDIANT_INTERVAL", [""], isNumber=True, default=120  # minutes
         )
         self.mandiant_report_types_ignored = get_config_variable(
             "MANDIANT_REPORT_TYPES_IGNORED", [""], default="News Analysis"
@@ -123,4 +123,4 @@ class Mandiant:
                     self.helper.log_info("Connector stop")
                     sys.exit(0)
 
-                time.sleep(60)
+                time.sleep(360)
