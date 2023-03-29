@@ -247,7 +247,8 @@ class ExportFileCsv:
                                     "Note",
                                     "Observed-Data",
                                     "Opinion",
-                                    "Case",
+                                    "Case-Incident",
+                                    "Feedback",
                                 ],
                             }
                         )
@@ -261,8 +262,8 @@ class ExportFileCsv:
                                     "Note",
                                     "Observed-Data",
                                     "Opinion",
-                                    "Case",
-                                    "Case",
+                                    "Case-Incident",
+                                    "Feedback",
                                 ],
                             }
                         ]
@@ -280,7 +281,8 @@ class ExportFileCsv:
                     "Opinion": self.helper.api_impersonate.opinion.list,
                     "Report": self.helper.api_impersonate.report.list,
                     "Grouping": self.helper.api_impersonate.grouping.list,
-                    "Case": self.helper.api_impersonate.case.list,
+                    "Case-Incident": self.helper.api_impersonate.case_incident.list,
+                    "Feedback": self.helper.api_impersonate.feedback.list,
                     "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
                     "Identity": self.helper.api_impersonate.identity.list,
                     "Indicator": self.helper.api_impersonate.indicator.list,
