@@ -4,9 +4,10 @@ import time
 from datetime import datetime
 
 import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
+
 from cape.cape import cuckoo, cuckooReport
 from cape.telemetry import openCTIInterface
-from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class capeConnector:
@@ -23,6 +24,12 @@ class capeConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+
+        self.identity = self.helper.api.identity.create(
+            type="Organization",
+            name="CAPEv2 Sandbox",
+            description="CAPEv2 Sandbox.",
+        )["standard_id"]
 
         self.cape_api_url = get_config_variable(
             "CAPE_API_URL", ["cape", "api_url"], config
@@ -89,7 +96,7 @@ class capeConnector:
             if self.first_run:
                 state = self.helper.get_state()
                 self.helper.log_info("Connector has never run")
-                self.helper.log_info(str(state))
+                self.helper.log_info("state=%s" % str(state))
 
                 # Get Last Cape Task Pulled
                 if not state:
@@ -156,6 +163,7 @@ class capeConnector:
                         # Process and submit cape task as stix bundle
                         openCTIInterface(
                             taskSummary,
+                            self.identity,
                             self.helper,
                             self.update_existing_data,
                             [],
