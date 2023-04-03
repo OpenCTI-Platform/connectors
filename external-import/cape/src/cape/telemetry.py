@@ -1,5 +1,17 @@
 from datetime import datetime
 
+from cape.cape import (
+    cuckooPayload,
+    cuckooReport,
+    cuckooReportDomain,
+    cuckooReportHost,
+    cuckooReportICMP,
+    cuckooReportNetwork,
+    cuckooReportProcess,
+    cuckooReportTCPUDP,
+    cuckooReportTTP,
+    cuckooTarget,
+)
 from pycti import Note as pyctiNote
 from pycti import Report as pyctiReport
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
@@ -21,19 +33,6 @@ from stix2.v21 import (
     Relationship,
     Report,
     WindowsRegistryKey,
-)
-
-from cape.cape import (
-    cuckooPayload,
-    cuckooReport,
-    cuckooReportDomain,
-    cuckooReportHost,
-    cuckooReportICMP,
-    cuckooReportNetwork,
-    cuckooReportProcess,
-    cuckooReportTCPUDP,
-    cuckooReportTTP,
-    cuckooTarget,
 )
 
 
