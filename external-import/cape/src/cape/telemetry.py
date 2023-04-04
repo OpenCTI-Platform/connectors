@@ -12,6 +12,8 @@ from cape.cape import (
     cuckooReportTTP,
     cuckooTarget,
 )
+from pycti import Note as pyctiNote
+from pycti import Report as pyctiReport
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import (
     TLP_AMBER,
@@ -26,6 +28,7 @@ from stix2.v21 import (
     IPv4Address,
     Malware,
     NetworkTraffic,
+    Note,
     Process,
     Relationship,
     Report,
@@ -37,6 +40,7 @@ class openCTIInterface:
     def __init__(
         self,
         report: cuckooReport,
+        identity,
         helper: OpenCTIConnectorHelper,
         update,
         labels=[],
@@ -47,6 +51,7 @@ class openCTIInterface:
         ReportScore=0,
     ):
         self.API = helper.api
+        self.identity = identity
         self.helper = helper
         self.CreateIndicator = CreateIndicator
         self.report = report
@@ -308,9 +313,9 @@ class openCTIInterface:
         )
 
         rel = Relationship(
-            source_ref=Filex.id,
+            source_ref=ind.id,
             relationship_type="based-on",
-            target_ref=ind.id,
+            target_ref=Filex.id,
             allow_custom=True,
         )
 
@@ -384,6 +389,7 @@ class openCTIInterface:
                 tlps.append(TLP_RED["id"])
 
         report = Report(
+            id=pyctiReport.generate_id(name, f"```{self.report.info.started}```"),
             name=name,
             report_types="sandbox-report",
             published=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -606,6 +612,104 @@ class openCTIInterface:
         if int(self.report.malscore) >= self.ReportScore:
             # Create Report and link All ATPs/Cyber Obs/Payload
             report = self.createCuckooReport(self.report, IDs, ext_ref)
+
+            if self.report.signatures:
+                content = ""
+                for match in self.report.signatures:
+                    content += f"{match.description}\n"
+                note = Note(
+                    id=pyctiNote.generate_id(
+                        # f"```{self.report.info.started}```", f"```\nYara - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nSignatures - {self.report.target.file.sha256}\n```",
+                    ),
+                    abstract=f"[Signatures]\t{self.report.target.file.sha256}",
+                    content=f"```\n{content}\n```",
+                    # content=f"```\n{self.report.target.file.yara}\n```",
+                    created_by_ref=self.identity,
+                    object_refs=[report.id],
+                    # object_refs=[payload[0]["id"]],
+                )
+                bundle_ids.append(note)
+
+            if self.report.target.file.yara:
+                content = ""
+                for match in self.report.target.file.yara:
+                    content += f"{match['meta']['description']}\n"
+                note = Note(
+                    id=pyctiNote.generate_id(
+                        # f"```{self.report.info.started}```", f"```\nYara - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nYara - {self.report.target.file.sha256}\n```",
+                    ),
+                    abstract=f"[Yara]\t{self.report.target.file.sha256}",
+                    content=f"```\n{content}\n```",
+                    # content=f"```\n{self.report.target.file.yara}\n```",
+                    created_by_ref=self.identity,
+                    object_refs=[report.id],
+                    # object_refs=[payload[0]["id"]],
+                )
+                bundle_ids.append(note)
+
+            if self.report.target.file.cape_yara:
+                content = ""
+                for match in self.report.target.file.cape_yara:
+                    content += f"{match['meta']['description']}\n"
+                note = Note(
+                    id=pyctiNote.generate_id(
+                        # f"```{self.report.info.started}```", f"```\nCape_Yara - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nCape_Yara - {self.report.target.file.sha256}\n```",
+                    ),
+                    abstract=f"[Cape_Yara]\t{self.report.target.file.sha256}",
+                    # abstract=f"{report.name} - Cape_Yara - {self.report.target.file.sha256}",
+                    content=f"```\n{content}\n```",
+                    # content=f"```\n{self.report.target.file.cape_yara}\n```",
+                    created_by_ref=self.identity,
+                    object_refs=[report.id],
+                    # object_refs=[payload[0]["id"]],
+                )
+                bundle_ids.append(note)
+
+            if self.report.target.file.clamav:
+                content = ""
+                for match in self.report.target.file.clamav:
+                    content += f"{match}\n"
+                note = Note(
+                    id=pyctiNote.generate_id(
+                        # f"```{self.report.info.started}```", f"```\nClamav - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nClamav - {self.report.target.file.sha256}\n```",
+                    ),
+                    abstract=f"[Clamav]\t{self.report.target.file.sha256}",
+                    content=f"```\n{content}\n```",
+                    # content=f"```\n{self.report.target.file.clamav}\n```",
+                    created_by_ref=self.identity,
+                    object_refs=[report.id],
+                    # object_refs=[payload[0]["id"]],
+                )
+                bundle_ids.append(note)
+
+            if self.report.target.file.trid:
+                content = ""
+                for match in self.report.target.file.trid:
+                    content += f"{match}\n"
+                note = Note(
+                    id=pyctiNote.generate_id(
+                        # f"```{self.report.info.started}```", f"```\nTrID - {self.report.target.file.sha256}\n```"
+                        None,
+                        f"```\nTrID - {self.report.target.file.sha256}\n```",
+                    ),
+                    abstract=f"[TrID]\t{self.report.target.file.sha256}",
+                    # abstract=f"{report.name} - TrID Analysis - {self.report.target.file.sha256}",
+                    content=f"```\n{content}\n```",
+                    # content=f"```\n{self.report.target.file.trid}\n```",
+                    created_by_ref=self.identity,
+                    object_refs=[report.id],
+                    # object_refs=[payload[0]["id"]],
+                )
+                bundle_ids.append(note)
+
             b = Bundle(
                 report,
                 bundle_ids,
