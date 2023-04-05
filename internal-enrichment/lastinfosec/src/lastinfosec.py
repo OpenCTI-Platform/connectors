@@ -1,11 +1,12 @@
 # coding: utf-8
 
-import os
-import yaml
-import requests
-import time
 import json
+import os
+import sys
+import time
 
+import requests
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
