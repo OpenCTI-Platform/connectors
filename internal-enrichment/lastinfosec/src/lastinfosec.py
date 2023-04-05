@@ -65,10 +65,10 @@ class LastInfoSecEnrichment:
         if self.proxy_https is not None:
             proxy_dic["https"] = self.proxy_https
 
-        body = {"value" : value}
+        body = {"value": value}
         url = "{}/stix21/search/?api_key={}&platform=opencti".format(
-                self.api_url, self.lastinfosec_apikey
-            )
+            self.api_url, self.lastinfosec_apikey
+        )
         response = requests.post(url, json=body)
 
         if response.status_code == 422:
