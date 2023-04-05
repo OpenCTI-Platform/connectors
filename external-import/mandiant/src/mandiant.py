@@ -71,7 +71,9 @@ class Mandiant:
         ).split(",")
         self.added_after = int(parse(self.mandiant_import_start_date).timestamp())
         self.mandiant_mscore = get_config_variable(
-            "MANDIANT_MSCORE", ["mandiant", "mscore"], config,
+            "MANDIANT_MSCORE",
+            ["mandiant", "mscore"],
+            config,
         )
 
         self.identity = self.helper.api.identity.create(
@@ -170,7 +172,9 @@ class Mandiant:
             return r.json()
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
             self._get_token()
-            return self._query(url, limit, gte_mscore, offset, next, start_epoch, end_epoch, True)
+            return self._query(
+                url, limit, gte_mscore, offset, next, start_epoch, end_epoch, True
+            )
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
         else:
@@ -727,7 +731,9 @@ class Mandiant:
                 + ", next="
                 + str(next)
             )
-            result = self._query(url, limit, gte_mscore, None, next, start_epoch, end_epoch)
+            result = self._query(
+                url, limit, gte_mscore, None, next, start_epoch, end_epoch
+            )
             if (
                 result is not None
                 and result["indicators"] is not None
