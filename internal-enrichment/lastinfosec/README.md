@@ -1,4 +1,4 @@
-# ![Image of LastInfoSec](https://www.lastinfosec.com/img/logolastinfosec.png) LastInfoSec Connector for OpenCTI !
+# ![Image of LastInfoSec](LASTINFOSEC_LOGO_NOIR.png) LastInfoSec Connector for OpenCTI !
 
 OpenCTI LastInfoSec connector will use the `/v2/stix21/search_hash/{hash}` and `/v2/stix21/search_host/{host}` API.
 
