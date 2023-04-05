@@ -11,7 +11,7 @@ jobs:
       - checkout
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
-          name: install dependencies
+          name: install dependencies.
           command: pip install black isort --user
       - run:
           name: confirm black version
