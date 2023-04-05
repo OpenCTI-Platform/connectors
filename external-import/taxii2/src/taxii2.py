@@ -229,7 +229,35 @@ class Taxii2Connector:
             added_after = datetime.now() - timedelta(hours=lookback)
             filters["added_after"] = added_after
         self.helper.log_info(f"Polling Collection {collection.title}")
-        self.send_to_server(collection.get_objects(**filters))
+
+        total = None
+        objects = []
+        while total != 0:
+            response = collection.get_objects(**filters)
+            bundleid = response["id"]
+            version = response["spec_version"]
+            total = len(response["objects"])
+            if total > 0:
+                for object in response["objects"]:
+                    # If taxii feed is v2.0 append pattern_type
+                    if version == "2.0":
+                        object["pattern_type"] = "stix"
+                    objects.append(object)
+
+                # Get the manifest for the last object
+                last_obj = response["objects"][-1]
+                manifest = collection.get_manifest(id=last_obj["id"])
+                date_added = manifest["objects"][0]["date_added"]
+                filters["added_after"] = date_added
+
+        # Create bundle
+        new_bundle = {
+            "type": "bundle",
+            "id": bundleid,
+            "spec_version": version,
+            "objects": objects,
+        }
+        self.send_to_server(new_bundle)
 
     def _process_objects(self, stix_bundle: Dict) -> Dict:
         # the list of object types for which the confidence has to be added
