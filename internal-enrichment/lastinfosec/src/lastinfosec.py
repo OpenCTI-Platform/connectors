@@ -35,8 +35,8 @@ class LastInfoSecEnrichment:
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
             source_name="Last Info Sec",
-            url="{}/stix21/search_hash/{}".format(self.api_url, value),
-            description="Last Info Sec Threat Feed",
+            url="{}/stix21/search/".format(self.api_url),
+            description="LastInfoSec Threat Feed",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
             id=observable["id"],
@@ -64,7 +64,7 @@ class LastInfoSecEnrichment:
             proxy_dic["http"] = self.proxy_http
         if self.proxy_https is not None:
             proxy_dic["https"] = self.proxy_https
-        
+
         body = {"value" : value}
         url = "{}/stix21/search/?api_key={}&platform=opencti".format(
                 self.api_url, self.lastinfosec_apikey
