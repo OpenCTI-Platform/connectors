@@ -1,0 +1,12 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Google DNS'
+  scope: 'Domain-Name' # MIME type or SCO
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
