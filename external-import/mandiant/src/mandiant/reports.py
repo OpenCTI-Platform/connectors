@@ -1,68 +1,45 @@
 import base64
 import json
-import time
+import stix2
 
 from . import utils
 
 
-def process(connector, work_id, current_state):
-    start_epoch = current_state.get("report")
-    confidence = connector.helper.connect_confidence_level
-    identity = connector.identity
+def process(connector, report):
+    report_id = report.get("report_id", report.get("reportId", None))
+    report_type = report.get("report_type", report.get("reportType", None))
+    report_title = report.get("title", report.get("reportTitle", None))
 
-    if start_epoch == 0:
-        start_epoch = connector.mandiant_import_start_date
+    connector.helper.log_info(f"Processing report [{report_id}][{report_type}] {report_title} ...")
 
-    connector.helper.log_info("Start collecting reports ...")
+    if report_type not in connector.mandiant_report_types:
+        connector.helper.log_debug(f"Report {report_id} ignored based on type.")
+        return
 
-    for report in connector.api.reports(start_epoch=start_epoch, limit=50):
-        report_id = report.get("report_id", report.get("reportId", None))
-        report_type = report.get("report_type", report.get("reportType", None))
+    report_details = connector.api.report(report_id, "json")
+    report_bundle = connector.api.report(report_id, mode="stix")
+    report_pdf = connector.api.report(report_id, mode="pdf")
 
-        connector.helper.log_info(
-            f"Report collected [{report_id}][{report_type}] {report.get('title')}."
+    report_bundle["objects"] = list(
+        filter(
+            lambda item: not item["id"].startswith("x-"), report_bundle["objects"]
         )
+    )
 
-        if report_type in connector.mandiant_report_types_ignored:
-            connector.helper.log_debug(f"Report ID {report_id} ignored based on type.")
-            continue
+    report = Report(
+        bundle=report_bundle,
+        details=report_details,
+        pdf=report_pdf,
+        confidence=connector.helper.connect_confidence_level,
+        identity=connector.identity,
+    )
 
-        connector.helper.log_debug(f"Start process Report ID {report_id} ...")
+    bundle = report.generate()
 
-        connector.helper.log_debug("Collecting report details ...")
-        report_details = connector.api.report(report_id, "json")
+    if bundle is None:
+        connector.helper.log_error(f"Could not process report {report_id}. Skipping ...")
 
-        connector.helper.log_debug("Collecting STIX bundle ...")
-        report_bundle = connector.api.report(report_id, mode="stix")
-
-        connector.helper.log_debug("Collecting PDF report ...")
-        report_pdf = connector.api.report(report_id, mode="pdf")
-
-        report = Report(report_bundle, report_details, report_pdf, confidence, identity)
-        bundle = report.process()
-
-        if bundle is None:
-            connector.helper.log_debug(f"Start sending Report ID {report_id} ...")
-
-        connector.helper.log_debug(f"Start sending Report ID {report_id} ...")
-
-        connector.helper.send_stix2_bundle(
-            json.dumps(bundle),
-            update=connector.update_existing_data,
-            work_id=work_id,
-            # bypass_split=True
-        )
-
-        connector.helper.log_info(f"Report ID {report_id} sent.")
-
-        time.sleep(1)
-
-    connector.helper.log_info("Reports collection finished.")
-
-    current_state["report"] = utils.unix_timestamp(hours=-2)
-    connector.helper.set_state(current_state)
-
-    return current_state
+    return bundle
 
 
 class Report:
@@ -74,7 +51,7 @@ class Report:
         self.identity = identity
         self.report_id = details.get("report_id", details.get("reportId", None))
 
-    def process(self):
+    def generate(self):
         self.save_files()
         self.convert_threat_actor_to_intrusion_set()
         self.update_identities()
@@ -83,7 +60,7 @@ class Report:
         self.update_intrusionset()
         self.update_vulnerability()
         self.create_note()
-        return self.bundle
+        return stix2.parse(self.bundle, allow_custom=True)
 
     def save_files(self):
         report = utils.retrieve(self.bundle, "type", "report")
@@ -122,9 +99,7 @@ class Report:
             report["x_opencti_files"].append(
                 {
                     "name": f"{self.report_id}.summary.html",
-                    "data": base64.b64encode(
-                        self.details["executive_summary"].encode("utf-8")
-                    ).decode("utf-8"),
+                    "data": base64.b64encode(self.details["executive_summary"].encode("utf-8")).decode("utf-8"),
                     "mime_type": "text/html",
                 }
             )
@@ -133,9 +108,7 @@ class Report:
             report["x_opencti_files"].append(
                 {
                     "name": f"{self.report_id}.threat-detail.html",
-                    "data": base64.b64encode(
-                        self.details["threat_detail"].encode("utf-8")
-                    ).decode("utf-8"),
+                    "data": base64.b64encode(self.details["threat_detail"].encode("utf-8")).decode("utf-8"),
                     "mime_type": "text/html",
                 }
             )
@@ -145,9 +118,7 @@ class Report:
         for intrusion_set in utils.retrieve_all(self.bundle, "type", "intrusion-set"):
             # Goals
             # FIXME: the goals are being inserted in double (tags?)
-            intrusion_set["goals"] = report["x_mandiant_com_metadata"].get(
-                "intended_effects", []
-            )
+            intrusion_set["goals"] = report["x_mandiant_com_metadata"].get("intended_effects", [])
 
             # Motivations
             # FIXME: requires a mapping
@@ -164,25 +135,20 @@ class Report:
         report = utils.retrieve(self.bundle, "type", "report")
 
         risk_rating = None
-        if (
-            "x_mandiant_com_medata" in report
-            and "risk_rating" in report["x_mandiant_com_medata"]
-        ):
+        if "x_mandiant_com_medata" in report and "risk_rating" in report["x_mandiant_com_medata"]:
             risk_rating = report["x_mandiant_com_medata"]["risk_rating"]
 
         for vulnerability in utils.retrieve_all(self.bundle, "type", "vulnerability"):
             for score_item in vulnerability["x_mandiant_com_vulnerability_score"]:
                 if "cvss_version" in score_item.keys():
-                    vulnerability["x_opencti_base_score"] = score_item["base_metrics"][
-                        "base_score"
-                    ]
+                    vulnerability["x_opencti_base_score"] = score_item["base_metrics"]["base_score"]
             if risk_rating:
                 vulnerability["x_opencti_base_severity"] = risk_rating
 
     def update_report(self):
         report = utils.retrieve(self.bundle, "type", "report")
         report["confidence"] = self.confidence
-        report["created_by_ref"] = self.identity["id"]
+        report["created_by_ref"] = self.identity["standard_id"]
 
     def create_note(self):
         # Report Analysis Note
@@ -201,9 +167,7 @@ class Report:
                 continue
 
             if type(report[section]) == str:
-                title = " ".join(
-                    section.replace("x_mandiant_com_", "").split("_")
-                ).title()
+                title = " ".join(section.replace("x_mandiant_com_", "").split("_")).title()
                 data[title] = [report[section]]
                 continue
 
@@ -246,7 +210,7 @@ class Report:
                 "abstract": "Analysis",
                 "content": text,
                 "confidence": self.confidence,
-                "created_by_ref": self.identity["id"],
+                "created_by_ref": self.identity["standard_id"],
                 "object_refs": [report.get("id")],
                 "object_marking_refs": report["object_marking_refs"],
                 "note_types": ["analysis", "external"],
@@ -271,12 +235,8 @@ class Report:
             item["id"] = item.get("id").replace("threat-actor", "intrusion-set")
 
         for rel in utils.retrieve_all(self.bundle, "type", "relationship"):
-            rel["source_ref"] = rel.get("source_ref").replace(
-                "threat-actor", "intrusion-set"
-            )
-            rel["target_ref"] = rel.get("target_ref").replace(
-                "threat-actor", "intrusion-set"
-            )
+            rel["source_ref"] = rel.get("source_ref").replace("threat-actor", "intrusion-set")
+            rel["target_ref"] = rel.get("target_ref").replace("threat-actor", "intrusion-set")
 
             if (
                 rel["relationship_type"] == "located-at"
@@ -287,8 +247,7 @@ class Report:
 
         report = utils.retrieve(self.bundle, "type", "report")
         report["object_refs"] = [
-            reference.replace("threat-actor", "intrusion-set")
-            for reference in report.get("object_refs", [])
+            reference.replace("threat-actor", "intrusion-set") for reference in report.get("object_refs", [])
         ]
 
 

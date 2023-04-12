@@ -9,57 +9,42 @@ from pycti import StixCoreRelationship
 from . import utils
 
 
-def process(connector, work_id, current_state):
-    connector.helper.log_info("Start collecting actors ...")
+def process(connector, actor):
+    actor_id = actor.get("id")
 
-    for actor in connector.api.actors(limit=100):
-        stix_intrusionset = create_stix_intrusionset(connector, actor)
-        actor_id = actor.get("id")
-        actor_details = connector.api.actor(actor_id)
+    connector.helper.log_debug(f"Processing actor {actor_id} ...")
 
-        items = [stix_intrusionset]
+    stix_intrusionset = create_stix_intrusionset(connector, actor)
+    actor_details = connector.api.actor(actor_id)
 
-        for industry in actor_details.get("industries", []):
-            items += create_stix_industry(connector, stix_intrusionset, industry)
+    items = [stix_intrusionset]
 
-        for cve in actor_details.get("cve", []):
-            items += create_stix_vulnerability(connector, stix_intrusionset, cve)
+    for industry in actor_details.get("industries", []):
+        items += create_stix_industry(connector, stix_intrusionset, industry)
 
-        for malware in actor_details.get("malware", []):
-            items += create_stix_malware(connector, stix_intrusionset, malware)
+    for cve in actor_details.get("cve", []):
+        items += create_stix_vulnerability(connector, stix_intrusionset, cve)
 
-        for tool in actor_details.get("tool", []):
-            items += create_stix_tool(connector, stix_intrusionset, tool)
+    for malware in actor_details.get("malware", []):
+        items += create_stix_malware(connector, stix_intrusionset, malware)
 
-        if "locations" in actor_details:
-            for direction in ["source", "destination"]:
-                for location in actor_details["locations"].get(direction, []):
-                    items += create_stix_location(
-                        connector, stix_intrusionset, location, direction
-                    )
+    for tool in actor_details.get("tool", []):
+        items += create_stix_tool(connector, stix_intrusionset, tool)
 
-        connector.helper.log_debug(f"Start sending Actor ID {actor_id} ...")
+    if "locations" in actor_details:
+        for direction in ["source", "destination"]:
+            for location in actor_details["locations"].get(direction, []):
+                items += create_stix_location(connector, stix_intrusionset, location, direction)
 
-        bundle = stix2.Bundle(objects=items, allow_custom=True)
-        connector.helper.send_stix2_bundle(
-            bundle.serialize(), update=connector.update_existing_data, work_id=work_id
-        )
+    bundle = stix2.Bundle(objects=items, allow_custom=True)
 
-        connector.helper.log_info(f"Actor ID {actor_id} sent.")
+    if bundle is None:
+        connector.helper.log_error(f"Could not process actor {actor_id}. Skipping ...")
 
-        time.sleep(1)
-
-    connector.helper.log_info("Actors collection finished.")
-
-    current_state["actor"] = utils.unix_timestamp(hours=-2)
-    connector.helper.set_state(current_state)
-
-    return current_state
+    return bundle
 
 
-def create_stix_relationship(
-    connector, rel_type, source, target, start_time, stop_time=None
-):
+def create_stix_relationship(connector, rel_type, source, target, start_time, stop_time=None):
     start_time = parse(start_time) if start_time else datetime.now(ZoneInfo("UTC"))
     stop_time = parse(stop_time) if stop_time else start_time + timedelta(seconds=+1)
 
@@ -67,9 +52,7 @@ def create_stix_relationship(
         stop_time += timedelta(seconds=+1)
 
     return stix2.Relationship(
-        id=StixCoreRelationship.generate_id(
-            rel_type, source, target, start_time, stop_time
-        ),
+        id=StixCoreRelationship.generate_id(rel_type, source, target, start_time, stop_time),
         relationship_type=rel_type,
         source_ref=source,
         target_ref=target,

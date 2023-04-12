@@ -107,42 +107,20 @@ def create_indicator(connector, indicator):
     )
 
 
-def process(connector, work_id, current_state):
-    current_timestamp = utils.unix_timestamp()
-    last_90_days_limit = utils.unix_timestamp(days=-89)
+def process(connector, indicator):
+    indicator_id = indicator.get("id")
 
-    start_epoch = current_state.get("indicator")
+    connector.helper.log_debug(f"Processing indicator {indicator_id} ...")
 
-    if start_epoch <= last_90_days_limit:
-        start_epoch = last_90_days_limit
+    stix_indicator = create_indicator(connector, indicator)
+    items = [stix_indicator]
 
-    connector.helper.log_info(f"Start collecting indicators from {start_epoch} ...")
+    for attribution in indicator.get("attributed_associations", []):
+        items += [create_stix_relationship(connector, stix_indicator, indicator, attribution)]
 
-    parameters = {
-        "start_epoch": start_epoch,
-        "gte_mscore": connector.mandiant_indicator_minimum_score,
-    }
+    bundle = stix2.Bundle(objects=items, allow_custom=True)
 
-    for indicator in connector.api.indicators(**parameters):
-        stix_indicator = create_indicator(connector, indicator)
-        items = [stix_indicator]
+    if bundle is None:
+        connector.helper.log_error(f"Could not process indicator {indicator_id}. Skipping ...")
 
-        for attribution in indicator.get("attributed_associations", []):
-            items += [
-                create_stix_relationship(
-                    connector, stix_indicator, indicator, attribution
-                )
-            ]
-
-        bundle = stix2.Bundle(objects=items, allow_custom=True)
-        connector.helper.send_stix2_bundle(
-            bundle.serialize(),
-            update=connector.update_existing_data,
-            work_id=work_id,
-        )
-
-    current_state["indicator"] = current_timestamp
-    connector.helper.set_state(current_state)
-    connector.helper.log_info(f"Set Indicator state to {current_state['indicator']}")
-
-    return current_state
+    return bundle

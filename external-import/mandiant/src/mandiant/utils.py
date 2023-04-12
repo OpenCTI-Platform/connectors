@@ -1,8 +1,53 @@
-import datetime
+from datetime import datetime, timezone, timedelta
 import json
 import re
 
 import stix2
+
+
+class Timestamp:
+
+    format = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+    def __init__(self, value):
+        if type(value) == datetime:
+            self._value = value.replace(microsecond=0)
+        else:
+            raise TypeError("Value must be a datetime object")
+
+    @classmethod
+    def from_iso(cls, iso):
+        try:
+            return cls(datetime.fromisoformat(iso).replace(tzinfo=timezone.utc))
+        except ValueError:
+            value = datetime.strptime(iso, Timestamp.format)
+            return cls(value.replace(tzinfo=timezone.utc).replace(microsecond=0))
+
+    @classmethod
+    def from_unix(cls, unix):
+        return cls(datetime.fromtimestamp(int(unix), timezone.utc))
+
+    @classmethod
+    def now(cls):
+        return cls(datetime.now(timezone.utc))
+
+    @property
+    def iso_format(self):
+        return self._value.astimezone(timezone.utc).isoformat()
+
+    @property
+    def unix_format(self):
+        return int(self._value.timestamp())
+
+    @property
+    def value(self):
+        return self._value
+
+    def delta(self, **kwargs):
+        return Timestamp(self.value + timedelta(**kwargs))
+
+    def __str__(self):
+        return str(self._value)
 
 
 def sanitizer(key, object, default=None):
@@ -12,7 +57,7 @@ def sanitizer(key, object, default=None):
 
 
 def unix_timestamp(**kwargs):
-    epoch_in_past = datetime.datetime.now() + datetime.timedelta(**kwargs)
+    epoch_in_past = datetime.now() + timedelta(**kwargs)
     return int(epoch_in_past.timestamp())
 
 
@@ -46,9 +91,7 @@ def clean_intrusionset_aliases(object):
 
 
 def generate_note(data):
-    note = json.loads(
-        stix2.Note(object_refs=data["object_refs"], content="").serialize()
-    )
+    note = json.loads(stix2.Note(object_refs=data["object_refs"], content="").serialize())
     note.update(**data)
     return note
 

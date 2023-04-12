@@ -5,7 +5,8 @@ from mandiant import Mandiant
 
 try:
     mandiantConnector = Mandiant()
-    mandiantConnector.run()
+    while True:
+        mandiantConnector.run()
 except Exception as e:
     print(e)
     time.sleep(10)
