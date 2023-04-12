@@ -193,7 +193,7 @@ Ports: {format_list(result.ports)}
             )
 
             log.debug("Creating domain relationship")
-            self._helper.api.stix_cyber_observable_relationship.create(
+            self._helper.api.stix_ref_relationship.create(
                 fromId=domain["id"],
                 toId=observable["id"],
                 relationship_type="resolves-to",

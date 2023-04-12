@@ -252,7 +252,7 @@ class IvreConnector:
     def link_cyber(
         self, from_id, to_id, firstseen, lastseen, rel_type="x_opencti_linked-to"
     ):
-        self.helper.api.stix_cyber_observable_relationship.create(
+        self.helper.api.stix_ref_relationship.create(
             fromId=from_id,
             toId=to_id,
             createdBy=self.ivre_entity,
