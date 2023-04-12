@@ -20,6 +20,12 @@ class MandiantAPI:
         "actor": "v4/actor/{id}",
         "malwares": "v4/malware",
         "malware": "v4/malware/{id}",
+        "campaigns": "v4/campaign",
+        "campaign": "v4/campaign/{id}",
+        "campaign_timeline": "v4/campaign/{id}/timeline",
+        "campaign_indicators": "v4/campaign/{id}/indicators",
+        "campaign_attack_patterns": "v4/campaign/{id}/attack-pattern",
+        "campaign_reports": "v4/campaign/{id}/reports",
         "indicators": "v4/indicator",
         "vulnerabilities": "v4/vulnerability",
     }
@@ -59,7 +65,6 @@ class MandiantAPI:
             raise ValueError("Mandiant Authentication failed")
 
         self.token = response.json().get("access_token")
-        print(self.token)
 
     def __query(self, url: str, accept: str) -> Union[requests.Response, None]:
         retries = 0
@@ -192,6 +197,20 @@ class MandiantAPI:
             result="vulnerability",
         )
 
+    def campaigns(
+        self, start_epoch: int = None, end_epoch: int = None, limit: int = None, offset: int = None
+    ) -> Iterable[Dict]:
+        return self.__process(
+            name="campaigns",
+            parameters={
+                "start_epoch": start_epoch,
+                "end_epoch": end_epoch,
+                "limit": limit,
+                "offset": offset,
+            },
+            result="campaigns",
+        )
+
     def malwares(self, limit: int = None, offset: int = None) -> Iterable[Dict]:
         return self.__process(
             name="malwares",
@@ -207,3 +226,18 @@ class MandiantAPI:
 
     def malware(self, malware_id: str) -> Dict:
         return next(self.__process(name="malware", item_id=malware_id))
+
+    def campaign(self, campaign_id: str) -> Dict:
+        return next(self.__process(name="campaign", item_id=campaign_id))
+
+    def campaign_timeline(self, campaign_id: str) -> Dict:
+        return next(self.__process(name="campaign_timeline", item_id=campaign_id))
+
+    def campaign_indicators(self, campaign_id: str) -> Dict:
+        return next(self.__process(name="campaign_indicators", item_id=campaign_id))
+
+    def campaign_attack_patterns(self, campaign_id: str) -> Dict:
+        return next(self.__process(name="campaign_attack_patterns", item_id=campaign_id))
+
+    def campaign_reports(self, campaign_id: str) -> Dict:
+        return next(self.__process(name="campaign_reports", item_id=campaign_id))
