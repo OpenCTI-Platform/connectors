@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'LastInfoSec Enrichment'
-  scope: 'StixFile,Domain-Name'
+  scope: 'StixFile,Domain-Name,Hostname,Url'
   auto: true # Enable/disable auto-enrichment of observables
   confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'

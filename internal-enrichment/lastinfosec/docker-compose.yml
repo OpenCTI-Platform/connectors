@@ -8,7 +8,7 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=Last Info Sec Enrichment
-      - CONNECTOR_SCOPE=StixFile,Domain-Name
+      - CONNECTOR_SCOPE=StixFile,Domain-Name,Hostname,Url
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
