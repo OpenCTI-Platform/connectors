@@ -229,6 +229,10 @@ jobs:
           name: Build Docker image opencti/connector-sentinel
           command: docker build -t opencti/connector-sentinel:latest . && docker tag opencti/connector-sentinel:latest opencti/connector-sentinel:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/sentinel
+          name: Build Docker image opencti/connector-cybersixgill
+          command: docker build -t opencti/connector-cybersixgill:latest . && docker tag opencti/connector-cybersixgill:latest opencti/connector-cybersixgill:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -320,6 +324,8 @@ jobs:
             docker push opencti/connector-webhook:${CIRCLE_TAG}
             docker push opencti/connector-sentinel:latest
             docker push opencti/connector-sentinel:${CIRCLE_TAG}
+            docker push opencti/connector-cybersixgill:latest
+            docker push opencti/connector-cybersixgill:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -507,6 +513,14 @@ jobs:
           name: Build Docker image opencti/connector-crits
           command: docker build -t opencti/connector-crits:latest . && docker tag opencti/connector-crits:latest opencti/connector-crits:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/yara
+          name: Build Docker image opencti/connector-yara
+          command: docker build -t opencti/connector-yara:latest . && docker tag opencti/connector-yara:latest opencti/connector-yara:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/ipqs
+          name: Build Docker image opencti/connector-ipqs
+          command: docker build -t opencti/connector-ipqs:latest . && docker tag opencti/connector-ipqs:latest opencti/connector-ipqs:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -596,6 +610,10 @@ jobs:
             docker push opencti/connector-joe-sandbox:${CIRCLE_TAG}
             docker push opencti/connector-crits:latest
             docker push opencti/connector-crits:${CIRCLE_TAG}
+            docker push opencti/connector-yara:latest
+            docker push opencti/connector-yara:${CIRCLE_TAG}
+            docker push opencti/connector-ipqs:latest
+            docker push opencti/connector-ipqs:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -779,6 +797,10 @@ jobs:
           name: Build Docker image opencti/connector-sentinel
           command: docker build -t opencti/connector-sentinel:rolling .
       - run:
+          working_directory: ~/opencti/external-import/cybersixgill
+          name: Build Docker image opencti/connector-cybersixgill
+          command: docker build -t opencti/connector-cybersixgill:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -824,6 +846,7 @@ jobs:
             docker push opencti/connector-silobreaker:rolling
             docker push opencti/connector-webhook:rolling
             docker push opencti/connector-sentinel:rolling
+            docker push opencti/connector-cybersixgill:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1015,6 +1038,14 @@ jobs:
           name: Build Docker image opencti/connector-crits
           command: docker build -t opencti/connector-crits:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/yara
+          name: Build Docker image opencti/connector-yara
+          command: docker build -t opencti/connector-yara:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/ipqs
+          name: Build Docker image opencti/connector-ipqs
+          command: docker build -t opencti/connector-ipqs:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1062,6 +1093,8 @@ jobs:
             docker push opencti/connector-opencsam:rolling
             docker push opencti/connector-joe-sandbox:rolling
             docker push opencti/connector-crits:rolling
+            docker push opencti/connector-yara:rolling
+            docker push opencti/connector-ipqs:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
