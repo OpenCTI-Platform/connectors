@@ -25,6 +25,7 @@ misp:
   create_tags_as_labels: true # Optional, create tags as labels (sanitize MISP tag to OpenCTI labels)
   guess_threats_from_tags: false # Optional, try to guess threats (threat actor, intrusion set, malware, etc.) from MISP tags when they are present in OpenCTI
   author_from_tags: false # Optional, map creator:XX=YY (author of event will be YY instead of the author of the event)
+  enforce_warning_list: false # Optional, enforce warning list in MISP queries
   report_type: 'misp-event' # Optional, report_class if creating report for event
   report_status: 'New' # New, In progress, Analyzed and Closed
   import_from_date: '2010-01-01' # Optional, import all event from this date
