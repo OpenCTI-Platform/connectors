@@ -211,6 +211,18 @@ class Misp:
             config,
             default=True,
         )
+        self.misp_guess_threats_from_tags = get_config_variable(
+            "MISP_GUESS_THREAT_FROM_TAGS",
+            ["misp", "guess_threats_from_tags"],
+            config,
+            default=False,
+        )
+        self.misp_author_from_tags = get_config_variable(
+            "MISP_AUTHOR_FROM_TAGS",
+            ["misp", "author_from_tags"],
+            config,
+            default=False,
+        )
         self.misp_report_type = get_config_variable(
             "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
         )
@@ -579,11 +591,27 @@ class Misp:
 
             ### Pre-process
             # Author
-            author = stix2.Identity(
-                id=Identity.generate_id(event["Event"]["Orgc"]["name"], "organization"),
-                name=event["Event"]["Orgc"]["name"],
-                identity_class="organization",
-            )
+            author = None
+            if self.misp_author_from_tags:
+                if "Tag" in event["Event"]:
+                    event_tags = event["Event"]["Tag"]
+                    for tag in event_tags:
+                        tag_name = tag["name"].lower()
+                        if tag_name.startswith("creator") and "=" in tag_name:
+                            author_name = tag_name.split("=")[1]
+                            author = stix2.Identity(
+                                id=Identity.generate_id(author_name, "organization"),
+                                name=author_name,
+                                identity_class="organization",
+                            )
+            if author is None:
+                author = stix2.Identity(
+                    id=Identity.generate_id(
+                        event["Event"]["Orgc"]["name"], "organization"
+                    ),
+                    name=event["Event"]["Orgc"]["name"],
+                    identity_class="organization",
+                )
             # Markings
             if "Tag" in event["Event"]:
                 event_markings = self.resolve_markings(event["Event"]["Tag"])
@@ -1810,6 +1838,68 @@ class Misp:
                         added_names.append(name)
 
         for tag in tags:
+            # Try to guess from tags
+            if self.misp_guess_threats_from_tags:
+                tag_value_split = tag["name"].split("=")
+                if len(tag_value_split) == 1:
+                    tag_value = tag_value_split[0]
+                else:
+                    tag_value = tag_value_split[1].replace('"', "")
+                threats = self.helper.api.stix_domain_object.list(
+                    types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
+                    filters=[{"key": "name", "values": [tag_value]}],
+                )
+                if len(threats) > 0:
+                    threat = threats[0]
+                    if threat["name"] not in added_names:
+                        if threat["entity_type"] == "Intrusion-Set":
+                            elements["intrusion_sets"].append(
+                                stix2.IntrusionSet(
+                                    id=IntrusionSet.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Malware":
+                            elements["malwares"].append(
+                                stix2.Malware(
+                                    id=IntrusionSet.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Tool":
+                            elements["tools"].append(
+                                stix2.Tool(
+                                    id=Tool.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Intrusion-Set":
+                            elements["attack_patterns"].append(
+                                stix2.AttackPattern(
+                                    id=AttackPattern.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
             # Get the linked intrusion sets
             if (
                 tag["name"].startswith("misp-galaxy:threat-actor")

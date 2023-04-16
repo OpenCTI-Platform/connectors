@@ -21,6 +21,9 @@ misp_feed:
   create_indicators: true # Required, create indicators from attributes
   create_observables: true # Required, create observables from attributes
   create_object_observables: true # Required, create text observables for MISP objects
+  create_tags_as_labels: true # Optional, create tags as labels (sanitize MISP tag to OpenCTI labels)
+  guess_threats_from_tags: false # Optional, try to guess threats (threat actor, intrusion set, malware, etc.) from MISP tags when they are present in OpenCTI
+  author_from_tags: false # Optional, map creator:XX=YY (author of event will be YY instead of the author of the event)
   import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
   import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
   import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value
