@@ -22,7 +22,9 @@ misp:
   create_observables: true # Required, create observables for attributes
   create_object_observables: true # Required, create text observables for MISP objects
   report_description_attribute_filter: '' # Optional, example: "type=comment,category=Internal reference"
-  create_tags_as_labels: true # Optional, create tags as labels
+  create_tags_as_labels: true # Optional, create tags as labels (sanitize MISP tag to OpenCTI labels)
+  guess_threats_from_tags: false # Optional, try to guess threats (threat actor, intrusion set, malware, etc.) from MISP tags when they are present in OpenCTI
+  author_from_tags: false # Optional, map creator:XX=YY (author of event will be YY instead of the author of the event)
   report_type: 'misp-event' # Optional, report_class if creating report for event
   report_status: 'New' # New, In progress, Analyzed and Closed
   import_from_date: '2010-01-01' # Optional, import all event from this date

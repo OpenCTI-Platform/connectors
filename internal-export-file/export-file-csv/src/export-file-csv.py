@@ -121,6 +121,10 @@ class ExportFileCsv:
                 entity_data = self.helper.api_impersonate.stix_cyber_observable.read(
                     id=entity_id
                 )
+            if entity_data is None:
+                raise ValueError(
+                    "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
+                )
             entities_list = []
             if "objectsIds" in entity_data:
                 for id in entity_data["objectsIds"]:
@@ -188,6 +192,10 @@ class ExportFileCsv:
                             self.helper.api_impersonate.stix_sighting_relationship.read(
                                 id=entity_id
                             )
+                        )
+                    if entity_data is None:
+                        raise ValueError(
+                            "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
                         )
                     entities_list.append(entity_data)
 
