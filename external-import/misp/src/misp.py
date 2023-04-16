@@ -223,6 +223,12 @@ class Misp:
             config,
             default=False,
         )
+        self.misp_enforce_warning_list = get_config_variable(
+            "MISP_ENFORCE_WARNING_LIST",
+            ["misp", "enforce_warning_list"],
+            config,
+            default=False,
+        )
         self.misp_report_type = get_config_variable(
             "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
         )
@@ -403,6 +409,8 @@ class Misp:
                 if self.import_keyword is not None:
                     kwargs["value"] = self.import_keyword
                     kwargs["searchall"] = True
+                if self.misp_enforce_warning_list is not None:
+                    kwargs["enforce_warninglist"] = self.misp_enforce_warning_list
                 self.helper.log_info(
                     "Fetching MISP events with args: " + json.dumps(kwargs)
                 )
