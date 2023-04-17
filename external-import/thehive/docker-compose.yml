@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-thehive:
-    image: opencti/connector-thehive:5.6.2
+    image: opencti/connector-thehive:5.7.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

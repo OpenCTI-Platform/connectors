@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-urlscan:
-    image: opencti/connector-urlscan:5.6.2
+    image: opencti/connector-urlscan:5.7.0
     environment:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe

@@ -1,4 +1,4 @@
-pycti==5.6.2
+pycti==5.7.0
 urllib3==1.26.5
 beautifulsoup4==4.11.2
 pdfminer.six==20221105
