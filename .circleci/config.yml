@@ -229,7 +229,7 @@ jobs:
           name: Build Docker image opencti/connector-sentinel
           command: docker build -t opencti/connector-sentinel:latest . && docker tag opencti/connector-sentinel:latest opencti/connector-sentinel:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/sentinel
+          working_directory: ~/opencti/external-import/cybersixgill
           name: Build Docker image opencti/connector-cybersixgill
           command: docker build -t opencti/connector-cybersixgill:latest . && docker tag opencti/connector-cybersixgill:latest opencti/connector-cybersixgill:${CIRCLE_TAG}
       - run:
