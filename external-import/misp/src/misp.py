@@ -17,6 +17,7 @@ from pycti import (
     Location,
     Malware,
     Note,
+    MarkingDefinition,
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
@@ -220,6 +221,12 @@ class Misp:
         self.misp_author_from_tags = get_config_variable(
             "MISP_AUTHOR_FROM_TAGS",
             ["misp", "author_from_tags"],
+            config,
+            default=False,
+        )
+        self.misp_markings_from_tags = get_config_variable(
+            "MISP_MARKINGS_FROM_TAGS",
+            ["misp", "markings_from_tags"],
             config,
             default=False,
         )
@@ -2151,6 +2158,24 @@ class Misp:
         markings = []
         for tag in tags:
             tag_name = tag["name"].lower()
+            if self.misp_markings_from_tags:
+                if (
+                    tag_name.startswith("marking")
+                    and ":" in tag_name
+                    and "=" in tag_name
+                ):
+                    marking_definition = tag_name.split(":")[1]
+                    marking_type = marking_definition.split("=")[0]
+                    marking_name = marking_definition.split("=")[1]
+                    marking = stix2.MarkingDefinition(
+                        id=MarkingDefinition.generate_id(marking_type, marking_name),
+                        definition_type="statement",
+                        definition={"statement": "custom"},
+                        allow_custom=True,
+                        x_opencti_definition_type=marking_type,
+                        x_opencti_definition=marking_name,
+                    )
+                    markings.append(marking)
             if tag_name == "tlp:clear":
                 markings.append(stix2.TLP_WHITE)
             if tag_name == "tlp:white":
@@ -2160,7 +2185,15 @@ class Misp:
             if tag_name == "tlp:amber":
                 markings.append(stix2.TLP_AMBER)
             if tag_name == "tlp:amber+strict":
-                markings.append(stix2.TLP_AMBER)
+                marking = stix2.MarkingDefinition(
+                    id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                    definition_type="statement",
+                    definition={"statement": "custom"},
+                    allow_custom=True,
+                    x_opencti_definition_type="TLP",
+                    x_opencti_definition="TLP:AMBER+STRICT",
+                )
+                markings.append(marking)
             if tag_name == "tlp:red":
                 markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
