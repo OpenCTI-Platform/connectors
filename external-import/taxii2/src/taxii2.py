@@ -6,6 +6,7 @@ import sys
 import time
 from datetime import datetime, timedelta
 from typing import Dict
+import uuid
 
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
@@ -230,34 +231,46 @@ class Taxii2Connector:
             filters["added_after"] = added_after
         self.helper.log_info(f"Polling Collection {collection.title}")
 
+        # Initial request
         total = None
-        objects = []
-        while total != 0:
-            response = collection.get_objects(**filters)
-            bundleid = response["id"]
-            version = response["spec_version"]
-            total = len(response["objects"])
-            if total > 0:
-                for object in response["objects"]:
-                    # If taxii feed is v2.0 append pattern_type
-                    if version == "2.0":
-                        object["pattern_type"] = "stix"
-                    objects.append(object)
+        response = collection.get_objects(**filters)
+        if "objects" in response:
+            objects = []
+            while total != 0:
+                # Taxii 2.1 servers are not required to send data in bundle
+                if "spec_version" not in response:
+                    version = response["objects"][0]["spec_version"]
+                else:
+                    version = response["spec_version"]
+                total = len(response["objects"])
+                if total > 0:
+                    for object in response["objects"]:
+                        # If taxii feed is v2.0 append pattern_type
+                        if version == "2.0":
+                            object["pattern_type"] = "stix"
+                        objects.append(object)
 
-                # Get the manifest for the last object
-                last_obj = response["objects"][-1]
-                manifest = collection.get_manifest(id=last_obj["id"])
-                date_added = manifest["objects"][0]["date_added"]
-                filters["added_after"] = date_added
+                    # Get the manifest for the last object
+                    last_obj = response["objects"][-1]
+                    manifest = collection.get_manifest(id=last_obj["id"])
+                    date_added = manifest["objects"][0]["date_added"]
+                    filters["added_after"] = date_added
 
-        # Create bundle
-        new_bundle = {
-            "type": "bundle",
-            "id": bundleid,
-            "spec_version": version,
-            "objects": objects,
-        }
-        self.send_to_server(new_bundle)
+                    # Get the next set of objects
+                    response = collection.get_objects(**filters)
+                    if "objects" in response and len(response["objects"]) > 0:
+                        total = len(response["objects"])
+                    else:
+                        total = 0
+
+            # Create bundle
+            new_bundle = {
+                "type": "bundle",
+                "id": f"bundle--{str(uuid.uuid4())}",
+                "spec_version": version,
+                "objects": objects,
+            }
+            self.send_to_server(new_bundle)
 
     def _process_objects(self, stix_bundle: Dict) -> Dict:
         # the list of object types for which the confidence has to be added
