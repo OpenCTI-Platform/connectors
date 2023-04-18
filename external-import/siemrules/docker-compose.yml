@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-taxii2:
-    image: opencti/connector-siemrules:5.7.0
+    image: opencti/connector-siemrules:5.7.1
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME

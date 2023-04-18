@@ -1,3 +1,3 @@
-pycti==5.7.0
+pycti==5.7.1
 pydantic==1.8.2
 lxml==4.9.1
