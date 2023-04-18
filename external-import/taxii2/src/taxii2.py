@@ -4,9 +4,9 @@ import json
 import os
 import sys
 import time
+import uuid
 from datetime import datetime, timedelta
 from typing import Dict
-import uuid
 
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
