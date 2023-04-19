@@ -12,7 +12,7 @@ services:
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
-      - HATCHING_TRIAGE_SANDBOX_BASE_URL=https://api.tria.ge # Public URL, see https://tria.ge/docs/
+      - HATCHING_TRIAGE_SANDBOX_BASE_URL=https://tria.ge/api # Public URL, see https://tria.ge/docs/
       - HATCHING_TRIAGE_SANDBOX_TOKEN=ChangeMe # See https://tria.ge/account
       - HATCHING_TRIAGE_SANDBOX_USE_EXISTING_ANALYSIS=true # If true, get existing analysis if any
       - HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR=#0059f7 # Label color for family
