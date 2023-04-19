@@ -259,8 +259,8 @@ class ExportFileCsv:
                                     "Feedback",
                                     "Case-Rfi",
                                     "Case-Rft",
-                                    'Case-Task',
-                                    'Case-Template',
+                                    "Case-Task",
+                                    "Case-Template",
                                 ],
                             }
                         )
@@ -278,8 +278,8 @@ class ExportFileCsv:
                                     "Case-Rft",
                                     "Case-Incident",
                                     "Feedback",
-                                    'Case-Task',
-                                    'Case-Template',
+                                    "Case-Task",
+                                    "Case-Template",
                                 ],
                             }
                         ]
