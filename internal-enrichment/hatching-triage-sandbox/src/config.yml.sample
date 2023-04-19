@@ -12,7 +12,7 @@ connector:
   log_level: 'info'
 
 hatching_triage_sandbox:
-  base_url: 'https://api.tria.ge' # See https://tria.ge/docs/
+  base_url: 'https://tria.ge/api' # See https://tria.ge/docs/
   token: 'ChangeMe' # See https://tria.ge/account
   use_existing_analysis: true # If true, get existing analysis if any
   family_color: '#0059f7' # Label color for family
