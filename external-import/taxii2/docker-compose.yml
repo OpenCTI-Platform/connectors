@@ -23,4 +23,6 @@ services:
       - TAXII2_VERIFY_SSL=true
       - TAXII2_CREATE_INDICATORS=true # Generate indicators for ingested observables
       - TAXII2_CREATE_OBSERVABLES=true # Generate observables for ingested indicators
+      - TAXII2_ADD_CUSTOM_LABEL=false # Enable custom label
+      - TAXII2_CUSTOM_LABEL= # Custom label added to all objects
     restart: always
