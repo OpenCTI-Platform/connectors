@@ -254,7 +254,7 @@ class ShodanConnector:
             )
 
         # Link ASN to Observable
-        self.helper.api.stix_ref_relationship.create(
+        self.helper.api.stix_nested_ref_relationship.create(
             fromId=observable["id"],
             toId=asn["id"],
             relationship_type="obs_belongs-to",
@@ -273,7 +273,7 @@ class ShodanConnector:
 
         # Link Domains to Observable
         for domain in domains:
-            self.helper.api.stix_ref_relationship.create(
+            self.helper.api.stix_nested_ref_relationship.create(
                 fromId=domain["id"],
                 toId=observable["id"],
                 relationship_type="obs_resolves-to",
