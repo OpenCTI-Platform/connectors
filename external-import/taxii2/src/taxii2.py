@@ -258,14 +258,12 @@ class Taxii2Connector:
                         if version == "2.0":
                             object["pattern_type"] = "stix"
                         # Add a custom label
+                        new_labels = []
                         if "labels" in object:
-                            labels = list(object["labels"])
-                        if "labels" not in object:
-                            labels = []
+                            new_labels = object["labels"]
                         if self.add_custom_label == True:
-                            labels.append(self.custom_label)
-                        # Assign the new list of labels back to the object
-                        object["labels"] = labels
+                            new_labels.append(self.custom_label)
+                            object["labels"] = new_labels
                         objects.append(object)
 
                     # Get the manifest for the last object
