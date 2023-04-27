@@ -1,7 +1,7 @@
 from datetime import datetime
+
 import requests
 from requests.exceptions import HTTPError
-
 
 # ------------------------------------------------------------------
 # This is a Class to serialize the Cuckoo API /tasks/Summary JSON
@@ -69,21 +69,28 @@ class cuckooTarget:
         self.yara = self.getYara()
         self.cape_yara = self.getCapeYara()
         self.clamav = self.getclamav()
+        self.trid = self.json["trid"]
 
     def getYara(self):
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def getCapeYara(self):
         yara_matches = []
         for match in self.json["cape_yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def getclamav(self):
         clam_matches = []
         for match in self.json["clamav"]:
-            clam_matches.append({"name": match["name"], "meta": match["meta"]})
+            if isinstance(match, dict):
+                clam_matches.append({"name": match["name"], "meta": match["meta"]})
+            else:
+                clam_matches.append(match)
+        return clam_matches
 
     def __str__(self):
         return self.name
@@ -107,7 +114,6 @@ class cuckooReportTarget:
 
 class cuckooReportSignature:
     def __init__(self, signature_json):
-
         self.json = signature_json
 
         # Get Basic info
@@ -116,6 +122,7 @@ class cuckooReportSignature:
         self.name = self.json["name"]
         self.confidence = self.json["confidence"]
         self.references = self.json["references"]
+        self.data = self.json["data"]
         self.new_data = self.json["new_data"]
         self.alert = self.json["alert"]
         self.severity = self.json["severity"]
@@ -141,6 +148,7 @@ class cuckooReportExtracted:
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def __str__(self):
         return f"[{str(self.pid)}][{self.category}] {self.raw.split('/')[-1]}"
@@ -170,6 +178,7 @@ class cuckooReportDropped:
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def __str__(self):
         return self.name
@@ -197,6 +206,7 @@ class cuckooReportBuffer:
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def __str__(self):
         return self.name
@@ -424,7 +434,7 @@ class cuckooReportNetwork:
 
     def getHTTPEX(self):
         requests = []
-        if not "http_ex" in self.json:
+        if "http_ex" not in self.json:
             return []
 
         for reqObj in self.json["http_ex"]:
@@ -439,7 +449,6 @@ class cuckooReportNetwork:
 
 class cuckooReportBehaviorSummary:
     def __init__(self, report_json):
-
         self.json = report_json["behavior"]["summary"]
 
         if "files" in self.json:
@@ -511,7 +520,6 @@ class cuckooReportBehaviorSummary:
 
 class cuckooReportProcessEnviron:
     def __init__(self, environ_json):
-
         self.json = environ_json
 
         # Get Basic info
@@ -573,7 +581,6 @@ class cuckooReportProcessEnviron:
 
 class cuckooReportProcess:
     def __init__(self, process_json, children=[]):
-
         self.json = process_json
 
         # Get Basic info
@@ -612,7 +619,6 @@ class cuckooReportProcess:
 
 class cuckooReportTTP:
     def __init__(self, ttp_json):
-
         self.json = ttp_json
 
         # Get Basic info
@@ -650,21 +656,28 @@ class cuckooPayload:
         self.yara = self.getYara()
         self.cape_yara = self.getCapeYara()
         self.clamav = self.getclamav()
+        self.trid = self.json["trid"]
 
     def getYara(self):
         yara_matches = []
         for match in self.json["yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def getCapeYara(self):
         yara_matches = []
         for match in self.json["cape_yara"]:
             yara_matches.append({"name": match["name"], "meta": match["meta"]})
+        return yara_matches
 
     def getclamav(self):
         clam_matches = []
         for match in self.json["clamav"]:
-            clam_matches.append({"name": match["name"], "meta": match["meta"]})
+            if isinstance(match, dict):
+                clam_matches.append({"name": match["name"], "meta": match["meta"]})
+            else:
+                clam_matches.append(match)
+        return clam_matches
 
     def __str__(self):
         return self.name
@@ -700,7 +713,6 @@ class cuckooReport:
             self.network = None
 
         if "behavior" in report_json:
-
             if "processtree" in report_json["behavior"]:
                 self.process = self.getProcesses(report_json["behavior"]["processtree"])
             else:
@@ -742,7 +754,7 @@ class cuckooReport:
 
     def getReportTTPs(self):
         TTPs = []
-        if not "ttps" in self.report_json:
+        if "ttps" not in self.report_json:
             return []
         for sig in self.report_json["ttps"]:
             sigObj: cuckooReportTTP = cuckooReportTTP(sig)
@@ -752,7 +764,7 @@ class cuckooReport:
 
     def getReportSignatures(self):
         signatures = []
-        if not "signatures" in self.report_json:
+        if "signatures" not in self.report_json:
             return []
         for sig in self.report_json["signatures"]:
             sigObj: cuckooReportSignature = cuckooReportSignature(sig)

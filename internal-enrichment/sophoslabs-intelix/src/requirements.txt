@@ -1,0 +1,2 @@
+pycti==5.7.2
+validators==0.20.0

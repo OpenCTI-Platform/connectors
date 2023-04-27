@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link href="intrusion-set.css" rel="stylesheet">
+    <title>{{ entities.intrusion_set.0.name }}_{{ report_date }}</title>
+    <meta name="description" content="{{ entities.intrusion_set.0.name }}_{{ report_date }}">
+  </head>
+
+  <body>
+    <article id="cover">
+      <div id="report-date">{{ report_date }}</div>
+      <div id="report-heading">Intrusion Set Report</div>
+      <div id="report-sub-heading">{{ entities.intrusion_set.0.name }}</div>
+      <div id="report-address">
+        <address style="margin-right: 1cm;">
+          {{ company_address_line_1 }}
+          {{ company_address_line_2 }}
+          {{ company_address_line_3 }}
+          {{ company_phone_number }}
+        </address>
+        <address style="margin-left: 1cm;">
+          {{ company_email }}
+          {{ company_website }}
+        </address>
+      </div>
+    </article>
+
+    <article id="contents">
+      <h2>Table of contents</h2>
+      <h3>Overview</h3>
+      <ul>
+        <li><a href="#author-title"></a></li>
+        <li><a href="#created-at-title"></a></li>
+        <li><a href="#description-title"></a></li>
+        <li><a href="#confidence-title"></a></li>
+        <li><a href="#marking-definitions-title"></a></li>
+        <li><a href="#labels-title"></a></li>
+        {% if entities.intrusion_set.0.aliases is not none %}
+        <li><a href="#aliases-title"></a></li>
+        {% endif %}
+        <li><a href="#first-seen-title"></a></li>
+        <li><a href="#last-seen-title"></a></li>
+        <li><a href="#originates-from-title"></a></li>
+        {% if entities.intrusion_set.0.resource_level is not none %}
+        <li><a href="#resource-level-title"></a></li>
+        {% endif %}
+        {% if entities.intrusion_set.0.goals is not none %}
+        <li><a href="#goals-title"></a></li>
+        {% endif %}
+        {% if entities.intrusion_set.0.primary_motivation is not none %}
+        <li><a href="#primary-motivation-title"></a></li>
+        {% endif %}
+        {% if entities.intrusion_set.0.secondary_motivations is not none %}
+        <li><a href="#secondary-motivations-title"></a></li>
+        {% endif %}
+        {% if entities.intrusion_set.0.externalReferences %}
+        <li><a href="#sources-title"></a></li>
+        {% endif %}
+      </ul>
+      <h3>Entities</h3>
+      <ul>
+        {% if entities.threat_actor %}
+        <li><a href="#threat-actors-title"></a></li>
+        {% endif %}
+        {% if entities.indicator %}
+        <li><a href="#indicators-title"></a></li>
+        {% endif %}
+        {% if entities.attack_pattern %}
+        <li><a href="#attack-patterns-title"></a></li>
+        {% endif %}
+        {% if entities.tool %}
+        <li><a href="#tools-title"></a></li>
+        {% endif %}
+        {% if entities.vulnerability %}
+        <li><a href="#vulnerabilities-title"></a></li>
+        {% endif %}
+        {% if entities.malware %}
+        <li><a href="#malwares-title"></a></li>
+        {% endif %}
+        <li><a href="#targets-title"></a></li>
+        {% if entities.campaign %}
+        <li><a href="#campaigns-title"></a></li>
+        {% endif %}
+        {% if entities.incident %}
+        <li><a href="#incidents-title"></a></li>
+        {% endif %}
+        {% if entities.infrastructure %}
+        <li><a href="#infrastructures-title"></a></li>
+        {% endif %}
+      </ul>
+    </article>
+
+    <article id="columns">
+      <h2>Overview</h2>
+      <section>
+        <h3 id="author-title">
+          Author
+        </h3>
+        <p>
+          {{ entities.intrusion_set.0.createdBy.name }}
+        </p>
+      </section>
+      <section>
+        <h3 id="created-at-title">
+          Created At
+        </h3>
+        <p>
+          {{ entities.intrusion_set.0.created_at }}
+        </p>
+      </section>
+      <section>
+        <h3 id="description-title">
+          Description
+        </h3>
+        <p>
+          {{ entities.intrusion_set.0.description }}
+        </p>
+      </section>
+      <section>
+        <h3 id="confidence-title">
+          Confidence
+        </h3>
+        <p>
+          {{ entities.intrusion_set.0.confidence }} / 100
+          <br>
+          <em>
+            This value represents the confidence in the correctness of the data contained within this report.
+          </em>
+        </p>
+      </section>
+      <section>
+        <h3 id="marking-definitions-title">
+          Marking Definitions
+        </h3>
+        <ul>
+        {% for marking_definiton in entities.intrusion_set.0.objectMarking %}
+        <li>{{ marking_definiton.definition }}</li>
+        {% endfor %}
+        </ul>
+      </section>
+      <section>
+        <h3 id="labels-title">
+          Labels
+        </h3>
+        <ul>
+        {% for label in entities.intrusion_set.0.objectLabel %}
+        <li>{{ label.value }}</li>
+        {% endfor %}
+        </ul>
+      </section>
+      {% if entities.intrusion_set.0.aliases is not none %}
+      <section>
+        <h3 id="aliases-title">
+          Aliases
+        </h3>
+        <ul>
+        {% for alias in entities.intrusion_set.0.aliases %}
+          <li>{{ alias }}</li>
+        {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+      <section>
+        <h3 id="first-seen-title">
+          First Seen
+        </h3>
+        <p>
+          {{ entities.intrusion_set.0.first_seen }}
+        </p>
+      </section>
+      <section>
+        <h3 id="last-seen-title">
+          Last Seen
+        </h3>
+        <p>
+          {{ entities.intrusion_set.0.last_seen }}
+        </p>
+      </section>
+      <section>
+        <h3 id="originates-from-title">
+          Originates From
+        </h3>
+        <ul>
+          {% for relationship in entities.relationship %}
+          {% if relationship.entity_type == "originates-from" %}
+            <li>{{ relationship.to.name }}</li>
+          </table>
+          {% endif %}
+          {% endfor %}
+        </ul>
+      </section>
+      {% if entities.intrusion_set.0.resource_level is not none %}
+      <section>
+        <h3 id="resource-level-title">
+          Resource Level
+        </h3>
+        <p>
+          {{ entities.intrusion_set.0.resource_level }}
+        </p>
+      </section>
+      {% endif %}
+      {% if entities.intrusion_set.0.goals is not none %}
+      <section>
+        <h3 id="goals-title">
+          Goals
+        </h3>
+        <ul>
+          {% for goal in entities.intrusion_set.0.goals %}
+          <li>{{ goal }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+      {% if entities.intrusion_set.0.primary_motivation is not none %}
+      <section>
+        <h3 id="primary-motivation-title">
+          Primary Motivation
+        </h3>
+        <p>
+          {{ entities.intrusion_set.0.primary_motivation }}
+        </p>
+      </section>
+      {% endif %}
+      {% if entities.intrusion_set.0.secondary_motivations is not none %}
+      <section>
+        <h3 id="secondary-motivations-title">
+          Secondary Motivations
+        </h3>
+        <ul>
+          {% for secondary_motivation in entities.intrusion_set.0.secondary_motivations %}
+            <li>{{ secondary_motivation }}</li>
+          {% endfor %}
+          </ul>
+      </section>
+      {% endif %}
+      {% if entities.intrusion_set.0.externalReferences %}
+      <section>
+        <h3 id="sources-title">
+          Sources
+        </h3>
+        <ul>
+        {% for external_ref in entities.intrusion_set.0.externalReferences %}
+          <li><a href="{{ external_ref.url }}" target="_blank">{{ external_ref.url }}</a></li>
+        {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+    </article>
+
+    <article id="entities">
+      {% if entities.threat_actor %}
+      <h2 id="threat-actors-title">Threat Actors</h2>
+      <section id="threat-actors">
+      {% for threat_actor in entities.threat_actor %}
+        <table>
+          <tbody>
+          <tr>
+            <th>Name</th>
+          </tr>
+          <tr>
+            <td>
+              {{ threat_actor.name }}
+            </td>
+          </tr>
+          {% if threat_actor.description %}
+            <tr>
+              <th>Description</th>
+            </tr>
+            <tr>
+              <td>
+                {{ threat_actor.description }}
+              </td>
+            </tr>
+          {% endif %}
+          {% if threat_actor.objectMarking %}
+            <tr>
+              <th>Marking Definitions</th>
+            </tr>
+            <tr>
+              <td>
+                {% for marking in threat_actor.objectMarking %}
+                <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+                {% endfor %}
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+        </table>
+      {% endfor %}
+      </section>
+      {% endif %}
+      {% if entities.indicator %}
+      <h2 id="indicators-title">Indicators</h2>
+      <section id="indicators">
+      {% for indicator in entities.indicator %}
+        <table>
+        <tbody>
+          <tr>
+            <th>Name</th>
+          </tr>
+          <tr>
+            <td>
+              {{ indicator.name }}
+            </td>
+          </tr>
+          {% if indicator.description %}
+          <tr>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>
+              {{ indicator.description }}
+            </td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th>Pattern Type</th>
+          </tr>
+          <tr>
+            <td>
+              {{ indicator.pattern_type }}
+            </td>
+          </tr>
+          <tr>
+            <th>Pattern</th>
+          </tr>
+          <tr>
+            <td>
+              <pre>{{ indicator.pattern|escape }}</pre>
+            </td>
+          </tr>
+          <tr>
+            <th>Created At</th>
+          </tr>
+          <tr>
+            <td>
+              {{ indicator.created }}
+            </td>
+          </tr>
+          <tr>
+            <th>Valid From</th>
+          </tr>
+          <tr>
+            <td>
+              {{ indicator.valid_from }}
+            </td>
+          </tr>
+          <tr>
+            <th>Valid Until</th>
+          </tr>
+          <tr>
+            <td>
+              {{ indicator.valid_until }}
+            </td>
+          </tr>
+          {% if indicator.objectMarking %}
+          <tr>
+            <th>Marking Definitions</th>
+          </tr>
+          <tr>
+            <td>
+              {% for marking in indicator.objectMarking %}
+              <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+          </tbody>
+        </table>
+      {% endfor %}
+      </section>
+      {% endif %}
+      {% if entities.attack_pattern %}
+      <h2 id="attack-patterns-title">Attack Patterns</h2>
+      <section id="attack-patterns">
+      {% for attack in entities.attack_pattern %}
+        <table>
+        <tbody>
+        <tr>
+          <th>Name</th>
+        </tr>
+        <tr>
+          <td>
+            {{ attack.name }}
+          </td>
+        </tr>
+        {% if attack.description %}
+        <tr>
+          <th>Name</th>
+        </tr>
+        <tr>
+          <td>
+            {{ attack.name }}
+          </td>
+        </tr>
+        {% endif %}
+        {% if attack.objectMarking %}
+        <tr>
+          <th>Marking Definitions</th>
+        </tr>
+        <tr>
+          <td>
+            {% for marking in attack.objectMarking %}
+            <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endif %}
+        </tbody>
+        </table>
+      {% endfor %}
+      </section>
+      {% endif %}
+      {% if entities.tool %}
+      <h2 id="tools-title">Tools</h2>
+      <section id="tools">
+      {% for tool in entities.tool %}
+        <table>
+        <tbody>
+        <tr>
+          <th>Name</th>
+        </tr>
+        <tr>
+          <td>
+            {{ tool.name }}
+          </td>
+        </tr>
+        {% if tool.description %}
+        <tr>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>
+            {{ tool.description }}
+          </td>
+        </tr>
+        {% endif %}
+        {% if tool.objectMarking %}
+        <tr>
+          <th>Marking Definitions</th>
+        </tr>
+        <tr>
+          <td>
+            {% for marking in tool.objectMarking %}
+            <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+      </table>
+      {% endfor %}
+      </section>
+      {% endif %}
+      {% if entities.vulnerability %}
+      <h2 id="vulnerabilities-title">Vulnerabilities</h2>
+      <section id="vulnerabilities">
+        {% for vulnerability in entities.vulnerability %}
+          <table>
+          <tbody>
+          <tr>
+            <th>Name</th>
+          </tr>
+          <tr>
+            <td>
+              {{ vulnerability.name }}
+            </td>
+          </tr>
+          {% if vulnerability.description %}
+          <tr>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>
+              {{ vulnerability.description }}
+            </td>
+          </tr>
+          {% endif %}
+          {% if vulnerability.objectMarking %}
+          <tr>
+            <th>Marking Definitions</th>
+          </tr>
+          <tr>
+            <td>
+              {% for marking in vulnerability.objectMarking %}
+              <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+        </table>
+        {% endfor %}
+      </section>
+      {% endif %}
+      {% if entities.malware %}
+      <h2 id="malwares-title">Malwares</h2>
+      <section id="malwares">
+        {% for malware in entities.malware %}
+          <table>
+          <tbody>
+          <tr>
+            <th>Name</th>
+          </tr>
+          <tr>
+            <td>
+              {{ malware.name }}
+            </td>
+          </tr>
+          {% if malware.description %}
+          <tr>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>
+              {{ malware.description }}
+            </td>
+          </tr>
+          {% endif %}
+          {% if malware.objectMarking %}
+          <tr>
+            <th>Marking Definitions</th>
+          </tr>
+          <tr>
+            <td>
+              {% for marking in malware.objectMarking %}
+              <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+        </table>
+        {% endfor %}
+      </section>
+      {% endif %}
+      <h2 id="targets-title">Targets</h2>
+      <section id="targets">
+        {% for relationship in entities.relationship %}
+        {% if relationship.entity_type == "targets" %}
+          <table>
+          <tbody>
+          <tr>
+            <th>Name</th>
+          </tr>
+          <tr>
+            <td>
+              {{ relationship.to.name }}
+            </td>
+          </tr>
+          </tbody>
+          </table>
+        {% endif %}
+        {% endfor %}
+        {% if target_map_country %}
+        <img src="{{ target_map_country }}" style="max-width:100%;max-height:100%;"/>
+        {% endif %}
+      </section>
+      {% if entities.campaign %}
+      <h2 id="campaigns-title">Campaigns</h2>
+      <section id="campaigns">
+        {% for campaign in entities.campaign %}
+          <table>
+          <tbody>
+          <tr>
+            <th>Name</th>
+          </tr>
+          <tr>
+            <td>
+              {{ campaign.name }}
+            </td>
+          </tr>
+          {% if campaign.description %}
+          <tr>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>
+              {{ campaign.description }}
+            </td>
+          </tr>
+          {% endif %}
+          {% if campaign.objectMarking %}
+          <tr>
+            <th>Marking Definitions</th>
+          </tr>
+          <tr>
+            <td>
+              {% for marking in campaign.objectMarking %}
+              <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+        </table>
+        {% endfor %}
+      </section>
+      {% endif %}
+      {% if entities.incident %}
+      <h2 id="incidents-title">Incidents</h2>
+      <section id="incidents">
+        {% for incident in entities.incident %}
+          <table>
+          <tbody>
+          <tr>
+            <th>Name</th>
+          </tr>
+          <tr>
+            <td>
+              {{ incident.name }}
+            </td>
+          </tr>
+          {% if incident.description %}
+          <tr>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>
+              {{ incident.description }}
+            </td>
+          </tr>
+          {% endif %}
+          {% if incident.objectMarking %}
+          <tr>
+            <th>Marking Definitions</th>
+          </tr>
+          <tr>
+            <td>
+              {% for marking in incident.objectMarking %}
+              <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+        </table>
+        {% endfor %}
+      </section>
+      {% endif %}
+      {% if entities.infrastructure %}
+      <h2 id="infrastructures-title">Infrastructures</h2>
+      <section id="infrastructures">
+        {% for infrastructure in entities.infrastructure %}
+          <table>
+          <tbody>
+          <tr>
+            <th>Name</th>
+          </tr>
+          <tr>
+            <td>
+              {{ infrastructure.name }}
+            </td>
+          </tr>
+          {% if infrastructure.description %}
+          <tr>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>
+              {{ infrastructure.description }}
+            </td>
+          </tr>
+        {% endif %}
+        {% if infrastructure.objectMarking %}
+          <tr>
+            <th>Marking Definitions</th>
+          </tr>
+          <tr>
+            <td>
+              {% for marking in infrastructure.objectMarking %}
+              <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+          </tbody>
+          </table>
+        {% endfor %}
+      </section>
+      {% endif %}
+    </article>
+  </body>
+</html>

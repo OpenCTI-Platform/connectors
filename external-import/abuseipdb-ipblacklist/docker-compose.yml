@@ -1,0 +1,19 @@
+version: '3'
+services:
+  connector-abuseipdb-ipblacklist:
+    image: opencti/connector-abuseipdb-ipblacklist:5.7.2
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe # Valid UUIDv4
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - "CONNECTOR_NAME=AbuseIPDB IP Blacklist"
+      - CONNECTOR_SCOPE=abuseipdb
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - ABUSEIPDB_URL=https://api.abuseipdb.com/api/v2/blacklist
+      - ABUSEIPDB_API_KEY=ChangeMe
+      - ABUSEIPDB_SCORE=100
+      - ABUSEIPDB_LIMIT=10000
+      - ABUSEIPDB_INTERVAL=2 #Day
+    restart: always

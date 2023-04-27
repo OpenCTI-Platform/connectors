@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM python:3.10-alpine
 
 # Copy the worker
 COPY src /opt/opencti-connector-unpac-me
@@ -12,5 +12,5 @@ RUN apk --no-cache add git build-base libmagic libffi-dev && \
 
 # Expose and entrypoint
 COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh 
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

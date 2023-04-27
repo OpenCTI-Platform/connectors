@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """OpenCTI AlienVault connector module."""
 
-import os
-import time
 import datetime
+import os
+import sys
+import time
 from typing import Any, Dict, List, Mapping, Optional
 
+import stix2
 import yaml
-
-from pycti.connector.opencti_connector_helper import (  # type: ignore
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
-
-from stix2 import Identity, MarkingDefinition  # type: ignore
-
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter, PulseImporterConfig
 from alienvault.utils import (
@@ -23,6 +16,10 @@ from alienvault.utils import (
     get_tlp_string_marking_definition,
 )
 from alienvault.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
+from pycti.connector.opencti_connector_helper import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 
 
 class AlienVault:
@@ -47,6 +44,7 @@ class AlienVault:
     _CONFIG_ENABLE_ATTACK_PATTERNS_INDICATES = (
         f"{_CONFIG_NAMESPACE}.enable_attack_patterns_indicates"
     )
+    _CONFIG_FILTER_INDICATORS = f"{_CONFIG_NAMESPACE}.filter_indicators"
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
@@ -60,6 +58,7 @@ class AlienVault:
 
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
+    _DEFAULT_FILTER_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
     _DEFAULT_ENABLE_RELATIONSHIPS = True
     _DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES = True
@@ -94,6 +93,14 @@ class AlienVault:
             create_indicators = self._DEFAULT_CREATE_INDICATORS
         else:
             create_indicators = bool(create_indicators)
+
+        filter_indicators = self._get_configuration(
+            config, self._CONFIG_FILTER_INDICATORS
+        )
+        if filter_indicators is None:
+            filter_indicators = self._DEFAULT_FILTER_INDICATORS
+        else:
+            filter_indicators = bool(filter_indicators)
 
         default_latest_pulse_timestamp = self._get_configuration(
             config, self._CONFIG_PULSE_START_TIMESTAMP
@@ -174,6 +181,7 @@ class AlienVault:
             guess_malware=guess_malware,
             guess_cve=guess_cve,
             excluded_pulse_indicator_types=excluded_pulse_indicator_types,
+            filter_indicators=filter_indicators,
             enable_relationships=enable_relationships,
             enable_attack_patterns_indicates=enable_attack_patterns_indicates,
         )
@@ -181,7 +189,7 @@ class AlienVault:
         self.pulse_importer = PulseImporter(pulse_importer_config)
 
     @staticmethod
-    def _create_author() -> Identity:
+    def _create_author() -> stix2.Identity:
         return create_organization("AlienVault")
 
     @staticmethod
@@ -213,7 +221,7 @@ class AlienVault:
     @classmethod
     def _convert_tlp_to_marking_definition(
         cls, tlp_value: Optional[str]
-    ) -> MarkingDefinition:
+    ) -> stix2.MarkingDefinition:
         if tlp_value is None:
             return DEFAULT_TLP_MARKING_DEFINITION
         return get_tlp_string_marking_definition(tlp_value)
@@ -266,10 +274,15 @@ class AlienVault:
                         "Connector will not run, next run in: {0} seconds", next_run
                     )
 
-                self._sleep(delay_sec=run_interval)
             except (KeyboardInterrupt, SystemExit):
                 self._info("Connector stop")
-                exit(0)
+                sys.exit(0)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            self._sleep(delay_sec=run_interval)
 
     @classmethod
     def _sleep(cls, delay_sec: Optional[int] = None) -> None:

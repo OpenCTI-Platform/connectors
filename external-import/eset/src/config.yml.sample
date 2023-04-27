@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'ESET Cyber Threat Intelligence'
+  scope: 'eset'
+  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  log_level: 'info'
+
+eset:
+  api_url: 'eti.eset.com'
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  collections: 'ei.misp,ei.cc,ei.urls'
+  import_apt_reports: true
+  import_start_date: '2022-04-01'
+  create_observables: true
+  interval: 60 # Required, in minutes

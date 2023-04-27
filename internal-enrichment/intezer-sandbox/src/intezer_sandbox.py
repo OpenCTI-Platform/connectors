@@ -1,13 +1,12 @@
 # coding: utf-8
 
 import os
-import yaml
+import sys
 import time
+
+import yaml
 from intezer_api import IntezerApi
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class IntezerSandboxConnector:
@@ -72,7 +71,6 @@ class IntezerSandboxConnector:
         )
 
     def _process_report(self, observable, report):
-
         self.helper.log_info(report)
 
         # Create external reference
@@ -89,7 +87,6 @@ class IntezerSandboxConnector:
 
         # Attach family name as label if present
         if "family_name" in report["result"] and report["result"]["family_name"]:
-
             family_label = self.helper.api.label.create(
                 value=report["result"]["family_name"], color=self.family_color
             )
@@ -115,7 +112,6 @@ class IntezerSandboxConnector:
         return "Nothing to attach"
 
     def _process_file(self, observable):
-
         if not observable["importFiles"]:
             raise ValueError(f"No files found for {observable['observable_value']}")
 
@@ -134,7 +130,6 @@ class IntezerSandboxConnector:
         status = None
         report = None
         while True:
-
             report = self.intezer_client.get_analysis_report(result_url)
             status = report["status"]
 
@@ -173,8 +168,9 @@ class IntezerSandboxConnector:
                 "Observable not found "
                 "(may be linked to data seggregation, check your group and permissions)"
             )
+
         # Extract TLP
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
@@ -196,4 +192,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

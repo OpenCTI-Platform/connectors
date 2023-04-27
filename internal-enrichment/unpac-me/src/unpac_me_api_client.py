@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import argparse
-import logging
-import os
 import datetime
-import json
 import glob
 import hashlib
+import json
+import logging
+import os
 import typing
 from enum import Enum
 

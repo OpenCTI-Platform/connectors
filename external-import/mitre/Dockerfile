@@ -1,16 +1,10 @@
-FROM python:3.9-alpine
+FROM python:3.10-alpine
 
-# Copy the connector
-COPY src /opt/opencti-connector-mitre
+COPY src /opt/connector
+WORKDIR /opt/connector
 
-# Install Python modules
-# hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-connector-mitre && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python", "connector.py"]

@@ -1,13 +1,13 @@
 import atexit
 import json
 import os
+from typing import Union
+
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from sseclient import Event
 from stix2 import Indicator, Sighting, parse
 from threatbus.data import Operation, ThreatBusSTIX2Constants
-from typing import Union
-import yaml
-
 from threatbus_connector_helper import ThreatBusConnectorHelper
 
 
@@ -158,7 +158,7 @@ class ThreatBusConnector(object):
         @param indicator The STIX-2 Indicator
         """
         ioc_dct = json.loads(indicator.serialize())
-        ioc_dct["name"] = ioc_dct.get("name", indicator.id)  #  default to UUID
+        ioc_dct["name"] = ioc_dct.get("name", indicator.id)  # default to UUID
         ioc_dct["stix_id"] = indicator.id
         del ioc_dct["id"]
         obs_type = ioc_dct.get("x_opencti_main_observable_type", "Unknown")
@@ -205,24 +205,18 @@ class ThreatBusConnector(object):
             (either `create`, `update` or `delete`)
         @return a STIX-2 Indicator or None
         """
-        opencti_id: str = data.get("x_opencti_id", None)
+        opencti_id: str = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         if not opencti_id:
             self.opencti_helper.log_error(
                 "Cannot process data without 'x_opencti_id' field"
             )
             return
-
-        event_id = data.get("id", None)
-        update = data.get("x_data_update", {})
-        added = update.get("add", {})
-        added_ids = added.get("x_opencti_stix_ids", [])
-        type_ = data.get("type", None)
-        if type_ == "indicator" and len(added_ids) == 1 and added_ids[0] == event_id:
-            # Discard the update if it was empty. An update is empty when the
-            # only "changed" attribute is the stix_id and it changed to its own
-            # already existing value. Example:
-            # data ~ {'id': 'XXX', 'x_data_update': {'add': {'x_opencti_stix_ids': ['XXX']}}}
-            return
+        # if type_ == "indicator" and len(added_ids) == 1 and added_ids[0] == event_id:
+        # Discard the update if it was empty. An update is empty when the
+        # only "changed" attribute is the stix_id and it changed to its own
+        # already existing value. Example:
+        # data ~ {'id': 'XXX', 'x_data_update': {'add': {'x_opencti_stix_ids': ['XXX']}}}
+        #   return
 
         if opencti_action == "delete":
             indicator: dict = data

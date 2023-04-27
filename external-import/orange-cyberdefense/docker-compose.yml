@@ -1,0 +1,35 @@
+version: '3'
+services:
+  connector-orange-cyberdefense:
+    image: opencti/connector-orange-cyberdefense:5.7.2
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - "CONNECTOR_NAME=Orange Cyberdefense Cyber Threat Intelligence"
+      - CONNECTOR_SCOPE=ocd
+      - CONNECTOR_CONFIDENCE_LEVEL=55 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_LOG_LEVEL=info
+      - OCD_PORTAL_API_LOGIN=ChangeMe
+      - OCD_PORTAL_API_KEY=ChangeMe
+      - OCD_DATALAKE_LOGIN=ChangeMe
+      - OCD_DATALAKE_PASSWORD=ChangeMe
+      - OCD_VULNERABILITIES_LOGIN=ChangeMe
+      - OCD_VULNERABILITIES_PASSWORD=ChangeMe
+      - OCD_IMPORT_WORLDWATCH=true
+      - OCD_IMPORT_WORLDWATCH_START_DATE=2022-01-01
+      - OCD_IMPORT_CYBERCRIME=true
+      - OCD_IMPORT_CYBERCRIME_START_DATE=2022-01-01
+      - OCD_IMPORT_VULNERABILITIES=false
+      - OCD_IMPORT_DATALAKE=true
+      - OCD_IMPORT_DATALAKE_ATOM_TYPES=apk,as,cc,crypto,cve,domain,email,file,fqdn,iban,ip,ip_range,paste,phone_number,regkey,ssl,url
+      - OCD_IMPORT_DATALAKE_THREAT_TYPES=ddos,fraud,hack,leak,malware,phishing,scam,scan,spam
+      - OCD_IMPORT_DATALAKE_MINIMUM_RISK_SCORE=80
+      - OCD_IMPORT_DATALAKE_START_DATE=2022-01-01
+      - OCD_CREATE_OBSERVABLES=true  # Create observables from indicators
+      - OCD_CURATE_LABELS=true # Curated labels
+      - OCD_THREAT_ACTOR_AS_INTRUSION_SET=true
+      - OCD_INTERVAL=5 # Required, in minutes
+    restart: always

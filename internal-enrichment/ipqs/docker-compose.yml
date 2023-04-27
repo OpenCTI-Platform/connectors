@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-ipqs:
+    image: opencti/connector-ipqs:5.7.2
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=IPQS Fraud and Risk Scoring
+      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - IPQS_PRIVATE_KEY=ChangeMe
+      - IPQS_BASE_URL=https://ipqualityscore.com/api/json
+      # IP specific config settings
+      - IPQS_IP_ADD_RELATIONSHIPS=true # Whether or not to add ASN relationships
+      # Domain specific config settings
+      - IPQS_DOMAIN_ADD_RELATIONSHIPS=true # Whether or not to add IP resolution relationships
+    restart: always

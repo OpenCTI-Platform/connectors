@@ -7,30 +7,41 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'MISP' # Required
   scope: 'misp'
-  confidence_level: 15 # 0 (Unknown) or from 1 to 100
-  update_existing_data: False
+  confidence_level: 25 # 0 (Unknown) or from 1 to 100
+  update_existing_data: false
   log_level: 'info'
 
 misp:
   url: 'http://localhost' # Required
   reference_url: '' # Optional, will be used to create external reference to MISP event
   key: 'ChangeMe' # Required
-  ssl_verify: False # Required
+  ssl_verify: true # Required
   datetime_attribute: 'timestamp' # Required, filter to be used in query for new MISP events
-  create_reports: True # Required, create report for MISP event
-  create_indicators: True # Required, create indicators for attributes
-  create_observables: True # Required, create observables for attributes
-  create_object_observables: True # Required, create text observables for MISP objects
-  report_class: 'misp-event' # Optional, report_class if creating report for event
+  create_reports: true # Required, create report for MISP event
+  create_indicators: true # Required, create indicators for attributes
+  create_observables: true # Required, create observables for attributes
+  create_object_observables: true # Required, create text observables for MISP objects
+  report_description_attribute_filter: '' # Optional, example: "type=comment,category=Internal reference"
+  create_tags_as_labels: true # Optional, create tags as labels (sanitize MISP tag to OpenCTI labels)
+  guess_threats_from_tags: false # Optional, try to guess threats (threat actor, intrusion set, malware, etc.) from MISP tags when they are present in OpenCTI
+  author_from_tags: false # Optional, map creator:XX=YY (author of event will be YY instead of the author of the event)
+  markings_from_tags: false # Optional, map marking:XX=YY (in addition to TLP, add XX:YY as marking definition, where XX is marking type, YY is marking value)
+  enforce_warning_list: false # Optional, enforce warning list in MISP queries
+  report_type: 'misp-event' # Optional, report_class if creating report for event
+  report_status: 'New' # New, In progress, Analyzed and Closed
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: 'opencti:import,type:osint' # Optional, list of tags used for import events
   import_tags_not: '' # Optional, list of tags to not include
-  import_creator_orgs: 'CIRCL,Luatix' # Optional, only import events created by this ORG (put the identifier here)
-  import_owner_orgs: 'CIRCL' # Optional, only import events owned by this ORG (put the identifier here)
+  import_creator_orgs: 'CIRCL,Luatix' # Optional, only import events created by those orgs (put the identifiers here)
+  import_creator_orgs_not: '' # Optional, do not import events created by those orgs (put the identifiers here)
+  import_owner_orgs: 'CIRCL' # Optional, only import events owned by those orgs (put the identifiers here)
+  import_owner_orgs_not: '' # Optional, do not import events owned by those orgs (put the identifiers here)
+  import_owner_keyword: '' # Optional, search only events based on a keyword
   import_distribution_levels: '0,1,2,3' # Optional, only import events with the given distribution levels
   import_threat_levels: '1,2,3,4' # Optional only import events with the given threat levels
-  import_only_published: False # Optional only import events published
-  import_with_attachments: False # Optional, try to import a PDF file from the attachment attribute
+  import_only_published: false # Optional only import events published
+  import_with_attachments: false # Optional, try to import a PDF file from the attachment attribute
   import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
-  import_unsupported_observables_as_text: False # Optional, import unsupported observable as x_opencti_text
+  import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
+  import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value
   interval: 1 # Required, in minutes

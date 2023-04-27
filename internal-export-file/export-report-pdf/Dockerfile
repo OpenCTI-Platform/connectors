@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM python:3.10-alpine
 
 # Copy the worker
 COPY src /opt/opencti-connector-export-report-pdf
@@ -14,5 +14,5 @@ RUN apk --no-cache add git build-base libmagic libffi-dev zlib-dev tiff-dev jpeg
 
 # Expose and entrypoint
 COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh 
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

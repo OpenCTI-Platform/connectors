@@ -4,24 +4,6 @@
 import logging
 from typing import List, Mapping, NamedTuple, Optional, Set
 
-from crowdstrike_client.api.models import Indicator
-from crowdstrike_client.api.models.report import Report
-
-from stix2 import (  # type: ignore
-    Bundle,
-    Identity,
-    Indicator as STIXIndicator,
-    IntrusionSet,
-    KillChainPhase,
-    Malware,
-    MarkingDefinition,
-    Relationship,
-    Report as STIXReport,
-    Vulnerability,
-)
-from stix2.v21 import _DomainObject, _Observable  # type: ignore
-
-from crowdstrike.utils.report_fetcher import FetchedReport
 from crowdstrike.utils import (
     DEFAULT_X_OPENCTI_SCORE,
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
@@ -52,7 +34,15 @@ from crowdstrike.utils import (
     create_vulnerability,
     create_vulnerability_external_references,
 )
-
+from crowdstrike.utils.report_fetcher import FetchedReport
+from crowdstrike_client.api.models import Indicator
+from crowdstrike_client.api.models.report import Report
+from stix2 import Bundle, Identity
+from stix2 import Indicator as STIXIndicator  # type: ignore
+from stix2 import IntrusionSet, KillChainPhase, Malware, MarkingDefinition, Relationship
+from stix2 import Report as STIXReport
+from stix2 import Vulnerability
+from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -388,7 +378,6 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            start_time=self.first_seen,
         )
 
     def _create_indicates_relationships(

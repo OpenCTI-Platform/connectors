@@ -1,11 +1,12 @@
 # coding: utf-8
 
-import os
-import yaml
-import requests
-import time
 import json
+import os
+import sys
+import time
 
+import requests
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -34,8 +35,8 @@ class LastInfoSecEnrichment:
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
             source_name="Last Info Sec",
-            url="{}/stix21/search_hash/{}".format(self.api_url, value),
-            description="Last Info Sec Threat Feed",
+            url="{}/stix21/search/".format(self.api_url),
+            description="LastInfoSec Threat Feed",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
             id=observable["id"],
@@ -64,15 +65,11 @@ class LastInfoSecEnrichment:
         if self.proxy_https is not None:
             proxy_dic["https"] = self.proxy_https
 
-        if observable["entity_type"] == "StixFile":
-            url = "{}/stix21/search_hash/{}?api_key={}&platform=opencti".format(
-                self.api_url, value, self.lastinfosec_apikey
-            )
-        if observable["entity_type"] == "Domain-Name":
-            url = "{}/stix21/search_host/{}?api_key={}&platform=opencti".format(
-                self.api_url, value, self.lastinfosec_apikey
-            )
-        response = requests.get(url, proxies=proxy_dic)
+        body = {"value": value}
+        url = "{}/stix21/search/?api_key={}&platform=opencti".format(
+            self.api_url, self.lastinfosec_apikey
+        )
+        response = requests.post(url, json=body)
 
         if response.status_code == 422:
             return "{} not found...".format(value)
@@ -94,4 +91,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

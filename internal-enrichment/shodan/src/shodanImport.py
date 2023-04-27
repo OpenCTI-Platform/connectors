@@ -1,7 +1,8 @@
-import yaml
 import os
-import shodan
 from datetime import datetime, timedelta
+
+import shodan
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -90,15 +91,15 @@ class ShodanConnector:
                     observableData={
                         "type": "x509-certificate",
                         "issuer": ", ".join(
-                            (
-                                f"{k}={v}"
-                                for k, v in sslObject["cert"]["subject"].items()
-                            )
+                            (f"{k}={v}" for k, v in sslObject["cert"]["issuer"].items())
                         ),
                         "validity_not_before": issued.isoformat().split(".")[0] + "Z",
                         "validity_not_after": expires.isoformat().split(".")[0] + "Z",
                         "subject": ", ".join(
-                            (f"{k}={v}" for k, v in sslObject["cert"]["issuer"].items())
+                            (
+                                f"{k}={v}"
+                                for k, v in sslObject["cert"]["subject"].items()
+                            )
                         ),
                         "serial_number": ":".join(
                             [
@@ -127,7 +128,6 @@ class ShodanConnector:
         domains = []
 
         for domain in shodanHostResponse["domains"]:
-
             domainX = self.helper.api.stix_cyber_observable.create(
                 observableData={
                     "type": "domain-name",
@@ -141,7 +141,7 @@ class ShodanConnector:
     def _generate_vulns(self, shodanHostResponse):
         vulns = []
 
-        if not "vulns" in shodanHostResponse:
+        if "vulns" not in shodanHostResponse:
             return []
 
         for vuln in shodanHostResponse["vulns"]:
@@ -168,7 +168,6 @@ class ShodanConnector:
         return orgX
 
     def _convert_shodan_to_stix(self, shodanHostResponse, observable):
-
         # --------------------------------------------------------------------
         #  Helpers
         # --------------------------------------------------------------------
@@ -255,7 +254,7 @@ class ShodanConnector:
             )
 
         # Link ASN to Observable
-        self.helper.api.stix_cyber_observable_relationship.create(
+        self.helper.api.stix_nested_ref_relationship.create(
             fromId=observable["id"],
             toId=asn["id"],
             relationship_type="obs_belongs-to",
@@ -274,7 +273,7 @@ class ShodanConnector:
 
         # Link Domains to Observable
         for domain in domains:
-            self.helper.api.stix_cyber_observable_relationship.create(
+            self.helper.api.stix_nested_ref_relationship.create(
                 fromId=domain["id"],
                 toId=observable["id"],
                 relationship_type="obs_resolves-to",
@@ -314,15 +313,20 @@ class ShodanConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        if observable is None:
+            raise ValueError(
+                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
+            )
 
-        TLPs = ["TLP:WHITE"]
+        # Check TLP markings, do not submit higher than the max allowed
+        tlps = ["TLP:CLEAR"]
         if "objectMarking" in observable:
             for marking_definition in observable["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
-                    TLPs.append(marking_definition["definition"])
+                    tlps.append(marking_definition["definition"])
 
-        for TLPx in TLPs:
-            if not OpenCTIConnectorHelper.check_max_tlp(TLPx, self.max_tlp):
+        for tlp in tlps:
+            if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
                 raise ValueError(
                     "Do not send any data, TLP of the observable is greater than MAX TLP"
                 )

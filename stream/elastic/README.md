@@ -50,6 +50,8 @@ variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and
 | `connector.name`                  | `CONNECTOR_NAME`             | Yes       | The name of the Elastic instance, to identify it if you have multiple Elastic instances connectors.                                                                      |
 | `connector.scope`                 | `CONNECTOR_SCOPE`            | Yes       | Must be `elastic`, not used in this connector.                                                                                                                           |
 | `connector.type`                  | `CONNECTOR_TYPE`             | Yes       | Must be `STREAM` (this is the connector type).                                                                                                                           |
+| `connector.start_timestamp`       | `CONNECTOR_START_TIMESTAMP`  | No        | Must be a Unix timestamp like `1655890657402` or an ISO date like `2022-05-22T09:17:08.520Z`                                                                             |
+| `connector.live_stream_id`        | `CONNECTOR_LIVE_STREAM_ID`   | No        | Must be a generated guid or a string `live` if you want to collect all events type                                                                                       |
 | `cloud.auth`                      | `CLOUD_AUTH`                 | No        | Auth info for cloud instance of Elasticsearch Cloud                                                                                                                      |
 | `cloud.id`                        | `CLOUD_ID`                   | No        | Cloud ID for cloud instance of Elasticsearch                                                                                                                             |
 | `output.elasticsearch.api_key`    | `ELASTICSEARCH_APIKEY`       | No        | The Elasticsearch ApiKey (recommended authentication, see [apikey docs](https://www.elastic.co/guide/en/elasticsearch/reference/master/security-api-create-api-key.html) |
@@ -57,7 +59,9 @@ variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and
 | `output.elasticsearch.password`   | `ELASTICSEARCH_PASSWORD`     | No        | The Elasticsearch password (ApiKey is recommended).                                                                                                                      |
 | `output.elasticsearch.username`   | `ELASTICSEARCH_USERNAME`     | No        | The Elasticsearch login user (ApiKey is recommended).                                                                                                                    |
 | `output.elasticsearch.ssl_verify` | `ELASTICSEARCH_SSL_VERIFY`   | No        | Set to `False` to disable TLS certificate validation. Defaults to `True`                                                                                                 |
+| `output.elasticsearch.reduced_privileges` | `ELASTICSEARCH_REDUCED_PRIVILEGES`   | No        | Set to `True` to disable additional access checks for Elasticsearch if the access does not includes ' manage" cluster-privileges. Defaults to `False`                                                                                                 |
 |                                   | `CONNECTOR_JSON_CONFIG`      | No        | (Optional) environment variable allowing full configuration via a single environment variable using JSON. Helpful for some container deployment scenarios.               |
+
 
 ## Building Container
 
@@ -135,6 +139,69 @@ POST /_security/api_key?pretty
             ]
           },
           "allow_restricted_indices": false
+        }
+      ],
+      "run_as": []
+    },
+    "protections_privileges": {
+      "cluster": [],
+      "indices": [
+        {
+          "names": [
+            ".siem-signals-*"
+          ],
+          "privileges": [
+            "read"
+          ],
+          "field_security": {
+            "grant": [
+              "*"
+            ],
+            "except": []
+          },
+          "allow_restricted_indices": false
+        }
+      ],
+      "run_as": []
+    }
+  },
+  "metadata": {
+    "application": "opencti",
+    "environment": {
+      "tags": [
+        "dev",
+        "staging"
+      ]
+    }
+  }
+}
+```
+
+### Using a Constrained API key without cluster privileges
+
+In combination with the configuration flag "output.elasticsearch.reduced_privileges", the following API request generates API-keys that allow access only to the specific index pattern `opencti*`. 
+
+```
+POST /_security/api_key?pretty
+{
+  "name": "opencti",
+  "expiration": "365d",
+  "role_descriptors": {
+    "opencti_privileges": {
+      "cluster": [],
+      "indices": [{
+        "names": [
+          "opencti*"
+        ],
+        "privileges": [
+          "all"
+        ],
+        "field_security": {
+          "grant": [
+            "*"
+          ]
+        },
+        "allow_restricted_indices": false
         }
       ],
       "run_as": []

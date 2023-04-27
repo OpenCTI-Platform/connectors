@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-sophoslabs-intelix-connector:
+    image: opencti/sophoslabs-intelix-lookup:5.7.2
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=SophosLabs Intelix Lookup
+      - CONNECTOR_SCOPE=Url,IPv4-Addr,Domain,File,File-Sha256,Artifact
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_CONFIDENCE_LEVEL=50
+      - CONNECTOR_LOG_LEVEL=info
+      - INTELIX_CLIENT_ID=ChangeMe
+      - INTELIX_CLIENT_SECRET=ChangeMe
+      - INTELIX_REGION_URI=ChangeMe
+    restart: always

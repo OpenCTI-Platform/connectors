@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-cybersixgill:
+    image: opencti/connector-cybersixgill:5.7.2
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Cybersixgill Darkfeed
+      - CONNECTOR_SCOPE=cybersixgill[1-10] # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_LOG_LEVEL=info
+      - CYBERSIXGILL_CLIENT_ID=ChangeMe
+      - CYBERSIXGILL_CLIENT_SECRET=ChangeMe
+      - CYBERSIXGILL_CREATE_OBSERVABLES=true
+      - CYBERSIXGILL_CREATE_INDICATORS=true
+      - CYBERSIXGILL_ENABLE_RELATIONSHIPS=true
+      - CYBERSIXGILL_INTERVAL_SEC=300
+      - CYBERSIXGILL_FETCH_SIZE=2000
+    restart: always

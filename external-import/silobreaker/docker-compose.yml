@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-silobreaker:
+    image: opencti/connector-silobreaker:5.7.2
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - "CONNECTOR_NAME=Silobreaker Cyber Threat Intelligence"
+      - CONNECTOR_SCOPE=silobreaker
+      - CONNECTOR_CONFIDENCE_LEVEL=25 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_LOG_LEVEL=info
+      - SILOBREAKER_API_URL=https://api.silobreaker.com
+      - SILOBREAKER_API_KEY=ChangeMe
+      - SILOBREAKER_API_SHARED=ChangeMe
+      - SILOBREAKER_IMPORT_START_DATE=2022-04-01
+      - SILOBREAKER_INTERVAL=60 # Required, in minutes
+    restart: always

@@ -1,6 +1,8 @@
 import os
-import yaml
+import sys
 import time
+
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -21,7 +23,7 @@ class TemplateConnector:
     ####
     # TODO add your code according to your connector type
     # For details: see
-    # https://luatix.notion.site/luatix/Connector-Development-06b2690697404b5ebc6e3556a1385940
+    # https://filigran.notion.site/Connector-Development-06b2690697404b5ebc6e3556a1385940
     ####
 
 
@@ -32,4 +34,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

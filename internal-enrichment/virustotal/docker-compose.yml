@@ -1,17 +1,42 @@
-version: '3'
+version: "3"
 services:
   connector-virustotal:
-    image: opencti/connector-virustotal:5.2.1
+    image: opencti/connector-virustotal:5.7.2
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=VirusTotal
-      - CONNECTOR_SCOPE=StixFile,Artifact
+      - CONNECTOR_SCOPE=StixFile,Artifact,IPv4-Addr,Domain-Name,Url
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - VIRUSTOTAL_TOKEN=ChangeMe
       - VIRUSTOTAL_MAX_TLP=TLP:AMBER
+      - VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE=false # Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).
+      # File/Artifact specific config settings
+      - VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT=true # Whether or not to include the full report as a Note
+      - VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS=false # Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of
+      - VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for File/Artifact based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+      - VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
+      - VIRUSTOTAL_FILE_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+      # IP specific config settings
+      - VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for IPv4 based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+      - VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
+      - VIRUSTOTAL_IP_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+      - VIRUSTOTAL_IP_ADD_RELATIONSHIPS=true # Whether or not to add ASN and location resolution relationships
+      # Domain specific config settings
+      - VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Domain based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+      - VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
+      - VIRUSTOTAL_DOMAIN_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+      - VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS=true # Whether or not to add IP resolution relationships
+      # URL specific config settings
+      - VIRUSTOTAL_URL_UPLOAD_UNSEEN=false # Whether to upload URLs that VirusTotal has no record of for analysis
+      - VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Url based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
+      - VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
+      - VIRUSTOTAL_URL_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
+    deploy:
+      mode: replicated
+      replicas: 1
     restart: always

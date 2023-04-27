@@ -1,14 +1,14 @@
-FROM python:3.9-alpine3.14
+FROM python:3.10-buster
 
 # Copy the connector
 COPY src /opt/opencti-connector-import-external-reference
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev openssl-dev rust cargo jpeg-dev zlib-dev wkhtmltopdf && \
+RUN apt-get update && \
+    apt-get install -y git build-essential libmagic-dev libffi-dev libxml2-dev libxslt-dev libssl-dev cargo libjpeg-dev zlib1g-dev wkhtmltopdf && \
     cd /opt/opencti-connector-import-external-reference && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    pip3 install --no-cache-dir -r requirements.txt
 
 # Expose and entrypoint
 COPY entrypoint.sh /

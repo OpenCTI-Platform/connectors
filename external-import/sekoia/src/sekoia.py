@@ -1,20 +1,27 @@
 import base64
 import json
 import os
+import sys
 import time
 from datetime import datetime, timedelta
 from posixpath import join as urljoin
-from typing import Any, Iterable, List, Set, Dict
+from typing import Any, Dict, Iterable, List, Set
 
-from dateutil.parser import parse, ParserError
 import requests
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from dateutil.parser import ParserError, parse
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
+
+## MODIFICATION BY CYRILYXE (OPENCTI 5.7.2, the 2022-08-12)
+# By default, the def '_load_data_sets' (line 370ish in this file) uses relative path
+#   But from a manual deployement, we have to use a Daemon for launching the service
+#   So i added a global var : gbl_scriptDir (not mandatory but for visibility purpose only)
+gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
+# so i propose the change on the relative path with the concat of the script dir path (go to line 374)
 
 
 class Sekoia(object):
-
     limit = 200
 
     def __init__(self):
@@ -34,6 +41,7 @@ class Sekoia(object):
         self.collection = self.get_config(
             "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
         )
+        self.create_observables = self.get_config("create_observables", config, True)
 
         self.helper.log_info("Setting up api key")
         self.api_key = self.get_config("api_key", config)
@@ -43,6 +51,18 @@ class Sekoia(object):
 
         self._load_data_sets()
         self.helper.log_info("All datasets has been loaded")
+
+        self.helper.api.identity.create(
+            stix_id="identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
+            type="Organization",
+            name="SEKOIA",
+            description="SEKOIA.IO is a European cybersecurity SAAS company, whose mission is to develop the best protection capabilities against cyber attacks.",
+        )
+        self.helper.api.marking_definition.create(
+            stix_id="marking-definition--bf973641-9d22-45d7-a307-ccdc68e120b9",
+            definition_type="statement",
+            definition="Copyright SEKOIA.IO",
+        )
 
     def run(self):
         self.helper.log_info("Starting SEKOIA.IO connector")
@@ -64,7 +84,7 @@ class Sekoia(object):
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 self.helper.api.work.to_processed(work_id, "Connector is stopping")
-                exit(0)
+                sys.exit(0)
             except Exception as ex:
                 # In case of error try to get the last updated cursor
                 # since `_run` updates it after every successful request
@@ -73,6 +93,10 @@ class Sekoia(object):
                 self.helper.log_error(str(ex))
                 message = f"Connector encountered an error, cursor updated to {cursor}"
                 self.helper.api.work.to_processed(work_id, message)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
 
             time.sleep(60)
 
@@ -121,35 +145,43 @@ class Sekoia(object):
             yield items[i : i + chunk_size]
 
     def _run(self, cursor, work_id):
-        params = {"limit": self.limit, "cursor": cursor}
+        current_time = f"{datetime.utcnow().isoformat()}Z"
+        current_cursor = base64.b64encode(current_time.encode("utf-8")).decode("utf-8")
+        while True:
+            params = {"limit": self.limit, "cursor": cursor}
 
-        data = self._send_request(self.get_collection_url(), params)
-        if not data:
-            return cursor
+            data = self._send_request(self.get_collection_url(), params)
+            if not data:
+                return cursor
 
-        next_cursor = data["next_cursor"] or cursor  # In case next_cursor is None
-        items = data["items"]
-        if not items:
-            return next_cursor
+            cursor = (
+                data["next_cursor"] or current_cursor
+            )  # In case next_cursor is None
+            items = data["items"]
+            if not items or len(items) == 0:
+                return cursor
 
-        items = self._retrieve_references(items)
-        items = self._clean_ic_fields(items)
-        self._add_files_to_items(items)
-        bundle = self.helper.stix2_create_bundle(items)
-        try:
-            self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
-        except RecursionError:
-            self.helper.send_stix2_bundle(
-                bundle, update=True, work_id=work_id, bypass_split=True
-            )
+            items = self._retrieve_references(items)
+            self._add_main_observable_type_to_indicators(items)
+            if self.create_observables:
+                self._add_create_observables_to_indicators(items)
+            items = self._clean_ic_fields(items)
+            self._add_files_to_items(items)
+            bundle = self.helper.stix2_create_bundle(items)
+            try:
+                self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+            except RecursionError:
+                self.helper.log_error(
+                    "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
+                )
+                self.helper.send_stix2_bundle(
+                    bundle, update=True, work_id=work_id, bypass_split=True
+                )
 
-        self.helper.set_state({"last_cursor": next_cursor})
-        if len(items) < self.limit:
-            # We got the last results
-            return next_cursor
-
-        # More results to fetch
-        return self._run(next_cursor, work_id)
+            self.helper.set_state({"last_cursor": cursor})
+            if len(items) < self.limit:
+                # We got the last results
+                return cursor
 
     def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
         """
@@ -175,6 +207,25 @@ class Sekoia(object):
             (field.startswith("x_ic") or field.startswith("x_inthreat"))
             and (field.endswith("ref") or field.endswith("refs"))
         ) or field in to_ignore
+
+    @staticmethod
+    def _add_create_observables_to_indicators(items: List[Dict]):
+        for item in items:
+            if item.get("type") == "indicator":
+                item["x_opencti_create_observables"] = True
+
+    @staticmethod
+    def _add_main_observable_type_to_indicators(items: List[Dict]):
+        for item in items:
+            if (
+                item.get("type") == "indicator"
+                and item.get("x_ic_observable_types") is not None
+                and len(item.get("x_ic_observable_types")) > 0
+            ):
+                stix_type = item.get("x_ic_observable_types")[0]
+                item[
+                    "x_opencti_main_observable_type"
+                ] = OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
@@ -204,7 +255,13 @@ class Sekoia(object):
         items += self._retrieve_by_ids(
             relationships_to_fetch, self.get_relationship_url
         )
-        return self._retrieve_references(items, current_depth + 1)
+        # Avoid circular
+        final_items = []
+        for item in items:
+            if "created_by_ref" in item and item["created_by_ref"] == item["id"]:
+                del item["created_by_ref"]
+            final_items.append(item)
+        return self._retrieve_references(final_items, current_depth + 1)
 
     def _get_missing_refs(self, items: List[Dict]) -> Set:
         """
@@ -321,23 +378,28 @@ class Sekoia(object):
 
     def _load_data_sets(self):
         # Mapping between SEKOIA sectors/locations and OpenCTI ones
+        ## MODIFICATION BY CYRILYXE
+        #   Use of the global variable : gbl_scriptDir
+        #   For using absolute path and not relative ones
+        global gbl_scriptDir
+
         self.helper.log_info("Loading locations mapping")
-        with open("./data/geography_mapping.json") as fp:
+        with open(gbl_scriptDir + "/data/geography_mapping.json") as fp:
             self._geography_mapping: Dict = json.load(fp)
 
         self.helper.log_info("Loading sectors mapping")
-        with open("./data/sectors_mapping.json") as fp:
+        with open(gbl_scriptDir + "/data/sectors_mapping.json") as fp:
             self._sectors_mapping: Dict = json.load(fp)
 
         # Adds OpenCTI sectors/locations to cache
         self.helper.log_info("Loading OpenCTI sectors")
-        with open("./data/sectors.json") as fp:
+        with open(gbl_scriptDir + "/data/sectors.json") as fp:
             objects = json.load(fp)["objects"]
             for sector in objects:
                 self._clean_and_add_to_cache(sector)
 
         self.helper.log_info("Loading OpenCTI locations")
-        with open("./data/geography.json") as fp:
+        with open(gbl_scriptDir + "/data/geography.json") as fp:
             for geography in json.load(fp)["objects"]:
                 self._clean_and_add_to_cache(geography)
 
@@ -365,4 +427,4 @@ if __name__ == "__main__":
         sekoiaConnector.run()
     except Exception:
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

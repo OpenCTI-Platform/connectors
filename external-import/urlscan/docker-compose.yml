@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-urlscan:
+    image: opencti/connector-urlscan:5.7.2
+    environment:
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Urlscan
+      - CONNECTOR_SCOPE=urlscan
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_CREATE_INDICATORS=true
+      - CONNECTOR_TLP=white
+      - CONNECTOR_LABELS=Phishing,Phishfeed
+      - CONNECTOR_INTERVAL=86400 # seconds, 1d
+      - URLSCAN_URL=https://urlscan.io/api/v1/pro/phishfeed?format=json&q=date:>now-1d
+      - URLSCAN_API_KEY=
+    restart: always

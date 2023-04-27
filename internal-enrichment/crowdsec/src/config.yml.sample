@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: ChangeMe
+
+connector:
+  id: ChangeMe
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'CrowdSec'
+  scope: 'IPv4-Addr' # MIME type or SCO
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+  auto: true
+
+crowdsec:
+  key: ChangeMe
+  api_version: v2
+  name: CrowdSec
+  description: CrowdSec CTI
+  max_tlp: 'TLP:AMBER'

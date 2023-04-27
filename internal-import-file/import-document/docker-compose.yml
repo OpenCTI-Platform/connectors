@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-import-document:
-    image: opencti/connector-import-document:5.2.1
+    image: opencti/connector-import-document:5.7.2
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,8 +9,8 @@ services:
       - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
       - CONNECTOR_NAME=ImportDocument
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
-      - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/csv
-      - CONNECTOR_AUTO=true # Enable/disable auto-import of file
+      - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/csv,text/markdown
+      - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_ONLY_CONTEXTUAL=true # Only extract data related to an entity (a report, a threat actor, etc.)
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info

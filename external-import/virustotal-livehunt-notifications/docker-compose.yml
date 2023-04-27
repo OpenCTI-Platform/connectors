@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-virustotal-livehunt-notifications:
-    image: opencti/connector-virustotal-livehunt-notifications:5.2.1
+    image: opencti/connector-virustotal-livehunt-notifications:5.7.2
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=Virustotal Livehunt Notifications"
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY=ChangeMe # Private API Key
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_COOLDOWN_SECONDS=300 # Time to wait in seconds between subsequent requests

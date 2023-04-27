@@ -1,14 +1,14 @@
 ################################
 # OpenCTI Restore Files         #
 ################################
-import os
-import yaml
-import json
 import datetime
+import json
+import os
 import sys
-
-from pycti import OpenCTIConnectorHelper, get_config_variable, OpenCTIStix2Splitter
 from pathlib import Path
+
+import yaml
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Splitter, get_config_variable
 
 
 def ref_extractors(objects):
@@ -83,7 +83,9 @@ class RestoreFilesConnector:
     def restore_files(self):
         stix2_splitter = OpenCTIStix2Splitter()
         state = self.helper.get_state()
-        start_directory = state["current"] if state is not None else None
+        start_directory = (
+            state["current"] if state is not None and "current" in state else None
+        )
         start_date = (
             date_convert(start_directory) if start_directory is not None else None
         )
@@ -164,7 +166,9 @@ class RestoreFilesConnector:
     def start(self):
         # Check if the directory exists
         if not os.path.exists(self.backup_path + "/opencti_data"):
-            raise ValueError("Backup path does not exist")
+            raise ValueError(
+                "Backup path does not exist - " + self.backup_path + "/opencti_data"
+            )
         self.restore_files()
 
 

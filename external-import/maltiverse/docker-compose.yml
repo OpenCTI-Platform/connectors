@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-maltiverse:
+    image: opencti/connector-maltiverse:5.7.2
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=MALTIVERSE
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1 # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - MALTIVERSE_USER=change@me.com # Username from Maltiverse
+      - MALTIVERSE_PASSWD=ChAnGeMe! # PAssword for the user provided
+      - MALTIVERSE_FEEDS=VdhZV34B4jHUXfKt_gDi # Your feeds selection between commas
+      - MALTIVERSE_POLL_INTERVAL=4 # in hours!
+    restart: always

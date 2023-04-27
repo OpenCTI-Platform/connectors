@@ -1,0 +1,2 @@
+pycti==5.7.2
+yara-python>=4.3.0

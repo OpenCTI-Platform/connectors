@@ -1,13 +1,15 @@
 version: "3"
 services:
   connector-tanium:
-    image: opencti/connector-tanium:5.2.1
+    image: opencti/connector-tanium:5.7.2
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=STREAM
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - CONNECTOR_NAME=Tanium
       - CONNECTOR_SCOPE=tanium
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)

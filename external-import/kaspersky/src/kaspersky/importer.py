@@ -3,11 +3,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Mapping, Optional
 
-from pycti import OpenCTIConnectorHelper  # type: ignore
-
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-
 from kaspersky.client import KasperskyClient
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 
 class BaseImporter(ABC):
@@ -60,6 +58,10 @@ class BaseImporter(ABC):
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
         self.helper.log_info(fmt_msg)
+
+    def _debug(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_debug(fmt_msg)
 
     def _error(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)

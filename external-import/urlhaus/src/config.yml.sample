@@ -8,12 +8,12 @@ connector:
   name: 'Abuse.ch URLhaus'
   scope: 'urlhaus'
   confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
-  create_indicator: False
-  update_existing_data: True
+  update_existing_data: false
   log_level: 'info'
 
 urlhaus:
   csv_url: 'https://urlhaus.abuse.ch/downloads/csv_recent/'
-  import_offline: True
-  create_indicators: True
+  import_offline: true
+  create_indicators: true
+  threats_from_labels: true
   interval: 3 # In days, must be strictly greater than 1

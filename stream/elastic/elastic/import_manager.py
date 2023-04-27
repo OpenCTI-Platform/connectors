@@ -1,8 +1,10 @@
 import re
 import urllib.parse
+import warnings
 from datetime import datetime, timezone
 from logging import getLogger
 
+from arrow import Arrow
 from datemath import dm
 from elasticsearch import Elasticsearch, NotFoundError, RequestError
 from pycti import OpenCTIConnectorHelper
@@ -56,7 +58,6 @@ class StixManager(object):
     def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
-
         try:
             # Submit to Elastic index
 
@@ -70,14 +71,16 @@ class StixManager(object):
                 if m.get("modulo", None) is not None:
                     _fmt = m.get("format") or DM_DEFAULT_FMT
                     logger.debug(f"{m['modulo']} -> {_fmt}")
-                    _val = dm(m.get("modulo"), now=timestamp).format(_fmt)
+                    _val = dm(
+                        m.get("modulo"), now=Arrow.fromdatetime(timestamp)
+                    ).format(_fmt)
                     _write_idx = self.pattern.sub(_val, _write_idx)
 
             # Submit to Elastic index
             logger.debug(f"Indexing doc to {_write_idx}:\n {_document}")
             self.es_client.index(
                 index=_write_idx,
-                id=data["x_opencti_id"],
+                id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
                 body=_document,
             )
 
@@ -92,13 +95,19 @@ class StixManager(object):
         _result: dict = {}
         try:
             _result = self.es_client.delete(
-                index=self.idx_pattern, id=data["x_opencti_id"], doc_type="_doc"
+                index=self.idx_pattern,
+                id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
+                doc_type="_doc",
             )
         except NotFoundError:
-            logger.warn(f"Document id {data['x_opencti_id']} not found in index")
+            logger.warn(
+                f"Document id {OpenCTIConnectorHelper.get_attribute_in_extension('id', data)} not found in index"
+            )
 
         if _result.get("result", None) == "deleted":
-            logger.debug(f"Document id {data['x_opencti_id']} deleted")
+            logger.debug(
+                f"Document id {OpenCTIConnectorHelper.get_attribute_in_extension('id', data)} deleted"
+            )
 
         return
 
@@ -132,18 +141,19 @@ class IntelManager(object):
         from string import Template
 
         logger.info("Setting up Elasticsearch for OpenCTI Connector")
-        assert self.es_client.ping()
+        if not self.config.get("output.elasticsearch.reduced_privileges", True):
+            assert self.es_client.ping()
 
         _ilm_enabled: bool = self.config.get("setup.ilm.enabled", True)
         _policy_name: str = self.config.get("setup.ilm.policy_name", "opencti")
         _policy: str = None
 
-        try:
-            _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
-        except NotFoundError as err:
-            logger.warning(f"HTTP {err.status_code}: {err.info['error']['reason']}")
-
         if _ilm_enabled is True:
+            try:
+                _policy: str = self.es_client.ilm.get_lifecycle(policy=_policy_name)
+            except NotFoundError as err:
+                logger.warning(f"HTTP {err.status_code}: {err.info['error']['reason']}")
+
             # Create ILM policy if needed
             if (_policy is None) or (
                 self.config.get("setup.ilm.overwrite", None) is True
@@ -176,14 +186,12 @@ class IntelManager(object):
 
         # Create initial index, if needed
         logger.debug(f"Checking if index pattern exists: {self.idx_pattern}")
-        if (
-            len(
-                self.es_client.indices.resolve_index(name=self.idx_pattern).get(
-                    "indices", []
-                )
-            )
-            < 1
-        ):
+        with warnings.catch_warnings(record=True):
+            matching_indices = self.es_client.indices.resolve_index(
+                name=self.idx_pattern
+            ).get("indices", [])
+
+        if len(matching_indices) < 1:
             logger.debug("No indices matching pattern exist.")
 
             if _ilm_enabled is True:
@@ -191,6 +199,7 @@ class IntelManager(object):
                 _alias = self.config.get("setup.ilm.rollover_alias", "opencti")
                 _ilm_pattern = self.config.get("setup.ilm.pattern", "{now/d}-000001")
                 _initial_idx = f"{_alias}-{_ilm_pattern}"
+                logger.info(f"Using alias '{_alias}'")
             else:
                 _initial_idx = self.config.get(
                     "output.elasticsearch.index", "opencti-{now/d}"
@@ -210,8 +219,6 @@ class IntelManager(object):
             #     logger.debug(f"Timestamp string from arrow {_val}")
             #     _initial_idx = self.pattern.sub(_val, _initial_idx)
 
-            logger.info(f"Initial index: {_initial_idx}\nAlias: {_alias}")
-
             if _ilm_enabled is True and (
                 not self.es_client.indices.exists_alias(
                     index=self.idx_pattern, name=_alias
@@ -228,7 +235,6 @@ class IntelManager(object):
 
                 self.write_idx = _alias
             else:
-                logger.info(f"Alias {_alias} already exists or not being used")
                 _settings = "{}"
 
             self.es_client.index(index=_initial_idx, body=_settings)
@@ -240,10 +246,17 @@ class IntelManager(object):
     def import_cti_event(
         self, timestamp: datetime, data: dict, is_update: bool = False
     ) -> dict:
-        logger.debug(f"Querying indicator: { data['x_opencti_id']}")
-        entity = self.helper.api.indicator.read(id=data["x_opencti_id"])
+        logger.debug(
+            f"Querying indicator: { OpenCTIConnectorHelper.get_attribute_in_extension('id', data)}"
+        )
+        entity = self.helper.api.indicator.read(
+            id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        )
 
-        logger.debug(entity)
+        if entity is None:
+            id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+            logger.warning(f"For document id {id}, entity is '{entity}'. Skipping.")
+            return None
 
         _result: dict = {}
         _document: Cut = {}
@@ -260,21 +273,25 @@ class IntelManager(object):
             )
             try:
                 # Attempt to retreive existing document
-                logger.debug(f"Retrieving document id: {data['x_opencti_id']}")
+                logger.debug(
+                    f"Retrieving document id: {OpenCTIConnectorHelper.get_attribute_in_extension('id', data)}"
+                )
                 _result = self.es_client.get(
-                    index=self.idx_pattern, id=data["x_opencti_id"], doc_type="_doc"
+                    index=self.write_idx,
+                    id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
+                    doc_type="_doc",
                 )
 
             except NotFoundError:
                 logger.warn(
-                    f"Document not found to update at /{self.idx}/_doc/{data['x_opencti_id']}"
+                    f"Document not found to update at /{self.idx}/_doc/{OpenCTIConnectorHelper.get_attribute_in_extension('id', data)}"
                 )
                 logger.warn("Skipping")
                 return {}
 
             except RequestError as err:
                 logger.error(
-                    f"Unexpected error retreiving document at /{self.idx}/_doc/{data['x_opencti_id']}:",
+                    f"Unexpected error retreiving document at /{self.idx}/_doc/{OpenCTIConnectorHelper.get_attribute_in_extension('id', data)}:",
                     err.__dict__,
                 )
 
@@ -296,14 +313,18 @@ class IntelManager(object):
                                 entity["killChainPhases"],
                                 key=lambda i: (
                                     i["kill_chain_name"],
-                                    i["x_opencti_order"],
+                                    OpenCTIConnectorHelper.get_attribute_in_extension(
+                                        "order", i
+                                    ),
                                 ),
                             ):
                                 phases.append(
                                     {
                                         "killchain_name": phase["kill_chain_name"],
                                         "phase_name": phase["phase_name"],
-                                        "opencti_phase_order": phase["x_opencti_order"],
+                                        "opencti_phase_order": OpenCTIConnectorHelper.get_attribute_in_extension(
+                                            "order", phase
+                                        ),
                                     }
                                 )
 
@@ -338,7 +359,9 @@ class IntelManager(object):
                         logger.debug(f"Updating doc to {_write_idx}:\n {_document}")
                         self.es_client.index(
                             index=_write_idx,
-                            id=data["x_opencti_id"],
+                            id=OpenCTIConnectorHelper.get_attribute_in_extension(
+                                "id", data
+                            ),
                             body=_document,
                         )
                     except RequestError as err:
@@ -375,8 +398,12 @@ class IntelManager(object):
                 f"/dashboard/observations/indicators/{entity['id']}",
             )
 
-        _document["event"]["risk_score"] = entity.get("x_opencti_score", None)
-        _document["event"]["risk_score_norm"] = entity.get("x_opencti_score", None)
+        _document["event"][
+            "risk_score"
+        ] = OpenCTIConnectorHelper.get_attribute_in_extension("score", entity)
+        _document["event"][
+            "risk_score_norm"
+        ] = OpenCTIConnectorHelper.get_attribute_in_extension("score", entity)
         _document["threatintel"]["confidence"] = entity.get("confidence", None)
         _document["threatintel"]["confidence_norm"] = entity.get("confidence", None)
 
@@ -384,7 +411,9 @@ class IntelManager(object):
             "internal_id": entity.get("id", None),
             "valid_from": entity.get("valid_from", None),
             "valid_until": entity.get("valid_until", None),
-            "enable_detection": entity.get("x_opencti_detection", None),
+            "enable_detection": OpenCTIConnectorHelper.get_attribute_in_extension(
+                "detection", entity
+            ),
             "original_pattern": entity.get("pattern", None),
             "pattern_type": entity.get("pattern_type", None),
             "created_at": entity.get("created_at", None),
@@ -396,21 +425,28 @@ class IntelManager(object):
             phases = []
             for phase in sorted(
                 entity["killChainPhases"],
-                key=lambda i: (i["kill_chain_name"], i["x_opencti_order"]),
+                key=lambda i: (
+                    i["kill_chain_name"],
+                    OpenCTIConnectorHelper.get_attribute_in_extension("order", i),
+                ),
             ):
                 phases.append(
                     {
                         "killchain_name": phase["kill_chain_name"],
                         "phase_name": phase["phase_name"],
-                        "opencti_phase_order": phase["x_opencti_order"],
+                        "opencti_phase_order": OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "order", phase
+                        ),
                     }
                 )
 
             _document["threatintel"]["opencti"]["killchain_phases"] = phases
 
-        if entity.get("x_mitre_platforms", None):
+        if OpenCTIConnectorHelper.get_attribute_in_mitre_extension("platforms", entity):
             _document["threatintel"]["opencti"]["mitre"] = {
-                "platforms": entity.get("x_mitre_platforms", None)
+                "platforms": OpenCTIConnectorHelper.get_attribute_in_mitre_extension(
+                    "platforms", entity
+                )
             }
 
         if entity["pattern_type"] == "stix":
@@ -438,14 +474,16 @@ class IntelManager(object):
                 if m.get("modulo", None) is not None:
                     _fmt = m.get("format") or DM_DEFAULT_FMT
                     logger.debug(f"{m['modulo']} -> {_fmt}")
-                    _val = dm(m.get("modulo"), now=timestamp).format(_fmt)
+                    _val = dm(
+                        m.get("modulo"), now=Arrow.fromdatetime(timestamp)
+                    ).format(_fmt)
                     _write_idx = self.pattern.sub(_val, _write_idx)
 
             # Submit to Elastic index
             logger.debug(f"Indexing doc to {_write_idx}:\n {_document}")
             self.es_client.index(
                 index=_write_idx,
-                id=data["x_opencti_id"],
+                id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
                 body=_document,
             )
         except RequestError as err:
@@ -456,7 +494,6 @@ class IntelManager(object):
         return _document
 
     def delete_cti_event(self, data: dict) -> None:
-
         logger.debug(f"Deleting {data}")
         _result: dict = {}
 
@@ -468,13 +505,19 @@ class IntelManager(object):
 
         try:
             _result = self.es_client.delete(
-                index=self.idx_pattern, id=data["x_opencti_id"], doc_type="_doc"
+                index=self.write_idx,
+                id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data),
+                doc_type="_doc",
             )
         except NotFoundError:
-            logger.warn(f"Document id {data['x_opencti_id']} not found in index")
+            logger.warn(
+                f"Document id {OpenCTIConnectorHelper.get_attribute_in_extension('id', data)} not found in index"
+            )
 
         if _result.get("result", None) == "deleted":
-            logger.debug(f"Document id {data['x_opencti_id']} deleted")
+            logger.debug(
+                f"Document id {OpenCTIConnectorHelper.get_attribute_in_extension('id', data)} deleted"
+            )
 
         return
 
@@ -482,9 +525,15 @@ class IntelManager(object):
         from .stix2ecs import StixIndicator
 
         try:
-            item = StixIndicator.parse_pattern(entity["pattern"])[0]
+            items = StixIndicator.parse_pattern(entity["pattern"])
+            if len(items) > 1:
+                types = ",".join([i.typename for i in items])
+                logger.warning(
+                    f"Encountered indicator with more than one comparison expression ({types}). Using only the first one ({items[0].typename})"
+                )
+            item = items[0]
         except NotImplementedError as e:
-            logger.warning(e)
+            logger.error(e)
             return {}
 
         _indicator = item.get_ecs_indicator()

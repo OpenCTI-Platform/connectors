@@ -1,11 +1,14 @@
+import json
 import os
-import yaml
+import sys
 import time
-from typing import List, Dict
-from stix2 import Report, Bundle, parse
+import uuid
+from typing import Dict, List
+
+import yaml
+from pycti import OpenCTIConnectorHelper
 from stix2elevator import elevate
 from stix2elevator.options import initialize_options
-from pycti import OpenCTIConnectorHelper
 
 
 class ImportFileStix:
@@ -34,17 +37,18 @@ class ImportFileStix:
         entity_id = data.get("entity_id", None)
         if entity_id:
             self.helper.log_info("Contextual import.")
-
-            bundle = parse(file_content, allow_custom=True)["objects"]
-
+            bundle = json.loads(file_content)["objects"]
             if self._contains_report(bundle):
                 self.helper.log_info("Bundle contains report.")
             else:
                 self.helper.log_info("No Report in Stix file. Updating current report")
                 bundle = self._update_report(bundle, entity_id)
-
-            file_content = Bundle(objects=bundle, allow_custom=True).serialize()
-
+            bundle = {
+                "type": "bundle",
+                "id": "bundle--" + str(uuid.uuid4()),
+                "objects": bundle,
+            }
+            file_content = json.dumps(bundle)
         bundles_sent = self.helper.send_stix2_bundle(
             file_content,
             bypass_validation=bypass_validation,
@@ -63,7 +67,7 @@ class ImportFileStix:
     @staticmethod
     def _contains_report(bundle: List) -> bool:
         for elem in bundle:
-            if type(elem) == Report:
+            if elem.get("type") == "report":
                 return True
         return False
 
@@ -71,15 +75,15 @@ class ImportFileStix:
         report = self.helper.api.report.read(id=entity_id)
         # The entity_id can be any SDO
         if report:
-            report = Report(
-                id=report["standard_id"],
-                name=report["name"],
-                description=report["description"],
-                published=self.helper.api.stix2.format_date(report["created"]),
-                report_types=report["report_types"],
-                object_refs=bundle,
-                allow_custom=True,
-            )
+            report = {
+                "id": report["standard_id"],
+                "type": "report",
+                "name": report["name"],
+                "description": report["description"],
+                "published": self.helper.api.stix2.format_date(report["created"]),
+                "report_types": report["report_types"],
+                "object_refs": [object["id"] for object in bundle],
+            }
             bundle.append(report)
         return bundle
 
@@ -91,4 +95,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

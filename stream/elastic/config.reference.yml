@@ -14,6 +14,8 @@ connector:
   entity_name: 'Elastic Detection Cluster'
   entity_description: 'Elasticsearch detection engine cluster'
   live_stream_id: 'live'
+  live_stream_listen_delete: true
+  start_timestamp: '1655890657402' ### format example Wed, 22 Jun 2022 09:46:24 GMT
   mode: ecs # Options are 'ecs' (indicators only) or 'stix' (raw STIX documents)
 
 # =============================== Elastic Cloud ================================
@@ -42,6 +44,10 @@ output.elasticsearch:
   # Custom index settings are ignored when ILM is enabled.  Be sure to update
   # `setup.template.pattern` if you change the output index.
   #index: "opencti-{now/d}"
+
+  # Set the following flag to "true" if the elasticsearch access do not have cluster 
+  # "monitor" privileges
+  #reduced_privileges: false 
 
 # ====================== Index Lifecycle Management (ILM) ======================
 

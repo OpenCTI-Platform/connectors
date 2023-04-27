@@ -1,13 +1,12 @@
+import datetime
 import os
-import yaml
+import sys
 import time
+
 import magic
 import requests
-import datetime
-from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class URLHausRecentPayloads:
@@ -106,7 +105,6 @@ class URLHausRecentPayloads:
         self.helper.log_info("Starting URLHaus Recent Payloads Connector")
         while True:
             try:
-
                 current_state = self.helper.get_state()
                 last_first_seen_datetime = None
                 if current_state is not None and "last_first_seen" in current_state:
@@ -153,7 +151,7 @@ class URLHausRecentPayloads:
 
                     # If the artifact doesn't have an included file type, skip processing
                     if self.include_filetypes:
-                        if not file_type in self.include_filetypes:
+                        if file_type not in self.include_filetypes:
                             self.helper.log_info(
                                 f"Skipping {sha256} as it did not match a file type in the included list: {file_type}"
                             )
@@ -161,7 +159,7 @@ class URLHausRecentPayloads:
 
                     # If the artifact doesn't have an included signature, skip processing
                     if self.include_signatures:
-                        if not signature in self.include_signatures:
+                        if signature not in self.include_signatures:
                             self.helper.log_info(
                                 f"Skipping {sha256} as it did not match a signature in the included list: {signature}"
                             )
@@ -212,15 +210,19 @@ class URLHausRecentPayloads:
                 self.helper.log_info(
                     f"Re-checking for new payloads in {self.cooldown_seconds} seconds..."
                 )
-                time.sleep(self.cooldown_seconds)
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
 
             except Exception as e:
                 self.helper.log_error(str(e))
-                time.sleep(self.cooldown_seconds)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                sys.exit(0)
+
+            time.sleep(self.cooldown_seconds)
 
     def get_recent_payloads(self):
         """
@@ -295,4 +297,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        exit(0)
+        sys.exit(0)

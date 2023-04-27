@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-flashpoint:
+    image: opencti/connector-flashpoint:5.7.2
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Flashpoint
+      - CONNECTOR_SCOPE=flashpoint
+      - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - CONNECTOR_LOG_LEVEL=info
+      - FLASHPOINT_API_KEY=ChangeMe
+      - FLASHPOINT_IMPORT_APT=true
+      - FLASHPOINT_IMPORT_MALWARE=true
+      - FLASHPOINT_IMPORT_START_DATE=2022-01-01
+      - FLASHPOINT_IMPORT_INDICATOR=true
+      - FLASHPOINT_INTERVAL=5 # In minutes
+    restart: always

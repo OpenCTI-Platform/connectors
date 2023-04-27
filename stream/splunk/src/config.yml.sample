@@ -6,16 +6,18 @@ connector:
   id: 'ChangeMe'
   type: 'STREAM'
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
   name: 'Splunk'
   scope: 'splunk' # Reserved
   confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 splunk:
-  url: 'https://splunk.changeme.com:8089'
+  url: 'https://splunk1.changeme.com:8089,https://splunk2.changeme.com:8089'
+  token: 'Token1,Token2'
+  owner: 'nobody,nobody'
   ssl_verify: true
-  login: 'ChangeMe'
-  password: 'ChangeMe'
-  owner: 'nobody'
   app: 'search'
   kv_store_name: 'opencti'
+  ignore_types: 'label,marking-definition,identity'
