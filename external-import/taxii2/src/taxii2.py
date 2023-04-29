@@ -93,6 +93,15 @@ class Taxii2Connector:
             ["connector", "update_existing_data"],
             config,
         )
+        self.add_custom_label = get_config_variable(
+            "TAXII2_ADD_CUSTOM_LABEL",
+            ["taxii2", "add_custom_label"],
+            config,
+            default=False,
+        )
+        self.custom_label = get_config_variable(
+            "TAXII2_CUSTOM_LABEL", ["taxii2", "custom_label"], config
+        )
 
     @staticmethod
     def _init_collection_table(colls):
@@ -248,6 +257,13 @@ class Taxii2Connector:
                         # If taxii feed is v2.0 append pattern_type
                         if version == "2.0":
                             object["pattern_type"] = "stix"
+                        # Add a custom label
+                        new_labels = []
+                        if "labels" in object:
+                            new_labels = object["labels"]
+                        if self.add_custom_label == True:
+                            new_labels.append(self.custom_label)
+                            object["labels"] = new_labels
                         objects.append(object)
 
                     # Get the manifest for the last object
