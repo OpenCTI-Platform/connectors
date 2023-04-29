@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'Google DNS'
-  scope: 'Domain-Name' # MIME type or SCO
+  scope: 'Domain-Name,Hostname' # MIME type or SCO
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
