@@ -8,7 +8,7 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=Google DNS
-      - CONNECTOR_SCOPE=Domain-Name # MIME type or Stix Object
+      - CONNECTOR_SCOPE=Domain-Name,Hostname # MIME type or Stix Object
       - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
