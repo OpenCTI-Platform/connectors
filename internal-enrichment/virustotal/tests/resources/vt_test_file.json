@@ -536,7 +536,7 @@
                 "SUPERAntiSpyware": {
                     "category": "undetected",
                     "engine_name": "SUPERAntiSpyware",
-                    "engine_version": "5.7.2.1032",
+                    "engine_version": "5.7.3.1032",
                     "result": null,
                     "method": "blacklist",
                     "engine_update": "20211106"
@@ -856,7 +856,7 @@
                 "Yandex": {
                     "category": "malicious",
                     "engine_name": "Yandex",
-                    "engine_version": "5.7.2.24",
+                    "engine_version": "5.7.3.24",
                     "result": "Trojan.GenAsa!Ad91bBBOkW4",
                     "method": "blacklist",
                     "engine_update": "20211109"

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crits:
-    image: opencti/connector-crits:5.7.2
+    image: opencti/connector-crits:5.7.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

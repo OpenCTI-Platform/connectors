@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-misp-feed:
-    image: opencti/connector-misp-feed:5.7.2
+    image: opencti/connector-misp-feed:5.7.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
