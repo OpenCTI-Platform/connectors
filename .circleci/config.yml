@@ -521,6 +521,10 @@ jobs:
           name: Build Docker image opencti/connector-ipqs
           command: docker build -t opencti/connector-ipqs:latest . && docker tag opencti/connector-ipqs:latest opencti/connector-ipqs:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/google-dns
+          name: Build Docker image opencti/connector-google-dns
+          command: docker build -t opencti/connector-google-dns:latest . && docker tag opencti/connector-google-dns:latest opencti/connector-google-dns:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -614,6 +618,8 @@ jobs:
             docker push opencti/connector-yara:${CIRCLE_TAG}
             docker push opencti/connector-ipqs:latest
             docker push opencti/connector-ipqs:${CIRCLE_TAG}
+            docker push opencti/connector-google-dns:latest
+            docker push opencti/connector-google-dns:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1046,6 +1052,10 @@ jobs:
           name: Build Docker image opencti/connector-ipqs
           command: docker build -t opencti/connector-ipqs:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/google-dns
+          name: Build Docker image opencti/connector-google-dns
+          command: docker build -t opencti/connector-google-dns:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1095,6 +1105,7 @@ jobs:
             docker push opencti/connector-crits:rolling
             docker push opencti/connector-yara:rolling
             docker push opencti/connector-ipqs:rolling
+            docker push opencti/connector-google-dns:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
