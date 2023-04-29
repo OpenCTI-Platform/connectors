@@ -4,6 +4,7 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta
+from functools import cached_property
 from posixpath import join as urljoin
 from typing import Any, Dict, Iterable, List, Set
 
@@ -63,6 +64,10 @@ class Sekoia(object):
             definition_type="statement",
             definition="Copyright SEKOIA.IO",
         )
+
+    @cached_property
+    def requested_types(self) -> str:
+        return self.helper.connect_scope
 
     def run(self):
         self.helper.log_info("Starting SEKOIA.IO connector")
@@ -129,10 +134,15 @@ class Sekoia(object):
         """
         start = f"{(datetime.utcnow() - timedelta(hours=1)).isoformat()}Z"
         if self.start_date:
+            self.helper.log_info(
+                f"Using date provided to the connector: {self.start_date}"
+            )
             try:
                 start = f"{parse(self.start_date).isoformat()}Z"
             except ParserError:
-                pass
+                self.helper.log_error(
+                    f"Impossible to parse the date provided: {self.start_date}. Starting from one hour ago"
+                )
 
         return base64.b64encode(start.encode("utf-8")).decode("utf-8")
 
@@ -149,6 +159,8 @@ class Sekoia(object):
         current_cursor = base64.b64encode(current_time.encode("utf-8")).decode("utf-8")
         while True:
             params = {"limit": self.limit, "cursor": cursor}
+            if self.requested_types:
+                params["match[type]"] = self.requested_types
 
             data = self._send_request(self.get_collection_url(), params)
             if not data:
@@ -165,6 +177,7 @@ class Sekoia(object):
             self._add_main_observable_type_to_indicators(items)
             if self.create_observables:
                 self._add_create_observables_to_indicators(items)
+            self._clean_external_references_fields(items)
             items = self._clean_ic_fields(items)
             self._add_files_to_items(items)
             bundle = self.helper.stix2_create_bundle(items)
@@ -182,6 +195,22 @@ class Sekoia(object):
             if len(items) < self.limit:
                 # We got the last results
                 return cursor
+
+    def _clean_external_references_fields(self, items: List[Dict]):
+        """
+        Remove empty values from external references and add link to original object in Sekoia.io platform
+        """
+        for item in items:
+            item["external_references"] = [
+                {k: v for k, v in ref.items() if v}
+                for ref in item.get("external_references", [])
+            ]
+            item["external_references"].append(
+                {
+                    "source_name": "Sekoia.io",
+                    "url": f"https://app.sekoia.io/intelligence/objects/{item['id']}",
+                }
+            )
 
     def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
         """
@@ -363,6 +392,12 @@ class Sekoia(object):
         """
         try:
             headers = {"Authorization": f"Bearer {self.api_key}"}
+            param_string = (
+                "&".join(f"{k}={v}" for k, v in params.items()) if params else ""
+            )
+            self.helper.log_debug(
+                f"Sending request to: {url} with params {param_string}"
+            )
             res = requests.get(url, params=params, headers=headers)
             res.raise_for_status()
             if binary:
