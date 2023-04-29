@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   connector-kaspersky:
-    image: opencti/connector-kaspersky:5.7.2
+    image: opencti/connector-kaspersky:5.7.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
