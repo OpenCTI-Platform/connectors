@@ -137,11 +137,11 @@ class Mandiant:
         self,
         url,
         limit=None,
-        gte_mscore=None,
         offset=None,
         next=None,
         start_epoch=None,
         end_epoch=None,
+        gte_mscore=None,
         retry=False,
         app_header=None,
     ):
@@ -173,7 +173,7 @@ class Mandiant:
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
             self._get_token()
             return self._query(
-                url, limit, gte_mscore, offset, next, start_epoch, end_epoch, True
+                url, limit, offset, next, start_epoch, end_epoch, gte_mscore, True
             )
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
@@ -732,7 +732,7 @@ class Mandiant:
                 + str(next)
             )
             result = self._query(
-                url, limit, gte_mscore, None, next, start_epoch, end_epoch
+                url, limit, None, next, start_epoch, end_epoch, gte_mscore
             )
             if (
                 result is not None
