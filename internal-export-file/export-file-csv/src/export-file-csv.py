@@ -305,6 +305,7 @@ class ExportFileCsv:
                     "Location": self.helper.api_impersonate.location.list,
                     "Language": self.helper.api_impersonate.language.list,
                     "Malware": self.helper.api_impersonate.malware.list,
+                    "Malware-Analysis": self.helper.api_impersonate.malware_analysis.list,
                     "Threat-Actor": self.helper.api_impersonate.threat_actor.list,
                     "Tool": self.helper.api_impersonate.tool.list,
                     "Narrative": self.helper.api_impersonate.narrative.list,
