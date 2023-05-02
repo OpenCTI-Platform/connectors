@@ -464,6 +464,7 @@ class ExportReportPdf:
             "infrastructure": self.helper.api_impersonate.infrastructure.read,
             "intrusion-set": self.helper.api_impersonate.intrusion_set.read,
             "malware": self.helper.api_impersonate.malware.read,
+            "Malware-Analysis": self.helper.api_impersonate.malware_analysis.list,
             "threat-actor": self.helper.api_impersonate.threat_actor.read,
             "tool": self.helper.api_impersonate.tool.read,
             "channel": self.helper.api_impersonate.channel.read,
