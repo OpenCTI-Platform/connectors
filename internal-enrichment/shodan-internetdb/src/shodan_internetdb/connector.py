@@ -100,7 +100,7 @@ class ShodanInternetDBConnector:
                 return "Skipping observable (TLP)"
 
         # Process the observable value
-        value = observable["value"]
+        value = observable["observable_value"]
         if not validators.ipv4(value):
             log.error("Observable value is not an IPv4 address")
             return "Skipping observable (ipv4 validation)"
@@ -140,7 +140,7 @@ class ShodanInternetDBConnector:
             """Format a list of primitives into a Markdown list"""
             return "".join(f"\n- {name}" for name in alist) or "n/a"
 
-        value = observable["value"]
+        value = observable["observable_value"]
         abstract = f"Shodan InternetDB enrichment of {value}"
         content = f"""```
 Shodan InternetDB:
