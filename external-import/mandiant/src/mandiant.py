@@ -51,10 +51,11 @@ class Mandiant:
             False,
             True,
         )
-        self.mandiant_import_start_date = get_config_variable(
-            "MANDIANT_IMPORT_START_DATE",
-            ["mandiant", "import_start_date"],
+        self.mandiant_days_before_start = get_config_variable(
+            "MANDIANT_DAYS_BEFORE_START",
+            ["mandiant", "days_before_start"],
             config,
+            default="89",
         )
         self.mandiant_interval = get_config_variable(
             "MANDIANT_INTERVAL", ["mandiant", "interval"], config, True
@@ -69,11 +70,14 @@ class Mandiant:
             ["mandiant", "report_types_ignored"],
             config,
         ).split(",")
-        self.added_after = int(parse(self.mandiant_import_start_date).timestamp())
+        self.added_after = int(time.time()) - (
+            86400 * int(self.mandiant_days_before_start)
+        )
         self.mandiant_mscore = get_config_variable(
             "MANDIANT_MSCORE",
             ["mandiant", "mscore"],
             config,
+            default="0",
         )
 
         self.identity = self.helper.api.identity.create(
@@ -137,11 +141,11 @@ class Mandiant:
         self,
         url,
         limit=None,
-        gte_mscore=None,
         offset=None,
         next=None,
         start_epoch=None,
         end_epoch=None,
+        gte_mscore=None,
         retry=False,
         app_header=None,
     ):
@@ -173,7 +177,7 @@ class Mandiant:
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
             self._get_token()
             return self._query(
-                url, limit, gte_mscore, offset, next, start_epoch, end_epoch, True
+                url, limit, offset, next, start_epoch, end_epoch, gte_mscore, True
             )
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
@@ -625,9 +629,10 @@ class Mandiant:
     def _import_vulnerability(self, work_id, current_state):
         url = self.mandiant_api_url + "/v4/vulnerability"
         no_more_result = False
-        limit = 1000
+        limit = 25
+        current_epoch = int(time.time())
         start_epoch = current_state["vulnerability"]
-        end_epoch = start_epoch + 3600
+        end_epoch = current_epoch
         next = None
         while no_more_result is False:
             self.helper.log_info(
@@ -638,7 +643,10 @@ class Mandiant:
                 + ", next="
                 + str(next)
             )
-            result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is None:
+                result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is not None:
+                result = self._query(url, None, None, next)
             if (
                 result is not None
                 and result["vulnerability"] is not None
@@ -697,29 +705,27 @@ class Mandiant:
                         update=self.update_existing_data,
                         work_id=work_id,
                     )
-            elif end_epoch > int(time.time()):
-                no_more_result = True
             if (
                 result is not None
                 and result["vulnerability"] is not None
-                and len(result["vulnerability"]) == 1000
+                and len(result["vulnerability"]) > 0
                 and "next" in result
                 and len(result["next"]) > 0
             ):
                 next = result["next"]
             else:
                 next = None
-                start_epoch = end_epoch
-                end_epoch = start_epoch + 3600
-                current_state["vulnerability"] = int(start_epoch)
+                no_more_result = True
+                current_state["vulnerability"] = current_epoch
         return current_state
 
     def _import_indicator(self, work_id, current_state):
         url = self.mandiant_api_url + "/v4/indicator"
         no_more_result = False
-        limit = 1000
+        limit = 25
+        current_epoch = int(time.time())
         start_epoch = current_state["indicator"]
-        end_epoch = start_epoch + 3600
+        end_epoch = current_epoch
         gte_mscore = self.mandiant_mscore
         next = None
         while no_more_result is False:
@@ -731,9 +737,12 @@ class Mandiant:
                 + ", next="
                 + str(next)
             )
-            result = self._query(
-                url, limit, gte_mscore, None, next, start_epoch, end_epoch
-            )
+            if next is None:
+                result = self._query(
+                    url, limit, None, next, start_epoch, end_epoch, gte_mscore
+                )
+            if next is not None:
+                result = self._query(url, None, None, next)
             if (
                 result is not None
                 and result["indicators"] is not None
@@ -844,29 +853,27 @@ class Mandiant:
                         update=self.update_existing_data,
                         work_id=work_id,
                     )
-            elif end_epoch > int(time.time()):
-                no_more_result = True
             if (
                 result is not None
                 and result["indicators"] is not None
-                and len(result["indicators"]) == 1000
+                and len(result["indicators"]) > 0
                 and "next" in result
                 and len(result["next"]) > 0
             ):
                 next = result["next"]
             else:
                 next = None
-                start_epoch = end_epoch
-                end_epoch = start_epoch + 3600
-                current_state["indicator"] = int(start_epoch)
+                no_more_result = True
+                current_state["indicator"] = current_epoch
         return current_state
 
     def _import_report(self, work_id, current_state):
         url = self.mandiant_api_url + "/v4/reports"
         no_more_result = False
-        limit = 1000
+        limit = 25
+        current_epoch = int(time.time())
         start_epoch = current_state["report"]
-        end_epoch = start_epoch + 3600
+        end_epoch = current_epoch
         next = None
         while no_more_result is False:
             self.helper.log_info(
@@ -877,7 +884,10 @@ class Mandiant:
                 + ", next="
                 + str(next)
             )
-            result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is None:
+                result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is not None:
+                result = self._query(url, None, None, next)
             if (
                 result is not None
                 and result["objects"] is not None
@@ -1152,21 +1162,18 @@ class Mandiant:
                             self.helper.log_info("ERROR: " + traceback.format_exc())
                 next_pointer = result.get("next")
                 self.helper.log_debug("Report next_pointer ID " + str(next_pointer))
-            elif end_epoch > int(time.time()):
-                no_more_result = True
             if (
                 result is not None
                 and result["objects"] is not None
-                and len(result["objects"]) == 1000
+                and len(result["objects"]) > 0
                 and "next" in result
                 and len(result["next"]) > 0
             ):
                 next = result["next"]
             else:
                 next = None
-                start_epoch = end_epoch
-                end_epoch = start_epoch + 3600
-                current_state["report"] = int(start_epoch)
+                no_more_result = True
+                current_state["report"] = current_epoch
         return current_state
 
     def run(self):
