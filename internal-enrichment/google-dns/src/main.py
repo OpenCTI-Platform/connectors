@@ -47,7 +47,15 @@ class GoogleDNSConnector:
 
     def _get_domain(self, entity_id):
         self.helper.log_debug("Getting Domain Name from OpenCTI")
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        custom_attributes = """
+            id
+            entity_type
+            observable_value
+            standard_id
+        """
+        observable = self.helper.api.stix_cyber_observable.read(
+            id=entity_id, customAttributes=custom_attributes
+        )
         return observable
 
     def _build_ip_addrs(self, domain, a_records) -> list:
@@ -212,7 +220,7 @@ class GoogleDNSConnector:
 
         # Handle 'NS' records
         self.helper.log_debug("Getting 'NS' records via Google Public DNS")
-        ns_records = self.dns_client.ns(domain["value"])
+        ns_records = self.dns_client.ns(domain["observable_value"])
         if any(ns_records):
             ns_objects = self._build_nameservers(domain, ns_records)
             bundle = Bundle(objects=ns_objects).serialize()
@@ -220,7 +228,7 @@ class GoogleDNSConnector:
 
         # Handle any 'A' records
         self.helper.log_debug("Getting 'A' records via Google Public DNS")
-        a_records = self.dns_client.a(domain["value"])
+        a_records = self.dns_client.a(domain["observable_value"])
         if any(a_records):
             ipv4_objects = self._build_ip_addrs(domain, a_records)
             bundle = Bundle(objects=ipv4_objects).serialize()
@@ -228,7 +236,7 @@ class GoogleDNSConnector:
 
         # Handle any 'CNAME' records
         self.helper.log_debug("Getting 'CNAME' records via Google Public DNS")
-        cname_records = self.dns_client.cname(domain["value"])
+        cname_records = self.dns_client.cname(domain["observable_value"])
         if any(cname_records):
             domain_objects = self._build_cname_domains(domain, cname_records)
             bundle = Bundle(objects=domain_objects).serialize()
@@ -236,7 +244,7 @@ class GoogleDNSConnector:
 
         # Handle any 'MX' records
         self.helper.log_debug("Getting 'MX' records via Google Public DNS")
-        mx_records = self.dns_client.mx(domain["value"])
+        mx_records = self.dns_client.mx(domain["observable_value"])
         if any(mx_records):
             domain_objects = self._build_mx_domains(domain, mx_records)
             bundle = Bundle(objects=domain_objects).serialize()
@@ -244,7 +252,7 @@ class GoogleDNSConnector:
 
         # Handle any 'TXT' records
         self.helper.log_debug("Getting 'TXT' records via Google Public DNS")
-        txt_records = self.dns_client.txt(domain["value"])
+        txt_records = self.dns_client.txt(domain["observable_value"])
         if any(txt_records):
             txt_objects = self._build_txt_objects(domain, txt_records)
             bundle = Bundle(objects=txt_objects).serialize()
