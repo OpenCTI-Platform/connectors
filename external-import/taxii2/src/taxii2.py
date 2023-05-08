@@ -269,14 +269,20 @@ class Taxii2Connector:
                     # Get the manifest for the last object
                     last_obj = response["objects"][-1]
                     manifest = collection.get_manifest(id=last_obj["id"])
-                    date_added = manifest["objects"][0]["date_added"]
-                    filters["added_after"] = date_added
 
-                    # Get the next set of objects
-                    response = collection.get_objects(**filters)
-                    if "objects" in response and len(response["objects"]) > 0:
-                        total = len(response["objects"])
+                    # Check manifest size
+                    if len(manifest["objects"]) > 0:
+                        date_added = manifest["objects"][0]["date_added"]
+                        filters["added_after"] = date_added
+
+                        # Get the next set of objects
+                        response = collection.get_objects(**filters)
+                        if "objects" in response and len(response["objects"]) > 0:
+                            total = len(response["objects"])
+                        else:
+                            total = 0
                     else:
+                        self.helper.log_info("No manifest found. Stopping pagination")
                         total = 0
 
             # Create bundle
