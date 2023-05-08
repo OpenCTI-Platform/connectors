@@ -245,12 +245,12 @@ class Taxii2Connector:
         response = collection.get_objects(**filters)
         if "objects" in response:
             objects = []
+            if "spec_version" in response:
+                version = response["spec_version"]
+            else:
+                version = response["objects"][0]["spec_version"]
             while total != 0:
                 # Taxii 2.1 servers are not required to send data in bundle
-                if "spec_version" not in response:
-                    version = response["objects"][0]["spec_version"]
-                else:
-                    version = response["spec_version"]
                 total = len(response["objects"])
                 if total > 0:
                     for object in response["objects"]:
