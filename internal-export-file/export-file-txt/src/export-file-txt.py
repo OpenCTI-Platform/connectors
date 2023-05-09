@@ -112,7 +112,10 @@ class ExportFileTxt:
                                         "Note",
                                         "Observed-Data",
                                         "Opinion",
-                                        "Case",
+                                        "Case-Incident",
+                                        "Feedback",
+                                        "Case-Rfi",
+                                        "Case-Rft",
                                     ],
                                 }
                             )
@@ -126,7 +129,10 @@ class ExportFileTxt:
                                         "Note",
                                         "Observed-Data",
                                         "Opinion",
-                                        "Case",
+                                        "Case-Rfi",
+                                        "Case-Rft",
+                                        "Case-Incident",
+                                        "Feedback",
                                     ],
                                 }
                             ]
@@ -145,7 +151,10 @@ class ExportFileTxt:
                     "Opinion": self.helper.api_impersonate.opinion.list,
                     "Report": self.helper.api_impersonate.report.list,
                     "Grouping": self.helper.api_impersonate.grouping.list,
-                    "Case": self.helper.api_impersonate.case.list,
+                    "Case-Incident": self.helper.api_impersonate.case_incident.list,
+                    "Feedback": self.helper.api_impersonate.feedback.list,
+                    "Case-Rfi": self.helper.api_impersonate.case_rfi.list,
+                    "Case-Rft": self.helper.api_impersonate.case_rft.list,
                     "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
                     "Identity": self.helper.api_impersonate.identity.list,
                     "Language": self.helper.api_impersonate.language.list,

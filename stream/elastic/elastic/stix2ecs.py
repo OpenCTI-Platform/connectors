@@ -460,8 +460,7 @@ class ProcessIndicator(StixIndicator):
         obj = super().get_ecs_indicator()
         for item in data:
             if item[0][0].lower() == "arguments":
-                args = item[2].replace("'", "").split(",")
-                recursive_update(obj, {"arguments": args})
+                recursive_update(obj, {"arguments": item[2].replace("'", "")})
             elif item[0][0].lower() in ("name", "command_line"):
                 recursive_update(obj, {item[0][0].lower(): item[2].replace("'", "")})
 
@@ -486,12 +485,32 @@ class ProcessIndicator(StixIndicator):
         return obj
 
 
-class SoftwareIndicator(StixIndicator):
+class UrlIndicator(StixIndicator):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self.url: List[str] = None
+
+    def _parse(self, data: List[Tuple[str, str, str]]) -> Dict[str, str]:
+        obj = super().get_ecs_indicator()
+        for item in data:
+            if item[0][0].lower() == "value":
+                url = item[2].replace("'", "")
+                recursive_update(obj, {"url": {"full": url}})
+
+        if "url" in obj:
+            self.url = obj["url"]
+
+        return self
+
+    def get_ecs_indicator(self) -> Dict[str, str]:
+        obj = super().get_ecs_indicator()
+        if self.url is not None:
+            recursive_update(obj, {"url": self.url})
+
+        return obj
 
 
-class UrlIndicator(StixIndicator):
+class SoftwareIndicator(StixIndicator):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 

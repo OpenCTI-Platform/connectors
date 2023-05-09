@@ -17,7 +17,10 @@ There are a number of configuration options, which are set either in `docker-com
 | TAXII2_INITIAL_HISTORY| initial_history| In hours, the "lookback" window for the intial Poll. This will limit the respones only to STIX2 objects that were added to the collection during the specified lookback time. In all subsequent polls, the `interval` configuration option is used to determine the lookback window
 | TAXII2_INTERVAL     | interval        | In hours, the amount of time between each run of the connector. This option also sets the "lookback" window for all polls except the first one
 | VERIFY_SSL          | verify_ssl      | Boolean statement on whether to require an SSL/TLS connection with the TAXII Server. Default to True
-
+| TAXII2_CREATE_INDICATORS | true | Boolean statement on whether to create indicators
+| TAXII2_CREATE_OBSERVABLES | true | Boolean statement on whether to create observables
+| TAXII2_ADD_CUSTOM_LABEL | false | Boolean statement on whether to add custom label to all indicators. Default to False
+| TAXII2_CUSTOM_LABEL | string | String to use for custom label.
 
 ### Collections and API roots
 TAXII 2.0 introduced a new concept into the TAXII standard called an "API Root." API Roots are logical groupings of TAXII Collections and Channels that allow for better organization and federated access. More information can be found in the [TAXII2 standard](https://docs.oasis-open.org/cti/taxii/v2.1/csprd01/taxii-v2.1-csprd01.pdf)

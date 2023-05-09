@@ -16,7 +16,8 @@ mandiant:
   api_v4_key_id: 'ChangeMe'
   api_v4_key_secret: 'ChangeMe'
   collections: 'actor,malware,indicator,vulnerability,report'
-  import_start_date: '2022-04-01'
+  days_before_start: '89'
   threat_actor_as_intrusion_set: true
   report_types_ignored: 'Vulnerability Report' # Separated by commas, highly suggest to ignore "Vulnerability Report" due the amount of reports daily and the amount of repetitive software creating extensive delay processing reports.
   interval: 60 # Required, in minutes
+  mscore: 0

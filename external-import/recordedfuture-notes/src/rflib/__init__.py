@@ -9,6 +9,7 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
+
 from ._version import __version__ as APP_VERSION
 from .rf_client import RFClient
 from .rf_notes_to_stix2 import (

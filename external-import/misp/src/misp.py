@@ -16,6 +16,7 @@ from pycti import (
     IntrusionSet,
     Location,
     Malware,
+    MarkingDefinition,
     Note,
     OpenCTIConnectorHelper,
     Report,
@@ -211,6 +212,30 @@ class Misp:
             config,
             default=True,
         )
+        self.misp_guess_threats_from_tags = get_config_variable(
+            "MISP_GUESS_THREAT_FROM_TAGS",
+            ["misp", "guess_threats_from_tags"],
+            config,
+            default=False,
+        )
+        self.misp_author_from_tags = get_config_variable(
+            "MISP_AUTHOR_FROM_TAGS",
+            ["misp", "author_from_tags"],
+            config,
+            default=False,
+        )
+        self.misp_markings_from_tags = get_config_variable(
+            "MISP_MARKINGS_FROM_TAGS",
+            ["misp", "markings_from_tags"],
+            config,
+            default=False,
+        )
+        self.misp_enforce_warning_list = get_config_variable(
+            "MISP_ENFORCE_WARNING_LIST",
+            ["misp", "enforce_warning_list"],
+            config,
+            default=False,
+        )
         self.misp_report_type = get_config_variable(
             "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
         )
@@ -271,6 +296,15 @@ class Misp:
                 config,
                 isNumber=False,
                 default=False,
+            )
+        )
+        self.import_unsupported_observables_as_text_transparent = bool(
+            get_config_variable(
+                "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
+                ["misp", "import_unsupported_observables_as_text_transparent"],
+                config,
+                isNumber=False,
+                default=True,
             )
         )
         self.misp_interval = get_config_variable(
@@ -382,6 +416,8 @@ class Misp:
                 if self.import_keyword is not None:
                     kwargs["value"] = self.import_keyword
                     kwargs["searchall"] = True
+                if self.misp_enforce_warning_list is not None:
+                    kwargs["enforce_warninglist"] = self.misp_enforce_warning_list
                 self.helper.log_info(
                     "Fetching MISP events with args: " + json.dumps(kwargs)
                 )
@@ -420,7 +456,10 @@ class Misp:
 
                 # Next page
                 current_page += 1
-                current_state["current_page"] = current_page
+                if current_state is not None:
+                    current_state["current_page"] = current_page
+                else:
+                    current_state = {"current_page": current_page}
                 self.helper.set_state(current_state)
             # Loop is over, storing the state
             # We cannot store the state before, because MISP events are NOT ordered properly
@@ -567,11 +606,27 @@ class Misp:
 
             ### Pre-process
             # Author
-            author = stix2.Identity(
-                id=Identity.generate_id(event["Event"]["Orgc"]["name"], "organization"),
-                name=event["Event"]["Orgc"]["name"],
-                identity_class="organization",
-            )
+            author = None
+            if self.misp_author_from_tags:
+                if "Tag" in event["Event"]:
+                    event_tags = event["Event"]["Tag"]
+                    for tag in event_tags:
+                        tag_name = tag["name"].lower()
+                        if tag_name.startswith("creator") and "=" in tag_name:
+                            author_name = tag_name.split("=")[1]
+                            author = stix2.Identity(
+                                id=Identity.generate_id(author_name, "organization"),
+                                name=author_name,
+                                identity_class="organization",
+                            )
+            if author is None:
+                author = stix2.Identity(
+                    id=Identity.generate_id(
+                        event["Event"]["Orgc"]["name"], "organization"
+                    ),
+                    name=event["Event"]["Orgc"]["name"],
+                    identity_class="organization",
+                )
             # Markings
             if "Tag" in event["Event"]:
                 event_markings = self.resolve_markings(event["Event"]["Tag"])
@@ -659,29 +714,47 @@ class Misp:
 
                 object_observable = None
                 if self.misp_create_object_observables is not None:
-                    unique_key = ""
-                    if len(object["Attribute"]) > 0:
-                        unique_key = (
-                            " ("
-                            + object["Attribute"][0]["type"]
-                            + "="
-                            + object["Attribute"][0]["value"]
-                            + ")"
+                    if self.import_unsupported_observables_as_text_transparent:
+                        if len(object["Attribute"]) > 0:
+                            value = object["Attribute"][0]["value"]
+                            object_observable = Text(
+                                value=value,
+                                object_marking_refs=event_markings,
+                                custom_properties={
+                                    "description": object["description"],
+                                    "x_opencti_score": self.threat_level_to_score(
+                                        event_threat_level
+                                    ),
+                                    "labels": event_tags,
+                                    "created_by_ref": author["id"],
+                                    "external_references": attribute_external_references,
+                                },
+                            )
+                            objects_observables.append(object_observable)
+                    else:
+                        unique_key = ""
+                        if len(object["Attribute"]) > 0:
+                            unique_key = (
+                                " ("
+                                + object["Attribute"][0]["type"]
+                                + "="
+                                + object["Attribute"][0]["value"]
+                                + ")"
+                            )
+                        object_observable = Text(
+                            value=object["name"] + unique_key,
+                            object_marking_refs=event_markings,
+                            custom_properties={
+                                "description": object["description"],
+                                "x_opencti_score": self.threat_level_to_score(
+                                    event_threat_level
+                                ),
+                                "labels": event_tags,
+                                "created_by_ref": author["id"],
+                                "external_references": attribute_external_references,
+                            },
                         )
-                    object_observable = Text(
-                        value=object["name"] + unique_key,
-                        object_marking_refs=event_markings,
-                        custom_properties={
-                            "description": object["description"],
-                            "x_opencti_score": self.threat_level_to_score(
-                                event_threat_level
-                            ),
-                            "labels": event_tags,
-                            "created_by_ref": author["id"],
-                            "external_references": attribute_external_references,
-                        },
-                    )
-                    objects_observables.append(object_observable)
+                        objects_observables.append(object_observable)
                 object_attributes = []
                 for attribute in object["Attribute"]:
                     indicator = self.process_attribute(
@@ -1780,6 +1853,68 @@ class Misp:
                         added_names.append(name)
 
         for tag in tags:
+            # Try to guess from tags
+            if self.misp_guess_threats_from_tags:
+                tag_value_split = tag["name"].split("=")
+                if len(tag_value_split) == 1:
+                    tag_value = tag_value_split[0]
+                else:
+                    tag_value = tag_value_split[1].replace('"', "")
+                threats = self.helper.api.stix_domain_object.list(
+                    types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
+                    filters=[{"key": "name", "values": [tag_value]}],
+                )
+                if len(threats) > 0:
+                    threat = threats[0]
+                    if threat["name"] not in added_names:
+                        if threat["entity_type"] == "Intrusion-Set":
+                            elements["intrusion_sets"].append(
+                                stix2.IntrusionSet(
+                                    id=IntrusionSet.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Malware":
+                            elements["malwares"].append(
+                                stix2.Malware(
+                                    id=IntrusionSet.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Tool":
+                            elements["tools"].append(
+                                stix2.Tool(
+                                    id=Tool.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Intrusion-Set":
+                            elements["attack_patterns"].append(
+                                stix2.AttackPattern(
+                                    id=AttackPattern.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
             # Get the linked intrusion sets
             if (
                 tag["name"].startswith("misp-galaxy:threat-actor")
@@ -2023,6 +2158,24 @@ class Misp:
         markings = []
         for tag in tags:
             tag_name = tag["name"].lower()
+            if self.misp_markings_from_tags:
+                if (
+                    tag_name.startswith("marking")
+                    and ":" in tag_name
+                    and "=" in tag_name
+                ):
+                    marking_definition = tag_name.split(":")[1]
+                    marking_type = marking_definition.split("=")[0]
+                    marking_name = marking_definition.split("=")[1]
+                    marking = stix2.MarkingDefinition(
+                        id=MarkingDefinition.generate_id(marking_type, marking_name),
+                        definition_type="statement",
+                        definition={"statement": "custom"},
+                        allow_custom=True,
+                        x_opencti_definition_type=marking_type,
+                        x_opencti_definition=marking_name,
+                    )
+                    markings.append(marking)
             if tag_name == "tlp:clear":
                 markings.append(stix2.TLP_WHITE)
             if tag_name == "tlp:white":
@@ -2032,7 +2185,15 @@ class Misp:
             if tag_name == "tlp:amber":
                 markings.append(stix2.TLP_AMBER)
             if tag_name == "tlp:amber+strict":
-                markings.append(stix2.TLP_AMBER)
+                marking = stix2.MarkingDefinition(
+                    id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                    definition_type="statement",
+                    definition={"statement": "custom"},
+                    allow_custom=True,
+                    x_opencti_definition_type="TLP",
+                    x_opencti_definition="TLP:AMBER+STRICT",
+                )
+                markings.append(marking)
             if tag_name == "tlp:red":
                 markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:

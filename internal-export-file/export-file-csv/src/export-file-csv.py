@@ -121,6 +121,10 @@ class ExportFileCsv:
                 entity_data = self.helper.api_impersonate.stix_cyber_observable.read(
                     id=entity_id
                 )
+            if entity_data is None:
+                raise ValueError(
+                    "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
+                )
             entities_list = []
             if "objectsIds" in entity_data:
                 for id in entity_data["objectsIds"]:
@@ -189,6 +193,10 @@ class ExportFileCsv:
                                 id=entity_id
                             )
                         )
+                    if entity_data is None:
+                        raise ValueError(
+                            "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
+                        )
                     entities_list.append(entity_data)
 
             else:  # export_scope = 'query'
@@ -247,7 +255,10 @@ class ExportFileCsv:
                                     "Note",
                                     "Observed-Data",
                                     "Opinion",
-                                    "Case",
+                                    "Case-Incident",
+                                    "Feedback",
+                                    "Case-Rfi",
+                                    "Case-Rft",
                                 ],
                             }
                         )
@@ -261,8 +272,10 @@ class ExportFileCsv:
                                     "Note",
                                     "Observed-Data",
                                     "Opinion",
-                                    "Case",
-                                    "Case",
+                                    "Case-Rfi",
+                                    "Case-Rft",
+                                    "Case-Incident",
+                                    "Feedback",
                                 ],
                             }
                         ]
@@ -280,7 +293,10 @@ class ExportFileCsv:
                     "Opinion": self.helper.api_impersonate.opinion.list,
                     "Report": self.helper.api_impersonate.report.list,
                     "Grouping": self.helper.api_impersonate.grouping.list,
-                    "Case": self.helper.api_impersonate.case.list,
+                    "Case-Incident": self.helper.api_impersonate.case_incident.list,
+                    "Feedback": self.helper.api_impersonate.feedback.list,
+                    "Case-Rfi": self.helper.api_impersonate.case_rfi.list,
+                    "Case-Rft": self.helper.api_impersonate.case_rft.list,
                     "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
                     "Identity": self.helper.api_impersonate.identity.list,
                     "Indicator": self.helper.api_impersonate.indicator.list,

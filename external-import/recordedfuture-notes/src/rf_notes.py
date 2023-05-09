@@ -45,6 +45,10 @@ class RFNotes:
         self.rf_interval = get_config_variable(
             "RECORDED_FUTURE_INTERVAL", ["rf-notes", "interval"], config, True
         )
+        self.tlp = get_config_variable(
+            "RECORDED_FUTURE_TLP", ["rf-notes", "TLP"], config
+        )
+
         self.rf_pull_signatures = get_config_variable(
             "RECORDED_FUTURE_PULL_SIGNATURES", ["rf-notes", "pull_signatures"], config
         )
@@ -53,6 +57,14 @@ class RFNotes:
         )
         self.rf_topic = get_config_variable(
             "RECORDED_FUTURE_TOPIC", ["rf-notes", "topic"], config
+        )
+        self.rf_person_to_TA = get_config_variable(
+            "RECORDED_FUTUTRE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
+        )
+        self.rf_TA_to_intrusion_set = get_config_variable(
+            "RECORDED_FUTURE_TA_TO_INTRUSION_SET",
+            ["rf-notes", "TA_to_intrusion_set"],
+            config,
         )
 
         self.update_existing_data = get_config_variable(
@@ -119,7 +131,13 @@ class RFNotes:
         )
         self.helper.log_info(f"fetched {len(notes)} Analyst notes from API")
         for note in notes:
-            stixnote = StixNote(self.helper, tas)
+            stixnote = StixNote(
+                self.helper,
+                tas,
+                self.tlp,
+                self.rf_person_to_TA,
+                self.rf_TA_to_intrusion_set,
+            )
             stixnote.from_json(note)
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(

@@ -22,7 +22,11 @@ misp:
   create_observables: true # Required, create observables for attributes
   create_object_observables: true # Required, create text observables for MISP objects
   report_description_attribute_filter: '' # Optional, example: "type=comment,category=Internal reference"
-  create_tags_as_labels: true # Optional, create tags as labels
+  create_tags_as_labels: true # Optional, create tags as labels (sanitize MISP tag to OpenCTI labels)
+  guess_threats_from_tags: false # Optional, try to guess threats (threat actor, intrusion set, malware, etc.) from MISP tags when they are present in OpenCTI
+  author_from_tags: false # Optional, map creator:XX=YY (author of event will be YY instead of the author of the event)
+  markings_from_tags: false # Optional, map marking:XX=YY (in addition to TLP, add XX:YY as marking definition, where XX is marking type, YY is marking value)
+  enforce_warning_list: false # Optional, enforce warning list in MISP queries
   report_type: 'misp-event' # Optional, report_class if creating report for event
   report_status: 'New' # New, In progress, Analyzed and Closed
   import_from_date: '2010-01-01' # Optional, import all event from this date
@@ -39,4 +43,5 @@ misp:
   import_with_attachments: false # Optional, try to import a PDF file from the attachment attribute
   import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
   import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
+  import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value
   interval: 1 # Required, in minutes

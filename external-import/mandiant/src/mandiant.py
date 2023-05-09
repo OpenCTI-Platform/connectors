@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import time
+import traceback
 
 import requests
 import stix2
@@ -50,10 +51,11 @@ class Mandiant:
             False,
             True,
         )
-        self.mandiant_import_start_date = get_config_variable(
-            "MANDIANT_IMPORT_START_DATE",
-            ["mandiant", "import_start_date"],
+        self.mandiant_days_before_start = get_config_variable(
+            "MANDIANT_DAYS_BEFORE_START",
+            ["mandiant", "days_before_start"],
             config,
+            default="89",
         )
         self.mandiant_interval = get_config_variable(
             "MANDIANT_INTERVAL", ["mandiant", "interval"], config, True
@@ -68,7 +70,15 @@ class Mandiant:
             ["mandiant", "report_types_ignored"],
             config,
         ).split(",")
-        self.added_after = int(parse(self.mandiant_import_start_date).timestamp())
+        self.added_after = int(time.time()) - (
+            86400 * int(self.mandiant_days_before_start)
+        )
+        self.mandiant_mscore = get_config_variable(
+            "MANDIANT_MSCORE",
+            ["mandiant", "mscore"],
+            config,
+            default="0",
+        )
 
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -81,6 +91,8 @@ class Mandiant:
         self.cache = {}
 
     def cleanhtml(self, raw_html):
+        if raw_html is None:
+            return None
         CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
         cleantext = re.sub(CLEANR, "", raw_html)
         return cleantext
@@ -91,7 +103,7 @@ class Mandiant:
     def _get_token(self):
         headers = {
             "accept": "application/json",
-            "x-app-name": "opencti-connector-5.5.4",
+            "x-app-name": "opencti-connector-5.7.4",
         }
         r = requests.post(
             self.mandiant_api_url + "/token",
@@ -111,14 +123,19 @@ class Mandiant:
             return None
         return object[key]
 
+    def _exists_and_not_redacted(self, key, object):
+        # in contrast to self._redacted_as_none that returns a 'NoneType',
+        # this function returns a boolean
+        return key in object and object[key] != "redacted"
+
     def _process_aliases(self, object):
-        if "aliases" in object:
-            aliases = []
-            for alias in object["aliases"]:
-                aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
-            object["aliases"] = aliases
-            return self._redacted_as_none("aliases", object)
-        return None
+        if not self._exists_and_not_redacted("aliases", object):
+            return None
+        aliases = []
+        for alias in object["aliases"]:
+            aliases.append(re.sub("[\(\[].*?[\)\]]", "", alias["name"]).strip())
+        object["aliases"] = aliases
+        return self._redacted_as_none("aliases", object)
 
     def _query(
         self,
@@ -128,6 +145,7 @@ class Mandiant:
         next=None,
         start_epoch=None,
         end_epoch=None,
+        gte_mscore=None,
         retry=False,
         app_header=None,
     ):
@@ -137,11 +155,13 @@ class Mandiant:
         headers = {
             "authorization": "Bearer " + self.auth_token,
             "accept": app_header,
-            "x-app-name": "opencti-connector-5.5.4",
+            "x-app-name": "opencti-connector-5.7.4",
         }
         params = {}
         if limit is not None:
             params["limit"] = str(limit)
+        if gte_mscore is not None:
+            params["gte_mscore"] = str(int(gte_mscore))
         if offset is not None:
             params["offset"] = str(offset)
         if next is not None:
@@ -156,7 +176,9 @@ class Mandiant:
             return r.json()
         elif (r.status_code == 401 or r.status_code == 403) and not retry:
             self._get_token()
-            return self._query(url, limit, offset, next, start_epoch, end_epoch, True)
+            return self._query(
+                url, limit, offset, next, start_epoch, end_epoch, gte_mscore, True
+            )
         elif r.status_code == 401 or r.status_code == 403:
             raise ValueError("Query failed, permission denied")
         else:
@@ -169,7 +191,7 @@ class Mandiant:
     def _getreportpdf(self, url, retry=False):
         headers = {
             "accept": "application/pdf",
-            "x-app-name": "opencti-connector-5.5.4",
+            "x-app-name": "opencti-connector-5.7.4",
             "authorization": "Bearer " + self.auth_token,
         }
         r = requests.get(url, headers=headers)
@@ -233,7 +255,7 @@ class Mandiant:
                         objects.append(stix_actor)
                         # Get the actor
                         result_actor = self._query(url + "/" + actor["id"])
-                        if "industries" in result_actor:
+                        if self._exists_and_not_redacted("industries", result_actor):
                             for industry in result_actor["industries"]:
                                 stix_identity = stix2.Identity(
                                     id=industry["id"],
@@ -270,7 +292,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_identity)
                                 objects.append(stix_relationship)
-                        if "cve" in result_actor:
+                        if self._exists_and_not_redacted("cve", result_actor):
                             for cve in result_actor["cve"]:
                                 stix_vulnerability = stix2.Vulnerability(
                                     id=cve["id"],
@@ -306,8 +328,10 @@ class Mandiant:
                                 )
                                 objects.append(stix_vulnerability)
                                 objects.append(stix_relationship)
-                        if "locations" in result_actor:
-                            if "source" in result_actor["locations"]:
+                        if self._exists_and_not_redacted("locations", result_actor):
+                            if self._exists_and_not_redacted(
+                                "source", result_actor["locations"]
+                            ):
                                 for source in result_actor["locations"]["source"]:
                                     if "country" in source:
                                         stix_location = stix2.Location(
@@ -349,7 +373,9 @@ class Mandiant:
                                         )
                                         objects.append(stix_location)
                                         objects.append(stix_relationship)
-                            if "target" in result_actor["locations"]:
+                            if self._exists_and_not_redacted(
+                                "target", result_actor["locations"]
+                            ):
                                 for target in result_actor["locations"]["target"]:
                                     if "country" in target:
                                         stix_location = stix2.Location(
@@ -391,7 +417,7 @@ class Mandiant:
                                         )
                                         objects.append(stix_location)
                                         objects.append(stix_relationship)
-                        if "malware" in result_actor:
+                        if self._exists_and_not_redacted("malware", result_actor):
                             for malware in result_actor["malware"]:
                                 stix_malware = stix2.Malware(
                                     id=malware["id"],
@@ -427,7 +453,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_malware)
                                 objects.append(stix_relationship)
-                        if "tool" in result_actor:
+                        if self._exists_and_not_redacted("tool", result_actor):
                             for tool in result_actor["tool"]:
                                 stix_tool = stix2.Tool(
                                     id=tool["id"],
@@ -462,8 +488,8 @@ class Mandiant:
                                 )
                                 objects.append(stix_tool)
                                 objects.append(stix_relationship)
-                    except Exception as e:
-                        self.helper.log_error(str(e))
+                    except Exception:
+                        self.helper.log_error(traceback.format_exc())
                 self.helper.send_stix2_bundle(
                     stix2.Bundle(
                         objects=objects,
@@ -510,7 +536,7 @@ class Mandiant:
                         objects.append(stix_malware)
                         # Get the malware
                         result_malware = self._query(url + "/" + malware["id"])
-                        if "industries" in result_malware:
+                        if self._exists_and_not_redacted("industries", result_malware):
                             for industry in result_malware["industries"]:
                                 stix_identity = stix2.Identity(
                                     id=industry["id"],
@@ -547,7 +573,7 @@ class Mandiant:
                                 )
                                 objects.append(stix_identity)
                                 objects.append(stix_relationship)
-                        if "cve" in result_malware:
+                        if self._exists_and_not_redacted("cve", result_malware):
                             for cve in result_malware["cve"]:
                                 stix_vulnerability = stix2.Vulnerability(
                                     id=cve["id"],
@@ -583,8 +609,8 @@ class Mandiant:
                                 )
                                 objects.append(stix_vulnerability)
                                 objects.append(stix_relationship)
-                    except Exception as e:
-                        self.helper.log_error(str(e))
+                    except Exception:
+                        self.helper.log_error(traceback.format_exc())
                 if len(objects) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -603,9 +629,10 @@ class Mandiant:
     def _import_vulnerability(self, work_id, current_state):
         url = self.mandiant_api_url + "/v4/vulnerability"
         no_more_result = False
-        limit = 1000
+        limit = 25
+        current_epoch = int(time.time())
         start_epoch = current_state["vulnerability"]
-        end_epoch = start_epoch + 3600
+        end_epoch = current_epoch
         next = None
         while no_more_result is False:
             self.helper.log_info(
@@ -616,7 +643,10 @@ class Mandiant:
                 + ", next="
                 + str(next)
             )
-            result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is None:
+                result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is not None:
+                result = self._query(url, None, None, next)
             if (
                 result is not None
                 and result["vulnerability"] is not None
@@ -664,8 +694,8 @@ class Mandiant:
                             custom_properties=custom_properties,
                         )
                         vulnerabilities.append(stix_vulnerability)
-                    except Exception as e:
-                        self.helper.log_error(str(e))
+                    except Exception:
+                        self.helper.log_error(traceback.format_exc())
                 if len(vulnerabilities) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -675,29 +705,28 @@ class Mandiant:
                         update=self.update_existing_data,
                         work_id=work_id,
                     )
-            elif end_epoch > int(time.time()):
-                no_more_result = True
             if (
                 result is not None
                 and result["vulnerability"] is not None
-                and len(result["vulnerability"]) == 1000
+                and len(result["vulnerability"]) > 0
                 and "next" in result
                 and len(result["next"]) > 0
             ):
                 next = result["next"]
             else:
                 next = None
-                start_epoch = end_epoch
-                end_epoch = start_epoch + 3600
-                current_state["vulnerability"] = int(start_epoch)
+                no_more_result = True
+                current_state["vulnerability"] = current_epoch
         return current_state
 
     def _import_indicator(self, work_id, current_state):
         url = self.mandiant_api_url + "/v4/indicator"
         no_more_result = False
-        limit = 1000
+        limit = 25
+        current_epoch = int(time.time())
         start_epoch = current_state["indicator"]
-        end_epoch = start_epoch + 3600
+        end_epoch = current_epoch
+        gte_mscore = self.mandiant_mscore
         next = None
         while no_more_result is False:
             self.helper.log_info(
@@ -708,7 +737,12 @@ class Mandiant:
                 + ", next="
                 + str(next)
             )
-            result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is None:
+                result = self._query(
+                    url, limit, None, next, start_epoch, end_epoch, gte_mscore
+                )
+            if next is not None:
+                result = self._query(url, None, None, next)
             if (
                 result is not None
                 and result["indicators"] is not None
@@ -808,8 +842,8 @@ class Mandiant:
                                         created_by_ref=self.identity["standard_id"],
                                     )
                                     objects.append(stix_relationship)
-                    except Exception as e:
-                        self.helper.log_error(str(e))
+                    except Exception:
+                        self.helper.log_error(traceback.format_exc())
                 if len(objects) > 0:
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
@@ -819,29 +853,27 @@ class Mandiant:
                         update=self.update_existing_data,
                         work_id=work_id,
                     )
-            elif end_epoch > int(time.time()):
-                no_more_result = True
             if (
                 result is not None
                 and result["indicators"] is not None
-                and len(result["indicators"]) == 1000
+                and len(result["indicators"]) > 0
                 and "next" in result
                 and len(result["next"]) > 0
             ):
                 next = result["next"]
             else:
                 next = None
-                start_epoch = end_epoch
-                end_epoch = start_epoch + 3600
-                current_state["indicator"] = int(start_epoch)
+                no_more_result = True
+                current_state["indicator"] = current_epoch
         return current_state
 
     def _import_report(self, work_id, current_state):
         url = self.mandiant_api_url + "/v4/reports"
         no_more_result = False
-        limit = 1000
+        limit = 25
+        current_epoch = int(time.time())
         start_epoch = current_state["report"]
-        end_epoch = start_epoch + 3600
+        end_epoch = current_epoch
         next = None
         while no_more_result is False:
             self.helper.log_info(
@@ -852,7 +884,10 @@ class Mandiant:
                 + ", next="
                 + str(next)
             )
-            result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is None:
+                result = self._query(url, limit, None, next, start_epoch, end_epoch)
+            if next is not None:
+                result = self._query(url, None, None, next)
             if (
                 result is not None
                 and result["objects"] is not None
@@ -966,12 +1001,12 @@ class Mandiant:
                                     + str(reportOut.get("report_id"))
                                 )
                                 self.helper.log_info("ERROR: " + str(e))
-                        except Exception as e:
+                        except Exception:
                             self.helper.log_info(
                                 "Failed to process News Analysis Report "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                     else:
                         stix_bundle = None
                         try:
@@ -1102,12 +1137,12 @@ class Mandiant:
                                             + str(reportOut.get("report_id"))
                                         )
                                         self.helper.log_info("ERROR: " + str(e))
-                        except Exception as e:
+                        except Exception:
                             self.helper.log_info(
                                 "Failed to process News Analyis Report "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                         # Creating and sending the bundle to OCTI
                         try:
                             bundle = stix2.Bundle(
@@ -1119,29 +1154,26 @@ class Mandiant:
                                 update=self.update_existing_data,
                                 work_id=work_id,
                             )
-                        except Exception as e:
+                        except Exception:
                             self.helper.log_info(
                                 "Failed to process this report ID "
                                 + str(reportOut.get("report_id"))
                             )
-                            self.helper.log_info("ERROR: " + str(e))
+                            self.helper.log_info("ERROR: " + traceback.format_exc())
                 next_pointer = result.get("next")
                 self.helper.log_debug("Report next_pointer ID " + str(next_pointer))
-            elif end_epoch > int(time.time()):
-                no_more_result = True
             if (
                 result is not None
                 and result["objects"] is not None
-                and len(result["objects"]) == 1000
+                and len(result["objects"]) > 0
                 and "next" in result
                 and len(result["next"]) > 0
             ):
                 next = result["next"]
             else:
                 next = None
-                start_epoch = end_epoch
-                end_epoch = start_epoch + 3600
-                current_state["report"] = int(start_epoch)
+                no_more_result = True
+                current_state["report"] = current_epoch
         return current_state
 
     def run(self):
@@ -1219,8 +1251,8 @@ class Mandiant:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
-            except Exception as e:
-                self.helper.log_error(str(e))
+            except Exception:
+                self.helper.log_error(traceback.format_exc())
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
@@ -1233,7 +1265,7 @@ if __name__ == "__main__":
     try:
         mandiantConnector = Mandiant()
         mandiantConnector.run()
-    except Exception as e:
-        print(e)
+    except Exception:
+        print(traceback.format_exc())
         time.sleep(10)
         sys.exit(0)

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-sentinelone-threats:
-    image: opencti/connector-sentinelone-threats:5.5.4
+    image: opencti/connector-sentinelone-threats:5.7.4
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe

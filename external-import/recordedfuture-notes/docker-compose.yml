@@ -1,21 +1,24 @@
 version: '3'
 services:
-  connector--notes:
-    image: opencti/connector-recordedfuture-notes:5.5.4
+  connector-recordedfuture-notes:
+    image: connector-recordedfuture-notes:5.7.4
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Recorded Future Analyst Notes
-      - CONNECTOR_SCOPE=recorded-future
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile
       - CONNECTOR_CONFIDENCE_LEVEL=5
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       - CONNECTOR_LOG_LEVEL=info
       - RECORDED_FUTURE_TOKEN=CHANGEME #required
       - RECORDED_FUTURE_INITIAL_LOOKBACK=240 #required
       - RECORDED_FUTURE_INTERVAL=240 #required
+      - RECORDED_FUTURE_TLP=White # required
       - RECORDED_FUTURE_PULL_SIGNATURES=False #optional, can remove
       - RECORDED_FUTURE_INSIKT_ONLY=True #optional, can remove
       - RECORDED_FUTURE_TOPIC=ChangeMe #optional, can remove
+      - RECORDED_FUTUTRE_PERSON_TO_TA=False #optional, can remove
+      - RECORDED_FUTURE_TA_TO_INTRUSION_SET=False #optional, can remove
     restart: always

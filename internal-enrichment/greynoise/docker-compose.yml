@@ -1,21 +1,21 @@
 version: '3'
 services:
   connector-greynoise:
-    image: opencti/connector-greynoise:5.5.4
+    image: opencti/connector-greynoise:5.7.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
-      - CONNECTOR_NAME=greynoise
-      - CONNECTOR_SCOPE=ipv4-addr
+      - CONNECTOR_NAME=GreyNoise
+      - CONNECTOR_SCOPE=IPv4-Addr
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - GREYNOISE_KEY=ChangeMe
       - GREYNOISE_MAX_TLP=TLP:AMBER
-      - GREYNOISE_NAME=GreyNoise sensors
-      - GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.
+      - "GREYNOISE_NAME=GreyNoise sensors"
+      - "GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet."
       - GREYNOISE_SIGHTING_NOT_SEEN=false
       - GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL=30
     restart: always

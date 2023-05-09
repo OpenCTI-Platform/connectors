@@ -107,6 +107,7 @@ class SplunkConnector:
             + "/storage/collections"
             + uri
         )
+        payload["stream_name"] = self.helper.get_stream_name()["name"]
         if (
             "type" in payload
             and payload["type"] == "indicator"

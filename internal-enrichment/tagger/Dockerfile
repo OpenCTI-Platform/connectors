@@ -2,6 +2,7 @@ FROM python:3.10-alpine
 
 # Copy the worker
 COPY src /opt/opencti-connector-tagger
+WORKDIR /opt/opencti-connector-tagger
 
 # Install Python modules
 # hadolint ignore=DL3003

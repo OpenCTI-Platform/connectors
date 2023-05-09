@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import time
+import uuid
 from datetime import datetime, timedelta
 from typing import Dict
 
@@ -91,6 +92,15 @@ class Taxii2Connector:
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
             config,
+        )
+        self.add_custom_label = get_config_variable(
+            "TAXII2_ADD_CUSTOM_LABEL",
+            ["taxii2", "add_custom_label"],
+            config,
+            default=False,
+        )
+        self.custom_label = get_config_variable(
+            "TAXII2_CUSTOM_LABEL", ["taxii2", "custom_label"], config
         )
 
     @staticmethod
@@ -229,7 +239,54 @@ class Taxii2Connector:
             added_after = datetime.now() - timedelta(hours=lookback)
             filters["added_after"] = added_after
         self.helper.log_info(f"Polling Collection {collection.title}")
-        self.send_to_server(collection.get_objects(**filters))
+
+        # Initial request
+        total = None
+        response = collection.get_objects(**filters)
+        if "objects" in response:
+            objects = []
+            while total != 0:
+                # Taxii 2.1 servers are not required to send data in bundle
+                if "spec_version" not in response:
+                    version = response["objects"][0]["spec_version"]
+                else:
+                    version = response["spec_version"]
+                total = len(response["objects"])
+                if total > 0:
+                    for object in response["objects"]:
+                        # If taxii feed is v2.0 append pattern_type
+                        if version == "2.0":
+                            object["pattern_type"] = "stix"
+                        # Add a custom label
+                        new_labels = []
+                        if "labels" in object:
+                            new_labels = object["labels"]
+                        if self.add_custom_label == True:
+                            new_labels.append(self.custom_label)
+                            object["labels"] = new_labels
+                        objects.append(object)
+
+                    # Get the manifest for the last object
+                    last_obj = response["objects"][-1]
+                    manifest = collection.get_manifest(id=last_obj["id"])
+                    date_added = manifest["objects"][0]["date_added"]
+                    filters["added_after"] = date_added
+
+                    # Get the next set of objects
+                    response = collection.get_objects(**filters)
+                    if "objects" in response and len(response["objects"]) > 0:
+                        total = len(response["objects"])
+                    else:
+                        total = 0
+
+            # Create bundle
+            new_bundle = {
+                "type": "bundle",
+                "id": f"bundle--{str(uuid.uuid4())}",
+                "spec_version": version,
+                "objects": objects,
+            }
+            self.send_to_server(new_bundle)
 
     def _process_objects(self, stix_bundle: Dict) -> Dict:
         # the list of object types for which the confidence has to be added

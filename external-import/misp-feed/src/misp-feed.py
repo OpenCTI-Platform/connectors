@@ -168,6 +168,24 @@ class MispFeed:
         self.misp_feed_create_observables = get_config_variable(
             "MISP_FEED_CREATE_OBSERVABLES", ["misp_feed", "create_observables"], config
         )
+        self.misp_create_tags_as_labels = get_config_variable(
+            "MISP_CREATE_TAGS_AS_LABELS",
+            ["misp", "create_tags_as_labels"],
+            config,
+            default=True,
+        )
+        self.misp_guess_threats_from_tags = get_config_variable(
+            "MISP_GUESS_THREAT_FROM_TAGS",
+            ["misp", "guess_threats_from_tags"],
+            config,
+            default=False,
+        )
+        self.misp_author_from_tags = get_config_variable(
+            "MISP_AUTHOR_FROM_TAGS",
+            ["misp", "author_from_tags"],
+            config,
+            default=False,
+        )
         self.misp_feed_create_object_observables = get_config_variable(
             "MISP_FEED_CREATE_OBJECT_OBSERVABLES",
             ["misp_feed", "create_object_observables"],
@@ -197,6 +215,15 @@ class MispFeed:
                 config,
                 isNumber=False,
                 default=False,
+            )
+        )
+        self.import_unsupported_observables_as_text_transparent = bool(
+            get_config_variable(
+                "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
+                ["misp", "import_unsupported_observables_as_text_transparent"],
+                config,
+                isNumber=False,
+                default=True,
             )
         )
         self.misp_feed_interval = get_config_variable(
@@ -444,6 +471,68 @@ class MispFeed:
                         )
                         added_names.append(name)
         for tag in tags:
+            # Try to guess from tags
+            if self.misp_guess_threats_from_tags:
+                tag_value_split = tag["name"].split("=")
+                if len(tag_value_split) == 1:
+                    tag_value = tag_value_split[0]
+                else:
+                    tag_value = tag_value_split[1].replace('"', "")
+                threats = self.helper.api.stix_domain_object.list(
+                    types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
+                    filters=[{"key": "name", "values": [tag_value]}],
+                )
+                if len(threats) > 0:
+                    threat = threats[0]
+                    if threat["name"] not in added_names:
+                        if threat["entity_type"] == "Intrusion-Set":
+                            elements["intrusion_sets"].append(
+                                stix2.IntrusionSet(
+                                    id=IntrusionSet.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Malware":
+                            elements["malwares"].append(
+                                stix2.Malware(
+                                    id=IntrusionSet.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Tool":
+                            elements["tools"].append(
+                                stix2.Tool(
+                                    id=Tool.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
+                        if threat["entity_type"] == "Intrusion-Set":
+                            elements["attack_patterns"].append(
+                                stix2.AttackPattern(
+                                    id=AttackPattern.generate_id(threat["name"]),
+                                    name=threat["name"],
+                                    description="Imported from MISP tag",
+                                    created_by_ref=author["id"],
+                                    object_marking_refs=markings,
+                                    allow_custom=True,
+                                )
+                            )
+                            added_names.append(threat["name"])
             # Get the linked intrusion sets
             if (
                 tag["name"].startswith("misp-galaxy:threat-actor")
@@ -571,6 +660,10 @@ class MispFeed:
 
     def _resolve_tags(self, tags):
         opencti_tags = []
+
+        if not self.misp_create_tags_as_labels:
+            return opencti_tags
+
         for tag in tags:
             if (
                 tag["name"] != "tlp:white"
@@ -1452,11 +1545,25 @@ class MispFeed:
 
         ### Pre-process
         # Author
-        author = stix2.Identity(
-            id=Identity.generate_id(event["Event"]["Orgc"]["name"], "organization"),
-            name=event["Event"]["Orgc"]["name"],
-            identity_class="organization",
-        )
+        author = None
+        if self.misp_author_from_tags:
+            if "Tag" in event["Event"]:
+                event_tags = event["Event"]["Tag"]
+                for tag in event_tags:
+                    tag_name = tag["name"].lower()
+                    if tag_name.startswith("creator") and "=" in tag_name:
+                        author_name = tag_name.split("=")[1]
+                        author = stix2.Identity(
+                            id=Identity.generate_id(author_name, "organization"),
+                            name=author_name,
+                            identity_class="organization",
+                        )
+        if author is None:
+            author = stix2.Identity(
+                id=Identity.generate_id(event["Event"]["Orgc"]["name"], "organization"),
+                name=event["Event"]["Orgc"]["name"],
+                identity_class="organization",
+            )
         # Markings
         if "Tag" in event["Event"]:
             event_markings = self._resolve_markings(event["Event"]["Tag"])
@@ -1534,29 +1641,47 @@ class MispFeed:
 
             object_observable = None
             if self.misp_feed_create_object_observables:
-                unique_key = ""
-                if len(object["Attribute"]) > 0:
-                    unique_key = (
-                        " ("
-                        + object["Attribute"][0]["type"]
-                        + "="
-                        + object["Attribute"][0]["value"]
-                        + ")"
+                if self.import_unsupported_observables_as_text_transparent:
+                    if len(object["Attribute"]) > 0:
+                        value = object["Attribute"][0]["value"]
+                        object_observable = Text(
+                            value=value,
+                            object_marking_refs=event_markings,
+                            custom_properties={
+                                "description": object["description"],
+                                "x_opencti_score": self._threat_level_to_score(
+                                    event_threat_level
+                                ),
+                                "labels": event_tags,
+                                "created_by_ref": author["id"],
+                                "external_references": attribute_external_references,
+                            },
+                        )
+                        objects_observables.append(object_observable)
+                else:
+                    unique_key = ""
+                    if len(object["Attribute"]) > 0:
+                        unique_key = (
+                            " ("
+                            + object["Attribute"][0]["type"]
+                            + "="
+                            + object["Attribute"][0]["value"]
+                            + ")"
+                        )
+                    object_observable = Text(
+                        value=object["name"] + unique_key,
+                        object_marking_refs=event_markings,
+                        custom_properties={
+                            "description": object["description"],
+                            "x_opencti_score": self._threat_level_to_score(
+                                event_threat_level
+                            ),
+                            "labels": event_tags,
+                            "created_by_ref": author["id"],
+                            "external_references": attribute_external_references,
+                        },
                     )
-                object_observable = Text(
-                    value=object["name"] + unique_key,
-                    object_marking_refs=event_markings,
-                    custom_properties={
-                        "description": object["description"],
-                        "x_opencti_score": self._threat_level_to_score(
-                            event_threat_level
-                        ),
-                        "labels": event_tags,
-                        "created_by_ref": author["id"],
-                        "external_references": attribute_external_references,
-                    },
-                )
-                objects_observables.append(object_observable)
+                    objects_observables.append(object_observable)
             object_attributes = []
             for attribute in object["Attribute"]:
                 indicator = self._process_attribute(

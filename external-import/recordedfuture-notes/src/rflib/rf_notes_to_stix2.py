@@ -11,8 +11,15 @@
 
 from datetime import datetime
 
-import pycti
 import stix2.v21
+
+TLP_MAP = {
+    "white": stix2.v21.TLP_WHITE,
+    "green": stix2.v21.TLP_GREEN,
+    "amber": stix2.v21.TLP_AMBER,
+    "red": stix2.v21.TLP_RED,
+}
+{}
 
 
 class ConversionError(Exception):
@@ -78,7 +85,6 @@ class Indicator(RFStixEntity):
     def _create_indicator(self):
         """Creates and returns STIX2 indicator object"""
         return stix2.v21.Indicator(
-            id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
             pattern_type="stix",
             valid_from=datetime.now(),
@@ -98,12 +104,10 @@ class Indicator(RFStixEntity):
     def _create_rel(self):
         """Creates Relationship object linking indicator and observable"""
         return stix2.v21.Relationship(
-            id=pycti.StixCoreRelationship.generate_id(
-                "based-on", self.stix_indicator.id, self.stix_observable.id
-            ),
             relationship_type="based_on",
             source_ref=self.stix_indicator.id,
             target_ref=self.stix_observable.id,
+            start_time=datetime.now(),
             created_by_ref=self.author.id,
         )
 
@@ -169,13 +173,24 @@ class FileHash(Indicator):
         return stix2.v21.File(hashes={self.algorithm: self.name})
 
 
+class TLPMarking(RFStixEntity):
+    """Creates TLP marking for report"""
+
+    def create_stix_objects(self):
+        """Creates STIX objects from object attributes"""
+        self.stix_obj = stix2.v21.AttackPattern(
+            name=self.name,
+            created_by_ref=self.author.id,
+            custom_properties={"x_mitre_id": self.name},
+        )
+
+
 class TTP(RFStixEntity):
     """Converts MITRE T codes to AttackPattern"""
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.v21.AttackPattern(
-            id=pycti.AttackPattern.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
             custom_properties={"x_mitre_id": self.name},
@@ -194,7 +209,6 @@ class Identity(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.v21.Identity(
-            id=pycti.Identity.generate_id(self.name, self.create_id_class()),
             name=self.name,
             identity_class=self.create_id_class(),
             created_by_ref=self.author.id,
@@ -217,14 +231,22 @@ class ThreatActor(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.v21.ThreatActor(
-            id=pycti.ThreatActor.generate_id(self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
+            name=self.name, created_by_ref=self.author.id
         )
 
     def create_id_class(self):
         """Creates a STIX2 identity class"""
         return self.type_to_class[self.type]
+
+
+class IntrusionSet(RFStixEntity):
+    """Converts Threat Actor to Intrusion Set SDO"""
+
+    def create_stix_objects(self):
+        """Creates STIX objects from object attributes"""
+        self.stix_obj = stix2.v21.IntrusionSet(
+            name=self.name, created_by_ref=self.author.id
+        )
 
 
 class Malware(RFStixEntity):
@@ -233,10 +255,7 @@ class Malware(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.v21.Malware(
-            id=pycti.Malware.generate_id(self.name),
-            name=self.name,
-            is_family=False,
-            created_by_ref=self.author.id,
+            name=self.name, is_family=False, created_by_ref=self.author.id
         )
 
 
@@ -247,9 +266,7 @@ class Vulnerability(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.v21.Vulnerability(
-            id=pycti.Vulnerability.generate_id(self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
+            name=self.name, created_by_ref=self.author.id
         )
 
 
@@ -271,7 +288,6 @@ class DetectionRule(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.v21.Indicator(
-            id=pycti.Indicator.generate_id(self.content),
             name=self.name,
             pattern_type=self.type,
             pattern=self.content,
@@ -326,7 +342,14 @@ class StixNote:
         "YARA Rule": "Indicator",
     }
 
-    def __init__(self, opencti_helper, tas):
+    def __init__(
+        self,
+        opencti_helper,
+        tas,
+        tlp="white",
+        person_to_ta=False,
+        ta_to_intrusion_set=False,
+    ):
         self.author = self._create_author()
         self.name = None
         self.text = None
@@ -337,14 +360,13 @@ class StixNote:
         self.objects = []
         self.helper = opencti_helper
         self.tas = tas
+        self.person_to_ta = person_to_ta
+        self.ta_to_intrusion_set = ta_to_intrusion_set
+        self.tlp = TLP_MAP.get(tlp.lower(), None)
 
     def _create_author(self):
         """Creates Recorded Future Author"""
-        return stix2.v21.Identity(
-            id=pycti.Identity.generate_id("Recorded Future", "organization"),
-            name="Recorded Future",
-            identity_class="organization",
-        )
+        return stix2.v21.Identity(name="Recorded Future", identity_class="organization")
 
     def _generate_external_references(self, urls):
         """Generate External references from validation urls"""
@@ -370,8 +392,13 @@ class StixNote:
         for entity in attr.get("note_entities", []):
             type_ = entity["type"]
             name = entity["name"]
-            if entity["id"] in self.tas:
+            if self.person_to_ta and type_ == "Person":
                 stix_objs = ThreatActor(name, type_, self.author).to_stix_objects()
+            elif entity["id"] in self.tas:
+                if self.ta_to_intrusion_set and type_ != "Person":
+                    stix_objs = IntrusionSet(name, type_, self.author).to_stix_objects()
+                else:
+                    stix_objs = ThreatActor(name, type_, self.author).to_stix_objects()
             elif type_ not in ENTITY_TYPE_MAPPER:
                 msg = f"Cannot convert entity {name} to STIX2 because it is of type {type_}"
                 self.helper.log_warning(msg)
@@ -403,7 +430,6 @@ class StixNote:
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
         report = stix2.v21.Report(
-            id=pycti.Report.generate_id(self.name, self.published),
             name=self.name,
             description=self.text,
             published=self.published,
@@ -412,8 +438,9 @@ class StixNote:
             report_types=self.report_types,
             object_refs=[obj.id for obj in self.objects] + [self.author.id],
             external_references=self.external_references,
+            object_marking_refs=self.tlp,
         )
-        return self.objects + [report, self.author]
+        return self.objects + [report, self.author, self.tlp]
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""

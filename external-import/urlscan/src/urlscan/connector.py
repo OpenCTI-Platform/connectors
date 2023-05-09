@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Iterator, NamedTuple
 from urllib.parse import urlparse
 
-import pycti
 import stix2
 import validators
 import yaml
+from pycti import Indicator, StixCoreRelationship
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
@@ -281,6 +281,7 @@ class UrlscanConnector:
         :return: An indicator
         """
         return stix2.Indicator(
+            id=Indicator.generate_id(pattern.pattern),
             pattern_type="stix",
             pattern=pattern.pattern,
             name=value,
@@ -292,6 +293,7 @@ class UrlscanConnector:
                 x_opencti_score=self._helper.connect_confidence_level,
                 x_opencti_main_observable_type=pattern.main_observable_type,
             ),
+            allow_custom=True,
         )
 
     def _create_relationship(
@@ -312,7 +314,7 @@ class UrlscanConnector:
         created_by_ref = self._identity["standard_id"]
 
         return stix2.Relationship(
-            id=pycti.StixCoreRelationship.generate_id(rel_type, source_id, target_id),
+            id=StixCoreRelationship.generate_id(rel_type, source_id, target_id),
             source_ref=source_id,
             relationship_type=rel_type,
             target_ref=target_id,
@@ -321,6 +323,7 @@ class UrlscanConnector:
             description=description,
             labels=self._default_labels,
             object_marking_refs=[self._default_tlp],
+            allow_custom=True,
         )
 
 

@@ -7,7 +7,6 @@ from typing import Dict, List
 
 import yaml
 from pycti import OpenCTIConnectorHelper
-from stix2 import Report
 from stix2elevator import elevate
 from stix2elevator.options import initialize_options
 
@@ -38,7 +37,6 @@ class ImportFileStix:
         entity_id = data.get("entity_id", None)
         if entity_id:
             self.helper.log_info("Contextual import.")
-
             bundle = json.loads(file_content)["objects"]
             if self._contains_report(bundle):
                 self.helper.log_info("Bundle contains report.")
@@ -69,7 +67,7 @@ class ImportFileStix:
     @staticmethod
     def _contains_report(bundle: List) -> bool:
         for elem in bundle:
-            if type(elem) == Report:
+            if elem.get("type") == "report":
                 return True
         return False
 
@@ -77,15 +75,15 @@ class ImportFileStix:
         report = self.helper.api.report.read(id=entity_id)
         # The entity_id can be any SDO
         if report:
-            report = Report(
-                id=report["standard_id"],
-                name=report["name"],
-                description=report["description"],
-                published=self.helper.api.stix2.format_date(report["created"]),
-                report_types=report["report_types"],
-                object_refs=bundle,
-                allow_custom=True,
-            )
+            report = {
+                "id": report["standard_id"],
+                "type": "report",
+                "name": report["name"],
+                "description": report["description"],
+                "published": self.helper.api.stix2.format_date(report["created"]),
+                "report_types": report["report_types"],
+                "object_refs": [object["id"] for object in bundle],
+            }
             bundle.append(report)
         return bundle
 

@@ -57,7 +57,10 @@ class CrowdSecConnector:
         for i in itertools.count(1, 1):
             resp = requests.get(
                 urljoin(self.api_base_url, f"smoke/{ip}"),
-                headers={"x-api-key": self.crowdsec_cti_key},
+                headers={
+                    "x-api-key": self.crowdsec_cti_key,
+                    "User-Agent": "crowdsec-opencti/v1.0.0",
+                },
             )
             if resp.status_code == 404:
                 return {}

@@ -355,24 +355,20 @@ class SocprimeConnector:
         self._send_stix_objects(objects_list=bundle_objects, work_id=work_id)
 
     def _send_stix_objects(self, objects_list: list, work_id: str) -> None:
-        bundle = Bundle(
-            objects=[
-                x
-                for x in objects_list
-                if not isinstance(x, self._stix_object_types_to_udate)
-            ]
-        ).serialize()
-        if bundle:
+        objects = [
+            x
+            for x in objects_list
+            if not isinstance(x, self._stix_object_types_to_udate)
+        ]
+        if objects:
+            bundle = Bundle(objects=objects).serialize()
             self.helper.send_stix2_bundle(bundle, update=False, work_id=work_id)
 
-        bundle = Bundle(
-            objects=[
-                x
-                for x in objects_list
-                if isinstance(x, self._stix_object_types_to_udate)
-            ]
-        ).serialize()
-        if bundle:
+        objects = [
+            x for x in objects_list if isinstance(x, self._stix_object_types_to_udate)
+        ]
+        if objects:
+            bundle = Bundle(objects=objects).serialize()
             self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
 
     def run(self):
