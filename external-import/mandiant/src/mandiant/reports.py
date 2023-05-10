@@ -1,3 +1,4 @@
+import itertools
 import base64
 import json
 import stix2
@@ -10,11 +11,11 @@ def process(connector, report):
     report_type = report.get("report_type", report.get("reportType", None))
     report_title = report.get("title", report.get("reportTitle", None))
 
-    connector.helper.log_info(f"Processing report [{report_id}][{report_type}] {report_title} ...")
-
     if report_type not in connector.mandiant_report_types:
-        connector.helper.log_debug(f"Report {report_id} ignored based on type.")
+        connector.helper.log_debug(f"Ignoring report based on type [{report_id}][{report_type}] {report_title} ...")
         return
+
+    connector.helper.log_info(f"Processing report [{report_id}][{report_type}] {report_title} ...")
 
     report_details = connector.api.report(report_id, "json")
     report_bundle = connector.api.report(report_id, mode="stix")
@@ -60,6 +61,7 @@ class Report:
         self.update_intrusionset()
         self.update_vulnerability()
         self.create_note()
+        self.create_relationships()
         return stix2.parse(self.bundle, allow_custom=True)
 
     def save_files(self):
@@ -85,13 +87,14 @@ class Report:
             }
         )
 
-        report["x_opencti_files"].append(
-            {
-                "name": f"{self.report_id}.pdf",
-                "data": base64.b64encode(self.pdf).decode("utf-8"),
-                "mime_type": "application/pdf",
-            }
-        )
+        if self.pdf:
+            report["x_opencti_files"].append(
+                {
+                    "name": f"{self.report_id}.pdf",
+                    "data": base64.b64encode(self.pdf).decode("utf-8"),
+                    "mime_type": "application/pdf",
+                }
+            )
 
         # HTML Files from specific report details fields
         # FIXME: create a condition
@@ -249,6 +252,89 @@ class Report:
         report["object_refs"] = [
             reference.replace("threat-actor", "intrusion-set") for reference in report.get("object_refs", [])
         ]
+
+    def _get_objects_from_tags(self, section):
+        tags = self.details["tags"].get(section, [])
+
+        for tag in tags:
+            for item in self.bundle.get("objects"):
+                if tag == item.get("name"):
+                    yield item
+
+    def create_relationships(self):
+        # Get related objects
+        identities = list(utils.retrieve_all(self.bundle, "type", "identity"))
+        malwares = list(utils.retrieve_all(self.bundle, "type", "malware"))
+        intrusion_sets = list(utils.retrieve_all(self.bundle, "type", "intrusion-set"))
+        vulnerabilities = list(utils.retrieve_all(self.bundle, "type", "vulnerabilities"))
+        softwares = list(utils.retrieve_all(self.bundle, "type", "softwares"))
+        course_actions = list(utils.retrieve_all(self.bundle, "type", "course-of-action"))
+        attack_patterns = list(utils.retrieve_all(self.bundle, "type", "attack-pattern"))
+        indicators = list(utils.retrieve_all(self.bundle, "type", "indicator"))
+        ipv4_addresses = list(utils.retrieve_all(self.bundle, "type", "ipv4"))
+        ipv6_addresses = list(utils.retrieve_all(self.bundle, "type", "ipv6"))
+        domain_names = list(utils.retrieve_all(self.bundle, "type", "domain-name"))
+        urls = list(utils.retrieve_all(self.bundle, "type", "url"))
+        files = list(utils.retrieve_all(self.bundle, "type", "file"))
+
+        sectors = [identity for identity in identities if identity["identity_class"] == "class"]
+
+        # Get objects from tags
+        source_geographies = list(self._get_objects_from_tags("source_geographies"))
+        target_geographies = list(self._get_objects_from_tags("target_geographies"))
+        affected_industries = list(self._get_objects_from_tags("affected_industries"))
+        affected_systems = list(self._get_objects_from_tags("affected_systems"))
+        # NOT NEEEDED malware_families = list(self._get_objects_from_tags("malware_families"))
+        # NOT NEEEDED actors = list(self._get_objects_from_tags("actors"))
+        # motivations = list(self._get_objects_from_tags("motivations"))
+        # ? ttps = list(self._get_objects_from_tags("ttps"))
+        # ? targeted_informations = list(self._get_objects_from_tags("targeted_informations"))
+        # ? intended_effects = list(self._get_objects_from_tags("intended_effects"))
+
+        definitions = [
+            {"type": "originates-from", "sources": malwares + intrusion_sets, "destinations": source_geographies},
+            {"type": "targets", "sources": malwares + intrusion_sets, "destinations": target_geographies + affected_industries},
+            {"type": "targets", "sources": malwares, "destinations": affected_systems},
+            {"type": "targets", "sources": intrusion_sets, "destinations": sectors},
+            {"type": "compromises", "sources": intrusion_sets, "destinations": affected_systems},
+            {"type": "uses", "sources": intrusion_sets, "destinations": malwares},
+            {"type": "related-to", "sources": vulnerabilities, "destinations": softwares},
+            {"type": "mitigates", "sources": course_actions, "destinations": vulnerabilities},
+            {"type": "targets", "sources": attack_patterns, "destinations": vulnerabilities},
+            {
+                "type": "communicates-with",
+                "sources": malwares,
+                "destinations": ipv4_addresses + ipv6_addresses + domain_names + urls},
+            {"type": "drops", "sources": malwares, "destinations": files},
+            {"type": "indicates", "sources": indicators, "destinations": malwares},
+            {"type": "targets", "sources": intrusion_sets, "destinations": sectors},
+        ]
+
+        # Create relationships
+        relationships = []
+
+        for definition in definitions:
+
+            sources = definition["sources"]
+            destinations = definition["destinations"]
+
+            for item in itertools.product(sources, destinations):
+
+                relationship = stix2.Relationship(
+                    source_ref=item[0]["id"],
+                    target_ref=item[1]["id"],
+                    relationship_type=definition["type"],
+                )
+
+                relationships.append(relationship)
+
+        # Remove me
+        if len(relationships) == 0:
+            self.bundle["objects"] = []
+            return
+        # end
+
+        self.bundle["objects"] += relationships
 
 
 # class NewsAnalysisReport(Report):
