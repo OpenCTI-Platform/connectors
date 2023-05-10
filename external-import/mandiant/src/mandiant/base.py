@@ -45,38 +45,38 @@ class Mandiant:
             self.mandiant_collections.append("vulnerabilities")
 
         self.mandiant_report_types = []
-        if get_config_variable("MANDIANT_ACTOR_PROFILE", [""], default=True):
+        if get_config_variable("MANDIANT_ACTOR_PROFILE_REPORT", [""], default=True):
             self.mandiant_report_types.append("Actor Profile")
-        if get_config_variable("MANDIANT_COUNTRY_PROFILE", [""], default=True):
+        if get_config_variable("MANDIANT_COUNTRY_PROFILE_REPORT", [""], default=True):
             self.mandiant_report_types.append("Country Profile")
-        if get_config_variable("MANDIANT_EVENT_COVERAGE_IMPLICATION", [""], default=True):
+        if get_config_variable("MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT", [""], default=True):
             self.mandiant_report_types.append("Event Coverage/Implication")
-        if get_config_variable("MANDIANT_EXECUTIVE_PERSPECTIVE", [""], default=True):
+        if get_config_variable("MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT", [""], default=True):
             self.mandiant_report_types.append("Executive Perspective")
-        if get_config_variable("MANDIANT_ICS_SECURITY_ROUNDUP", [""], default=True):
+        if get_config_variable("MANDIANT_ICS_SECURITY_ROUNDUP_REPORT", [""], default=True):
             self.mandiant_report_types.append("ICS Security Roundup")
-        if get_config_variable("MANDIANT_INDUSTRY_REPORTING", [""], default=True):
+        if get_config_variable("MANDIANT_INDUSTRY_REPORTING_REPORT", [""], default=True):
             self.mandiant_report_types.append("Industry Reporting")
-        if get_config_variable("MANDIANT_MALWARE_PROFILE", [""], default=True):
+        if get_config_variable("MANDIANT_MALWARE_PROFILE_REPORT", [""], default=True):
             self.mandiant_report_types.append("Malware Profile")
-        if get_config_variable("MANDIANT_NETWORK_ACTIVITY_REPORTS", [""], default=True):
+        if get_config_variable("MANDIANT_NETWORK_ACTIVITY_REPORT", [""], default=True):
             self.mandiant_report_types.append("Network Activity Reports")
         if get_config_variable("MANDIANT_PATCH_REPORT", [""], default=True):
             self.mandiant_report_types.append("Patch Report")
-        if get_config_variable("MANDIANT_TTP_DEEP_DIVE", [""], default=True):
+        if get_config_variable("MANDIANT_TTP_DEEP_DIVE_REPORT", [""], default=True):
             self.mandiant_report_types.append("TTP Deep Dive")
-        if get_config_variable("MANDIANT_THREAT_ACTIVITY_ALERT", [""], default=True):
+        if get_config_variable("MANDIANT_THREAT_ACTIVITY_ALERT_REPORT", [""], default=True):
             self.mandiant_report_types.append("Threat Activity Alert")
         if get_config_variable("MANDIANT_THREAT_ACTIVITY_REPORT", [""], default=True):
             self.mandiant_report_types.append("Threat Activity Report")
-        if get_config_variable("MANDIANT_TRENDS_AND_FORECASTING", [""], default=True):
+        if get_config_variable("MANDIANT_TRENDS_AND_FORECASTING_REPORT", [""], default=True):
             self.mandiant_report_types.append("Trends and Forecasting")
         if get_config_variable("MANDIANT_VULNERABILITY_REPORT", [""], default=True):
             self.mandiant_report_types.append("Vulnerability Report")
         if get_config_variable("MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT", [""], default=True):
             self.mandiant_report_types.append("Weekly Vulnerability Exploitation Report")
         # TODO: work on this report (current default is False)
-        if get_config_variable("MANDIANT_NEWS_ANALYSIS", [""], default=False):
+        if get_config_variable("MANDIANT_NEWS_ANALYSIS_REPORT", [""], default=False):
             self.mandiant_report_types.append("News Analysis")
 
         self.mandiant_indicator_minimum_score = get_config_variable(
@@ -89,7 +89,7 @@ class Mandiant:
         self.identity = self.helper.api.identity.create(
             id="identity--28dc7d92-5db5-57d8-9c82-e151d743bb93",
             type="Organization",
-            name="Mandiant, Inc",
+            name="Mandiant, Inc.",
         )
 
         self.api = MandiantAPI(self.mandiant_api_v4_key_id, self.mandiant_api_v4_key_secret)
@@ -123,7 +123,11 @@ class Mandiant:
         now = Timestamp.now()
 
         start = Timestamp.from_iso(state[collection][STATE_START])
-        end = Timestamp.from_iso(state[collection].get(STATE_END, now.iso_format))
+        end = Timestamp.now()
+
+        if STATE_END in state[collection] and state[collection][STATE_END] is not None:
+            end = Timestamp.from_iso(state[collection][STATE_END])
+
         offset = state[collection][STATE_OFFSET]
 
         parameters = {}
