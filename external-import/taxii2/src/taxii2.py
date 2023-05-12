@@ -245,12 +245,12 @@ class Taxii2Connector:
         response = collection.get_objects(**filters)
         if "objects" in response:
             objects = []
+            if "spec_version" in response:
+                version = response["spec_version"]
+            else:
+                version = response["objects"][0]["spec_version"]
             while total != 0:
                 # Taxii 2.1 servers are not required to send data in bundle
-                if "spec_version" not in response:
-                    version = response["objects"][0]["spec_version"]
-                else:
-                    version = response["spec_version"]
                 total = len(response["objects"])
                 if total > 0:
                     for object in response["objects"]:
@@ -269,14 +269,20 @@ class Taxii2Connector:
                     # Get the manifest for the last object
                     last_obj = response["objects"][-1]
                     manifest = collection.get_manifest(id=last_obj["id"])
-                    date_added = manifest["objects"][0]["date_added"]
-                    filters["added_after"] = date_added
 
-                    # Get the next set of objects
-                    response = collection.get_objects(**filters)
-                    if "objects" in response and len(response["objects"]) > 0:
-                        total = len(response["objects"])
+                    # Check manifest size
+                    if len(manifest["objects"]) > 0:
+                        date_added = manifest["objects"][0]["date_added"]
+                        filters["added_after"] = date_added
+
+                        # Get the next set of objects
+                        response = collection.get_objects(**filters)
+                        if "objects" in response and len(response["objects"]) > 0:
+                            total = len(response["objects"])
+                        else:
+                            total = 0
                     else:
+                        self.helper.log_info("No manifest found. Stopping pagination")
                         total = 0
 
             # Create bundle
