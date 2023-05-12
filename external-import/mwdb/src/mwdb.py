@@ -532,52 +532,50 @@ class MWDB:
                     self.helper.log_info("Connector has never run")
 
                 conf_startdate = calendar.timegm(parser.parse(self.start_date).utctimetuple())
-
                 if last_run is None or (
-                    (timestamp - last_run) > ((int(self.mwdb_interval) - 1) * 60 * 60 * 24)
+                    (timestamp - last_run) > ((int(self.mwdb_interval)) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("MWDB importing")
+                    if not last_run or last_run < conf_startdate:
+                        current_date = conf_startdate
+                    else:
+                        current_date = last_run
 
-                if not last_run or last_run < conf_startdate:
-                    current_date = conf_startdate
-                else:
-                    current_date = last_run
+                    querysearch = "[{date} TO *]".format(
+                        date=datetime.fromtimestamp(current_date).strftime("%Y-%m-%d")
+                    )
+                    querysearch = "?query=upload_time:" + urllib.parse.quote(querysearch)
 
-                querysearch = "[{date} TO *]".format(
-                    date=datetime.fromtimestamp(current_date).strftime("%Y-%m-%d")
-                )
-                querysearch = "?query=upload_time:" + urllib.parse.quote(querysearch)
+                    try:
+                        lasthash = ""
+                        files_to_import = True
+                        while files_to_import:
+                            search_path = "api/file" + querysearch
+                            if lasthash:
+                                search_path = "api/file" + querysearch + "&older_than=" + lasthash
 
-                try:
-                    lasthash = ""
-                    files_to_import = True
-                    while files_to_import:
-                        search_path = "api/file" + querysearch
-                        if lasthash:
-                            search_path = "api/file" + querysearch + "&older_than=" + lasthash
+                            auth = {"Authorization": "Bearer " + self.mwdb_token}
+                            resp = requests.get(
+                                self.mwdb_url + search_path,
+                                headers=auth,
+                                verify=bool(self.verify_ssl),
+                            )
+                            if resp.status_code == 200:
+                                malws = resp.json()
 
-                        auth = {"Authorization": "Bearer " + self.mwdb_token}
-                        resp = requests.get(
-                            self.mwdb_url + search_path,
-                            headers=auth,
-                            verify=bool(self.verify_ssl),
-                        )
-                        if resp.status_code == 200:
-                            malws = resp.json()
+                                for malware in malws["files"]:
+                                    self.process_virus(malware)
+                                    lasthash = malware["sha256"]
 
-                            for malware in malws["files"]:
-                                self.process_virus(malware)
-                                lasthash = malware["sha256"]
+                                if len(malws["files"]) == 0:
+                                    files_to_import = False
 
-                            if len(malws["files"]) == 0:
-                                files_to_import = False
-
-                    date = datetime.utcnow()
-                    utc_time = calendar.timegm(date.utctimetuple())
-                    state = {"last_run": utc_time}
-                    self.helper.set_state(state)
-                except Exception as e:
-                    self.helper.log_error(str(e))
+                        date = datetime.utcnow()
+                        utc_time = calendar.timegm(date.utctimetuple())
+                        state = {"last_run": utc_time}
+                        self.helper.set_state(state)
+                    except Exception as e:
+                        self.helper.log_error(str(e))
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
