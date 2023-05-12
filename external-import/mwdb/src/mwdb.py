@@ -525,13 +525,17 @@ class MWDB:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                        + datetime.utcfromtimestamp(last_run).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
                     )
                 else:
                     last_run = None
                     self.helper.log_info("Connector has never run")
 
-                conf_startdate = calendar.timegm(parser.parse(self.start_date).utctimetuple())
+                conf_startdate = calendar.timegm(
+                    parser.parse(self.start_date).utctimetuple()
+                )
                 if last_run is None or (
                     (timestamp - last_run) > ((int(self.mwdb_interval)) * 60 * 60 * 24)
                 ):
@@ -544,7 +548,9 @@ class MWDB:
                     querysearch = "[{date} TO *]".format(
                         date=datetime.fromtimestamp(current_date).strftime("%Y-%m-%d")
                     )
-                    querysearch = "?query=upload_time:" + urllib.parse.quote(querysearch)
+                    querysearch = "?query=upload_time:" + urllib.parse.quote(
+                        querysearch
+                    )
 
                     try:
                         lasthash = ""
@@ -552,7 +558,9 @@ class MWDB:
                         while files_to_import:
                             search_path = "api/file" + querysearch
                             if lasthash:
-                                search_path = "api/file" + querysearch + "&older_than=" + lasthash
+                                search_path = (
+                                    "api/file" + querysearch + "&older_than=" + lasthash
+                                )
 
                             auth = {"Authorization": "Bearer " + self.mwdb_token}
                             resp = requests.get(
