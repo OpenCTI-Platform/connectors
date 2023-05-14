@@ -312,6 +312,7 @@ class Report:
 
         # Create relationships
         relationships = []
+        relationships_ids = []
 
         for definition in definitions:
 
@@ -327,15 +328,11 @@ class Report:
                 )
 
                 relationships.append(relationship)
+                relationships_ids.append(relationship.id)
 
-        # Remove me
-        if len(relationships) == 0:
-            self.bundle["objects"] = []
-            return
-        # end
-
+        report = utils.retrieve(self.bundle, "type", "report")
+        report["object_refs"] += relationships_ids
         self.bundle["objects"] += relationships
-
 
 # class NewsAnalysisReport(Report):
 #     pass
