@@ -12,7 +12,7 @@ This repository is used to host connectors that are supported by the core develo
 
 ## Contributing
 
-If you want to help use improve or develop new connector, please check out the **[development documentation for new connectors](https://docs.opencti.io/5.7.X/development/connectors)**. If you want to make your connector available to the community, **please create a Pull Request on this repository**, then we will integrate it to the CI and in the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+If you want to help use improve or develop new connector, please check out the **[development documentation for new connectors](https://docs.opencti.io/latest/development/connectors)**. If you want to make your connector available to the community, **please create a Pull Request on this repository**, then we will integrate it to the CI and in the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
 
 ## License
 
