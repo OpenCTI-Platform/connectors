@@ -169,6 +169,8 @@ class ExportFileTxt:
                     "Narrative": self.helper.api_impersonate.narrative.list,
                     "Vulnerability": self.helper.api_impersonate.vulnerability.list,
                     "Incident": self.helper.api_impersonate.incident.list,
+                    "Data-Source": self.helper.api_impersonate.data_source.list,
+                    "Data-Component": self.helper.api_impersonate.data_component.list,
                     "Stix-Cyber-Observable": self.helper.api_impersonate.stix_cyber_observable.list,
                     "Stix-Core-Relationship": self.helper.api_impersonate.stix_core_relationship.list,
                     "stix-core-relationship": self.helper.api_impersonate.stix_core_relationship.list,
