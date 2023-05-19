@@ -557,7 +557,7 @@ class Misp:
                 continue
             if (
                 import_owner_orgs_not is not None
-                and event["Event"]["Org"]["name"] not in import_owner_orgs_not
+                and event["Event"]["Org"]["name"] in import_owner_orgs_not
             ):
                 self.helper.log_info(
                     "Event owner organization "
