@@ -13,7 +13,7 @@ ENV PYTHONFAULTHANDLER=1 \
   PATH="$PATH:/runtime/bin" \
   PYTHONPATH="$PYTHONPATH:/runtime/lib/python3.9/site-packages" \
   # Versions:
-  POETRY_VERSION=1.2.0b1
+  POETRY_VERSION=1.5.0
 
 # System deps:
 RUN apt-get update && apt-get install -y build-essential unzip wget python-dev
@@ -27,8 +27,7 @@ RUN /runtime/bin/pip3 install --upgrade pip && \
   poetry export --no-plugins --without-hashes -f requirements.txt | /runtime/bin/pip3 install -r /dev/stdin
 
 COPY . .
-RUN poetry plugin add poetry-version-plugin && \
-  poetry build && /runtime/bin/pip install dist/*.whl
+RUN poetry build && /runtime/bin/pip install dist/*.whl
 
 FROM base as runtime
 RUN apt-get update && apt-get install -y libmagic1 && apt-get clean
