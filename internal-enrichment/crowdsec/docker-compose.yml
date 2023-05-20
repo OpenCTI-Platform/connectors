@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crowdsec:
-    image: opencti/connector-crowdsec:5.7.5
+    image: opencti/connector-crowdsec:5.7.6
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=c9acd74d-9128-436d-914f-df803315c791
