@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-abuseipdb-ipblacklist:
-    image: opencti/connector-abuseipdb-ipblacklist:5.7.5
+    image: opencti/connector-abuseipdb-ipblacklist:5.7.6
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
