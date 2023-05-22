@@ -1882,7 +1882,7 @@ class Misp:
                         if threat["entity_type"] == "Malware":
                             elements["malwares"].append(
                                 stix2.Malware(
-                                    id=IntrusionSet.generate_id(threat["name"]),
+                                    id=Malware.generate_id(threat["name"]),
                                     name=threat["name"],
                                     description="Imported from MISP tag",
                                     created_by_ref=author["id"],
@@ -1903,7 +1903,7 @@ class Misp:
                                 )
                             )
                             added_names.append(threat["name"])
-                        if threat["entity_type"] == "Intrusion-Set":
+                        if threat["entity_type"] == "Attack-Pattern":
                             elements["attack_patterns"].append(
                                 stix2.AttackPattern(
                                     id=AttackPattern.generate_id(threat["name"]),
