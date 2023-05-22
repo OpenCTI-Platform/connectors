@@ -5,7 +5,6 @@
 import json
 import logging
 import os
-import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
