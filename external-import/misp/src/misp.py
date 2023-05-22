@@ -1288,7 +1288,7 @@ class Misp:
                             )
                     elif observable_type == "Text":
                         observable = Text(
-                            data=observable_value,
+                            value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
