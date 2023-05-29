@@ -13,5 +13,5 @@ services:
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       - CONNECTOR_LOG_LEVEL=info
       - ABUSESSL_URL=https://sslbl.abuse.ch/blacklist/sslipblacklist.csv
-      - ABUSESSL_INTERVAL=10
+      - ABUSESSL_INTERVAL=10 # Time to wait in minutes between subsequent requests
     restart: always
