@@ -1,5 +1,5 @@
 antlr4-python3-runtime==4.8
-certifi==2021.5.30
+certifi==2022.12.7
 chardet==4.0.0
 datefinder==0.7.3
 idna==2.10
