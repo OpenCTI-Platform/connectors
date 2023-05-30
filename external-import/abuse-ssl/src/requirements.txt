@@ -1,2 +1,2 @@
-beautifulsoup4==4.11.1
+beautifulsoup4==4.12.2
 pycti==5.7.6
