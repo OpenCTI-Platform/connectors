@@ -1,5 +1,2 @@
 beautifulsoup4==4.11.1
 pycti==5.7.6
-PyYAML==6.0
-requests==2.31.0
-stix2==3.0.1
