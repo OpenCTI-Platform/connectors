@@ -52,6 +52,27 @@ class HybridAnalysis:
         )["standard_id"]
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
 
+    def _create_malware_analysis(self, report):
+        operating_system = self.helper.api.stix_cyber_observable.create(
+            observableData={
+                "type": "Software",
+                "value": report["environment_description"],
+            }
+        )
+        malware_analysis = self.helper.api.malware_analysis.create(
+            product="HybridAnalysis",
+            result_name="Result Name",
+            analysis_started="",
+            result=report["verdict"],
+        )
+        self._helper.api.stix_nested_ref_relationship.create(
+            fromId=malware_analysis["id"],
+            toId=operating_system["id"],
+            relationship_type="operating-system",
+            confidence=self._helper.connect_confidence_level,
+            update=True,
+        )
+
     def _send_knowledge(self, observable, report):
         bundle_objects = []
         final_observable = observable
@@ -237,6 +258,10 @@ class HybridAnalysis:
                 )
                 bundle_objects.append(attack_pattern)
                 bundle_objects.append(relationship)
+
+        # create malware analysis
+        self._create_malware_analysis(self, report)
+        # TODO add Malware Analysis to stix bundle
         if len(bundle_objects) > 0:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
