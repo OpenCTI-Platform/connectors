@@ -15,7 +15,7 @@ from pycti import (
     get_config_variable,
 )
 from stix2 import DomainName, File, IPv4Address, IPv6Address
-
+from threading import Lock
 
 class HybridAnalysis:
     def __init__(self):
@@ -53,6 +53,7 @@ class HybridAnalysis:
         )["standard_id"]
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
         self._latest_request_timestamp=time.time()
+        self.lock = Lock()
 
     def _send_knowledge(self, observable, report):
         bundle_objects = []
@@ -396,11 +397,15 @@ class HybridAnalysis:
         return self._process_observable(observable)
 
     def _process_message_with_wait(self,data):
+        self.lock.acquire()
         while time.time() - self._latest_request_timestamp<2.0:
             pass
         self._latest_request_timestamp=time.time()
-        self.helper.log_info("Another request was made at time {}".format(datetime.now()))
-        return self._process_message(data)
+        self.helper.log_info(f"A request for entitiy_id={data['entity_id']} was made at time {datetime.now()}")
+        message = self._process_message(data)
+        self.helper.log_info(f"Request for entity_id={data['entity_id']} was processed.")
+        self.lock.release()
+        return message
 
 
     # Start the main loop
