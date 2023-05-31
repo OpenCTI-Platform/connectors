@@ -52,7 +52,6 @@ class HybridAnalysis:
         )["standard_id"]
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
 
-
     def _send_knowledge(self, observable, report):
         bundle_objects = []
         final_observable = observable
@@ -97,7 +96,7 @@ class HybridAnalysis:
                 "name": report["environment_description"],
             }
         )
-        #TODO Put right data
+        # TODO Put right data
         malware_analysis = self.helper.api.malware_analysis.create(
             product="HybridAnalysis",
             result_name="Result Name",
