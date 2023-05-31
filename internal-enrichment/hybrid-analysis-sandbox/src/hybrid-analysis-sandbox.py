@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+from datetime import datetime
 
 import requests
 import stix2
@@ -14,7 +15,7 @@ from pycti import (
     get_config_variable,
 )
 from stix2 import DomainName, File, IPv4Address, IPv6Address
-
+from threading import Lock
 
 class HybridAnalysis:
     def __init__(self):
@@ -51,6 +52,8 @@ class HybridAnalysis:
             description="Hybrid Analysis Sandbox.",
         )["standard_id"]
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
+        self._latest_request_timestamp=time.time()
+        self.lock = Lock()
 
     def _send_knowledge(self, observable, report):
         bundle_objects = []
@@ -348,6 +351,16 @@ class HybridAnalysis:
             if r.status_code > 299:
                 raise ValueError(r.text)
             result = r.json()
+
+        for analysis in result:
+            if analysis['job_id']!=None:
+                return self._send_knowledge(observable,analysis)      
+        # If no file
+        if "importFiles" not in observable or len(observable["importFiles"]) == 0:
+            return "Observable not found and no file to upload in the sandbox"
+        self.helper.log_info("This is the local image DENEME..")
+        return self._trigger_sandbox(observable)
+
         if len(result) > 0:
             # One report is found
             self.helper.log_info("Already found in HA, attaching knowledge...")
@@ -359,6 +372,7 @@ class HybridAnalysis:
         if "importFiles" not in observable or len(observable["importFiles"]) == 0:
             return "Observable not found and no file to upload in the sandbox"
         return self._trigger_sandbox(observable)
+        # return "TRIGERRING SANDBOX DISABLED FIX THIS LATER!!!"
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
@@ -374,15 +388,29 @@ class HybridAnalysis:
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
+        self.helper.log_info("tlp={} vs max tlp={}".format(tlp,self.max_tlp))
+        self.helper.log_info("check_max_tlp result: "+ str(OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp)))
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
         return self._process_observable(observable)
 
+    def _process_message_with_wait(self,data):
+        self.lock.acquire()
+        while time.time() - self._latest_request_timestamp<2.0:
+            pass
+        self._latest_request_timestamp=time.time()
+        self.helper.log_info(f"A request for entitiy_id={data['entity_id']} was made at time {datetime.now()}")
+        message = self._process_message(data)
+        self.helper.log_info(f"Request for entity_id={data['entity_id']} was processed.")
+        self.lock.release()
+        return message
+
+
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(self._process_message_with_wait)
 
     def detect_ip_version(self, value):
         if len(value) > 16:
