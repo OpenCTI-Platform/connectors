@@ -8,6 +8,7 @@ import plyara
 import plyara.utils
 import stix2
 from pycti import (
+    AttackPattern,
     ExternalReference,
     Location,
     Note,
@@ -27,7 +28,7 @@ class VirusTotalBuilder:
         author: stix2.Identity,
         replace_with_lower_score: bool,
         observable: dict,
-        data: dict,
+        data: dict
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
@@ -54,6 +55,7 @@ class VirusTotalBuilder:
             )
         else:
             self.external_reference = None
+
 
     def _compute_score(self, stats: dict) -> int:
         """
@@ -391,6 +393,38 @@ class VirusTotalBuilder:
             allow_custom=True,
         )
         self.bundle += [indicator, relationship]
+
+    #Authored by Atilla
+    def create_mitre_attck_ttps(self, mitre_attck_observer_list):
+        ttp_list = []
+        for observer in mitre_attck_observer_list:
+            for tactic in mitre_attck_observer_list[observer]["tactics"]:
+                for technique in tactic["techniques"]:
+                    attack_pattern = stix2.AttackPattern(
+                        id=AttackPattern.generate_id(
+                            technique["name"], technique["id"]
+                        ),
+                        created_by_ref=self.author,
+                        name=technique["name"],
+                        external_references = [stix2.ExternalReference(source_name="mitre-attack", url=technique["link"], external_id=technique["id"])],
+                        custom_properties={
+                            "x_mitre_id": technique["id"],
+                        },
+                        object_marking_refs=[stix2.TLP_WHITE],
+                    )
+                    relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "uses", self.observable["standard_id"], attack_pattern.id
+                        ),
+                        relationship_type="uses",
+                        created_by_ref=self.author,
+                        source_ref=self.observable["standard_id"],
+                        target_ref=attack_pattern.id,
+                    )
+                    if attack_pattern not in ttp_list:
+                        ttp_list.append(attack_pattern)
+                        self.bundle += [attack_pattern, relationship]
+
 
     @staticmethod
     def _extract_link(link: str) -> Optional[str]:

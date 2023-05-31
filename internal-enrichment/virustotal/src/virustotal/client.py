@@ -27,6 +27,7 @@ class VirusTotalClient:
             "x-apikey": token,
             "accept": "application/json",
         }
+        
 
     def _query(self, url):
         """
@@ -258,6 +259,24 @@ class VirusTotalClient:
         return self._post(endpoint_url, data=payload, additional_headers=headers)[
             "data"
         ]["id"]
+    
+    # Authored by Atilla
+    def get_mitre_attck_info(self, hash256):
+        """
+        Retrieve Mitre Att&ck tactics and techniques observed in a file.
+
+        Parameters
+        ----------
+        hash256 : str
+            Hash of the file to retrieve Mitre Att&ck info.
+
+        Returns
+            Mitre Att&ck list object, see https://developers.virustotal.com/reference/get-a-summary-of-all-mitre-attck-techniques-observed-in-a-file
+        
+        """
+        url = f"{self.url}/files/{hash256}/behaviour_mitre_trees"
+        return self._query(url)
+
 
     async def check_upload_status(self, upload_type, name, analysis_id):
         """

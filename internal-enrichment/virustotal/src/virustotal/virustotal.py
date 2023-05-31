@@ -177,12 +177,15 @@ class VirusTotalConnector:
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
+        mitre_attck_data = self.client.get_mitre_attck_info(observable["observable_value"])
+        assert mitre_attck_data
+
         builder = VirusTotalBuilder(
             self.helper,
             self.author,
             self.replace_with_lower_score,
             observable,
-            json_data["data"],
+            json_data["data"]
         )
 
         builder.update_hashes()
@@ -216,12 +219,13 @@ class VirusTotalConnector:
                 ruleset,
                 json_data["data"]["attributes"].get("creation_date", None),
             )
-
-        # Create a Note with the full report
-        if self.file_create_note_full_report:
-            builder.create_note(
-                "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
-            )
+        ##  Not needed. Serves no purpose.
+            # Create a Note with the full report
+            # if self.file_create_note_full_report:
+            #     builder.create_note(
+            #         "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
+            #     )
+        builder.create_mitre_attck_ttps(mitre_attck_data["data"])
         return builder.send_bundle()
 
     def _process_ip(self, observable):
