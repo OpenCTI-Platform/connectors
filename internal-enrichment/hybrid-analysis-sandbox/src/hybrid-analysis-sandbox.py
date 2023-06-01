@@ -395,8 +395,18 @@ class HybridAnalysis:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
         return self._process_observable(observable)
+    
+    def exclude_author(self,entity_id,exclude_list=['CrowdStrike']):
+        entity = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        
+        if entity['createdBy']['name'] in exclude_list:
+            return True
+        return False
+        
 
     def _process_message_with_wait(self,data):
+        if self.exclude_author(data['entity_id']):
+            return "Entity is excluded from analysis"
         self.lock.acquire()
         while time.time() - self._latest_request_timestamp<2.0:
             pass
