@@ -35,6 +35,7 @@ class ImportFileStix:
             file_content = elevate(file_content)
 
         entity_id = data.get("entity_id", None)
+        self.helper.log_debug(f"Data: {data}")
         if entity_id:
             self.helper.log_info("Contextual import.")
             bundle = json.loads(file_content)["objects"]
