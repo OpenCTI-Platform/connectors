@@ -291,24 +291,37 @@ class Report:
         # ? targeted_informations = list(self._get_objects_from_tags("targeted_informations"))
         # ? intended_effects = list(self._get_objects_from_tags("intended_effects"))
 
-        definitions = [
-            {"type": "originates-from", "sources": malwares + intrusion_sets, "destinations": source_geographies},
-            {"type": "targets", "sources": malwares + intrusion_sets, "destinations": target_geographies + affected_industries},
-            {"type": "targets", "sources": malwares, "destinations": affected_systems},
-            {"type": "targets", "sources": intrusion_sets, "destinations": sectors},
-            {"type": "compromises", "sources": intrusion_sets, "destinations": affected_systems},
-            {"type": "uses", "sources": intrusion_sets, "destinations": malwares},
-            {"type": "related-to", "sources": vulnerabilities, "destinations": softwares},
-            {"type": "mitigates", "sources": course_actions, "destinations": vulnerabilities},
-            {"type": "targets", "sources": attack_patterns, "destinations": vulnerabilities},
-            {
-                "type": "communicates-with",
-                "sources": malwares,
-                "destinations": ipv4_addresses + ipv6_addresses + domain_names + urls},
-            {"type": "drops", "sources": malwares, "destinations": files},
-            {"type": "indicates", "sources": indicators, "destinations": malwares},
-            {"type": "targets", "sources": intrusion_sets, "destinations": sectors},
-        ]
+        definitions = []
+
+        if len(intrusion_sets) == 0:
+            definitions += [
+                {"type": "originates-from", "sources": intrusion_sets, "destinations": source_geographies},
+                {"type": "targets", "sources": intrusion_sets, "destinations": target_geographies + affected_industries},
+                {"type": "targets", "sources": intrusion_sets, "destinations": sectors},
+                {"type": "compromises", "sources": intrusion_sets, "destinations": affected_systems},
+                {"type": "uses", "sources": intrusion_sets, "destinations": malwares},
+            ]
+
+        if len(malwares) == 0:
+            definitions += [
+                {"type": "originates-from", "sources": malwares, "destinations": source_geographies},
+                {"type": "targets", "sources": malwares, "destinations": target_geographies + affected_industries},
+                {"type": "targets", "sources": malwares, "destinations": affected_systems},
+                {
+                    "type": "communicates-with",
+                    "sources": malwares,
+                    "destinations": ipv4_addresses + ipv6_addresses + domain_names + urls
+                },
+                {"type": "drops", "sources": malwares, "destinations": files},
+                {"type": "indicates", "sources": indicators, "destinations": malwares},
+            ]
+
+        if len(vulnerabilities) == 0:
+            definitions += [
+                {"type": "related-to", "sources": vulnerabilities, "destinations": softwares},
+                {"type": "mitigates", "sources": course_actions, "destinations": vulnerabilities},
+                {"type": "targets", "sources": attack_patterns, "destinations": vulnerabilities},
+            ]
 
         # Create relationships
         relationships = []
