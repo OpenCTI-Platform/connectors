@@ -43,7 +43,9 @@ class QradarReference:
         return True
 
     def get_type(self, payload):
-        return re.search("main_observable_type': '(.*?)'", str(payload['extensions'])).group(1)
+        return re.search(
+            "main_observable_type': '(.*?)'", str(payload["extensions"])
+        ).group(1)
 
     def create_refernce(self, name: str):
         r = requests.post(
@@ -57,7 +59,7 @@ class QradarReference:
         payload["_key"] = id
         r = requests.post(
             f"{self.collection_url}_{self.get_type(payload)}",
-            {"value": payload.get('name')},
+            {"value": payload.get("name")},
             headers=self.headers,
             verify=self.qradar_ssl_verify,
         )
@@ -72,7 +74,7 @@ class QradarReference:
 
         r = requests.post(
             f"{self.collection_url}/{self.qradar_reference_name}_{self.get_type(payload)}",
-            {"value": payload.get('name')},
+            {"value": payload.get("name")},
             headers=self.headers,
             verify=self.qradar_ssl_verify,
         )
@@ -89,7 +91,7 @@ class QradarReference:
         )
         if r.status_code != 404:
             r.raise_for_status()
-    
+
 
 class Metrics:
     def __init__(self, name: str, addr: str, port: int) -> None:
@@ -152,7 +154,6 @@ class QradarConnector:
 
         return org_name
 
-
     def register_producer(self):
         self.helper.listen_stream(self.produce)
 
@@ -187,7 +188,6 @@ class QradarConnector:
             if self.is_filtered(payload):
                 self.helper.log_debug(f"item with id {id} is filtered")
                 continue
-
 
             match msg.event:
                 case "create":
