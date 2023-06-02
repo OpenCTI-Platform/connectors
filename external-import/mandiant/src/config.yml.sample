@@ -12,9 +12,5 @@ connector:
   log_level: 'info'
 
 mandiant:
-  api_url: 'https://api.intelligence.mandiant.com'
   api_v4_key_id: 'ChangeMe'
   api_v4_key_secret: 'ChangeMe'
-  import_start_date: '2022-04-01'
-  interval: 60 # Required, in minutes
-  indicator_minimum_score: 80

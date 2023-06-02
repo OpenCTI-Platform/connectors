@@ -13,7 +13,6 @@ The connector can be configured with the following variables:
 | `MANDIANT_API_V4_KEY_SECRET` | | Mandiant API Key Secret |
 | `MANDIANT_INTERVAL` | 1 | Number of the days between each collection. |
 | `MANDIANT_IMPORT_START_DATE` | 2023-01-01 | Date to start collect data |
-| `MANDIANT_COLLECTIONS` | actor,malware,indicator,vulnerability,report | Type of data to be collected |
 | `MANDIANT_INDICATOR_MINIMUM_SCORE` | 80 | Minimum score (based on mscore) that an indicator must have to be processed |
 | `MANDIANT_IMPORT_ACTORS` | True | Enable to collect actors |
 | `MANDIANT_IMPORT_REPORTS` | True | Enable to collect reports |

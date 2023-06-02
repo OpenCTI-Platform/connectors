@@ -56,11 +56,6 @@ def sanitizer(key, object, default=None):
     return object[key]
 
 
-def unix_timestamp(**kwargs):
-    epoch_in_past = datetime.now() + timedelta(**kwargs)
-    return int(epoch_in_past.timestamp())
-
-
 def cleanhtml(raw_html):
     if raw_html:
         CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
