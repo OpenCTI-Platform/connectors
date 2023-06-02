@@ -354,8 +354,10 @@ class HybridAnalysis:
 
         for analysis in result:
             if analysis['job_id']!=None:
+                self.mark_as_enriched(observable,tag='SUCCESS')
                 return self._send_knowledge(observable,analysis)      
         # If no file
+        self.mark_as_enriched(observable,tag='FAILURE')
         if "importFiles" not in observable or len(observable["importFiles"]) == 0:
             return "Observable not found and no file to upload in the sandbox"
         self.helper.log_info("This is the local image DENEME..")
@@ -402,6 +404,14 @@ class HybridAnalysis:
         if entity['createdBy']['name'] in exclude_list:
             return True
         return False
+    
+
+    def mark_as_enriched(self,observable,tag='SUCCESS'):
+        self.helper.log_info("Marking observable as enriched...")
+        tag_ha = self.helper.api.label.create(value="HYBRID_ENRICH_{}".format(tag), color="#0059f7")
+        self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=tag_ha["id"])
+        #add the enrichment tag
+
         
 
     def _process_message_with_wait(self,data):
