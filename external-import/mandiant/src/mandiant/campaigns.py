@@ -1,5 +1,6 @@
 import stix2
 
+
 def process(connector, campaign):
     campaign_id = campaign.get("id")
 
@@ -18,9 +19,10 @@ def process(connector, campaign):
 
     return bundle
 
+
 def create_campaign(connector, campaign):
     pass
 
+
 def create_stix_relationship(connector, stix_campaign, campaign, attribution):
     pass
-

@@ -21,11 +21,7 @@ def process(connector, report):
     report_bundle = connector.api.report(report_id, mode="stix")
     report_pdf = connector.api.report(report_id, mode="pdf")
 
-    report_bundle["objects"] = list(
-        filter(
-            lambda item: not item["id"].startswith("x-"), report_bundle["objects"]
-        )
-    )
+    report_bundle["objects"] = list(filter(lambda item: not item["id"].startswith("x-"), report_bundle["objects"]))
 
     report = Report(
         bundle=report_bundle,
@@ -293,34 +289,86 @@ class Report:
 
         definitions = []
 
-        if len(intrusion_sets) == 0:
+        if len(intrusion_sets) == 1:
             definitions += [
-                {"type": "originates-from", "sources": intrusion_sets, "destinations": source_geographies},
-                {"type": "targets", "sources": intrusion_sets, "destinations": target_geographies + affected_industries},
-                {"type": "targets", "sources": intrusion_sets, "destinations": sectors},
-                {"type": "compromises", "sources": intrusion_sets, "destinations": affected_systems},
-                {"type": "uses", "sources": intrusion_sets, "destinations": malwares},
+                {
+                    "type": "originates-from",
+                    "sources": intrusion_sets,
+                    "destinations": source_geographies,
+                },
+                {
+                    "type": "targets",
+                    "sources": intrusion_sets,
+                    "destinations": target_geographies + affected_industries,
+                },
+                {
+                    "type": "targets",
+                    "sources": intrusion_sets,
+                    "destinations": sectors,
+                },
+                {
+                    "type": "compromises",
+                    "sources": intrusion_sets,
+                    "destinations": affected_systems,
+                },
+                {
+                    "type": "uses",
+                    "sources": intrusion_sets,
+                    "destinations": malwares,
+                },
             ]
 
-        if len(malwares) == 0:
+        if len(malwares) == 1:
             definitions += [
-                {"type": "originates-from", "sources": malwares, "destinations": source_geographies},
-                {"type": "targets", "sources": malwares, "destinations": target_geographies + affected_industries},
-                {"type": "targets", "sources": malwares, "destinations": affected_systems},
+                {
+                    "type": "originates-from",
+                    "sources": malwares,
+                    "destinations": source_geographies,
+                },
+                {
+                    "type": "targets",
+                    "sources": malwares,
+                    "destinations": target_geographies + affected_industries,
+                },
+                {
+                    "type": "targets",
+                    "sources": malwares,
+                    "destinations": affected_systems,
+                },
                 {
                     "type": "communicates-with",
                     "sources": malwares,
-                    "destinations": ipv4_addresses + ipv6_addresses + domain_names + urls
+                    "destinations": ipv4_addresses + ipv6_addresses + domain_names + urls,
                 },
-                {"type": "drops", "sources": malwares, "destinations": files},
-                {"type": "indicates", "sources": indicators, "destinations": malwares},
+                {
+                    "type": "drops",
+                    "sources": malwares,
+                    "destinations": files,
+                },
+                {
+                    "type": "indicates",
+                    "sources": indicators,
+                    "destinations": malwares,
+                },
             ]
 
-        if len(vulnerabilities) == 0:
+        if len(vulnerabilities) == 1:
             definitions += [
-                {"type": "related-to", "sources": vulnerabilities, "destinations": softwares},
-                {"type": "mitigates", "sources": course_actions, "destinations": vulnerabilities},
-                {"type": "targets", "sources": attack_patterns, "destinations": vulnerabilities},
+                {
+                    "type": "related-to",
+                    "sources": vulnerabilities,
+                    "destinations": softwares,
+                },
+                {
+                    "type": "mitigates",
+                    "sources": course_actions,
+                    "destinations": vulnerabilities,
+                },
+                {
+                    "type": "targets",
+                    "sources": attack_patterns,
+                    "destinations": vulnerabilities,
+                },
             ]
 
         # Create relationships
@@ -328,12 +376,10 @@ class Report:
         relationships_ids = []
 
         for definition in definitions:
-
             sources = definition["sources"]
             destinations = definition["destinations"]
 
             for item in itertools.product(sources, destinations):
-
                 relationship = stix2.Relationship(
                     source_ref=item[0]["id"],
                     target_ref=item[1]["id"],
@@ -346,6 +392,7 @@ class Report:
         report = utils.retrieve(self.bundle, "type", "report")
         report["object_refs"] += relationships_ids
         self.bundle["objects"] += relationships
+
 
 # class NewsAnalysisReport(Report):
 #     pass

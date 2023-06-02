@@ -6,7 +6,6 @@ import stix2
 
 
 class Timestamp:
-
     format = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     def __init__(self, value):

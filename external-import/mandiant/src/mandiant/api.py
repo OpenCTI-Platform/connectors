@@ -129,7 +129,6 @@ class MandiantAPI:
         result: str = "objects",
         mode: str = "json",
     ) -> Iterable[object]:
-
         url = self._get_endpoint(name=name, item_id=item_id, **parameters)
 
         required_parameters = {param: parameters[param] for param in required}
@@ -183,7 +182,7 @@ class MandiantAPI:
                 "gte_mscore": gte_mscore,
                 "exclude_osint": exclude_osint,
                 "include_reports": include_reports,
-                "include_campaigns": include_campaigns
+                "include_campaigns": include_campaigns,
             },
             required=["start_epoch"],
             result="indicators",
@@ -226,7 +225,11 @@ class MandiantAPI:
         )
 
     def campaigns(
-        self, start_epoch: int = None, end_epoch: int = None, limit: int = 1000, offset: int = 0
+        self,
+        start_epoch: int = None,
+        end_epoch: int = None,
+        limit: int = 1000,
+        offset: int = 0,
     ) -> Iterable[Dict]:
         return self._process(
             name="campaigns",
