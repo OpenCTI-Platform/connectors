@@ -53,12 +53,12 @@ class Cve:
         return int(self.cve_interval) * 60 * 60 * 24
 
     def delete_files(self):
-        if os.path.exists("data.json"):
-            os.remove("data.json")
-        if os.path.exists("data.json.gz"):
-            os.remove("data.json.gz")
-        if os.path.exists("data-stix2.json"):
-            os.remove("data-stix2.json")
+        if os.path.exists("/tmp/data.json"):
+            os.remove("/tmp/data.json")
+        if os.path.exists("/tmp/data.json.gz"):
+            os.remove("/tmp/data.json.gz")
+        if os.path.exists("/tmp/data-stix2.json"):
+            os.remove("/tmp/data-stix2.json")
 
     def convert_and_send(self, url, work_id):
         try:
@@ -69,20 +69,20 @@ class Cve:
             )
             image = response.read()
             with open(
-                os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz", "wb"
+                os.path.dirname(os.path.abspath(__file__)) + "/tmp/data.json.gz", "wb"
             ) as file:
                 file.write(image)
             # Unzipping the file
             self.helper.log_info("Unzipping the file")
             with gzip.open(
-                os.path.dirname(os.path.abspath(__file__)) + "/data.json.gz", "rb"
+                os.path.dirname(os.path.abspath(__file__)) + "/tmp/data.json.gz", "rb"
             ) as f_in:
-                with open("data.json", "wb") as f_out:
+                with open("/tmp/data.json", "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
             # Converting the file to stix2
             self.helper.log_info("Converting the file")
-            convert("data.json", "data-stix2.json")
-            with open("data-stix2.json") as stix_json:
+            convert("/tmp/data.json", "/tmp/data-stix2.json")
+            with open("/tmp/data-stix2.json") as stix_json:
                 contents = stix_json.read()
                 self.helper.send_stix2_bundle(
                     contents,
