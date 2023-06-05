@@ -11,6 +11,8 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 from .builder import VirusTotalBuilder
 from .client import VirusTotalClient
 from .indicator_config import IndicatorConfig
+from asyncio import Lock
+from datetime import datetime, timedelta
 
 
 class VirusTotalConnector:
@@ -38,6 +40,14 @@ class VirusTotalConnector:
             ["virustotal", "replace_with_lower_score"],
             config,
         )
+
+        self.quota_max = get_config_variable(
+            "VIRUSTOTAL_QUOTA", ["virustotal", "quota"], config,isNumber=True
+        )
+        self.quota_current = 0
+        self.latest_request_timestamp = datetime.now()
+        self.lock = Lock()
+
         self.author = stix2.Identity(
             name=self._SOURCE_NAME,
             identity_class="Organization",
@@ -226,6 +236,8 @@ class VirusTotalConnector:
             #         "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
             #     )
         builder.create_mitre_attck_ttps(mitre_attck_data["data"])
+        self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
+        self.lock.release()
         return builder.send_bundle()
 
     def _process_ip(self, observable):
@@ -339,7 +351,29 @@ class VirusTotalConnector:
         builder.create_notes()
         return builder.send_bundle()
 
+
+    def exclude_author(self,entity_id,exclude_list=['CrowdStrike']):
+        entity = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        
+        if entity['createdBy']['name'] in exclude_list:
+            return True
+        return False
+    
+
+    def mark_as_enriched(self,observable,tag='SUCCESS'):
+        self.helper.log_info("Marking observable as enriched...")
+        tag_ha = self.helper.api.label.create(value="HYBRID_ENRICH_{}".format(tag), color="#0059f7")
+        self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=tag_ha["id"])
+        #add the enrichment tag
+
+
+
+
     async def _process_message(self, data):
+        await self.lock.acquire()
+        #busy wait for 2 seconds
+        await asyncio.sleep(2)
+
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:
@@ -360,8 +394,9 @@ class VirusTotalConnector:
             )
 
         self.helper.log_debug(
-            f"[VirusTotal] starting enrichment of observable: {observable}"
+            f"[VirusTotal] starting enrichment of observable: {observable} at time {datetime.now()}"
         )
+
         match observable["entity_type"]:
             case "StixFile" | "Artifact":
                 return await self._process_file(observable)
@@ -375,6 +410,7 @@ class VirusTotalConnector:
                 raise ValueError(
                     f'{observable["entity_type"]} is not a supported entity type.'
                 )
+        
 
     def start(self):
         """Start the main loop."""
