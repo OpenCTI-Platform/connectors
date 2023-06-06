@@ -9,6 +9,7 @@ import titan_client
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
 from titan_client.titan_stix.exceptions import EmptyBundle
+from titan_client.titan_stix import STIXMapperSettings
 
 from .. import HelperRequest
 
@@ -97,7 +98,9 @@ class Intel471Stream(ABC):
             cursor = self._get_cursor_value(api_response)
             self._update_cursor(cursor)
             try:
-                bundle = api_response.to_stix(titan_client, api_client)
+                bundle = api_response.to_stix(STIXMapperSettings(
+                    titan_client, api_client, report_attachments_opencti=True
+                ))
             except EmptyBundle:
                 self.helper.log_info(
                     f"{self.__class__.__name__} got empty bundle from STIX converter."
