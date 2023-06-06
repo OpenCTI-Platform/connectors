@@ -363,7 +363,8 @@ class HybridAnalysis:
             self.mark_as_enriched(observable,tag='FAILURE')
             return "Observable not found and no file to upload in the sandbox"
         self.helper.log_info("This is the local image DENEME..")
-        return self._trigger_sandbox(observable)
+        # return self._trigger_sandbox(observable)
+        return "This is the auto enrichment connector, sandbox is disabled here..."
 
         if len(result) > 0:
             # One report is found

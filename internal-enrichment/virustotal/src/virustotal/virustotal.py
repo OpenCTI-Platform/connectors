@@ -69,6 +69,8 @@ class VirusTotalConnector:
             True,
         )
 
+        
+
         # File/Artifact specific settings
         self.file_create_note_full_report = get_config_variable(
             "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT",
@@ -178,13 +180,16 @@ class VirusTotalConnector:
                 )
             except Exception as err:
                 raise ValueError(
+
                     f"[VirusTotal] Error occurred while waiting for VirusTotal to analyze artifact: {err}"
                 )
             json_data = self.client.get_file_info(observable["observable_value"])
             assert json_data
         if "error" in json_data:
+            self.mark_as_enriched(observable["id"], 'FAILURE')
             raise ValueError(json_data["error"]["message"])
         if "data" not in json_data or "attributes" not in json_data["data"]:
+            self.mark_as_enriched(observable["id"], 'FAILURE')
             raise ValueError("An error has occurred.")
 
         mitre_attck_data = self.client.get_mitre_attck_info(observable["observable_value"])
@@ -236,8 +241,13 @@ class VirusTotalConnector:
             #         "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
             #     )
         builder.create_mitre_attck_ttps(mitre_attck_data["data"])
-        self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
-        self.lock.release()
+
+        #add the file extension if oberservable type is a stix file
+        if observable["entity_type"] == "StixFile":
+            builder.add_file_extension(json_data["data"]["attributes"]["type_tag"])
+            
+        # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
+        # self.lock.release()
         return builder.send_bundle()
 
     def _process_ip(self, observable):
@@ -354,7 +364,9 @@ class VirusTotalConnector:
 
     def exclude_author(self,entity_id,exclude_list=['CrowdStrike']):
         entity = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        
+        if entity['entity_type'] == 'Artifact': # analyze the artifacts regardless (crowdstrike doesnt give artifacts anyway)
+            return False
+            
         if entity['createdBy']['name'] in exclude_list:
             return True
         return False
@@ -362,7 +374,7 @@ class VirusTotalConnector:
 
     def mark_as_enriched(self,observable,tag='SUCCESS'):
         self.helper.log_info("Marking observable as enriched...")
-        tag_ha = self.helper.api.label.create(value="HYBRID_ENRICH_{}".format(tag), color="#0059f7")
+        tag_ha = self.helper.api.label.create(value="VIRUSTOTAL_ENRICH_{}".format(tag), color="#0059f7")
         self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=tag_ha["id"])
         #add the enrichment tag
 
@@ -370,9 +382,14 @@ class VirusTotalConnector:
 
 
     async def _process_message(self, data):
-        await self.lock.acquire()
+        # await self.lock.acquire()
         #busy wait for 2 seconds
-        await asyncio.sleep(2)
+        # await asyncio.sleep(2)
+
+        if self.exclude_author(data['entity_id']):
+            self.helper.log_info("Skipping enrichment for {}".format(data['entity_id']))
+            return "Skipping enrichment for {}".format(data['entity_id'])
+
 
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
@@ -396,20 +413,32 @@ class VirusTotalConnector:
         self.helper.log_debug(
             f"[VirusTotal] starting enrichment of observable: {observable} at time {datetime.now()}"
         )
-
+        result = None
+        if self.quota_current >= self.quota_max:
+            self.helper.log_info("Quota reached...")
+            return "Quota reached..."
         match observable["entity_type"]:
             case "StixFile" | "Artifact":
-                return await self._process_file(observable)
+                result = await self._process_file(observable)
+                # return await self._process_file(observable)
             case "IPv4-Addr":
-                return self._process_ip(observable)
+                result = self._process_ip(observable)
+                # return self._process_ip(observable)
             case "Domain-Name":
-                return self._process_domain(observable)
+                result = self._process_domain(observable)
+                # return self._process_domain(observable)
             case "Url":
-                return await self._process_url(observable)
+                result = await self._process_url(observable)
+                # return await self._process_url(observable)
             case _:
+                # self.lock.release()
                 raise ValueError(
                     f'{observable["entity_type"]} is not a supported entity type.'
                 )
+        # self.helper.log_debug("Releasing lock")
+        # self.lock.release()
+        self.quota_current += 1
+        return result
         
 
     def start(self):
