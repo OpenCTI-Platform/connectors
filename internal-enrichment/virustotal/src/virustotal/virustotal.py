@@ -186,11 +186,12 @@ class VirusTotalConnector:
             json_data = self.client.get_file_info(observable["observable_value"])
             assert json_data
         if "error" in json_data:
-            self.mark_as_enriched(observable["id"], 'FAILURE')
+            self.mark_as_enriched(observable, 'FAILURE')
             raise ValueError(json_data["error"]["message"])
         if "data" not in json_data or "attributes" not in json_data["data"]:
-            self.mark_as_enriched(observable["id"], 'FAILURE')
+            self.mark_as_enriched(observable, 'FAILURE')
             raise ValueError("An error has occurred.")
+        self.mark_as_enriched(observable)
 
         mitre_attck_data = self.client.get_mitre_attck_info(observable["observable_value"])
         assert mitre_attck_data
