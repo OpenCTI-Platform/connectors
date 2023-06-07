@@ -51,7 +51,7 @@ class Intel471Stream(ABC):
         out_queue: Queue,
         initial_history: int = None,
         update_existing_data: bool = False,
-        proxy_url: Union[str, None] = None
+        proxy_url: Union[str, None] = None,
     ) -> None:
         self.helper = helper
         self.in_queue = in_queue
@@ -77,7 +77,9 @@ class Intel471Stream(ABC):
     def get_bundle(self) -> Iterator[Bundle]:
         cursor = self._fetch_cursor()
         with titan_client.ApiClient(self.api_config) as api_client:
-            api_client.user_agent = f"{api_client.user_agent}; OpenCTI-Connector/{version}"
+            api_client.user_agent = (
+                f"{api_client.user_agent}; OpenCTI-Connector/{version}"
+            )
             api_instance = getattr(titan_client, self.api_class_name)(api_client)
         while True:
             kwargs = self._get_api_kwargs(cursor)
@@ -100,9 +102,11 @@ class Intel471Stream(ABC):
             cursor = self._get_cursor_value(api_response)
             self._update_cursor(cursor)
             try:
-                bundle = api_response.to_stix(STIXMapperSettings(
-                    titan_client, api_client, report_attachments_opencti=True
-                ))
+                bundle = api_response.to_stix(
+                    STIXMapperSettings(
+                        titan_client, api_client, report_attachments_opencti=True
+                    )
+                )
             except EmptyBundle:
                 self.helper.log_info(
                     f"{self.__class__.__name__} got empty bundle from STIX converter."
