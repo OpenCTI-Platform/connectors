@@ -130,9 +130,9 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "uses", final_observable["standard_id"], attack_pattern.id
+                        "related-to", final_observable["standard_id"], attack_pattern.id
                     ),
-                    relationship_type="uses",
+                    relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=final_observable["standard_id"],
                     target_ref=attack_pattern.id,
@@ -151,9 +151,9 @@ class HybridAnalysis:
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    "communicates-with", final_observable["standard_id"], domain_stix.id
+                    "related-to", final_observable["standard_id"], domain_stix.id
                 ),
-                relationship_type="communicates-with",
+                relationship_type="related-to",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
                 target_ref=domain_stix.id,
@@ -183,9 +183,9 @@ class HybridAnalysis:
                 )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    "communicates-with", final_observable["standard_id"], host_stix.id
+                    "related-to", final_observable["standard_id"], host_stix.id
                 ),
-                relationship_type="communicates-with",
+                relationship_type="related-to",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
                 target_ref=host_stix.id,
