@@ -51,6 +51,7 @@ class Intel471Stream(ABC):
         out_queue: Queue,
         initial_history: int = None,
         update_existing_data: bool = False,
+        proxy_url: Union[str, None] = None
     ) -> None:
         self.helper = helper
         self.in_queue = in_queue
@@ -58,6 +59,7 @@ class Intel471Stream(ABC):
         self.api_config = titan_client.Configuration(
             username=api_username, password=api_key
         )
+        self.api_config.proxy = proxy_url
         self.update_existing_data = update_existing_data
         if initial_history:
             self.initial_history = initial_history
