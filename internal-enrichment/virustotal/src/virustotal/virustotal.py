@@ -230,7 +230,7 @@ class VirusTotalConnector:
         )
         builder.create_indicator_based_on(
             self.file_indicator_config,
-            f"""[file:hashes.'MD5' = '{json_data["data"]["attributes"]["md5"]}']""",
+            f"""[file:hashes.MD5 = '{json_data["data"]["attributes"]["md5"]}']""",
             hashValue=json_data["data"]["attributes"]["md5"]
         )
 
