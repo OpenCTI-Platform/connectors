@@ -92,12 +92,10 @@ class HybridAnalysis:
             input={"key": "x_opencti_score", "value": str(report["threat_score"])},
         )
         # Sandbox Operating System
-        operating_system = stix2.Software(
-            name=report["environment_description"]
-        )
+        operating_system = stix2.Software(name=report["environment_description"])
         bundle_objects.append(operating_system)
         # List of all the referenced SCO of the analysis
-        analysis_sco_refs=[]
+        analysis_sco_refs = []
 
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
@@ -253,14 +251,16 @@ class HybridAnalysis:
         # Creating the Malware Analysis
         malware_analysis = stix2.MalwareAnalysis(
             id=MalwareAnalysis.generate_id("Result Name"),
-            product="HybridAnalysis", # TODO Ask Jean-Philippe
-            result_name="Result Name", # TODO Ask Jean-Philippe
-            analysis_started=datetime.strptime(report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"),
+            product="HybridAnalysis",  # TODO Ask Jean-Philippe
+            result_name="Result Name",  # TODO Ask Jean-Philippe
+            analysis_started=datetime.strptime(
+                report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"
+            ),
             result=report["verdict"],
             sample_ref=final_observable["standard_id"],
             operating_system_ref=operating_system["id"],
             analysis_sco_refs=analysis_sco_refs,
-            external_references=[external_reference]
+            external_references=[external_reference],
         )
         self.helper.api.stix_domain_object.add_external_reference(
             id=malware_analysis["id"],
