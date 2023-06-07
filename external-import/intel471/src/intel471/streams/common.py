@@ -8,8 +8,8 @@ from typing import Any, Iterator, Union
 import titan_client
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
-from titan_client.titan_stix.exceptions import EmptyBundle
 from titan_client.titan_stix import STIXMapperSettings
+from titan_client.titan_stix.exceptions import EmptyBundle
 
 from .. import HelperRequest
 
