@@ -9,6 +9,7 @@ import stix2
 import yaml
 from pycti import (
     AttackPattern,
+    MalwareAnalysis,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     StixCyberObservable,
@@ -103,10 +104,6 @@ class HybridAnalysis:
             source_name="Hybrid Analysis",
             url="https://www.hybrid-analysis.com/sample/" + report["sha256"],
             description="Hybrid Analysis Report",
-        )
-        self.helper.api.stix_cyber_observable.add_external_reference(
-            id=final_observable["id"],
-            external_reference_id=external_reference["id"],
         )
         # Create tags
         for tag in report["type_short"]:
@@ -255,13 +252,19 @@ class HybridAnalysis:
                 bundle_objects.append(relationship)
         # Creating the Malware Analysis
         malware_analysis = stix2.MalwareAnalysis(
+            id=MalwareAnalysis.generate_id("Result Name"),
             product="HybridAnalysis", # TODO Ask Jean-Philippe
             result_name="Result Name", # TODO Ask Jean-Philippe
             analysis_started=datetime.strptime(report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"),
             result=report["verdict"],
             sample_ref=final_observable["standard_id"],
             operating_system_ref=operating_system["id"],
-            analysis_sco_refs=analysis_sco_refs
+            analysis_sco_refs=analysis_sco_refs,
+            external_references=[external_reference]
+        )
+        self.helper.api.stix_domain_object.add_external_reference(
+            id=malware_analysis["id"],
+            external_reference_id=external_reference["id"],
         )
         bundle_objects.append(malware_analysis)
         if len(bundle_objects) > 0:
