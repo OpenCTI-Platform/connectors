@@ -1,5 +1,5 @@
 # coding: utf-8
-
+from datetime import datetime
 import os
 import sys
 import time
@@ -11,6 +11,7 @@ from pycti import (
     AttackPattern,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
+    StixCyberObservable,
     get_config_variable,
 )
 from stix2 import DomainName, File, IPv4Address, IPv6Address
@@ -89,31 +90,13 @@ class HybridAnalysis:
             id=final_observable["id"],
             input={"key": "x_opencti_score", "value": str(report["threat_score"])},
         )
-        # create malware analysis
-        operating_system = self.helper.api.stix_cyber_observable.create(
-            observableData={
-                "type": "Software",
-                "name": report["environment_description"],
-            }
-        )
-        # TODO Put right data
-        malware_analysis = self.helper.api.malware_analysis.create(
-            product="HybridAnalysis",
-            result_name="Result Name",
-            analysis_started=report["analysis_start_time"],
-            result=report["verdict"],
-        )
-        self.helper.log_info("Malware Analysis Created")
-        operating_system_ref = self.helper.api.stix_nested_ref_relationship.create(
-            fromId=malware_analysis["id"],
-            toId=operating_system["id"],
-            relationship_type="operating-system",
-            confidence=self.helper.connect_confidence_level,
-            update=True,
+        # Sandbox Operating System
+        operating_system = stix2.Software(
+            name=report["environment_description"]
         )
         bundle_objects.append(operating_system)
-        bundle_objects.append(malware_analysis)
-        bundle_objects.append(operating_system_ref)
+        # List of all the referenced SCO of the analysis
+        analysis_sco_refs=[]
 
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
@@ -179,17 +162,10 @@ class HybridAnalysis:
                 target_ref=domain_stix.id,
                 object_marking_refs=[stix2.TLP_WHITE],
             )
-            # Attach domain to Malware Analysis
-            analysis_sco_ref = self.helper.api.stix_nested_ref_relationship.create(
-                fromId=malware_analysis["id"],
-                toId=domain_stix.id,
-                relationship_type="analysis-sco",
-                confidence=self.helper.connect_confidence_level,
-                update=True,
-            )
+            # Attach IP to Malware Analysis (through analysis_sco_refs)
+            analysis_sco_refs.append(domain_stix.id)
             bundle_objects.append(domain_stix)
             bundle_objects.append(relationship)
-            bundle_objects.append(analysis_sco_ref)
         # Attach the IP addresses
         for host in report["hosts"]:
             if self.detect_ip_version(host) == "IPv4-Addr":
@@ -218,17 +194,10 @@ class HybridAnalysis:
                 target_ref=host_stix.id,
                 object_marking_refs=[stix2.TLP_WHITE],
             )
-            # Attach IP address to Malware Analysis
-            analysis_sco_ref = self.helper.api.stix_nested_ref_relationship.create(
-                fromId=malware_analysis["id"],
-                toId=host_stix.id,
-                relationship_type="analysis-sco",
-                confidence=self.helper.connect_confidence_level,
-                update=True,
-            )
+            # Attach IP to Malware Analysis (through analysis_sco_refs)
+            analysis_sco_refs.append(host_stix.id)
             bundle_objects.append(host_stix)
             bundle_objects.append(relationship)
-            bundle_objects.append(analysis_sco_ref)
         # Attach other files
         for file in report["extracted_files"]:
             if file["threat_level"] > 0:
@@ -253,17 +222,11 @@ class HybridAnalysis:
                     source_ref=final_observable["standard_id"],
                     target_ref=file_stix.id,
                 )
-                # Attach file to Malware Analysis
-                analysis_sco_ref = self.helper.api.stix_nested_ref_relationship.create(
-                    fromId=malware_analysis["id"],
-                    toId=file_stix.id,
-                    relationship_type="analysis-sco",
-                    confidence=self.helper.connect_confidence_level,
-                    update=True,
-                )
+                # Attach file to Malware Analysis (through analysis_sco_refs)
+                analysis_sco_refs.append(file_stix.id)
+
                 bundle_objects.append(file_stix)
                 bundle_objects.append(relationship)
-                bundle_objects.append(analysis_sco_ref)
         for tactic in report["mitre_attcks"]:
             if (
                 tactic["malicious_identifiers_count"] > 0
@@ -290,6 +253,17 @@ class HybridAnalysis:
                 )
                 bundle_objects.append(attack_pattern)
                 bundle_objects.append(relationship)
+        # Creating the Malware Analysis
+        malware_analysis = stix2.MalwareAnalysis(
+            product="HybridAnalysis", # TODO Ask Jean-Philippe
+            result_name="Result Name", # TODO Ask Jean-Philippe
+            analysis_started=datetime.strptime(report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"),
+            result=report["verdict"],
+            sample_ref=final_observable["standard_id"],
+            operating_system_ref=operating_system["id"],
+            analysis_sco_refs=analysis_sco_refs
+        )
+        bundle_objects.append(malware_analysis)
         if len(bundle_objects) > 0:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
