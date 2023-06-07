@@ -123,22 +123,28 @@ class Intel471Stream(ABC):
         self.helper.api.work.to_processed(work_id, "Done")
 
     def _fetch_cursor(self) -> Union[str, None]:
+        return self._get_state(self.cursor_name)
+
+    def _update_cursor(self, value: str) -> None:
+        return self._set_state(self.cursor_name, value)
+
+    def _get_state(self, key: str):
         self.helper.log_debug("Sending task to helper handler to get the state")
         self.out_queue.put(
             HelperRequest(operation=HelperRequest.Operation.GET, stream=self.label)
         )
         self.helper.log_debug("Waiting for helper handler to get state")
-        cursor = self.in_queue.get().get(self.cursor_name)
+        cursor = self.in_queue.get().get(key)
         self.helper.log_debug("Got data from helper handler")
         return cursor
 
-    def _update_cursor(self, value: str) -> None:
+    def _set_state(self, key: str, value: str):
         self.helper.log_debug("Sending task to helper handler to save state")
         self.out_queue.put(
             HelperRequest(
                 operation=HelperRequest.Operation.UPDATE,
                 stream=self.label,
-                data={self.cursor_name: value},
+                data={key: value},
             )
         )
         self.helper.log_debug("Waiting for ACK from helper handler to save state")
