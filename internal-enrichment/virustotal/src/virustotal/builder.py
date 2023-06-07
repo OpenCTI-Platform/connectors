@@ -526,6 +526,16 @@ class VirusTotalBuilder:
                     "operation": "add",
                 },
             )
+    
+    def add_file_extension(self, file_extension: str):
+        self.helper.api.stix_cyber_observable.update_field(
+            id=self.observable["id"],
+            input={
+                "key": "extensions",
+                "value": stix2.FileExtension(value=file_extension),
+                "operation": "add",
+            },
+        )
 
     def update_size(self):
         """Update the size of the file."""
