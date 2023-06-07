@@ -89,6 +89,32 @@ class HybridAnalysis:
             id=final_observable["id"],
             input={"key": "x_opencti_score", "value": str(report["threat_score"])},
         )
+        # create malware analysis
+        operating_system = self.helper.api.stix_cyber_observable.create(
+            observableData={
+                "type": "Software",
+                "name": report["environment_description"],
+            }
+        )
+        # TODO Put right data
+        malware_analysis = self.helper.api.malware_analysis.create(
+            product="HybridAnalysis",
+            result_name="Result Name",
+            analysis_started=report["analysis_start_time"],
+            result=report["verdict"],
+        )
+        self.helper.log_info("Malware Analysis Created")
+        operating_system_ref = self.helper.api.stix_nested_ref_relationship.create(
+            fromId=malware_analysis["id"],
+            toId=operating_system["id"],
+            relationship_type="operating-system",
+            confidence=self.helper.connect_confidence_level,
+            update=True,
+        )
+        bundle_objects.append(operating_system)
+        bundle_objects.append(malware_analysis)
+        bundle_objects.append(operating_system_ref)
+
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
             source_name="Hybrid Analysis",
@@ -108,8 +134,8 @@ class HybridAnalysis:
         # Attach the TTPs
         for tactic in report["mitre_attcks"]:
             if (
-                tactic["malicious_identifiers_count"] > 0
-                or tactic["suspicious_identifiers_count"] > 0
+                    tactic["malicious_identifiers_count"] > 0
+                    or tactic["suspicious_identifiers_count"] > 0
             ):
                 attack_pattern = stix2.AttackPattern(
                     id=AttackPattern.generate_id(
@@ -153,8 +179,17 @@ class HybridAnalysis:
                 target_ref=domain_stix.id,
                 object_marking_refs=[stix2.TLP_WHITE],
             )
+            # Attach domain to Malware Analysis
+            analysis_sco_ref = self.helper.api.stix_nested_ref_relationship.create(
+                fromId=malware_analysis["id"],
+                toId=domain_stix.id,
+                relationship_type="analysis-sco",
+                confidence=self.helper.connect_confidence_level,
+                update=True,
+            )
             bundle_objects.append(domain_stix)
             bundle_objects.append(relationship)
+            bundle_objects.append(analysis_sco_ref)
         # Attach the IP addresses
         for host in report["hosts"]:
             if self.detect_ip_version(host) == "IPv4-Addr":
@@ -183,8 +218,17 @@ class HybridAnalysis:
                 target_ref=host_stix.id,
                 object_marking_refs=[stix2.TLP_WHITE],
             )
+            # Attach IP address to Malware Analysis
+            analysis_sco_ref = self.helper.api.stix_nested_ref_relationship.create(
+                fromId=malware_analysis["id"],
+                toId=host_stix.id,
+                relationship_type="analysis-sco",
+                confidence=self.helper.connect_confidence_level,
+                update=True,
+            )
             bundle_objects.append(host_stix)
             bundle_objects.append(relationship)
+            bundle_objects.append(analysis_sco_ref)
         # Attach other files
         for file in report["extracted_files"]:
             if file["threat_level"] > 0:
@@ -209,12 +253,21 @@ class HybridAnalysis:
                     source_ref=final_observable["standard_id"],
                     target_ref=file_stix.id,
                 )
+                # Attach file to Malware Analysis
+                analysis_sco_ref = self.helper.api.stix_nested_ref_relationship.create(
+                    fromId=malware_analysis["id"],
+                    toId=file_stix.id,
+                    relationship_type="analysis-sco",
+                    confidence=self.helper.connect_confidence_level,
+                    update=True,
+                )
                 bundle_objects.append(file_stix)
                 bundle_objects.append(relationship)
+                bundle_objects.append(analysis_sco_ref)
         for tactic in report["mitre_attcks"]:
             if (
-                tactic["malicious_identifiers_count"] > 0
-                or tactic["suspicious_identifiers_count"] > 0
+                    tactic["malicious_identifiers_count"] > 0
+                    or tactic["suspicious_identifiers_count"] > 0
             ):
                 attack_pattern = stix2.AttackPattern(
                     id=AttackPattern.generate_id(
@@ -241,7 +294,7 @@ class HybridAnalysis:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return (
-                "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+                    "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
             )
         else:
             return "Nothing to attach"
@@ -256,7 +309,7 @@ class HybridAnalysis:
             self.api_url + "/submit/url",
             headers=self.headers,
             data=values,
-        )
+            )
         if r.status_code > 299:
             raise ValueError(r.text)
         result = r.json()
@@ -267,7 +320,7 @@ class HybridAnalysis:
             r = requests.get(
                 self.api_url + "/report/" + job_id + "/state",
                 headers=self.headers,
-            )
+                )
             if r.status_code > 299:
                 raise ValueError(r.text)
             result = r.json()
@@ -278,7 +331,7 @@ class HybridAnalysis:
         r = requests.get(
             self.api_url + "/report/" + job_id + "/summary",
             headers=self.headers,
-        )
+            )
         if r.status_code > 299:
             raise ValueError(r.text)
         result = r.json()
@@ -301,7 +354,7 @@ class HybridAnalysis:
             headers=self.headers,
             files=files,
             data=values,
-        )
+            )
         os.remove(file_name)
         if r.status_code > 299:
             raise ValueError(r.text)
@@ -313,7 +366,7 @@ class HybridAnalysis:
             r = requests.get(
                 self.api_url + "/report/" + job_id + "/state",
                 headers=self.headers,
-            )
+                )
             if r.status_code > 299:
                 raise ValueError(r.text)
             result = r.json()
@@ -324,7 +377,7 @@ class HybridAnalysis:
         r = requests.get(
             self.api_url + "/report/" + job_id + "/summary",
             headers=self.headers,
-        )
+            )
         if r.status_code > 299:
             raise ValueError(r.text)
         result = r.json()
@@ -344,7 +397,7 @@ class HybridAnalysis:
                 self.api_url + "/search/hash",
                 headers=self.headers,
                 data=values,
-            )
+                )
             if r.status_code > 299:
                 raise ValueError(r.text)
             result = r.json()
