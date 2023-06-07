@@ -215,9 +215,23 @@ class VirusTotalConnector:
             and (observable["name"] is None or len(observable["name"]) == 0)
         )
 
+
+    
         builder.create_indicator_based_on(
             self.file_indicator_config,
             f"""[file:hashes.'SHA-256' = '{json_data["data"]["attributes"]["sha256"]}']""",
+            hashValue=json_data["data"]["attributes"]["sha256"]
+        )
+
+        builder.create_indicator_based_on(
+            self.file_indicator_config,
+            f"""[file:hashes.'SHA-1' = '{json_data["data"]["attributes"]["sha1"]}']""",
+            hashValue=json_data["data"]["attributes"]["sha1"]
+        )
+        builder.create_indicator_based_on(
+            self.file_indicator_config,
+            f"""[file:hashes.'MD5' = '{json_data["data"]["attributes"]["md5"]}']""",
+            hashValue=json_data["data"]["attributes"]["md5"]
         )
 
         # Create labels from tags

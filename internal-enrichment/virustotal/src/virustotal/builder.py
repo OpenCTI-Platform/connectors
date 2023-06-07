@@ -153,6 +153,7 @@ class VirusTotalBuilder:
         self,
         indicator_config: IndicatorConfig,
         pattern: str,
+        hashValue=None
     ):
         """
         Create an Indicator if the positives hits >= threshold specified in the config.
@@ -183,7 +184,7 @@ class VirusTotalBuilder:
 
             indicator = stix2.Indicator(
                 created_by_ref=self.author,
-                name=self.observable["observable_value"],
+                name=self.observable["observable_value"] if (hashValue is None) else hashValue,
                 description=(
                     "Created by VirusTotal connector as the positive count "
                     f"was >= {indicator_config.threshold}"
