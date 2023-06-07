@@ -9,6 +9,7 @@ import titan_client
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
 from titan_client.titan_stix.exceptions import EmptyBundle
+from titan_client.titan_stix import STIXMapperSettings
 
 from .. import HelperRequest
 
@@ -50,6 +51,7 @@ class Intel471Stream(ABC):
         out_queue: Queue,
         initial_history: int = None,
         update_existing_data: bool = False,
+        proxy_url: Union[str, None] = None
     ) -> None:
         self.helper = helper
         self.in_queue = in_queue
@@ -57,6 +59,7 @@ class Intel471Stream(ABC):
         self.api_config = titan_client.Configuration(
             username=api_username, password=api_key
         )
+        self.api_config.proxy = proxy_url
         self.update_existing_data = update_existing_data
         if initial_history:
             self.initial_history = initial_history
@@ -74,7 +77,7 @@ class Intel471Stream(ABC):
     def get_bundle(self) -> Iterator[Bundle]:
         cursor = self._fetch_cursor()
         with titan_client.ApiClient(self.api_config) as api_client:
-            api_client.user_agent = f"OpenCTI-Connector/{version}"
+            api_client.user_agent = f"{api_client.user_agent}; OpenCTI-Connector/{version}"
             api_instance = getattr(titan_client, self.api_class_name)(api_client)
         while True:
             kwargs = self._get_api_kwargs(cursor)
@@ -97,7 +100,9 @@ class Intel471Stream(ABC):
             cursor = self._get_cursor_value(api_response)
             self._update_cursor(cursor)
             try:
-                bundle = api_response.to_stix(titan_client, api_client)
+                bundle = api_response.to_stix(STIXMapperSettings(
+                    titan_client, api_client, report_attachments_opencti=True
+                ))
             except EmptyBundle:
                 self.helper.log_info(
                     f"{self.__class__.__name__} got empty bundle from STIX converter."
@@ -118,22 +123,28 @@ class Intel471Stream(ABC):
         self.helper.api.work.to_processed(work_id, "Done")
 
     def _fetch_cursor(self) -> Union[str, None]:
+        return self._get_state(self.cursor_name)
+
+    def _update_cursor(self, value: str) -> None:
+        return self._set_state(self.cursor_name, value)
+
+    def _get_state(self, key: str):
         self.helper.log_debug("Sending task to helper handler to get the state")
         self.out_queue.put(
             HelperRequest(operation=HelperRequest.Operation.GET, stream=self.label)
         )
         self.helper.log_debug("Waiting for helper handler to get state")
-        cursor = self.in_queue.get().get(self.cursor_name)
+        cursor = self.in_queue.get().get(key)
         self.helper.log_debug("Got data from helper handler")
         return cursor
 
-    def _update_cursor(self, value: str) -> None:
+    def _set_state(self, key: str, value: str):
         self.helper.log_debug("Sending task to helper handler to save state")
         self.out_queue.put(
             HelperRequest(
                 operation=HelperRequest.Operation.UPDATE,
                 stream=self.label,
-                data={self.cursor_name: value},
+                data={key: value},
             )
         )
         self.helper.log_debug("Waiting for ACK from helper handler to save state")

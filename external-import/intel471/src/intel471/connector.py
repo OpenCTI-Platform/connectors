@@ -40,6 +40,9 @@ class Intel471Connector:
         api_key = get_config_variable(
             "INTEL471_API_KEY", ["intel471", "api_key"], config
         )
+        proxy_url = get_config_variable(
+            "INTEL471_PROXY", ["intel471", "proxy"], config
+        )
 
         for stream_class in (
             Intel471IndicatorsStream,
@@ -71,6 +74,7 @@ class Intel471Connector:
                         self.in_queue,
                         initial_history,
                         update_existing_data,
+                        proxy_url
                     ),
                     interval,
                 )
