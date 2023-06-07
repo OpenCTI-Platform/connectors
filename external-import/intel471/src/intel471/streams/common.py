@@ -77,7 +77,7 @@ class Intel471Stream(ABC):
     def get_bundle(self) -> Iterator[Bundle]:
         cursor = self._fetch_cursor()
         with titan_client.ApiClient(self.api_config) as api_client:
-            api_client.user_agent = f"OpenCTI-Connector/{version}"
+            api_client.user_agent = f"{api_client.user_agent}; OpenCTI-Connector/{version}"
             api_instance = getattr(titan_client, self.api_class_name)(api_client)
         while True:
             kwargs = self._get_api_kwargs(cursor)
