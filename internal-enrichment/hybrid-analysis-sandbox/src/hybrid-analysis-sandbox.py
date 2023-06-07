@@ -12,7 +12,6 @@ from pycti import (
     MalwareAnalysis,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    StixCyberObservable,
     get_config_variable,
 )
 from stix2 import DomainName, File, IPv4Address, IPv6Address
