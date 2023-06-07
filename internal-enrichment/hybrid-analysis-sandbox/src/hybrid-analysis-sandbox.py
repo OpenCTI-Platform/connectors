@@ -134,8 +134,8 @@ class HybridAnalysis:
         # Attach the TTPs
         for tactic in report["mitre_attcks"]:
             if (
-                    tactic["malicious_identifiers_count"] > 0
-                    or tactic["suspicious_identifiers_count"] > 0
+                tactic["malicious_identifiers_count"] > 0
+                or tactic["suspicious_identifiers_count"] > 0
             ):
                 attack_pattern = stix2.AttackPattern(
                     id=AttackPattern.generate_id(
@@ -266,8 +266,8 @@ class HybridAnalysis:
                 bundle_objects.append(analysis_sco_ref)
         for tactic in report["mitre_attcks"]:
             if (
-                    tactic["malicious_identifiers_count"] > 0
-                    or tactic["suspicious_identifiers_count"] > 0
+                tactic["malicious_identifiers_count"] > 0
+                or tactic["suspicious_identifiers_count"] > 0
             ):
                 attack_pattern = stix2.AttackPattern(
                     id=AttackPattern.generate_id(
@@ -294,7 +294,7 @@ class HybridAnalysis:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return (
-                    "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+                "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
             )
         else:
             return "Nothing to attach"
@@ -309,7 +309,7 @@ class HybridAnalysis:
             self.api_url + "/submit/url",
             headers=self.headers,
             data=values,
-            )
+        )
         if r.status_code > 299:
             raise ValueError(r.text)
         result = r.json()
@@ -320,7 +320,7 @@ class HybridAnalysis:
             r = requests.get(
                 self.api_url + "/report/" + job_id + "/state",
                 headers=self.headers,
-                )
+            )
             if r.status_code > 299:
                 raise ValueError(r.text)
             result = r.json()
@@ -331,7 +331,7 @@ class HybridAnalysis:
         r = requests.get(
             self.api_url + "/report/" + job_id + "/summary",
             headers=self.headers,
-            )
+        )
         if r.status_code > 299:
             raise ValueError(r.text)
         result = r.json()
@@ -354,7 +354,7 @@ class HybridAnalysis:
             headers=self.headers,
             files=files,
             data=values,
-            )
+        )
         os.remove(file_name)
         if r.status_code > 299:
             raise ValueError(r.text)
@@ -366,7 +366,7 @@ class HybridAnalysis:
             r = requests.get(
                 self.api_url + "/report/" + job_id + "/state",
                 headers=self.headers,
-                )
+            )
             if r.status_code > 299:
                 raise ValueError(r.text)
             result = r.json()
@@ -377,7 +377,7 @@ class HybridAnalysis:
         r = requests.get(
             self.api_url + "/report/" + job_id + "/summary",
             headers=self.headers,
-            )
+        )
         if r.status_code > 299:
             raise ValueError(r.text)
         result = r.json()
@@ -397,7 +397,7 @@ class HybridAnalysis:
                 self.api_url + "/search/hash",
                 headers=self.headers,
                 data=values,
-                )
+            )
             if r.status_code > 299:
                 raise ValueError(r.text)
             result = r.json()
