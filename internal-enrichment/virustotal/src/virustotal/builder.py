@@ -426,6 +426,7 @@ class VirusTotalBuilder:
                         self.bundle += [attack_pattern, relationship]
 
 
+
     @staticmethod
     def _extract_link(link: str) -> Optional[str]:
         """
@@ -528,6 +529,16 @@ class VirusTotalBuilder:
             )
     
     
+
+    def add_file_extension(self, file_extension: str):
+        tag_vt_extension=self.helper.api.label.create(value="vt_file_extension_"+file_extension, color="#0059f7")
+        self.helper.api.stix_cyber_observable.add_label(
+            id=self.observable["id"], label_id=tag_vt_extension["id"]
+        )
+        
+        
+
+        
 
     def update_size(self):
         """Update the size of the file."""
