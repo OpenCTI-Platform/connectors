@@ -66,6 +66,7 @@ class VirustotalDownloaderConnector:
             artifact_id = response["standard_id"]
 
         except Exception as e:
+            self.mark_as_enriched(observable, tag="FAILURE")
             raise Exception(
                 f"Failed to download/upload Artifact with hash {hash_value}, exception: {e}"
             )
@@ -86,8 +87,10 @@ class VirustotalDownloaderConnector:
         if bundle_objects:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
+            self.mark_as_enriched(observable, tag="SUCCESS")
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
+            self.mark_as_enriched(observable, tag="FAILURE")
             return "Nothing to attach"
 
     def _process_observable(self, observable):
@@ -111,6 +114,12 @@ class VirustotalDownloaderConnector:
                 "(may be linked to data seggregation, check your group and permissions)"
             )
         return self._process_observable(observable)
+    
+    def mark_as_enriched(self,observable,tag='SUCCESS'):
+        self.helper.log_info("Marking observable as enriched...")
+        tag_ha = self.helper.api.label.create(value="VIRUSTOTAL_DOWNLOADER_ENRICH_{}".format(tag), color="#0059f7")
+        self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=tag_ha["id"])
+        #add the enrichment tag
 
     # Start the main loop
     def start(self):
