@@ -204,7 +204,6 @@ class VirusTotalConnector:
             json_data["data"]
         )
 
-        builder.update_hashes()
 
         # Set the size and names (main and additional)
         if observable["entity_type"] == "StixFile":
@@ -216,7 +215,6 @@ class VirusTotalConnector:
         )
 
 
-    
         builder.create_indicator_based_on(
             self.file_indicator_config,
             f"""[file:hashes.'SHA-256' = '{json_data["data"]["attributes"]["sha256"]}']""",
@@ -249,12 +247,11 @@ class VirusTotalConnector:
                 ruleset,
                 json_data["data"]["attributes"].get("creation_date", None),
             )
-        ##  Not needed. Serves no purpose.
-            # Create a Note with the full report
-            # if self.file_create_note_full_report:
-            #     builder.create_note(
-            #         "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
-            #     )
+        # Create a Note with the full report
+        if self.file_create_note_full_report:
+            builder.create_note(
+                "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
+            )
         builder.create_mitre_attck_ttps(mitre_attck_data["data"])
 
         #add the file extension if oberservable type is a stix file
@@ -263,6 +260,9 @@ class VirusTotalConnector:
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
         # self.lock.release()
+
+
+        builder.update_hashes()
         return builder.send_bundle()
 
     def _process_ip(self, observable):

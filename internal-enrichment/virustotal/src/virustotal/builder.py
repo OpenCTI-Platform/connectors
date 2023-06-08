@@ -474,18 +474,33 @@ class VirusTotalBuilder:
         return "Nothing to attach"
 
     def update_hashes(self):
-        """Update the hashes (md5 and sha1) of the file."""
+        #To avoid multiquerying same files with different hashes, We try to find all file instances and add all hashes to them. Platform will then merge them. 
+        file_list = []
         for algo in ("MD5", "SHA-1", "SHA-256"):
-            self.helper.log_debug(
-                f'[VirusTotal] updating hash {algo}: {self.attributes[algo.lower().replace("-", "")]}'
-            )
-            self.helper.api.stix_cyber_observable.update_field(
-                id=self.observable["id"],
-                input={
-                    "key": f"hashes.{algo}",
-                    "value": self.attributes[algo.lower().replace("-", "")],
-                },
-            )
+            possible_files = self.helper.api.stix_cyber_observable.list(filters=[], first=1, search=self.attributes[algo.lower().replace("-", "")], types="StixFile")
+            file = None
+            if possible_files != None and len(possible_files) != 0:
+                file = possible_files[0]
+
+            if file != None and file["observable_value"] == self.attributes[algo.lower().replace("-", "")]:
+                self.helper.log_info(f"Found same file with different hash name: {file['observable_value']}")
+                file_list.append(file)
+
+#        assert self.observable in file_list
+
+        for file in file_list:
+            """Update the hashes (md5 and sha1) of the file."""
+            for algo in ("SHA-256", "SHA-1", "MD5"):
+                self.helper.log_debug(
+                    f'[VirusTotal] updating hash {algo}: {self.attributes[algo.lower().replace("-", "")]}'
+                )
+                self.helper.api.stix_cyber_observable.update_field(
+                    id=file["id"],
+                    input={
+                        "key": f"hashes.{algo}",
+                        "value": self.attributes[algo.lower().replace("-", "")],
+                    },
+                )
 
     def update_labels(self):
         """Update the labels of the file using the tags."""
