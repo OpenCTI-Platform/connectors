@@ -97,7 +97,7 @@ class HybridAnalysis:
         analysis_sco_refs = []
 
         # Create external reference
-        external_reference = self.helper.api.external_reference.create(
+        external_reference = stix2.ExternalReference(
             source_name="Hybrid Analysis",
             url="https://www.hybrid-analysis.com/sample/" + report["sha256"],
             description="Hybrid Analysis Report",
@@ -238,9 +238,9 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "uses", final_observable["standard_id"], attack_pattern.id
+                        "related-to", final_observable["standard_id"], attack_pattern.id
                     ),
-                    relationship_type="uses",
+                    relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=final_observable["standard_id"],
                     target_ref=attack_pattern.id,
@@ -260,10 +260,6 @@ class HybridAnalysis:
             operating_system_ref=operating_system["id"],
             analysis_sco_refs=analysis_sco_refs,
             external_references=[external_reference],
-        )
-        self.helper.api.stix_domain_object.add_external_reference(
-            id=malware_analysis["id"],
-            external_reference_id=external_reference["id"],
         )
         bundle_objects.append(malware_analysis)
         if len(bundle_objects) > 0:
