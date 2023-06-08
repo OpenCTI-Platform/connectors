@@ -4,7 +4,6 @@ import time
 
 import requests
 import yaml
-
 from intelix import intelixlookup
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
