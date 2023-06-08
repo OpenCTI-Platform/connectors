@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name:  'SophosLabs Intelix Lookup'
-  scope: Url,IPv4-Addr,Domain,File,File-Sha256,Artifact
+  scope: Url,IPv4-Addr,Artifact
   confidence_level: 50
   log_level: 'info'
 
