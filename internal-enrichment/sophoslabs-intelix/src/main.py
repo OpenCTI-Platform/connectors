@@ -1,4 +1,5 @@
 import base64
+import logging
 import os
 import time
 
@@ -92,5 +93,6 @@ if __name__ == "__main__":
         openctitest = ConnectorStart()
         openctitest.start()
     except Exception as e:
+        logging.info(e)
         time.sleep(10)
         exit(0)
