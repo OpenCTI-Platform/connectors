@@ -1,5 +1,7 @@
-import requests
 import urllib
+
+import requests
+
 import validators
 
 

@@ -1,11 +1,12 @@
-import os
-import yaml
-import time
 import base64
-import requests
+import os
+import time
 
-from pycti import OpenCTIConnectorHelper, get_config_variable
+import requests
+import yaml
+
 from intelix import intelixlookup
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class ConnectorStart:
