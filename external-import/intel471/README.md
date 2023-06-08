@@ -14,7 +14,7 @@ This connector runs four streams at this time:
 |-----------------------|------------------------------------------------------------------------------------------------|--------------------------------------------------
 | Intel471IndicatorsStream | Fetches malware indicators from `/indicators` application programming interface (API) endpoint | `Indicator` and `Malware` SDOs related using `Relationship` object; `URL`, `IPv4Address` or `File` Observable related with the `Indicator` SDO using `Relationship` object
 | Intel471YARAStream | Fetches YARA rules from `/yara` API endpoint                                                   | `Indicator` and `Malware` SDOs related using `Relationship` object
-| Intel471IOCsStream | Fetches indicators of compromise (IoCs) from `/iocs` API endpoint                              | `Indicator` and `Report` SDOs and either `URL` or `DomainName` Observable. Both `Indicator` and Observable objects are related with the `Report` using `Report`'s internal property `object_refs`. Observable and `Indicator` objects also are related using `Relationship` object
+| Intel471IOCsStream | Fetches indicators of compromise (IoCs) from `/iocs` API endpoint                              | `Indicator` and `Report` SDOs and one of following Observables: `URL`, `DomainName`, `IPv4Address`, `File`. Both `Indicator` and Observable objects are related with the `Report` using `Report`'s internal property `object_refs`. Observable and `Indicator` objects also are related using `Relationship` object
 | Intel471CVEsStream | Fetches Common Vulnerabilities and Exposures (CVE) reports from `/cve/reports` API endpoint    | `Vulnerability` SDO
 
 Each stream can be enabled or disabled and configured separately (see "Configuration" section for more details).
@@ -30,7 +30,7 @@ Available as part of Intel 471's paid subscriptions. For more information, pleas
 Configuration options can be set as environment variables, and in `docker-compose.yml`, or in `config.yml`.
 
 | Env variable                        | config.yaml variable       | Description
-| ------------------------------------|----------------------------|--------------------------------------------------
+|-------------------------------------|----------------------------|--------------------------------------------------
 | INTEL471_API_USERNAME               | api_username               | Titan API username
 | INTEL471_API_KEY                    | api_key                    | Titan API key
 | INTEL471_INTERVAL_INDICATORS        | interval_indicators        | How often malware indicators should be fetched in minutes. If not set, the stream will not be enabled.
@@ -41,6 +41,7 @@ Configuration options can be set as environment variables, and in `docker-compos
 | INTEL471_INITIAL_HISTORY_CVES       | initial_history_cves       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for CVE reports.
 | INTEL471_INTERVAL_YARA              | interval_yara              | Same as INTEL471_INTERVAL_INDICATORS variable, but for YARA rules.
 | INTEL471_INITIAL_HISTORY_YARA       | initial_history_yara       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for YARA rules.
+| INTEL471_PROXY                      | proxy                      | Optional Proxy URL, for example `http://user@pass:localhost:3128`
 
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
 For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
