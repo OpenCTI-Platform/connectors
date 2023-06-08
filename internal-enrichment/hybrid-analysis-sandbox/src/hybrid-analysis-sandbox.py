@@ -91,8 +91,9 @@ class HybridAnalysis:
             input={"key": "x_opencti_score", "value": str(report["threat_score"])},
         )
         # Sandbox Operating System
-        operating_system = stix2.Software(name=report["environment_description"])
-        bundle_objects.append(operating_system)
+        if report["environment_id"] is not None:
+            operating_system = stix2.Software(name=report["environment_description"])
+            bundle_objects.append(operating_system)
         # List of all the referenced SCO of the analysis
         analysis_sco_refs = []
 
@@ -139,27 +140,28 @@ class HybridAnalysis:
                 bundle_objects.append(relationship)
         # Attach the domains
         for domain in report["domains"]:
-            domain_stix = DomainName(
-                value=domain,
-                object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "created_by_ref": self.identity,
-                },
-            )
-            relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "related-to", final_observable["standard_id"], domain_stix.id
-                ),
-                relationship_type="related-to",
-                created_by_ref=self.identity,
-                source_ref=final_observable["standard_id"],
-                target_ref=domain_stix.id,
-                object_marking_refs=[stix2.TLP_WHITE],
-            )
-            # Attach IP to Malware Analysis (through analysis_sco_refs)
-            analysis_sco_refs.append(domain_stix.id)
-            bundle_objects.append(domain_stix)
-            bundle_objects.append(relationship)
+            if domain != final_observable["value"]:
+                domain_stix = DomainName(
+                    value=domain,
+                    object_marking_refs=[stix2.TLP_WHITE],
+                    custom_properties={
+                        "created_by_ref": self.identity,
+                    },
+                )
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", final_observable["standard_id"], domain_stix.id
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.identity,
+                    source_ref=final_observable["standard_id"],
+                    target_ref=domain_stix.id,
+                    object_marking_refs=[stix2.TLP_WHITE],
+                )
+                # Attach IP to Malware Analysis (through analysis_sco_refs)
+                analysis_sco_refs.append(domain_stix.id)
+                bundle_objects.append(domain_stix)
+                bundle_objects.append(relationship)
         # Attach the IP addresses
         for host in report["hosts"]:
             if self.detect_ip_version(host) == "IPv4-Addr":
@@ -248,16 +250,20 @@ class HybridAnalysis:
                 bundle_objects.append(attack_pattern)
                 bundle_objects.append(relationship)
         # Creating the Malware Analysis
+        result_name = "Result " + observable["observable_value"]
         malware_analysis = stix2.MalwareAnalysis(
-            id=MalwareAnalysis.generate_id("Result Name"),
+            id=MalwareAnalysis.generate_id(result_name),
             product="HybridAnalysis",  # TODO Ask Jean-Philippe
-            result_name="Result Name",  # TODO Ask Jean-Philippe
+            result_name=result_name,  # TODO Ask Jean-Philippe
             analysis_started=datetime.strptime(
                 report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"
             ),
             result=report["verdict"],
             sample_ref=final_observable["standard_id"],
-            operating_system_ref=operating_system["id"],
+            created_by_ref=self.identity,
+            operating_system_ref=operating_system["id"]
+            if "operating_system" in locals()
+            else None,
             analysis_sco_refs=analysis_sco_refs,
             external_references=[external_reference],
         )
