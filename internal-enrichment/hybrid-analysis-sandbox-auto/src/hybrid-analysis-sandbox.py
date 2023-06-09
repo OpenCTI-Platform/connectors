@@ -378,6 +378,7 @@ class HybridAnalysis:
             return "Observable not found and no file to upload in the sandbox"
         return self._trigger_sandbox(observable)
         # return "TRIGERRING SANDBOX DISABLED FIX THIS LATER!!!"
+        
 
     def _process_message(self, data):
         entity_id = data["entity_id"]

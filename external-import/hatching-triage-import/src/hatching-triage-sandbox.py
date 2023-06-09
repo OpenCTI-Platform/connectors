@@ -98,8 +98,9 @@ class HatchingTriageImporter:
         )
         _CONNECTOR_RUN_INTERVAL_SEC = 60
         _STATE_LAST_RUN = "last_run"
+    
 
-        
+    
     
     def run(self):
         """Run HatchingTriage connector."""
@@ -123,7 +124,9 @@ class HatchingTriageImporter:
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
-                    pulse_import_state = self.pulse_importer.run(current_state, work_id)
+                    self._info("Work initiated: {0}", work_id)
+                    search_state
+
                     new_state = current_state.copy()
                     new_state.update(pulse_import_state)
                     new_state[self._STATE_LAST_RUN] = time.time()
