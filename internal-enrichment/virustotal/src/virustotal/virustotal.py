@@ -264,6 +264,11 @@ class VirusTotalConnector:
             builder.create_note(
                 "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
             )
+
+
+        
+        builder.create_note("Magic", f"\n```{json_data['data']['attributes'].get('magic', 'No magic info')}```\n")
+
         builder.create_mitre_attck_ttps(mitre_attck_data["data"])
 
         #add the file extension if oberservable type is a stix file
