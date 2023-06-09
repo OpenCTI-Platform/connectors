@@ -273,10 +273,7 @@ class VirusTotalConnector:
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
         # self.lock.release()
-
-        builder.add_suggested_threat_label()    
-        builder.add_suggested_threat_categories()      
-        builder.add_suggested_threat_names()
+        
         builder.update_names(
                     observable["entity_type"] == "StixFile"
                     and (observable["name"] is None or len(observable["name"]) == 0)
