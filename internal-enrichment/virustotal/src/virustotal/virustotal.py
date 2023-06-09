@@ -260,6 +260,8 @@ class VirusTotalConnector:
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
         # self.lock.release()
+        suggested_threat_label = self.get_suggested_threat_label(json_data)
+        builder.add_suggested_threat_label(suggested_threat_label)
 
 
         builder.update_hashes()
@@ -392,6 +394,10 @@ class VirusTotalConnector:
         tag_ha = self.helper.api.label.create(value="VIRUSTOTAL_ENRICH_{}".format(tag), color="#0059f7")
         self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=tag_ha["id"])
         #add the enrichment tag
+    
+    def get_suggested_threat_label(self,data):
+        return data['data']['attributes']['popular_threat_classification'].get('suggested_threat_label','UNKNOWN')\
+            if data['data']['attributes']['popular_threat_classification'] else 'UNKNOWN'
 
 
 

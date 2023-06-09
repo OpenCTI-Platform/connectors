@@ -551,7 +551,12 @@ class VirusTotalBuilder:
         self.helper.api.stix_cyber_observable.add_label(
             id=self.observable["id"], label_id=tag_vt_extension["id"]
         )
-        
+
+    def add_suggested_threat_label(self, suggested_threat_label: str):
+        tag_vt_suggested_threat_label=self.helper.api.label.create(value="vt_suggested_threat_label_"+suggested_threat_label, color="#0059f7")
+        self.helper.api.stix_cyber_observable.add_label(
+            id=self.observable["id"], label_id=tag_vt_suggested_threat_label["id"]
+        )
         
 
         
