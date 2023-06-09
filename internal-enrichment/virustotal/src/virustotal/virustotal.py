@@ -266,7 +266,9 @@ class VirusTotalConnector:
             )
 
 
-        
+        builder.add_suggested_threat_label()
+        builder.add_popular_threat_categories(self.popular_threat_category_threshold)
+        builder.add_popular_threat_names(self.popular_threat_name_threshold)
         builder.create_note("Magic", f"\n```{json_data['data']['attributes'].get('magic', 'No magic info')}```\n")
 
         builder.create_mitre_attck_ttps(mitre_attck_data["data"])
@@ -276,18 +278,12 @@ class VirusTotalConnector:
             builder.add_file_extension(json_data["data"]["attributes"]["type_tag"])
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
-        # self.lock.release()
-        suggested_threat_label = self.get_suggested_threat_label(json_data)
-        builder.add_suggested_threat_label(suggested_threat_label)
         
-        suggested_threat_categories= self.get_popular_threat_category(json_data)
-        builder.add_suggested_threat_categories(suggested_threat_categories)
-
-        suggested_threat_names= self.get_popular_threat_name(json_data)
-        builder.add_suggested_threat_names(suggested_threat_names)
-
-
+        builder.add_suggested_threat_label()    
+        builder.add_suggested_threat_categories()      
+        builder.add_suggested_threat_names()
         builder.update_hashes()
+
         return builder.send_bundle()
 
     def _process_ip(self, observable):
@@ -418,17 +414,6 @@ class VirusTotalConnector:
         self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=tag_ha["id"])
         #add the enrichment tag
     
-    def get_suggested_threat_label(self,data):
-        return data['data']['attributes']['popular_threat_classification'].get('suggested_threat_label','UNKNOWN')\
-            if data['data']['attributes']['popular_threat_classification'] else 'UNKNOWN'
-
-    def get_popular_threat_category(self,data):
-        return [ptc['value'] for ptc in data['data']['attributes']['popular_threat_classification']['popular_threat_category']\
-                if ptc['count'] >= self.popular_threat_category_threshold]
-    
-    def get_popular_threat_name(self,data):
-        return [ptc['value'] for ptc in data['data']['attributes']['popular_threat_classification']['popular_threat_name']\
-                if ptc['count'] >= self.popular_threat_name_threshold]
     
 
 
