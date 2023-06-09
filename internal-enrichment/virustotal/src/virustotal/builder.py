@@ -555,7 +555,7 @@ class VirusTotalBuilder:
         )
 
     def add_suggested_threat_label(self):
-        if not self.attributes['popular_threat_classification']:
+        if not self.attributes.get('popular_threat_classification',None):
             return
         tag_vt_suggested_threat_label=self.attributes['popular_threat_classification'].get('suggested_threat_label','UNKNOWN')\
             if self.attributes['popular_threat_classification'] else 'UNKNOWN'
@@ -567,7 +567,7 @@ class VirusTotalBuilder:
         )
     
     def add_popular_threat_categories(self,threshold):
-        if not self.attributes['popular_threat_classification']:
+        if not self.attributes.get('popular_threat_classification',None):
             return
         popular_threat_categories=self.attributes['popular_threat_classification'].get('popular_threat_category',[])\
             if self.attributes['popular_threat_classification'] else []
@@ -581,7 +581,7 @@ class VirusTotalBuilder:
             )
 
     def add_popular_threat_names(self,threshold):
-        if not self.attributes['popular_threat_classification']:
+        if not self.attributes.get('popular_threat_classification',None):
             return
         popular_threat_names=self.attributes['popular_threat_classification'].get('popular_threat_name',[])\
             if self.attributes['popular_threat_classification'] else []
