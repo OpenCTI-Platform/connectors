@@ -263,6 +263,7 @@ class VirusTotalConnector:
         builder.add_suggested_threat_label()
         builder.add_popular_threat_categories(self.popular_threat_category_threshold)
         builder.add_popular_threat_names(self.popular_threat_name_threshold)
+        builder.add_engine_results_as_notes()
         builder.create_note("Magic", f"\n```{json_data['data']['attributes'].get('magic', 'No magic info')}```\n")
 
         builder.create_mitre_attck_ttps(mitre_attck_data["data"])
@@ -280,7 +281,7 @@ class VirusTotalConnector:
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
         # self.lock.release()
-        
+
         builder.update_names(
                     observable["entity_type"] == "StixFile"
                     and (observable["name"] is None or len(observable["name"]) == 0)
