@@ -69,7 +69,19 @@ class VirusTotalConnector:
             True,
         )
 
-        
+        self.popular_threat_category_threshold = get_config_variable(
+            "VIRUSTOTAL_POPULAR_THREAT_CATEGORY_THRESHOLD",
+            ["virustotal", "popular_threat_category_threshold"],
+            config,
+            True,
+        )
+
+        self.popular_threat_name_threshold = get_config_variable(
+            "VIRUSTOTAL_POPULAR_THREAT_NAME_THRESHOLD",
+            ["virustotal", "popular_threat_name_threshold"],
+            config,
+            True,
+        )
 
         # File/Artifact specific settings
         self.file_create_note_full_report = get_config_variable(
@@ -209,12 +221,6 @@ class VirusTotalConnector:
         if observable["entity_type"] == "StixFile":
             builder.update_size()
 
-        builder.update_names(
-            observable["entity_type"] == "StixFile"
-            and (observable["name"] is None or len(observable["name"]) == 0)
-        )
-
-
         builder.create_indicator_based_on(
             self.file_indicator_config,
             f"""[file:hashes.'SHA-256' = '{json_data["data"]["attributes"]["sha256"]}']""",
@@ -254,7 +260,9 @@ class VirusTotalConnector:
             )
 
 
-        
+        builder.add_suggested_threat_label()
+        builder.add_popular_threat_categories(self.popular_threat_category_threshold)
+        builder.add_popular_threat_names(self.popular_threat_name_threshold)
         builder.create_note("Magic", f"\n```{json_data['data']['attributes'].get('magic', 'No magic info')}```\n")
 
         builder.create_mitre_attck_ttps(mitre_attck_data["data"])
@@ -264,13 +272,26 @@ class VirusTotalConnector:
             builder.add_file_extension(json_data["data"]["attributes"]["type_tag"])
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
+<<<<<<< HEAD
         # self.lock.release()
         suggested_threat_label = self.get_suggested_threat_label(json_data)
         builder.add_suggested_threat_label(suggested_threat_label)
-
-
+        builder.update_names(
+                    observable["entity_type"] == "StixFile"
+                    and (observable["name"] is None or len(observable["name"]) == 0)
+                )
+        temp = builder.send_bundle()
+        builder.update_hashes() # This line can merge the observable with other observable. In order not to lose relationships we update hashes after we send the relations.
+        return temp
+=======
+        
+        builder.add_suggested_threat_label()    
+        builder.add_suggested_threat_categories()      
+        builder.add_suggested_threat_names()
         builder.update_hashes()
+
         return builder.send_bundle()
+>>>>>>> b6066ac8f6323c833234fbf3350c531c69166dbd
 
     def _process_ip(self, observable):
         json_data = self.client.get_ip_info(observable["observable_value"])
@@ -400,10 +421,7 @@ class VirusTotalConnector:
         self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=tag_ha["id"])
         #add the enrichment tag
     
-    def get_suggested_threat_label(self,data):
-        return data['data']['attributes']['popular_threat_classification'].get('suggested_threat_label','UNKNOWN')\
-            if data['data']['attributes']['popular_threat_classification'] else 'UNKNOWN'
-
+    
 
 
 

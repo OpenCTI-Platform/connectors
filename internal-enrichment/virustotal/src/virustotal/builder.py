@@ -28,7 +28,9 @@ class VirusTotalBuilder:
         author: stix2.Identity,
         replace_with_lower_score: bool,
         observable: dict,
-        data: dict
+        data: dict,
+
+
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
@@ -552,11 +554,39 @@ class VirusTotalBuilder:
             id=self.observable["id"], label_id=tag_vt_extension["id"]
         )
 
-    def add_suggested_threat_label(self, suggested_threat_label: str):
-        tag_vt_suggested_threat_label=self.helper.api.label.create(value="vt_suggested_threat_label_"+suggested_threat_label, color="#0059f7")
+    def add_suggested_threat_label(self):
+        tag_vt_suggested_threat_label=self.attributes['popular_threat_classification'].get('suggested_threat_label','UNKNOWN')\
+            if self.attributes['popular_threat_classification'] else 'UNKNOWN'
+        
+        tag_vt_suggested_threat_label_created=self.helper.api.label.create(value="vt_suggested_threat_label_"+tag_vt_suggested_threat_label, color="#0059f7")
+        
         self.helper.api.stix_cyber_observable.add_label(
-            id=self.observable["id"], label_id=tag_vt_suggested_threat_label["id"]
+            id=self.observable["id"], label_id=tag_vt_suggested_threat_label_created["id"]
         )
+    
+    def add_popular_threat_categories(self,threshold):
+        popular_threat_categories=self.attributes['popular_threat_classification'].get('popular_threat_category',[])\
+            if self.attributes['popular_threat_classification'] else []
+        
+        ptc_above_threshold=[ptc['value'] for ptc in popular_threat_categories if ptc['count']>=threshold]
+
+        for ptc in ptc_above_threshold:
+            tag_vt_popular_threat_category=self.helper.api.label.create(value="vt_popular_threat_category_"+ptc, color="#0059f7")
+            self.helper.api.stix_cyber_observable.add_label(
+                id=self.observable["id"], label_id=tag_vt_popular_threat_category["id"]
+            )
+
+    def add_popular_threat_names(self,threshold):
+        popular_threat_names=self.attributes['popular_threat_classification'].get('popular_threat_name',[])\
+            if self.attributes['popular_threat_classification'] else []
+        
+        ptn_above_threshold=[ptn['value'] for ptn in popular_threat_names if ptn['count']>=threshold]
+
+        for ptn in ptn_above_threshold:
+            tag_vt_popular_threat_name=self.helper.api.label.create(value="vt_popular_threat_name_"+ptn, color="#0059f7")
+            self.helper.api.stix_cyber_observable.add_label(
+                id=self.observable["id"], label_id=tag_vt_popular_threat_name["id"]
+            )
         
 
         
