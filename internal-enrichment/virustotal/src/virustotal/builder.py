@@ -588,6 +588,15 @@ class VirusTotalBuilder:
                 id=self.observable["id"], label_id=tag_vt_popular_threat_name["id"]
             )
         
+    def add_engine_results_as_notes(self):
+        if not self.attributes.get('last_analysis_results', None):
+            return
+        note = "\n```"
+        for engine in self.attributes['last_analysis_results'].values():
+            if engine.get("category", "UNKNOWN") == "malicious":
+                note = note + "\n" + engine.get('engine_name', "UNKNOWN_ENGINE:") + ":" + engine.get("result", "result unknown") + "\n"
+        note = note + "````\n"
+        self.create_note("Malicious Engine Results", note)
 
         
 
