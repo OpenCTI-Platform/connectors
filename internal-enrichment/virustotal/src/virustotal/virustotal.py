@@ -273,8 +273,6 @@ class VirusTotalConnector:
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
         # self.lock.release()
-        suggested_threat_label = self.get_suggested_threat_label(json_data)
-        builder.add_suggested_threat_label(suggested_threat_label)
 
         builder.add_suggested_threat_label()    
         builder.add_suggested_threat_categories()      
