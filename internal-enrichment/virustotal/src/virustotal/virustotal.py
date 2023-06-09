@@ -221,12 +221,6 @@ class VirusTotalConnector:
         if observable["entity_type"] == "StixFile":
             builder.update_size()
 
-        builder.update_names(
-            observable["entity_type"] == "StixFile"
-            and (observable["name"] is None or len(observable["name"]) == 0)
-        )
-
-
         builder.create_indicator_based_on(
             self.file_indicator_config,
             f"""[file:hashes.'SHA-256' = '{json_data["data"]["attributes"]["sha256"]}']""",
@@ -278,13 +272,15 @@ class VirusTotalConnector:
             builder.add_file_extension(json_data["data"]["attributes"]["type_tag"])
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
+        # self.lock.release()
         
-        builder.add_suggested_threat_label()    
-        builder.add_suggested_threat_categories()      
-        builder.add_suggested_threat_names()
-        builder.update_hashes()
-
-        return builder.send_bundle()
+        builder.update_names(
+                    observable["entity_type"] == "StixFile"
+                    and (observable["name"] is None or len(observable["name"]) == 0)
+                )
+        temp = builder.send_bundle()
+        builder.update_hashes() # This line can merge the observable with other observable. In order not to lose relationships we update hashes after we send the relations.
+        return temp
 
     def _process_ip(self, observable):
         json_data = self.client.get_ip_info(observable["observable_value"])
