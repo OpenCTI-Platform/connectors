@@ -57,7 +57,7 @@ class ElasticConnector:
                 opencti_client=self.helper,
                 elasticsearch_client=self.elasticsearch,
             )
-        if self.config["connector.mode"] == "ecs_no_signals":
+        elif self.config["connector.mode"] == "ecs_no_signals":
             self.import_manager = IntelManager(
                 self.helper, self.elasticsearch, self.config, datadir
             )
