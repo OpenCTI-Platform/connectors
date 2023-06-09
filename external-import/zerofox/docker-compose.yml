@@ -1,0 +1,15 @@
+version: '3'
+services:
+  connector-zerofox:
+    image: opencti/connector-zerofox:5.7.6
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Zerofox
+      - CONNECTOR_SCOPE=zerofox # MIME type or Stix Object
+      - CONNECTOR_LOG_LEVEL=info
+      - ZEROFOX_USERNAME=changeme
+      - ZEROFOX_PASSWORD=changeme
+    restart: always
