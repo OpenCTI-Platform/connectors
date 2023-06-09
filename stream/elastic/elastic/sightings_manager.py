@@ -120,6 +120,8 @@ class SignalsManager(Thread):
                 )
                 ids_dict = {}
 
+                logger.debug(f"Signal request result: {results}")
+
                 # Parse the results
                 for hit in results["hits"]["hits"]:
                     # This depends on ECS mappings >= 1.11
@@ -138,6 +140,7 @@ class SignalsManager(Thread):
                             continue
 
                         if _doc["found"] is not True:
+                            logger.debug(f"Document with indicator id '{indicator['matched']['id']}' not found. Continue")
                             continue
 
                         if (
