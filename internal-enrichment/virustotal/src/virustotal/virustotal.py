@@ -13,6 +13,7 @@ from .client import VirusTotalClient
 from .indicator_config import IndicatorConfig
 from asyncio import Lock
 from datetime import datetime, timedelta
+import time
 
 
 class VirusTotalConnector:
@@ -123,6 +124,8 @@ class VirusTotalConnector:
             config,
         )
         self.url_indicator_config = IndicatorConfig.load_indicator_config(config, "URL")
+
+        self.latest_reset_timestamp = time.time()
 
     def _retrieve_yara_ruleset(self, ruleset_id: str) -> dict:
         """
@@ -418,7 +421,17 @@ class VirusTotalConnector:
         self.helper.api.stix_cyber_observable.add_label(id=observable["id"], label_id=tag_ha["id"])
         #add the enrichment tag
     
-    
+    def check_quota(self):
+        if time.time() - self.latest_reset_timestamp > 86400:
+            self.latest_reset_timestamp = time.time()
+            self.quota_current= 0
+            self.helper.log_info("Reset quota at time {}".format(str(datetime.now())))
+            return True
+        if self.quota_current >= self.quota_max:
+            self.helper.log_info("Quota exceeded, waiting for reset...")
+            return False
+        return True
+  
 
 
 
@@ -455,9 +468,9 @@ class VirusTotalConnector:
             f"[VirusTotal] starting enrichment of observable: {observable} at time {datetime.now()}"
         )
         result = None
-        if self.quota_current >= self.quota_max:
-            self.helper.log_info("Quota reached...")
-            return "Quota reached..."
+        if not self.check_quota():
+            return "Quota exceeded, waiting for reset..."
+        
         match observable["entity_type"]:
             case "StixFile" | "Artifact":
                 result = await self._process_file(observable)
