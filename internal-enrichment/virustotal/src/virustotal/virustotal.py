@@ -69,7 +69,19 @@ class VirusTotalConnector:
             True,
         )
 
-        
+        self.popular_threat_category_threshold = get_config_variable(
+            "VIRUSTOTAL_POPULAR_THREAT_CATEGORY_THRESHOLD",
+            ["virustotal", "popular_threat_category_threshold"],
+            config,
+            True,
+        )
+
+        self.popular_threat_name_threshold = get_config_variable(
+            "VIRUSTOTAL_POPULAR_THREAT_NAME_THRESHOLD",
+            ["virustotal", "popular_threat_name_threshold"],
+            config,
+            True,
+        )
 
         # File/Artifact specific settings
         self.file_create_note_full_report = get_config_variable(
@@ -262,6 +274,12 @@ class VirusTotalConnector:
         # self.lock.release()
         suggested_threat_label = self.get_suggested_threat_label(json_data)
         builder.add_suggested_threat_label(suggested_threat_label)
+        
+        suggested_threat_categories= self.get_popular_threat_category(json_data)
+        builder.add_suggested_threat_categories(suggested_threat_categories)
+
+        suggested_threat_names= self.get_popular_threat_name(json_data)
+        builder.add_suggested_threat_names(suggested_threat_names)
 
 
         builder.update_hashes()
@@ -399,6 +417,14 @@ class VirusTotalConnector:
         return data['data']['attributes']['popular_threat_classification'].get('suggested_threat_label','UNKNOWN')\
             if data['data']['attributes']['popular_threat_classification'] else 'UNKNOWN'
 
+    def get_popular_threat_category(self,data):
+        return [ptc['value'] for ptc in data['data']['attributes']['popular_threat_classification']['popular_threat_category']\
+                if ptc['count'] >= self.popular_threat_category_threshold]
+    
+    def get_popular_threat_name(self,data):
+        return [ptc['value'] for ptc in data['data']['attributes']['popular_threat_classification']['popular_threat_name']\
+                if ptc['count'] >= self.popular_threat_name_threshold]
+    
 
 
 
