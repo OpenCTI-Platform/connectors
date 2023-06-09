@@ -267,6 +267,13 @@ class VirusTotalConnector:
 
         builder.create_mitre_attck_ttps(mitre_attck_data["data"])
 
+        first_submission_date = json_data['data']['attributes'].get('first_submission_date', None)
+        if first_submission_date:
+            human_readable_date = datetime.fromtimestamp(first_submission_date).strftime('%Y-%m-%d %H:%M:%S')
+            builder.create_note("First submission date", f"\n```{human_readable_date}```\n")
+        else:
+            builder.create_note("First submission date", f"\n```No first submission date```")
+
         #add the file extension if oberservable type is a stix file
         if observable["entity_type"] == "StixFile":
             builder.add_file_extension(json_data["data"]["attributes"]["type_tag"])
