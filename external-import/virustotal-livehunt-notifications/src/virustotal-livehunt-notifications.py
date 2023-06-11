@@ -203,6 +203,7 @@ class VirustotalLivehuntNotifications:
                         file_contents,
                         file_name,
                         "Downloaded from Virustotal Livehunt Notifications.",
+                        self.identity,
                     )
 
                     # Set score
@@ -292,13 +293,14 @@ class VirustotalLivehuntNotifications:
             return True
         return False
 
-    def upload_artifact_opencti(self, file_contents, file_name, description):
+    def upload_artifact_opencti(self, file_contents, file_name, description, author):
         """
         Upload a file to OpenCTI.
 
         file_contents: a bytes object representing the file contents
         file_name: a str representing the name of the file
         description: a str representing the description for the upload
+        author: the author uploading the artefact (identity of the connector)
 
         returns: response of upload
         """
@@ -310,6 +312,7 @@ class VirustotalLivehuntNotifications:
             "data": file_contents,
             "mime_type": mime_type,
             "x_opencti_description": description,
+            "createdBy": author["id"],
         }
         return self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
 
