@@ -1,4 +1,4 @@
-FROM python:3.10-alpine as build
+FROM python:3.11-alpine as build
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     POETRY_HOME="/opt/poetry" \
@@ -22,7 +22,7 @@ RUN poetry env use /usr/local/bin/python3 && \
 COPY src ./src
 RUN poetry install --no-dev
 
-FROM python:3.10-alpine
+FROM python:3.11-alpine
 
 WORKDIR /opt/connector
 

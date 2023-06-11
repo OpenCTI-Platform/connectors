@@ -21,7 +21,6 @@ from stix2 import (
     Relationship,
     ThreatActor,
     Tool,
-    ExternalReference,
 )
 
 
