@@ -1,8 +1,10 @@
-from stix2 import Indicator, ObservedData, Bundle, Malware, Relationship, Identity
-from dateutil.parser import parse
 import re
 from datetime import datetime
 from urllib.parse import quote
+
+from dateutil.parser import parse
+from stix2 import Bundle, Identity, Indicator, Malware, ObservedData, Relationship
+
 
 def convert_to_stix_botnet(data):
     try:
@@ -21,7 +23,6 @@ def convert_to_stix_botnet(data):
 
         if ip_address:
             indicator_ip = Indicator(
-
                 created_by_ref=identity.id,
                 name="Bot IP Address: {}".format(ip_address),
                 description="Bot IP Address: {}".format(ip_address),
@@ -30,7 +31,7 @@ def convert_to_stix_botnet(data):
                 pattern_type="stix",
                 confidence=85,
                 labels=tags,
-                created=parse(listed_at)
+                created=parse(listed_at),
             )
             indicators.append(indicator_ip)
 
@@ -44,7 +45,7 @@ def convert_to_stix_botnet(data):
                 pattern_type="stix",
                 confidence=85,
                 labels=tags,
-                created=parse(listed_at)
+                created=parse(listed_at),
             )
             indicators.append(indicator_c2_ip)
 
@@ -58,7 +59,7 @@ def convert_to_stix_botnet(data):
                 pattern_type="stix",
                 confidence=85,
                 labels=tags,
-                created=parse(listed_at)
+                created=parse(listed_at),
             )
             indicators.append(indicator_c2_domain)
 
@@ -70,22 +71,24 @@ def convert_to_stix_botnet(data):
                 is_family=False,
                 confidence=85,
                 labels=tags,
-                created=parse(listed_at)
+                created=parse(listed_at),
             )
             malware_objects.append(malware)
 
             for indicator in indicators:
                 relationship = Relationship(
                     source_ref=indicator.id,
-                    relationship_type='indicates',
+                    relationship_type="indicates",
                     target_ref=malware.id,
                     confidence=85,
                     labels=tags,
-                    created=parse(listed_at)
+                    created=parse(listed_at),
                 )
                 relationships.append(relationship)
 
-        bundle = Bundle(objects=[identity] + indicators + malware_objects + relationships)
+        bundle = Bundle(
+            objects=[identity] + indicators + malware_objects + relationships
+        )
         stix_bundle = bundle.serialize()
         return stix_bundle
 
@@ -93,14 +96,18 @@ def convert_to_stix_botnet(data):
         print("Error:", str(e))
         return None
 
+
 def is_valid_md5(md5):
-    pattern = r'^[a-fA-F0-9]{32}$'
+    pattern = r"^[a-fA-F0-9]{32}$"
     return bool(re.match(pattern, md5))
+
 
 def convert_to_stix_malware(data):
     try:
         # Data validation
-        if not all(key in data for key in ["md5", "created_at", "sha256", "sha1", "sha512"]):
+        if not all(
+            key in data for key in ["md5", "created_at", "sha256", "sha1", "sha512"]
+        ):
             print(f"Skipping due to missing keys in data: {data}")
             return None
 
@@ -110,8 +117,14 @@ def convert_to_stix_malware(data):
             return None
 
         tags = data.get("tags")
-        family = data.get("family", []) if isinstance(data.get("family", []), list) else []
-        created_at = datetime.strptime(data["created_at"], '%Y-%m-%dT%H:%M:%SZ') if isinstance(data["created_at"], str) else None
+        family = (
+            data.get("family", []) if isinstance(data.get("family", []), list) else []
+        )
+        created_at = (
+            datetime.strptime(data["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+            if isinstance(data["created_at"], str)
+            else None
+        )
         sha256 = data.get("sha256")
         sha1 = data.get("sha1")
         sha512 = data.get("sha512")
@@ -134,7 +147,6 @@ def convert_to_stix_malware(data):
                 valid_from=created_at,
                 confidence=85,
                 labels=tags,
-
             )
             indicators.append(md5_indicator)
 
@@ -185,7 +197,9 @@ def convert_to_stix_malware(data):
 
         if c2_domain:
             for domain in c2_domain:
-                quoted_domain = quote(domain, safe="")  # Escape special characters in the domain
+                quoted_domain = quote(
+                    domain, safe=""
+                )  # Escape special characters in the domain
                 indicator_c2_domain = Indicator(
                     created_by_ref=identity.id,
                     name="C2 Domain: {}".format(quoted_domain),
@@ -199,7 +213,6 @@ def convert_to_stix_malware(data):
                 )
                 indicators.append(indicator_c2_domain)
 
-
         for family_item in family:
             malware = Malware(
                 created=created_at,
@@ -211,19 +224,20 @@ def convert_to_stix_malware(data):
             )
             malware_objects.append(malware)
 
-
         for indicator in indicators:
             relationship = Relationship(
                 source_ref=indicator.id,
-                relationship_type='indicates',
+                relationship_type="indicates",
                 target_ref=malware.id,
                 confidence=85,
                 labels=tags,
-                created=created_at
+                created=created_at,
             )
             relationships.append(relationship)
 
-        bundle = Bundle(objects=[identity] + indicators + malware_objects + relationships)
+        bundle = Bundle(
+            objects=[identity] + indicators + malware_objects + relationships
+        )
         stix_bundle = bundle.serialize()
         return stix_bundle
 
@@ -235,7 +249,9 @@ def convert_to_stix_malware(data):
 def convert_to_stix_ransomware(data):
     try:
         # Data validation
-        if not all(key in data for key in ["md5", "created_at", "sha256", "sha1", "sha512"]):
+        if not all(
+            key in data for key in ["md5", "created_at", "sha256", "sha1", "sha512"]
+        ):
             print(f"Skipping due to missing keys in data: {data}")
             return None
 
@@ -244,7 +260,11 @@ def convert_to_stix_ransomware(data):
             print(f"Skipping due to invalid MD5 hash format: {md5}")
             return None
 
-        created_at = datetime.strptime(data["created_at"], '%Y-%m-%dT%H:%M:%S%z') if isinstance(data["created_at"], str) else None
+        created_at = (
+            datetime.strptime(data["created_at"], "%Y-%m-%dT%H:%M:%S%z")
+            if isinstance(data["created_at"], str)
+            else None
+        )
         sha1 = data.get("sha1")
         sha256 = data.get("sha256")
         sha512 = data.get("sha512")
@@ -269,7 +289,6 @@ def convert_to_stix_ransomware(data):
                 valid_from=created_at,
                 confidence=85,
                 labels=tags,
-
             )
             indicators.append(md5_indicator)
 
@@ -336,27 +355,31 @@ def convert_to_stix_ransomware(data):
         if ransomware_name:
             malware = Malware(
                 created_by_ref=identity.id,
-                name=ransomware_name[0],  # Assuming the ransomware_name is a list with a single value
+                name=ransomware_name[
+                    0
+                ],  # Assuming the ransomware_name is a list with a single value
                 description="Ransomware Tracked by Zerofox",
                 is_family=False,
                 confidence=85,
                 labels=tags,
-                created=created_at
+                created=created_at,
             )
             malware_objects.append(malware)
 
             for indicator in indicators:
                 relationship = Relationship(
                     source_ref=indicator.id,
-                    relationship_type='indicates',
+                    relationship_type="indicates",
                     target_ref=malware.id,
                     confidence=85,
                     labels=tags,
-                    created=created_at
+                    created=created_at,
                 )
                 relationships.append(relationship)
 
-        bundle = Bundle(objects=[identity] + indicators + malware_objects + relationships)
+        bundle = Bundle(
+            objects=[identity] + indicators + malware_objects + relationships
+        )
         stix_bundle = bundle.serialize()
         return stix_bundle
 

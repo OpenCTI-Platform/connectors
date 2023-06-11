@@ -1,15 +1,20 @@
 import requests
-from .stix_converter import convert_to_stix_botnet, convert_to_stix_malware, convert_to_stix_ransomware
+
+from .stix_converter import (
+    convert_to_stix_botnet,
+    convert_to_stix_malware,
+    convert_to_stix_ransomware,
+)
 
 
 def fetch_data_from_zerofox_endpoint(access_token, endpoint, upload_function):
     headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer ' + access_token
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer " + access_token,
     }
 
-    endpoint_url = 'https://api.zerofox.com/cti/' + endpoint
+    endpoint_url = "https://api.zerofox.com/cti/" + endpoint
     cti_json_data = []
 
     while endpoint_url is not None:
@@ -21,29 +26,39 @@ def fetch_data_from_zerofox_endpoint(access_token, endpoint, upload_function):
             if data and "results" in data and data["results"]:
                 for item in data["results"]:
                     print("Processing item:", item)
-                    if endpoint == 'botnet':
+                    if endpoint == "botnet":
                         try:
-                            converted_item = convert_to_stix_botnet(item)  # Convert the item using the converter function
-                            upload_function(converted_item)  # Upload the converted item to OpenCTI
-                            cti_json_data.append(item)  # Append the raw JSON item to the list
+                            converted_item = convert_to_stix_botnet(
+                                item
+                            )  # Convert the item using the converter function
+                            upload_function(
+                                converted_item
+                            )  # Upload the converted item to OpenCTI
+                            cti_json_data.append(
+                                item
+                            )  # Append the raw JSON item to the list
                         except Exception as e:
                             print(f"Error in converting or pushing item: {e}")
-                    elif endpoint == 'malware':
+                    elif endpoint == "malware":
                         # Handle the malware endpoint differently
                         try:
                             converted_item = convert_to_stix_malware(item)
                             print(item)
                             upload_function(converted_item)
-                            cti_json_data.append(item)  # Append the raw JSON item to the list
+                            cti_json_data.append(
+                                item
+                            )  # Append the raw JSON item to the list
                         except Exception as e:
                             print(f"Error in processing item for malware endpoint: {e}")
-                    elif endpoint == 'ransomware':
+                    elif endpoint == "ransomware":
                         # Handle the malware endpoint differently
                         try:
                             converted_item = convert_to_stix_ransomware(item)
                             print(item)
                             upload_function(converted_item)
-                            cti_json_data.append(item)  # Append the raw JSON item to the list
+                            cti_json_data.append(
+                                item
+                            )  # Append the raw JSON item to the list
                         except Exception as e:
                             print(f"Error in processing item for malware endpoint: {e}")
             else:
@@ -51,6 +66,8 @@ def fetch_data_from_zerofox_endpoint(access_token, endpoint, upload_function):
                 endpoint_url = None  # No more pages to fetch
             endpoint_url = data.get("next")  # Retrieve the next page URL
         else:
-            raise Exception(f'Request failed with status code {response.status_code}, response: {response.text}')
+            raise Exception(
+                f"Request failed with status code {response.status_code}, response: {response.text}"
+            )
 
     return cti_json_data
