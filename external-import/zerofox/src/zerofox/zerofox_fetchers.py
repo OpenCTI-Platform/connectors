@@ -7,7 +7,7 @@ from .stix_converter import (
 )
 
 
-def fetch_data_from_zerofox_endpoint(access_token, endpoint, upload_function):
+def fetch_data_from_zerofox_endpoint(access_token, endpoint, helper):
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -29,9 +29,9 @@ def fetch_data_from_zerofox_endpoint(access_token, endpoint, upload_function):
                     if endpoint == "botnet":
                         try:
                             converted_item = convert_to_stix_botnet(
-                                item
+                                item, helper
                             )  # Convert the item using the converter function
-                            upload_function(
+                            helper.send_stix2_bundle(
                                 converted_item
                             )  # Upload the converted item to OpenCTI
                             cti_json_data.append(
@@ -42,9 +42,9 @@ def fetch_data_from_zerofox_endpoint(access_token, endpoint, upload_function):
                     elif endpoint == "malware":
                         # Handle the malware endpoint differently
                         try:
-                            converted_item = convert_to_stix_malware(item)
+                            converted_item = convert_to_stix_malware(item, helper)
                             print(item)
-                            upload_function(converted_item)
+                            helper.send_stix2_bundle(converted_item)
                             cti_json_data.append(
                                 item
                             )  # Append the raw JSON item to the list
@@ -53,9 +53,9 @@ def fetch_data_from_zerofox_endpoint(access_token, endpoint, upload_function):
                     elif endpoint == "ransomware":
                         # Handle the malware endpoint differently
                         try:
-                            converted_item = convert_to_stix_ransomware(item)
+                            converted_item = convert_to_stix_ransomware(item, helper)
                             print(item)
-                            upload_function(converted_item)
+                            helper.send_stix2_bundle(converted_item)
                             cti_json_data.append(
                                 item
                             )  # Append the raw JSON item to the list

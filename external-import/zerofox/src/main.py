@@ -2,7 +2,6 @@ import sys
 import time
 
 from zerofox.zerofox_connector import ZeroFoxConnector
-from zerofox.zerofox_fetchers import fetch_data_from_zerofox_endpoint
 
 if __name__ == "__main__":
     try:
