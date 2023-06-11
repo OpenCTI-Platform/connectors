@@ -1,4 +1,4 @@
-FROM python:3.10-alpine
+FROM python:3.11-alpine
 
 # Copy the connector
 COPY src /opt/opencti-connector-mandiant
