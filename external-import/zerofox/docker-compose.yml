@@ -9,6 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Zerofox
       - CONNECTOR_SCOPE=zerofox # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=info
       - ZEROFOX_USERNAME=changeme
       - ZEROFOX_PASSWORD=changeme
