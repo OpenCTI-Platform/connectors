@@ -21,6 +21,7 @@ from stix2 import (
     Relationship,
     ThreatActor,
     Tool,
+    ExternalReference,
 )
 
 
@@ -325,6 +326,7 @@ class SocprimeConnector:
                 {"source_name": "SOC Prime", "url": "https://socprime.com/"}
             ],
         )
+
         serialized_bundle = Bundle(objects=[author_identity]).serialize()
         self.helper.send_stix2_bundle(serialized_bundle, update=True, work_id=work_id)
         return identity_id
