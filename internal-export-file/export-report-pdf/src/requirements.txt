@@ -1,5 +1,5 @@
 pycti==5.7.6
-weasyprint==54.2
+weasyprint==54.3
 Jinja2==3.1.2
 pygal==3.0.0
 wheel==0.38.1
