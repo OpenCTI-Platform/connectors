@@ -1,11 +1,10 @@
 import re
-import stix2
-
 from datetime import datetime
 from urllib.parse import quote
-from pycti import Identity, Indicator, Malware, StixCoreRelationship
 
+import stix2
 from dateutil.parser import parse
+from pycti import Identity, Indicator, Malware, StixCoreRelationship
 
 
 def convert_to_stix_botnet(data, helper):
