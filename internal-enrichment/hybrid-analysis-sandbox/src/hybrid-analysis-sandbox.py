@@ -1,19 +1,14 @@
 # coding: utf-8
-from datetime import datetime
 import os
 import sys
 import time
+from datetime import datetime
 
 import requests
 import stix2
 import yaml
-from pycti import (
-    AttackPattern,
-    MalwareAnalysis,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from pycti import (AttackPattern, MalwareAnalysis, OpenCTIConnectorHelper,
+                   StixCoreRelationship, get_config_variable)
 from stix2 import DomainName, File, IPv4Address, IPv6Address
 
 
