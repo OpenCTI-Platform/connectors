@@ -424,14 +424,21 @@ class HybridAnalysis:
         if self.exclude_author(data['entity_id']):
             return "Entity is excluded from analysis"
         self.lock.acquire()
-        while time.time() - self._latest_request_timestamp<2.0:
-            pass
-        self._latest_request_timestamp=time.time()
-        self.helper.log_info(f"A request for entitiy_id={data['entity_id']} was made at time {datetime.now()}")
-        message = self._process_message(data)
-        self.helper.log_info(f"Request for entity_id={data['entity_id']} was processed.")
-        self.lock.release()
-        return message
+        try:
+            while time.time() - self._latest_request_timestamp<2.0:
+                pass
+            self._latest_request_timestamp=time.time()
+            self.helper.log_info(f"A request for entitiy_id={data['entity_id']} was made at time {datetime.now()}")
+            message = self._process_message(data)
+            self.helper.log_info(f"Request for entity_id={data['entity_id']} was processed.")
+            self.lock.release()
+            return message
+        except Exception as e:
+            self.helper.log_error(f"Error processing message: {e}")
+            self.helper.log_error(f"Release lock for entity_id={data['entity_id']}")
+            self.lock.release()
+
+            return "Error processing message: {}".format(e)
 
 
     # Start the main loop
