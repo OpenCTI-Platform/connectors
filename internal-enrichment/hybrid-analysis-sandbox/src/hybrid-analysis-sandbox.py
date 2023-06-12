@@ -57,21 +57,24 @@ class HybridAnalysis:
         bundle_objects = []
         final_observable = observable
         if observable["entity_type"] in ["StixFile", "Artifact"]:
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={"key": "hashes.MD5", "value": report["md5"]},
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={"key": "hashes.SHA-1", "value": report["sha1"]},
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={
-                    "key": "hashes.SHA-256",
-                    "value": report["sha256"],
-                },
-            )
+            if report["md5"] is not None:
+                final_observable = self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    input={"key": "hashes.MD5", "value": report["md5"]},
+                )
+            if report["sha1"] is not None:
+                final_observable = self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    input={"key": "hashes.SHA-1", "value": report["sha1"]},
+                )
+            if report["sha256"] is not None:
+                final_observable = self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    input={
+                        "key": "hashes.SHA-256",
+                        "value": report["sha256"],
+                    },
+                )
             if "name" not in final_observable or final_observable["name"] is None:
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
@@ -251,13 +254,15 @@ class HybridAnalysis:
                 bundle_objects.append(relationship)
         # Creating the Malware Analysis
         result_name = "Result " + observable["observable_value"]
+        analysis_started = datetime.now() if report["analysis_start_time"] is None else datetime.strptime(
+            report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"
+        )
         malware_analysis = stix2.MalwareAnalysis(
             id=MalwareAnalysis.generate_id(result_name),
-            product="HybridAnalysis",  # TODO Ask Jean-Philippe
-            result_name=result_name,  # TODO Ask Jean-Philippe
-            analysis_started=datetime.strptime(
-                report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"
-            ),
+            product="HybridAnalysis",
+            result_name=result_name,
+            analysis_started=analysis_started,
+            submitted=datetime.now(),
             result=report["verdict"],
             sample_ref=final_observable["standard_id"],
             created_by_ref=self.identity,
