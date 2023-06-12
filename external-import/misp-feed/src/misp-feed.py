@@ -698,6 +698,8 @@ class MispFeed:
                 and not tag["name"].startswith("misp-galaxy:malpedia")
                 and not tag["name"].startswith("misp-galaxy:sector")
                 and not tag["name"].startswith("misp-galaxy:country")
+                and not tag["name"].startswith("marking")
+                and not tag["name"].startswith("creator")
             ):
                 tag_value = tag["name"]
                 if '="' in tag["name"]:

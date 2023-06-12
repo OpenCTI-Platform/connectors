@@ -1,26 +1,26 @@
-import logging
 import urllib
 
 import requests
 import validators
 
 
-def intelixlookup(token, type, observable, regionuri) -> dict:
+def intelixlookup(token, observable, regionuri, observable_type) -> dict:
     # use Validators to redirect the observable to the correct Intelix endpoint
-    if type == "IPv4-Addr" and validators.ipv4(observable):
+    if validators.ipv4(observable):
         u = f"{regionuri}/lookup/ips/v1/{observable}"
-    elif type == "Url":
+    elif validators.domain(observable) or validators.url(observable):
         observable = urllib.parse.quote(observable.encode("utf8"), safe="")
         u = f"{regionuri}/lookup/urls/v1/{observable}"
-    elif type == "Artifact" and validators.sha256(observable):
+    elif validators.sha256(observable):
         u = f"{regionuri}/lookup/files/v1/{observable}"
     else:
         raise ValueError("Observable not supported by connector")
 
     headers = {"Authorization": f"{token}"}
     r = requests.get(u, headers=headers)
+    if not r.ok:
+        raise ValueError("Intelix API returned an error")
     j = r.json()
-
     response = {}
     # Set the URL for the external reponse reference
     response["url"] = u
@@ -31,7 +31,7 @@ def intelixlookup(token, type, observable, regionuri) -> dict:
     goodcolor = "#32c822"
 
     # File reponses
-    if type == "Artifact":
+    if observable_type == "Artifact" or observable_type == "StixFile":
         if "reputationScore" in j:
             response["reputationScore"] = j["reputationScore"]
             if j["reputationScore"] <= 19:
@@ -56,7 +56,7 @@ def intelixlookup(token, type, observable, regionuri) -> dict:
         return response
 
     # IP reponses
-    if type == "IPv4-Addr":
+    if observable_type == "IPv4-Addr":
         if "category" in j:
             intelixdescriptions = {
                 "malware": "Known source of malware",
@@ -119,7 +119,7 @@ def intelixlookup(token, type, observable, regionuri) -> dict:
         return response
 
     # URL reponses
-    if type == "Url" or type == "Domain":
+    if observable_type == "Url" or observable_type == "Domain-Name":
         intelixdescriptions = {
             "PROD_UNCATEGORIZED": "Uncategorized",
             "PROD_ADVERTISEMENTS": "Unwanted. Sites serving advertising content. Blocking advertisements reduces unnecessary bandwidth usage and reduces risk of compromise through poorly controlled advertising content.",
@@ -242,10 +242,8 @@ def intelixlookup(token, type, observable, regionuri) -> dict:
         response["description"] = intelixdescriptions[observablecategory]
         # Remove the category underscore and title the label
         response["category"] = observablecategory.replace("_", " ")
-        logging.info(j)
         # Set label color based on risk
         if "riskLevel" in j:
-            logging.info(j["riskLevel"])
             if j["riskLevel"] == "HIGH" or j["riskLevel"] == "MEDIUM":
                 response["labelcolor"] = maliciouscolor
             elif j["riskLevel"] == "UNCLASSIFIED":
@@ -254,5 +252,4 @@ def intelixlookup(token, type, observable, regionuri) -> dict:
                 response["labelcolor"] = goodcolor
         else:
             response["labelcolor"] = goodcolor
-        logging.info(response)
         return response

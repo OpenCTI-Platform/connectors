@@ -1,0 +1,22 @@
+version: "3"
+services:
+  connector-qradar:
+    image: opencti/connector-qradar:5.7.6
+    environment:
+      OPENCTI_URL: http://localhost
+      OPENCTI_TOKEN: ChangeMe
+      CONNECTOR_ID: ChangeMe
+      CONNECTOR_TYPE: STREAM
+      CONNECTOR_LIVE_STREAM_ID: live # ID of the live stream created in the OpenCTI UI
+      CONNECTOR_LIVE_STREAM_LISTEN_DELETE: true
+      CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES: true
+      CONNECTOR_NAME: OpenCTI QRADAR Connector
+      CONNECTOR_SCOPE: qradar
+      CONNECTOR_CONFIDENCE_LEVEL: 80 # From 0 (Unknown) to 100 (Fully trusted)
+      CONNECTOR_LOG_LEVEL: info
+      QRADAR_URL: https://QRADAR1.changeme.com
+      QRADAR_TOKEN: Token1
+      QRADAR_SSL_VERIFY: true
+      QRADAR_RFERENCE_NAME: opencti
+      QRADAR_IGNORE_TYPES: label,marking-definition,identity
+    restart: always

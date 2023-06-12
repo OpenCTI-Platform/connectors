@@ -525,6 +525,14 @@ jobs:
           name: Build Docker image opencti/connector-google-dns
           command: docker build -t opencti/connector-google-dns:latest . && docker tag opencti/connector-google-dns:latest opencti/connector-google-dns:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/qradar
+          name: Build Docker image opencti/connector-qradar
+          command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/zerofox
+          name: Build Docker image opencti/connector-zerofox
+          command: docker build -t opencti/connector-zerofox:latest . && docker tag opencti/connector-zerofox:latest opencti/connector-zerofox:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -620,6 +628,10 @@ jobs:
             docker push opencti/connector-ipqs:${CIRCLE_TAG}
             docker push opencti/connector-google-dns:latest
             docker push opencti/connector-google-dns:${CIRCLE_TAG}
+            docker push opencti/connector-qradar:latest
+            docker push opencti/connector-qradar:${CIRCLE_TAG}
+            docker push opencti/connector-zerofox:latest
+            docker push opencti/connector-zerofox:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1056,6 +1068,14 @@ jobs:
           name: Build Docker image opencti/connector-google-dns
           command: docker build -t opencti/connector-google-dns:rolling .
       - run:
+          working_directory: ~/opencti/stream/qradar
+          name: Build Docker image opencti/connector-qradar
+          command: docker build -t opencti/connector-qradar:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/zerofox
+          name: Build Docker image opencti/connector-zerofox
+          command: docker build -t opencti/connector-zerofox:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1106,6 +1126,8 @@ jobs:
             docker push opencti/connector-yara:rolling
             docker push opencti/connector-ipqs:rolling
             docker push opencti/connector-google-dns:rolling
+            docker push opencti/connector-qradar:rolling
+            docker push opencti/connector-zerofox:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

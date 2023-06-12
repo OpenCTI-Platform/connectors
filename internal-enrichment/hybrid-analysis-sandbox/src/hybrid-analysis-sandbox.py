@@ -1,5 +1,4 @@
 # coding: utf-8
-
 import os
 import sys
 import time
@@ -10,6 +9,7 @@ import stix2
 import yaml
 from pycti import (
     AttackPattern,
+    MalwareAnalysis,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
@@ -59,21 +59,24 @@ class HybridAnalysis:
         bundle_objects = []
         final_observable = observable
         if observable["entity_type"] in ["StixFile", "Artifact"]:
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={"key": "hashes.MD5", "value": report["md5"]},
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={"key": "hashes.SHA-1", "value": report["sha1"]},
-            )
-            final_observable = self.helper.api.stix_cyber_observable.update_field(
-                id=final_observable["id"],
-                input={
-                    "key": "hashes.SHA-256",
-                    "value": report["sha256"],
-                },
-            )
+            if report["md5"] is not None:
+                final_observable = self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    input={"key": "hashes.MD5", "value": report["md5"]},
+                )
+            if report["sha1"] is not None:
+                final_observable = self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    input={"key": "hashes.SHA-1", "value": report["sha1"]},
+                )
+            if report["sha256"] is not None:
+                final_observable = self.helper.api.stix_cyber_observable.update_field(
+                    id=final_observable["id"],
+                    input={
+                        "key": "hashes.SHA-256",
+                        "value": report["sha256"],
+                    },
+                )
             if "name" not in final_observable or final_observable["name"] is None:
                 self.helper.api.stix_cyber_observable.update_field(
                     id=final_observable["id"],
@@ -92,15 +95,18 @@ class HybridAnalysis:
             id=final_observable["id"],
             input={"key": "x_opencti_score", "value": str(report["threat_score"])},
         )
+        # Sandbox Operating System
+        if report["environment_id"] is not None:
+            operating_system = stix2.Software(name=report["environment_description"])
+            bundle_objects.append(operating_system)
+        # List of all the referenced SCO of the analysis
+        analysis_sco_refs = []
+
         # Create external reference
-        external_reference = self.helper.api.external_reference.create(
+        external_reference = stix2.ExternalReference(
             source_name="Hybrid Analysis",
             url="https://www.hybrid-analysis.com/sample/" + report["sha256"],
             description="Hybrid Analysis Report",
-        )
-        self.helper.api.stix_cyber_observable.add_external_reference(
-            id=final_observable["id"],
-            external_reference_id=external_reference["id"],
         )
         # Create tags
         for tag in report["type_short"]:
@@ -127,9 +133,9 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "uses", final_observable["standard_id"], attack_pattern.id
+                        "related-to", final_observable["standard_id"], attack_pattern.id
                     ),
-                    relationship_type="uses",
+                    relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=final_observable["standard_id"],
                     target_ref=attack_pattern.id,
@@ -139,25 +145,28 @@ class HybridAnalysis:
                 bundle_objects.append(relationship)
         # Attach the domains
         for domain in report["domains"]:
-            domain_stix = DomainName(
-                value=domain,
-                object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "created_by_ref": self.identity,
-                },
-            )
-            relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "communicates-with", final_observable["standard_id"], domain_stix.id
-                ),
-                relationship_type="communicates-with",
-                created_by_ref=self.identity,
-                source_ref=final_observable["standard_id"],
-                target_ref=domain_stix.id,
-                object_marking_refs=[stix2.TLP_WHITE],
-            )
-            bundle_objects.append(domain_stix)
-            bundle_objects.append(relationship)
+            if domain != final_observable["value"]:
+                domain_stix = DomainName(
+                    value=domain,
+                    object_marking_refs=[stix2.TLP_WHITE],
+                    custom_properties={
+                        "created_by_ref": self.identity,
+                    },
+                )
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", final_observable["standard_id"], domain_stix.id
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.identity,
+                    source_ref=final_observable["standard_id"],
+                    target_ref=domain_stix.id,
+                    object_marking_refs=[stix2.TLP_WHITE],
+                )
+                # Attach IP to Malware Analysis (through analysis_sco_refs)
+                analysis_sco_refs.append(domain_stix.id)
+                bundle_objects.append(domain_stix)
+                bundle_objects.append(relationship)
         # Attach the IP addresses
         for host in report["hosts"]:
             if self.detect_ip_version(host) == "IPv4-Addr":
@@ -178,14 +187,16 @@ class HybridAnalysis:
                 )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    "communicates-with", final_observable["standard_id"], host_stix.id
+                    "related-to", final_observable["standard_id"], host_stix.id
                 ),
-                relationship_type="communicates-with",
+                relationship_type="related-to",
                 created_by_ref=self.identity,
                 source_ref=final_observable["standard_id"],
                 target_ref=host_stix.id,
                 object_marking_refs=[stix2.TLP_WHITE],
             )
+            # Attach IP to Malware Analysis (through analysis_sco_refs)
+            analysis_sco_refs.append(host_stix.id)
             bundle_objects.append(host_stix)
             bundle_objects.append(relationship)
         # Attach other files
@@ -212,6 +223,9 @@ class HybridAnalysis:
                     source_ref=final_observable["standard_id"],
                     target_ref=file_stix.id,
                 )
+                # Attach file to Malware Analysis (through analysis_sco_refs)
+                analysis_sco_refs.append(file_stix.id)
+
                 bundle_objects.append(file_stix)
                 bundle_objects.append(relationship)
         for tactic in report["mitre_attcks"]:
@@ -231,15 +245,40 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "uses", final_observable["standard_id"], attack_pattern.id
+                        "related-to", final_observable["standard_id"], attack_pattern.id
                     ),
-                    relationship_type="uses",
+                    relationship_type="related-to",
                     created_by_ref=self.identity,
                     source_ref=final_observable["standard_id"],
                     target_ref=attack_pattern.id,
                 )
                 bundle_objects.append(attack_pattern)
                 bundle_objects.append(relationship)
+        # Creating the Malware Analysis
+        result_name = "Result " + observable["observable_value"]
+        analysis_started = (
+            datetime.now()
+            if report["analysis_start_time"] is None
+            else datetime.strptime(
+                report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"
+            )
+        )
+        malware_analysis = stix2.MalwareAnalysis(
+            id=MalwareAnalysis.generate_id(result_name),
+            product="HybridAnalysis",
+            result_name=result_name,
+            analysis_started=analysis_started,
+            submitted=datetime.now(),
+            result=report["verdict"],
+            sample_ref=final_observable["standard_id"],
+            created_by_ref=self.identity,
+            operating_system_ref=operating_system["id"]
+            if "operating_system" in locals()
+            else None,
+            analysis_sco_refs=analysis_sco_refs,
+            external_references=[external_reference],
+        )
+        bundle_objects.append(malware_analysis)
         if len(bundle_objects) > 0:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(bundle)

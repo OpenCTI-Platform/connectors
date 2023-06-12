@@ -1,3 +1,3 @@
 pycti==5.7.6
-threatbus==2021.6.24
-pyzmq==22.0.3
+threatbus==2021.12.16
+pyzmq==25.1.0
