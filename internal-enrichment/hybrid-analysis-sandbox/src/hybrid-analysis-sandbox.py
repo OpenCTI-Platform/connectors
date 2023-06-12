@@ -254,8 +254,12 @@ class HybridAnalysis:
                 bundle_objects.append(relationship)
         # Creating the Malware Analysis
         result_name = "Result " + observable["observable_value"]
-        analysis_started = datetime.now() if report["analysis_start_time"] is None else datetime.strptime(
-            report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"
+        analysis_started = (
+            datetime.now()
+            if report["analysis_start_time"] is None
+            else datetime.strptime(
+                report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"
+            )
         )
         malware_analysis = stix2.MalwareAnalysis(
             id=MalwareAnalysis.generate_id(result_name),
