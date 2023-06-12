@@ -279,16 +279,18 @@ class VirusTotalConnector:
             builder.create_note("First submission date", f"\n```No first submission date```")
 
         #add the file extension if oberservable type is a stix file
-        if observable["entity_type"] == "StixFile":
+        if observable["entity_type"] == "StixFile" and json_data["data"]["attributes"].get("type_tag", None):
             builder.add_file_extension(json_data["data"]["attributes"]["type_tag"])
             
         # self.helper.log_debug("Finished processing file, releasing lock at {}".format(datetime.now()))
         # self.lock.release()
 
+        builder.add_crowdsourced_ids_rules()
         builder.update_names(
                     observable["entity_type"] == "StixFile"
                     and (observable["name"] is None or len(observable["name"]) == 0)
                 )
+        
         temp = builder.send_bundle()
         builder.update_hashes() # This line can merge the observable with other observable. In order not to lose relationships we update hashes after we send the relations.
         return temp

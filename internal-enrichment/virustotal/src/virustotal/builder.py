@@ -15,7 +15,7 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
-
+from urllib.parse import urlparse
 from .indicator_config import IndicatorConfig
 
 
@@ -597,14 +597,79 @@ class VirusTotalBuilder:
     def add_engine_results_as_notes(self):
         if not self.attributes.get('last_analysis_results', None):
             return
-        note = "\n```"
+        note = "```\n"
         for engine in self.attributes['last_analysis_results'].values():
             if engine.get("category", "UNKNOWN") == "malicious":
                 note = note + "\n" + engine.get('engine_name', "UNKNOWN_ENGINE:") + ":" + engine.get("result", "result unknown") + "\n"
-        note = note + "````\n"
+        note = note + "\n```"
         self.create_note("Malicious Engine Results", note)
 
-        
+    def add_crowdsourced_ids_rules(self):
+        if not self.attributes.get('crowdsourced_ids_results', None):
+            return
+        valid_from_date = datetime.datetime.now()
+        valid_until_date = valid_from_date.replace(year=valid_from_date.year + 1)
+        for rule in self.attributes['crowdsourced_ids_results']:
+            pattern = rule["rule_raw"]
+            description = "```\nRule Id: " + rule["rule_id"] + '\n' \
+                 + "Rule Category: " + rule["rule_category"] + '\n' \
+                 + "Alert Severity: " + rule["alert_severity"] + '\n' \
+                 + "Rule message: " + rule["rule_msg"] + '\n```'
+            external_references= []
+            if rule.get("rule_references", None):
+                for reference in rule["rule_references"]:
+                    domain = urlparse(reference).netloc
+                    ref = stix2.ExternalReference(source_name=domain, url=reference)
+                    external_references.append(ref)
+
+            label_list = []
+            if rule.get("rule_source", None):
+                label_list.append(rule["rule_source"])
+            if rule.get("rule_category", None):
+                label_list.append(rule["rule_category"])
+            if rule.get("alert_severity", None):
+                label_list.append(rule["alert_severity"])
+            if rule.get("rule_id", None):
+                label_list.append(str(rule["rule_id"]))
+            indicator = stix2.Indicator(
+                created_by_ref=self.author,
+                name=("crowdsourced_ids: " + rule["rule_id"]),
+                description=description,
+                confidence=self.helper.connect_confidence_level,
+                pattern=pattern,
+                pattern_type="SNORT",
+                labels=label_list,
+                valid_from=self.helper.api.stix2.format_date(valid_from_date),
+                valid_until=self.helper.api.stix2.format_date(valid_until_date),
+                external_references=external_references
+            )
+
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    indicator.id,
+                    self.observable["standard_id"],
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.author,
+                source_ref=indicator.id,
+                target_ref=self.observable["standard_id"],
+                confidence=self.helper.connect_confidence_level,
+                allow_custom=True,
+            )
+
+            if rule.get("alert_context", None):
+                for context in rule["alert_context"]:
+                    note = stix2.Note(
+                        id=Note.generate_id(datetime.datetime.now().isoformat(), ("```\n" + json.dumps(context, indent=2) + "\n```")),
+                        abstract="Alert Context",
+                        content=("```\n" + json.dumps(context, indent=2) + "\n```"),
+                        created_by_ref=self.author,
+                        object_refs=[indicator.id],
+                    )
+
+            self.bundle += [indicator, relationship, note]
+
 
     def update_size(self):
         """Update the size of the file."""
