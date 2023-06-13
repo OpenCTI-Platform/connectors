@@ -1,6 +1,6 @@
 pycti==5.7.6
 urllib3==1.26.5
 python-dateutil==2.8.1
-feedparser==6.0.2
+feedparser==6.0.10
 beautifulsoup4==4.12.2
-lxml==4.9.1
+lxml==4.9.2
