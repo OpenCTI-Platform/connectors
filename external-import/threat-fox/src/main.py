@@ -152,19 +152,24 @@ class ThreatFox:
                                 entry_date.timestamp(), last_processed_entry_running_max
                             )
 
-                            observable_type = ""  # new variable
                             if ioc_type == "ip:port":
                                 pattern_value = "[ipv4-addr:value = '" + ioc_value.split(":")[0] + "']"
                                 indicator_type = "IP"
-                                observable_type = "ipv4-addr"  # set observable_type
                             elif ioc_type == "domain":
                                 pattern_value = "[domain-name:value = '" + ioc_value + "']"
                                 indicator_type = "malicious-activity"
-                                observable_type = "domain-name"  # set observable_type
                             elif ioc_type == "url":
                                 pattern_value = "[url:value = '" + ioc_value + "']"
                                 indicator_type = "malicious-activity"
-                                observable_type = "url"  # set observable_type
+                            elif ioc_type == "md5_hash":
+                                pattern_value = "[file:hashes.MD5 = '" + ioc_value + "']"
+                                indicator_type = "malicious-activity"
+                            elif ioc_type == "sha1_hash":
+                                pattern_value = "[file:hashes.SHA1 = '" + ioc_value + "']"
+                                indicator_type = "malicious-activity"
+                            elif ioc_type == "sha256_hash":
+                                pattern_value = "[file:hashes.'SHA-256' = '" + ioc_value + "']"
+                                indicator_type = "malicious-activity"
                             else:
                                 self.helper.log_warning(f"Unrecognized ioc_type: {ioc_type}")
                                 continue
