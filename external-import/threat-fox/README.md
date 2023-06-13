@@ -8,9 +8,8 @@ General description of the connector
 * Use case description
 * ...
 -->
-<p align="center">
-<img src="https://abuse.ch/images/threatfox.webp">
-</p>
+![alt test](https://abuse.ch/images/threatfox.webp)
+
 This connector imports data from the [Threat Fox Recent Feed](https://abuse.ch/images/threatfox.webp)
 
 The connector adds data for the following OpenCTI observable/indicator types:
