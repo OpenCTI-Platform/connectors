@@ -402,19 +402,19 @@ class Mandiant:
             parameters["gte_mscore"] = self.mandiant_indicator_minimum_score
 
         try:
-            for offset, item in enumerate(collection_api(**parameters)):
+            for item in collection_api(**parameters):
                 bundle = module.process(self, item)
 
-                if not bundle:
-                    continue
+                if bundle:
+                    self.helper.send_stix2_bundle(
+                        bundle.serialize(),
+                        update=self.update_existing_data,
+                        work_id=work_id,
+                    )
 
-                self.helper.send_stix2_bundle(
-                    bundle.serialize(),
-                    update=self.update_existing_data,
-                    work_id=work_id,
-                )
+                offset += 1
 
-        except BaseException as error:
+        except (KeyboardInterrupt, SystemExit, BaseException) as error:
             """
             Save current state before exitting in order to provide
             the capability to start near the moment where it exitted.
@@ -427,6 +427,8 @@ class Mandiant:
                 state[collection][STATE_OFFSET] = offset
 
             self.helper.set_state(state)
+            self.helper.log_info("Saving state ...")
+            time.sleep(2)
             raise error
 
         if collection == "reports":
