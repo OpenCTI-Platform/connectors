@@ -36,3 +36,19 @@ The connector can be configured with the following variables:
 | `MANDIANT_VULNERABILITY_REPORT` | True | Enable to collect report type vulnerability_report |
 | `MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT` | True | Enable to collect report type weekly_vulnerability_exploitation_report |
 | `MANDIANT_NEWS_ANALYSIS_REPORT` | True | Enable to collect report type news_analysis |
+| `MANDIANT_ACTOR_PROFILE_REPORT_TYPE` | actor-profile | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_COUNTRY_PROFILE_REPORT_TYPE` | country-profile | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT_TYPE` | event-coverage | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT_TYPE` | executive-perspective | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_ICS_SECURITY_ROUNDUP_REPORT_TYPE` | ics-security-roundup | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_INDUSTRY_REPORTING_REPORT_TYPE` | industry | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_MALWARE_PROFILE_REPORT_TYPE` | malware-profile | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_NETWORK_ACTIVITY_REPORT_TYPE` | network-activity | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_PATCH_REPORT_TYPE` | patch | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_TTP_DEEP_DIVE_REPORT_TYPE` | ttp-deep-dive | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_THREAT_ACTIVITY_ALERT_REPORT_TYPE` | threat-alert | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_THREAT_ACTIVITY_REPORT_TYPE` | threat-activity | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_TRENDS_AND_FORECASTING_REPORT_TYPE` | trends-forecasting | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_VULNERABILITY_REPORT_TYPE` | vulnerability | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT_TYPE` | vulnerability-exploitation | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_NEWS_ANALYSIS_REPORT_TYPE` | news-analysis | Report type on vocabulary `report_types_ov` |
