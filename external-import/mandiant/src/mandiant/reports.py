@@ -262,8 +262,8 @@ class Report:
         identities = list(utils.retrieve_all(self.bundle, "type", "identity"))
         malwares = list(utils.retrieve_all(self.bundle, "type", "malware"))
         intrusion_sets = list(utils.retrieve_all(self.bundle, "type", "intrusion-set"))
-        vulnerabilities = list(utils.retrieve_all(self.bundle, "type", "vulnerabilities"))
-        softwares = list(utils.retrieve_all(self.bundle, "type", "softwares"))
+        vulnerabilities = list(utils.retrieve_all(self.bundle, "type", "vulnerability"))
+        softwares = list(utils.retrieve_all(self.bundle, "type", "software"))
         course_actions = list(utils.retrieve_all(self.bundle, "type", "course-of-action"))
         attack_patterns = list(utils.retrieve_all(self.bundle, "type", "attack-pattern"))
         indicators = list(utils.retrieve_all(self.bundle, "type", "indicator"))
@@ -315,6 +315,11 @@ class Report:
                     "type": "uses",
                     "sources": intrusion_sets,
                     "destinations": malwares,
+                },
+                {
+                    "type": "targets",
+                    "sources": intrusion_sets,
+                    "destinations": vulnerabilities,
                 },
             ]
 
