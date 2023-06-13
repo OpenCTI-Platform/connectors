@@ -8,9 +8,9 @@ General description of the connector
 * Use case description
 * ...
 -->
-![alt test](https://abuse.ch/images/threatfox.webp)
+![alt test](![image](https://github.com/izm1chael/connectors/assets/26186145/7223ea1c-7dc5-40d1-a3ad-b72d4cb46a90))
 
-This connector imports data from the [Threat Fox Recent Feed](https://abuse.ch/images/threatfox.webp)
+This connector imports data from the [Threat Fox Recent Feed](https://threatfox.abuse.ch/)
 
 The connector adds data for the following OpenCTI observable/indicator types:
 * file-md5
