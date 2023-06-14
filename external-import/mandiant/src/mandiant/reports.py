@@ -29,6 +29,7 @@ def process(connector, report):
         pdf=report_pdf,
         confidence=connector.helper.connect_confidence_level,
         identity=connector.identity,
+        report_type=connector.mandiant_report_types[report_type],
     )
 
     bundle = report.generate()
@@ -40,13 +41,14 @@ def process(connector, report):
 
 
 class Report:
-    def __init__(self, bundle, details, pdf, confidence, identity):
+    def __init__(self, bundle, details, pdf, confidence, identity, report_type):
         self.bundle = bundle
         self.details = details
         self.pdf = pdf
         self.confidence = confidence
         self.identity = identity
         self.report_id = details.get("report_id", details.get("reportId", None))
+        self.report_type = report_type
 
     def generate(self):
         self.save_files()
@@ -148,6 +150,7 @@ class Report:
         report = utils.retrieve(self.bundle, "type", "report")
         report["confidence"] = self.confidence
         report["created_by_ref"] = self.identity["standard_id"]
+        report["report_type"] = self.report_type
 
     def create_note(self):
         # Report Analysis Note
