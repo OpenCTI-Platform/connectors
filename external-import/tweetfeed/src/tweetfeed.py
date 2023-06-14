@@ -6,12 +6,10 @@ import sys
 from datetime import datetime, timedelta
 from typing import Any, Dict, Mapping, Optional
 import yaml
-from dateutil import parser
 from pycti import OpenCTIConnectorHelper, get_config_variable
 import requests
 import stix2
-from stix2 import URL, IPv4Address, DomainName, Bundle, File, Relationship
-from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
+
 
 __version__ = "0.0.1"
 BANNER = f"""
@@ -258,7 +256,7 @@ class TweetFeed:
         try:
             r = self.session.get(url)
             result = r.content
-        except Exception as e:
+        except Exception:
             pass
         return result
 
