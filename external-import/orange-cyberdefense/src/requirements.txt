@@ -1,5 +1,5 @@
 pycti==5.7.6
-datalake-scripts==2.6.6
+datalake-scripts==2.6.7
 html2text==2020.1.16
 beautifulsoup4==4.12.2
 lxml==4.9.2
