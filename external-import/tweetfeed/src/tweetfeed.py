@@ -1,15 +1,15 @@
 import os
 import random
-import time
 import re
 import sys
+import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, Mapping, Optional
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+
 import requests
 import stix2
-
+import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 __version__ = "0.0.1"
 BANNER = f"""
