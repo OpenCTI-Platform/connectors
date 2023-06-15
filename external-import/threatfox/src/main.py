@@ -10,8 +10,13 @@ import urllib.request
 import certifi
 import stix2
 import yaml
-from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from pycti import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+    Indicator,
+    Malware,
+    StixCoreRelationship,
+)
 
 
 class ThreatFox:
@@ -29,7 +34,11 @@ class ThreatFox:
             "THREATFOX_CSV_URL", ["threatfox", "csv_url"], config
         )
         self.threatfox_import_offline = get_config_variable(
-            "THREATFOX_IMPORT_OFFLINE", ["threatfox", "import_offline"], config, False, True
+            "THREATFOX_IMPORT_OFFLINE",
+            ["threatfox", "import_offline"],
+            config,
+            False,
+            True,
         )
         self.threatfox_interval = get_config_variable(
             "THREATFOX_INTERVAL", ["threatfox", "interval"], config, False
@@ -89,15 +98,12 @@ class ThreatFox:
                 ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "Threat Fox run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    friendly_name = "Threat Fox run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
-
-                    # initialize the threat cache with each run
-                    if self.threats_from_labels:
-                        treat_cache = {}
-
                     try:
                         response = urllib.request.urlopen(
                             self.threatfox_csv_url,
@@ -135,11 +141,13 @@ class ThreatFox:
 
                         for i, row in enumerate(rdr):
                             # Pre-process row data for efficiency
-                            ioc_value = row[2].strip().replace('"', '')
+                            ioc_value = row[2].strip().replace('"', "")
                             ioc_type = row[3].strip().strip('"')
                             self.helper.log_info(f"ioc_type: '{ioc_type}'")
 
-                            entry_date = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
+                            entry_date = datetime.datetime.strptime(
+                                row[0], "%Y-%m-%d %H:%M:%S"
+                            )
                             if i % 5000 == 0:
                                 self.helper.log_info(
                                     f"Process entry {i} with dateadded='{entry_date.strftime('%Y-%m-%d %H:%M:%S')}'"
@@ -153,38 +161,61 @@ class ThreatFox:
                             )
 
                             if ioc_type == "ip:port":
-                                pattern_value = "[ipv4-addr:value = '" + ioc_value.split(":")[0] + "']"
+                                pattern_value = (
+                                    "[ipv4-addr:value = '"
+                                    + ioc_value.split(":")[0]
+                                    + "']"
+                                )
                                 indicator_type = "IP"
                             elif ioc_type == "domain":
-                                pattern_value = "[domain-name:value = '" + ioc_value + "']"
+                                pattern_value = (
+                                    "[domain-name:value = '" + ioc_value + "']"
+                                )
                                 indicator_type = "malicious-activity"
                             elif ioc_type == "url":
                                 pattern_value = "[url:value = '" + ioc_value + "']"
                                 indicator_type = "malicious-activity"
                             elif ioc_type == "md5_hash":
-                                pattern_value = "[file:hashes.MD5 = '" + ioc_value + "']"
+                                pattern_value = (
+                                    "[file:hashes.MD5 = '" + ioc_value + "']"
+                                )
                                 indicator_type = "malicious-activity"
                             elif ioc_type == "sha1_hash":
-                                pattern_value = "[file:hashes.SHA1 = '" + ioc_value + "']"
+                                pattern_value = (
+                                    "[file:hashes.SHA1 = '" + ioc_value + "']"
+                                )
                                 indicator_type = "malicious-activity"
                             elif ioc_type == "sha256_hash":
-                                pattern_value = "[file:hashes.'SHA-256' = '" + ioc_value + "']"
+                                pattern_value = (
+                                    "[file:hashes.'SHA-256' = '" + ioc_value + "']"
+                                )
                                 indicator_type = "malicious-activity"
                             else:
-                                self.helper.log_warning(f"Unrecognized ioc_type: {ioc_type}")
+                                self.helper.log_warning(
+                                    f"Unrecognized ioc_type: {ioc_type}"
+                                )
                                 continue
 
-                            stix_observable = stix2.Indicator(
+                            stix_indicator = stix2.Indicator(
+                                id=Indicator.generate_id(pattern_value),
                                 indicator_types=[indicator_type],
                                 pattern_type="stix",
                                 pattern=pattern_value,
-                                valid_from=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                                labels=[row[i].replace('"', '') for i in range(4, 9) if row[i]],
+                                valid_from=datetime.datetime.utcnow().strftime(
+                                    "%Y-%m-%dT%H:%M:%S.%fZ"
+                                ),
+                                labels=[
+                                    row[i].replace('"', "")
+                                    for i in range(4, 9)
+                                    if row[i]
+                                ],
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 created_by_ref=self.identity["standard_id"],
                             )
-                            self.helper.log_info("Indicator created: " + str(stix_observable))
-                            bundle_objects.append(stix_observable)
+                            self.helper.log_info(
+                                "Indicator created: " + str(stix_indicator)
+                            )
+                            bundle_objects.append(stix_indicator)
 
                             malware_type = ""
                             if row[4] == "botnet_cc":
@@ -197,30 +228,52 @@ class ThreatFox:
                                 # Create the malware object
                                 self.helper.log_info("Creating Malware object...")
                                 malware_object = stix2.Malware(
-                                    name=row[5].replace('"', ''),
-                                    aliases=[row[i].replace('"', '') for i in range(6, 8) if row[i]],
+                                    id=Malware.generate_id(row[5].replace('"', "")),
+                                    name=row[5].replace('"', ""),
+                                    aliases=[
+                                        row[i].replace('"', "")
+                                        for i in range(6, 8)
+                                        if row[i]
+                                    ],
                                     created_by_ref=self.identity["standard_id"],
                                     object_marking_refs=[stix2.TLP_WHITE],
-                                    description="Threat: " + row[5].replace('"', '') + " - Reporter: " + row[
-                                        13].replace('"', ''),
+                                    description="Threat: "
+                                    + row[5].replace('"', "")
+                                    + " - Reporter: "
+                                    + row[13].replace('"', ""),
                                     is_family="false",
-                                    labels=[row[i].replace('"', '') for i in range(4, 9) if row[i] != "None"],
-                                    malware_types=[malware_type] if malware_type else None,
+                                    labels=[
+                                        row[i].replace('"', "")
+                                        for i in range(4, 9)
+                                        if row[i] != "None"
+                                    ],
+                                    malware_types=[malware_type]
+                                    if malware_type
+                                    else None,
                                 )
-                                self.helper.log_info("Malware object created: " + str(malware_object))
+                                self.helper.log_info(
+                                    "Malware object created: " + str(malware_object)
+                                )
                                 bundle_objects.append(malware_object)
 
                                 # Create a relationship between the indicator and the malware object
                                 self.helper.log_info("Creating Relationship...")
                                 relationship = stix2.Relationship(
-                                    source_ref=stix_observable.id,
+                                    id=StixCoreRelationship.generate_id(
+                                        "indicates",
+                                        stix_indicator.id,
+                                        malware_object.id,
+                                    ),
+                                    source_ref=stix_indicator.id,
                                     target_ref=malware_object.id,
                                     relationship_type="indicates",
                                     created_by_ref=self.identity["standard_id"],
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     description="Indicates relationship between indicator and malware",
                                 )
-                                self.helper.log_info("Relationship created: " + str(relationship))
+                                self.helper.log_info(
+                                    "Relationship created: " + str(relationship)
+                                )
                                 bundle_objects.append(relationship)
 
                         fp.close()
