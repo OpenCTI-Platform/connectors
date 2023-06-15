@@ -14,6 +14,7 @@ from .indicator_config import IndicatorConfig
 from asyncio import Lock
 from datetime import datetime, timedelta
 import time
+import schedule
 
 
 class VirusTotalConnector:
@@ -126,6 +127,12 @@ class VirusTotalConnector:
         self.url_indicator_config = IndicatorConfig.load_indicator_config(config, "URL")
 
         self.latest_reset_timestamp = time.time()
+
+        self.quota_reset_time= get_config_variable(
+            "VIRUSTOTAL_QUOTA_RESET_TIME",
+            ["virustotal", "quota_reset_time"],
+            config,
+        )
 
     def _retrieve_yara_ruleset(self, ruleset_id: str) -> dict:
         """
@@ -424,23 +431,27 @@ class VirusTotalConnector:
         #add the enrichment tag
     
     def check_quota(self):
-        if time.time() - self.latest_reset_timestamp > 86400:
-            self.latest_reset_timestamp = time.time()
-            self.quota_current= 0
-            self.helper.log_info("Reset quota at time {}".format(str(datetime.now())))
-            return True
+        # if time.time() - self.latest_reset_timestamp > 86400:
+        #     self.latest_reset_timestamp = time.time()
+        #     self.quota_current= 0
+        #     self.helper.log_info("Reset quota at time {}".format(str(datetime.now())))
+        #     return True
+        schedule.run_pending()
         if self.quota_current >= self.quota_max:
             self.helper.log_info("Quota exceeded, waiting for reset...")
             return False
         return True
   
-
+    def reset_quota(self):
+        self.quota_current = 0
+        self.helper.log_error("Reset quota at time {}".format(str(datetime.now())))
 
 
     async def _process_message(self, data):
         # await self.lock.acquire()
         #busy wait for 2 seconds
         # await asyncio.sleep(2)
+        schedule.run_pending()
 
         if self.exclude_author(data['entity_id']):
             self.helper.log_info("Skipping enrichment for {}".format(data['entity_id']))
@@ -495,8 +506,12 @@ class VirusTotalConnector:
         # self.lock.release()
         self.quota_current += 1
         return result
-        
+
+    def log_hello(self):
+        self.helper.log_info("Hello from VirusTotal connector")       
 
     def start(self):
         """Start the main loop."""
+        schedule.every().day.at(self.quota_reset_time).do(self.reset_quota)
+        # schedule.every().second.do(self.log_hello)
         self.helper.listen(self._process_message)
