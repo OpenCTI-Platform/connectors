@@ -16,7 +16,7 @@ ENV PYTHONFAULTHANDLER=1 \
   POETRY_VERSION=1.5.0
 
 # System deps:
-RUN apt-get update && apt-get install -y build-essential unzip wget python-dev
+RUN apt-get update && apt-get install -y build-essential unzip wget python3-dev
 RUN pip install --upgrade pip && pip install --pre "poetry==$POETRY_VERSION"
 RUN python3 -m venv /runtime
 
