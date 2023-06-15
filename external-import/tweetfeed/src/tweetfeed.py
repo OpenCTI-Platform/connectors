@@ -459,15 +459,15 @@ class TweetFeed:
             self.parse_ioc_csv(text)
 
     def run(self):
-        self.helper.log_info(" SATAYO IOC reader, Fetching IOC data...")
+        self.helper.log_info(" TweetFeed, Fetching IOC data...")
         self.retrieve_data()
         exit(0)
 
 
 if __name__ == "__main__":
     try:
-        satayo_connector = TweetFeed()
-        satayo_connector.run()
+        conn_hector = TweetFeed()
+        conn_hector.run()
     except Exception as e:
         print(e)
         time.sleep(10)
