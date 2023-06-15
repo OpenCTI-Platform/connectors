@@ -66,24 +66,25 @@ class Report:
         report = utils.retrieve(self.bundle, "type", "report")
         report["x_opencti_files"] = list()
 
-        # Original Report Files
-        bundle = json.dumps(self.bundle, indent=4)
-        report["x_opencti_files"].append(
-            {
-                "name": f"{self.report_id}.stix.original.txt",  # FIXME: did not manage to import with .json extension
-                "data": base64.b64encode(bundle.encode("utf-8")).decode("utf-8"),
-                "mime_type": "text/plain",
-            }
-        )
+        # FIXME: did not manage to import with .json extension
+        # bundle = json.dumps(self.bundle, indent=4)
+        # report["x_opencti_files"].append(
+        #     {
+        #         "name": f"{self.report_id}.stix.original.txt",
+        #         "data": base64.b64encode(bundle.encode("utf-8")).decode("utf-8"),
+        #         "mime_type": "text/plain",
+        #     }
+        # )
 
-        details = json.dumps(self.details, indent=4)
-        report["x_opencti_files"].append(
-            {
-                "name": f"{self.report_id}.details.original.txt",  # FIXME: did not manage to import with .json extension
-                "data": base64.b64encode(details.encode("utf-8")).decode("utf-8"),
-                "mime_type": "text/plain",
-            }
-        )
+        # FIXME: did not manage to import with .json extension
+        # details = json.dumps(self.details, indent=4)
+        # report["x_opencti_files"].append(
+        #     {
+        #         "name": f"{self.report_id}.details.original.txt",
+        #         "data": base64.b64encode(details.encode("utf-8")).decode("utf-8"),
+        #         "mime_type": "text/plain",
+        #     }
+        # )
 
         if self.pdf:
             report["x_opencti_files"].append(
@@ -96,23 +97,22 @@ class Report:
 
         # HTML Files from specific report details fields
         # FIXME: create a condition
-        if "executive_summary" in self.details:
-            report["x_opencti_files"].append(
-                {
-                    "name": f"{self.report_id}.summary.html",
-                    "data": base64.b64encode(self.details["executive_summary"].encode("utf-8")).decode("utf-8"),
-                    "mime_type": "text/html",
-                }
-            )
-
-        if "threat_detail" in self.details:
-            report["x_opencti_files"].append(
-                {
-                    "name": f"{self.report_id}.threat-detail.html",
-                    "data": base64.b64encode(self.details["threat_detail"].encode("utf-8")).decode("utf-8"),
-                    "mime_type": "text/html",
-                }
-            )
+        # if "executive_summary" in self.details:
+        #     report["x_opencti_files"].append(
+        #         {
+        #             "name": f"{self.report_id}.summary.html",
+        #             "data": base64.b64encode(self.details["executive_summary"].encode("utf-8")).decode("utf-8"),
+        #             "mime_type": "text/html",
+        #         }
+        #     )
+        # if "threat_detail" in self.details:
+        #     report["x_opencti_files"].append(
+        #         {
+        #             "name": f"{self.report_id}.threat-detail.html",
+        #             "data": base64.b64encode(self.details["threat_detail"].encode("utf-8")).decode("utf-8"),
+        #             "mime_type": "text/html",
+        #         }
+        #     )
 
     def update_intrusionset(self):
         report = utils.retrieve(self.bundle, "type", "report")
