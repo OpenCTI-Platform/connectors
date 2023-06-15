@@ -236,6 +236,9 @@ class ExportFileTxt:
                         list_filters,
                     )
                 else:
+                    if entity_type == "Malware-Analysis":
+                        for entity in entities_list:
+                            entity["name"] = entity["result_name"]
                     entities_values = [f["name"] for f in entities_list if "name" in f]
                     entities_values_bytes = "\n".join(entities_values)
                     self.helper.api.stix_domain_object.push_list_export(
