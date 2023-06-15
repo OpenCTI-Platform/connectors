@@ -352,9 +352,9 @@ class MWDB:
                         or malwsearc["name"].lower().strip() == taglabel.lower()
                     ):
                         ### create relation and continue indicates
-                        relatsions = Relationship(
+                        relationship = Relationship(
                             source_ref=sample["observable"]["id"],
-                            target_ref=cve["id"],
+                            target_ref=malwsearc["id"],
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )
@@ -373,9 +373,9 @@ class MWDB:
                     ].lower().strip() == taglabel.lower().strip().replace(
                         " ", ""
                     ):
-                        relatsions = Relationship(
+                        relationship = Relationship(
                             source_ref=sample["observable"]["id"],
-                            target_ref=cve["id"],
+                            target_ref=intrusion["id"],
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )

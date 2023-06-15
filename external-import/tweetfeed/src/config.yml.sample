@@ -1,0 +1,19 @@
+opencti:
+  url: 'ChangeMe'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'TWEETFEED'
+  scope: 'tweetfeed'
+  log_level: 'info'
+
+tweetfeed:
+  confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)
+  create_indicators: True
+  create_observables: True
+  interval: 1 # In days, must be strictly greater than 1
+  update_existing_data: True
+  org_description: 'Tweetfeed, a connector to import IOC from Twitter.'
+  org_name: 'Tweetfeed'
