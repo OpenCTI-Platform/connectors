@@ -1,4 +1,4 @@
-# OpenCTI Mandiant Connector
+# Mandiant Connector
 
 This connector connects to the Mandiant Advantage API V4 and gather all data from a given date.
 
@@ -6,15 +6,49 @@ This connector connects to the Mandiant Advantage API V4 and gather all data fro
 
 The connector can be configured with the following variables:
 
-| Config Parameter | Docker env var | Default | Description |
-| ---------------------------- | ---------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `api_url` | `MANDIANT_API_URL` | `https://api.intelligence.mandiant.com` | The base URL for the Mandiant API. |
-| `api_v4_key_id` | `MANDIANT_API_V4_KEY_ID` | `ChangeMe` | The Mandiant API client ID. |
-| `api_v4_key_secret` | `MANDIANT_API_V4_KEY_SECRET` | `ChangeMe` | The Mandiant API client secret. |
-| `collections` | `MANDIANT_COLLECTIONS` | `actor,malware,indicator,vulnerability,report` | Specify what Collections you want to pull. |
-| `threat_actor_as_intrusion_set` | `MANDIANT_THREAT_ACTOR_AS_INTRUSION_SET` | `true` | If true, then threat actors will be added to intrusion set. |
-| `days_before_start` | `MANDIANT_DAYS_BEFORE_START` | `89` | The Mandiant API limits the import start date to be less than 90 days. |
-| `interval` | `MANDIANT_INTERVAL` | `60` | In minutes, the amount of time between each run of the connector. |
-| `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | `false` | If true, then the connector will update existing data. |
-| `report_types_ignored` | `MANDIANT_REPORT_TYPES_IGNORED` | `Vulnerability Report` | This ignores certain report types, the amount of reports daily and the amount of repetitive software creating extensive delay processing reports. |
-| `mscore` | `MANDIANT_MSCORE` | `0` | Defines the minimum Indicator Confidence Score to return. A good starting point is 80 if looking for malicious indicators. |
+| Env var | Default | Description |
+| - | - | - |
+| `MANDIANT_API_URL` | https://api.intelligence.mandiant.com | URL for the Mandiant API |
+| `MANDIANT_API_V4_KEY_ID` | | Mandiant API Key ID |
+| `MANDIANT_API_V4_KEY_SECRET` | | Mandiant API Key Secret |
+| `MANDIANT_INTERVAL` | 1 | Number of the days between each collection. |
+| `MANDIANT_IMPORT_START_DATE` | 2023-01-01 | Date to start collect data |
+| `MANDIANT_INDICATOR_MINIMUM_SCORE` | 80 | Minimum score (based on mscore) that an indicator must have to be processed |
+| `MANDIANT_IMPORT_ACTORS` | True | Enable to collect actors |
+| `MANDIANT_IMPORT_REPORTS` | True | Enable to collect reports |
+| `MANDIANT_IMPORT_MALWARES` | True | Enable to collect malwares |
+| `MANDIANT_IMPORT_CAMPAIGNS` | True | Enable to collect campaigns |
+| `MANDIANT_IMPORT_INDICATORS` | True | Enable to collect indicators |
+| `MANDIANT_IMPORT_VULNERABILITIES` | True | Enable to collect vulnerabilities |
+| `MANDIANT_ACTOR_PROFILE_REPORT` | True | Enable to collect report type actor profile |
+| `MANDIANT_COUNTRY_PROFILE_REPORT` | True | Enable to collect report type country_profile |
+| `MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT` | True | Enable to collect report type event_coverage_implication |
+| `MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT` | True | Enable to collect report type executive_perspective |
+| `MANDIANT_ICS_SECURITY_ROUNDUP_REPORT` | True | Enable to collect report type ics_security_roundup |
+| `MANDIANT_INDUSTRY_REPORTING_REPORT` | True | Enable to collect report type industry_reporting |
+| `MANDIANT_MALWARE_PROFILE_REPORT` | True | Enable to collect report type malware_profile |
+| `MANDIANT_NETWORK_ACTIVITY_REPORT` | True | Enable to collect report type network_activity_reports |
+| `MANDIANT_PATCH_REPORT` | True | Enable to collect report type patch_report |
+| `MANDIANT_TTP_DEEP_DIVE_REPORT` | True | Enable to collect report type ttp_deep_dive |
+| `MANDIANT_THREAT_ACTIVITY_ALERT_REPORT` | True | Enable to collect report type threat_activity_alert |
+| `MANDIANT_THREAT_ACTIVITY_REPORT` | True | Enable to collect report type threat_activity_report |
+| `MANDIANT_TRENDS_AND_FORECASTING_REPORT` | True | Enable to collect report type trends_and_forecasting |
+| `MANDIANT_VULNERABILITY_REPORT` | True | Enable to collect report type vulnerability_report |
+| `MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT` | True | Enable to collect report type weekly_vulnerability_exploitation_report |
+| `MANDIANT_NEWS_ANALYSIS_REPORT` | True | Enable to collect report type news_analysis |
+| `MANDIANT_ACTOR_PROFILE_REPORT_TYPE` | actor-profile | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_COUNTRY_PROFILE_REPORT_TYPE` | country-profile | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT_TYPE` | event-coverage | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT_TYPE` | executive-perspective | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_ICS_SECURITY_ROUNDUP_REPORT_TYPE` | ics-security-roundup | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_INDUSTRY_REPORTING_REPORT_TYPE` | industry | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_MALWARE_PROFILE_REPORT_TYPE` | malware-profile | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_NETWORK_ACTIVITY_REPORT_TYPE` | network-activity | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_PATCH_REPORT_TYPE` | patch | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_TTP_DEEP_DIVE_REPORT_TYPE` | ttp-deep-dive | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_THREAT_ACTIVITY_ALERT_REPORT_TYPE` | threat-alert | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_THREAT_ACTIVITY_REPORT_TYPE` | threat-activity | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_TRENDS_AND_FORECASTING_REPORT_TYPE` | trends-forecasting | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_VULNERABILITY_REPORT_TYPE` | vulnerability | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT_TYPE` | vulnerability-exploitation | Report type on vocabulary `report_types_ov` |
+| `MANDIANT_NEWS_ANALYSIS_REPORT_TYPE` | news-analysis | Report type on vocabulary `report_types_ov` |
