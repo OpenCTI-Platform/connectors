@@ -333,8 +333,11 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
+                        value = match[RESULT_FORMAT_MATCH]
+                        if match[RESULT_FORMAT_MATCH].endswith(","):
+                            value = match[RESULT_FORMAT_MATCH][:-1]
                         observable = stix2.URL(
-                            value=match[RESULT_FORMAT_MATCH],
+                            value=value,
                             object_marking_refs=object_markings,
                             custom_properties={
                                 "x_opencti_create_indicator": self.create_indicator,
