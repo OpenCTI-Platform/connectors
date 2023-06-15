@@ -1,6 +1,6 @@
-from datetime import datetime, timezone, timedelta
 import json
 import re
+from datetime import datetime, timedelta, timezone
 
 import stix2
 
@@ -85,7 +85,9 @@ def clean_intrusionset_aliases(object):
 
 
 def generate_note(data):
-    note = json.loads(stix2.Note(object_refs=data["object_refs"], content="").serialize())
+    note = json.loads(
+        stix2.Note(object_refs=data["object_refs"], content="").serialize()
+    )
     note.update(**data)
     return note
 

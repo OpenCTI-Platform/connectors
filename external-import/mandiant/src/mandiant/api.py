@@ -1,10 +1,10 @@
-from typing import Dict, Iterable, List, Union
-from datetime import datetime, timedelta
-from urllib.parse import urljoin
-import requests
 import logging
 import time
+from datetime import datetime, timedelta
+from typing import Dict, Iterable, List, Union
+from urllib.parse import urljoin
 
+import requests
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -213,7 +213,9 @@ class MandiantAPI:
             result="threat-actors",
         )
 
-    def vulnerabilities(self, start_epoch: int = None, end_epoch: int = None, limit: int = 1000) -> Iterable[Dict]:
+    def vulnerabilities(
+        self, start_epoch: int = None, end_epoch: int = None, limit: int = 1000
+    ) -> Iterable[Dict]:
         return self._process(
             name="vulnerabilities",
             parameters={

@@ -116,11 +116,15 @@ def process(connector, indicator):
     items = [stix_indicator]
 
     for attribution in indicator.get("attributed_associations", []):
-        items += [create_stix_relationship(connector, stix_indicator, indicator, attribution)]
+        items += [
+            create_stix_relationship(connector, stix_indicator, indicator, attribution)
+        ]
 
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
     if bundle is None:
-        connector.helper.log_error(f"Could not process indicator {indicator_id}. Skipping ...")
+        connector.helper.log_error(
+            f"Could not process indicator {indicator_id}. Skipping ..."
+        )
 
     return bundle

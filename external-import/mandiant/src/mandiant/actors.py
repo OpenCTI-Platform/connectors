@@ -1,4 +1,3 @@
-import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -34,7 +33,9 @@ def process(connector, actor):
     if "locations" in actor_details:
         for direction in ["source", "destination"]:
             for location in actor_details["locations"].get(direction, []):
-                items += create_stix_location(connector, stix_intrusionset, location, direction)
+                items += create_stix_location(
+                    connector, stix_intrusionset, location, direction
+                )
 
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
@@ -44,7 +45,9 @@ def process(connector, actor):
     return bundle
 
 
-def create_stix_relationship(connector, rel_type, source, target, start_time, stop_time=None):
+def create_stix_relationship(
+    connector, rel_type, source, target, start_time, stop_time=None
+):
     start_time = parse(start_time) if start_time else datetime.now(ZoneInfo("UTC"))
     stop_time = parse(stop_time) if stop_time else start_time + timedelta(seconds=+1)
 
@@ -52,7 +55,9 @@ def create_stix_relationship(connector, rel_type, source, target, start_time, st
         stop_time += timedelta(seconds=+1)
 
     return stix2.Relationship(
-        id=StixCoreRelationship.generate_id(rel_type, source, target, start_time, stop_time),
+        id=StixCoreRelationship.generate_id(
+            rel_type, source, target, start_time, stop_time
+        ),
         relationship_type=rel_type,
         source_ref=source,
         target_ref=target,

@@ -20,8 +20,12 @@ def process(connector, vulnerability):
             "x_opencti_base_score": utils.sanitizer("base_score", score),
             "x_opencti_attack_vector": utils.sanitizer("attack_vector", score),
             "x_opencti_integrity_impact": utils.sanitizer("integrity_impact", score),
-            "x_opencti_availability_impact": utils.sanitizer("availability_impact", score),
-            "x_opencti_confidentiality_impact": utils.sanitizer("confidentiality_impact", score),
+            "x_opencti_availability_impact": utils.sanitizer(
+                "availability_impact", score
+            ),
+            "x_opencti_confidentiality_impact": utils.sanitizer(
+                "confidentiality_impact", score
+            ),
         }
 
     stix_vulnerability = stix2.Vulnerability(
@@ -39,6 +43,8 @@ def process(connector, vulnerability):
     bundle = stix2.Bundle(objects=[stix_vulnerability], allow_custom=True)
 
     if bundle is None:
-        connector.helper.log_error(f"Could not process vulnerability {vulnerability_id}. Skipping ...")
+        connector.helper.log_error(
+            f"Could not process vulnerability {vulnerability_id}. Skipping ..."
+        )
 
     return bundle

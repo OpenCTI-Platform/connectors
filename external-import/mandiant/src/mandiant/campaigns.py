@@ -10,12 +10,16 @@ def process(connector, campaign):
     items = [stix_campaign]
 
     for attribution in campaign.get("...", []):
-        items += [create_stix_relationship(connector, stix_campaign, campaign, attribution)]
+        items += [
+            create_stix_relationship(connector, stix_campaign, campaign, attribution)
+        ]
 
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
     if bundle is None:
-        connector.helper.log_error(f"Could not process campaign {campaign_id}. Skipping ...")
+        connector.helper.log_error(
+            f"Could not process campaign {campaign_id}. Skipping ..."
+        )
 
     return bundle
 

@@ -1,6 +1,6 @@
-import itertools
 import base64
-import json
+import itertools
+
 import stix2
 
 from . import utils
@@ -12,16 +12,22 @@ def process(connector, report):
     report_title = report.get("title", report.get("reportTitle", None))
 
     if report_type not in connector.mandiant_report_types:
-        connector.helper.log_debug(f"Ignoring report based on type [{report_id}][{report_type}] {report_title} ...")
+        connector.helper.log_debug(
+            f"Ignoring report based on type [{report_id}][{report_type}] {report_title} ..."
+        )
         return
 
-    connector.helper.log_info(f"Processing report [{report_id}][{report_type}] {report_title} ...")
+    connector.helper.log_info(
+        f"Processing report [{report_id}][{report_type}] {report_title} ..."
+    )
 
     report_details = connector.api.report(report_id, "json")
     report_bundle = connector.api.report(report_id, mode="stix")
     report_pdf = connector.api.report(report_id, mode="pdf")
 
-    report_bundle["objects"] = list(filter(lambda item: not item["id"].startswith("x-"), report_bundle["objects"]))
+    report_bundle["objects"] = list(
+        filter(lambda item: not item["id"].startswith("x-"), report_bundle["objects"])
+    )
 
     report = Report(
         bundle=report_bundle,
@@ -35,7 +41,9 @@ def process(connector, report):
     bundle = report.generate()
 
     if bundle is None:
-        connector.helper.log_error(f"Could not process report {report_id}. Skipping ...")
+        connector.helper.log_error(
+            f"Could not process report {report_id}. Skipping ..."
+        )
 
     return bundle
 
@@ -119,7 +127,9 @@ class Report:
         for intrusion_set in utils.retrieve_all(self.bundle, "type", "intrusion-set"):
             # Goals
             # FIXME: the goals are being inserted in double (tags?)
-            intrusion_set["goals"] = report["x_mandiant_com_metadata"].get("intended_effects", [])
+            intrusion_set["goals"] = report["x_mandiant_com_metadata"].get(
+                "intended_effects", []
+            )
 
             # Motivations
             # FIXME: requires a mapping
@@ -136,13 +146,18 @@ class Report:
         report = utils.retrieve(self.bundle, "type", "report")
 
         risk_rating = None
-        if "x_mandiant_com_medata" in report and "risk_rating" in report["x_mandiant_com_medata"]:
+        if (
+            "x_mandiant_com_medata" in report
+            and "risk_rating" in report["x_mandiant_com_medata"]
+        ):
             risk_rating = report["x_mandiant_com_medata"]["risk_rating"]
 
         for vulnerability in utils.retrieve_all(self.bundle, "type", "vulnerability"):
             for score_item in vulnerability["x_mandiant_com_vulnerability_score"]:
                 if "cvss_version" in score_item.keys():
-                    vulnerability["x_opencti_base_score"] = score_item["base_metrics"]["base_score"]
+                    vulnerability["x_opencti_base_score"] = score_item["base_metrics"][
+                        "base_score"
+                    ]
             if risk_rating:
                 vulnerability["x_opencti_base_severity"] = risk_rating
 
@@ -169,7 +184,9 @@ class Report:
                 continue
 
             if type(report[section]) == str:
-                title = " ".join(section.replace("x_mandiant_com_", "").split("_")).title()
+                title = " ".join(
+                    section.replace("x_mandiant_com_", "").split("_")
+                ).title()
                 data[title] = [report[section]]
                 continue
 
@@ -237,8 +254,12 @@ class Report:
             item["id"] = item.get("id").replace("threat-actor", "intrusion-set")
 
         for rel in utils.retrieve_all(self.bundle, "type", "relationship"):
-            rel["source_ref"] = rel.get("source_ref").replace("threat-actor", "intrusion-set")
-            rel["target_ref"] = rel.get("target_ref").replace("threat-actor", "intrusion-set")
+            rel["source_ref"] = rel.get("source_ref").replace(
+                "threat-actor", "intrusion-set"
+            )
+            rel["target_ref"] = rel.get("target_ref").replace(
+                "threat-actor", "intrusion-set"
+            )
 
             if (
                 rel["relationship_type"] == "located-at"
@@ -249,7 +270,8 @@ class Report:
 
         report = utils.retrieve(self.bundle, "type", "report")
         report["object_refs"] = [
-            reference.replace("threat-actor", "intrusion-set") for reference in report.get("object_refs", [])
+            reference.replace("threat-actor", "intrusion-set")
+            for reference in report.get("object_refs", [])
         ]
 
     def _get_objects_from_tags(self, section):
@@ -267,8 +289,12 @@ class Report:
         intrusion_sets = list(utils.retrieve_all(self.bundle, "type", "intrusion-set"))
         vulnerabilities = list(utils.retrieve_all(self.bundle, "type", "vulnerability"))
         softwares = list(utils.retrieve_all(self.bundle, "type", "software"))
-        course_actions = list(utils.retrieve_all(self.bundle, "type", "course-of-action"))
-        attack_patterns = list(utils.retrieve_all(self.bundle, "type", "attack-pattern"))
+        course_actions = list(
+            utils.retrieve_all(self.bundle, "type", "course-of-action")
+        )
+        attack_patterns = list(
+            utils.retrieve_all(self.bundle, "type", "attack-pattern")
+        )
         indicators = list(utils.retrieve_all(self.bundle, "type", "indicator"))
         ipv4_addresses = list(utils.retrieve_all(self.bundle, "type", "ipv4-addr"))
         ipv6_addresses = list(utils.retrieve_all(self.bundle, "type", "ipv6-addr"))
@@ -276,7 +302,9 @@ class Report:
         urls = list(utils.retrieve_all(self.bundle, "type", "url"))
         files = list(utils.retrieve_all(self.bundle, "type", "file"))
 
-        sectors = [identity for identity in identities if identity["identity_class"] == "class"]
+        sectors = [
+            identity for identity in identities if identity["identity_class"] == "class"
+        ]
 
         # Get objects from tags
         source_geographies = list(self._get_objects_from_tags("source_geographies"))
@@ -346,7 +374,10 @@ class Report:
                 {
                     "type": "communicates-with",
                     "sources": malwares,
-                    "destinations": ipv4_addresses + ipv6_addresses + domain_names + urls,
+                    "destinations": ipv4_addresses
+                    + ipv6_addresses
+                    + domain_names
+                    + urls,
                 },
                 {
                     "type": "drops",

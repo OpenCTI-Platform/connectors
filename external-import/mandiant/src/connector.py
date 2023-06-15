@@ -1,7 +1,7 @@
 import sys
 import time
 
-from mandiant import Mandiant
+from mandiant.base import Mandiant
 
 try:
     mandiantConnector = Mandiant()
