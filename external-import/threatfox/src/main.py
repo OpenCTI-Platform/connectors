@@ -11,11 +11,11 @@ import certifi
 import stix2
 import yaml
 from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
     Indicator,
     Malware,
+    OpenCTIConnectorHelper,
     StixCoreRelationship,
+    get_config_variable,
 )
 
 
