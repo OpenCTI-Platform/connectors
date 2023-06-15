@@ -281,12 +281,15 @@ class Mandiant:
             )
             self.mandiant_report_types["News Analysis"] = news_analysis_report_type
 
-        for description, name in self.mandiant_report_types.items():
-            self.helper.api.vocabulary.create(
-                name=name,
-                description=description,
-                category="report_types_ov",
-            )
+        try:
+            for description, name in self.mandiant_report_types.items():
+                self.helper.api.vocabulary.create(
+                    name=name,
+                    description=description,
+                    category="report_types_ov",
+                )
+        except Exception:
+            self.helper.log_warning("Could not create report types.")
 
         self.mandiant_indicator_minimum_score = get_config_variable(
             "MANDIANT_INDICATOR_MINIMUM_SCORE",
