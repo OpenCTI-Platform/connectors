@@ -7,7 +7,7 @@ COPY src /opt/opencti-connector-recordedfuture-enrichment
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libxslt libxslt-dev libxml2 libxml2-dev && \
-    cd /opt/opencti-connector-rf-enrichment && \
+    cd /opt/opencti-connector-recordedfuture-enrichment && \
     pip install --no-cache-dir -r requirements.txt && \
     apk del git build-base libxslt-dev libxml2-dev && \
     rm -rf /var/cache/apk/*
