@@ -398,6 +398,9 @@ class IntelManager(object):
                 f"/dashboard/observations/indicators/{entity['id']}",
             )
 
+        if self.config.get("output.include_labels", False):
+            _document["labels"] = OpenCTIConnectorHelper.get_attribute_in_extension("labels", entity),
+
         _document["event"][
             "risk_score"
         ] = OpenCTIConnectorHelper.get_attribute_in_extension("score", entity)

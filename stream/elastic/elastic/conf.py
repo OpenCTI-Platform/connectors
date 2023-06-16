@@ -38,7 +38,8 @@ defaults: dict = {
             "api_key": None,
             "index": "opencti-{now/d}",
             "reduced_privileges": "false",
-        }
+        },
+        "include_labels": False,
     },
     "setup": {
         "ilm": {
