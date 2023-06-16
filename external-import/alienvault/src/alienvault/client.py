@@ -6,11 +6,41 @@ from typing import List
 
 import pydantic
 from alienvault.models import Pulse
-from OTXv2 import OTXv2
+from OTXv2 import OTXv2,RetryError
 
 __all__ = [
     "AlienVaultClient",
 ]
+
+class OTXv2Fixed(OTXv2):
+    
+    def walkapi_iter(self, url, max_page=None, max_items=None, method='GET', body=None):
+        next_page_url = url
+        count = 0
+        item_count = 0
+        while next_page_url:
+            count += 1
+            if max_page and count > max_page:
+                break
+            
+            if method == 'GET':
+                try:
+                    data = self.get(next_page_url)
+                except RetryError:
+                    pass
+            elif method == 'POST':
+                data = self.post(next_page_url, body=body)
+            else:
+                raise Exception("Unsupported method type: {}".format(method))
+
+            for el in data['results']:
+                item_count += 1
+                if max_items and item_count > max_items:
+                    break
+
+                yield el
+
+            next_page_url = data["next"]
 
 
 class AlienVaultClient:
