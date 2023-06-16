@@ -7,12 +7,12 @@ import requests
 import stix2
 import yaml
 from pycti import (
+    AttackPattern,
     Identity,
     Indicator,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
-    AttackPattern,
 )
 
 
