@@ -248,19 +248,19 @@ class Misp:
         self.misp_import_tags_not = get_config_variable(
             "MISP_IMPORT_TAGS_NOT", ["misp", "import_tags_not"], config
         )
-        self.import_creator_orgs = get_config_variable(
+        self.misp_import_creator_orgs = get_config_variable(
             "MISP_IMPORT_CREATOR_ORGS", ["misp", "import_creator_orgs"], config
         )
-        self.import_creator_orgs_not = get_config_variable(
+        self.misp_import_creator_orgs_not = get_config_variable(
             "MISP_IMPORT_CREATOR_ORGS_NOT", ["misp", "import_creator_orgs_not"], config
         )
-        self.import_owner_orgs = get_config_variable(
+        self.misp_import_owner_orgs = get_config_variable(
             "MISP_IMPORT_OWNER_ORGS", ["misp", "import_owner_orgs"], config
         )
-        self.import_owner_orgs_not = get_config_variable(
+        self.misp_import_owner_orgs_not = get_config_variable(
             "MISP_IMPORT_OWNER_ORGS_NOT", ["misp", "import_owner_orgs_not"], config
         )
-        self.import_keyword = get_config_variable(
+        self.misp_import_keyword = get_config_variable(
             "MISP_IMPORT_KEYWORD", ["misp", "MISP_IMPORT_KEYWORD"], config
         )
         self.import_distribution_levels = get_config_variable(
@@ -413,8 +413,8 @@ class Misp:
             while True:
                 kwargs["limit"] = 50
                 kwargs["page"] = current_page
-                if self.import_keyword is not None:
-                    kwargs["value"] = self.import_keyword
+                if self.misp_import_keyword is not None:
+                    kwargs["value"] = self.misp_import_keyword
                     kwargs["searchall"] = True
                 if self.misp_enforce_warning_list is not None:
                     kwargs["enforce_warninglist"] = self.misp_enforce_warning_list
@@ -504,14 +504,14 @@ class Misp:
         import_distribution_levels = None
         import_threat_levels = None
         last_event_timestamp = None
-        if self.import_creator_orgs is not None:
-            import_creator_orgs = self.import_creator_orgs.split(",")
-        if self.import_creator_orgs_not is not None:
-            import_creator_orgs_not = self.import_creator_orgs_not.split(",")
-        if self.import_owner_orgs is not None:
-            import_owner_orgs = self.import_owner_orgs.split(",")
-        if self.import_owner_orgs_not is not None:
-            import_owner_orgs_not = self.import_owner_orgs_not.split(",")
+        if self.misp_import_creator_orgs is not None:
+            import_creator_orgs = self.misp_import_creator_orgs.split(",")
+        if self.misp_import_creator_orgs_not is not None:
+            import_creator_orgs_not = self.misp_import_creator_orgs_not.split(",")
+        if self.misp_import_owner_orgs is not None:
+            import_owner_orgs = self.misp_import_owner_orgs.split(",")
+        if self.misp_import_owner_orgs_not is not None:
+            import_owner_orgs_not = self.misp_import_owner_orgs_not.split(",")
         if self.import_distribution_levels is not None:
             import_distribution_levels = self.import_distribution_levels.split(",")
         if self.import_threat_levels is not None:
