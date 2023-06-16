@@ -168,21 +168,21 @@ class MispFeed:
         self.misp_feed_create_observables = get_config_variable(
             "MISP_FEED_CREATE_OBSERVABLES", ["misp_feed", "create_observables"], config
         )
-        self.misp_create_tags_as_labels = get_config_variable(
+        self.misp_feed_create_tags_as_labels = get_config_variable(
             "MISP_CREATE_TAGS_AS_LABELS",
-            ["misp", "create_tags_as_labels"],
+            ["misp_feed", "create_tags_as_labels"],
             config,
             default=True,
         )
-        self.misp_guess_threats_from_tags = get_config_variable(
-            "MISP_GUESS_THREAT_FROM_TAGS",
-            ["misp", "guess_threats_from_tags"],
+        self.misp_feed_guess_threats_from_tags = get_config_variable(
+            "MISP_FEED_GUESS_THREAT_FROM_TAGS",
+            ["misp_feed", "guess_threats_from_tags"],
             config,
             default=False,
         )
-        self.misp_author_from_tags = get_config_variable(
-            "MISP_AUTHOR_FROM_TAGS",
-            ["misp", "author_from_tags"],
+        self.misp_feed_author_from_tags = get_config_variable(
+            "MISP_FEED_AUTHOR_FROM_TAGS",
+            ["misp_feed", "author_from_tags"],
             config,
             default=False,
         )
@@ -217,10 +217,10 @@ class MispFeed:
                 default=False,
             )
         )
-        self.import_unsupported_observables_as_text_transparent = bool(
+        self.misp_feed_import_unsupported_observables_as_text_transparent = bool(
             get_config_variable(
-                "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
-                ["misp", "import_unsupported_observables_as_text_transparent"],
+                "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
+                ["misp_feed", "import_unsupported_observables_as_text_transparent"],
                 config,
                 isNumber=False,
                 default=True,
@@ -472,7 +472,7 @@ class MispFeed:
                         added_names.append(name)
         for tag in tags:
             # Try to guess from tags
-            if self.misp_guess_threats_from_tags:
+            if self.misp_feed_guess_threats_from_tags:
                 tag_value_split = tag["name"].split("=")
                 if len(tag_value_split) == 1:
                     tag_value = tag_value_split[0]
@@ -661,7 +661,7 @@ class MispFeed:
     def _resolve_tags(self, tags):
         opencti_tags = []
 
-        if not self.misp_create_tags_as_labels:
+        if not self.misp_feed_create_tags_as_labels:
             return opencti_tags
 
         for tag in tags:
@@ -1548,7 +1548,7 @@ class MispFeed:
         ### Pre-process
         # Author
         author = None
-        if self.misp_author_from_tags:
+        if self.misp_feed_author_from_tags:
             if "Tag" in event["Event"]:
                 event_tags = event["Event"]["Tag"]
                 for tag in event_tags:
@@ -1643,7 +1643,7 @@ class MispFeed:
 
             object_observable = None
             if self.misp_feed_create_object_observables:
-                if self.import_unsupported_observables_as_text_transparent:
+                if self.misp_feed_import_unsupported_observables_as_text_transparent:
                     if len(object["Attribute"]) > 0:
                         value = object["Attribute"][0]["value"]
                         object_observable = Text(
