@@ -201,18 +201,6 @@ class SignalsManager(Thread):
                             elif _timestamp > ids_dict[_opencti_id]["last_seen"]:
                                 ids_dict[_opencti_id]["last_seen"] = _timestamp
 
-<<<<<<< HEAD
-=======
-                        # only supported if Kibana version >= 8.0.0
-                        if self.config.get("elastic.sightings_label_rule_id", "false") and not kbn_version_lt8:
-                            ids_dict[_opencti_id]['labels'].add(hit["_source"]["kibana.alert.rule.parameters"]["rule_id"])
-                        if self.config.get("elastic.sightings_label_organization", "false") and not kbn_version_lt8:
-                            try:
-                                ids_dict[_opencti_id]['labels'].add(hit["_source"]["organization"]['name'])
-                            except KeyError:
-                                logger.info(("Cannot extract 'organization.name' property from signal."))
-
->>>>>>> dbc41ca2... bugfixes
                 # Loop through signal hits and create new sightings
                 for k, v in ids_dict.items():
                     # Check if indicator exists
@@ -241,11 +229,12 @@ class SignalsManager(Thread):
                             created=None,
                             modified=None,
                             confidence=confidence,
-                            created_by=entity_id,
-                            object_marking=None,
-                            object_label=None,
-                            external_references=None,
+                            createdBy=entity_id,
+                            objectMarking=None,
+                            objectLabel=None,
+                            externalReferences=None,
                             update=False,
+                            x_opencti_stix_ids=None,
                         )
 
                 # Wait allows us to return earlier during a shutdown
