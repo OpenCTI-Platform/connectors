@@ -11,13 +11,14 @@
 
 from datetime import datetime
 
-import stix2.v21
+import pycti
+import stix2
 
 TLP_MAP = {
-    "white": stix2.v21.TLP_WHITE,
-    "green": stix2.v21.TLP_GREEN,
-    "amber": stix2.v21.TLP_AMBER,
-    "red": stix2.v21.TLP_RED,
+    "white": stix2.TLP_WHITE,
+    "green": stix2.TLP_GREEN,
+    "amber": stix2.TLP_AMBER,
+    "red": stix2.TLP_RED,
 }
 {}
 
@@ -49,7 +50,7 @@ class RFStixEntity:
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
-        return stix2.v21.Bundle(objects=self.to_stix_objects(), allow_custom=True)
+        return stix2.Bundle(objects=self.to_stix_objects(), allow_custom=True)
 
     def to_json_bundle(self):
         """Returns STIX Bundle as JSON"""
@@ -84,7 +85,8 @@ class Indicator(RFStixEntity):
 
     def _create_indicator(self):
         """Creates and returns STIX2 indicator object"""
-        return stix2.v21.Indicator(
+        return stix2.Indicator(
+            id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
             pattern_type="stix",
             valid_from=datetime.now(),
@@ -103,11 +105,13 @@ class Indicator(RFStixEntity):
 
     def _create_rel(self):
         """Creates Relationship object linking indicator and observable"""
-        return stix2.v21.Relationship(
-            relationship_type="based_on",
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                "based-on", self.stix_indicator.id, self.stix_observable.id
+            ),
+            relationship_type="based-on",
             source_ref=self.stix_indicator.id,
             target_ref=self.stix_observable.id,
-            start_time=datetime.now(),
             created_by_ref=self.author.id,
         )
 
@@ -120,7 +124,7 @@ class IPAddress(Indicator):
         return f"[ipv4-addr:value = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.v21.IPv4Address(value=self.name)
+        return stix2.IPv4Address(value=self.name)
 
 
 class Domain(Indicator):
@@ -130,7 +134,7 @@ class Domain(Indicator):
         return f"[domain-name:value = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.v21.DomainName(value=self.name)
+        return stix2.DomainName(value=self.name)
 
 
 class URL(Indicator):
@@ -142,7 +146,7 @@ class URL(Indicator):
         return f"[url:value = '{ioc}']"
 
     def _create_obs(self):
-        return stix2.v21.URL(value=self.name)
+        return stix2.URL(value=self.name)
 
 
 class FileHash(Indicator):
@@ -170,7 +174,7 @@ class FileHash(Indicator):
         return f"[file:hashes.'{self.algorithm}' = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.v21.File(hashes={self.algorithm: self.name})
+        return stix2.File(hashes={self.algorithm: self.name})
 
 
 class TLPMarking(RFStixEntity):
@@ -178,7 +182,8 @@ class TLPMarking(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.v21.AttackPattern(
+        self.stix_obj = stix2.AttackPattern(
+            id=pycti.AttackPattern.generate_id(self.name, self.name),
             name=self.name,
             created_by_ref=self.author.id,
             custom_properties={"x_mitre_id": self.name},
@@ -190,7 +195,8 @@ class TTP(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.v21.AttackPattern(
+        self.stix_obj = stix2.AttackPattern(
+            id=pycti.AttackPattern.generate_id(self.name, self.name),
             name=self.name,
             created_by_ref=self.author.id,
             custom_properties={"x_mitre_id": self.name},
@@ -208,7 +214,8 @@ class Identity(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.v21.Identity(
+        self.stix_obj = stix2.Identity(
+            id=pycti.Identity.generate_id(self.name, self.create_id_class()),
             name=self.name,
             identity_class=self.create_id_class(),
             created_by_ref=self.author.id,
@@ -230,8 +237,10 @@ class ThreatActor(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.v21.ThreatActor(
-            name=self.name, created_by_ref=self.author.id
+        self.stix_obj = stix2.ThreatActor(
+            id=pycti.ThreatActor.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
         )
 
     def create_id_class(self):
@@ -244,8 +253,10 @@ class IntrusionSet(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.v21.IntrusionSet(
-            name=self.name, created_by_ref=self.author.id
+        self.stix_obj = stix2.IntrusionSet(
+            id=pycti.IntrusionSet.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
         )
 
 
@@ -254,8 +265,11 @@ class Malware(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.v21.Malware(
-            name=self.name, is_family=False, created_by_ref=self.author.id
+        self.stix_obj = stix2.Malware(
+            id=pycti.Malware.generate_id(self.name),
+            name=self.name,
+            is_family=False,
+            created_by_ref=self.author.id,
         )
 
 
@@ -265,8 +279,10 @@ class Vulnerability(RFStixEntity):
     # TODO: add vuln descriptions
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.v21.Vulnerability(
-            name=self.name, created_by_ref=self.author.id
+        self.stix_obj = stix2.Vulnerability(
+            id=pycti.Vulnerability.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
         )
 
 
@@ -287,7 +303,8 @@ class DetectionRule(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.v21.Indicator(
+        self.stix_obj = stix2.Indicator(
+            id=pycti.Indicator.generate_id(self.content),
             name=self.name,
             pattern_type=self.type,
             pattern=self.content,
@@ -366,7 +383,11 @@ class StixNote:
 
     def _create_author(self):
         """Creates Recorded Future Author"""
-        return stix2.v21.Identity(name="Recorded Future", identity_class="organization")
+        return stix2.Identity(
+            id=pycti.Identity.generate_id("Recorded Future", "organization"),
+            name="Recorded Future",
+            identity_class="organization",
+        )
 
     def _generate_external_references(self, urls):
         """Generate External references from validation urls"""
@@ -429,7 +450,8 @@ class StixNote:
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
-        report = stix2.v21.Report(
+        report = stix2.Report(
+            id=pycti.Report.generate_id(self.name, self.published),
             name=self.name,
             description=self.text,
             published=self.published,
@@ -444,7 +466,7 @@ class StixNote:
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
-        return stix2.v21.Bundle(objects=self.to_stix_objects(), allow_custom=True)
+        return stix2.Bundle(objects=self.to_stix_objects(), allow_custom=True)
 
     def to_json_bundle(self):
         """Returns STIX Bundle as JSON"""

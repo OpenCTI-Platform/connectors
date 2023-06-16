@@ -545,6 +545,10 @@ jobs:
           name: Build Docker image opencti/connector-zerofox
           command: docker build -t opencti/connector-zerofox:latest . && docker tag opencti/connector-zerofox:latest opencti/connector-zerofox:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/recordedfuture-enrichment
+          name: Build Docker image opencti/connector-recordedfuture-enrichment
+          command: docker build -t opencti/connector-recordedfuture-enrichment:latest . && docker tag opencti/connector-recordedfuture-enrichment:latest opencti/connector-recordedfuture-enrichment:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -644,6 +648,8 @@ jobs:
             docker push opencti/connector-qradar:${CIRCLE_TAG}
             docker push opencti/connector-zerofox:latest
             docker push opencti/connector-zerofox:${CIRCLE_TAG}
+            docker push opencti/connector-recordedfuture-enrichment:latest
+            docker push opencti/connector-recordedfuture-enrichment:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1098,6 +1104,10 @@ jobs:
           name: Build Docker image opencti/connector-zerofox
           command: docker build -t opencti/connector-zerofox:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/recordedfuture-enrichment
+          name: Build Docker image opencti/connector-recordedfuture-enrichment
+          command: docker build -t opencti/connector-recordedfuture-enrichment:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1150,6 +1160,7 @@ jobs:
             docker push opencti/connector-google-dns:rolling
             docker push opencti/connector-qradar:rolling
             docker push opencti/connector-zerofox:rolling
+            docker push opencti/connector-recordedfuture-enrichment:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
