@@ -1,4 +1,4 @@
 pycti==5.7.6
-urllib3==1.26.5
+urllib3==1.26.16
 certifi==2022.12.7
 PyGithub==1.58.2
