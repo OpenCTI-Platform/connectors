@@ -1,6 +1,6 @@
 antlr4-python3-runtime
 certifi==2023.5.7
-chardet==4.0.0
+chardet==5.1.0
 datefinder==0.7.3
 idna==2.10
 pycti==5.7.6
