@@ -566,19 +566,19 @@ toml = "*"
 
 [[package]]
 name = "pytest-flake8"
-version = "1.1.0"
+version = "1.1.1"
 description = "pytest plugin to check FLAKE8 requirements"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytest-flake8-1.1.0.tar.gz", hash = "sha256:358d449ca06b80dbadcb43506cd3e38685d273b4968ac825da871bd4cc436202"},
-    {file = "pytest_flake8-1.1.0-py2.py3-none-any.whl", hash = "sha256:f1b19dad0b9f0aa651d391c9527ebc20ac1a0f847aa78581094c747462bfa182"},
+    {file = "pytest-flake8-1.1.1.tar.gz", hash = "sha256:ba4f243de3cb4c2486ed9e70752c80dd4b636f7ccb27d4eba763c35ed0cd316e"},
+    {file = "pytest_flake8-1.1.1-py2.py3-none-any.whl", hash = "sha256:e0661a786f8cbf976c185f706fdaf5d6df0b1667c3bcff8e823ba263618627e7"},
 ]
 
 [package.dependencies]
-flake8 = ">=3.5"
-pytest = ">=3.5"
+flake8 = ">=4.0"
+pytest = ">=7.0"
 
 [[package]]
 name = "pytest-isort"
