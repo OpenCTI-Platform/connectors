@@ -657,6 +657,7 @@ class VirusTotalBuilder:
                 confidence=self.helper.connect_confidence_level,
                 allow_custom=True,
             )
+            self.bundle += [indicator, relationship]
 
             if rule.get("alert_context", None):
                 for context in rule["alert_context"]:
@@ -667,8 +668,8 @@ class VirusTotalBuilder:
                         created_by_ref=self.author,
                         object_refs=[indicator.id],
                     )
+                    self.bundle += [note]
 
-            self.bundle += [indicator, relationship, note]
 
 
     def update_size(self):
