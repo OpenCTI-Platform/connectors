@@ -1,0 +1,19 @@
+
+FROM python:3.11-alpine
+
+# Copy the worker
+COPY src /opt/opencti-connector-virustotal
+
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk add git
+RUN apk add build-base
+RUN apk add libmagic
+RUN apk add libffi-dev
+RUN cd /opt/opencti-connector-virustotal && \
+    pip3 install --no-cache-dir -r requirements.txt
+
+# Expose and entrypoint
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
