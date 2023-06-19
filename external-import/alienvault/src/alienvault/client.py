@@ -7,18 +7,56 @@ from typing import List
 import pydantic
 from alienvault.models import Pulse
 from OTXv2 import OTXv2,RetryError
+import requests
+from requests.adapters import HTTPAdapter
+
+from requests.packages.urllib3.util import Retry
+
+try:
+    from urllib.parse import urlencode
+except ImportError:
+    from urllib import urlencode
 
 __all__ = [
     "AlienVaultClient",
 ]
 
 class OTXv2Fixed(OTXv2):
+    def create_url(self, url_path, **kwargs):
+        """ Turn a path into a valid fully formatted URL. Supports query parameter formatting as well.
+
+        :param url_path: Request path (i.e. "/search/pulses")
+        :param kwargs: key value pairs to be added as query parameters (i.e. limit=10, page=5)
+        :return: a formatted url (i.e. "/search/pulses")
+        """
+        uri = url_path.format(self.server)
+        uri = uri if uri.startswith("http") else self.server.rstrip('/') + uri
+        if kwargs:
+            uri += "?" + urlencode(kwargs)
+        print("URI"+uri)
+        return uri
+
+    def session(self):
+        if self.request_session is None:
+            self.request_session = requests.Session()
+
+            # This will allow 5 tries at a url, with an increasing backoff.  Only applies to a specific set of codes
+            self.request_session.mount('https://', HTTPAdapter(
+                max_retries=Retry(
+                    total=0,
+                    status_forcelist=[429, 500, 502, 503, 504],
+                    backoff_factor=1,
+                )
+            ))
+
+        return self.request_session
     
     def walkapi_iter(self, url, max_page=None, max_items=None, method='GET', body=None):
         next_page_url = url
         count = 0
         item_count = 0
         while next_page_url:
+            print(next_page_url)
             count += 1
             if max_page and count > max_page:
                 break
@@ -26,8 +64,17 @@ class OTXv2Fixed(OTXv2):
             if method == 'GET':
                 try:
                     data = self.get(next_page_url)
-                except RetryError:
+                except RetryError as e:
+                    # print("Retry error at: "+next_page_url+"...")
+                    if count==1:
+                        next_page_url+="&page=2"
+
+                    last_page_number=int(next_page_url[-1]) #TODO: this might not work if the problem is on the first page requested
+                    next_page_url=next_page_url[:-1]+str(last_page_number+1)
+                    # print("Retrying at: "+next_page_url+"...")
                     continue #TODO: traverse the page one by one instead of skipping it
+                    #TODO:get page size from config
+                    
             elif method == 'POST':
                 data = self.post(next_page_url, body=body)
             else:

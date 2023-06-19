@@ -187,6 +187,10 @@ class AlienVault:
         )
 
         self.pulse_importer = PulseImporter(pulse_importer_config)
+        
+        # self.page_size = self._get_configuration(
+        #     config, self._CONFIG_PAGE_SIZE, is_number=True
+        # ) #TODO: add page size to config
 
     @staticmethod
     def _create_author() -> stix2.Identity:
