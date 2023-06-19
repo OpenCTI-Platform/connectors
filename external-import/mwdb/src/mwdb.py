@@ -17,7 +17,7 @@ from pycti import Malware, OpenCTIConnectorHelper, get_config_variable
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "5.7.6"
+__version__ = "5.8.0"
 BANNER = f"""
 
  ██████   ██████ █████   ███   █████ ██████████   ███████████
