@@ -54,7 +54,7 @@ class AlienVaultClient:
         """
         server = base_url if not base_url.endswith("/") else base_url[:-1]
 
-        self.otx = OTXv2(api_key, server=server)
+        self.otx = OTXv2Fixed(api_key, server=server)
 
     def get_pulses_subscribed(
         self,
