@@ -116,7 +116,7 @@ class ExportFileTxt:
                                         "Feedback",
                                         "Case-Rfi",
                                         "Case-Rft",
-                                        "Case-Task",
+                                        "Task",
                                     ],
                                 }
                             )
@@ -134,7 +134,7 @@ class ExportFileTxt:
                                         "Case-Rft",
                                         "Case-Incident",
                                         "Feedback",
-                                        "Case-Task",
+                                        "Task",
                                     ],
                                 }
                             ]
@@ -157,7 +157,7 @@ class ExportFileTxt:
                     "Feedback": self.helper.api_impersonate.feedback.list,
                     "Case-Rfi": self.helper.api_impersonate.case_rfi.list,
                     "Case-Rft": self.helper.api_impersonate.case_rft.list,
-                    "Case-Task": self.helper.api_impersonate.case_task.list,
+                    "Task": self.helper.api_impersonate.task.list,
                     "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
                     "Identity": self.helper.api_impersonate.identity.list,
                     "Language": self.helper.api_impersonate.language.list,
