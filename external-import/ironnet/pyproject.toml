@@ -7,7 +7,7 @@ authors = []
 [tool.poetry.dependencies]
 python = "^3.10"
 requests = "^2.28.0"
-pycti = "5.8.1"
+pycti = "5.8.2"
 pydantic = "^1.9.1"
 
 [build-system]
