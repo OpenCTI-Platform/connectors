@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-threatbus:
-    image: opencti/connector-threatbus:5.8.0
+    image: opencti/connector-threatbus:5.8.1
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

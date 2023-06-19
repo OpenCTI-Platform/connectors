@@ -8,7 +8,7 @@ An SSL certificate can be associated with one or more servers (IP address:port c
 
 ### Requirements
 
-- OpenCTI Platform >= 5.8.0
+- OpenCTI Platform >= 5.8.1
 
 ### Configuration
 

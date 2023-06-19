@@ -442,14 +442,14 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.3.1)", "pytest-
 
 [[package]]
 name = "pluggy"
-version = "1.1.0"
+version = "1.0.0"
 description = "plugin and hook calling mechanisms for python"
 category = "dev"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.6"
 files = [
-    {file = "pluggy-1.1.0-py3-none-any.whl", hash = "sha256:d81d19a3a88d82ed06998353ce5d5c02587ef07ee2d808ae63904ab0ccef0087"},
-    {file = "pluggy-1.1.0.tar.gz", hash = "sha256:c500b592c5512df35622e4faf2135aa0b7e989c7d31344194b4afb9d5e47b1bf"},
+    {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
+    {file = "pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
 ]
 
 [package.extras]
@@ -470,14 +470,14 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.8.0"
+version = "5.8.1"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.8.0-py3-none-any.whl", hash = "sha256:3bfc69af21e38fccca51ebd7b22322b81a244cb878c5b5f755971018857d0e3c"},
-    {file = "pycti-5.8.0.tar.gz", hash = "sha256:15e057f143f8a095af25cdf77f60da8429999a2de87422f7e7b3a2fbcf8d3ea8"},
+    {file = "pycti-5.8.1-py3-none-any.whl", hash = "sha256:34ae862cfed666809fcc302ef8e5057e95c2edea94825d6ad794c7dd94755a0d"},
+    {file = "pycti-5.8.1.tar.gz", hash = "sha256:7d57c2da84f9346c10080ac96fb8bca2cf447bd1ea870104fe7778ed1694913b"},
 ]
 
 [package.dependencies]
@@ -1084,4 +1084,8 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
+<<<<<<< HEAD
 content-hash = "e3e1bba8cbbe72d1fad33642367361cadd782eca1ac619db2e7a4cc286bc3586"
+=======
+content-hash = "66313146bef887252b1451d860bdc47df55236951712d06b634dd1cf7f460246"
+>>>>>>> 36b889c2 ([all] Release 5.8.1)
