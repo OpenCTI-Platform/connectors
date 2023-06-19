@@ -3,7 +3,7 @@ certifi==2023.5.7
 chardet==5.1.0
 datefinder==0.7.3
 idna==3.4
-pycti==5.7.6
+pycti==5.8.0
 python-dateutil==2.8.2
 pytz==2021.3
 regex==2021.11.10
