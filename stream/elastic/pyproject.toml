@@ -31,7 +31,7 @@ black = "^21.4b2"
 flake8 = "^6.0.0"
 pytest-flake8 = "^1.0.7"
 pytest-black = "^0.3.12"
-pytest-isort = "^2.0.0"
+pytest-isort = "^3.0.0"
 pyproject-flake8 = "^6.0.0"
 
 [build-system]
