@@ -27,7 +27,7 @@ class OTXv2Fixed(OTXv2):
                 try:
                     data = self.get(next_page_url)
                 except RetryError:
-                    pass
+                    continue #TODO: traverse the page one by one instead of skipping it
             elif method == 'POST':
                 data = self.post(next_page_url, body=body)
             else:
