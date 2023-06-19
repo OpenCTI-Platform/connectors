@@ -8,7 +8,7 @@ There is a [`docker-compose.yml`](docker-compose.yml) example you can use to ena
 
 ### Requirements
 
-- OpenCTI Platform >= 5.8.1
+- OpenCTI Platform >= 5.8.2
 
 ### Configuration
 

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-urlhaus-recent-payloads:
-    image: opencti/connector-urlhaus-recent-payloads:5.8.1
+    image: opencti/connector-urlhaus-recent-payloads:5.8.2
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
