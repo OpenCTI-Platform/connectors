@@ -180,7 +180,9 @@ class ImportExternalReferenceConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         external_reference = self.helper.api.external_reference.read(id=entity_id)
-        self.helper.log_info("External reference found: " + external_reference["source_name"])
+        self.helper.log_info(
+            "External reference found: " + external_reference["source_name"]
+        )
         return self._process_external_reference(external_reference)
 
     # Start the main loop
