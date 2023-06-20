@@ -1,5 +1,5 @@
 pycti==5.8.2
-stix-shifter==4.6.7
+stix-shifter==5.3.1
 stix-shifter-utils==4.6.7
 stix-shifter-modules-splunk==4.6.7
 prometheus-client==0.17.0
