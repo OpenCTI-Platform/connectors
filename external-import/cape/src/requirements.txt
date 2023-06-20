@@ -6,7 +6,7 @@ idna==3.4
 pycti==5.8.2
 python-dateutil==2.8.2
 pytz==2023.3
-regex==2021.11.10
+regex==2023.6.3
 simplejson==3.19.1
 six==1.16.0
 stix2-patterns==1.3.2
