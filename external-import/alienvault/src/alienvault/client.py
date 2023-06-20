@@ -78,10 +78,10 @@ class OTXv2Fixed(OTXv2):
                     last_page_number=int(next_page_url[next_page_url.rfind("=") + 1:])
                     next_page_url=next_page_url[:next_page_url.rfind("=")]+str(last_page_number+1)
                     last_index = 0
-                    try :
-                        start_index = page_size * (count - 1) + 1
-                        end_index = start_index + page_size
-                        for index in range(start_index, end_index):
+                    start_index = page_size * (count - 1) + 1
+                    end_index = start_index + page_size
+                    for index in range(start_index, end_index):
+                        try :
                             last_index = index
                             new_url_parsed = urlparse(next_page_url)
                             queries = parse_qs(new_url_parsed.query)
@@ -91,9 +91,10 @@ class OTXv2Fixed(OTXv2):
                             new_url_parsed = new_url_parsed._replace(query=urlencode(queries))
                             new_url = new_url_parsed.geturl()
                             yield list(self.get(new_url)["results"])[0]
-                    except RetryError as e:
-                        self.helper.log_debug(f"Retry error at pulse indexed: {last_index}")
-                        break
+                        except RetryError as e:
+                            self.helper.log_debug(f"Retry error at pulse indexed: {last_index}")
+                    continue
+                        
 
                     #TODO:get page size from config
                     
