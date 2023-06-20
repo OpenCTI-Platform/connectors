@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-alienvault:
+  connector-tweetfeed:
     image: opencti/connector-tweetfeed:5.7.6
     environment:
       - OPENCTI_URL=http://localhost
