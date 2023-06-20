@@ -53,7 +53,7 @@ class OTXv2Fixed(OTXv2):
 
         return self.request_session
     
-    def set_helper(self, helper):
+    def set_helper(self, helper : OpenCTIConnectorHelper):
         self.helper = helper
 
     def walkapi_iter(self, url, max_page=None, max_items=None, method='GET', body=None, page_size=20):
@@ -61,7 +61,7 @@ class OTXv2Fixed(OTXv2):
         count = 0
         item_count = 0
         while next_page_url:
-            self.helper.log.debug(f"Requesting {next_page_url}")
+            self.helper.log_debug(f"Requesting {next_page_url}")
             count += 1
             if max_page and count > max_page:
                 break
@@ -70,7 +70,7 @@ class OTXv2Fixed(OTXv2):
                 try:
                     data = self.get(next_page_url)
                 except RetryError as e:
-                    self.helper.log.debug("Retry error at: "+next_page_url+"...")
+                    self.helper.log_debug("Retry error at: "+next_page_url+"...")
                     if count==1:
                         next_page_url+="&page=2"
 
@@ -84,7 +84,7 @@ class OTXv2Fixed(OTXv2):
                             last_index = index
                             yield list(self.get(next_page_url, params={"limit": 1, "page": index})["results"])[0]
                     except RetryError as e:
-                        self.helper.log.debug(f"Retry error at pulse indexed: {last_index}")
+                        self.helper.log_debug(f"Retry error at pulse indexed: {last_index}")
                         break
 
                     #TODO:get page size from config
