@@ -15,7 +15,7 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util import Retry
 
 try:
-    from urllib.parse import urlencode
+    from urllib.parse import urlencode, urlparse, parse_qs
 except ImportError:
     from urllib import urlencode
 
@@ -56,8 +56,9 @@ class OTXv2Fixed(OTXv2):
     def set_helper(self, helper : OpenCTIConnectorHelper):
         self.helper = helper
 
-    def walkapi_iter(self, url, max_page=None, max_items=None, method='GET', body=None, page_size=20):
+    def walkapi_iter(self, url, max_page=None, max_items=None, method='GET', body=None):
         next_page_url = url
+        page_size = parse_qs(url)['limit'] if 'limit' in parse_qs(url) else 20
         count = 0
         item_count = 0
         while next_page_url:
@@ -82,7 +83,14 @@ class OTXv2Fixed(OTXv2):
                         end_index = start_index + page_size
                         for index in range(start_index, end_index):
                             last_index = index
-                            yield list(self.get(next_page_url, params={"limit": 1, "page": index})["results"])[0]
+                            new_url_parsed = urlparse(next_page_url)
+                            queries = parse_qs(new_url_parsed.query)
+                            queries['page'] = index
+                            queries['limit'] = 1
+
+                            new_url_parsed = new_url_parsed._replace(query=urlencode(queries))
+                            new_url = new_url_parsed.geturl()
+                            yield list(self.get(new_url)["results"])[0]
                     except RetryError as e:
                         self.helper.log_debug(f"Retry error at pulse indexed: {last_index}")
                         break
