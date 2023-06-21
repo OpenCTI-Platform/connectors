@@ -73,10 +73,10 @@ class OTXv2Fixed(OTXv2):
                 except RetryError as e:
                     self.helper.log_debug("Retry error at: "+next_page_url+"...")
                     if count==1:
-                        next_page_url+="&page=2"
+                        next_page_url+="&page=1"
 
                     last_page_number=int(next_page_url[next_page_url.rfind("=") + 1:])
-                    next_page_url=next_page_url[:next_page_url.rfind("=")]+str(last_page_number+1)
+                    next_page_url=next_page_url[:next_page_url.rfind("=") + 1]+str(last_page_number+1)
                     last_index = 0
                     start_index = page_size * (count - 1) + 1
                     end_index = start_index + page_size
