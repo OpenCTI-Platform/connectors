@@ -1,3 +1,3 @@
-pycti==5.7.6
-pydantic==1.10.8
+pycti==5.8.2
+pydantic==1.10.9
 OTXv2==1.5.12

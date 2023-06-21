@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:4000'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Recorded Future Enrichment'
+  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
+  confidence_level: 5
+  update_existing_data: true
+  log_level: 'info'
+
+recordedfuture-enrichment:
+  api_key: 'ChangeMe' #required
+  max_tlp: 'TLP:AMBER'

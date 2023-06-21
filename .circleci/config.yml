@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  slack: circleci/slack@4.8.3
+  slack: circleci/slack@4.12.5
   ms-teams: cloudradar-monitoring/ms-teams@0.0.1
 jobs:
   ensure_formatting:
@@ -233,6 +233,14 @@ jobs:
           name: Build Docker image opencti/connector-cybersixgill
           command: docker build -t opencti/connector-cybersixgill:latest . && docker tag opencti/connector-cybersixgill:latest opencti/connector-cybersixgill:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/tweetfeed
+          name: Build Docker image opencti/connector-tweetfeed
+          command: docker build -t opencti/connector-tweetfeed:latest . && docker tag opencti/connector-tweetfeed:latest opencti/connector-tweetfeed:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/threatfox
+          name: Build Docker image opencti/connector-threatfox
+          command: docker build -t opencti/connector-threatfox:latest . && docker tag opencti/connector-threatfox:latest opencti/connector-threatfox:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -326,6 +334,10 @@ jobs:
             docker push opencti/connector-sentinel:${CIRCLE_TAG}
             docker push opencti/connector-cybersixgill:latest
             docker push opencti/connector-cybersixgill:${CIRCLE_TAG}
+            docker push opencti/connector-tweetfeed:latest
+            docker push opencti/connector-tweetfeed:${CIRCLE_TAG}
+            docker push opencti/connector-threatfox:latest
+            docker push opencti/connector-threatfox:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -533,6 +545,10 @@ jobs:
           name: Build Docker image opencti/connector-zerofox
           command: docker build -t opencti/connector-zerofox:latest . && docker tag opencti/connector-zerofox:latest opencti/connector-zerofox:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/recordedfuture-enrichment
+          name: Build Docker image opencti/connector-recordedfuture-enrichment
+          command: docker build -t opencti/connector-recordedfuture-enrichment:latest . && docker tag opencti/connector-recordedfuture-enrichment:latest opencti/connector-recordedfuture-enrichment:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -632,6 +648,8 @@ jobs:
             docker push opencti/connector-qradar:${CIRCLE_TAG}
             docker push opencti/connector-zerofox:latest
             docker push opencti/connector-zerofox:${CIRCLE_TAG}
+            docker push opencti/connector-recordedfuture-enrichment:latest
+            docker push opencti/connector-recordedfuture-enrichment:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -819,6 +837,14 @@ jobs:
           name: Build Docker image opencti/connector-cybersixgill
           command: docker build -t opencti/connector-cybersixgill:rolling .
       - run:
+          working_directory: ~/opencti/external-import/tweetfeed
+          name: Build Docker image opencti/connector-tweetfeed
+          command: docker build -t opencti/connector-tweetfeed:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/threatfox
+          name: Build Docker image opencti/connector-threatfox
+          command: docker build -t opencti/connector-threatfox:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -865,6 +891,8 @@ jobs:
             docker push opencti/connector-webhook:rolling
             docker push opencti/connector-sentinel:rolling
             docker push opencti/connector-cybersixgill:rolling
+            docker push opencti/connector-tweetfeed:rolling
+            docker push opencti/connector-threatfox:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1076,6 +1104,10 @@ jobs:
           name: Build Docker image opencti/connector-zerofox
           command: docker build -t opencti/connector-zerofox:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/recordedfuture-enrichment
+          name: Build Docker image opencti/connector-recordedfuture-enrichment
+          command: docker build -t opencti/connector-recordedfuture-enrichment:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1128,6 +1160,7 @@ jobs:
             docker push opencti/connector-google-dns:rolling
             docker push opencti/connector-qradar:rolling
             docker push opencti/connector-zerofox:rolling
+            docker push opencti/connector-recordedfuture-enrichment:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

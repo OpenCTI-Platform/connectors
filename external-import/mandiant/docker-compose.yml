@@ -1,24 +1,17 @@
 version: '3'
 services:
   connector-mandiant:
-    image: opencti/connector-mandiant:5.7.6
+    image: opencti/connector-mandiant:5.8.2
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - "CONNECTOR_NAME=Mandiant Cyber Threat Intelligence"
+      - CONNECTOR_NAME=Mandiant
       - CONNECTOR_SCOPE=mandiant
-      - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_CONFIDENCE_LEVEL=80
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
-      - MANDIANT_API_URL=https://api.intelligence.mandiant.com
-      - MANDIANT_API_V4_KEY_ID=ChangeMe
-      - MANDIANT_API_V4_KEY_SECRET=ChangeMe
-      - MANDIANT_COLLECTIONS=actor,malware,indicator,vulnerability,report
-      - MANDIANT_DAYS_BEFORE_START=89
-      - MANDIANT_THREAT_ACTOR_AS_INTRUSION_SET=true
-      - MANDIANT_INTERVAL=60 # Required, in minutes
-      - "MANDIANT_REPORT_TYPES_IGNORED=Vulnerability Report" # Separated by commas, highly suggest to ignore "Vulnerability Report" due the amount of reports daily and the amount of repetitive software creating extensive delay processing reports.
-      - MANDIANT_MSCORE=0 # From 0 to 100 (Malicious)
+      - MANDIANT_API_V4_KEY_ID=
+      - MANDIANT_API_V4_KEY_SECRET=
     restart: always

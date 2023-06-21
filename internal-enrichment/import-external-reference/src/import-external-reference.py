@@ -53,6 +53,7 @@ class ImportExternalReferenceConnector:
             os.remove("data.pdf")
 
     def _process_external_reference(self, external_reference):
+        self.helper.log_info("Processing external reference....")
         if "url" not in external_reference:
             raise ValueError("No URL in this external reference, doing nothing")
         url_to_import = external_reference["url"].strip("/")
@@ -179,6 +180,9 @@ class ImportExternalReferenceConnector:
     def _process_message(self, data):
         entity_id = data["entity_id"]
         external_reference = self.helper.api.external_reference.read(id=entity_id)
+        self.helper.log_info(
+            "External reference found: " + external_reference["source_name"]
+        )
         return self._process_external_reference(external_reference)
 
     # Start the main loop

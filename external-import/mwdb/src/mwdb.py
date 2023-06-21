@@ -17,7 +17,7 @@ from pycti import Malware, OpenCTIConnectorHelper, get_config_variable
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "5.7.6"
+__version__ = "5.8.2"
 BANNER = f"""
 
  ██████   ██████ █████   ███   █████ ██████████   ███████████
@@ -352,9 +352,9 @@ class MWDB:
                         or malwsearc["name"].lower().strip() == taglabel.lower()
                     ):
                         ### create relation and continue indicates
-                        relatsions = Relationship(
+                        relationship = Relationship(
                             source_ref=sample["observable"]["id"],
-                            target_ref=cve["id"],
+                            target_ref=malwsearc["id"],
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )
@@ -373,9 +373,9 @@ class MWDB:
                     ].lower().strip() == taglabel.lower().strip().replace(
                         " ", ""
                     ):
-                        relatsions = Relationship(
+                        relationship = Relationship(
                             source_ref=sample["observable"]["id"],
-                            target_ref=cve["id"],
+                            target_ref=intrusion["id"],
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )

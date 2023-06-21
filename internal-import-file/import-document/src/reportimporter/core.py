@@ -333,8 +333,11 @@ class ReportImporter:
                             },
                         )
                     elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
+                        value = match[RESULT_FORMAT_MATCH]
+                        if match[RESULT_FORMAT_MATCH].endswith(","):
+                            value = match[RESULT_FORMAT_MATCH][:-1]
                         observable = stix2.URL(
-                            value=match[RESULT_FORMAT_MATCH],
+                            value=value,
                             object_marking_refs=object_markings,
                             custom_properties={
                                 "x_opencti_create_indicator": self.create_indicator,
@@ -401,6 +404,10 @@ class ReportImporter:
             # For containers, just insert everything in it
             if (
                 entity_stix["type"] == "report"
+                or entity_stix["type"] == "grouping"
+                or entity_stix["type"] == "case-incident"
+                or entity_stix["type"] == "case-rfi"
+                or entity_stix["type"] == "case-rft"
                 or entity_stix["type"] == "note"
                 or entity_stix["type"] == "opinion"
             ):
@@ -470,6 +477,85 @@ class ReportImporter:
                                 )
                             )
                         # Incident uses Attack Patterns
+                        elif entity_id.startswith("attack-pattern"):
+                            relationships.append(
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "uses", entity_stix["id"], entity["id"]
+                                    ),
+                                    relationship_type="uses",
+                                    source_ref=entity_stix["id"],
+                                    target_ref=entity,
+                                    allow_custom=True,
+                                )
+                            )
+                if entity_stix["type"] == "incident":
+                    for entity_id in entities_ids:
+                        # Incident attributed-to Threats
+                        if (
+                            entity_id.startswith("threat-actor")
+                            or entity_id.startswith("intrusion-set")
+                            or entity_id.startswith("campaign")
+                        ):
+                            relationships.append(
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "attributed-to",
+                                        entity_stix["id"],
+                                        entity["id"],
+                                    ),
+                                    relationship_type="attributed-to",
+                                    source_ref=entity_stix["id"],
+                                    target_ref=entity,
+                                    allow_custom=True,
+                                )
+                            )
+                        # Incident targets Vulnerabilities
+                        elif entity_id.startswith("vulnerability"):
+                            relationships.append(
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "targets",
+                                        entity_stix["id"],
+                                        entity["id"],
+                                    ),
+                                    relationship_type="targets",
+                                    source_ref=entity_stix["id"],
+                                    target_ref=entity,
+                                    allow_custom=True,
+                                )
+                            )
+                        # Incident uses Attack Patterns
+                        elif entity_id.startswith("attack-pattern"):
+                            relationships.append(
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "uses", entity_stix["id"], entity["id"]
+                                    ),
+                                    relationship_type="uses",
+                                    source_ref=entity_stix["id"],
+                                    target_ref=entity,
+                                    allow_custom=True,
+                                )
+                            )
+                if entity_stix["type"] == "threat-actor":
+                    for entity_id in entities_ids:
+                        # Threat actor targets Vulnerabilities
+                        if entity_id.startswith("vulnerability"):
+                            relationships.append(
+                                stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "targets",
+                                        entity_stix["id"],
+                                        entity["id"],
+                                    ),
+                                    relationship_type="targets",
+                                    source_ref=entity_stix["id"],
+                                    target_ref=entity,
+                                    allow_custom=True,
+                                )
+                            )
+                        # Threat Actor uses Attack Patterns
                         elif entity_id.startswith("attack-pattern"):
                             relationships.append(
                                 stix2.Relationship(
