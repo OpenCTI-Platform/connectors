@@ -4,6 +4,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List
 
+from pycti import OpenCTIConnectorHelper
+
 import pydantic
 from alienvault.models import Pulse
 from OTXv2 import OTXv2,RetryError
@@ -13,7 +15,7 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util import Retry
 
 try:
-    from urllib.parse import urlencode
+    from urllib.parse import urlencode, urlparse, parse_qs
 except ImportError:
     from urllib import urlencode
 
@@ -51,12 +53,16 @@ class OTXv2Fixed(OTXv2):
 
         return self.request_session
     
+    def set_helper(self, helper : OpenCTIConnectorHelper):
+        self.helper = helper
+
     def walkapi_iter(self, url, max_page=None, max_items=None, method='GET', body=None):
         next_page_url = url
+        page_size = parse_qs(url)['limit'] if 'limit' in parse_qs(url) else 20
         count = 0
         item_count = 0
         while next_page_url:
-            print(next_page_url)
+            self.helper.log_debug(f"Requesting {next_page_url}")
             count += 1
             if max_page and count > max_page:
                 break
@@ -65,14 +71,31 @@ class OTXv2Fixed(OTXv2):
                 try:
                     data = self.get(next_page_url)
                 except RetryError as e:
-                    # print("Retry error at: "+next_page_url+"...")
+                    self.helper.log_debug("Retry error at: "+next_page_url+"...")
                     if count==1:
-                        next_page_url+="&page=2"
+                        next_page_url+="&page=1"
 
-                    last_page_number=int(next_page_url[-1]) #TODO: this might not work if the problem is on the first page requested
-                    next_page_url=next_page_url[:-1]+str(last_page_number+1)
-                    # print("Retrying at: "+next_page_url+"...")
-                    continue #TODO: traverse the page one by one instead of skipping it
+                    last_page_number=int(next_page_url[next_page_url.rfind("=") + 1:])
+                    next_page_url=next_page_url[:next_page_url.rfind("=") + 1]+str(last_page_number+1)
+                    last_index = 0
+                    start_index = page_size * (count - 1) + 1
+                    end_index = start_index + page_size
+                    for index in range(start_index, end_index):
+                        try :
+                            last_index = index
+                            new_url_parsed = urlparse(next_page_url)
+                            queries = parse_qs(new_url_parsed.query)
+                            queries['page'] = index
+                            queries['limit'] = 1
+
+                            new_url_parsed = new_url_parsed._replace(query=urlencode(queries))
+                            new_url = new_url_parsed.geturl()
+                            yield list(self.get(new_url)["results"])[0]
+                        except RetryError as e:
+                            self.helper.log_debug(f"Retry error at pulse indexed: {last_index}")
+                    continue
+                        
+
                     #TODO:get page size from config
                     
             elif method == 'POST':
@@ -93,7 +116,7 @@ class OTXv2Fixed(OTXv2):
 class AlienVaultClient:
     """AlienVault client."""
 
-    def __init__(self, base_url: str, api_key: str) -> None:
+    def __init__(self, base_url: str, api_key: str, helper : OpenCTIConnectorHelper) -> None:
         """
         Initializer.
         :param base_url: Base API url.
@@ -102,6 +125,7 @@ class AlienVaultClient:
         server = base_url if not base_url.endswith("/") else base_url[:-1]
 
         self.otx = OTXv2Fixed(api_key, server=server)
+        self.otx.set_helper(helper=helper)
 
     def get_pulses_subscribed(
         self,

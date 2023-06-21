@@ -164,7 +164,7 @@ class AlienVault:
         author = self._create_author()
 
         # Create AlienVault client
-        client = AlienVaultClient(base_url, api_key)
+        client = AlienVaultClient(base_url, api_key, self.helper)
 
         # Create pulse importer
         pulse_importer_config = PulseImporterConfig(
