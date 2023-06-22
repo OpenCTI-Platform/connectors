@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-rf-enrichment:
-    image: opencti-rf-enrichment:latest
+    image: opencti/connector-recordedfuture-enrichment:5.8.2
     environment:
       - OPENCTI_URL=http://opencti:4000
       - OPENCTI_TOKEN=CHANGME
