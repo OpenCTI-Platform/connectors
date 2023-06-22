@@ -34,3 +34,9 @@ The connector can be configured with the following variables:
 | `update_existing_data`     | `CONNECTOR_UPDATE_EXISTING_DATA`   | `true`                                           | Update existing data bundle flag.                              |
 | `interval`                 | `CONNECTOR_INTERVAL`               | `86400`                                          | Interval in minutes between runs.                              |
 | `loop_interval`            | `CONNECTOR_LOOP_INTERVAL`          | `600`                                            | Interval in minutes between loops.                             |
+
+## Filtering
+
+The URL has several query parameters that can be used to filter the data received, such as IP/domain, confidence level, or the threat_type. See the API docs [here](https://api.threatanalysis.io/prod/docs/index.html).
+
+Example: `https://api.threatanalysis.io/prod/all/1d/json?filter=domain&confidence=high&threat_type=recon`
