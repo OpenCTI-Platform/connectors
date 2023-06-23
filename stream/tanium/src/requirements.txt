@@ -1,4 +1,4 @@
-pycti==5.8.2
+pycti==5.8.3
 ioc_writer==0.3.3
 stix2-slider==4.0.0
 maec==4.1.0.17
