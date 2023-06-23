@@ -398,7 +398,10 @@ class IntelManager(object):
                 f"/dashboard/observations/indicators/{entity['id']}",
             )
 
-        if self.config.get("output.include_labels", False) and data.get("labels", None) is not None:
+        if (
+            self.config.get("output.include_labels", False)
+            and data.get("labels", None) is not None
+        ):
             _document["labels"] = data.get("labels")
 
         _document["event"][

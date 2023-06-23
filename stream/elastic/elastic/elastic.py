@@ -158,7 +158,9 @@ class ElasticConnector:
             logger.error(f"Unable to process the message: {msg}")
             raise ValueError("Cannot process the message: " + msg)
 
-        logger.debug(f"[PROCESS] Message (id: {event_id}, date: {timestamp}, data: {data})")
+        logger.debug(
+            f"[PROCESS] Message (id: {event_id}, date: {timestamp}, data: {data})"
+        )
 
         if msg.event == "create":
             return self.handle_create(timestamp, data)

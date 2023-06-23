@@ -140,7 +140,9 @@ class SignalsManager(Thread):
                             continue
 
                         if _doc["found"] is not True:
-                            logger.debug(f"Document with indicator id '{indicator['matched']['id']}' not found. Continue")
+                            logger.debug(
+                                f"Document with indicator id '{indicator['matched']['id']}' not found. Continue"
+                            )
                             continue
 
                         if (
