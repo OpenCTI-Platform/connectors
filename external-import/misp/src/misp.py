@@ -1932,47 +1932,49 @@ class Misp:
                 )
             ):
                 tag_value_split = tag["name"].split('="')
-                tag_value = tag_value_split[1][:-1].strip()
-                if " - G" in tag_value:
-                    name = tag_value.split(" - G")[0]
-                elif "APT " in tag_value:
-                    name = tag_value.replace("APT ", "APT")
-                else:
-                    name = tag_value
-                if name not in added_names:
-                    elements["intrusion_sets"].append(
-                        stix2.IntrusionSet(
-                            id=IntrusionSet.generate_id(name),
-                            name=name,
-                            description="Imported from MISP tag",
-                            created_by_ref=author["id"],
-                            object_marking_refs=markings,
-                            allow_custom=True,
+                if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
+                    tag_value = tag_value_split[1][:-1].strip()
+                    if " - G" in tag_value:
+                        name = tag_value.split(" - G")[0]
+                    elif "APT " in tag_value:
+                        name = tag_value.replace("APT ", "APT")
+                    else:
+                        name = tag_value
+                    if name not in added_names:
+                        elements["intrusion_sets"].append(
+                            stix2.IntrusionSet(
+                                id=IntrusionSet.generate_id(name),
+                                name=name,
+                                description="Imported from MISP tag",
+                                created_by_ref=author["id"],
+                                object_marking_refs=markings,
+                                allow_custom=True,
+                            )
                         )
-                    )
-                    added_names.append(name)
+                        added_names.append(name)
             # Get the linked tools
             if tag["name"].startswith("misp-galaxy:mitre-tool") or tag[
                 "name"
             ].startswith("misp-galaxy:mitre-enterprise-attack-tool"):
                 tag_value_split = tag["name"].split('="')
-                tag_value = tag_value_split[1][:-1].strip()
-                if " - S" in tag_value:
-                    name = tag_value.split(" - S")[0]
-                else:
-                    name = tag_value
-                if name not in added_names:
-                    elements["tools"].append(
-                        stix2.Tool(
-                            id=Tool.generate_id(name),
-                            name=name,
-                            description="Imported from MISP tag",
-                            created_by_ref=author["id"],
-                            object_marking_refs=markings,
-                            allow_custom=True,
+                if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
+                    tag_value = tag_value_split[1][:-1].strip()
+                    if " - S" in tag_value:
+                        name = tag_value.split(" - S")[0]
+                    else:
+                        name = tag_value
+                    if name not in added_names:
+                        elements["tools"].append(
+                            stix2.Tool(
+                                id=Tool.generate_id(name),
+                                name=name,
+                                description="Imported from MISP tag",
+                                created_by_ref=author["id"],
+                                object_marking_refs=markings,
+                                allow_custom=True,
+                            )
                         )
-                    )
-                    added_names.append(name)
+                        added_names.append(name)
             # Get the linked malwares
             if (
                 tag["name"].startswith("misp-galaxy:mitre-malware")
@@ -1983,61 +1985,64 @@ class Misp:
                 or tag["name"].startswith("misp-galaxy:misp-malpedia")
             ):
                 tag_value_split = tag["name"].split('="')
-                tag_value = tag_value_split[1][:-1].strip()
-                if " - S" in tag_value:
-                    name = tag_value.split(" - S")[0]
-                else:
-                    name = tag_value
-                if name not in added_names:
-                    elements["malwares"].append(
-                        stix2.Malware(
-                            id=Malware.generate_id(name),
-                            name=name,
-                            is_family=True,
-                            description="Imported from MISP tag",
-                            created_by_ref=author["id"],
-                            object_marking_refs=markings,
-                            allow_custom=True,
+                if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
+                    tag_value = tag_value_split[1][:-1].strip()
+                    if " - S" in tag_value:
+                        name = tag_value.split(" - S")[0]
+                    else:
+                        name = tag_value
+                    if name not in added_names:
+                        elements["malwares"].append(
+                            stix2.Malware(
+                                id=Malware.generate_id(name),
+                                name=name,
+                                is_family=True,
+                                description="Imported from MISP tag",
+                                created_by_ref=author["id"],
+                                object_marking_refs=markings,
+                                allow_custom=True,
+                            )
                         )
-                    )
-                    added_names.append(name)
+                        added_names.append(name)
             # Get the linked attack_patterns
             if tag["name"].startswith("mitre-attack:attack-pattern"):
                 tag_value_split = tag["name"].split('="')
-                tag_value = tag_value_split[1][:-1].strip()
-                if " - T" in tag_value:
-                    name = tag_value.split(" - T")[0]
-                else:
-                    name = tag_value
-                if name not in added_names:
-                    elements["attack_patterns"].append(
-                        stix2.AttackPattern(
-                            id=AttackPattern.generate_id(name),
-                            name=name,
-                            description="Imported from MISP tag",
-                            created_by_ref=author["id"],
-                            object_marking_refs=markings,
-                            allow_custom=True,
+                if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
+                    tag_value = tag_value_split[1][:-1].strip()
+                    if " - T" in tag_value:
+                        name = tag_value.split(" - T")[0]
+                    else:
+                        name = tag_value
+                    if name not in added_names:
+                        elements["attack_patterns"].append(
+                            stix2.AttackPattern(
+                                id=AttackPattern.generate_id(name),
+                                name=name,
+                                description="Imported from MISP tag",
+                                created_by_ref=author["id"],
+                                object_marking_refs=markings,
+                                allow_custom=True,
+                            )
                         )
-                    )
-                    added_names.append(name)
+                        added_names.append(name)
             # Get the linked sectors
             if tag["name"].startswith("misp-galaxy:sector"):
                 tag_value_split = tag["name"].split('="')
-                name = tag_value_split[1][:-1].strip()
-                if name not in added_names:
-                    elements["sectors"].append(
-                        stix2.Identity(
-                            id=Identity.generate_id(name, "class"),
-                            name=name,
-                            description="Imported from MISP tag",
-                            identity_class="class",
-                            created_by_ref=author["id"],
-                            object_marking_refs=markings,
-                            allow_custom=True,
+                if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
+                    name = tag_value_split[1][:-1].strip()
+                    if name not in added_names:
+                        elements["sectors"].append(
+                            stix2.Identity(
+                                id=Identity.generate_id(name, "class"),
+                                name=name,
+                                description="Imported from MISP tag",
+                                identity_class="class",
+                                created_by_ref=author["id"],
+                                object_marking_refs=markings,
+                                allow_custom=True,
+                            )
                         )
-                    )
-                    added_names.append(name)
+                        added_names.append(name)
         return elements
 
     def resolve_type(self, type, value):
@@ -2247,18 +2252,22 @@ class Misp:
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
                     tag_value_split = tag["name"].split('="')
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
+                        tag_value = tag_value_split[1][:-1].strip()
                 elif ":" in tag["name"]:
                     tag_value_split = tag["name"].split(":")
-                    tag_value = tag_value_split[1].strip()
+                    if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
+                        tag_value = tag_value_split[1].strip()
                 if tag_value.isdigit():
                     if ":" in tag["name"]:
                         tag_value_split = tag["name"].split(":")
-                        tag_value = tag_value_split[1].strip()
+                        if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
+                            tag_value = tag_value_split[1].strip()
                     else:
                         tag_value = tag["name"]
                 if '="' in tag_value:
-                    tag_value = tag_value.replace('="', "-")[:-1]
+                    if len(tag_value) > 0:
+                        tag_value = tag_value.replace('="', "-")[:-1]
                 opencti_tags.append(tag_value)
         return opencti_tags
 

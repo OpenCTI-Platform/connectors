@@ -184,13 +184,11 @@ class RFEnrichmentConnector:
 
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        self.helper.log_info("OBS IS")
-        self.helper.log_info(observable)
         # Extract IOC from entity data
         observable_value = observable["observable_value"]
         entity_type = observable["entity_type"]
 
-        tlp = "TLP:WHITE"
+        tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
