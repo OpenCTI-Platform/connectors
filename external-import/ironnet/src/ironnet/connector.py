@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import logging
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import Dict, Iterable, List, Optional, Union
 
 import pycti
 import stix2
 import yaml
 from pycti import Indicator
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from stix2.v21 import _Observable as Observable  # noqa
 
 from .client import IronNetClient, IronNetItem
 from .config import RootConfig
@@ -24,6 +23,7 @@ __all__ = [
 ]
 
 log = logging.getLogger(__name__)
+ObservableType = Union[stix2.DomainName, stix2.IPv4Address, stix2.IPv6Address]
 
 
 class IronNetConnector:
@@ -75,18 +75,27 @@ class IronNetConnector:
         :param work_id: Work ID
         :return: None
         """
+
         bundle_objects = []
 
         results = self._client.query()
-        for result in results:
-            obs = self._create_observable(result)
+        aggregated: Dict[str, List[IronNetItem]] = defaultdict(list)
 
-            if obs:
-                bundle_objects.extend(filter(None, [*obs]))
+        # Aggregate under the ioc value so we can merge objects together
+        for result in results:
+            aggregated[result.indicator].append(result)
+
+        for agg in aggregated.values():
+            stix_objects = self._create_stix(agg)
+            bundle_objects.extend(stix_objects)
 
         if len(bundle_objects) == 0:
             log.info("No objects to bundle")
             return
+
+        # Dedup the bundle (mainly malware objects), keep the first seen
+        bundle_objects = {obj.id: obj for obj in reversed(bundle_objects)}
+        bundle_objects = list(bundle_objects.values())
 
         log.info("Bundling %d objects", len(bundle_objects))
 
@@ -102,7 +111,16 @@ class IronNetConnector:
             work_id=work_id,
         )
 
-    def _create_observable(self, result: IronNetItem) -> Optional[Observation]:
+    def _create_stix(
+        self, results: List[IronNetItem]
+    ) -> Iterable[
+        Union[
+            ObservableType,
+            stix2.Indicator,
+            stix2.Malware,
+            stix2.Relationship,
+        ]
+    ]:
         """
         Create an observable.
 
@@ -110,57 +128,55 @@ class IronNetConnector:
         :return: An observation
         """
 
+        observable = self._create_observable(results)
+        if observable:
+            yield observable
+        else:
+            return
+
+        indicator = self._create_indicator(observable)
+        if indicator:
+            yield indicator
+
+        malwares = list(self._create_malwares(results, observable))
+        yield from malwares
+
+        yield from self._create_relationships(observable, indicator, malwares)
+
+    def _create_observable(
+        self,
+        results: List[IronNetItem],
+    ) -> Optional[ObservableType]:
+        """Create an observable"""
+
+        result = results[0]
         value = result.indicator
-        is_ip_indicator = False
+        marking_refs = [resolve_tlp(result.tlp).id]
+        score = resolve_confidence(result.confidence)
 
-        # TLP marking
-        marking_ref = {
-            "WHITE": stix2.TLP_WHITE,
-            "CLEAR": stix2.TLP_WHITE,
-            "GREEN": stix2.TLP_GREEN,
-            "AMBER": stix2.TLP_AMBER,
-            "AMBER+STRICT": stix2.TLP_AMBER,
-            "RED": stix2.TLP_RED,
-        }.get(result.tlp)
-        if marking_ref is None:
-            raise ValueError(f"Invalid marking type: {result.tlp}")
-        marking_refs = [marking_ref.id]
+        threats = {result.threat for result in results}
+        threat_types = {result.threat_type for result in results}
+        labels = list(threats.union(threat_types))
 
-        # Score/confidence mapping
-        score = {
-            "Low": 20,
-            "Medium": 60,
-            "High": 100,
-        }.get(result.confidence)
-        if score is None:
-            raise ValueError(f"Invalid confidence/score: {result.confidence}")
+        threat_types_str = ", ".join(threats)
+        description = f"Indicator associated with {threat_types_str}."
 
         if result.type == "domain-name":
             stix_type = stix2.DomainName
-            pattern = f"[domain-name:value = '{value}']"
-            main_observable_type = "Domain-Name"
-
         elif result.type == "ipv4-addr":
             stix_type = stix2.IPv4Address
-            pattern = f"[ipv4-addr:value = '{value}']"
-            main_observable_type = "IPv4-Addr"
-            is_ip_indicator = True
-
         elif result.type == "ipv6-addr":
             stix_type = stix2.IPv6Address
-            pattern = f"[ipv6-addr:value = '{value}']"
-            main_observable_type = "IPv6-Addr"
-            is_ip_indicator = True
-
         else:
-            log.warning("Could not determine hostname: %s", value)
+            log.warning(
+                "Could not determine observable type: %s (%s)",
+                result.indicator,
+                result.type,
+            )
             return None
 
-        description = f"Indicator associated with {result.threat}"
-        labels = [result.threat, result.threat_type]
-
         log.debug("Creating observable: %s", value)
-        sco = stix_type(
+        return stix_type(
             value=value,
             object_marking_refs=marking_refs,
             custom_properties=dict(
@@ -171,55 +187,158 @@ class IronNetConnector:
             ),
         )
 
+    def _create_malwares(
+        self,
+        results: List[IronNetItem],
+        observable: ObservableType,
+    ) -> Iterable[stix2.Malware]:
+        """Create a simple malware object"""
+
+        threats = {result.threat for result in results}
+        for name in threats:
+            yield stix2.Malware(
+                id=pycti.Malware.generate_id(name),
+                name=name,
+                is_family=True,
+                created_by_ref=self._identity_id,
+                confidence=self._helper.connect_confidence_level,
+                object_marking_refs=observable.object_marking_refs,
+            )
+
+    def _create_indicator(
+        self,
+        observable: ObservableType,
+    ) -> Optional[stix2.Indicator]:
+        """Create an indicator"""
+
+        value = observable.value
+
+        if observable.type == "domain-name":
+            pattern = f"[domain-name:value = '{value}']"
+            main_observable_type = "Domain-Name"
+            is_ip_indicator = False
+        elif observable.type == "ipv4-addr":
+            pattern = f"[ipv4-addr:value = '{value}']"
+            main_observable_type = "IPv4-Addr"
+            is_ip_indicator = True
+        elif observable.type == "ipv6-addr":
+            pattern = f"[ipv6-addr:value = '{value}']"
+            main_observable_type = "IPv6-Addr"
+            is_ip_indicator = True
+        else:
+            log.warning("Could not determine observable type: %s", value)
+            return None
+
         create_indicator = self._config.ironnet.create_indicators
         if is_ip_indicator:
             create_indicator &= self._config.ironnet.create_ip_indicators
 
-        sdo = sro = None
-        if create_indicator:
-            valid_until = (
-                (date.today() + self._config.ironnet.ip_indicator_valid_until)
-                if is_ip_indicator
-                else None
-            )
+        if not create_indicator:
+            return None
 
-            log.debug("Creating indicator: %s", pattern)
-            sdo = stix2.Indicator(
-                id=Indicator.generate_id(pattern),
-                pattern_type="stix",
-                pattern=pattern,
-                name=value,
-                description=description,
-                labels=labels,
-                valid_until=valid_until,
-                created_by_ref=self._identity_id,
-                confidence=self._helper.connect_confidence_level,
-                object_marking_refs=marking_refs,
-                custom_properties=dict(
-                    x_opencti_score=score,
-                    x_opencti_main_observable_type=main_observable_type,
-                ),
-            )
+        valid_until = (
+            (date.today() + self._config.ironnet.ip_indicator_valid_until)
+            if is_ip_indicator
+            else None
+        )
 
+        log.debug("Creating indicator: %s", pattern)
+        return stix2.Indicator(
+            id=Indicator.generate_id(pattern),
+            pattern_type="stix",
+            pattern=pattern,
+            name=value,
+            description=observable.x_opencti_description,
+            labels=observable.x_opencti_labels,
+            valid_until=valid_until,
+            created_by_ref=self._identity_id,
+            confidence=self._helper.connect_confidence_level,
+            object_marking_refs=observable.object_marking_refs,
+            custom_properties=dict(
+                x_opencti_score=observable.x_opencti_score,
+                x_opencti_main_observable_type=main_observable_type,
+            ),
+        )
+
+    def _create_relationships(
+        self,
+        observable: ObservableType,
+        indicator: Optional[stix2.Indicator],
+        malwares: List[stix2.Malware],
+    ) -> List[stix2.Relationship]:
+        """Create relationships between all available objects"""
+
+        if indicator:
             rel_type = "based-on"
-            sro = stix2.Relationship(
-                id=pycti.StixCoreRelationship.generate_id(rel_type, sdo.id, sco.id),
-                source_ref=sdo.id,
+            yield stix2.Relationship(
+                id=pycti.StixCoreRelationship.generate_id(
+                    rel_type, indicator.id, observable.id
+                ),
+                source_ref=indicator.id,
                 relationship_type=rel_type,
-                target_ref=sco.id,
+                target_ref=observable.id,
                 created_by_ref=self._identity_id,
                 confidence=self._helper.connect_confidence_level,
-                description=description,
-                labels=labels,
-                object_marking_refs=marking_refs,
+                object_marking_refs=observable.object_marking_refs,
             )
 
-        return Observation(sco, sdo, sro)
+        for malware in malwares:
+            rel_type = "communicates-with"
+            yield stix2.Relationship(
+                id=pycti.StixCoreRelationship.generate_id(
+                    rel_type, malware.id, observable.id
+                ),
+                source_ref=malware.id,
+                relationship_type=rel_type,
+                target_ref=observable.id,
+                created_by_ref=self._identity_id,
+                confidence=self._helper.connect_confidence_level,
+                object_marking_refs=observable.object_marking_refs,
+            )
+
+            if indicator:
+                rel_type = "indicates"
+                yield stix2.Relationship(
+                    id=pycti.StixCoreRelationship.generate_id(
+                        rel_type, indicator.id, malware.id
+                    ),
+                    source_ref=indicator.id,
+                    relationship_type=rel_type,
+                    target_ref=malware.id,
+                    created_by_ref=self._identity_id,
+                    confidence=self._helper.connect_confidence_level,
+                    object_marking_refs=indicator.object_marking_refs,
+                )
 
 
-class Observation(NamedTuple):
-    """Result from making an observable"""
+def resolve_tlp(tlp: str) -> stix2.MarkingDefinition:
+    """Resolve the marking definition to a stix object"""
 
-    sco: Observable
-    sdo: stix2.Indicator = None
-    sro: stix2.Relationship = None
+    marking_ref = {
+        "WHITE": stix2.TLP_WHITE,
+        "CLEAR": stix2.TLP_WHITE,
+        "GREEN": stix2.TLP_GREEN,
+        "AMBER": stix2.TLP_AMBER,
+        "AMBER+STRICT": stix2.TLP_AMBER,
+        "RED": stix2.TLP_RED,
+    }.get(tlp)
+
+    if marking_ref is None:
+        raise ValueError(f"Invalid marking type: {tlp}")
+
+    return marking_ref
+
+
+def resolve_confidence(confidence: str) -> int:
+    """Resolve the score from the result confidence"""
+
+    score = {
+        "Low": 20,
+        "Medium": 60,
+        "High": 100,
+    }.get(confidence)
+
+    if score is None:
+        raise ValueError(f"Invalid confidence/score: {confidence}")
+
+    return score
