@@ -1,9 +1,11 @@
 # Elastic Threat Intel Connector
 
-This connector allows organizations to feed their Elastic platform using OpenCTI knowledge. It has two modes: `ecs` and `stix`.
+This connector allows organizations to feed their Elastic platform using OpenCTI knowledge. It has three modes: `ecs`, `ecs_no_signals`, and `stix`.
 
 `ecs` mode writes indicator objects in ECS format to Elasticsearch for the purpose of using ECS-formatted "[indicator match](https://www.elastic.co/guide/en/security/current/rules-ui-create.html#create-indicator-rule)"
 rules in the Detection Engine. It will also create a background thread to poll for matches in the `.siem-signals-*` indices and will record them in OpenCTI as Sightings.
+
+`ecs_no_signals` is the similar, it just avoids the polling of signals. Usefull, for example, if multiple elastic connectors are running for the same target instance. 
 
 `stix` mode writes the raw STIX objects used internally by OpenCTI to the index specified.
 
@@ -46,7 +48,7 @@ variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and
 | `connector.confidence_level`      | `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 0 and 100).                                                                                         |
 | `connector.id`                    | `CONNECTOR_ID`               | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                                       |
 | `connector.log_level`             | `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                            |
-| `connector.mode`                  | `CONNECTOR_MODE`             | No        | Must be 'ecs' for ECS-formatted threat indicator documents or 'stix' for raw OpenCTI STIX documents. Defaults to 'ecs'.                                                  |
+| `connector.mode`                  | `CONNECTOR_MODE`             | No        | Must be 'ecs' for ECS-formatted threat indicator documents, 'ecs_no_signals' if signal polling is not desired, or 'stix' for raw OpenCTI STIX documents. Defaults to 'ecs'.                                                  |
 | `connector.name`                  | `CONNECTOR_NAME`             | Yes       | The name of the Elastic instance, to identify it if you have multiple Elastic instances connectors.                                                                      |
 | `connector.scope`                 | `CONNECTOR_SCOPE`            | Yes       | Must be `elastic`, not used in this connector.                                                                                                                           |
 | `connector.type`                  | `CONNECTOR_TYPE`             | Yes       | Must be `STREAM` (this is the connector type).                                                                                                                           |

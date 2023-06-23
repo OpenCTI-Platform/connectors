@@ -120,6 +120,8 @@ class SignalsManager(Thread):
                 )
                 ids_dict = {}
 
+                logger.debug(f"Signal request result: {results}")
+
                 # Parse the results
                 for hit in results["hits"]["hits"]:
                     # This depends on ECS mappings >= 1.11
@@ -138,6 +140,7 @@ class SignalsManager(Thread):
                             continue
 
                         if _doc["found"] is not True:
+                            logger.debug(f"Document with indicator id '{indicator['matched']['id']}' not found. Continue")
                             continue
 
                         if (
@@ -176,10 +179,10 @@ class SignalsManager(Thread):
                                 )
                                 continue
 
-                        ecs_version_lt8 = version.parse(
-                            hit["_source"]["ecs"]["version"]
+                        kbn_version_lt8 = version.parse(
+                            hit["_source"]["kibana.version"]
                         ) < version.parse("8.0.0")
-                        if ecs_version_lt8:
+                        if kbn_version_lt8:
                             _timestamp = hit["_source"]["signal"]["original_time"]
                         else:
                             _timestamp = hit["_source"]["kibana.alert.original_time"]
@@ -226,11 +229,12 @@ class SignalsManager(Thread):
                             created=None,
                             modified=None,
                             confidence=confidence,
-                            created_by=entity_id,
-                            object_marking=None,
-                            object_label=None,
-                            external_references=None,
+                            createdBy=entity_id,
+                            objectMarking=None,
+                            objectLabel=None,
+                            externalReferences=None,
                             update=False,
+                            x_opencti_stix_ids=None,
                         )
 
                 # Wait allows us to return earlier during a shutdown
