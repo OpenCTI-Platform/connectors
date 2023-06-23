@@ -169,7 +169,7 @@ class SplunkConnector:
 
     def enrich_payload(self, payload: dict):
         # add stream name
-        payload["stream_name"] = self.helper.get_stream_name()["name"]
+        payload["stream_name"] = self.helper.get_stream_collection()["name"]
 
         if (
             "type" in payload
