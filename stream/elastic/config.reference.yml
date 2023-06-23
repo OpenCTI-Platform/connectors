@@ -16,7 +16,8 @@ connector:
   live_stream_id: 'live'
   live_stream_listen_delete: true
   start_timestamp: '1655890657402' ### format example Wed, 22 Jun 2022 09:46:24 GMT
-  mode: ecs # Options are 'ecs' (indicators only) or 'stix' (raw STIX documents)
+  mode: ecs # Options are 'ecs' (indicators only), 'ecs_no_signals' (same as 'ecs' but no signal import) 
+            # or 'stix' (raw STIX documents)
 
 # =============================== Elastic Cloud ================================
 # The cloud.id setting overwrites the `elastic.hosts`
@@ -27,27 +28,31 @@ connector:
 # API key is recommended
 #cloud.auth:
 
-output.elasticsearch:
-  # ---------------------------- Elasticsearch Output ----------------------------
-  # Array of hosts to connect to.
-  # Scheme and port can be left out and will be set to the default (http and 9200)
-  # In case you specify an additional path, the scheme is required: http://localhost:9200/path
-  # IPv6 addresses should always be defined as: https://[2001:db8::1]:9200
-  hosts: ["localhost:9200"]
-  # Authentication credentials - either API key or username/password.
-  #api_key: "id:api_key"
-  #username: "elastic"
-  #password: "changeme"
-  ssl_verify: true
+output:
+  elasticsearch:
+    # ---------------------------- Elasticsearch Output ----------------------------
+    # Array of hosts to connect to.
+    # Scheme and port can be left out and will be set to the default (http and 9200)
+    # In case you specify an additional path, the scheme is required: http://localhost:9200/path
+    # IPv6 addresses should always be defined as: https://[2001:db8::1]:9200
+    hosts: ["localhost:9200"]
+    # Authentication credentials - either API key or username/password.
+    #api_key: "id:api_key"
+    #username: "elastic"
+    #password: "changeme"
+    ssl_verify: true
 
-  # Optional index name. The default is "opencti" plus the date. Uses Elastic date math syntax.
-  # Custom index settings are ignored when ILM is enabled.  Be sure to update
-  # `setup.template.pattern` if you change the output index.
-  #index: "opencti-{now/d}"
+    # Optional index name. The default is "opencti" plus the date. Uses Elastic date math syntax.
+    # Custom index settings are ignored when ILM is enabled.  Be sure to update
+    # `setup.template.pattern` if you change the output index.
+    #index: "opencti-{now/d}"
 
-  # Set the following flag to "true" if the elasticsearch access do not have cluster 
-  # "monitor" privileges
-  #reduced_privileges: false 
+    # Set the following flag to "true" if the elasticsearch access do not have cluster 
+    # "monitor" privileges
+    #reduced_privileges: false 
+  
+  # store STIX object labels with the indicators in elasticsearch if in 'ecs' or 'ecs_no_signals' mode. 
+  include_labels: False
 
 # ====================== Index Lifecycle Management (ILM) ======================
 

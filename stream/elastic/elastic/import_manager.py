@@ -141,8 +141,8 @@ class IntelManager(object):
         from string import Template
 
         logger.info("Setting up Elasticsearch for OpenCTI Connector")
-        if self.config.get("output.elasticsearch.reduced_privileges", True):
-            return self.es_client.ping()
+        if not self.config.get("output.elasticsearch.reduced_privileges", False):
+            assert self.es_client.ping()
 
         _ilm_enabled: bool = self.config.get("setup.ilm.enabled", True)
         _policy_name: str = self.config.get("setup.ilm.policy_name", "opencti")
@@ -397,6 +397,9 @@ class IntelManager(object):
                 f"{self.config.get('opencti.platform_url')}",
                 f"/dashboard/observations/indicators/{entity['id']}",
             )
+
+        if self.config.get("output.include_labels", False) and data.get("labels", None) is not None:
+            _document["labels"] = data.get("labels")
 
         _document["event"][
             "risk_score"

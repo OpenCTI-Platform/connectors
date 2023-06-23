@@ -57,6 +57,10 @@ class ElasticConnector:
                 opencti_client=self.helper,
                 elasticsearch_client=self.elasticsearch,
             )
+        elif self.config["connector.mode"] == "ecs_no_signals":
+            self.import_manager = IntelManager(
+                self.helper, self.elasticsearch, self.config, datadir
+            )
         elif self.config["connector.mode"] == "stix":
             self.import_manager = StixManager(
                 self.helper, self.elasticsearch, self.config, datadir
@@ -65,7 +69,7 @@ class ElasticConnector:
             self.sightings_manager = None
         else:
             logger.error(
-                f"connector.mode: {self.config['connector.mode']} is unsupported. Should be 'ecs' or 'stix'"
+                f"connector.mode: {self.config['connector.mode']} is unsupported. Should be 'ecs', 'ecs_no_signals' or 'stix'"
             )
 
     def _connect_elasticsearch(self) -> None:
@@ -154,7 +158,7 @@ class ElasticConnector:
             logger.error(f"Unable to process the message: {msg}")
             raise ValueError("Cannot process the message: " + msg)
 
-        logger.debug(f"[PROCESS] Message (id: {event_id}, date: {timestamp})")
+        logger.debug(f"[PROCESS] Message (id: {event_id}, date: {timestamp}, data: {data})")
 
         if msg.event == "create":
             return self.handle_create(timestamp, data)
