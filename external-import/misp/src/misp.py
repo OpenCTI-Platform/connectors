@@ -611,7 +611,7 @@ class Misp:
                 if "Tag" in event["Event"]:
                     event_tags = event["Event"]["Tag"]
                     for tag in event_tags:
-                        tag_name = tag["name"].lower()
+                        tag_name = tag["name"]
                         if tag_name.startswith("creator") and "=" in tag_name:
                             author_name = tag_name.split("=")[1]
                             author = stix2.Identity(
@@ -2162,16 +2162,21 @@ class Misp:
     def resolve_markings(self, tags, with_default=True):
         markings = []
         for tag in tags:
-            tag_name = tag["name"].lower()
+            tag_name = tag["name"]
+            tag_name_lower = tag["name"].lower()
             if self.misp_markings_from_tags:
                 if (
-                    tag_name.startswith("marking")
-                    and ":" in tag_name
+                    ":" in tag_name
                     and "=" in tag_name
+                    and tag_name_lower.startswith("marking")
                 ):
-                    marking_definition = tag_name.split(":")[1]
-                    marking_type = marking_definition.split("=")[0]
-                    marking_name = marking_definition.split("=")[1]
+                    if tag_name_lower.includes("tlp="):
+                        marking_type = "TLP"
+                        marking_name = tag_name.split("=")[1].upper()
+                    else:
+                        marking_definition_split = tag_name.split(":")
+                        marking_type = marking_definition_split.split("=")[0]
+                        marking_name = marking_definition_split.split("=")[1]
                     marking = stix2.MarkingDefinition(
                         id=MarkingDefinition.generate_id(marking_type, marking_name),
                         definition_type="statement",
@@ -2181,15 +2186,15 @@ class Misp:
                         x_opencti_definition=marking_name,
                     )
                     markings.append(marking)
-            if tag_name == "tlp:clear":
+            if tag_name_lower == "tlp:clear":
                 markings.append(stix2.TLP_WHITE)
-            if tag_name == "tlp:white":
+            if tag_name_lower == "tlp:white":
                 markings.append(stix2.TLP_WHITE)
-            if tag_name == "tlp:green":
+            if tag_name_lower == "tlp:green":
                 markings.append(stix2.TLP_GREEN)
-            if tag_name == "tlp:amber":
+            if tag_name_lower == "tlp:amber":
                 markings.append(stix2.TLP_AMBER)
-            if tag_name == "tlp:amber+strict":
+            if tag_name_lower == "tlp:amber+strict":
                 marking = stix2.MarkingDefinition(
                     id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
                     definition_type="statement",
@@ -2199,7 +2204,7 @@ class Misp:
                     x_opencti_definition="TLP:AMBER+STRICT",
                 )
                 markings.append(marking)
-            if tag_name == "tlp:red":
+            if tag_name_lower == "tlp:red":
                 markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
             markings.append(stix2.TLP_WHITE)
