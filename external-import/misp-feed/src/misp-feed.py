@@ -20,6 +20,7 @@ from pycti import (
     IntrusionSet,
     Location,
     Malware,
+    MarkingDefinition,
     Note,
     OpenCTIConnectorHelper,
     Report,
@@ -27,7 +28,6 @@ from pycti import (
     StixSightingRelationship,
     Tool,
     get_config_variable,
-    MarkingDefinition,
 )
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
