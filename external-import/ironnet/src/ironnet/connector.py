@@ -141,7 +141,7 @@ class IronNetConnector:
         malwares = list(self._create_malwares(results, observable))
         yield from malwares
 
-        yield from self._create_relationships(observable, indicator, malwares)
+        yield from self._create_relationships(results, observable, indicator, malwares)
 
     def _create_observable(
         self,
@@ -151,15 +151,21 @@ class IronNetConnector:
 
         result = results[0]
         value = result.indicator
-        marking_refs = [resolve_tlp(result.tlp).id]
+        marking_refs = [resolve_tlp(result.tlp)]
         score = resolve_confidence(result.confidence)
 
         threats = {result.threat for result in results}
         threat_types = {result.threat_type for result in results}
         labels = list(threats.union(threat_types))
 
-        threat_types_str = ", ".join(threats)
-        description = f"Indicator associated with {threat_types_str}."
+        threat_ports = defaultdict(set)
+        for result in results:
+            threat_ports[result.threat].add(result.port)
+
+        description = "Observable associated with: "
+        for threat_name, threat_ports in threat_ports.items():
+            threat_ports = ",".join(map(str, sorted(threat_ports)))
+            description += f"\n- `{threat_name}` on port(s) `{threat_ports}`"
 
         if result.type == "domain-name":
             stix_type = stix2.DomainName
@@ -242,13 +248,17 @@ class IronNetConnector:
             else None
         )
 
+        description = observable.x_opencti_description.replace(
+            "Observable", "Indicator", 1
+        )
+
         log.debug("Creating indicator: %s", pattern)
         return stix2.Indicator(
             id=Indicator.generate_id(pattern),
             pattern_type="stix",
             pattern=pattern,
             name=value,
-            description=observable.x_opencti_description,
+            description=description,
             labels=observable.x_opencti_labels,
             valid_until=valid_until,
             created_by_ref=self._identity_id,
@@ -262,6 +272,7 @@ class IronNetConnector:
 
     def _create_relationships(
         self,
+        results: List[IronNetItem],
         observable: ObservableType,
         indicator: Optional[stix2.Indicator],
         malwares: List[stix2.Malware],
@@ -282,7 +293,15 @@ class IronNetConnector:
                 object_marking_refs=observable.object_marking_refs,
             )
 
+        threat_ports = defaultdict(set)
+        for result in results:
+            threat_ports[result.threat].add(result.port)
+
         for malware in malwares:
+            malware_ports = threat_ports[malware.name]
+            malware_ports = ",".join(map(str, sorted(malware_ports)))
+            obs_desc = f"Observable discovered on port(s) `{malware_ports}`"
+
             rel_type = "communicates-with"
             yield stix2.Relationship(
                 id=pycti.StixCoreRelationship.generate_id(
@@ -291,12 +310,14 @@ class IronNetConnector:
                 source_ref=malware.id,
                 relationship_type=rel_type,
                 target_ref=observable.id,
+                description=obs_desc,
                 created_by_ref=self._identity_id,
                 confidence=self._helper.connect_confidence_level,
                 object_marking_refs=observable.object_marking_refs,
             )
 
             if indicator:
+                ind_desc = obs_desc.replace("Observable", "Indicator", 1)
                 rel_type = "indicates"
                 yield stix2.Relationship(
                     id=pycti.StixCoreRelationship.generate_id(
@@ -305,6 +326,7 @@ class IronNetConnector:
                     source_ref=indicator.id,
                     relationship_type=rel_type,
                     target_ref=malware.id,
+                    description=ind_desc,
                     created_by_ref=self._identity_id,
                     confidence=self._helper.connect_confidence_level,
                     object_marking_refs=indicator.object_marking_refs,
@@ -315,12 +337,12 @@ def resolve_tlp(tlp: str) -> stix2.MarkingDefinition:
     """Resolve the marking definition to a stix object"""
 
     marking_ref = {
-        "WHITE": stix2.TLP_WHITE,
-        "CLEAR": stix2.TLP_WHITE,
-        "GREEN": stix2.TLP_GREEN,
-        "AMBER": stix2.TLP_AMBER,
-        "AMBER+STRICT": stix2.TLP_AMBER,
-        "RED": stix2.TLP_RED,
+        "WHITE": stix2.TLP_WHITE.id,
+        "CLEAR": stix2.TLP_WHITE.id,  # confirmed same UUID
+        "GREEN": stix2.TLP_GREEN.id,
+        "AMBER": stix2.TLP_AMBER.id,
+        "AMBER+STRICT": "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37",
+        "RED": stix2.TLP_RED.id,
     }.get(tlp)
 
     if marking_ref is None:
