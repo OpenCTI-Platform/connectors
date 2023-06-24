@@ -27,6 +27,7 @@ from pycti import (
     StixSightingRelationship,
     Tool,
     get_config_variable,
+    MarkingDefinition,
 )
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
@@ -186,6 +187,12 @@ class MispFeed:
             config,
             default=False,
         )
+        self.misp_feed_markings_from_tags = get_config_variable(
+            "MISP_FEED_MARKINGS_FROM_TAGS",
+            ["misp_feed", "markings_from_tags"],
+            config,
+            default=False,
+        )
         self.misp_feed_create_object_observables = get_config_variable(
             "MISP_FEED_CREATE_OBJECT_OBSERVABLES",
             ["misp_feed", "create_object_observables"],
@@ -279,20 +286,52 @@ class MispFeed:
         except Exception as e:
             self.helper.log_error(f"Error while sending bundle: {e}")
 
-    def _resolve_markings(self, tags, with_default=True):
+    def resolve_markings(self, tags, with_default=True):
         markings = []
         for tag in tags:
-            if tag["name"] == "tlp:clear":
+            tag_name = tag["name"]
+            tag_name_lower = tag["name"].lower()
+            if self.misp_feed_markings_from_tags:
+                if (
+                    ":" in tag_name
+                    and "=" in tag_name
+                    and tag_name_lower.startswith("marking")
+                ):
+                    if tag_name_lower.includes("tlp="):
+                        marking_type = "TLP"
+                        marking_name = tag_name.split("=")[1].upper()
+                    else:
+                        marking_definition_split = tag_name.split(":")
+                        marking_type = marking_definition_split.split("=")[0]
+                        marking_name = marking_definition_split.split("=")[1]
+                    marking = stix2.MarkingDefinition(
+                        id=MarkingDefinition.generate_id(marking_type, marking_name),
+                        definition_type="statement",
+                        definition={"statement": "custom"},
+                        allow_custom=True,
+                        x_opencti_definition_type=marking_type,
+                        x_opencti_definition=marking_name,
+                    )
+                    markings.append(marking)
+            if tag_name_lower == "tlp:clear":
                 markings.append(stix2.TLP_WHITE)
-            if tag["name"] == "tlp:white":
+            if tag_name_lower == "tlp:white":
                 markings.append(stix2.TLP_WHITE)
-            if tag["name"] == "tlp:green":
+            if tag_name_lower == "tlp:green":
                 markings.append(stix2.TLP_GREEN)
-            if tag["name"] == "tlp:amber":
+            if tag_name_lower == "tlp:amber":
                 markings.append(stix2.TLP_AMBER)
-            if tag["name"] == "tlp:amber+strict":
-                markings.append(stix2.TLP_AMBER)
-            if tag["name"] == "tlp:red":
+            if tag_name_lower == "tlp:amber+strict":
+                marking = stix2.MarkingDefinition(
+                    id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                    definition_type="statement",
+                    definition={"statement": "custom"},
+                    allow_custom=True,
+                    x_opencti_definition_type="TLP",
+                    x_opencti_definition="TLP:AMBER+STRICT",
+                )
+                markings.append(marking)
+            if tag_name_lower == "tlp:red":
                 markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
             markings.append(stix2.TLP_WHITE)
