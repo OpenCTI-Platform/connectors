@@ -89,6 +89,16 @@ class TheHive:
         self.thehive_import_alerts = get_config_variable(
             "THEHIVE_IMPORT_ALERTS", ["thehive", "import_alerts"], config, False, True
         )
+        self.thehive_severity_mapping = get_config_variable(
+            "THEHIVE_SEVERITY_MAPPING",
+            ["thehive", "severity_mapping"],
+            config,
+            False,
+            "1:01 - low,2:02 - medium,3:03 - high,4:04 - critical",
+        ).split(",")
+        self.thehive_interval = get_config_variable(
+            "THEHIVE_INTERVAL", ["thehive", "interval"], config, True
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -99,9 +109,269 @@ class TheHive:
             name=self.thehive_organization_name,
             description=self.thehive_organization_name,
         )
+        self.severity_mapping = {}
+        for mapping in self.thehive_severity_mapping:
+            self.severity_mapping[int(mapping.split(":")[0])] = mapping.split(":")[1]
         self.thehive_api = TheHiveApi(
             self.thehive_url, self.thehive_api_key, cert=self.thehive_check_ssl
         )
+
+    def convert_observable(self, observable, markings):
+        stix_observable = None
+        if observable["dataType"] == "hash":
+            if len(observable["data"]) == 32:
+                data_type = "file_md5"
+            elif len(observable["data"]) == 40:
+                data_type = "file_sha1"
+            elif len(observable["data"]) == 64:
+                data_type = "file_sha256"
+            else:
+                data_type = "unknown"
+        else:
+            data_type = observable["dataType"]
+        observable_key = (
+            OBSERVABLES_MAPPING[data_type] if data_type in OBSERVABLES_MAPPING else None
+        )
+        if observable_key is not None:
+            if data_type == "autonomous-system":
+                stix_observable = AutonomousSystem(
+                    number=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else None,
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "domain":
+                stix_observable = DomainName(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else None,
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "file_md5":
+                stix_observable = File(
+                    hashes={"MD5": observable["data"]},
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else None,
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "file_sha1":
+                stix_observable = File(
+                    hashes={"SHA-1": observable["data"]},
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else None,
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "file_sha256":
+                stix_observable = File(
+                    hashes={"SHA-256": observable["data"]},
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "filename":
+                stix_observable = File(
+                    name=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "fqdn":
+                stix_observable = CustomObservableHostname(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "hostname":
+                stix_observable = CustomObservableHostname(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "ip":
+                stix_observable = IPv4Address(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "mail":
+                stix_observable = EmailMessage(
+                    body=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "mail_subject":
+                stix_observable = EmailMessage(
+                    subject=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "other":
+                stix_observable = CustomObservableText(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "regexp":
+                stix_observable = CustomObservableText(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "registry":
+                stix_observable = WindowsRegistryKey(
+                    key=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "uri_path":
+                stix_observable = URL(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "url":
+                stix_observable = URL(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+            elif data_type == "user-agent":
+                stix_observable = CustomObservableUserAgent(
+                    value=observable["data"],
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable["message"]
+                        if "message" in observable
+                        else "Imported from TheHive",
+                        "labels": observable["tags"] if "tags" in observable else [],
+                        "x_opencti_score": 80 if observable["ioc"] else 50,
+                        "created_by_ref": self.identity["standard_id"],
+                        "x_opencti_create_indicator": observable["ioc"],
+                    },
+                )
+        return stix_observable
 
     def generate_case_bundle(self, case):
         self.helper.log_info("Importing case '" + case["title"] + "'")
@@ -122,329 +392,41 @@ class TheHive:
         # Get observables
         observables = self.thehive_api.get_case_observables(case_id=case["id"]).json()
         for observable in observables:
-            if observable["dataType"] == "hash":
-                if len(observable["data"]) == 32:
-                    data_type = "file_md5"
-                elif len(observable["data"]) == 40:
-                    data_type = "file_sha1"
-                elif len(observable["data"]) == 64:
-                    data_type = "file_sha256"
-                else:
-                    data_type = "unknown"
-            else:
-                data_type = observable["dataType"]
-            observable_key = (
-                OBSERVABLES_MAPPING[data_type]
-                if data_type in OBSERVABLES_MAPPING
-                else None
-            )
-            if observable_key is not None:
-                stix_observable = None
-                if data_type == "autonomous-system":
-                    stix_observable = AutonomousSystem(
-                        number=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else None,
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
+            stix_observable = self.convert_observable(observable, markings)
+            if stix_observable is not None:
+                case_objects.append(stix_observable.id)
+                bundle_objects.append(stix_observable)
+                if observable["sighted"]:
+                    fake_indicator_id = (
+                        "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
                     )
-                elif data_type == "domain":
-                    stix_observable = DomainName(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else None,
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "file_md5":
-                    stix_observable = File(
-                        hashes={"MD5": observable["data"]},
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else None,
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "file_sha1":
-                    stix_observable = File(
-                        hashes={"SHA-1": observable["data"]},
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else None,
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "file_sha256":
-                    stix_observable = File(
-                        hashes={"SHA-256": observable["data"]},
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "filename":
-                    stix_observable = File(
-                        name=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "fqdn":
-                    stix_observable = CustomObservableHostname(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "hostname":
-                    stix_observable = CustomObservableHostname(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "ip":
-                    stix_observable = IPv4Address(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "mail":
-                    stix_observable = EmailMessage(
-                        body=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "mail_subject":
-                    stix_observable = EmailMessage(
-                        subject=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "other":
-                    stix_observable = CustomObservableText(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "regexp":
-                    stix_observable = CustomObservableText(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "registry":
-                    stix_observable = WindowsRegistryKey(
-                        key=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "uri_path":
-                    stix_observable = URL(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "url":
-                    stix_observable = URL(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                elif data_type == "user-agent":
-                    stix_observable = CustomObservableUserAgent(
-                        value=observable["data"],
-                        object_marking_refs=markings,
-                        custom_properties={
-                            "description": observable["message"]
-                            if "message" in observable
-                            else "Imported from TheHive",
-                            "labels": observable["tags"]
-                            if "tags" in observable
-                            else [],
-                            "x_opencti_score": 80 if observable["ioc"] else 50,
-                            "created_by_ref": self.identity["standard_id"],
-                            "x_opencti_create_indicator": observable["ioc"],
-                        },
-                    )
-                if stix_observable is not None:
-                    case_objects.append(stix_observable.id)
-                    bundle_objects.append(stix_observable)
-                    if observable["sighted"]:
-                        fake_indicator_id = (
-                            "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
-                        )
-                        stix_sighting = stix2.Sighting(
-                            id=StixSightingRelationship.generate_id(
-                                stix_observable.id,
-                                self.identity["standard_id"],
-                                datetime.utcfromtimestamp(
-                                    int(observable["startDate"] / 1000)
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                datetime.utcfromtimestamp(
-                                    int(observable["startDate"] / 1000 + 3600)
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            ),
-                            first_seen=datetime.utcfromtimestamp(
+                    stix_sighting = stix2.Sighting(
+                        id=StixSightingRelationship.generate_id(
+                            stix_observable.id,
+                            self.identity["standard_id"],
+                            datetime.utcfromtimestamp(
                                 int(observable["startDate"] / 1000)
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            last_seen=datetime.utcfromtimestamp(
+                            datetime.utcfromtimestamp(
                                 int(observable["startDate"] / 1000 + 3600)
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            where_sighted_refs=[self.identity["standard_id"]],
-                            sighting_of_ref=fake_indicator_id,
-                            custom_properties={
-                                "x_opencti_sighting_of_ref": stix_observable.id
-                            },
-                        )
-                        case_objects.append(self.identity["standard_id"])
-                        case_objects.append(stix_sighting.id)
-                        bundle_objects.append(stix_sighting)
+                        ),
+                        confidence=int(self.helper.connect_confidence_level),
+                        first_seen=datetime.utcfromtimestamp(
+                            int(observable["startDate"] / 1000)
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        last_seen=datetime.utcfromtimestamp(
+                            int(observable["startDate"] / 1000 + 3600)
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        where_sighted_refs=[self.identity["standard_id"]],
+                        sighting_of_ref=fake_indicator_id,
+                        custom_properties={
+                            "x_opencti_sighting_of_ref": stix_observable.id
+                        },
+                    )
+                    case_objects.append(self.identity["standard_id"])
+                    case_objects.append(stix_sighting.id)
+                    bundle_objects.append(stix_sighting)
 
         # Create case
         created = datetime.utcfromtimestamp(int(case["createdAt"] / 1000)).strftime(
@@ -458,6 +440,10 @@ class TheHive:
             object_marking_refs=markings,
             labels=case["tags"] if "tags" in case else [],
             created_by_ref=self.identity["standard_id"],
+            severity=self.severity_mapping[case["severity"]]
+            if case["severity"] in self.severity_mapping
+            else None,
+            confidence=int(self.helper.connect_confidence_level),
             object_refs=case_objects,
         )
         bundle_objects.append(stix_case)
@@ -465,18 +451,20 @@ class TheHive:
         # Get tasks
         tasks = self.thehive_api.get_case_tasks(case_id=case["id"]).json()
         for task in tasks:
+            created = datetime.utcfromtimestamp(int(task["createdAt"] / 1000)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
             stix_task = CustomObjectTask(
-                id=Task.generate_id(),
+                id=Task.generate_id(task["title"], created),
                 name=task["title"],
                 description=task["description"],
-                created=datetime.utcfromtimestamp(
-                    int(task["createdAt"] / 1000)
-                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                created=created,
                 due_date=datetime.utcfromtimestamp(
                     int(task["dueDate"] / 1000)
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
                 if "dueDate" in task
                 else None,
+                confidence=int(self.helper.connect_confidence_level),
                 object_refs=[stix_case.id],
             )
             bundle_objects.append(stix_task)
@@ -486,8 +474,61 @@ class TheHive:
 
     def generate_alert_bundle(self, alert):
         self.helper.log_info("Importing alert '" + alert["title"] + "'")
-        print(alert)
-        exit()
+        markings = []
+        if alert["tlp"] == 0:
+            markings.append(stix2.TLP_WHITE)
+        if alert["tlp"] == 1:
+            markings.append(stix2.TLP_GREEN)
+        if alert["tlp"] == 2:
+            markings.append(stix2.TLP_AMBER)
+        if alert["tlp"] == 3:
+            markings.append(stix2.TLP_RED)
+        if len(markings) == 0:
+            markings.append(stix2.TLP_WHITE)
+
+        created = datetime.utcfromtimestamp(int(alert["createdAt"] / 1000)).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        stix_incident = stix2.Incident(
+            id=Incident.generate_id(alert["title"], created),
+            name=alert["title"],
+            description=alert["description"],
+            object_marking_refs=markings,
+            labels=alert["tags"] if "tags" in alert else [],
+            created_by_ref=self.identity["standard_id"],
+            confidence=int(self.helper.connect_confidence_level),
+            allow_custom=True,
+            custom_properties={
+                "source": alert["source"],
+                "severity": self.severity_mapping[alert["severity"]]
+                if alert["severity"] in self.severity_mapping
+                else None,
+                "incident_type": "alert",
+            },
+        )
+        bundle_objects = [stix_incident]
+        for observable in alert["artifacts"]:
+            stix_observable = self.convert_observable(observable, markings)
+            if stix_observable is not None:
+                stix_observable_relation = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_observable.id, stix_incident.id
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.identity["standard_id"],
+                    source_ref=stix_observable.id,
+                    target_ref=stix_incident.id,
+                    confidence=int(self.helper.connect_confidence_level),
+                    object_marking_refs=markings,
+                    allow_custom=True,
+                )
+                bundle_objects.append(stix_observable)
+                bundle_objects.append(stix_observable_relation)
+        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+        return bundle
+
+    def get_interval(self):
+        return int(self.thehive_interval) * 60
 
     def run(self):
         self.helper.log_info("Starting TheHive Connector...")
@@ -533,7 +574,7 @@ class TheHive:
                     Child("case_artifact", Gt("createdAt", int(last_case_date * 1000))),
                 )
                 cases = self.thehive_api.find_cases(
-                    query=query_cases, sort="updatedAt", range="0-10000"
+                    query=query_cases, sort="+updatedAt", range="0-10000"
                 ).json()
                 now = datetime.utcfromtimestamp(timestamp)
                 friendly_name = "TheHive run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
@@ -543,18 +584,17 @@ class TheHive:
                 try:
                     for case in cases:
                         stix_bundle = self.generate_case_bundle(case)
-                        print(stix_bundle)
                         self.helper.send_stix2_bundle(
                             stix_bundle,
                             update=self.update_existing_data,
                             work_id=work_id,
                         )
                         last_case_date = (
-                            int(case["updatedAt"] / 1000)
+                            (int(case["updatedAt"] / 1000) + 1)
                             if "updatedAt" in case and case["updatedAt"] is not None
-                            else int(case["createdAt"] / 1000)
+                            else (int(case["createdAt"] / 1000) + 1)
                         )
-                except Exception as e:
+                except Exception:
                     error_msg = traceback.format_exc()
                     self.helper.log_error(error_msg)
                 if self.thehive_import_alerts:
@@ -563,7 +603,7 @@ class TheHive:
                         Gt("createdAt", int(last_alert_date * 1000)),
                     )
                     alerts = self.thehive_api.find_alerts(
-                        query=query_alerts, sort="updatedAt", range="0-10000"
+                        query=query_alerts, sort="+updatedAt", range="0-10000"
                     ).json()
                     try:
                         for alert in alerts:
@@ -574,12 +614,12 @@ class TheHive:
                                 work_id=work_id,
                             )
                             last_alert_date = (
-                                int(alert["updatedAt"] / 1000)
+                                (int(alert["updatedAt"] / 1000) + 1)
                                 if "updatedAt" in alert
                                 and alert["updatedAt"] is not None
-                                else int(alert["createdAt"] / 1000)
+                                else (int(alert["createdAt"] / 1000)) + 1
                             )
-                    except Exception as e:
+                    except Exception:
                         error_msg = traceback.format_exc()
                         self.helper.log_error(error_msg)
 
@@ -612,7 +652,7 @@ class TheHive:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
-            time.sleep(60)
+            time.sleep(self.get_interval())
 
 
 if __name__ == "__main__":

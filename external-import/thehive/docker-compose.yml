@@ -18,4 +18,6 @@ services:
       - THEHIVE_ORGANIZATION_NAME=MyCompany
       - THEHIVE_IMPORT_FROM_DATE=2021-01-01T00:00:00 # Optional
       - THEHIVE_IMPORT_ALERTS=true
+      - "THEHIVE_SEVERITY_MAPPING= 1:01 - low,2:02 - medium,3:03 - high,4:04 - critical"
+      - THEHIVE_INTERVAL=5 # In minutes
     restart: always

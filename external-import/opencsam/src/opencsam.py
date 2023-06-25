@@ -92,7 +92,7 @@ class OpenCSAM:
         )
         objects.append(identity_stix)
         incident_stix = stix2.Incident(
-            id=Incident.generate_id(source["title"]),
+            id=Incident.generate_id(source["title"], parse(source["published"])),
             name=source["title"],
             incident_type=source["categories"][0],
             description=source["summary"] if "summary" in source else source["content"],
