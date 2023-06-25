@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-virustotal-livehunt-stream:
-    image: opencti/connector-virustotal-livehunt-stream:5.8.3
+    image: opencti/connector-virustotal-livehunt-stream:5.8.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
