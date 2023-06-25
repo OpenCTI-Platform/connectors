@@ -11,10 +11,14 @@ from kaspersky.utils.common import (
     is_ip_address,
     is_ipv4_address,
 )
+from pycti import (
+    CustomObservableCryptocurrencyWallet,
+    CustomObservableHostname,
+    CustomObservableUserAgent,
+)
 from stix2 import DomainName  # type: ignore
 from stix2 import (
     URL,
-    CustomObservable,
     EmailAddress,
     EmailMessage,
     File,
@@ -26,8 +30,6 @@ from stix2 import (
     Process,
     X509Certificate,
 )
-from stix2.properties import ListProperty  # type: ignore  # noqa: E501
-from stix2.properties import ReferenceProperty, StringProperty
 
 
 class ObservableProperties(NamedTuple):
@@ -112,29 +114,11 @@ def create_observable_domain_name(properties: ObservableProperties) -> DomainNam
     )
 
 
-@CustomObservable(
-    "hostname",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class Hostname:
-    """Hostname observable."""
-
-    pass
-
-
-def create_observable_hostname(properties: ObservableProperties) -> Hostname:
+def create_observable_hostname(
+    properties: ObservableProperties,
+) -> CustomObservableHostname:
     """Create an observable representing a hostname."""
-    return Hostname(
+    return CustomObservableHostname(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),
@@ -221,31 +205,11 @@ def create_observable_mutex(properties: ObservableProperties) -> Mutex:
     )
 
 
-@CustomObservable(
-    "cryptocurrency-wallet",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class CryptocurrencyWallet:
-    """Cryptocurrency wallet observable."""
-
-    pass
-
-
 def create_observable_cryptocurrency_wallet(
     properties: ObservableProperties,
-) -> CryptocurrencyWallet:
+) -> CustomObservableCryptocurrencyWallet:
     """Create an observable representing a cryptocurrency wallet."""
-    return CryptocurrencyWallet(
+    return CustomObservableCryptocurrencyWallet(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),
@@ -344,29 +308,11 @@ def create_observable_x509_certificate_issuer(
     )
 
 
-@CustomObservable(
-    "user-agent",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class UserAgent:
-    """User-Agent observable."""
-
-    pass
-
-
-def create_observable_user_agent(properties: ObservableProperties) -> UserAgent:
+def create_observable_user_agent(
+    properties: ObservableProperties,
+) -> CustomObservableUserAgent:
     """Create an observable representing an user-agent."""
-    return UserAgent(
+    return CustomObservableUserAgent(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),

@@ -13,6 +13,7 @@ import yaml
 from dateutil.parser import parse as dtparse
 from pycti import (
     Campaign,
+    CustomObservableText,
     Identity,
     Indicator,
     IntrusionSet,
@@ -24,30 +25,6 @@ from pycti import (
     get_config_variable,
 )
 
-
-# Used from external-import/misp to cover importing Raw Data objects
-@stix2.CustomObservable(
-    "text",
-    [
-        ("value", stix2.properties.StringProperty(required=True)),
-        ("spec_version", stix2.properties.StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            stix2.properties.ListProperty(
-                stix2.properties.ReferenceProperty(
-                    valid_types="marking-definition", spec_version="2.1"
-                )
-            ),
-        ),
-    ],
-    ["value"],
-)
-class Text:
-    """Text observable."""
-
-    pass
-
-
 # Large table to map CRITs Indicator types to corresponding STIXv2.1 ones
 INDICATOR_MAPPING = {
     "IPv4 Address": "ipv4-addr:value",
@@ -56,7 +33,6 @@ INDICATOR_MAPPING = {
     "IPv6 Address": "ipv6-addr:value",
     "IPv6 Subnet": "ipv6-addr:value",
     "Address - ipv6-addr": "ipv6-addr:value",
-    "IPv6 Subnet": "ipv6-addr:value",
     "Domain": "domain-name:value",
     "URI - Domain Name": "domain-name:value",
     "URI - domain-name": "domain-name:value",
@@ -221,7 +197,7 @@ class CRITsConnector:
         custom_properties["description"] = crits_obj.get("description", "")
         custom_properties["labels"] = crits_obj.get("bucket_list", [])
 
-        return Text(
+        return CustomObservableText(
             value=crits_obj["data"],
             object_marking_refs=[self.default_marking],
             custom_properties=custom_properties,

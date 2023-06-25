@@ -15,6 +15,8 @@ import yaml
 from dateutil.parser import parse
 from pycti import (
     AttackPattern,
+    CustomObservableHostname,
+    CustomObservableText,
     Identity,
     Indicator,
     IntrusionSet,
@@ -31,67 +33,6 @@ from pycti import (
 )
 from stix2.properties import ListProperty  # type: ignore # noqa: E501
 from stix2.properties import ReferenceProperty, StringProperty
-
-
-@stix2.CustomObservable(
-    "cryptocurrency-wallet",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class CryptocurrencyWallet:
-    """Cryptocurrency wallet observable."""
-
-    pass
-
-
-@stix2.CustomObservable(
-    "hostname",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class Hostname:
-    """Hostname observable."""
-
-    pass
-
-
-@stix2.CustomObservable(
-    "text",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class Text:
-    """Text observable."""
-
-    pass
-
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -1064,7 +1005,7 @@ class MispFeed:
                             custom_properties=custom_properties,
                         )
                     elif observable_type == "Hostname":
-                        observable = Hostname(
+                        observable = CustomObservableHostname(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
@@ -1165,7 +1106,7 @@ class MispFeed:
                                 custom_properties=custom_properties,
                             )
                     elif observable_type == "Text":
-                        observable = Text(
+                        observable = CustomObservableText(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
@@ -1694,7 +1635,7 @@ class MispFeed:
                 if self.misp_feed_import_unsupported_observables_as_text_transparent:
                     if len(object["Attribute"]) > 0:
                         value = object["Attribute"][0]["value"]
-                        object_observable = Text(
+                        object_observable = CustomObservableText(
                             value=value,
                             object_marking_refs=event_markings,
                             custom_properties={
@@ -1718,7 +1659,7 @@ class MispFeed:
                             + object["Attribute"][0]["value"]
                             + ")"
                         )
-                    object_observable = Text(
+                    object_observable = CustomObservableText(
                         value=object["name"] + unique_key,
                         object_marking_refs=event_markings,
                         custom_properties={

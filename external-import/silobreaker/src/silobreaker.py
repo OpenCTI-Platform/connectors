@@ -15,6 +15,7 @@ import stix2
 import yaml
 from dateutil.parser import parse
 from pycti import (
+    CustomObservableHostname,
     Identity,
     IntrusionSet,
     Location,
@@ -25,28 +26,6 @@ from pycti import (
     Vulnerability,
     get_config_variable,
 )
-from stix2.properties import ListProperty  # type: ignore # noqa: E501
-from stix2.properties import ReferenceProperty, StringProperty
-
-
-@stix2.CustomObservable(
-    "hostname",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class Hostname:
-    """Hostname observable."""
-
-    pass
 
 
 class Silobreaker:
@@ -295,7 +274,7 @@ class Silobreaker:
                             objects.append(ip_stix)
                             observables.append(ip_stix)
                         if entity["Type"] == "Subdomain":
-                            hostname_stix = Hostname(
+                            hostname_stix = CustomObservableHostname(
                                 value=entity["Description"],
                                 allow_custom=True,
                                 object_marking_refs=[stix2.TLP_AMBER.get("id")],

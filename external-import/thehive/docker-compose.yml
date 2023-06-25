@@ -17,4 +17,5 @@ services:
       - THEHIVE_CHECK_SSL=true
       - THEHIVE_ORGANIZATION_NAME=MyCompany
       - THEHIVE_IMPORT_FROM_DATE=2021-01-01T00:00:00 # Optional
+      - THEHIVE_IMPORT_ALERTS=true
     restart: always
