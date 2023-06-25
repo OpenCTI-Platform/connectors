@@ -14,34 +14,13 @@ import stix2
 import yaml
 from pycti import (
     AttackPattern,
+    CustomObservableHostname,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
 )
-from stix2 import URL, CustomObservable, DomainName, EmailAddress, IPv4Address
-from stix2.properties import ListProperty  # type: ignore # noqa: E501
-from stix2.properties import ReferenceProperty, StringProperty
+from stix2 import URL, DomainName, EmailAddress, IPv4Address
 from triage import Client
-
-
-@CustomObservable(
-    "hostname",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class Hostname:
-    """Hostname observable."""
-
-    pass
 
 
 class HatchingTriageSandboxConnector:
@@ -228,7 +207,7 @@ class HatchingTriageSandboxConnector:
                     protocol = cred_dict.get("protocol")
                     if host:
                         # Add Host Observable
-                        host_stix = Hostname(
+                        host_stix = CustomObservableHostname(
                             value=host,
                             custom_properties={
                                 "labels": [config_rule, "credentials"],

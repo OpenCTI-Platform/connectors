@@ -14,6 +14,7 @@ connector:
 thehive:
   url: 'https://thehive.changeme.com'
   api_key: 'ChangeMe'
-  check_ssl: True
+  check_ssl: true
   organization_name: 'MyCompany'
   import_from_date: '2021-01-01T00:00:00' # Optional
+  import_alerts: true

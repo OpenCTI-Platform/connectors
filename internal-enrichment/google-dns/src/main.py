@@ -4,34 +4,8 @@ import time
 
 import yaml
 from client import GoogleDNSClient
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship
-from stix2 import (
-    TLP_WHITE,
-    Bundle,
-    CustomObservable,
-    DomainName,
-    IPv4Address,
-    Relationship,
-)
-from stix2.properties import ListProperty, ReferenceProperty, StringProperty
-
-
-@CustomObservable(
-    "text",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class Text:
-    pass
+from pycti import CustomObservableText, OpenCTIConnectorHelper, StixCoreRelationship
+from stix2 import TLP_WHITE, Bundle, DomainName, IPv4Address, Relationship
 
 
 class GoogleDNSConnector:
@@ -189,7 +163,7 @@ class GoogleDNSConnector:
         objects = []
         for record in txt_records:
             # Create a Text Observable
-            txt_object = Text(
+            txt_object = CustomObservableText(
                 value=record,
                 object_marking_refs=TLP_WHITE,
             )

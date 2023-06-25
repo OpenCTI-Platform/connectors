@@ -9,18 +9,9 @@ from cybersixgill.utils.constants import (
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
 )
+from pycti import CustomObservableHostname
 from stix2 import DomainName  # type: ignore
-from stix2 import (
-    URL,
-    CustomObservable,
-    File,
-    Identity,
-    IPv4Address,
-    IPv6Address,
-    MarkingDefinition,
-)
-from stix2.properties import ListProperty  # type: ignore # noqa: E501
-from stix2.properties import ReferenceProperty, StringProperty
+from stix2 import URL, File, Identity, IPv4Address, IPv6Address, MarkingDefinition
 
 
 def _get_default_custom_properties(
@@ -82,29 +73,11 @@ def create_observable_domain_name(properties: ObservableProperties) -> DomainNam
     )
 
 
-@CustomObservable(
-    "hostname",
-    [
-        ("value", StringProperty(required=True)),
-        ("spec_version", StringProperty(fixed="2.1")),
-        (
-            "object_marking_refs",
-            ListProperty(
-                ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-            ),
-        ),
-    ],
-    ["value"],
-)
-class Hostname:
-    """Hostname observable."""
-
-    pass
-
-
-def create_observable_hostname(properties: ObservableProperties) -> Hostname:
+def create_observable_hostname(
+    properties: ObservableProperties,
+) -> CustomObservableHostname:
     """Create an observable representing a hostname."""
-    return Hostname(
+    return CustomObservableHostname(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),
