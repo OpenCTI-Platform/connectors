@@ -714,7 +714,9 @@ class OrangeCyberDefense:
         }
         labels = [incident["services"][0]["name"], incident["risk"]]
         incident_stix = stix2.Incident(
-            id=Incident.generate_id(curated_title),
+            id=Incident.generate_id(
+                curated_title, parse(incident["timestamp_detected"])
+            ),
             name=curated_title,
             incident_type=incident["services"][0]["offer_name"],
             description=analysis_md,

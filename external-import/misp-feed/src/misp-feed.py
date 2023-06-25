@@ -31,8 +31,6 @@ from pycti import (
     Tool,
     get_config_variable,
 )
-from stix2.properties import ListProperty  # type: ignore # noqa: E501
-from stix2.properties import ReferenceProperty, StringProperty
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {

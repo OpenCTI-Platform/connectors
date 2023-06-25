@@ -44,4 +44,4 @@ misp:
   import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
   import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
   import_unsupported_observables_as_text_transparent: false # Optional, import unsupported observable as x_opencti_text just with the value
-  interval: 1 # Required, in minutes
+  interval: 5 # Required, in minutes

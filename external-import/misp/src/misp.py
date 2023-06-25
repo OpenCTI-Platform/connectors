@@ -13,7 +13,6 @@ from pycti import (
     AttackPattern,
     CustomObservableHostname,
     CustomObservableText,
-    CustomObservableUserAgent,
     Identity,
     Indicator,
     IntrusionSet,
