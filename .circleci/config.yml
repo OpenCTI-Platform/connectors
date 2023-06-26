@@ -241,6 +241,14 @@ jobs:
           name: Build Docker image opencti/connector-threatfox
           command: docker build -t opencti/connector-threatfox:latest . && docker tag opencti/connector-threatfox:latest opencti/connector-threatfox:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/vmray-analyzer
+          name: Build Docker image opencti/connector-vmray-analyzer
+          command: docker build -t opencti/connector-vmray-analyzer:latest . && docker tag opencti/connector-vmray-analyzer:latest opencti/connector-vmray-analyzer:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/virustotal-livehunt-rules
+          name: Build Docker image opencti/connector-virustotal-livehunt-rules
+          command: docker build -t opencti/connector-virustotal-livehunt-rules:latest . && docker tag opencti/connector-virustotal-livehunt-rules:latest opencti/connector-virustotal-livehunt-rules:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -338,6 +346,10 @@ jobs:
             docker push opencti/connector-tweetfeed:${CIRCLE_TAG}
             docker push opencti/connector-threatfox:latest
             docker push opencti/connector-threatfox:${CIRCLE_TAG}
+            docker push opencti/connector-vmray-analyzer:latest
+            docker push opencti/connector-vmray-analyzer:${CIRCLE_TAG}
+            docker push opencti/connector-virustotal-livehunt-rules:latest
+            docker push opencti/connector-virustotal-livehunt-rules:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -549,6 +561,10 @@ jobs:
           name: Build Docker image opencti/connector-recordedfuture-enrichment
           command: docker build -t opencti/connector-recordedfuture-enrichment:latest . && docker tag opencti/connector-recordedfuture-enrichment:latest opencti/connector-recordedfuture-enrichment:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/lastinfosec
+          name: Build Docker image opencti/connector-lastinfosec-enrichment
+          command: docker build -t opencti/connector-lastinfosec-enrichment:latest . && docker tag opencti/connector-lastinfosec-enrichment:latest opencti/connector-lastinfosec-enrichment:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -650,6 +666,8 @@ jobs:
             docker push opencti/connector-zerofox:${CIRCLE_TAG}
             docker push opencti/connector-recordedfuture-enrichment:latest
             docker push opencti/connector-recordedfuture-enrichment:${CIRCLE_TAG}
+            docker push opencti/connector-lastinfosec-enrichment:latest
+            docker push opencti/connector-lastinfosec-enrichment:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -845,6 +863,14 @@ jobs:
           name: Build Docker image opencti/connector-threatfox
           command: docker build -t opencti/connector-threatfox:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/vmray-analyzer
+          name: Build Docker image opencti/connector-vmray-analyzer
+          command: docker build -t opencti/connector-vmray-analyzer:rolling .
+      - run:
+          working_directory: ~/opencti/stream/virustotal-livehunt-rules
+          name: Build Docker image opencti/connector-virustotal-livehunt-rules
+          command: docker build -t opencti/connector-virustotal-livehunt-rules:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -893,6 +919,8 @@ jobs:
             docker push opencti/connector-cybersixgill:rolling
             docker push opencti/connector-tweetfeed:rolling
             docker push opencti/connector-threatfox:rolling
+            docker push opencti/connector-vmray-analyzer:rolling
+            docker push opencti/connector-virustotal-livehunt-rules:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1108,6 +1136,10 @@ jobs:
           name: Build Docker image opencti/connector-recordedfuture-enrichment
           command: docker build -t opencti/connector-recordedfuture-enrichment:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/lastinfosec
+          name: Build Docker image opencti/connector-lastinfosec-enrichment
+          command: docker build -t opencti/connector-lastinfosec-enrichment:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1161,6 +1193,7 @@ jobs:
             docker push opencti/connector-qradar:rolling
             docker push opencti/connector-zerofox:rolling
             docker push opencti/connector-recordedfuture-enrichment:rolling
+            docker push opencti/connector-lastinfosec-enrichment:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
