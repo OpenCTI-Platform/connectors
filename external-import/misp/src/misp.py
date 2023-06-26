@@ -2109,7 +2109,7 @@ class Misp:
                     and "=" in tag_name
                     and tag_name_lower.startswith("marking")
                 ):
-                    if tag_name_lower.includes("tlp="):
+                    if "tlp=" in tag_name_lower:
                         marking_type = "TLP"
                         marking_name = tag_name.split("=")[1].upper()
                     else:
