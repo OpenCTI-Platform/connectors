@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-taxii2:
-    image: opencti/connector-taxii2:5.8.4
+    image: opencti/connector-taxii2:5.8.5
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
