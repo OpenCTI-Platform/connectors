@@ -480,6 +480,7 @@ class MispFeed:
                                 stix2.Malware(
                                     id=Malware.generate_id(threat["name"]),
                                     name=threat["name"],
+                                    is_family=True,
                                     description="Imported from MISP tag",
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
