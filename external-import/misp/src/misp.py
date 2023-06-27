@@ -2110,13 +2110,30 @@ class Misp:
                     and "=" in tag_name
                     and tag_name_lower.startswith("marking")
                 ):
-                    if "tlp=" in tag_name_lower:
-                        marking_type = "TLP"
-                        marking_name = tag_name.split("=")[1].upper()
+                    marking_definition_split = tag_name.split(":")
+                    # Check if second part also contains ":"
+                    if len(marking_definition_split) > 2:
+                        # Example: marking:PAP=PAP:RED
+                        # "PAP=PAP" + "RED"
+                        marking_definition = (
+                            marking_definition_split[1] + marking_definition_split[2]
+                        )
                     else:
-                        marking_definition_split = tag_name.split(":")
-                        marking_type = marking_definition_split.split("=")[0]
-                        marking_name = marking_definition_split.split("=")[1]
+                        # Example: marking:CLASSIFICATION=DIFFUSION RESTREINTE
+                        # CLASSIFICATION=DIFFUSION RESTREINTE
+                        marking_definition = marking_definition_split[1]
+
+                    # Split on the equal
+                    marking_definition_split2 = marking_definition.split("=")
+
+                    # PAP
+                    # CLASSIFICATION
+                    marking_type = marking_definition_split2[0]
+
+                    # PAP:RED
+                    # DIFFUSION RESTREINTE
+                    marking_name = marking_definition_split2[1]
+
                     marking = stix2.MarkingDefinition(
                         id=MarkingDefinition.generate_id(marking_type, marking_name),
                         definition_type="statement",
