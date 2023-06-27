@@ -6,7 +6,7 @@ COPY src /opt/tweetfeed
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/tweedfeed && \
+    cd /opt/tweetfeed && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
