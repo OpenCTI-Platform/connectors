@@ -1,7 +1,7 @@
 FROM python:3.11-alpine
 
 # Copy the connector
-COPY src /opt/tweedfeed
+COPY src /opt/tweetfeed
 
 # Install Python modules
 # hadolint ignore=DL3003
