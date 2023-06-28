@@ -68,15 +68,11 @@ class Cve:
                 url, context=ssl.create_default_context(cafile=certifi.where())
             )
             image = response.read()
-            with open(
-                "/tmp/data.json.gz", "wb"
-            ) as file:
+            with open("/tmp/data.json.gz", "wb") as file:
                 file.write(image)
             # Unzipping the file
             self.helper.log_info("Unzipping the file")
-            with gzip.open(
-                "/tmp/data.json.gz", "rb"
-            ) as f_in:
+            with gzip.open("/tmp/data.json.gz", "rb") as f_in:
                 with open("/tmp/data.json", "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
             # Converting the file to stix2
