@@ -217,7 +217,7 @@ class TweetFeed:
 
                 if last_run is None or (
                     (timestamp - last_run)
-                    > ((int(self.tweetfeed_interval) - 1) * 60 * 60 * 24)
+                    > ((int(self.tweetfeed_interval)) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
                     datetimex = datetime.utcfromtimestamp(timestamp).strftime(
@@ -232,6 +232,10 @@ class TweetFeed:
                         + str(timestamp)
                     )
                     self.helper.set_state({"last_run": timestamp})
+                    message = "Connector successfully run, storing last_run as " + str(
+                        timestamp
+                    )
+                    self.helper.api.work.to_processed(self.workid, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))
@@ -339,7 +343,7 @@ class TweetFeed:
                 indicator = self.helper.api.indicator.create(
                     name=ioc["value"],
                     description="TWEETFEED IOC " + ioc["value"],
-                    pattern_type="stix2",
+                    pattern_type="stix",
                     pattern=f"[{type_ioc.lower()} = '" + ioc["value"] + "']",
                     x_opencti_main_observable_type=type_ioc.split(":")[0],
                     objectMarking=[stix2.TLP_GREEN["id"]],
@@ -356,7 +360,7 @@ class TweetFeed:
                 indicator = self.helper.api.indicator.create(
                     name=ioc["value"],
                     description="TWEETFEED IOC " + ioc["value"],
-                    pattern_type="stix2",
+                    pattern_type="stix",
                     pattern=f"[{type_ioc.lower()} = '" + ioc["value"] + "']",
                     x_opencti_main_observable_type=type_ioc.split(":")[0],
                     objectMarking=[stix2.TLP_GREEN["id"]],
