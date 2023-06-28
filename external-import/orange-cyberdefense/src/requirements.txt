@@ -1,4 +1,4 @@
-pycti==5.8.5
+pycti==5.8.6
 datalake-scripts==2.6.8
 html2text==2020.1.16
 beautifulsoup4==4.12.2
