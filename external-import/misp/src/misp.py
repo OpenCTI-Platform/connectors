@@ -2116,7 +2116,9 @@ class Misp:
                         # Example: marking:PAP=PAP:RED
                         # "PAP=PAP" + "RED"
                         marking_definition = (
-                            marking_definition_split[1] + marking_definition_split[2]
+                            marking_definition_split[1]
+                            + ":"
+                            + marking_definition_split[2]
                         )
                     else:
                         # Example: marking:CLASSIFICATION=DIFFUSION RESTREINTE
