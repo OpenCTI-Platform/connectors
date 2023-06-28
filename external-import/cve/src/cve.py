@@ -69,13 +69,13 @@ class Cve:
             )
             image = response.read()
             with open(
-                os.path.dirname(os.path.abspath(__file__)) + "/tmp/data.json.gz", "wb"
+                "/tmp/data.json.gz", "wb"
             ) as file:
                 file.write(image)
             # Unzipping the file
             self.helper.log_info("Unzipping the file")
             with gzip.open(
-                os.path.dirname(os.path.abspath(__file__)) + "/tmp/data.json.gz", "rb"
+                "/tmp/data.json.gz", "rb"
             ) as f_in:
                 with open("/tmp/data.json", "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
