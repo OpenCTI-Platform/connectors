@@ -90,7 +90,7 @@ class LivehuntBuilder:
         # Create the alert
         name = f"""Alert from ruleset {vtobj._context_attributes["ruleset_name"]} {f'{vtobj._context_attributes["rule_tags"]}' if vtobj._context_attributes["rule_tags"] else ""}"""
         incident = stix2.Incident(
-            id=Incident.generate_id(name),
+            id=Incident.generate_id(name, vtobj._context_attributes["notification_date"]),
             incident_type="alert",
             name=name,
             description=f'Snippet:\n{vtobj._context_attributes["notification_snippet"]}',
