@@ -186,11 +186,14 @@ class VirustotalLivehuntNotifications:
                     ),
                 )
                 if self._is_scheduled(last_run, timestamp):
-                    work_id = self._initiate_work(timestamp)
                     new_state = current_state.copy()
 
                     self.builder.process(last_run)
-                    self.builder.send_bundle(work_id)
+                    if len(self.builder.bundle) > 0:
+                        work_id = self._initiate_work(timestamp)
+                        self.builder.send_bundle(work_id)
+                    else:
+                        self.helper.log_debug("No bundle to send")
 
                     # Set the new state
                     new_state[
