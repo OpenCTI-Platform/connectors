@@ -16,6 +16,7 @@ virustotal_livehunt_notifications:
   api_key: 'ChangeMe' # Private API Key
   interval_sec: 300 # Time to wait in seconds between subsequent requests
   create_alert: True
-  create_file_with_alert: True
-  delete_notification: True
-  filter_with_tag: "abc"
+  create_file: True
+  create_ruleset: True
+  delete_notification: False
+  filter_with_tag: "mytag"

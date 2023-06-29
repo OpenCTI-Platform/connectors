@@ -64,15 +64,21 @@ class VirustotalLivehuntNotifications:
             config,
         )
 
-        self.create_alert = get_config_variable(
+        create_alert = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT",
             ["virustotal_livehunt_notifications", "create_alert"],
             config,
         )
 
-        create_file_with_alert = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE_WITH_ALERT",
-            ["virustotal_livehunt_notifications", "create_file_with_alert"],
+        create_file = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE",
+            ["virustotal_livehunt_notifications", "create_file"],
+            config,
+        )
+
+        create_ruleset = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_RULESET",
+            ["virustotal_livehunt_notifications", "create_file"],
             config,
         )
 
@@ -87,7 +93,9 @@ class VirustotalLivehuntNotifications:
             self.helper,
             author,
             tag,
-            create_file_with_alert,
+            create_alert,
+            create_file,
+            create_ruleset,
             delete_notification,
         )
 
@@ -181,9 +189,7 @@ class VirustotalLivehuntNotifications:
                     work_id = self._initiate_work(timestamp)
                     new_state = current_state.copy()
 
-                    if self.create_alert:
-                        self.builder.create_alerts(last_run)
-
+                    self.builder.process(last_run)
                     self.builder.send_bundle(work_id)
 
                     # Set the new state
