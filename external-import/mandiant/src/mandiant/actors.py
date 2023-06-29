@@ -21,7 +21,7 @@ def process(connector, actor):
     for industry in utils.sanitizer("industries", actor_details, []):
         items += create_stix_industry(connector, stix_intrusionset, industry)
 
-    for cve in utils.sanitizer("cve", actor_details, default=[]):
+    for cve in utils.sanitizer("cve", actor_details, []):
         items += create_stix_vulnerability(connector, stix_intrusionset, cve)
 
     for malware in utils.sanitizer("malware", actor_details, []):
