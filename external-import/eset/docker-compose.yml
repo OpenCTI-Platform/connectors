@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-eset:
-    image: opencti/connector-eset:5.8.6
+    image: opencti/connector-eset:5.8.7
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

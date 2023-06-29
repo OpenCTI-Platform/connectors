@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-joe-sandbox:
-    image: opencti/connector-joe-sandbox:5.8.6
+    image: opencti/connector-joe-sandbox:5.8.7
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
