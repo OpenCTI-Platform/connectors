@@ -225,7 +225,7 @@ class MispFeed:
         except Exception as e:
             self.helper.log_error(f"Error while sending bundle: {e}")
 
-    def resolve_markings(self, tags, with_default=True):
+    def _resolve_markings(self, tags, with_default=True):
         markings = []
         for tag in tags:
             tag_name = tag["name"]
