@@ -18,13 +18,13 @@ def process(connector, actor):
 
     items = [stix_intrusionset]
 
-    for industry in actor_details.get("industries", []):
+    for industry in utils.sanitizer("industries", actor_details, []):
         items += create_stix_industry(connector, stix_intrusionset, industry)
 
-    for cve in actor_details.get("cve", []):
+    for cve in utils.sanitizer("cve", actor_details, []):
         items += create_stix_vulnerability(connector, stix_intrusionset, cve)
 
-    for malware in actor_details.get("malware", []):
+    for malware in utils.sanitizer("malware", actor_details, []):
         items += create_stix_malware(connector, stix_intrusionset, malware)
 
     for tool in actor_details.get("tool", []):
