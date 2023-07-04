@@ -249,6 +249,10 @@ jobs:
           name: Build Docker image opencti/connector-virustotal-livehunt-rules
           command: docker build -t opencti/connector-virustotal-livehunt-rules:latest . && docker tag opencti/connector-virustotal-livehunt-rules:latest opencti/connector-virustotal-livehunt-rules:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/taxii-post
+          name: Build Docker image opencti/connector-taxii-post
+          command: docker build -t opencti/connector-taxii-posts:latest . && docker tag opencti/connector-taxii-post:latest opencti/connector-taxii-post:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -350,6 +354,8 @@ jobs:
             docker push opencti/connector-vmray-analyzer:${CIRCLE_TAG}
             docker push opencti/connector-virustotal-livehunt-rules:latest
             docker push opencti/connector-virustotal-livehunt-rules:${CIRCLE_TAG}
+            docker push opencti/connector-taxii-post:latest
+            docker push opencti/connector-taxii-post:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -871,6 +877,10 @@ jobs:
           name: Build Docker image opencti/connector-virustotal-livehunt-rules
           command: docker build -t opencti/connector-virustotal-livehunt-rules:rolling .
       - run:
+          working_directory: ~/opencti/stream/taxii-post
+          name: Build Docker image opencti/connector-taxii-post
+          command: docker build -t opencti/connector-taxii-post:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -921,6 +931,7 @@ jobs:
             docker push opencti/connector-threatfox:rolling
             docker push opencti/connector-vmray-analyzer:rolling
             docker push opencti/connector-virustotal-livehunt-rules:rolling
+            docker push opencti/connector-taxii-post:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

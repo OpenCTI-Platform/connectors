@@ -57,7 +57,6 @@ class VirusTotalClient:
         response = None
         try:
             response = http.request(method, url, headers=self.headers, data=payload)
-
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")

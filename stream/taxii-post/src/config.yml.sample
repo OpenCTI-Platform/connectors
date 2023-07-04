@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
+  name: 'TAXII POST'
+  scope: 'taxii' # Reserved
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+taxii:
+  url: 'https://taxii.changeme.com' # The URL of the TAXII Server
+  ssl_verify: true
+  collection_id: 'ChangeMe' # The collection ID
+  token: '' # Token for bearer auth (if set, will ignore basic auth params)
+  login: 'ChangeMe' # Login for basic auth
+  password: 'ChangeMe' # Password for basic auth
+  version: '2.1' # Version for TAXII
+  stix_version: '2.1' # Version for STIX
