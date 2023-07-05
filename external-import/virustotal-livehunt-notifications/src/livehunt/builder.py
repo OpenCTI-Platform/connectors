@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Livehunt builder module."""
-
+import datetime
 import json
+import logging
 from typing import Optional
 
 import plyara
@@ -9,6 +10,8 @@ import plyara.utils
 import stix2
 import vt
 from pycti import Incident, OpenCTIConnectorHelper, StixCoreRelationship
+
+plyara.logger.setLevel(logging.ERROR)
 
 
 class LivehuntBuilder:
@@ -23,6 +26,7 @@ class LivehuntBuilder:
         author: stix2.Identity,
         tag: str,
         create_alert: bool,
+        max_old_days: int,
         create_file: bool,
         create_ruleset: bool,
         delete_notification: bool,
@@ -34,6 +38,7 @@ class LivehuntBuilder:
         self.bundle = [self.author]
         self.tag = tag
         self.with_alert = create_alert
+        self.max_old_days = max_old_days
         self.with_file = create_file
         self.with_ruleset = create_ruleset
         self.delete_notification = delete_notification
@@ -41,14 +46,23 @@ class LivehuntBuilder:
     def process(self, start_date: str):
         url = "/intelligence/hunting_notification_files"
         params = f"date:{start_date}+"
-        if self.tag:
+        if self.tag is not None and self.tag != "":
+            self.helper.log_debug(f"Setting up filter with tag {self.tag}")
             params += f" tag:{self.tag}"
 
-        self.helper.log_debug(f"Url for notifications: {url} / params: {params}")
+        self.helper.log_info(f"Url for notifications: {url} / params: {params}")
         files_iterator = self.client.iterator(url, params={"filter": params})
 
         for vtobj in files_iterator:
             self.helper.log_debug(json.dumps(vtobj.__dict__, indent=2))
+
+            if self.max_old_days is not None:
+                time_diff = datetime.datetime.now() - vtobj.first_submission_date
+                if time_diff.days >= self.max_old_days:
+                    self.helper.log_info(
+                        f"First submission date {vtobj.first_submission_date} is too old (more than {self.max_old_days} days"
+                    )
+                    continue
 
             # Create external reference to Virustotal report
             external_reference = self.create_external_reference(
@@ -90,7 +104,9 @@ class LivehuntBuilder:
         # Create the alert
         name = f"""Alert from ruleset {vtobj._context_attributes["ruleset_name"]} {f'{vtobj._context_attributes["rule_tags"]}' if vtobj._context_attributes["rule_tags"] else ""}"""
         incident = stix2.Incident(
-            id=Incident.generate_id(name, vtobj._context_attributes["notification_date"]),
+            id=Incident.generate_id(
+                name, vtobj._context_attributes["notification_date"]
+            ),
             incident_type="alert",
             name=name,
             description=f'Snippet:\n{vtobj._context_attributes["notification_snippet"]}',
@@ -218,14 +234,17 @@ class LivehuntBuilder:
                 created_by_ref=self.author,
                 name=rule["rule_name"],
                 description=next(
-                    (i["date"] for i in rule["metadata"] if "date" in i),
+                    (i["date"] for i in rule.get("metadata", {}) if "date" in i),
                     "No description",
                 ),
                 confidence=self.helper.connect_confidence_level,
                 pattern=plyara.utils.rebuild_yara_rule(rule),
                 pattern_type="yara",
                 valid_from=self.helper.api.stix2.format_date(
-                    next((i["date"] for i in rule["metadata"] if "date" in i), None)
+                    next(
+                        (i["date"] for i in rule.get("metadata", {}) if "date" in i),
+                        None,
+                    )
                 ),
                 custom_properties={
                     "x_opencti_main_observable_type": "StixFile",

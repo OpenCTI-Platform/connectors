@@ -15,6 +15,7 @@ services:
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY=ChangeMe # Private API Key
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC=300 # Time to wait in seconds between subsequent requests
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT=True # Set to true to create alerts
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_OLD_DAYS=3 # Only create the alert if the first submission of the file is not older than `max_old_days`
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE_WITH_ALERT=True # Set to true to create file linked to the alerts
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION=False # Set to true to remove livehunt notifications
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG="mytag" # Filter livehunt notifications with this tag
