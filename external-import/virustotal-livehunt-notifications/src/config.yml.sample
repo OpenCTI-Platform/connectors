@@ -18,6 +18,6 @@ virustotal_livehunt_notifications:
   create_alert: True # If True, create alerts (incident) from the notification
   max_old_days: 3  # Create the alert only if the first submission is not older than `max_old_days` to avoid creating alerts with re-submissions
   create_file: True # If True, create a file and link it to the alert
-  create_ruleset: True # If True, create a yara indicator and link it to the alert and the file
+  create_yara_rule: True # If True, create a yara indicator and link it to the alert and the file
   delete_notification: False # If True, remove the notification on VT
   filter_with_tag: "" # (Optional) Tag to filter the notifications, empty = no filtering

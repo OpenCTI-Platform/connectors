@@ -28,7 +28,7 @@ class LivehuntBuilder:
         create_alert: bool,
         max_old_days: int,
         create_file: bool,
-        create_ruleset: bool,
+        create_yara_rule: bool,
         delete_notification: bool,
     ) -> None:
         """Initialize Virustotal builder."""
@@ -40,7 +40,7 @@ class LivehuntBuilder:
         self.with_alert = create_alert
         self.max_old_days = max_old_days
         self.with_file = create_file
-        self.with_ruleset = create_ruleset
+        self.with_yara_rule = create_yara_rule
         self.delete_notification = delete_notification
 
     def process(self, start_date: str):
@@ -77,9 +77,12 @@ class LivehuntBuilder:
             if self.with_file:
                 file_id = self.create_file(vtobj, incident_id)
 
-            if self.with_ruleset:
-                self.create_ruleset(
-                    vtobj._context_attributes["ruleset_id"], incident_id, file_id
+            if self.with_yara_rule:
+                self.create_rule(
+                    vtobj._context_attributes["ruleset_id"],
+                    vtobj.rule_name,
+                    incident_id,
+                    file_id,
                 )
 
             if self.delete_notification:
@@ -204,21 +207,25 @@ class LivehuntBuilder:
             self.bundle.append(relationship)
         return file["id"]
 
-    def create_ruleset(
+    def create_rule(
         self,
         ruleset_id: str,
+        rule_name: str,
         incident_id: Optional[str] = None,
         file_id: Optional[str] = None,
     ):
         """
-        Get the ruleset from VirusTotal, parse the yara rules and create them.
+        Get the rule from VirusTotal, parse the yara rules and create the wanted rule.
 
+        A single rule is created, the one having the name matching.
         If an incident or a file has been created, the yara rules will be linked to them.
 
         Parameters
         ----------
         ruleset_id : str
             Ruleset id of the notification to retrieve.
+        rule_name : str
+            Name of the rule that matched.
         incident_id : str, optional
             Id of the incident to be linked to the file using a `related-to` relationship.
         file_id : str, optional
@@ -230,62 +237,68 @@ class LivehuntBuilder:
         rules = parser.parse_string(ruleset.rules)
 
         for rule in rules:
-            indicator = stix2.Indicator(
-                created_by_ref=self.author,
-                name=rule["rule_name"],
-                description=next(
-                    (i["date"] for i in rule.get("metadata", {}) if "date" in i),
-                    "No description",
-                ),
-                confidence=self.helper.connect_confidence_level,
-                pattern=plyara.utils.rebuild_yara_rule(rule),
-                pattern_type="yara",
-                valid_from=self.helper.api.stix2.format_date(
-                    next(
+            if rule["rule_name"] == rule_name:
+                self.helper.log_debug(f"Adding rule name {rule_name}")
+                indicator = stix2.Indicator(
+                    created_by_ref=self.author,
+                    name=rule["rule_name"],
+                    description=next(
                         (i["date"] for i in rule.get("metadata", {}) if "date" in i),
-                        None,
+                        "No description",
+                    ),
+                    confidence=self.helper.connect_confidence_level,
+                    pattern=plyara.utils.rebuild_yara_rule(rule),
+                    pattern_type="yara",
+                    valid_from=self.helper.api.stix2.format_date(
+                        next(
+                            (
+                                i["date"]
+                                for i in rule.get("metadata", {})
+                                if "date" in i
+                            ),
+                            None,
+                        )
+                    ),
+                    custom_properties={
+                        "x_opencti_main_observable_type": "StixFile",
+                    },
+                )
+                self.helper.log_debug(
+                    f"[VirusTotal Livehunt Notifications] yara indicator created: {indicator}"
+                )
+                self.bundle.append(indicator)
+
+                if incident_id is not None:
+                    relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to",
+                            incident_id,
+                            indicator["id"],
+                        ),
+                        relationship_type="related-to",
+                        created_by_ref=self.author["id"],
+                        source_ref=incident_id,
+                        target_ref=indicator["id"],
+                        confidence=self.helper.connect_confidence_level,
+                        allow_custom=True,
                     )
-                ),
-                custom_properties={
-                    "x_opencti_main_observable_type": "StixFile",
-                },
-            )
-            self.helper.log_debug(
-                f"[VirusTotal Livehunt Notifications] yara indicator created: {indicator}"
-            )
-            self.bundle.append(indicator)
+                    self.bundle.append(relationship)
 
-            if incident_id is not None:
-                relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to",
-                        incident_id,
-                        indicator["id"],
-                    ),
-                    relationship_type="related-to",
-                    created_by_ref=self.author["id"],
-                    source_ref=incident_id,
-                    target_ref=indicator["id"],
-                    confidence=self.helper.connect_confidence_level,
-                    allow_custom=True,
-                )
-                self.bundle.append(relationship)
-
-            if file_id is not None:
-                relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to",
-                        file_id,
-                        indicator["id"],
-                    ),
-                    relationship_type="related-to",
-                    created_by_ref=self.author["id"],
-                    source_ref=file_id,
-                    target_ref=indicator["id"],
-                    confidence=self.helper.connect_confidence_level,
-                    allow_custom=True,
-                )
-                self.bundle.append(relationship)
+                if file_id is not None:
+                    relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to",
+                            file_id,
+                            indicator["id"],
+                        ),
+                        relationship_type="related-to",
+                        created_by_ref=self.author["id"],
+                        source_ref=file_id,
+                        target_ref=indicator["id"],
+                        confidence=self.helper.connect_confidence_level,
+                        allow_custom=True,
+                    )
+                    self.bundle.append(relationship)
 
     def delete_livehunt_notification(self, notification_id):
         """
