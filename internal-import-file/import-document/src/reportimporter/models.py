@@ -36,13 +36,11 @@ class Observable(BaseModel):
 
         self.filter_regex = self._load_filter_values(self.filter_config)
 
-    @validator("detection_option")
     def validate_detection_value(cls, value: str) -> str:
         if value not in OBSERVABLE_DETECTION_OPTIONS:
             raise ValueError("{} is not a valid detection_option value")
         return value
 
-    @validator("filter_config")
     def validate_files_exist(cls, filter_config: List[str]) -> List[str]:
         if len(filter_config) == 0:
             return filter_config
@@ -59,7 +57,6 @@ class Observable(BaseModel):
             filter_paths.append(file_path)
         return filter_paths
 
-    @validator("regex_patterns", "filter_config", pre=True)
     def pre_validate_transform_str_to_list(cls, field: str) -> Any:
         return list(filter(None, (x.strip() for x in field.splitlines())))
 
@@ -117,11 +114,9 @@ class EntityConfig(BaseModel):
     omit_match_in: List[str] = []
     custom_attributes: str
 
-    @validator("fields", "exclude_values", "omit_match_in", pre=True)
     def pre_validate_transform_str_to_list(cls, field: str) -> List[str]:
         return list(filter(None, (x.strip() for x in field.splitlines())))
 
-    @validator("filter", pre=True)
     def pre_validate_transform_str_to_json(cls, filter_string: str) -> Any:
         try:
             return json.loads(filter_string)
