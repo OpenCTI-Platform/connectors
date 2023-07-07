@@ -83,7 +83,12 @@ class TaxiiPostConnector:
             if self.taxii_token is not None:
                 self.helper.log_info("Posting to TAXII URL (using token): " + url)
                 headers["Authorization"] = "Bearer " + self.taxii_token
-                response = requests.post(url, headers=headers, json=bundle)
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=bundle,
+                    verify=self.taxii_ssl_verify,
+                )
                 response.raise_for_status()
             else:
                 self.helper.log_info("Posting to TAXII URL (using basic auth): " + url)
@@ -92,6 +97,7 @@ class TaxiiPostConnector:
                     headers=headers,
                     auth=(self.taxii_login, self.taxii_password),
                     json=bundle,
+                    verify=self.taxii_ssl_verify,
                 )
                 response.raise_for_status()
             self.helper.log_info("TAXII Response: " + str(response.content))
