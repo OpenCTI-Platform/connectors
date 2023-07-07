@@ -3,7 +3,7 @@ urllib3==2.0.3
 beautifulsoup4==4.12.2
 pdfminer.six==20221105
 stix==1.2.0.11
-pydantic==2.0.2
+pydantic==1.10.11
 ioc-finder==7.3.0
 dateparser==1.1.8
 pyhumps==3.8.0
