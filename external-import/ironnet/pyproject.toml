@@ -8,7 +8,7 @@ authors = []
 python = "^3.10"
 requests = "^2.28.0"
 pycti = "5.8.7"
-pydantic = "^1.10.11"
+pydantic = "^2.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
