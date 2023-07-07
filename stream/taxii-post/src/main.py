@@ -60,7 +60,7 @@ class TaxiiPostConnector:
             self.taxii_url
             + "/root/collections/"
             + self.taxii_collection_id
-            + "/objects"
+            + "/objects/"
         )
         headers = {
             "Content-Type": "application/vnd.oasis.stix+json; version="
@@ -82,6 +82,7 @@ class TaxiiPostConnector:
             }
             if self.taxii_token is not None:
                 self.helper.log_info("Posting to TAXII URL (using token): " + url)
+                self.helper.log_info(str(bundle))
                 headers["Authorization"] = "Bearer " + self.taxii_token
                 response = requests.post(
                     url,
@@ -92,6 +93,7 @@ class TaxiiPostConnector:
                 response.raise_for_status()
             else:
                 self.helper.log_info("Posting to TAXII URL (using basic auth): " + url)
+                self.helper.log_info(str(bundle))
                 response = requests.post(
                     url,
                     headers=headers,
