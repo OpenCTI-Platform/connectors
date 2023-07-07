@@ -55,6 +55,7 @@ class TaxiiPostConnector:
             data = json.loads(msg.data)["data"]
         except:
             raise ValueError("Cannot process the message")
+        self.helper.log_info("Processing the object " + data["id"])
         url = (
             self.taxii_url
             + "/root/collections/"
@@ -80,10 +81,12 @@ class TaxiiPostConnector:
                 "objects": [data_object],
             }
             if self.taxii_token is not None:
+                self.helper.log_info("Posting to TAXII URL (using token): " + url)
                 headers["Authorization"] = "Bearer " + self.taxii_token
                 response = requests.post(url, headers=headers, json=bundle)
                 response.raise_for_status()
             else:
+                self.helper.log_info("Posting to TAXII URL (using basic auth): " + url)
                 response = requests.post(
                     url,
                     headers=headers,
@@ -91,6 +94,7 @@ class TaxiiPostConnector:
                     json=bundle,
                 )
                 response.raise_for_status()
+            self.helper.log_info("TAXII Response: " + str(response.content))
         except Exception as e:
             self.helper.log_error(str(e))
 
