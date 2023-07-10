@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-restore-files:
-    image: opencti/connector-restore-files:5.8.7
+    image: opencti/connector-restore-files:5.9.0
     environment:
       - OPENCTI_URL=http://localhost # Local OpenCTI URL
       - OPENCTI_TOKEN=ChangeMe # Local OpenCTI token

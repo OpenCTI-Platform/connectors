@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-silobreaker:
-    image: opencti/connector-silobreaker:5.8.7
+    image: opencti/connector-silobreaker:5.9.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
