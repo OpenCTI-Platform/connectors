@@ -251,7 +251,7 @@ jobs:
       - run:
           working_directory: ~/opencti/stream/taxii-post
           name: Build Docker image opencti/connector-taxii-post
-          command: docker build -t opencti/connector-taxii-posts:latest . && docker tag opencti/connector-taxii-post:latest opencti/connector-taxii-post:${CIRCLE_TAG}
+          command: docker build -t opencti/connector-taxii-post:latest . && docker tag opencti/connector-taxii-post:latest opencti/connector-taxii-post:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
