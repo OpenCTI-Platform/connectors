@@ -32,6 +32,7 @@ class PulseImporterConfig(NamedTuple):
     filter_indicators: bool
     enable_relationships: bool
     enable_attack_patterns_indicates: bool
+    malware_blacklist: Set[str]
 
 
 class PulseImporter:
@@ -67,6 +68,7 @@ class PulseImporter:
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
 
+        self.malware_blacklist: Set[str] = config.malware_blacklist
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
         self.work_id: Optional[str] = None
@@ -230,6 +232,7 @@ class PulseImporter:
             excluded_pulse_indicator_types=self.excluded_pulse_indicator_types,
             enable_relationships=self.enable_relationships,
             enable_attack_patterns_indicates=self.enable_attack_patterns_indicates,
+            malware_blacklist=self.malware_blacklist
         )
 
         bundle_builder = PulseBundleBuilder(config, self.helper)

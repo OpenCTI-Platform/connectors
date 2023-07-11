@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 from typing import Callable, List, Mapping, NamedTuple, Optional, Set
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, ExternalReference
 
 import stix2
 from alienvault.models import Pulse, PulseIndicator
@@ -71,6 +71,7 @@ class PulseBundleBuilderConfig(NamedTuple):
     excluded_pulse_indicator_types: Set[str]
     enable_relationships: bool
     enable_attack_patterns_indicates: bool
+    malware_blacklist: Set[str]
 
 
 class PulseBundleBuilder:
@@ -138,6 +139,7 @@ class PulseBundleBuilder:
         self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
+        self.malware_blacklist = config.malware_blacklist
 
         self.helper = helper
 
@@ -200,6 +202,12 @@ class PulseBundleBuilder:
         # Create malwares based on malware families in the Pulse.
         for malware_name in self.pulse.malware_families:
             if not malware_name or malware_name in self.guessed_malwares:
+                continue
+
+            if malware_name in self.malware_blacklist:
+                log.warning(
+                    f"Malware family '{malware_name}' is in the blacklist, skipping"
+                )
                 continue
 
             malware = self._create_malware(malware_name)
@@ -339,6 +347,7 @@ class PulseBundleBuilder:
 
     def _create_observations(
         self,
+        external_references: Optional[List[stix2.ExternalReference]] = None,
     ) -> List[Observation]:
         if not (self.create_observables or self.create_indicators):
             return []
@@ -395,6 +404,7 @@ class PulseBundleBuilder:
                     pulse_indicator.created,
                     labels,
                     main_observable_type=indicator_pattern.main_observable_type,
+                    external_references=external_references
                 )
 
                 if observable is not None:
@@ -449,6 +459,7 @@ class PulseBundleBuilder:
         valid_from: datetime,
         labels: List[str],
         main_observable_type: Optional[str] = None,
+        external_references: Optional[List[ExternalReference]] = None,
     ) -> stix2.Indicator:
         return create_indicator(
             pattern,
@@ -461,6 +472,7 @@ class PulseBundleBuilder:
             confidence=self.confidence_level,
             object_markings=self.object_markings,
             x_opencti_main_observable_type=main_observable_type,
+            external_references=external_references
         )
 
     @staticmethod
@@ -708,7 +720,7 @@ class PulseBundleBuilder:
         bundle_objects.extend(attack_patterns_target_vulnerabilities)
 
         # Create observations.
-        observations = self._create_observations()
+        observations = self._create_observations(self._create_report_external_references())
 
         # Get observables and add to bundle.
         observables = [o.observable for o in observations if o.observable is not None]
