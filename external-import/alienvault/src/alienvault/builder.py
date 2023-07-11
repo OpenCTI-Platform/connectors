@@ -71,6 +71,7 @@ class PulseBundleBuilderConfig(NamedTuple):
     excluded_pulse_indicator_types: Set[str]
     enable_relationships: bool
     enable_attack_patterns_indicates: bool
+    malware_blacklist: Set[str]
 
 
 class PulseBundleBuilder:
@@ -137,6 +138,7 @@ class PulseBundleBuilder:
         self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
+        self.malware_blacklist = config.malware_blacklist
 
     def _no_relationships(self) -> bool:
         return not self.enable_relationships
@@ -197,6 +199,12 @@ class PulseBundleBuilder:
         # Create malwares based on malware families in the Pulse.
         for malware_name in self.pulse.malware_families:
             if not malware_name or malware_name in self.guessed_malwares:
+                continue
+
+            if malware_name in self.malware_blacklist:
+                log.warning(
+                    f"Malware family '{malware_name}' is in the blacklist, skipping"
+                )
                 continue
 
             malware = self._create_malware(malware_name)
