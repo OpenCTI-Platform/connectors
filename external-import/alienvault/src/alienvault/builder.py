@@ -3,6 +3,7 @@
 import logging
 from datetime import datetime
 from typing import Callable, List, Mapping, NamedTuple, Optional, Set
+from pycti import ExternalReference
 
 import stix2
 from alienvault.models import Pulse, PulseIndicator
@@ -335,6 +336,7 @@ class PulseBundleBuilder:
 
     def _create_observations(
         self,
+        external_references: Optional[List[stix2.ExternalReference]] = None,
     ) -> List[Observation]:
         if not (self.create_observables or self.create_indicators):
             return []
@@ -391,6 +393,7 @@ class PulseBundleBuilder:
                     pulse_indicator.created,
                     labels,
                     main_observable_type=indicator_pattern.main_observable_type,
+                    external_references=external_references
                 )
 
                 if observable is not None:
@@ -445,6 +448,7 @@ class PulseBundleBuilder:
         valid_from: datetime,
         labels: List[str],
         main_observable_type: Optional[str] = None,
+        external_references: Optional[List[ExternalReference]] = None,
     ) -> stix2.Indicator:
         return create_indicator(
             pattern,
@@ -457,6 +461,7 @@ class PulseBundleBuilder:
             confidence=self.confidence_level,
             object_markings=self.object_markings,
             x_opencti_main_observable_type=main_observable_type,
+            external_references=external_references
         )
 
     @staticmethod
@@ -696,7 +701,7 @@ class PulseBundleBuilder:
         bundle_objects.extend(attack_patterns_target_vulnerabilities)
 
         # Create observations.
-        observations = self._create_observations()
+        observations = self._create_observations(self._create_report_external_references())
 
         # Get observables and add to bundle.
         observables = [o.observable for o in observations if o.observable is not None]
