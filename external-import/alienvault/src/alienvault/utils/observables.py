@@ -3,6 +3,7 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
+
 from alienvault.utils.constants import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_CREATED_BY_REF,
@@ -136,7 +137,7 @@ def _create_observable_file(
     name: Optional[str] = None,
     created_by: Optional[Identity] = None,
     labels: Optional[List[str]] = None,
-    object_markings: Optional[List[MarkingDefinition]] = None,
+    object_markings: Optional[List[MarkingDefinition]] = None
 ) -> File:
     return File(
         hashes=hashes,
