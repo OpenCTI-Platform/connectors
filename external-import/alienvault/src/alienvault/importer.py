@@ -232,7 +232,7 @@ class PulseImporter:
             enable_attack_patterns_indicates=self.enable_attack_patterns_indicates,
         )
 
-        bundle_builder = PulseBundleBuilder(config)
+        bundle_builder = PulseBundleBuilder(config, self.helper)
 
         try:
             return bundle_builder.build()
