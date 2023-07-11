@@ -56,6 +56,8 @@ class AlienVault:
         "closed": 3,
     }
 
+    _CONFIG_MALWARE_BLACKLIST = f"{_CONFIG_NAMESPACE}.malware_blacklist"
+
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_FILTER_INDICATORS = True
@@ -153,12 +155,26 @@ class AlienVault:
             config, self._CONFIG_INTERVAL_SEC, is_number=True
         )
 
+        malware_blacklist_str = self._get_configuration(
+            config, self._CONFIG_MALWARE_BLACKLIST)
+        
+        malware_blacklist = set()
+        if malware_blacklist_str is not None:
+            malware_blacklist_list = convert_comma_separated_str_to_list(
+                malware_blacklist_str
+            )
+            malware_blacklist = set(malware_blacklist_list)
+
+
         update_existing_data = bool(
             self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
 
         # Create OpenCTI connector helper
         self.helper = OpenCTIConnectorHelper(config)
+
+
+        self.helper.log_debug(f"Malware blacklist: {malware_blacklist}")
 
         # Create AlienVault author
         author = self._create_author()
@@ -184,6 +200,7 @@ class AlienVault:
             filter_indicators=filter_indicators,
             enable_relationships=enable_relationships,
             enable_attack_patterns_indicates=enable_attack_patterns_indicates,
+            malware_blacklist=malware_blacklist,
         )
 
         self.pulse_importer = PulseImporter(pulse_importer_config)
