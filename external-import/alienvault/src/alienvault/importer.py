@@ -235,7 +235,7 @@ class PulseImporter:
             malware_blacklist=self.malware_blacklist
         )
 
-        bundle_builder = PulseBundleBuilder(config)
+        bundle_builder = PulseBundleBuilder(config, self.helper)
 
         try:
             return bundle_builder.build()

@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 from typing import Callable, List, Mapping, NamedTuple, Optional, Set
-from pycti import ExternalReference
+from pycti import OpenCTIConnectorHelper, ExternalReference
 
 import stix2
 from alienvault.models import Pulse, PulseIndicator
@@ -119,6 +119,7 @@ class PulseBundleBuilder:
     def __init__(
         self,
         config: PulseBundleBuilderConfig,
+        helper: OpenCTIConnectorHelper,
     ) -> None:
         """Initialize pulse bundle builder."""
         self.pulse = config.pulse
@@ -139,6 +140,8 @@ class PulseBundleBuilder:
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
         self.malware_blacklist = config.malware_blacklist
+
+        self.helper = helper
 
     def _no_relationships(self) -> bool:
         return not self.enable_relationships
@@ -562,9 +565,17 @@ class PulseBundleBuilder:
         external_references = self._create_report_external_references()
         labels = self._get_labels()
 
+        reports = self.helper.api.report.list(search = self.pulse.name, first=1, filters=[])
+        candidate = reports[0] if reports != None and len(reports) > 0 else None
+        published = 0
+        if candidate != None and candidate["name"] == self.pulse.name:
+            published = candidate["published"]
+        else:
+            published = self.pulse.created
+
         return create_report(
             self.pulse.name,
-            self.pulse.created,
+            published,
             objects,
             created_by=self.pulse_author,
             created=self.pulse.created,
