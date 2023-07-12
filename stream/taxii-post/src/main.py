@@ -90,8 +90,6 @@ class TaxiiPostConnector:
                     del data_object["pattern_version"]
                 if "is_family" in data_object:
                     del data_object["is_family"]
-                if "external_references" in data_object:
-                    del data_object["external_references"]
             bundle = {
                 "type": "bundle",
                 "spec_version": self.taxii_stix_version,
