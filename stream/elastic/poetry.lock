@@ -470,14 +470,14 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.9.0"
+version = "5.9.1"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.9.0-py3-none-any.whl", hash = "sha256:34ae862cfed666809fcc302ef8e5057e95c2edea94825d6ad794c7dd94755a0d"},
-    {file = "pycti-5.9.0.tar.gz", hash = "sha256:7d57c2da84f9346c10080ac96fb8bca2cf447bd1ea870104fe7778ed1694913b"},
+    {file = "pycti-5.9.1-py3-none-any.whl", hash = "sha256:34ae862cfed666809fcc302ef8e5057e95c2edea94825d6ad794c7dd94755a0d"},
+    {file = "pycti-5.9.1.tar.gz", hash = "sha256:7d57c2da84f9346c10080ac96fb8bca2cf447bd1ea870104fe7778ed1694913b"},
 ]
 
 [package.dependencies]
@@ -1088,4 +1088,4 @@ python-versions = "^3.9"
 content-hash = "e3e1bba8cbbe72d1fad33642367361cadd782eca1ac619db2e7a4cc286bc3586"
 =======
 content-hash = "66313146bef887252b1451d860bdc47df55236951712d06b634dd1cf7f460246"
->>>>>>> 36b889c2 ([all] Release 5.9.0)
+>>>>>>> 36b889c2 ([all] Release 5.9.1)

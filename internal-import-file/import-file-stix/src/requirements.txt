@@ -1,4 +1,4 @@
-pycti==5.9.0
+pycti==5.9.1
 maec==4.1.0.17
 numpy==1.25.1
 stix2-elevator==4.1.7
