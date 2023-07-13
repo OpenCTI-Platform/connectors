@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cape-sandbox:
-    image: opencti/connector-cape-sandbox:5.9.1
+    image: opencti/connector-cape-sandbox:5.9.2
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
