@@ -74,9 +74,10 @@ class LivehuntBuilder:
             # If extension filters were set
             if self.extensions:
                 # If the extension isn't in the list of extensions
-                if not hasattr(
-                    vtobj, "type_extension"
-                ) or vtobj.type_extension not in self.extensions:
+                if (
+                    not hasattr(vtobj, "type_extension")
+                    or vtobj.type_extension not in self.extensions
+                ):
                     self.helper.log_info(
                         f"Extension {vtobj.type_extension} not in filter {self.extensions}."
                     )
