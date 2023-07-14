@@ -16,8 +16,12 @@ virustotal_livehunt_notifications:
   api_key: 'ChangeMe' # Private API Key
   interval_sec: 300 # Time to wait in seconds between subsequent requests
   create_alert: True # If True, create alerts (incident) from the notification
-  max_old_days: 3  # Create the alert only if the first submission is not older than `max_old_days` to avoid creating alerts with re-submissions
-  create_file: True # If True, create a file and link it to the alert
+  extensions: 'exe,dll' # (Optional) Comma separated filter to only download files matching these extensions
+  min_file_size: 1000 # (Optional) Don't download files smaller than this many bytes
+  max_file_size: 52428800 # (Optional) Don't download files larger than this many bytes
+  max_age_days: 3  # Create the alert only if the first submission is not older than `max_old_days` to avoid creating alerts with re-submissions
+  create_file: True # If True, create a file object and link it to the alert
+  upload_file: False # If True, upload the file to opencti
   create_yara_rule: True # If True, create a yara indicator and link it to the alert and the file
   delete_notification: False # If True, remove the notification on VT
   filter_with_tag: "" # (Optional) Tag to filter the notifications, empty = no filtering

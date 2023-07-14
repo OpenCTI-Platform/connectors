@@ -70,7 +70,7 @@ class VirustotalLivehuntNotifications:
             config,
         )
 
-        max_old_days = get_config_variable(
+        max_age_days = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_OLD_DAYS",
             ["virustotal_livehunt_notifications", "max_old_days"],
             config,
@@ -95,16 +95,57 @@ class VirustotalLivehuntNotifications:
             config,
         )
 
+        extensions = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_EXTENSIONS",
+            ["virustotal_livehunt_notifications", "extensions"],
+            config,
+        )
+        exts = []
+        if extensions:
+            exts = extensions.split(",")
+
+        min_file_size = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_FILE_SIZE",
+            ["virustotal_livehunt_notifications", "min_file_size"],
+            config,
+            True,
+        )
+
+        max_file_size = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_FILE_SIZE",
+            ["virustotal_livehunt_notifications", "max_file_size"],
+            config,
+            True,
+        )
+
+        min_positives = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_POSITIVES",
+            ["virustotal_livehunt_notifications", "min_positives"],
+            config,
+            True,
+        )
+
+        upload_artifact = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_UPLOAD_ARTIFACT",
+            ["virustotal_livehunt_notifications", "upload_artifact"],
+            config,
+        )
+
         self.builder = LivehuntBuilder(
             client,
             self.helper,
             author,
             tag,
             create_alert,
-            max_old_days,
+            max_age_days,
             create_file,
+            upload_artifact,
             create_yara_rule,
             delete_notification,
+            exts,
+            min_file_size,
+            max_file_size,
+            min_positives,
         )
 
     @staticmethod

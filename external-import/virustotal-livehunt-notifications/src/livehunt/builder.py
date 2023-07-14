@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Livehunt builder module."""
 import datetime
+import io
 import json
 import logging
 from typing import Optional
 
+import magic
 import plyara
 import plyara.utils
 import stix2
@@ -26,10 +28,15 @@ class LivehuntBuilder:
         author: stix2.Identity,
         tag: str,
         create_alert: bool,
-        max_old_days: int,
+        max_age_days: int,
         create_file: bool,
+        upload_artifact: bool,
         create_yara_rule: bool,
         delete_notification: bool,
+        extensions: list[str],
+        min_file_size: int,
+        max_file_size: int,
+        min_positives: int,
     ) -> None:
         """Initialize Virustotal builder."""
         self.client = client
@@ -38,10 +45,15 @@ class LivehuntBuilder:
         self.bundle = [self.author]
         self.tag = tag
         self.with_alert = create_alert
-        self.max_old_days = max_old_days
+        self.max_age_days = max_age_days
         self.with_file = create_file
+        self.upload_artifact = upload_artifact
         self.with_yara_rule = create_yara_rule
         self.delete_notification = delete_notification
+        self.extensions = extensions
+        self.min_file_size = min_file_size
+        self.max_file_size = max_file_size
+        self.min_positives = min_positives
 
     def process(self, start_date: str):
         url = "/intelligence/hunting_notification_files"
@@ -56,11 +68,49 @@ class LivehuntBuilder:
         for vtobj in files_iterator:
             self.helper.log_debug(json.dumps(vtobj.__dict__, indent=2))
 
-            if self.max_old_days is not None:
-                time_diff = datetime.datetime.now() - vtobj.first_submission_date
-                if time_diff.days >= self.max_old_days:
+            if self.delete_notification:
+                self.delete_livehunt_notification(vtobj.id)
+
+            # If extension filters were set
+            if self.extensions:
+                # If the extension isn't in the list of extensions
+                if not hasattr(
+                    vtobj, "type_extension"
+                ) or vtobj.type_extension not in self.extensions:
                     self.helper.log_info(
-                        f"First submission date {vtobj.first_submission_date} is too old (more than {self.max_old_days} days"
+                        f"Extension {vtobj.type_extension} not in filter {self.extensions}."
+                    )
+                    continue
+
+            # If min positives set and file has fewer detections
+            if (
+                self.min_positives
+                and vtobj.last_analysis_stats["malicious"] < self.min_positives
+            ):
+                self.helper.log_info(
+                    f'Not enough detections ({vtobj.last_analysis_stats["malicious"]} < {self.min_positives}'
+                )
+                continue
+
+            # If min size was set and file is below that size
+            if self.min_file_size and self.min_file_size > int(vtobj.size):
+                self.helper.log_info(
+                    f"File too small ({vtobj.size} < {self.min_file_size}"
+                )
+                continue
+
+            # If max size was set and file is above that size
+            if self.max_file_size and self.max_file_size < int(vtobj.size):
+                self.helper.log_info(
+                    f"File too big ({vtobj.size} > {self.max_file_size}"
+                )
+                continue
+
+            if self.max_age_days is not None:
+                time_diff = datetime.datetime.now() - vtobj.first_submission_date
+                if time_diff.days >= self.max_age_days:
+                    self.helper.log_info(
+                        f"First submission date {vtobj.first_submission_date} is too old (more than {self.max_age_days} days"
                     )
                     continue
 
@@ -71,6 +121,7 @@ class LivehuntBuilder:
             )
             incident_id = None
             file_id = None
+
             if self.with_alert:
                 incident_id = self.create_alert(vtobj, external_reference)
 
@@ -85,8 +136,25 @@ class LivehuntBuilder:
                     file_id,
                 )
 
-            if self.delete_notification:
-                self.delete_livehunt_notification(vtobj.id)
+            if self.upload_artifact:
+                if not self.artifact_exists_opencti(vtobj.sha256):
+                    self.upload_artifact_opencti(vtobj)
+
+    def artifact_exists_opencti(self, sha256: str) -> bool:
+        """
+        Determine whether an Artifact already exists in OpenCTI.
+
+        sha256: a str representing the sha256 of the artifact's file contents
+        returns: a bool indicating the aforementioned
+        """
+
+        response = self.helper.api.stix_cyber_observable.read(
+            filters=[{"key": "hashes_SHA256", "values": [sha256]}]
+        )
+
+        if response:
+            return True
+        return False
 
     def create_alert(self, vtobj, external_reference) -> str:
         """
@@ -309,7 +377,6 @@ class LivehuntBuilder:
         notification_id : str
             Io of the notification to delete.
         """
-
         url = f"/intelligence/hunting_notifications/{notification_id}"
         return self.client.delete(url)
 
@@ -361,3 +428,27 @@ class LivehuntBuilder:
         self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
         # Reset the bundle for the next import.
         self.bundle = []
+
+    def upload_artifact_opencti(self, vtobj):
+        """Upload a file to OpenCTI."""
+        file_name = (
+            vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else vtobj.sha256
+        )
+
+        # Download the file to a file like object
+        file_obj = io.BytesIO()
+        self.helper.log_info(f"Downloading {vtobj.sha256}")
+        self.client.download_file(vtobj.sha256, file_obj)
+        file_obj.seek(0)
+        file_contents = file_obj.read()
+
+        mime_type = magic.from_buffer(file_contents, mime=True)
+
+        kwargs = {
+            "file_name": file_name,
+            "data": file_contents,
+            "mime_type": mime_type,
+            "x_opencti_description": "Downloaded from Virustotal Livehunt Notifications.",
+            "createdBy": self.author["id"],
+        }
+        return self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
