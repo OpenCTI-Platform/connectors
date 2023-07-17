@@ -61,6 +61,7 @@ class VirustotalLivehuntNotifications:
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG",
             ["virustotal_livehunt_notifications", "filter_with_tag"],
             config,
+            default="",
         )
 
         create_alert = get_config_variable(
@@ -92,12 +93,14 @@ class VirustotalLivehuntNotifications:
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION",
             ["virustotal_livehunt_notifications", "delete_notification"],
             config,
+            default=False,
         )
 
         extensions = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_EXTENSIONS",
             ["virustotal_livehunt_notifications", "extensions"],
             config,
+            default=[],
         )
         exts = []
         if extensions:
