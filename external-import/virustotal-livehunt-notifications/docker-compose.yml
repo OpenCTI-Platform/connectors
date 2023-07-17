@@ -8,17 +8,21 @@ services:
       - CONNECTOR_ID=Virustotal_Livehunt_Notifications
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=Virustotal Livehunt Notifications"
+      - CONNECTOR_SCOPE=StixFile,Indicator,Incident
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY=ChangeMe # Private API Key
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_COOLDOWN_SECONDS=300 # Time to wait in seconds between subsequent requests
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_RULENAME_COLOR=#0059f7 # Color to use for Yara rule name labels
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LABELS_COLOR=#54483b # Color to use for all other labels
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_EXTENSIONS=exe,dll # (Optional) Comma separated filter to only download files matching these extensions
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC=300 # Time to wait in seconds between subsequent requests
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT=True # Set to true to create alerts
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_EXTENSIONS='exe,dll' # (Optional) Comma separated filter to only download files matching these extensions
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_FILE_SIZE=1000 # (Optional) Don't download files smaller than this many bytes
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_FILE_SIZE=52428800 # (Optional) Don't download files larger than this many bytes
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE=1 # (Optional) Don't download files older than this many days (first seen in VT)
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE_DAYS=3 # Only create the alert if the first submission of the file is not older than `max_age_days`
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_POSITIVES=5 # (Optional) Don't download files with less than this many vendors marking malicious
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LABELS=livehunt # (Optional) Comma separated labels to apply for uploaded files
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE=True # Set to true to create file object linked to the alerts
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_UPLOAD_ARTIFACT=False # Set to true to upload the file to opencti
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE=True # Set to true to create yara rule linked to the alert and the file
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION=False # Set to true to remove livehunt notifications
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG="mytag" # Filter livehunt notifications with this tag
     restart: always
