@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import sys
 import time
 import uuid
@@ -101,6 +102,17 @@ class Taxii2Connector:
         )
         self.custom_label = get_config_variable(
             "TAXII2_CUSTOM_LABEL", ["taxii2", "custom_label"], config
+        )
+        self.force_pattern_as_name = get_config_variable(
+            "TAXII2_FORCE_PATTERN_AS_NAME",
+            ["taxii2", "force_pattern_as_name"],
+            config,
+            default=False,
+        )
+        self.force_multiple_pattern_name = get_config_variable(
+            "TAXII2_FORCE_MULTIPLE_PATTERN_NAME",
+            ["taxii2", "force_multiple_pattern_name"],
+            config,
         )
 
     @staticmethod
@@ -264,6 +276,20 @@ class Taxii2Connector:
                         if self.add_custom_label == True:
                             new_labels.append(self.custom_label)
                             object["labels"] = new_labels
+                        # Force name to be pattern
+                        if (
+                            self.force_pattern_as_name == True
+                            and object["type"] == "indicator"
+                        ):
+                            if (
+                                " AND " in object["pattern"]
+                                or " OR " in object["pattern"]
+                            ):
+                                object["name"] = self.force_multiple_pattern_name
+                            else:
+                                match = re.search(r"=.?\'(.*?)\'\]", object["pattern"])
+                                if match != None:
+                                    object["name"] = match[1]
                         objects.append(object)
 
                     # Get the manifest for the last object

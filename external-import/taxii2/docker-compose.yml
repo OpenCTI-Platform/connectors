@@ -25,4 +25,6 @@ services:
       - TAXII2_CREATE_OBSERVABLES=true # Generate observables for ingested indicators
       - TAXII2_ADD_CUSTOM_LABEL=false # Enable custom label
       - TAXII2_CUSTOM_LABEL= # Custom label added to all objects
+      - TAXII2_FORCE_PATTERN_AS_NAME=false
+      - "TAXII2_FORCE_MULTIPLE_PATTERN_NAME=Multiple Indicators"
     restart: always
