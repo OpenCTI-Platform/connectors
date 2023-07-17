@@ -110,7 +110,9 @@ class Taxii2Connector:
             default=False,
         )
         self.force_multiple_pattern_name = get_config_variable(
-            "TAXII2_FORCE_MULTIPLE_PATTERN_NAME", ["taxii2", "force_multiple_pattern_name"], config
+            "TAXII2_FORCE_MULTIPLE_PATTERN_NAME",
+            ["taxii2", "force_multiple_pattern_name"],
+            config,
         )
 
     @staticmethod
@@ -275,8 +277,14 @@ class Taxii2Connector:
                             new_labels.append(self.custom_label)
                             object["labels"] = new_labels
                         # Force name to be pattern
-                        if self.force_pattern_as_name == True and object["type"] == "indicator":
-                            if " AND " in object["pattern"] or " OR " in object["pattern"]:
+                        if (
+                            self.force_pattern_as_name == True
+                            and object["type"] == "indicator"
+                        ):
+                            if (
+                                " AND " in object["pattern"]
+                                or " OR " in object["pattern"]
+                            ):
                                 object["name"] = self.force_multiple_pattern_name
                             else:
                                 match = re.search(r"=.?\'(.*?)\'\]", object["pattern"])
