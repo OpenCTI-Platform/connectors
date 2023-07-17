@@ -20,7 +20,7 @@ services:
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_FILE_SIZE=52428800 # (Optional) Don't download files larger than this many bytes
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE_DAYS=3 # Only create the alert if the first submission of the file is not older than `max_age_days`
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE=True # Set to true to create file object linked to the alerts
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_UPLOAD_FILE=False # Set to true to upload the file to opencti
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_UPLOAD_ARTIFACT=False # Set to true to upload the file to opencti
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE=True # Set to true to create yara rule linked to the alert and the file
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION=False # Set to true to remove livehunt notifications
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG="mytag" # Filter livehunt notifications with this tag

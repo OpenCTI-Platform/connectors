@@ -6,7 +6,6 @@ import time
 from datetime import datetime, timedelta
 from typing import Any, Mapping, Optional
 
-import stix2
 import vt
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -37,9 +36,9 @@ class VirustotalLivehuntNotifications:
         )
         self.helper = OpenCTIConnectorHelper(config)
 
-        author = stix2.Identity(
+        author = self.helper.api.identity.create(
             name=self._DEFAULT_AUTHOR,
-            identity_class="Organization",
+            type="Organization",
             description="Download/upload files from Virustotal Livehunt Notifications.",
             confidence=self.helper.connect_confidence_level,
         )
@@ -135,6 +134,7 @@ class VirustotalLivehuntNotifications:
             client,
             self.helper,
             author,
+            self._DEFAULT_AUTHOR,
             tag,
             create_alert,
             max_age_days,

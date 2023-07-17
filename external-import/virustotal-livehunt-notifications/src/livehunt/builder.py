@@ -26,6 +26,7 @@ class LivehuntBuilder:
         client: vt.Client,
         helper: OpenCTIConnectorHelper,
         author: stix2.Identity,
+        author_name: str,
         tag: str,
         create_alert: bool,
         max_age_days: int,
@@ -42,7 +43,8 @@ class LivehuntBuilder:
         self.client = client
         self.helper = helper
         self.author = author
-        self.bundle = [self.author]
+        self.author_name = author_name
+        self.bundle = []
         self.tag = tag
         self.with_alert = create_alert
         self.max_age_days = max_age_days
@@ -70,6 +72,10 @@ class LivehuntBuilder:
 
             if self.delete_notification:
                 self.delete_livehunt_notification(vtobj.id)
+
+            if self.upload_artifact:
+                if not self.artifact_exists_opencti(vtobj.sha256):
+                    self.upload_artifact_opencti(vtobj)
 
             # If extension filters were set
             if self.extensions:
@@ -132,14 +138,10 @@ class LivehuntBuilder:
             if self.with_yara_rule:
                 self.create_rule(
                     vtobj._context_attributes["ruleset_id"],
-                    vtobj.rule_name,
+                    vtobj._context_attributes["rule_name"],
                     incident_id,
                     file_id,
                 )
-
-            if self.upload_artifact:
-                if not self.artifact_exists_opencti(vtobj.sha256):
-                    self.upload_artifact_opencti(vtobj)
 
     def artifact_exists_opencti(self, sha256: str) -> bool:
         """
@@ -183,7 +185,7 @@ class LivehuntBuilder:
             name=name,
             description=f'Snippet:\n{vtobj._context_attributes["notification_snippet"]}',
             source=self._SOURCE,
-            created_by_ref=self.author["id"],
+            created_by_ref=self.author["standard_id"],
             confidence=self.helper.connect_confidence_level,
             labels=vtobj._context_attributes["notification_tags"],
             external_references=[external_reference],
@@ -211,11 +213,11 @@ class LivehuntBuilder:
             The external reference object.
         """
         external_reference = stix2.ExternalReference(
-            source_name=self.author["name"],
+            source_name=self.author_name,
             url=url,
             description=description,
             custom_properties={
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author["standard_id"],
             },
         )
         return external_reference
@@ -254,7 +256,7 @@ class LivehuntBuilder:
             size=vtobj.size,
             custom_properties={
                 "x_opencti_score": score,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author["standard_id"],
             },
         )
         self.bundle.append(file)
@@ -267,7 +269,7 @@ class LivehuntBuilder:
                     file["id"],
                 ),
                 relationship_type="related-to",
-                created_by_ref=self.author["id"],
+                created_by_ref=self.author["standard_id"],
                 source_ref=incident_id,
                 target_ref=file["id"],
                 confidence=self.helper.connect_confidence_level,
@@ -309,7 +311,7 @@ class LivehuntBuilder:
             if rule["rule_name"] == rule_name:
                 self.helper.log_debug(f"Adding rule name {rule_name}")
                 indicator = stix2.Indicator(
-                    created_by_ref=self.author,
+                    created_by_ref=self.author["standard_id"],
                     name=rule["rule_name"],
                     description=next(
                         (i["date"] for i in rule.get("metadata", {}) if "date" in i),
@@ -345,7 +347,7 @@ class LivehuntBuilder:
                             indicator["id"],
                         ),
                         relationship_type="related-to",
-                        created_by_ref=self.author["id"],
+                        created_by_ref=self.author["standard_id"],
                         source_ref=incident_id,
                         target_ref=indicator["id"],
                         confidence=self.helper.connect_confidence_level,
@@ -361,7 +363,7 @@ class LivehuntBuilder:
                             indicator["id"],
                         ),
                         relationship_type="related-to",
-                        created_by_ref=self.author["id"],
+                        created_by_ref=self.author["standard_id"],
                         source_ref=file_id,
                         target_ref=indicator["id"],
                         confidence=self.helper.connect_confidence_level,
@@ -450,6 +452,6 @@ class LivehuntBuilder:
             "data": file_contents,
             "mime_type": mime_type,
             "x_opencti_description": "Downloaded from Virustotal Livehunt Notifications.",
-            "createdBy": self.author["id"],
+            "createdBy": self.author["standard_id"],
         }
         return self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)

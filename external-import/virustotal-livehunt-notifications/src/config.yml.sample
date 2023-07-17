@@ -21,7 +21,7 @@ virustotal_livehunt_notifications:
   max_file_size: 52428800 # (Optional) Don't download files larger than this many bytes
   max_age_days: 3  # Create the alert only if the first submission is not older than `max_old_days` to avoid creating alerts with re-submissions
   create_file: True # If True, create a file object and link it to the alert
-  upload_file: False # If True, upload the file to opencti
+  upload_artifact: False # If True, upload the artifact to opencti
   create_yara_rule: True # If True, create a yara indicator and link it to the alert and the file
   delete_notification: False # If True, remove the notification on VT
   filter_with_tag: "" # (Optional) Tag to filter the notifications, empty = no filtering
