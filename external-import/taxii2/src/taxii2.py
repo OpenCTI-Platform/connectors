@@ -1,5 +1,5 @@
 """Generic TAXII2 connector. """
-import logging
+
 import json
 import os
 import re
