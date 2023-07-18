@@ -1,7 +1,7 @@
 version: '3.2'
 services:
   connector-lastinfosec:
-    image: opencti/connector-lastinfosec:5.9.2
+    image: opencti/connector-lastinfosec:5.9.3
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
