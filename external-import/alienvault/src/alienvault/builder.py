@@ -568,7 +568,7 @@ class PulseBundleBuilder:
         labels = self._get_labels()
 
         #check for possible matches from cache
-        published = self.pulse.published
+        published = self.pulse.created
         flag = False
         for report in self.report_cache:
             if (report[0] in self.pulse.name or self.pulse.name in report[0]) and (len(report[0]) > 20) and (len(self.pulse.name) > 20):
