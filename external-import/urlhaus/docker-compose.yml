@@ -14,7 +14,6 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/
       - URLHAUS_IMPORT_OFFLINE=true
-      - URLHAUS_CREATE_INDICATORS=true
       - URLHAUS_THREATS_FROM_LABELS=true
       - URLHAUS_INTERVAL=3 # In days, must be strictly greater than 1
     restart: always
