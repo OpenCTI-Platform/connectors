@@ -120,6 +120,7 @@ class PulseBundleBuilder:
         self,
         config: PulseBundleBuilderConfig,
         helper: OpenCTIConnectorHelper,
+        report_cache: list[tuple(str,str)]
     ) -> None:
         """Initialize pulse bundle builder."""
         self.pulse = config.pulse
@@ -140,7 +141,7 @@ class PulseBundleBuilder:
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
         self.malware_blacklist = config.malware_blacklist
-
+        self.report_cache = report_cache
         self.helper = helper
 
     def _no_relationships(self) -> bool:
@@ -472,7 +473,8 @@ class PulseBundleBuilder:
             confidence=self.confidence_level,
             object_markings=self.object_markings,
             x_opencti_main_observable_type=main_observable_type,
-            external_references=external_references
+            external_references=external_references,
+            created=self.pulse.created,
         )
 
     @staticmethod
@@ -565,14 +567,17 @@ class PulseBundleBuilder:
         external_references = self._create_report_external_references()
         labels = self._get_labels()
 
-        reports = self.helper.api.report.list(search = self.pulse.name, first=1, filters=[])
-        candidate = reports[0] if reports != None and len(reports) > 0 else None
-        published = 0
-        if candidate != None and candidate["name"] == self.pulse.name:
-            published = candidate["published"]
-        else:
-            published = self.pulse.created
-
+        #check for possible matches from cache
+        published = self.pulse.published
+        flag = False
+        for report in self.report_cache:
+            if (report[0] in self.pulse.name or self.pulse.name in report[0]) and (len(report[0]) > 20) and (len(self.pulse.name) > 20):
+                published = report[1]
+                self.pulse.name = report[0]
+                flag = True
+                break
+        if not flag:
+            self.report_cache.append((self.pulse.name, published))
         return create_report(
             self.pulse.name,
             published,

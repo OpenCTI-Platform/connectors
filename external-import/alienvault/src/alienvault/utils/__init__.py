@@ -193,6 +193,7 @@ def create_indicator(
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
     x_opencti_main_observable_type: Optional[str] = None,
     external_references: Optional[List[stix2.ExternalReference]] = None,
+    created: Optional[datetime] = None,
 ) -> stix2.Indicator:
     """Create an indicator."""
     custom_properties: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
@@ -215,6 +216,7 @@ def create_indicator(
         object_marking_refs=object_markings,
         custom_properties=custom_properties,
         external_references=external_references,
+        created=created
     )
 
 

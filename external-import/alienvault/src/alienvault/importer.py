@@ -104,6 +104,10 @@ class PulseImporter:
 
         self._info("{0} pulse(s) since {1}...", pulse_count, latest_pulse_datetime)
 
+        self.report_cache = []
+
+        self._get_present_reports()
+
         if self.filter_indicators:
             total_remaining = 0
             total_filtered = 0
@@ -168,6 +172,40 @@ class PulseImporter:
         )
 
         return self._create_pulse_state(latest_pulse_modified_datetime)
+    
+
+    def _get_present_reports(self):
+        self.report_cache = []
+        query = """
+            query Reports($after: ID) {
+                reports(first: 5000, after: $after) {
+                    edges {
+                        node {
+                            name
+                            published
+                        }
+                    }
+                    pageInfo {
+                        startCursor
+                        endCursor
+                        hasNextPage
+                        hasPreviousPage
+                        globalCount
+                    }
+                }
+            }
+
+        """
+
+        reports_list = self.helper.api.query(query, {"after": 0})
+        reports = reports_list["data"]["reports"]["edges"]
+
+        while reports_list["data"]["reports"]["pageInfo"]["hasNextPage"]:
+            reports_list = self.helper.api.query(query, {"after": reports_list["data"]["reports"]["pageInfo"]["endCursor"]})
+            reports += reports_list["data"]["reports"]["edges"]
+
+        for report in reports:
+            self.report_cache.append((report["node"]["name"], report["node"]["published"]))
 
     def _create_pulse_state(self, latest_pulse_timestamp: datetime) -> Dict[str, Any]:
         return {self._LATEST_PULSE_TIMESTAMP: latest_pulse_timestamp.isoformat()}
@@ -235,7 +273,7 @@ class PulseImporter:
             malware_blacklist=self.malware_blacklist
         )
 
-        bundle_builder = PulseBundleBuilder(config, self.helper)
+        bundle_builder = PulseBundleBuilder(config, self.helper, self.report_cache)
 
         try:
             return bundle_builder.build()
