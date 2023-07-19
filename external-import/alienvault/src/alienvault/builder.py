@@ -120,7 +120,7 @@ class PulseBundleBuilder:
         self,
         config: PulseBundleBuilderConfig,
         helper: OpenCTIConnectorHelper,
-        report_cache: list[tuple(str,str)]
+        report_cache: List[tuple()]
     ) -> None:
         """Initialize pulse bundle builder."""
         self.pulse = config.pulse
