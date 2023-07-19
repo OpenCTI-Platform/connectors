@@ -167,14 +167,14 @@ files = [
 
 [[package]]
 name = "click"
-version = "8.1.5"
+version = "8.1.6"
 description = "Composable command line interface toolkit"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "click-8.1.5-py3-none-any.whl", hash = "sha256:e576aa487d679441d7d30abb87e1b43d24fc53bffb8758443b1a9e1cee504548"},
-    {file = "click-8.1.5.tar.gz", hash = "sha256:4be4b1af8d665c6d942909916d31a213a106800c47d0eeba73d34da3cbc11367"},
+    {file = "click-8.1.6-py3-none-any.whl", hash = "sha256:fa244bb30b3b5ee2cae3da8f55c9e5e0c0e86093306301fb418eb9dc40fbded5"},
+    {file = "click-8.1.6.tar.gz", hash = "sha256:48ee849951919527a045bfe3bf7baa8a959c423134e1a5b98c05c20ba75a1cbd"},
 ]
 
 [package.dependencies]
@@ -470,14 +470,14 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.9.3"
+version = "5.9.4"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.9.3-py3-none-any.whl", hash = "sha256:9e40c1d929884a3fb6d7cbaedb7bebc9eb1f5ac37a2d0b22f2c7d7aca46c6546"},
-    {file = "pycti-5.9.3.tar.gz", hash = "sha256:eba3f709296247cad3d32f04be07b4d0c59b60e3de33272e952253b735af0997"},
+    {file = "pycti-5.9.4-py3-none-any.whl", hash = "sha256:36ca02600b43457d210a1d7e9bbdfad1febedd4c2c21f6a0f969ffb8e9696bf6"},
+    {file = "pycti-5.9.4.tar.gz", hash = "sha256:8a89a41bd1035aa0554d2f2ecaad44666d6c36594237d1915d66962b5e353126"},
 ]
 
 [package.dependencies]
@@ -1084,4 +1084,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "6e4cec8392a5aaf86aafd3bb068f534599bd8981330c290c9fc4424931e6691e"
+content-hash = "e4456583e3ba78ca79cfe6170a783b40701cbb528871db39ce216d34f8d8affd"

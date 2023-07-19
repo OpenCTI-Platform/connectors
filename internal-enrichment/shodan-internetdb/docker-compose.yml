@@ -3,7 +3,7 @@
 version: '3'
 services:
   connector-shodan-internetdb:
-    image: opencti/connector-shodan-internetdb:5.9.3
+    image: opencti/connector-shodan-internetdb:5.9.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
