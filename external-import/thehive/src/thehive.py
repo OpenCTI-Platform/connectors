@@ -20,6 +20,7 @@ from pycti import (
     StixSightingRelationship,
     Task,
     get_config_variable,
+    MarkingDefinition,
 )
 from stix2 import (
     URL,
@@ -95,6 +96,13 @@ class TheHive:
             config,
             False,
             "1:01 - low,2:02 - medium,3:03 - high,4:04 - critical",
+        ).split(",")
+        self.thehive_import_only_tlp = get_config_variable(
+            "THEHIVE_IMPORT_ONLY_TLP",
+            ["thehive", "import_only_tlp"],
+            config,
+            False,
+            "0,1,2,3,4",
         ).split(",")
         self.thehive_interval = get_config_variable(
             "THEHIVE_INTERVAL", ["thehive", "interval"], config, True
@@ -384,8 +392,58 @@ class TheHive:
             markings.append(stix2.TLP_AMBER)
         if case["tlp"] == 3:
             markings.append(stix2.TLP_RED)
+        if case["tlp"] == 4:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            )
+            markings.append(marking)
         if len(markings) == 0:
             markings.append(stix2.TLP_WHITE)
+        if case["pap"] == 0:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("PAP", "PAP:WHITE"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="PAP",
+                x_opencti_definition="PAP:WHITE",
+            )
+            markings.append(marking)
+        if case["pap"] == 1:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("PAP", "PAP:GREEN"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="PAP",
+                x_opencti_definition="PAP:GREEN",
+            )
+            markings.append(marking)
+        if case["pap"] == 2:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("PAP", "PAP:AMBER"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="PAP",
+                x_opencti_definition="PAP:AMBER",
+            )
+            markings.append(marking)
+        if case["pap"] == 3:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("PAP", "PAP:RED"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="PAP",
+                x_opencti_definition="PAP:RED",
+            )
+            markings.append(marking)
         case_objects = []
         bundle_objects = []
 
@@ -483,8 +541,58 @@ class TheHive:
             markings.append(stix2.TLP_AMBER)
         if alert["tlp"] == 3:
             markings.append(stix2.TLP_RED)
+        if alert["tlp"] == 4:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            )
+            markings.append(marking)
         if len(markings) == 0:
             markings.append(stix2.TLP_WHITE)
+        if alert["pap"] == 0:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("PAP", "PAP:WHITE"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="PAP",
+                x_opencti_definition="PAP:WHITE",
+            )
+            markings.append(marking)
+        if alert["pap"] == 1:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("PAP", "PAP:GREEN"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="PAP",
+                x_opencti_definition="PAP:GREEN",
+            )
+            markings.append(marking)
+        if alert["pap"] == 2:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("PAP", "PAP:AMBER"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="PAP",
+                x_opencti_definition="PAP:AMBER",
+            )
+            markings.append(marking)
+        if alert["pap"] == 3:
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("PAP", "PAP:RED"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="PAP",
+                x_opencti_definition="PAP:RED",
+            )
+            markings.append(marking)
 
         created = datetime.utcfromtimestamp(int(alert["createdAt"] / 1000)).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
@@ -583,17 +691,22 @@ class TheHive:
                 )
                 try:
                     for case in cases:
-                        stix_bundle = self.generate_case_bundle(case)
-                        self.helper.send_stix2_bundle(
-                            stix_bundle,
-                            update=self.update_existing_data,
-                            work_id=work_id,
-                        )
-                        last_case_date = (
-                            (int(case["updatedAt"] / 1000) + 1)
-                            if "updatedAt" in case and case["updatedAt"] is not None
-                            else (int(case["createdAt"] / 1000) + 1)
-                        )
+                        if str(case["tlp"]) in self.thehive_import_only_tlp:
+                            stix_bundle = self.generate_case_bundle(case)
+                            self.helper.send_stix2_bundle(
+                                stix_bundle,
+                                update=self.update_existing_data,
+                                work_id=work_id,
+                            )
+                            last_case_date = (
+                                (int(case["updatedAt"] / 1000) + 1)
+                                if "updatedAt" in case and case["updatedAt"] is not None
+                                else (int(case["createdAt"] / 1000) + 1)
+                            )
+                        else:
+                            self.helper.log_info(
+                                "Ignoring case '" + case["title"] + "' due TLP too high"
+                            )
                 except Exception:
                     error_msg = traceback.format_exc()
                     self.helper.log_error(error_msg)
@@ -607,18 +720,25 @@ class TheHive:
                     ).json()
                     try:
                         for alert in alerts:
-                            stix_bundle = self.generate_alert_bundle(alert)
-                            self.helper.send_stix2_bundle(
-                                stix_bundle,
-                                update=self.update_existing_data,
-                                work_id=work_id,
-                            )
-                            last_alert_date = (
-                                (int(alert["updatedAt"] / 1000) + 1)
-                                if "updatedAt" in alert
-                                and alert["updatedAt"] is not None
-                                else (int(alert["createdAt"] / 1000)) + 1
-                            )
+                            if str(alert["tlp"]) in self.thehive_import_only_tlp:
+                                stix_bundle = self.generate_alert_bundle(alert)
+                                self.helper.send_stix2_bundle(
+                                    stix_bundle,
+                                    update=self.update_existing_data,
+                                    work_id=work_id,
+                                )
+                                last_alert_date = (
+                                    (int(alert["updatedAt"] / 1000) + 1)
+                                    if "updatedAt" in alert
+                                    and alert["updatedAt"] is not None
+                                    else (int(alert["createdAt"] / 1000)) + 1
+                                )
+                            else:
+                                self.helper.log_info(
+                                    "Ignoring alert '"
+                                    + alert["title"]
+                                    + "' due TLP too high"
+                                )
                     except Exception:
                         error_msg = traceback.format_exc()
                         self.helper.log_error(error_msg)
