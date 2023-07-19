@@ -166,7 +166,7 @@ class AlienVault:
             malware_blacklist = set(malware_blacklist_list)
 
         pulse_blacklist_str = self._get_configuration(
-            config, self._CONFIG_MALWARE_BLACKLIST)
+            config, self._CONFIG_PULSE_BLACKLIST)
         
         pulse_blacklist = set()
         if pulse_blacklist_str is not None:

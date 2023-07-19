@@ -148,6 +148,7 @@ class PulseImporter:
         for count, pulse in enumerate(pulses, start=1):
 
             if pulse.name in self.pulse_blacklist:
+                self._info("Skipping blacklisted pulse {0}", pulse.name)
                 continue
 
             result = self._process_pulse(pulse)
