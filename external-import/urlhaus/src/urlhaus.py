@@ -11,7 +11,12 @@ import certifi
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from pycti import (
+    Indicator,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 
 
 class URLhaus:
@@ -33,13 +38,6 @@ class URLhaus:
         )
         self.urlhaus_interval = get_config_variable(
             "URLHAUS_INTERVAL", ["urlhaus", "interval"], config, False
-        )
-        self.create_indicators = get_config_variable(
-            "URLHAUS_CREATE_INDICATORS",
-            ["urlhaus", "create_indicators"],
-            config,
-            False,
-            True,
         )
         self.threats_from_labels = get_config_variable(
             "URLHAUS_THREATS_FROM_LABELS",
@@ -154,6 +152,27 @@ class URLhaus:
                                     url=row[7],
                                     description="URLhaus repository URL",
                                 )
+                                pattern = "[url:value = '" + row[2] + "']"
+                                stix_indicator = stix2.Indicator(
+                                    id=Indicator.generate_id(pattern),
+                                    name=row[2],
+                                    description="Threat: "
+                                    + row[5]
+                                    + " - Reporter: "
+                                    + row[8]
+                                    + " - Status: "
+                                    + row[3],
+                                    created_by_ref=self.identity["standard_id"],
+                                    confidence=self.helper.connect_confidence_level,
+                                    pattern_type="stix",
+                                    pattern=pattern,
+                                    external_references=[external_reference],
+                                    object_marking_refs=[stix2.TLP_WHITE],
+                                    custom_properties={
+                                        "x_opencti_score": 80,
+                                        "x_opencti_main_observable_type": "IPv6-Addr",
+                                    },
+                                )
                                 stix_observable = stix2.URL(
                                     value=row[2],
                                     object_marking_refs=[stix2.TLP_WHITE],
@@ -167,11 +186,23 @@ class URLhaus:
                                         "x_opencti_score": 80,
                                         "labels": [x for x in row[6].split(",") if x],
                                         "created_by_ref": self.identity["standard_id"],
-                                        "x_opencti_create_indicator": self.create_indicators,
                                         "external_references": [external_reference],
                                     },
                                 )
+                                stix_relationship = stix2.Relationship(
+                                    id=StixCoreRelationship.generate_id(
+                                        "based-on",
+                                        stix_indicator.id,
+                                        stix_observable.id,
+                                    ),
+                                    relationship_type="based-on",
+                                    source_ref=stix_indicator.id,
+                                    target_ref=stix_observable.id,
+                                    object_marking_refs=[stix2.TLP_WHITE],
+                                )
+                                bundle_objects.append(stix_indicator)
                                 bundle_objects.append(stix_observable)
+                                bundle_objects.append(stix_relationship)
                                 if self.threats_from_labels:
                                     for label in row[6].split(","):
                                         if label:
@@ -197,7 +228,32 @@ class URLhaus:
                                                 treat_cache[label] = threat
 
                                             if threat is not None:
-                                                relation = stix2.Relationship(
+                                                stix_threat_relation_indicator = stix2.Relationship(
+                                                    id=StixCoreRelationship.generate_id(
+                                                        "indicates",
+                                                        stix_indicator.id,
+                                                        threat["standard_id"],
+                                                        entry_date,
+                                                        entry_date,
+                                                    ),
+                                                    source_ref=stix_indicator.id,
+                                                    target_ref=threat["standard_id"],
+                                                    relationship_type="indicates",
+                                                    start_time=entry_date,
+                                                    stop_time=entry_date
+                                                    + datetime.timedelta(0, 3),
+                                                    confidence=self.helper.connect_confidence_level,
+                                                    created_by_ref=self.identity[
+                                                        "standard_id"
+                                                    ],
+                                                    object_marking_refs=[
+                                                        stix2.TLP_WHITE
+                                                    ],
+                                                    created=entry_date,
+                                                    modified=entry_date,
+                                                    allow_custom=True,
+                                                )
+                                                stix_threat_relation_observable = stix2.Relationship(
                                                     id=StixCoreRelationship.generate_id(
                                                         "related-to",
                                                         stix_observable.id,
@@ -222,7 +278,12 @@ class URLhaus:
                                                     modified=entry_date,
                                                     allow_custom=True,
                                                 )
-                                                bundle_objects.append(relation)
+                                                bundle_objects.append(
+                                                    stix_threat_relation_indicator
+                                                )
+                                                bundle_objects.append(
+                                                    stix_threat_relation_observable
+                                                )
                         fp.close()
                         bundle = stix2.Bundle(
                             objects=bundle_objects, allow_custom=True
