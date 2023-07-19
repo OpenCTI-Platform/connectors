@@ -383,6 +383,7 @@ class ReportImporter:
             return "x-mitre-" + standard_id
         if type == "Data-Source":
             return "x-mitre-" + standard_id
+        return standard_id
 
     def _process_parsed_objects(
         self,
