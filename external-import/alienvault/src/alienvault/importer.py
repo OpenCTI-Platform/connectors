@@ -197,7 +197,7 @@ class PulseImporter:
 
         """
 
-        reports_list = self.helper.api.query(query, {"after": 0})
+        reports_list = self.helper.api.query(query, {"after": ""})
         reports = reports_list["data"]["reports"]["edges"]
 
         while reports_list["data"]["reports"]["pageInfo"]["hasNextPage"]:
