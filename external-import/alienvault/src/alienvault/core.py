@@ -57,6 +57,7 @@ class AlienVault:
     }
 
     _CONFIG_MALWARE_BLACKLIST = f"{_CONFIG_NAMESPACE}.malware_blacklist"
+    _CONFIG_PULSE_BLACKLIST = f"{_CONFIG_NAMESPACE}.pulse_blacklist"
 
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
