@@ -165,6 +165,15 @@ class AlienVault:
             )
             malware_blacklist = set(malware_blacklist_list)
 
+        pulse_blacklist_str = self._get_configuration(
+            config, self._CONFIG_MALWARE_BLACKLIST)
+        
+        pulse_blacklist = set()
+        if pulse_blacklist_str is not None:
+            pulse_blacklist_list = convert_comma_separated_str_to_list(
+                pulse_blacklist_str
+            )
+            pulse_blacklist = set(pulse_blacklist_list)
 
         update_existing_data = bool(
             self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
@@ -200,6 +209,7 @@ class AlienVault:
             filter_indicators=filter_indicators,
             enable_relationships=enable_relationships,
             enable_attack_patterns_indicates=enable_attack_patterns_indicates,
+            pulse_blacklist=pulse_blacklist,
             malware_blacklist=malware_blacklist,
         )
 
