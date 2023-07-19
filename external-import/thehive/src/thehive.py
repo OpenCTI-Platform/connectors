@@ -15,12 +15,12 @@ from pycti import (
     CustomObservableText,
     CustomObservableUserAgent,
     Incident,
+    MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     StixSightingRelationship,
     Task,
     get_config_variable,
-    MarkingDefinition,
 )
 from stix2 import (
     URL,
