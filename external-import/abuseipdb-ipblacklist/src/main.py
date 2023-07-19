@@ -8,9 +8,14 @@ from datetime import datetime
 from urllib import parse
 
 import certifi
+import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import TLP_WHITE, Bundle, ExternalReference, IPv4Address, IPv6Address
+from pycti import (
+    Indicator,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 
 
 class abuseipdbipblacklistimport:
@@ -39,13 +44,6 @@ class abuseipdbipblacklistimport:
             "ABUSEIPDB_INTERVAL",
             ["abuseipdbipblacklistimport", "interval"],
             config,
-            True,
-        )
-        self.create_indicators = get_config_variable(
-            "ABUSEIPDB_CREATE_INDICATORS",
-            ["abuseipdb", "create_indicators"],
-            config,
-            False,
             True,
         )
         self.update_existing_data = get_config_variable(
@@ -118,7 +116,7 @@ class abuseipdbipblacklistimport:
                         data_json = json.loads(image)
 
                         # preparing the bundle to be sent to OpenCTI worker
-                        external_reference = ExternalReference(
+                        external_reference = stix2.ExternalReference(
                             source_name="AbuseIPDB database",
                             url="https://www.abuseipdb.com/",
                             description="AbuseIPDB database URL",
@@ -131,11 +129,33 @@ class abuseipdbipblacklistimport:
                         )
                         for d in data_json["data"]:
                             if ipv4validator.match(d["ipAddress"]):
-                                stix_observable = IPv4Address(
+                                pattern = "[ipv4-addr:value = '" + d["ipAddress"] + "']"
+                                stix_indicator = stix2.Indicator(
+                                    id=Indicator.generate_id(pattern),
+                                    name=d["ipAddress"],
+                                    description="Agressive IP known malicious on AbuseIPDB"
+                                    + " - countryCode: "
+                                    + str(d["countryCode"])
+                                    + " - abuseConfidenceScore: "
+                                    + str(d["abuseConfidenceScore"])
+                                    + " - lastReportedAt: "
+                                    + str(d["lastReportedAt"]),
+                                    created_by_ref=self.identity["standard_id"],
+                                    confidence=self.helper.connect_confidence_level,
+                                    pattern_type="stix",
+                                    pattern=pattern,
+                                    external_references=[external_reference],
+                                    object_marking_refs=[stix2.TLP_WHITE],
+                                    custom_properties={
+                                        "x_opencti_score": d["abuseConfidenceScore"],
+                                        "x_opencti_main_observable_type": "IPv4-Addr",
+                                    },
+                                )
+                                stix_observable = stix2.IPv4Address(
                                     type="ipv4-addr",
                                     spec_version="2.1",
                                     value=d["ipAddress"],
-                                    object_marking_refs=[TLP_WHITE],
+                                    object_marking_refs=[stix2.TLP_WHITE],
                                     custom_properties={
                                         "description": "Agressive IP known malicious on AbuseIPDB"
                                         + " - countryCode: "
@@ -146,16 +166,37 @@ class abuseipdbipblacklistimport:
                                         + str(d["lastReportedAt"]),
                                         "x_opencti_score": d["abuseConfidenceScore"],
                                         "created_by_ref": self.identity["standard_id"],
-                                        "x_opencti_create_indicator": self.create_indicators,
                                         "external_references": [external_reference],
                                     },
                                 )
                             else:
-                                stix_observable = IPv6Address(
+                                pattern = "[ipv6-addr:value = '" + d["ipAddress"] + "']"
+                                stix_indicator = stix2.Indicator(
+                                    id=Indicator.generate_id(pattern),
+                                    name=d["ipAddress"],
+                                    description="Agressive IP known malicious on AbuseIPDB"
+                                    + " - countryCode: "
+                                    + str(d["countryCode"])
+                                    + " - abuseConfidenceScore: "
+                                    + str(d["abuseConfidenceScore"])
+                                    + " - lastReportedAt: "
+                                    + str(d["lastReportedAt"]),
+                                    created_by_ref=self.identity["standard_id"],
+                                    confidence=self.helper.connect_confidence_level,
+                                    pattern_type="stix",
+                                    pattern=pattern,
+                                    external_references=[external_reference],
+                                    object_marking_refs=[stix2.TLP_WHITE],
+                                    custom_properties={
+                                        "x_opencti_score": d["abuseConfidenceScore"],
+                                        "x_opencti_main_observable_type": "IPv6-Addr",
+                                    },
+                                )
+                                stix_observable = stix2.IPv6Address(
                                     type="ipv6-addr",
                                     spec_version="2.1",
                                     value=d["ipAddress"],
-                                    object_marking_refs=[TLP_WHITE],
+                                    object_marking_refs=[stix2.TLP_WHITE],
                                     custom_properties={
                                         "description": "Agressive IP known malicious on AbuseIPDB"
                                         + " - countryCode: "
@@ -166,14 +207,24 @@ class abuseipdbipblacklistimport:
                                         + str(d["lastReportedAt"]),
                                         "x_opencti_score": d["abuseConfidenceScore"],
                                         "created_by_ref": self.identity["standard_id"],
-                                        "x_opencti_create_indicator": self.create_indicators,
                                         "external_references": [external_reference],
                                     },
                                 )
                             # Adding the IP to the list
+                            stix_relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "based-on", stix_indicator.id, stix_observable.id
+                                ),
+                                relationship_type="based-on",
+                                source_ref=stix_indicator.id,
+                                target_ref=stix_observable.id,
+                                object_marking_refs=[stix2.TLP_WHITE],
+                            )
+                            bundle_objects.append(stix_indicator)
                             bundle_objects.append(stix_observable)
+                            bundle_objects.append(stix_relationship)
                         # Creating the bundle from the list
-                        bundle = Bundle(bundle_objects, allow_custom=True)
+                        bundle = stix2.Bundle(bundle_objects, allow_custom=True)
                         bundle_json = bundle.serialize()
                         # Sending the bundle
                         self.helper.send_stix2_bundle(
