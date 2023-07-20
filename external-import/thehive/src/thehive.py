@@ -104,8 +104,29 @@ class TheHive:
             False,
             "1:01 - low,2:02 - medium,3:03 - high,4:04 - critical",
         ).split(",")
-        self.thehive_status_mapping = get_config_variable(
-            "THEHIVE_STATUS_MAPPING", ["thehive", "status_mapping"], config, False, ""
+        self.thehive_case_status_mapping = get_config_variable(
+            "THEHIVE_CASE_STATUS_MAPPING",
+            ["thehive", "case_status_mapping"],
+            config,
+            False,
+            "",
+        ).split(",")
+        self.thehive_task_status_mapping = get_config_variable(
+            "THEHIVE_TASK_STATUS_MAPPING",
+            ["thehive", "case_task_mapping"],
+            config,
+            False,
+            "",
+        ).split(",")
+        self.thehive_alert_status_mapping = get_config_variable(
+            "THEHIVE_ALERT_STATUS_MAPPING",
+            ["thehive", "case_alert_mapping"],
+            config,
+            False,
+            "",
+        ).split(",")
+        self.thehive_user_mapping = get_config_variable(
+            "THEHIVE_USER_MAPPING", ["thehive", "user_mapping"], config, False, ""
         ).split(",")
         self.thehive_interval = get_config_variable(
             "THEHIVE_INTERVAL", ["thehive", "interval"], config, True
@@ -519,12 +540,12 @@ class TheHive:
         created = datetime.utcfromtimestamp(int(case["createdAt"] / 1000)).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
-        opencti_status = None
-        if len(self.thehive_status_mapping) > 0:
-            for status_mapping in self.thehive_status_mapping:
-                status_mapping_split = status_mapping.split(":")
-                if case["extendedStatus"] == status_mapping_split[0]:
-                    opencti_status = status_mapping_split[1]
+        opencti_case_status = None
+        if len(self.thehive_case_status_mapping) > 0:
+            for case_status_mapping in self.thehive_case_status_mapping:
+                case_status_mapping_split = case_status_mapping.split(":")
+                if case["extendedStatus"] == case_status_mapping_split[0]:
+                    opencti_case_status = case_status_mapping_split[1]
         stix_case = CustomObjectCaseIncident(
             id=CaseIncident.generate_id(case["title"], created),
             name=case["title"],
@@ -538,7 +559,7 @@ class TheHive:
             else None,
             confidence=int(self.helper.connect_confidence_level),
             object_refs=case_objects,
-            x_opencti_workflow_id=opencti_status,
+            x_opencti_workflow_id=opencti_case_status,
         )
         bundle_objects.append(stix_case)
 
@@ -548,6 +569,12 @@ class TheHive:
             created = datetime.utcfromtimestamp(int(task["createdAt"] / 1000)).strftime(
                 "%Y-%m-%dT%H:%M:%SZ"
             )
+            opencti_task_status = None
+            if len(self.thehive_task_status_mapping) > 0:
+                for task_status_mapping in self.thehive_task_status_mapping:
+                    task_status_mapping_split = task_status_mapping.split(":")
+                    if task["status"] == task_status_mapping_split[0]:
+                        opencti_task_status = task_status_mapping_split[1]
             stix_task = CustomObjectTask(
                 id=Task.generate_id(task["title"], created),
                 name=task["title"],
@@ -560,6 +587,7 @@ class TheHive:
                 else None,
                 confidence=int(self.helper.connect_confidence_level),
                 object_refs=[stix_case.id],
+                x_opencti_workflow_id=opencti_task_status,
             )
             bundle_objects.append(stix_task)
 
