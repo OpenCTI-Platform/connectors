@@ -20,5 +20,5 @@ thehive:
   import_only_tlp: '0,1,2,3,4'
   import_alerts: true
   severity_mapping: '1:01 - low,2:02 - medium,3:03 - high,4:04 - critical'
-  status_mapping: '' # Format: TheHive_Status_Text1:OpenCTI_Status_ID1,TheHive_Status_Text2:OpenCTI_Status_ID2
+  status_mapping: '' # Format: TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2
   interval: 5 # In minutes
