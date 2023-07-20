@@ -20,6 +20,6 @@ services:
       - THEHIVE_IMPORT_ONLY_TLP=0,1,2,3,4
       - THEHIVE_IMPORT_ALERTS=true
       - "THEHIVE_SEVERITY_MAPPING= 1:01 - low,2:02 - medium,3:03 - high,4:04 - critical"
-      - THEHIVE_STATUS_MAPPING= # Format: TheHive_Status_Text1:OpenCTI_Status_ID1,TheHive_Status_Text2:OpenCTI_Status_ID2
+      - THEHIVE_STATUS_MAPPING= # Format: TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2
       - THEHIVE_INTERVAL=5 # In minutes
     restart: always
