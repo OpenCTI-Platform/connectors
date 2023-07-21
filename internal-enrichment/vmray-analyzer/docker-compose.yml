@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-vmray-analyzer:
-    image: opencti/connector-vmray-analyzer:5.9.4
+    image: opencti/connector-vmray-analyzer:5.9.5
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
