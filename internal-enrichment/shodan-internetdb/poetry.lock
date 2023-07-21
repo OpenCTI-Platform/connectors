@@ -203,14 +203,14 @@ twisted = ["twisted"]
 
 [[package]]
 name = "pycti"
-version = "5.9.5"
+version = "5.9.6"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.9.5-py3-none-any.whl", hash = "sha256:1fc5849f7d1819c351e76f327e5d83c54262958ca744701f3bf5086ca648e089"},
-    {file = "pycti-5.9.5.tar.gz", hash = "sha256:91e8b6830fac940eeb90bc0c4069df63f01e3f034086a040514d719fff8e9907"},
+    {file = "pycti-5.9.6-py3-none-any.whl", hash = "sha256:88b1db386f7129ed2a5dc73116e5075cd40de2dc8caa7bb04ba87f40b82473fc"},
+    {file = "pycti-5.9.6.tar.gz", hash = "sha256:6564a4fd7414b2f1ac5c049a63816d1fdbb66a48fdf9971735c611dd3108e89f"},
 ]
 
 [package.dependencies]
@@ -734,4 +734,4 @@ test = ["flake8 (>=2.4.0)", "isort (>=4.2.2)", "pytest (>=2.2.3)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "5388e6622e8e84e38a00165d9137423f28589a4af768e901c6cea37b59e43b80"
+content-hash = "c8bd22bc9c6af8ef86fad36221837e1ab513985928fa3d1c998bff57f2c6f311"
