@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-taxii-post:
-    image: opencti/connector-taxii-post:5.9.4
+    image: opencti/connector-taxii-post:5.9.5
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

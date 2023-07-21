@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-backup-files:
-    image: opencti/connector-backup-files:5.9.4
+    image: opencti/connector-backup-files:5.9.5
     environment:
       - OPENCTI_URL=http://localhost # Local OpenCTI URL
       - OPENCTI_TOKEN=ChangeMe # Local OpenCTI token
