@@ -546,6 +546,12 @@ class TheHive:
                 case_status_mapping_split = case_status_mapping.split(":")
                 if case["extendedStatus"] == case_status_mapping_split[0]:
                     opencti_case_status = case_status_mapping_split[1]
+        opencti_case_user = None
+        if len(self.thehive_user_mapping) > 0:
+            for user_mapping in self.thehive_user_mapping:
+                user_mapping_split = user_mapping.split(":")
+                if case["owner"] == user_mapping_split[0]:
+                    opencti_case_user = user_mapping_split[1]
         stix_case = CustomObjectCaseIncident(
             id=CaseIncident.generate_id(case["title"], created),
             name=case["title"],
@@ -560,6 +566,9 @@ class TheHive:
             confidence=int(self.helper.connect_confidence_level),
             object_refs=case_objects,
             x_opencti_workflow_id=opencti_case_status,
+            x_opencti_assignee_ids=[opencti_case_user]
+            if opencti_case_user is not None
+            else None,
         )
         bundle_objects.append(stix_case)
 
@@ -575,6 +584,12 @@ class TheHive:
                     task_status_mapping_split = task_status_mapping.split(":")
                     if task["status"] == task_status_mapping_split[0]:
                         opencti_task_status = task_status_mapping_split[1]
+            opencti_task_user = None
+            if len(self.thehive_user_mapping) > 0:
+                for user_mapping in self.thehive_user_mapping:
+                    user_mapping_split = user_mapping.split(":")
+                    if task["owner"] == user_mapping_split[0]:
+                        opencti_task_user = user_mapping_split[1]
             stix_task = CustomObjectTask(
                 id=Task.generate_id(task["title"], created),
                 name=task["title"],
@@ -588,6 +603,9 @@ class TheHive:
                 confidence=int(self.helper.connect_confidence_level),
                 object_refs=[stix_case.id],
                 x_opencti_workflow_id=opencti_task_status,
+                x_opencti_assignee_ids=[opencti_task_user]
+                if opencti_task_user is not None
+                else None,
             )
             bundle_objects.append(stix_task)
 
