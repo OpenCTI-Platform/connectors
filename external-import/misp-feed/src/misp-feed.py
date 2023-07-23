@@ -1607,7 +1607,7 @@ class MispFeed:
                 None,
                 [],
                 attribute,
-                event["Event"]["threat_level_id"],
+                event["Event"].get("threat_level_id", "Undefined"),
             )
             if (
                 attribute["type"] == "link"
@@ -1631,7 +1631,7 @@ class MispFeed:
         indicators_relationships = []
         objects_relationships = []
         objects_observables = []
-        event_threat_level = event["Event"]["threat_level_id"]
+        event_threat_level = event["Event"].get("threat_level_id", "Undefined")
         for object in event["Event"].get("Object", []):
             attribute_external_references = []
             for attribute in object["Attribute"]:
@@ -1704,7 +1704,7 @@ class MispFeed:
                     object_observable,
                     attribute_external_references,
                     attribute,
-                    event["Event"]["threat_level_id"],
+                    event["Event"].get("threat_level_id", "Undefined"),
                 )
                 if indicator is not None:
                     indicators.append(indicator)
