@@ -462,9 +462,9 @@ class ExportReportPdf:
             targeted_countries = []
             for relationship in context["entities"]["relationship"]:
                 if (
-                        relationship["entity_type"] == "targets"
-                        and relationship["relationship_type"] == "targets"
-                        and relationship["to"]["entity_type"] == "Country"
+                    relationship["entity_type"] == "targets"
+                    and relationship["relationship_type"] == "targets"
+                    and relationship["to"]["entity_type"] == "Country"
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
