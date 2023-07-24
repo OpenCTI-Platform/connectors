@@ -36,11 +36,15 @@ class FeedlyRunner:
             state = self.helper.get_state() or {"last_runs": {}}
             last_run = state["last_runs"].get(stream_id, None)
 
-            self.helper.work_id = self.helper.api.work.initiate_work(self.helper.connect_id, f"Start {run_name}")
+            self.helper.work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, f"Start {run_name}"
+            )
 
             self.connector.fetch_and_publish(
                 stream_id,
-                datetime.fromisoformat(last_run) if last_run else (now - timedelta(days=self.days_to_back_fill)),
+                datetime.fromisoformat(last_run)
+                if last_run
+                else (now - timedelta(days=self.days_to_back_fill)),
             )
 
             success_message = f"Finished {run_name}"
@@ -52,9 +56,17 @@ class FeedlyRunner:
         except Exception as e:
             error_message = f"Failed {run_name} ({e})"
             self.helper.log_error(error_message)
-            self.helper.api.work.to_processed(self.helper.work_id, error_message, in_error=True)
+            self.helper.api.work.to_processed(
+                self.helper.work_id, error_message, in_error=True
+            )
 
-    def get_param(self, param_name: str, is_number: bool, default_value: str = None) -> Union[int, str]:
+    def get_param(
+        self, param_name: str, is_number: bool, default_value: str = None
+    ) -> Union[int, str]:
         return get_config_variable(
-            f"FEEDLY_{param_name.upper()}", ["feedly", param_name.lower()], self.helper.config, is_number, default_value
+            f"FEEDLY_{param_name.upper()}",
+            ["feedly", param_name.lower()],
+            self.helper.config,
+            is_number,
+            default_value,
         )

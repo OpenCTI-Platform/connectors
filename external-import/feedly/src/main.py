@@ -9,7 +9,11 @@ from pycti import OpenCTIConnectorHelper
 
 def load_helper() -> OpenCTIConnectorHelper:
     config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-    config = yaml.load(open(config_file_path), Loader=yaml.FullLoader) if os.path.isfile(config_file_path) else {}
+    config = (
+        yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+        if os.path.isfile(config_file_path)
+        else {}
+    )
     for _ in range(10):
         try:
             return OpenCTIConnectorHelper(config)
