@@ -103,8 +103,10 @@ class ExportReportPdf:
             self._process_report(entity_id, file_name)
         elif entity_type == "Intrusion-Set":
             self._process_intrusion_set(entity_id, file_name)
-        elif entity_type == "Threat-Actor":
-            self._process_threat_actor(entity_id, file_name)
+        elif entity_type == "Threat-Actor-Group":
+            self._process_threat_actor_group(entity_id, file_name)
+        elif entity_type == "Threat-Actor-Individual":
+            self._process_threat_actor_individual(entity_id, file_name)
         else:
             raise ValueError(
                 f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor", not "{entity_type}".'
@@ -311,9 +313,9 @@ class ExportReportPdf:
             entity_id, file_name, pdf_contents, "application/pdf"
         )
 
-    def _process_threat_actor(self, entity_id, file_name):
+    def _process_threat_actor_group(self, entity_id, file_name):
         """
-        Process a Threat Actor entity and upload as pdf.
+        Process a Threat Actor Group entity and upload as pdf.
         """
 
         now_date = datetime.datetime.now().strftime("%b %d %Y")
@@ -333,7 +335,7 @@ class ExportReportPdf:
 
         # Get a bundle of all objects affiliated with the threat actor
         bundle = self.helper.api_impersonate.stix2.export_entity(
-            "Threat-Actor", entity_id, "full"
+            "Threat-Actor-Group", entity_id, "full"
         )
 
         for bundle_obj in bundle["objects"]:
@@ -392,7 +394,102 @@ class ExportReportPdf:
         env = Environment(
             loader=FileSystemLoader(self.current_dir), finalize=self._finalize
         )
-        template = env.get_template("resources/threat-actor.html")
+        template = env.get_template("resources/threat-actor-group.html")
+        html_string = template.render(context)
+
+        # Generate pdf from html string
+        pdf_contents = HTML(
+            string=html_string, base_url=f"{self.current_dir}/resources"
+        ).write_pdf()
+
+        # Upload the output pdf
+        self.helper.log_info(f"Uploading: {file_name}")
+        self.helper.api.stix_domain_object.push_entity_export(
+            entity_id, file_name, pdf_contents, "application/pdf"
+        )
+
+    def _process_threat_actor_individual(self, entity_id, file_name):
+        """
+        Process a Threat Actor Individual entity and upload as pdf.
+        """
+
+        now_date = datetime.datetime.now().strftime("%b %d %Y")
+
+        # Store context for usage in html template
+        context = {
+            "entities": {},
+            "target_map_country": None,
+            "report_date": now_date,
+            "company_address_line_1": self.company_address_line_1,
+            "company_address_line_2": self.company_address_line_2,
+            "company_address_line_3": self.company_address_line_3,
+            "company_phone_number": self.company_phone_number,
+            "company_email": self.company_email,
+            "company_website": self.company_website,
+        }
+
+        # Get a bundle of all objects affiliated with the threat actor
+        bundle = self.helper.api_impersonate.stix2.export_entity(
+            "Threat-Actor-Individual", entity_id, "full"
+        )
+
+        for bundle_obj in bundle["objects"]:
+            obj_id = bundle_obj["id"]
+            obj_entity_type = bundle_obj["type"]
+
+            reader_func = self._get_reader(obj_entity_type)
+            if reader_func is None:
+                self.helper.log_error(
+                    f'Could not find a function to read entity with type "{obj_entity_type}"'
+                )
+                continue
+
+            time.sleep(0.3)
+            entity_dict = reader_func(id=obj_id)
+
+            # Key names cannot have - in them for jinja2 templating
+            obj_entity_type = obj_entity_type.replace("-", "_")
+            if obj_entity_type not in context["entities"]:
+                context["entities"][obj_entity_type] = []
+
+            context["entities"][obj_entity_type].append(entity_dict)
+
+        # Generate the svg img contents for the targets map
+        if "relationship" in context["entities"]:
+            # Create world map
+            world_map = World()
+            world_map.title = "Targeted Countries"
+            targeted_countries = []
+            for relationship in context["entities"]["relationship"]:
+                if (
+                        relationship["entity_type"] == "targets"
+                        and relationship["relationship_type"] == "targets"
+                        and relationship["to"]["entity_type"] == "Country"
+                ):
+                    country_code = relationship["to"]["name"].lower()
+                    if not self._validate_country_code(country_code):
+                        self.helper.log_warning(
+                            f"{country_code} is not a supported country code, skipping..."
+                        )
+                        continue
+
+                    targeted_countries.append(country_code)
+
+            # Build targeted countries image
+            if targeted_countries:
+                world_map.add("Targeted Countries", targeted_countries)
+                # Convert the svg to base64 png
+                svg_bytes = world_map.render()
+                png_bytes = io.BytesIO()
+                cairosvg.svg2png(bytestring=svg_bytes, write_to=png_bytes)
+                base64_png = base64.b64encode(png_bytes.getvalue()).decode()
+                context["target_map_country"] = f"data:image/png;base64, {base64_png}"
+
+        # Render html with input variables
+        env = Environment(
+            loader=FileSystemLoader(self.current_dir), finalize=self._finalize
+        )
+        template = env.get_template("resources/threat-actor-individual.html")
         html_string = template.render(context)
 
         # Generate pdf from html string
