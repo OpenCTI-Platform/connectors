@@ -1,0 +1,4 @@
+pycti==5.9.6
+feedly-client==0.26
+schedule==1.2.0
+markdownify==0.11.6
