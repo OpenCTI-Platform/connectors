@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-virustotal-livehunt-notifications
 
 # Start the connector
-python3 virustotal-livehunt-notifications.py
+python3 main.py

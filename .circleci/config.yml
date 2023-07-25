@@ -251,7 +251,7 @@ jobs:
       - run:
           working_directory: ~/opencti/stream/taxii-post
           name: Build Docker image opencti/connector-taxii-post
-          command: docker build -t opencti/connector-taxii-posts:latest . && docker tag opencti/connector-taxii-post:latest opencti/connector-taxii-post:${CIRCLE_TAG}
+          command: docker build -t opencti/connector-taxii-post:latest . && docker tag opencti/connector-taxii-post:latest opencti/connector-taxii-post:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -490,10 +490,10 @@ jobs:
           working_directory: ~/opencti/external-import/maltiverse
           name: Build Docker image opencti/connector-maltiverse
           command: docker build -t opencti/connector-maltiverse:latest . && docker tag opencti/connector-maltiverse:latest opencti/connector-maltiverse:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/external-import/intel471
-          name: Build Docker image opencti/connector-intel471
-          command: docker build -t opencti/connector-intel471:latest . && docker tag opencti/connector-intel471:latest opencti/connector-intel471:${CIRCLE_TAG}
+      #- run:
+      #    working_directory: ~/opencti/external-import/intel471
+      #    name: Build Docker image opencti/connector-intel471
+      #    command: docker build -t opencti/connector-intel471:latest . && docker tag opencti/connector-intel471:latest opencti/connector-intel471:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/orange-cyberdefense
           name: Build Docker image opencti/connector-orange-cyberdefense
@@ -634,8 +634,8 @@ jobs:
             docker push opencti/connector-urlscan:${CIRCLE_TAG}
             docker push opencti/connector-maltiverse:latest
             docker push opencti/connector-maltiverse:${CIRCLE_TAG}
-            docker push opencti/connector-intel471:latest
-            docker push opencti/connector-intel471:${CIRCLE_TAG}
+            #docker push opencti/connector-intel471:latest
+            #docker push opencti/connector-intel471:${CIRCLE_TAG}
             docker push opencti/connector-orange-cyberdefense:latest
             docker push opencti/connector-orange-cyberdefense:${CIRCLE_TAG}
             docker push opencti/connector-citalid:latest
@@ -1070,10 +1070,10 @@ jobs:
           working_directory: ~/opencti/external-import/maltiverse
           name: Build Docker image opencti/connector-maltiverse
           command: docker build -t opencti/connector-maltiverse:rolling .
-      - run:
-          working_directory: ~/opencti/external-import/intel471
-          name: Build Docker image opencti/connector-intel471
-          command: docker build -t opencti/connector-intel471:rolling .
+      #- run:
+      #    working_directory: ~/opencti/external-import/intel471
+      #    name: Build Docker image opencti/connector-intel471
+      #    command: docker build -t opencti/connector-intel471:rolling .
       - run:
           working_directory: ~/opencti/external-import/orange-cyberdefense
           name: Build Docker image opencti/connector-orange-cyberdefense
@@ -1185,7 +1185,7 @@ jobs:
             docker push opencti/connector-socprime:rolling
             docker push opencti/connector-urlscan:rolling
             docker push opencti/connector-maltiverse:rolling
-            docker push opencti/connector-intel471:rolling
+            #docker push opencti/connector-intel471:rolling
             docker push opencti/connector-orange-cyberdefense:rolling
             docker push opencti/connector-citalid:rolling
             docker push opencti/connector-abuseipdb-ipblacklist:rolling

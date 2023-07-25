@@ -131,7 +131,14 @@ class AbuseSSLImportConnector:
         self.helper.log_info("Creating STIX Observables")
         observables = []
         for ip in ip_addresses:
-            observable = stix2.IPv4Address(value=ip)
+            observable = stix2.IPv4Address(
+                value=ip,
+                object_marking_refs=[stix2.TLP_WHITE],
+                custom_properties={
+                    "description": "Malicious SSL connections",
+                    "created_by_ref": f"{self.author.id}",
+                },
+            )
             observables.append(observable)
         return observables
 
@@ -155,6 +162,10 @@ class AbuseSSLImportConnector:
                 pattern_type="stix",
                 pattern=pattern,
                 labels="osint",
+                object_marking_refs=[stix2.TLP_WHITE],
+                custom_properties={
+                    "x_opencti_main_observable_type": "IPv4-Addr",
+                },
             )
             indicators.append(indicator)
         return indicators
@@ -177,6 +188,7 @@ class AbuseSSLImportConnector:
                 relationship_type="based-on",
                 source_ref=indicators[i].id,
                 target_ref=observables[i].id,
+                object_marking_refs=[stix2.TLP_WHITE],
             )
             relationships.append(relationship)
         return relationships
@@ -189,7 +201,7 @@ class AbuseSSLImportConnector:
         """
         self.helper.log_info("Creating STIX Bundle")
         bundle = stix2.Bundle(
-            self.author, observables, indicators, relationships
+            self.author, observables, indicators, relationships, allow_custom=True
         ).serialize()
         return bundle
 

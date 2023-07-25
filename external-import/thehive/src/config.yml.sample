@@ -17,6 +17,11 @@ thehive:
   check_ssl: true
   organization_name: 'MyCompany'
   import_from_date: '2021-01-01T00:00:00' # Optional
+  import_only_tlp: '0,1,2,3,4'
   import_alerts: true
   severity_mapping: '1:01 - low,2:02 - medium,3:03 - high,4:04 - critical'
+  case_status_mapping: '' # TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2
+  task_status_mapping: '' # Waiting:OpenCTI_Status_ID1,InProgress:OpenCTI_Status_ID2,Completed:OpenCTI_Status_ID2
+  alert_status_mapping: '' # TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2
+  user_mapping: '' # Format: TheHive_Assignee_Email1:OpenCTI_User_ID1,TheHive_Assignee_Email2:OpenCTI_User_ID2
   interval: 5 # In minutes

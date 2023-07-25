@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-abuseipdb:
-    image: opencti/connector-abuseipdb:5.8.7
+    image: opencti/connector-abuseipdb:5.9.6
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

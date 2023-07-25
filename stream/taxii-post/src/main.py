@@ -55,11 +55,12 @@ class TaxiiPostConnector:
             data = json.loads(msg.data)["data"]
         except:
             raise ValueError("Cannot process the message")
+        self.helper.log_info("Processing the object " + data["id"])
         url = (
             self.taxii_url
             + "/root/collections/"
             + self.taxii_collection_id
-            + "/objects"
+            + "/objects/"
         )
         headers = {
             "Content-Type": "application/vnd.oasis.stix+json; version="
@@ -69,10 +70,26 @@ class TaxiiPostConnector:
         try:
             data_object = data
             data_object["spec_version"] = self.taxii_stix_version
+            if "object_marking_refs" in data_object:
+                del data_object["object_marking_refs"]
+            if "created_by_ref" in data_object:
+                del data_object["created_by_ref"]
             if self.taxii_stix_version != "2.1":
                 del data_object["extensions"]
+                if "spec_version" in data_object:
+                    del data_object["spec_version"]
+                if "revoked" in data_object:
+                    del data_object["revoked"]
+                if "confidence" in data_object:
+                    del data_object["confidence"]
+                if "lang" in data_object:
+                    del data_object["lang"]
+                if "pattern_type" in data_object:
+                    del data_object["pattern_type"]
                 if "pattern_version" in data_object:
                     del data_object["pattern_version"]
+                if "is_family" in data_object:
+                    del data_object["is_family"]
             bundle = {
                 "type": "bundle",
                 "spec_version": self.taxii_stix_version,
@@ -80,17 +97,28 @@ class TaxiiPostConnector:
                 "objects": [data_object],
             }
             if self.taxii_token is not None:
+                self.helper.log_info("Posting to TAXII URL (using token): " + url)
+                self.helper.log_info(str(bundle))
                 headers["Authorization"] = "Bearer " + self.taxii_token
-                response = requests.post(url, headers=headers, json=bundle)
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=bundle,
+                    verify=self.taxii_ssl_verify,
+                )
                 response.raise_for_status()
             else:
+                self.helper.log_info("Posting to TAXII URL (using basic auth): " + url)
+                self.helper.log_info(str(bundle))
                 response = requests.post(
                     url,
                     headers=headers,
                     auth=(self.taxii_login, self.taxii_password),
                     json=bundle,
+                    verify=self.taxii_ssl_verify,
                 )
                 response.raise_for_status()
+            self.helper.log_info("TAXII Response: " + str(response.content))
         except Exception as e:
             self.helper.log_error(str(e))
 
