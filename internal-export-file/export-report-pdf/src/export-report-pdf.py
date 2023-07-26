@@ -94,7 +94,7 @@ class ExportReportPdf:
         file_name = data["file_name"]
         if "entity_type" not in data or "entity_id" not in data:
             raise ValueError(
-                'This Connector currently only handles direct export (single entity and no list) of the following entity types: "Report", "Intrusion-Set", and "Threat-Actor"'
+                'This Connector currently only handles direct export (single entity and no list) of the following entity types: "Report", "Intrusion-Set", "Threat-Actor-Individual", and "Threat-Actor-Group"'
             )
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
@@ -109,7 +109,7 @@ class ExportReportPdf:
             self._process_threat_actor_individual(entity_id, file_name)
         else:
             raise ValueError(
-                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor", not "{entity_type}".'
+                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", not "{entity_type}".'
             )
 
         return "Export done"
@@ -333,7 +333,7 @@ class ExportReportPdf:
             "company_website": self.company_website,
         }
 
-        # Get a bundle of all objects affiliated with the threat actor
+        # Get a bundle of all objects affiliated with the threat actor group
         bundle = self.helper.api_impersonate.stix2.export_entity(
             "Threat-Actor-Group", entity_id, "full"
         )
@@ -428,7 +428,7 @@ class ExportReportPdf:
             "company_website": self.company_website,
         }
 
-        # Get a bundle of all objects affiliated with the threat actor
+        # Get a bundle of all objects affiliated with the threat actor individual
         bundle = self.helper.api_impersonate.stix2.export_entity(
             "Threat-Actor-Individual", entity_id, "full"
         )
