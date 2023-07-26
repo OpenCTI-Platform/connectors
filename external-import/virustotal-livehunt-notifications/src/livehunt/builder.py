@@ -250,6 +250,11 @@ class LivehuntBuilder:
         except ZeroDivisionError as e:
             self.helper.log_error(f"Unable to compute score of file, err = {e}")
 
+        external_reference = self.create_external_reference(
+            f"https://www.virustotal.com/gui/file/{vtobj.sha256}",
+            "Virustotal Analysis",
+        )
+
         file = stix2.File(
             type="file",
             name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}',
@@ -259,10 +264,12 @@ class LivehuntBuilder:
                 "SHA1": vtobj.sha1,
             },
             size=vtobj.size,
+            external_references=[external_reference],
             custom_properties={
                 "x_opencti_score": score,
                 "created_by_ref": self.author["standard_id"],
             },
+            allow_custom=True,
         )
         self.bundle.append(file)
         # Link to the incident if any.
