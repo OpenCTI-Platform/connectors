@@ -1,5 +1,5 @@
-# OpenCTI Recorded Future Feeds Connector
-*Contact jonah.feldman@recordedfuture.com with questions*
+# OpenCTI Recorded Future Enrichment Connector
+*Contact: support@recordedfuture.com*
 ## Description
 
 This connector enriches individual OpenCTI Observables with Recorded Future Information. Currently enrichment of IP Address (ipv4 and ipv6), URLs, Domains, and Hashes (MD5, SHA1, and SHA256) is supported.
@@ -11,6 +11,27 @@ Each enrichment pulls down an Indicator's Recorded Future Risk Score, any trigge
 - Risk Score -> Note attached to Indicator
 - Risk Rule -> Attack Pattern, the relationship defined as Indicator "indicates" Attack Pattern
 - Evidence String -> Note Attached to Indicator
+- Links:
+    Mitre T codes-> Attack Patterns
+    Indicators -> Indicators and Observables
+    Malware -> Malware
+    Threat Actors -> Threat Actors
+    Organization-> Organization
+
+Please note that not every link type from Recorded Future is supported at this time
+
+## Configuration variables
+
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). Since the `opencti` and `connector` options are the same as any other Connector, this doc only addresses the `recordedfuture-enrichment` options
+
+Please note that if you don't want to use an optional variable, best practice is to remove it from `config.yml` or `docker-compose.yml`
+
+| Docker Env variable | config variable | Description
+| --------------------|-----------------|------------
+| RECORDED_FUTURE_TOKEN   | token      | API Token for Recorded Future. Required
+| RECORDED_FUTURE_TLP | TLP | TLP marking of the report. One of White, Green, Amber, Red
+| RECORDED_FUTURE_CREATE_INDICATOR_THRESHOLD| create_indicator_threshold | The risk score threshold at which an indicator will be created for enriched observables. If set to zero, all enriched observables will automatically create an indicator. If set to 100, no enriched observables will create an indicator. Reccomended thresholds are: 0, 25, 65, 100
+
 
 Also note that the Indicator's STIX2 confidence field is set to the Risk Score. However, at this time OpenCTI does not automatically import the STIX2 confidence field as the OpenCTI score, it's logical equivalent
 
@@ -26,9 +47,9 @@ Create a file `config.yml` based off the provided `config.yml.sample`. Replace t
 
 
 ## Usage
-To enrich an observable, first click on it in the Signatures tab of the OpenCTI platform (or navigate to an observable another way). Click on either the Linked Observables or Knowledge Tab.  In the "Enrichment Connectors", locate the Recorded Future Enrichment connector. The connector may automatically begin to enrich the observable. If not (or if you want to re-enrich the indicator), click on the refresh button next to the indicator to enrich
+To enrich an observable, first click on it in the Observations->Observables tab of the OpenCTI platform (or navigate to an observable another way). Click on the cloud in the upper right, and under "Enrichment Connectors", select the Recorded Future Enrichment connector. Depending on your configuraiton, the connector may have already run automatically. If not (or if you want to re-enrich the indicator), click on the refresh button next to the indicator to enrich
 ## Verification
-After enriching the indicator, click on the Overview tab. You should now see a series of Notes from Recorded Future containing Evidence Strings and the Risk Score. Click on an indicator under the "Indicators composed with this observable" header (one should be created if it did not exist before). This indicator will have the same notes, and you should also see relationships with a number of TTPs/Attack Patterns which represent the Recorded Future Risk Rules
+After enriching the indicator, you should now see it has a number of notes, as well as relationships with Attack Patterns, Malware, and Indicators. Those Notes from Recorded Future contain Evidence Strings and the Risk Score. Depending on your configuration, it will also have created an Indicator, which can be seen under "Indicators composed with this observable"
 
 
 
