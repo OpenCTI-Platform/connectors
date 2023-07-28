@@ -1,13 +1,13 @@
 import json
-import uuid
 from datetime import datetime
 
 from feedly.api_client.enterprise.indicators_of_compromise import StixIoCDownloader
 from feedly.api_client.session import FeedlySession
 from markdownify import markdownify
 from pycti import OpenCTIConnectorHelper
+from stix2 import Note
 
-FEEDLY_AI_UUID = "477866fd-8784-46f9-ab40-5592ed4eddd7"
+FEEDLY_AI_UUID = "identity--477866fd-8784-46f9-ab40-5592ed4eddd7"
 
 
 class FeedlyConnector:
@@ -17,17 +17,15 @@ class FeedlyConnector:
 
     def fetch_and_publish(self, stream_id: str, newer_than) -> None:
         bundle = self.fetch_bundle(stream_id, newer_than)
-        if not bundle:
+        if not bundle["objects"]:
             return
         self.cti_helper.send_stix2_bundle(bundle)
 
-    def fetch_bundle(self, stream_id: str, newer_than: datetime) -> str:
+    def fetch_bundle(self, stream_id: str, newer_than: datetime) -> dict:
         bundle = StixIoCDownloader(self.feedly_session, newer_than, stream_id).download_all()
-        if not bundle["objects"]:
-            return ""
         _replace_html_description_with_md_note(bundle)
         self.cti_helper.log_info(f"Found {_count_reports(bundle)} new reports")
-        return json.dumps(bundle)
+        return bundle
 
 
 def _count_reports(bundle: dict) -> int:
@@ -39,13 +37,7 @@ def _replace_html_description_with_md_note(bundle: dict) -> None:
     for o in bundle["objects"]:
         if o["type"] == "report":
             notes.append(
-                {
-                    "type": "note",
-                    "id": f"note--{uuid.uuid4()}",
-                    "content": markdownify(o["description"]),
-                    "object_refs": [o["id"]],
-                    "created_by_ref": FEEDLY_AI_UUID,
-                }
+                Note(content=markdownify(o["description"]), object_refs=[o["id"]], created_by_ref=FEEDLY_AI_UUID)
             )
             o["description"] = ""
-    bundle["objects"].extend(notes)
+    bundle["objects"].extend([json.loads(note.serialize()) for note in notes])
