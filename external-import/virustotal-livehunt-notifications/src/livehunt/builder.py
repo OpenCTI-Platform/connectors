@@ -176,7 +176,11 @@ class LivehuntBuilder:
             Id of the created incident.
         """
         # Create the alert
-        name = f"""Alert from ruleset {vtobj._context_attributes["ruleset_name"]} {f'{vtobj._context_attributes["rule_tags"]}' if vtobj._context_attributes["rule_tags"] else ""}"""
+        name = f"""Alert from ruleset {vtobj._context_attributes["ruleset_name"]} file={vtobj.sha256}"""
+        alert = self.helper.api.incident.read(filters=[{"key": "name", "values": name}])
+        if alert:
+            self.helper.log_debug(f"Alert {name} already exists, skipping")
+            return None
         incident = stix2.Incident(
             id=Incident.generate_id(
                 name, vtobj._context_attributes["notification_date"]
@@ -191,6 +195,7 @@ class LivehuntBuilder:
             external_references=[external_reference],
             allow_custom=True,
         )
+        self.helper.log_debug(f"Adding alert: {incident}")
         self.bundle.append(incident)
         return incident["id"]
 
@@ -245,6 +250,11 @@ class LivehuntBuilder:
         except ZeroDivisionError as e:
             self.helper.log_error(f"Unable to compute score of file, err = {e}")
 
+        external_reference = self.create_external_reference(
+            f"https://www.virustotal.com/gui/file/{vtobj.sha256}",
+            "Virustotal Analysis",
+        )
+
         file = stix2.File(
             type="file",
             name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}',
@@ -254,10 +264,12 @@ class LivehuntBuilder:
                 "SHA1": vtobj.sha1,
             },
             size=vtobj.size,
+            external_references=[external_reference],
             custom_properties={
                 "x_opencti_score": score,
                 "created_by_ref": self.author["standard_id"],
             },
+            allow_custom=True,
         )
         self.bundle.append(file)
         # Link to the incident if any.
@@ -310,6 +322,26 @@ class LivehuntBuilder:
         for rule in rules:
             if rule["rule_name"] == rule_name:
                 self.helper.log_debug(f"Adding rule name {rule_name}")
+                # Default valid_from with current date
+                valid_from = self.helper.api.stix2.format_date(
+                    datetime.datetime.utcnow()
+                )
+                try:
+                    valid_from = self.helper.api.stix2.format_date(
+                        next(
+                            (
+                                i["date"]
+                                for i in rule.get("metadata", {})
+                                if "date" in i
+                            ),
+                            None,
+                        )
+                    )
+                except ValueError as e:
+                    self.helper.log_error(
+                        f"Date not valid, setting to {valid_from}, err: {e}"
+                    )
+
                 indicator = stix2.Indicator(
                     created_by_ref=self.author["standard_id"],
                     name=rule["rule_name"],
@@ -320,16 +352,7 @@ class LivehuntBuilder:
                     confidence=self.helper.connect_confidence_level,
                     pattern=plyara.utils.rebuild_yara_rule(rule),
                     pattern_type="yara",
-                    valid_from=self.helper.api.stix2.format_date(
-                        next(
-                            (
-                                i["date"]
-                                for i in rule.get("metadata", {})
-                                if "date" in i
-                            ),
-                            None,
-                        )
-                    ),
+                    valid_from=valid_from,
                     custom_properties={
                         "x_opencti_main_observable_type": "StixFile",
                     },
