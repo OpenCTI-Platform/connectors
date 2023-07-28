@@ -7,6 +7,8 @@ from feedly.api_client.session import FeedlySession
 from markdownify import markdownify
 from pycti import OpenCTIConnectorHelper
 
+FEEDLY_AI_UUID = "477866fd-8784-46f9-ab40-5592ed4eddd7"
+
 
 class FeedlyConnector:
     def __init__(self, feedly_api_key: str, cti_helper: OpenCTIConnectorHelper):
@@ -42,6 +44,7 @@ def _replace_html_description_with_md_note(bundle: dict) -> None:
                     "id": f"note--{uuid.uuid4()}",
                     "content": markdownify(o["description"]),
                     "object_refs": [o["id"]],
+                    "created_by_ref": FEEDLY_AI_UUID,
                 }
             )
             o["description"] = ""
