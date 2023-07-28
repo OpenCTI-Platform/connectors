@@ -10,19 +10,19 @@ from pycti import OpenCTIConnectorHelper
 
 class FeedlyConnector:
     def __init__(self, feedly_api_key: str, cti_helper: OpenCTIConnectorHelper):
-        self.feedly_session = FeedlySession(
-            feedly_api_key, client_name="feedly.opencti.client"
-        )
+        self.feedly_session = FeedlySession(feedly_api_key, client_name="feedly.opencti.client")
         self.cti_helper = cti_helper
 
     def fetch_and_publish(self, stream_id: str, newer_than) -> None:
         bundle = self.fetch_bundle(stream_id, newer_than)
+        if not bundle:
+            return
         self.cti_helper.send_stix2_bundle(bundle)
 
     def fetch_bundle(self, stream_id: str, newer_than: datetime) -> str:
-        bundle = StixIoCDownloader(
-            self.feedly_session, newer_than, stream_id
-        ).download_all()
+        bundle = StixIoCDownloader(self.feedly_session, newer_than, stream_id).download_all()
+        if not bundle["objects"]:
+            return ""
         _replace_html_description_with_md_note(bundle)
         self.cti_helper.log_info(f"Found {_count_reports(bundle)} new reports")
         return json.dumps(bundle)
