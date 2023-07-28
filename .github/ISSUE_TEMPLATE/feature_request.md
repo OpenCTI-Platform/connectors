@@ -23,8 +23,9 @@ assignees: ''
 
 <!-- Any additional information, including logs or screenshots if you have any. -->
 
-## If the feature request is approved, would you be willing to submit a PR?
+## Would you be willing to submit a PR?
 
 <!-- A PR is a shortcut for a "pull request". Here more details on the idea behind a PR https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests -->
 
-Yes / No (Help can be provided if you need assistance submitting a PR)
+We strongly encourage you to submit a PR if you want and whenever you want. If your issue concern a "Community-support" connector, your PR will probably be accepted after some review. If the connector is "Partner-support" or "Filigran-support", a dev team make take over but will base its work on your PR, speeding the process. It will be much appreciated. 
+
