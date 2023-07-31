@@ -21,7 +21,7 @@ class FeedlyConnector:
         bundle = self.fetch_bundle(stream_id, newer_than)
         if not bundle["objects"]:
             return
-        self.cti_helper.send_stix2_bundle(bundle)
+        self.cti_helper.send_stix2_bundle(json.dumps(bundle))
 
     def fetch_bundle(self, stream_id: str, newer_than: datetime) -> dict:
         bundle = StixIoCDownloader(
