@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Feedly'
+  scope: 'feedly'
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+feedly:
+  interval: 60 # In minutes
+  stream_ids: '' # Comma separated list of stream ids
+  days_to_back_fill: 7 # Number of days to back fill for new streams
+  api_key: '' # Feedly API key to generate here https://feedly.com/i/team/api
