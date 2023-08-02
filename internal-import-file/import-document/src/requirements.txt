@@ -7,4 +7,4 @@ pydantic==1.10.11
 ioc-finder==7.3.0
 dateparser==1.1.8
 pyhumps==3.8.0
-chardet==5.1.0
+chardet==5.2.0
