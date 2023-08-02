@@ -47,7 +47,10 @@ class Taxii2Connector:
             "TAXII2_VERIFY_SSL", ["taxii2", "verify_ssl"], config, default=True
         )
         # if V21 flag set to true
-        if get_config_variable("TAXII2_V21", ["taxii2", "v2.1"], config, default=True):
+        self.taxii2v21 = get_config_variable(
+            "TAXII2_V21", ["taxii2", "v2.1"], config, default=True
+        )
+        if self.taxii2v21:
             self.server = tx21.Server(
                 server_url,
                 user=username,
@@ -242,6 +245,30 @@ class Taxii2Connector:
             collection (taxii2client.v2*.Collection: THe Collection to poll
         """
 
+        def process_response(objects, response, version):
+            # Function to process data from taxii servers
+            for object in response["objects"]:
+                # If taxii feed is v2.0 append pattern_type if it does not exist
+                if version == "2.0" and "pattern_type" not in object:
+                    object["pattern_type"] = "stix"
+                # Add a custom label
+                new_labels = []
+                if "labels" in object:
+                    new_labels = object["labels"]
+                if self.add_custom_label == True:
+                    new_labels.append(self.custom_label)
+                    object["labels"] = new_labels
+                # Force name to be pattern
+                if self.force_pattern_as_name == True and object["type"] == "indicator":
+                    if " AND " in object["pattern"] or " OR " in object["pattern"]:
+                        object["name"] = self.force_multiple_pattern_name
+                    else:
+                        match = re.search(r"=.?\'(.*?)\'\]", object["pattern"])
+                        if match != None:
+                            object["name"] = match[1]
+                objects.append(object)
+            return objects
+
         filters = {}
         if self.first_run:
             lookback = self.initial_history or None
@@ -253,63 +280,42 @@ class Taxii2Connector:
         self.helper.log_info(f"Polling Collection {collection.title}")
 
         # Initial request
-        total = None
+        # If configured for Taxii 2.1, add next to filters
+        if self.taxii2v21:
+            filters["next"] = None
         response = collection.get_objects(**filters)
-        if "objects" in response:
-            objects = []
+        more = None
+        objects = []
+        if "objects" in response and len(response["objects"]) > 0:
             if "spec_version" in response:
                 version = response["spec_version"]
             else:
                 version = response["objects"][0]["spec_version"]
-            while total != 0:
-                # Taxii 2.1 servers are not required to send data in bundle
-                total = len(response["objects"])
-                if total > 0:
-                    for object in response["objects"]:
-                        # If taxii feed is v2.0 append pattern_type
-                        if version == "2.0":
-                            object["pattern_type"] = "stix"
-                        # Add a custom label
-                        new_labels = []
-                        if "labels" in object:
-                            new_labels = object["labels"]
-                        if self.add_custom_label == True:
-                            new_labels.append(self.custom_label)
-                            object["labels"] = new_labels
-                        # Force name to be pattern
-                        if (
-                            self.force_pattern_as_name == True
-                            and object["type"] == "indicator"
-                        ):
-                            if (
-                                " AND " in object["pattern"]
-                                or " OR " in object["pattern"]
-                            ):
-                                object["name"] = self.force_multiple_pattern_name
-                            else:
-                                match = re.search(r"=.?\'(.*?)\'\]", object["pattern"])
-                                if match != None:
-                                    object["name"] = match[1]
-                        objects.append(object)
-
+            # Taxii 2.0 doesn't support using next, using manifest lookup instead
+            if version == "2.0":
+                while more != False:
+                    objects = process_response(objects, response, version)
                     # Get the manifest for the last object
                     last_obj = response["objects"][-1]
                     manifest = collection.get_manifest(id=last_obj["id"])
-
                     # Check manifest size
                     if len(manifest["objects"]) > 0:
                         date_added = manifest["objects"][0]["date_added"]
                         filters["added_after"] = date_added
-
                         # Get the next set of objects
                         response = collection.get_objects(**filters)
-                        if "objects" in response and len(response["objects"]) > 0:
-                            total = len(response["objects"])
-                        else:
-                            total = 0
+                        more = "objects" in response and len(response["objects"]) > 0
                     else:
-                        self.helper.log_info("No manifest found. Stopping pagination")
-                        total = 0
+                        self.helper.log_info("No manifest found. Stopping pagination.")
+                        more = False
+            else:
+                # Assuming newer versions will support next
+                while more != False:
+                    objects = process_response(objects, response, version)
+                    # Get the next set of objects
+                    if (more := response["more"]) == True:
+                        filters["next"] = response["next"]
+                        response = collection.get_objects(**filters)
 
             # Create bundle
             new_bundle = {
@@ -319,6 +325,8 @@ class Taxii2Connector:
                 "objects": objects,
             }
             self.send_to_server(new_bundle)
+        else:
+            self.helper.log_info("No objects found in request.")
 
     def _process_objects(self, stix_bundle: Dict) -> Dict:
         # the list of object types for which the confidence has to be added
