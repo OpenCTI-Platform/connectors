@@ -57,7 +57,7 @@ class LivehuntBuilder:
         self.max_file_size = max_file_size
         self.min_positives = min_positives
 
-    def process(self, start_date: str):
+    def process(self, start_date: str, work_id):
         url = "/intelligence/hunting_notification_files"
         params = f"date:{start_date}+"
         if self.tag is not None and self.tag != "":
@@ -91,12 +91,11 @@ class LivehuntBuilder:
 
             # If min positives set and file has fewer detections
             if (
-                self.min_positives
-                and vtobj.last_analysis_stats["malicious"] < self.min_positives
+                not hasattr(vtobj, "last_analysis_stats")
+                or not self.min_positives
+                or vtobj.last_analysis_stats.get("malicious", 0) < self.min_positives
             ):
-                self.helper.log_info(
-                    f'Not enough detections ({vtobj.last_analysis_stats["malicious"]} < {self.min_positives}'
-                )
+                self.helper.log_info("Not enough detections")
                 continue
 
             # If min size was set and file is below that size
@@ -143,6 +142,9 @@ class LivehuntBuilder:
                     file_id,
                 )
 
+            if len(self.bundle) > 0:
+                self.send_bundle(work_id)
+
     def artifact_exists_opencti(self, sha256: str) -> bool:
         """
         Determine whether an Artifact already exists in OpenCTI.
@@ -177,14 +179,15 @@ class LivehuntBuilder:
         """
         # Create the alert
         name = f"""Alert from ruleset {vtobj._context_attributes["ruleset_name"]} file={vtobj.sha256}"""
-        alert = self.helper.api.incident.read(filters=[{"key": "name", "values": name}])
+        incident_id = Incident.generate_id(
+            name, vtobj._context_attributes["notification_date"]
+        )
+        alert = self.helper.api.incident.read(id=incident_id)
         if alert:
-            self.helper.log_debug(f"Alert {name} already exists, skipping")
+            self.helper.log_info(f"Alert {alert} already exists, skipping")
             return None
         incident = stix2.Incident(
-            id=Incident.generate_id(
-                name, vtobj._context_attributes["notification_date"]
-            ),
+            id=incident_id,
             incident_type="alert",
             name=name,
             description=f'Snippet:\n{vtobj._context_attributes["notification_snippet"]}',
