@@ -242,13 +242,9 @@ class VirustotalLivehuntNotifications:
                         f"[Virustotal Livehunt Notifications] starting run at: {current_state}"
                     )
                     new_state = current_state.copy()
+                    work_id = self._initiate_work(timestamp)
 
-                    self.builder.process(last_run)
-                    if len(self.builder.bundle) > 0:
-                        work_id = self._initiate_work(timestamp)
-                        self.builder.send_bundle(work_id)
-                    else:
-                        self.helper.log_debug("No bundle to send")
+                    self.builder.process(last_run, work_id)
 
                     # Set the new state
                     new_state[
