@@ -1,18 +1,19 @@
 version: '3'
 services:
   connector-rf-enrichment:
-    image: opencti/connector-recordedfuture-enrichment:5.9.6
+    image: opencti-rf-enrichment:latest
     environment:
       - OPENCTI_URL=http://opencti:4000
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=Recorded Future Enrichment
-      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,stixfile
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain-name,url,stixfile
       - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=5
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       - CONNECTOR_LOG_LEVEL=info
-      - RECORDEDFUTURE_ENRICHMENT_TOKEN=CHANGEME #required
-      - RECORDEDFUTURE_ENRICHMENT_INFO_MAX_TLP=TLP:AMBER
+      - RECORDED_FUTURE_TOKEN=CHANGEME #required
+      - RECORDED_FUTURE_INFO_MAX_TLP=TLP:AMBER
+      - RECORDED_FUTURE_CREATE_INDICATOR_THRESHOLD=0
     restart: always
