@@ -57,7 +57,9 @@ class LivehuntBuilder:
         self.max_file_size = max_file_size
         self.min_positives = min_positives
 
-    def process(self, start_date: str, work_id):
+    def process(self, start_date: str, timestamp: int):
+        # Work id will only be set and instantiated if there are bundles to send.
+        work_id = None
         url = "/intelligence/hunting_notification_files"
         params = f"date:{start_date}+"
         if self.tag is not None and self.tag != "":
@@ -143,6 +145,8 @@ class LivehuntBuilder:
                 )
 
             if len(self.bundle) > 0:
+                if work_id is None:
+                    work_id = self.initiate_work(timestamp)
                 self.send_bundle(work_id)
 
     def artifact_exists_opencti(self, sha256: str) -> bool:
@@ -409,36 +413,18 @@ class LivehuntBuilder:
         url = f"/intelligence/hunting_notifications/{notification_id}"
         return self.client.delete(url)
 
-    @staticmethod
-    def _compute_score(stats: dict) -> int:
-        """
-        Compute the score for the observable.
-
-        score = malicious_count / total_count * 100
-
-        Parameters
-        ----------
-        stats : dict
-            Dictionary with counts of each category (e.g. `harmless`, `malicious`, ...)
-
-        Returns
-        -------
-        int
-            Score, in percent, rounded.
-        """
-        try:
-            vt_score = round(
-                (
-                    stats["malicious"]
-                    / (stats["harmless"] + stats["undetected"] + stats["malicious"])
-                )
-                * 100
-            )
-        except ZeroDivisionError as e:
-            raise ValueError(
-                "Cannot compute score. VirusTotal may have no record of the observable"
-            ) from e
-        return vt_score
+    def initiate_work(self, timestamp: int) -> str:
+        now = datetime.datetime.utcfromtimestamp(timestamp)
+        friendly_name = "Virustotal Livehunt Notifications run @ " + now.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+        self.helper.log_info(
+            f"[Virustotal Livehunt Notifications] workid {work_id} initiated"
+        )
+        return work_id
 
     def send_bundle(self, work_id: str):
         """
@@ -481,3 +467,34 @@ class LivehuntBuilder:
             "createdBy": self.author["standard_id"],
         }
         return self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
+
+    @staticmethod
+    def _compute_score(stats: dict) -> int:
+        """
+        Compute the score for the observable.
+
+        score = malicious_count / total_count * 100
+
+        Parameters
+        ----------
+        stats : dict
+            Dictionary with counts of each category (e.g. `harmless`, `malicious`, ...)
+
+        Returns
+        -------
+        int
+            Score, in percent, rounded.
+        """
+        try:
+            vt_score = round(
+                (
+                    stats["malicious"]
+                    / (stats["harmless"] + stats["undetected"] + stats["malicious"])
+                )
+                * 100
+            )
+        except ZeroDivisionError as e:
+            raise ValueError(
+                "Cannot compute score. VirusTotal may have no record of the observable"
+            ) from e
+        return vt_score
