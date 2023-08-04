@@ -306,6 +306,9 @@ class MispFeed:
         }
         added_names = []
         for galaxy in galaxies:
+            if "namespace" not in galaxy:
+                self.helper.log_info("Skipping galaxy without namespace")
+                continue
             # Get the linked intrusion sets
             if (
                 (
@@ -1604,7 +1607,7 @@ class MispFeed:
                 None,
                 [],
                 attribute,
-                event["Event"]["threat_level_id"],
+                event["Event"].get("threat_level_id", "Undefined"),
             )
             if (
                 attribute["type"] == "link"
@@ -1628,7 +1631,7 @@ class MispFeed:
         indicators_relationships = []
         objects_relationships = []
         objects_observables = []
-        event_threat_level = event["Event"]["threat_level_id"]
+        event_threat_level = event["Event"].get("threat_level_id", "Undefined")
         for object in event["Event"].get("Object", []):
             attribute_external_references = []
             for attribute in object["Attribute"]:
@@ -1701,7 +1704,7 @@ class MispFeed:
                     object_observable,
                     attribute_external_references,
                     attribute,
-                    event["Event"]["threat_level_id"],
+                    event["Event"].get("threat_level_id", "Undefined"),
                 )
                 if indicator is not None:
                     indicators.append(indicator)
@@ -2043,15 +2046,19 @@ class MispFeed:
             self.helper.log_error(str(e))
 
     def run(self):
-        self.helper.log_info("Fetching MISP Feed...")
-        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-        if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-            self.process_data()
-            self.helper.force_ping()
-        else:
-            while True:
+        try:
+            self.helper.log_info("Fetching MISP Feed...")
+            get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
+            if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
                 self.process_data()
-                time.sleep(60)
+                self.helper.force_ping()
+            else:
+                while True:
+                    self.process_data()
+                    time.sleep(60)
+        except Exception as e:
+            self.helper.log_error(str(e))
+            raise e
 
 
 if __name__ == "__main__":

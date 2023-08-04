@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-webhook:
-    image: opencti/connector-webhook:5.8.7
+    image: opencti/connector-webhook:5.9.6
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -19,5 +19,3 @@ services:
       - WEBHOOK_UNSUCCESSFUL_RETRY_ATTEMPTS=5 # If the webhook call is unsuccessful, retry no more than this many times.
       - WEBHOOK_IGNORE_DUPLICATES=true # If duplicate webhook calls exist in the poll, only call each once.
     restart: always
-    depends_on:
-      - opencti

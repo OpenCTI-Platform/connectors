@@ -1,24 +1,24 @@
 version: "3"
 services:
   connector-splunk:
-    image: opencti/connector-splunk:5.8.7
+    image: opencti/connector-splunk:5.9.6
     environment:
-      OPENCTI_URL: http://localhost
-      OPENCTI_TOKEN: ChangeMe
-      CONNECTOR_ID: ChangeMe
-      CONNECTOR_TYPE: STREAM
-      CONNECTOR_LIVE_STREAM_ID: live # ID of the live stream created in the OpenCTI UI
-      CONNECTOR_LIVE_STREAM_LISTEN_DELETE: true
-      CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES: true
-      CONNECTOR_NAME: OpenCTI Splunk Connector
-      CONNECTOR_SCOPE: elastic
-      CONNECTOR_CONFIDENCE_LEVEL: 80 # From 0 (Unknown) to 100 (Fully trusted)
-      CONNECTOR_LOG_LEVEL: info
-      SPLUNK_URL: https://splunk1.changeme.com:8089
-      SPLUNK_TOKEN: Token1
-      SPLUNK_OWNER: nobody
-      SPLUNK_SSL_VERIFY: true
-      SPLUNK_APP: search
-      SPLUNK_KV_STORE_NAME: opencti
-      SPLUNK_IGNORE_TYPES: label,marking-definition,identity
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - "CONNECTOR_NAME=OpenCTI Splunk Connector"
+      - CONNECTOR_SCOPE=splunk
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - SPLUNK_URL=https://splunk1.changeme.com:8089
+      - SPLUNK_TOKEN=Token1
+      - SPLUNK_OWNER=nobody
+      - SPLUNK_SSL_VERIFY=true
+      - SPLUNK_APP=search
+      - SPLUNK_KV_STORE_NAME=opencti
+      - SPLUNK_IGNORE_TYPES=label,marking-definition,identity
     restart: always

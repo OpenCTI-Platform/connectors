@@ -30,19 +30,20 @@ class ImportFileStix:
 
         file_content = self.helper.api.fetch_opencti_file(file_uri)
         if data["file_mime"] == "text/xml":
-            self.helper.log_debug("Stix1 file. Attempting conversion")
+            self.helper.log_debug("STIX 1.2 file. Attempting conversion")
             initialize_options()
             file_content = elevate(file_content)
-
         entity_id = data.get("entity_id", None)
         if entity_id:
             self.helper.log_info("Contextual import.")
             bundle = json.loads(file_content)["objects"]
-            if self._contains_report(bundle):
-                self.helper.log_info("Bundle contains report.")
+            if self._contains_container(bundle):
+                self.helper.log_info("Bundle contains container.")
             else:
-                self.helper.log_info("No Report in Stix file. Updating current report")
-                bundle = self._update_report(bundle, entity_id)
+                self.helper.log_info(
+                    "No container in Stix file. Updating current container"
+                )
+                bundle = self._update_container(bundle, entity_id)
             bundle = {
                 "type": "bundle",
                 "id": "bundle--" + str(uuid.uuid4()),
@@ -65,26 +66,35 @@ class ImportFileStix:
         self.helper.listen(self._process_message)
 
     @staticmethod
-    def _contains_report(bundle: List) -> bool:
+    def _contains_container(bundle: List) -> bool:
         for elem in bundle:
-            if elem.get("type") == "report":
+            if (
+                elem.get("type") == "report"
+                or elem.get("type") == "grouping"
+                or elem.get("type") == "observed-data"
+                or elem.get("type") == "x-opencti-case-incident"
+                or elem.get("type") == "x-opencti-case-rfi"
+                or elem.get("type") == "x-opencti-case-rft"
+                or elem.get("type") == "x-opencti-task"
+                or elem.get("type") == "x-opencti-feedback"
+            ):
                 return True
         return False
 
-    def _update_report(self, bundle: List, entity_id: int) -> List:
-        report = self.helper.api.report.read(id=entity_id)
-        # The entity_id can be any SDO
-        if report:
-            report = {
-                "id": report["standard_id"],
-                "type": "report",
-                "name": report["name"],
-                "description": report["description"],
-                "published": self.helper.api.stix2.format_date(report["created"]),
-                "report_types": report["report_types"],
-                "object_refs": [object["id"] for object in bundle],
-            }
-            bundle.append(report)
+    def _update_container(self, bundle: List, entity_id: int) -> List:
+        container = self.helper.api.stix_domain_object.read(id=entity_id)
+        container_stix_bundle = self.helper.api.stix2.export_entity(
+            container["entity_type"], container["id"]
+        )
+        if len(container_stix_bundle["objects"]) > 0:
+            container_stix = [
+                object
+                for object in container_stix_bundle["objects"]
+                if "x_opencti_id" in object
+                and object["x_opencti_id"] == container["id"]
+            ][0]
+            container_stix["object_refs"] = [object["id"] for object in bundle]
+            bundle.append(container_stix)
         return bundle
 
 

@@ -20,7 +20,9 @@ There are a number of configuration options, which are set either in `docker-com
 | TAXII2_CREATE_INDICATORS | true | Boolean statement on whether to create indicators
 | TAXII2_CREATE_OBSERVABLES | true | Boolean statement on whether to create observables
 | TAXII2_ADD_CUSTOM_LABEL | false | Boolean statement on whether to add custom label to all indicators. Default to False
-| TAXII2_CUSTOM_LABEL | string | String to use for custom label.
+| TAXII2_CUSTOM_LABEL | string | String to use for custom label. Requires TAXII2_ADD_CUSTOM_LABEL to be configured.
+| TAXII2_FORCE_PATTERN_AS_NAME | false | Boolean statement on whether to force name to be contents of pattern. Default to False
+| TAXII2_FORCE_MULTIPLE_PATTERN_NAME | string | String to use for indicators that contain multiple indicators in a single pattern. Requires TAXII2_FORCE_PATTERN_AS_NAME to be configured.
 
 ### Collections and API roots
 TAXII 2.0 introduced a new concept into the TAXII standard called an "API Root." API Roots are logical groupings of TAXII Collections and Channels that allow for better organization and federated access. More information can be found in the [TAXII2 standard](https://docs.oasis-open.org/cti/taxii/v2.1/csprd01/taxii-v2.1-csprd01.pdf)

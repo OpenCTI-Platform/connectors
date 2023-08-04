@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-taxii-post:
+    image: opencti/connector-taxii-post:5.9.6
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - "CONNECTOR_NAME=TAXII POST"
+      - CONNECTOR_SCOPE=taxii
+      - CONNECTOR_CONFIDENCE_LEVEL=90 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - TAXII_URL=https://taxii.changeme.com # The URL of the TAXII Server
+      - TAXII_SSL_VERIFY=true
+      - TAXII_COLLECTION_ID=ChangeMe # The collection ID
+      - TAXII_TOKEN= # Token for bearer auth (if set, will ignore basic auth params)
+      - TAXII_LOGIN= # Login for basic auth
+      - TAXII_PASSWORD= # Password for basic auth
+      - TAXII_VERSION=2.1 # Version for TAXII
+      - TAXII_STIX_VERSION=2.1 # Version for STIX
+    restart: always

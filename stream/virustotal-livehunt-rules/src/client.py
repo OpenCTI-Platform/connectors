@@ -49,7 +49,7 @@ class VirusTotalClient:
         retry_strategy = Retry(
             total=3,
             status_forcelist=[429, 500, 502, 503, 504],
-            method_whitelist=["HEAD", "GET", "OPTIONS", "POST", "DELETE"],
+            allowed_methods=["HEAD", "GET", "OPTIONS", "POST", "DELETE"],
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
@@ -57,7 +57,6 @@ class VirusTotalClient:
         response = None
         try:
             response = http.request(method, url, headers=self.headers, data=payload)
-
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")

@@ -6,11 +6,12 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'Recorded Future Enrichment'
-  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
+  scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile'
   confidence_level: 5
   update_existing_data: true
   log_level: 'info'
 
 recordedfuture-enrichment:
-  api_key: 'ChangeMe' #required
+  token: 'ChangeMe' #required
+  create_indicator_threshold: 0
   max_tlp: 'TLP:AMBER'

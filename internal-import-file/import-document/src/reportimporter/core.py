@@ -368,6 +368,23 @@ class ReportImporter:
 
         return observables, entities
 
+    def _convert_id(self, type, standard_id):
+        if type == "Case-Incident":
+            return "x-opencti-" + standard_id
+        if type == "Case-Rfi":
+            return "x-opencti-" + standard_id
+        if type == "Case-Rft":
+            return "x-opencti-" + standard_id
+        if type == "Feedback":
+            return "x-opencti-" + standard_id
+        if type == "Task":
+            return "x-opencti-" + standard_id
+        if type == "Data-Component":
+            return "x-mitre-" + standard_id
+        if type == "Data-Source":
+            return "x-mitre-" + standard_id
+        return standard_id
+
     def _process_parsed_objects(
         self,
         entity: Dict,
@@ -398,16 +415,17 @@ class ReportImporter:
             entity_stix = [
                 object
                 for object in entity_stix_bundle["objects"]
-                if object["id"] == entity["standard_id"]
+                if object["id"]
+                == self._convert_id(entity["entity_type"], entity["standard_id"])
             ][0]
             relationships = []
             # For containers, just insert everything in it
             if (
                 entity_stix["type"] == "report"
                 or entity_stix["type"] == "grouping"
-                or entity_stix["type"] == "case-incident"
-                or entity_stix["type"] == "case-rfi"
-                or entity_stix["type"] == "case-rft"
+                or entity_stix["type"] == "x-opencti-case-incident"
+                or entity_stix["type"] == "x-opencti-case-rfi"
+                or entity_stix["type"] == "x-opencti-case-rft"
                 or entity_stix["type"] == "note"
                 or entity_stix["type"] == "opinion"
             ):

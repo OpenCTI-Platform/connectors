@@ -23,3 +23,7 @@ taxii2:
   verify_ssl: true
   create_indicators: true # Generate indicators for ingested observables
   create_observables: true # Generate observables for ingested indicators
+  add_custom_label: false
+  custom_label: ChangeMe
+  force_pattern_as_name: false
+  force_multiple_pattern_name: 'Multiple Indicators'
