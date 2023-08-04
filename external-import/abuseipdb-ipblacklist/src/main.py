@@ -157,7 +157,7 @@ class abuseipdbipblacklistimport:
                                     value=d["ipAddress"],
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     custom_properties={
-                                        "description": "Agressive IP known malicious on AbuseIPDB"
+                                        "x_opencti_description": "Agressive IP known malicious on AbuseIPDB"
                                         + " - countryCode: "
                                         + str(d["countryCode"])
                                         + " - abuseConfidenceScore: "
