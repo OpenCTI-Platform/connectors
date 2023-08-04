@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-tweetfeed:
     image: opencti/connector-tweetfeed:5.8.7
@@ -11,11 +11,12 @@ services:
       - CONNECTOR_SCOPE=tweetfeed
       - CONNECTOR_CONFIDENCE_LEVEL=15
       - CONNECTOR_LOG_LEVEL=info
-      - TWEETFEED_CONFIDENCE_LEVEL=15  # From 0 (Unknown) to 100 (Fully trusted)
+      - TWEETFEED_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - TWEETFEED_CREATE_INDICATORS=true
       - TWEETFEED_CREATE_OBSERVABLES=true
       - TWEETFEED_INTERVAL=1
       - TWEETFEED_UPDATE_EXISTING_DATA=true
       - "TWEETFEED_ORG_DESCRIPTION=Tweetfeed, a connector to import IOC from Twitter."
       - TWEETFEED_ORG_NAME=Tweetfeed
+      - TWEETFEED_DAYS_BACK_IN_TIME=30 # Number of days to retrieve data back in time
     restart: always

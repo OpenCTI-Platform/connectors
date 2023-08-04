@@ -29,6 +29,7 @@ BANNER = f"""
                               TWEETFeed importer, version {__version__}
 """
 
+
 # create a class for the IOC
 class TweetFeed:
     @staticmethod
@@ -101,6 +102,12 @@ class TweetFeed:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+        self.tweetfeed_days_back_in_time = get_config_variable(
+            "TWEETFEED_DAYS_BACK_IN_TIME",
+            ["tweetfeed", "days_back_in_time"],
+            config,
+            True,
+        )
         self.tweetfeed_interval = get_config_variable(
             "TWEETFEED_INTERVAL", ["tweetfeed", "interval"], config, True
         )
@@ -190,9 +197,7 @@ class TweetFeed:
     def retrieve_data(self):
         self.helper.log_info("Fetching data...")
         while True:
-
             try:
-
                 timestamp = int(time.time())
                 now = datetime.utcfromtimestamp(timestamp)
                 friendly_name = "TWEETFEED run @ " + now.strftime(
@@ -212,6 +217,9 @@ class TweetFeed:
                 else:
                     last_run = None
                     last_run_datetime = datetime.today()
+                    last_run_datetime = last_run_datetime + timedelta(
+                        days=-self.tweetfeed_days_back_in_time
+                    )
                     self.helper.log_info("Connector has never run")
                 last_run_datetime = last_run_datetime + timedelta(days=-1)
 
@@ -265,7 +273,6 @@ class TweetFeed:
         return result
 
     def process_line(self, network):
-
         _observable = None
         _indicator = None
         _network = {
@@ -324,7 +331,6 @@ class TweetFeed:
         return _observable
 
     def create_indicators_i(self, ioc, external_reference, tags):
-
         indicator = None
         type_ioc = ""
         if ioc["type"] == "domain":
@@ -379,7 +385,6 @@ class TweetFeed:
         for taglabel in tags:
             if taglabel is not None and taglabel != "":
                 if taglabel[0].isupper():
-
                     malwsearc = self.helper.api.malware.read(
                         filters={"key": "name", "values": [taglabel.lower().strip()]}
                     )
@@ -458,9 +463,12 @@ class TweetFeed:
             ## get the date
             date = datetime.today() - timedelta(days=day)
             ## get the url
-            url = self._generate_path(date.strftime("%Y%m%d"))
-            text = self.download_ioc_file(url)
-            self.parse_ioc_csv(text)
+            try:
+                url = self._generate_path(date.strftime("%Y%m%d"))
+                text = self.download_ioc_file(url)
+                self.parse_ioc_csv(text)
+            except:
+                pass
 
     def run(self):
         self.helper.log_info(" TweetFeed, Fetching IOC data...")
