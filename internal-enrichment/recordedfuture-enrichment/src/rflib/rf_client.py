@@ -9,23 +9,23 @@
 ################################################################################
 """
 import urllib
+
 import requests
 import requests.exceptions
 
-
-API_BASE = 'https://api.recordedfuture.com'
-CONNECT_BASE = API_BASE + '/v2'
-LINKS_BASE = API_BASE + '/links'
-LINK_SEARCH = LINKS_BASE + '/search'
+API_BASE = "https://api.recordedfuture.com"
+CONNECT_BASE = API_BASE + "/v2"
+LINKS_BASE = API_BASE + "/links"
+LINK_SEARCH = LINKS_BASE + "/search"
 
 
 class RFClient:
     """class for talking to the RF API, specifically for enriching indicators"""
 
-    def __init__(self, token, helper, header='OpenCTI-Enrichment/2.0'):
+    def __init__(self, token, helper, header="OpenCTI-Enrichment/2.0"):
         """Inits function"""
         self.token = token
-        headers = {'X-RFToken': token, 'User-Agent': header}
+        headers = {"X-RFToken": token, "User-Agent": header}
         self.session = requests.Session()
         self.session.headers.update(headers)
         self.helper = helper
@@ -33,19 +33,21 @@ class RFClient:
     def full_enrichment(self, entity, type_):
         """Enrich an individual IOC"""
         enrichment = self._enrich(entity, type_)
-        links = self._get_links(enrichment['entity']['id'])
-        enrichment['links'] = links
+        links = self._get_links(enrichment["entity"]["id"])
+        enrichment["links"] = links
         return enrichment
 
     def _enrich(self, entity, type_):
         """Make enrichment call to get entity and risk score"""
-        fields = 'entity,risk'
-        if type_.lower() == 'hash':
-            fields += ',hashAlgorithm'
-        url = '{}/{}/{}'.format(CONNECT_BASE, type_, urllib.parse.quote(entity, safe=""))
-        res = self.session.get(url, params={'fields': fields})
+        fields = "entity,risk"
+        if type_.lower() == "hash":
+            fields += ",hashAlgorithm"
+        url = "{}/{}/{}".format(
+            CONNECT_BASE, type_, urllib.parse.quote(entity, safe="")
+        )
+        res = self.session.get(url, params={"fields": fields})
         res.raise_for_status()
-        return res.json()['data']
+        return res.json()["data"]
 
     def _get_links(self, rfid):
         """Get links for entity"""
@@ -55,4 +57,4 @@ class RFClient:
         }
         res = self.session.post(LINK_SEARCH, json=query)
         res.raise_for_status()
-        return res.json()['data'][0]['links']
+        return res.json()["data"][0]["links"]
