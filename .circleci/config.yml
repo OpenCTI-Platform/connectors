@@ -253,6 +253,10 @@ jobs:
           name: Build Docker image opencti/connector-taxii-post
           command: docker build -t opencti/connector-taxii-post:latest . && docker tag opencti/connector-taxii-post:latest opencti/connector-taxii-post:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/feedly
+          name: Build Docker image opencti/connector-feedly
+          command: docker build -t opencti/connector-feedly:latest . && docker tag opencti/connector-feedly:latest opencti/connector-feedly:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -356,6 +360,8 @@ jobs:
             docker push opencti/connector-virustotal-livehunt-rules:${CIRCLE_TAG}
             docker push opencti/connector-taxii-post:latest
             docker push opencti/connector-taxii-post:${CIRCLE_TAG}
+            docker push opencti/connector-feedly:latest
+            docker push opencti/connector-feedly:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -881,6 +887,10 @@ jobs:
           name: Build Docker image opencti/connector-taxii-post
           command: docker build -t opencti/connector-taxii-post:rolling .
       - run:
+          working_directory: ~/opencti/external-import/feedly
+          name: Build Docker image opencti/connector-feedly
+          command: docker build -t opencti/connector-feedly:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -932,6 +942,7 @@ jobs:
             docker push opencti/connector-vmray-analyzer:rolling
             docker push opencti/connector-virustotal-livehunt-rules:rolling
             docker push opencti/connector-taxii-post:rolling
+            docker push opencti/connector-feedly:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

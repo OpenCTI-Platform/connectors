@@ -41,16 +41,19 @@ class IndicatorConfig:
                 ["virustotal", f"{config_type.lower()}_indicator_create_positives"],
                 config,
                 True,
+                10
             ),
             valid_minutes=get_config_variable(
                 f"VIRUSTOTAL_{config_type.upper()}_INDICATOR_VALID_MINUTES",
                 ["virustotal", f"{config_type.lower()}_indicator_valid_minutes"],
                 config,
                 True,
+                2880
             ),
             detect=get_config_variable(
                 f"VIRUSTOTAL_{config_type.upper()}_INDICATOR_DETECT",
                 ["virustotal", f"{config_type.lower()}_indicator_detect"],
                 config,
+                True
             ),
         )

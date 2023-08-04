@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-template:
+  connector-feedly:
     image: opencti/connector-feedly:5.9.6
     environment:
       - OPENCTI_URL=http://localhost
