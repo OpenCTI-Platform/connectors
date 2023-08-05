@@ -17,3 +17,4 @@ tweetfeed:
   update_existing_data: True
   org_description: 'Tweetfeed, a connector to import IOC from Twitter.'
   org_name: 'Tweetfeed'
+  days_back_in_time: 30
