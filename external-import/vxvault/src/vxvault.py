@@ -36,6 +36,13 @@ class VXVault:
             False,
             True,
         )
+        self.verify_ssl = get_config_variable(
+            "VXVAULT_SSL_VERIFY",
+            ["vxvault", "ssl_verify"],
+            config,
+            False,
+            True,
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -83,9 +90,14 @@ class VXVault:
                         self.helper.connect_id, friendly_name
                     )
                     try:
+                        ctx = ssl.create_default_context(cafile=certifi.where())
+                        if not bool(self.verify_ssl):
+                            ctx.check_hostname = False
+                            ctx.verify_mode = ssl.CERT_NONE
+
                         response = urllib.request.urlopen(
                             self.vxvault_url,
-                            context=ssl.create_default_context(cafile=certifi.where()),
+                            context=ctx,
                         )
                         image = response.read()
                         with open(
