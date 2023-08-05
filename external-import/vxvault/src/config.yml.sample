@@ -13,6 +13,8 @@ connector:
   log_level: 'info'
 
 vxvault:
-  url: 'http://vxvault.net/URL_List.php'
+  url: 'https://vxvault.net/URL_List.php'
   create_indicators: True
   interval: 3 # In days, must be strictly greater than 1
+  ssl_verify: False
+
