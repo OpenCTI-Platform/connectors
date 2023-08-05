@@ -96,6 +96,20 @@ class DisarmFramework:
                 obj["confidence"] = int(self.helper.connect_confidence_level)
         return json.dumps(stix_bundle)
 
+    def change_kill_chain_name(self, serialized_bundle: str) -> str:
+        object_types_with_kill_chain = ["attack-pattern"]
+        stix_bundle = json.loads(serialized_bundle)
+        for obj in stix_bundle["objects"]:
+            object_type = obj["type"]
+            if object_type in object_types_with_kill_chain:
+                phases = []
+                if "kill_chain_phases" in obj:
+                    for kill_chain_phase in obj["kill_chain_phases"]:
+                        kill_chain_phase["kill_chain_name"] = "disarm"
+                        phases.append(kill_chain_phase)
+                obj["kill_chain_phases"] = phases
+        return json.dumps(stix_bundle)
+
     def process_data(self):
         try:
             # Get the current timestamp and check
@@ -129,11 +143,14 @@ class DisarmFramework:
                     self.disarm_framework_file_url is not None
                     and len(self.disarm_framework_file_url) > 0
                 ):
-                    enterprise_data = self.retrieve_data(self.disarm_framework_file_url)
-                    enterprise_data_with_confidence = (
-                        self.add_confidence_to_bundle_objects(enterprise_data)
+                    disarm_data = self.retrieve_data(self.disarm_framework_file_url)
+                    disarm_data_with_confidence = self.add_confidence_to_bundle_objects(
+                        disarm_data
                     )
-                    self.send_bundle(work_id, enterprise_data_with_confidence)
+                    disarm_data_with_proper_kill_chain = self.change_kill_chain_name(
+                        disarm_data_with_confidence
+                    )
+                    self.send_bundle(work_id, disarm_data_with_proper_kill_chain)
 
                 # Store the current timestamp as a last run
                 message = "Connector successfully run, storing last_run as " + str(
