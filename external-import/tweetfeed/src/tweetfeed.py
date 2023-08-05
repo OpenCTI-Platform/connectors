@@ -106,7 +106,7 @@ class TweetFeed:
             "TWEETFEED_DAYS_BACK_IN_TIME",
             ["tweetfeed", "days_back_in_time"],
             config,
-            True,
+            default=30,
         )
         self.tweetfeed_interval = get_config_variable(
             "TWEETFEED_INTERVAL", ["tweetfeed", "interval"], config, True
