@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: ChangeMe (UUIDv4 token)
+
+connector:
+  id: ChangeMe (UUIDv4 token)
+  type: 'EXTERNAL_IMPORT'
+  name: 'Qakbot'
+  scope: 'qakbot'
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  create_indicator: False
+  update_existing_data: false
+  log_level: 'info'
+
+qakbot:
+  create_indicators: True
+  interval: 2 # In days, must be strictly greater than 1
