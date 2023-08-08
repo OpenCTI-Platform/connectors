@@ -135,7 +135,7 @@ class AbuseSSLImportConnector:
                 value=ip,
                 object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
-                    "description": "Malicious SSL connections",
+                    "x_opencti_description": "Malicious SSL connections",
                     "created_by_ref": f"{self.author.id}",
                 },
             )

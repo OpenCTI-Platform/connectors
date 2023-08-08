@@ -57,7 +57,9 @@ class LivehuntBuilder:
         self.max_file_size = max_file_size
         self.min_positives = min_positives
 
-    def process(self, start_date: str):
+    def process(self, start_date: str, timestamp: int):
+        # Work id will only be set and instantiated if there are bundles to send.
+        work_id = None
         url = "/intelligence/hunting_notification_files"
         params = f"date:{start_date}+"
         if self.tag is not None and self.tag != "":
@@ -91,12 +93,11 @@ class LivehuntBuilder:
 
             # If min positives set and file has fewer detections
             if (
-                self.min_positives
-                and vtobj.last_analysis_stats["malicious"] < self.min_positives
+                not hasattr(vtobj, "last_analysis_stats")
+                or not self.min_positives
+                or vtobj.last_analysis_stats.get("malicious", 0) < self.min_positives
             ):
-                self.helper.log_info(
-                    f'Not enough detections ({vtobj.last_analysis_stats["malicious"]} < {self.min_positives}'
-                )
+                self.helper.log_info("Not enough detections")
                 continue
 
             # If min size was set and file is below that size
@@ -143,6 +144,11 @@ class LivehuntBuilder:
                     file_id,
                 )
 
+            if len(self.bundle) > 0:
+                if work_id is None:
+                    work_id = self.initiate_work(timestamp)
+                self.send_bundle(work_id)
+
     def artifact_exists_opencti(self, sha256: str) -> bool:
         """
         Determine whether an Artifact already exists in OpenCTI.
@@ -176,11 +182,16 @@ class LivehuntBuilder:
             Id of the created incident.
         """
         # Create the alert
-        name = f"""Alert from ruleset {vtobj._context_attributes["ruleset_name"]} {f'{vtobj._context_attributes["rule_tags"]}' if vtobj._context_attributes["rule_tags"] else ""}"""
+        name = f"""Alert from ruleset {vtobj._context_attributes["ruleset_name"]} file={vtobj.sha256}"""
+        incident_id = Incident.generate_id(
+            name, vtobj._context_attributes["notification_date"]
+        )
+        alert = self.helper.api.incident.read(id=incident_id)
+        if alert:
+            self.helper.log_info(f"Alert {alert} already exists, skipping")
+            return None
         incident = stix2.Incident(
-            id=Incident.generate_id(
-                name, vtobj._context_attributes["notification_date"]
-            ),
+            id=incident_id,
             incident_type="alert",
             name=name,
             description=f'Snippet:\n{vtobj._context_attributes["notification_snippet"]}',
@@ -191,6 +202,7 @@ class LivehuntBuilder:
             external_references=[external_reference],
             allow_custom=True,
         )
+        self.helper.log_debug(f"Adding alert: {incident}")
         self.bundle.append(incident)
         return incident["id"]
 
@@ -245,6 +257,11 @@ class LivehuntBuilder:
         except ZeroDivisionError as e:
             self.helper.log_error(f"Unable to compute score of file, err = {e}")
 
+        external_reference = self.create_external_reference(
+            f"https://www.virustotal.com/gui/file/{vtobj.sha256}",
+            "Virustotal Analysis",
+        )
+
         file = stix2.File(
             type="file",
             name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}',
@@ -254,10 +271,12 @@ class LivehuntBuilder:
                 "SHA1": vtobj.sha1,
             },
             size=vtobj.size,
+            external_references=[external_reference],
             custom_properties={
                 "x_opencti_score": score,
                 "created_by_ref": self.author["standard_id"],
             },
+            allow_custom=True,
         )
         self.bundle.append(file)
         # Link to the incident if any.
@@ -310,6 +329,26 @@ class LivehuntBuilder:
         for rule in rules:
             if rule["rule_name"] == rule_name:
                 self.helper.log_debug(f"Adding rule name {rule_name}")
+                # Default valid_from with current date
+                valid_from = self.helper.api.stix2.format_date(
+                    datetime.datetime.utcnow()
+                )
+                try:
+                    valid_from = self.helper.api.stix2.format_date(
+                        next(
+                            (
+                                i["date"]
+                                for i in rule.get("metadata", {})
+                                if "date" in i
+                            ),
+                            None,
+                        )
+                    )
+                except ValueError as e:
+                    self.helper.log_error(
+                        f"Date not valid, setting to {valid_from}, err: {e}"
+                    )
+
                 indicator = stix2.Indicator(
                     created_by_ref=self.author["standard_id"],
                     name=rule["rule_name"],
@@ -320,16 +359,7 @@ class LivehuntBuilder:
                     confidence=self.helper.connect_confidence_level,
                     pattern=plyara.utils.rebuild_yara_rule(rule),
                     pattern_type="yara",
-                    valid_from=self.helper.api.stix2.format_date(
-                        next(
-                            (
-                                i["date"]
-                                for i in rule.get("metadata", {})
-                                if "date" in i
-                            ),
-                            None,
-                        )
-                    ),
+                    valid_from=valid_from,
                     custom_properties={
                         "x_opencti_main_observable_type": "StixFile",
                     },
@@ -383,36 +413,18 @@ class LivehuntBuilder:
         url = f"/intelligence/hunting_notifications/{notification_id}"
         return self.client.delete(url)
 
-    @staticmethod
-    def _compute_score(stats: dict) -> int:
-        """
-        Compute the score for the observable.
-
-        score = malicious_count / total_count * 100
-
-        Parameters
-        ----------
-        stats : dict
-            Dictionary with counts of each category (e.g. `harmless`, `malicious`, ...)
-
-        Returns
-        -------
-        int
-            Score, in percent, rounded.
-        """
-        try:
-            vt_score = round(
-                (
-                    stats["malicious"]
-                    / (stats["harmless"] + stats["undetected"] + stats["malicious"])
-                )
-                * 100
-            )
-        except ZeroDivisionError as e:
-            raise ValueError(
-                "Cannot compute score. VirusTotal may have no record of the observable"
-            ) from e
-        return vt_score
+    def initiate_work(self, timestamp: int) -> str:
+        now = datetime.datetime.utcfromtimestamp(timestamp)
+        friendly_name = "Virustotal Livehunt Notifications run @ " + now.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+        self.helper.log_info(
+            f"[Virustotal Livehunt Notifications] workid {work_id} initiated"
+        )
+        return work_id
 
     def send_bundle(self, work_id: str):
         """
@@ -455,3 +467,34 @@ class LivehuntBuilder:
             "createdBy": self.author["standard_id"],
         }
         return self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
+
+    @staticmethod
+    def _compute_score(stats: dict) -> int:
+        """
+        Compute the score for the observable.
+
+        score = malicious_count / total_count * 100
+
+        Parameters
+        ----------
+        stats : dict
+            Dictionary with counts of each category (e.g. `harmless`, `malicious`, ...)
+
+        Returns
+        -------
+        int
+            Score, in percent, rounded.
+        """
+        try:
+            vt_score = round(
+                (
+                    stats["malicious"]
+                    / (stats["harmless"] + stats["undetected"] + stats["malicious"])
+                )
+                * 100
+            )
+        except ZeroDivisionError as e:
+            raise ValueError(
+                "Cannot compute score. VirusTotal may have no record of the observable"
+            ) from e
+        return vt_score

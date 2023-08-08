@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-feedly:
+    image: opencti/connector-feedly:5.9.6
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Feedly
+      - CONNECTOR_SCOPE=feedly # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - FEEDLY_INTERVAL=60 # in minutes
+      - FEEDLY_STREAM_IDS= # Comma separated list of stream ids
+      - FEEDLY_DAYS_TO_BACK_FILL=7 # Number of days to back fill for new stream ids
+      - FEEDLY_API_KEY=ChangeMe # Feedly API key to generate here https://feedly.com/i/team/api
+    restart: always

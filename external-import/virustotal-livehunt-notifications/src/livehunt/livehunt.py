@@ -166,19 +166,6 @@ class VirustotalLivehuntNotifications:
             return state.get(key, default)
         return default
 
-    def _initiate_work(self, timestamp: int) -> str:
-        now = datetime.utcfromtimestamp(timestamp)
-        friendly_name = "Virustotal Livehunt Notifications run @ " + now.strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
-        )
-        self.helper.log_info(
-            f"[Virustotal Livehunt Notifications] workid {work_id} initiated"
-        )
-        return work_id
-
     def _is_scheduled(self, last_run: Optional[int], current_time: int) -> bool:
         if last_run is None:
             self.helper.log_info(
@@ -243,12 +230,7 @@ class VirustotalLivehuntNotifications:
                     )
                     new_state = current_state.copy()
 
-                    self.builder.process(last_run)
-                    if len(self.builder.bundle) > 0:
-                        work_id = self._initiate_work(timestamp)
-                        self.builder.send_bundle(work_id)
-                    else:
-                        self.helper.log_debug("No bundle to send")
+                    self.builder.process(last_run, timestamp)
 
                     # Set the new state
                     new_state[
