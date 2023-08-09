@@ -1,29 +1,28 @@
 import os
-import requests
-from bs4 import BeautifulSoup
 import re
+import ssl
 import sys
 import time
 from datetime import datetime, timedelta
 
+import requests
 import yaml
+from bs4 import BeautifulSoup
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import TLP_WHITE, IPv4Address, Bundle, ExternalReference
-
-
+from stix2 import TLP_WHITE, Bundle, ExternalReference, IPv4Address
 
 # URL du référentiel GitHub
-github_url = 'https://github.com/pr0xylife/Qakbot'
+github_url = "https://github.com/pr0xylife/Qakbot"
 
 # Récupérer le contenu HTML de la page
 response = requests.get(github_url)
 html_content = response.text
 
 # Analyser le contenu HTML avec Beautiful Soup
-soup = BeautifulSoup(html_content, 'html.parser')
+soup = BeautifulSoup(html_content, "html.parser")
 
 # Rechercher tous les liens de fichiers sur la page
-file_links = soup.find_all('a', class_='js-navigation-open')
+file_links = soup.find_all("a", class_="js-navigation-open")
 
 # Set the reference date (2 days ago)
 reference_date = datetime.now().date() - timedelta(days=2)
@@ -33,17 +32,18 @@ c2_servers = set()
 
 # Iterate over file links and extract IP addresses and ports of C2 servers
 for link in file_links:
-    file_url = 'https://github.com' + link['href']
+    file_url = "https://github.com" + link["href"]
     file_response = requests.get(file_url)
     file_content = file_response.text
 
-    ip_port_matches = re.findall(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+', file_content)
-                # Extract only the IP addresses without the port
+    ip_port_matches = re.findall(
+        r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+", file_content
+    )
+    # Extract only the IP addresses without the port
     for match in ip_port_matches:
-        ip_addresses = match.split(':')[0]
+        ip_addresses = match.split(":")[0]
         # the following line should be in the loop (doesn't appear in the commit)
         c2_servers.add(ip_addresses)
-
 
 
 class Qakbot:
@@ -175,6 +175,7 @@ class Qakbot:
 
             time.sleep(60)
 
+
 if __name__ == "__main__":
     try:
         QakbotConnector = Qakbot()
@@ -183,4 +184,3 @@ if __name__ == "__main__":
         print(e)
         time.sleep(10)
         sys.exit(0)
-
