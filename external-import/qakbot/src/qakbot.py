@@ -115,24 +115,24 @@ class Qakbot:
                     try:
                         bundle_objects = []
                         for line in c2_servers:
-                                external_reference = ExternalReference(
-                                    source_name="Qakbot",
-                                    url="https://github.com/pr0xylife/Qakbot",
-                                    description="Qakbot repository URL",
-                                )
-                                stix_observable = IPv4Address(
-                                    value=line,
-                                    object_marking_refs=[TLP_WHITE],
-                                    custom_properties={
-                                        "description": "Qakbot address",
-                                        "x_opencti_score": 100,
-					"labels": ["qbot", "qakbot", "quackbot", "quakbot"],
-                                        "created_by_ref": self.identity["standard_id"],
-                                        "x_opencti_create_indicator": self.create_indicators,
-                                        "external_references": [external_reference],
-                                    },
-                                )
-                                bundle_objects.append(stix_observable)
+                            external_reference = ExternalReference(
+                                source_name="Qakbot",
+                                url="https://github.com/pr0xylife/Qakbot",
+                                description="Qakbot repository URL",
+                            )
+                            stix_observable = IPv4Address(
+                                value=line,
+                                object_marking_refs=[TLP_WHITE],
+                                custom_properties={
+                                    "description": "Qakbot address",
+                                    "x_opencti_score": 100,
+                                    "labels": ["qbot", "qakbot", "quackbot", "quakbot"],
+                                    "created_by_ref": self.identity["standard_id"],
+                                    "x_opencti_create_indicator": self.create_indicators,
+                                    "external_references": [external_reference],
+                                },
+                            )
+                            bundle_objects.append(stix_observable)
                         bundle = Bundle(
                             objects=bundle_objects, allow_custom=True
                         ).serialize()
