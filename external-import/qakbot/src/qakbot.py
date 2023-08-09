@@ -2,7 +2,6 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import re
-import ssl
 import sys
 import time
 from datetime import datetime, timedelta
