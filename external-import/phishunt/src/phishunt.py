@@ -78,7 +78,9 @@ class Phishunt:
                 ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "Phishunt run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                    friendly_name = "Phishunt run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
@@ -120,7 +122,7 @@ class Phishunt:
                                     custom_properties={
                                         "description": "Phishunt",
                                         "x_opencti_score": 40,
-					"labels": ["phishing"],
+                                        "labels": ["phishing"],
                                         "created_by_ref": self.identity["standard_id"],
                                         "x_opencti_create_indicator": self.create_indicators,
                                         "external_references": [external_reference],
