@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: ChangeMe (UUIDv4 token)
+
+connector:
+  id: ChangeMe (UUIDv4 token)
+  type: 'EXTERNAL_IMPORT'
+  name: 'C2 IoCs'
+  scope: 'c2iocs'
+  confidence_level: 70 # From 0 (Unknown) to 100 (Fully trusted)
+  create_indicator: False
+  update_existing_data: false
+  log_level: 'info'
+
+c2iocs:
+  create_indicators: True
+  interval: 4 # In days, must be strictly greater than 1
