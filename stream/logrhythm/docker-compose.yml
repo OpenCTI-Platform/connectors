@@ -1,0 +1,23 @@
+version: "3"
+services:
+  connector-logrhythm:
+    image: opencti/connector-logrhythm:5.7.6
+    environment:
+      OPENCTI_URL: http://localhost
+      OPENCTI_TOKEN: ChangeMe
+      CONNECTOR_ID: ChangeMe
+      CONNECTOR_TYPE: STREAM
+      CONNECTOR_LIVE_STREAM_ID: live # ID of the live stream created in the OpenCTI UI
+      CONNECTOR_LIVE_STREAM_LISTEN_DELETE: true
+      CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES: true
+      CONNECTOR_NAME: OpenCTI Logrhythm Connector
+      CONNECTOR_SCOPE: logrhythm
+      CONNECTOR_CONFIDENCE_LEVEL: 80 # From 0 (Unknown) to 100 (Fully trusted)
+      CONNECTOR_LOG_LEVEL: info
+      LR_URL: https://logrhythm_host.com
+      LR_TOKEN: Token1
+      LR_SSL_VERIFY: true
+      LR_RFERENCE_NAME: opencti
+      LR_ENTITY_NAME: entity_name
+      LR_IGNORE_TYPES: label,marking-definition,identity
+    restart: always
