@@ -1,7 +1,7 @@
 version: '3'
 services :
-  connector-qakbot:
-    image: opencti/connector-qakbot:5.7.6
+  connector-c2iocs:
+    image: opencti/connector-c2iocs:5.7.6
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe (UUIDv4 token)
