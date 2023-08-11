@@ -1,0 +1,29 @@
+opencti:
+  url: 'opencti_url'
+  token: 'opencti_token'
+  ssl_verify: false
+
+connector:
+  id: 'bddfd745-040a-4cc3-9ed9-f5bc751f272b'
+  type: 'STREAM'
+  live_stream_id: 'IDHERE' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
+  name: 'Logrhythm'
+  scope: 'Logrhythm' # Reserved
+  confidence_level: 20 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+  consumer_count: 5 # number of consumer/worker used to push data to splunk
+
+logrhythm:
+  url: 'https://LRIP:8501/lr-admin-api'
+  token: 'TOKEN'
+  ssl_verify: false
+  list_name: 'prefix'
+  entity: "Entity Name" # Get identity name from LR console or API request to /identities/
+  ignore_types: 'label,marking-definition,identity,organization'
+
+metrics:
+  enable: true # set to true to expose prometheus metrics
+  port: 9113 # port on which metrics should be exposed
+  addr: 0.0.0.0 # ip on which metrics should be exposed
