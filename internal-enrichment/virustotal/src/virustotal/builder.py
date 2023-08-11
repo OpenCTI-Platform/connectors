@@ -176,10 +176,10 @@ class VirusTotalBuilder:
                 f"[VirusTotal] creating indicator with pattern {pattern}"
             )
             # If the valid_minutes field is NULL or blank for files with no expiry, set a default value
-            minutes=indicator_config.valid_minutes
+            minutes = indicator_config.valid_minutes
             if minutes == None:
-                minutes=2880 # 48 hours
-            valid_until=now_time + datetime.timedelta(minutes)
+                minutes = 2880  # 48 hours
+            valid_until = now_time + datetime.timedelta(minutes)
 
             indicator = stix2.Indicator(
                 created_by_ref=self.author,
