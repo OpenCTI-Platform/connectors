@@ -258,14 +258,27 @@ class Taxii2Connector:
                 if self.add_custom_label == True:
                     new_labels.append(self.custom_label)
                     object["labels"] = new_labels
-                # Force name to be pattern
+                # Force name to be pattern and enumerate main observable type.
                 if self.force_pattern_as_name == True and object["type"] == "indicator":
+                    match = re.search(r"\[(.*?):.*'(.*?)\'\]", object["pattern"])
+                    if match != None:
+                        if match[1] == "ipv4-addr":
+                            object["x_opencti_main_observable_type"] = "IPv4-Addr"
+                        elif match[1] == "ipv6-addr":
+                            object["x_opencti_main_observable_type"] = "IPv6-Addr"
+                        elif match[1] == "file":
+                            object["x_opencti_main_observable_type"] = "File"
+                        elif match[1] == "domain-name":
+                            object["x_opencti_main_observable_type"] = "Domain-Name"
+                        elif match[1] == "url":
+                            object["x_opencti_main_observable_type"] = "Url"
+                        elif match[1] == "email-addr":
+                            object["x_opencti_main_observable_type"] = "Email-Addr"
                     if " AND " in object["pattern"] or " OR " in object["pattern"]:
                         object["name"] = self.force_multiple_pattern_name
                     else:
-                        match = re.search(r"=.?\'(.*?)\'\]", object["pattern"])
                         if match != None:
-                            object["name"] = match[1]
+                            object["name"] = match[2]
                 objects.append(object)
             return objects
 
