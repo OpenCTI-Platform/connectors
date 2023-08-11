@@ -3,7 +3,6 @@ from datetime import datetime
 
 from feedly.api_client.enterprise.indicators_of_compromise import StixIoCDownloader
 from feedly.api_client.session import FeedlySession
-from markdownify import markdownify
 from pycti import OpenCTIConnectorHelper
 from stix2 import Note
 
@@ -27,7 +26,7 @@ class FeedlyConnector:
         bundle = StixIoCDownloader(
             self.feedly_session, newer_than, stream_id
         ).download_all()
-        _replace_html_description_with_md_note(bundle)
+        _replace_description_with_note(bundle)
         self.cti_helper.log_info(f"Found {_count_reports(bundle)} new reports")
         return bundle
 
@@ -36,13 +35,13 @@ def _count_reports(bundle: dict) -> int:
     return sum(1 for o in bundle["objects"] if o["type"] == "report")
 
 
-def _replace_html_description_with_md_note(bundle: dict) -> None:
+def _replace_description_with_note(bundle: dict) -> None:
     notes = []
     for o in bundle["objects"]:
         if o["type"] == "report":
             notes.append(
                 Note(
-                    content=markdownify(o["description"]),
+                    content=o["description"],
                     object_refs=[o["id"]],
                     created_by_ref=FEEDLY_AI_UUID,
                 )
