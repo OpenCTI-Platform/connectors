@@ -2,6 +2,7 @@
 # Logrhythm Connector for OpenCTI #
 ################################
 
+import base64
 import json
 import logging
 import os
@@ -9,7 +10,6 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
-import base64
 
 import requests
 import yaml
