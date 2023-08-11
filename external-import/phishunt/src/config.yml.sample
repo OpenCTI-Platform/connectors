@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: ChangeMe(UUIDv4 token)
+
+connector:
+  id: ChangeMe(UUIDv4 token)
+  type: 'EXTERNAL_IMPORT'
+  name: 'Phishunt'
+  scope: 'phishunt'
+  confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
+  create_indicator: False
+  update_existing_data: false
+  log_level: 'info'
+
+phishunt:
+  url: 'https://phishunt.io/feed.txt'
+  create_indicators: True
+  interval: 3 # In days, must be strictly greater than 1
