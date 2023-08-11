@@ -577,6 +577,14 @@ jobs:
           name: Build Docker image opencti/connector-lastinfosec-enrichment
           command: docker build -t opencti/connector-lastinfosec-enrichment:latest . && docker tag opencti/connector-lastinfosec-enrichment:latest opencti/connector-lastinfosec-enrichment:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/stopforumspam
+          name: Build Docker image opencti/connector-stopforumspam
+          command: docker build -t opencti/connector-stopforumspam:latest . && docker tag opencti/connector-stopforumspam:latest opencti/connector-stopforumspam:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/phishunt
+          name: Build Docker image opencti/connector-phishunt
+          command: docker build -t opencti/connector-phishunt:latest . && docker tag opencti/connector-phishunt:latest opencti/connector-phishunt:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -680,6 +688,10 @@ jobs:
             docker push opencti/connector-recordedfuture-enrichment:${CIRCLE_TAG}
             docker push opencti/connector-lastinfosec-enrichment:latest
             docker push opencti/connector-lastinfosec-enrichment:${CIRCLE_TAG}
+            docker push opencti/connector-stopforumspam:latest
+            docker push opencti/connector-stopforumspam:${CIRCLE_TAG}
+            docker push opencti/connector-phishunt:latest
+            docker push opencti/connector-phishunt:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1162,6 +1174,14 @@ jobs:
           name: Build Docker image opencti/connector-lastinfosec-enrichment
           command: docker build -t opencti/connector-lastinfosec-enrichment:rolling .
       - run:
+          working_directory: ~/opencti/external-import/stopforumspam
+          name: Build Docker image opencti/connector-stopforumspam
+          command: docker build -t opencti/connector-stopforumspam:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/phishunt
+          name: Build Docker image opencti/connector-phishunt
+          command: docker build -t opencti/connector-phishunt:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1216,6 +1236,8 @@ jobs:
             docker push opencti/connector-zerofox:rolling
             docker push opencti/connector-recordedfuture-enrichment:rolling
             docker push opencti/connector-lastinfosec-enrichment:rolling
+            docker push opencti/connector-stopforumspam:rolling
+            docker push opencti/connector-phishunt:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
