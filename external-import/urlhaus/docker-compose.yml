@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=urlhaus
       - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/
       - URLHAUS_IMPORT_OFFLINE=true
       - URLHAUS_THREATS_FROM_LABELS=true

@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONFIG_LIS_APIKEY=ChangeMe
       - CONNECTOR_RUN_AND_TERMINATE=False  # set to true if you want to run the connector only once
       - CONFIG_LIS_CTI_INTERVAL=30  # The connector will run every 30 minutes to get IOCs from LastInfoSec for the last 30 minutes

@@ -11,7 +11,7 @@ services:
       - "CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,Hostname"
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - HYBRID_ANALYSIS_TOKEN=ChangeMe
       - HYBRID_ANALYSIS_ENVIRONMENT_ID=110 # Available environments ID: 300: 'Linux (Ubuntu 16.04, 64 bit)', 200: 'Android Static Analysis', 120: 'Windows 7 64 bit', 110: 'Windows 7 32 bit (HWP Support)', 100: 'Windows 7 32 bit'
       - HYBRID_ANALYSIS_MAX_TLP=TLP:AMBER

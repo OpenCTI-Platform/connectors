@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=misp
       - CONNECTOR_CONFIDENCE_LEVEL=25 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - MISP_URL=http://localhost # Required
       - MISP_REFERENCE_URL= # Optional, will be used to create external reference to MISP event (default is "url")
       - MISP_KEY=ChangeMe # Required
@@ -36,12 +36,12 @@ services:
       - MISP_IMPORT_OWNER_ORGS= # Optional, only import events owned by those orgs (put the identifiers here)
       - MISP_IMPORT_OWNER_ORGS_NOT= # Optional, do not import events owned by those orgs (put the identifiers here)
       - MISP_IMPORT_KEYWORD= # Optional, search only events based on a keyword
-      - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3 # Optional, only import events with the given distribution levels
-      - MISP_IMPORT_THREAT_LEVELS=1,2,3,4 # Optional only import events with the given threat levels
+      - MISP_IMPORT_DISTRIBUTION_LEVELS= # Optional, only import events with the given distribution levels (ex: 0,1,2,3)
+      - MISP_IMPORT_THREAT_LEVELS= # Optional only import events with the given threat levels (ex: 1,2,3,4)
       - MISP_IMPORT_ONLY_PUBLISHED=false
       - MISP_IMPORT_WITH_ATTACHMENTS=false # Optional, try to import a PDF file from the attachment attribute
       - MISP_IMPORT_TO_IDS_NO_SCORE=40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
       - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false #  Optional, import unsupported observable as x_opencti_text
-      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT=false #  Optional, import unsupported observable as x_opencti_text just with the value
+      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT=true #  Optional, import unsupported observable as x_opencti_text just with the value
       - MISP_INTERVAL=5 # Required, in minutes
     restart: always

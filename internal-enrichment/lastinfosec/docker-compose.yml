@@ -11,6 +11,6 @@ services:
       - CONNECTOR_SCOPE=StixFile,Domain-Name,Hostname,Url
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONFIG_LIS_APIKEY_CTI=ChangeMe
     restart: always

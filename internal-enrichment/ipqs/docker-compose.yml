@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - IPQS_PRIVATE_KEY=ChangeMe
       - IPQS_BASE_URL=https://ipqualityscore.com/api/json
       # IP specific config settings

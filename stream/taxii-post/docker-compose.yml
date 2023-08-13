@@ -13,7 +13,7 @@ services:
       - "CONNECTOR_NAME=TAXII POST"
       - CONNECTOR_SCOPE=taxii
       - CONNECTOR_CONFIDENCE_LEVEL=90 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - TAXII_URL=https://taxii.changeme.com # The URL of the TAXII Server
       - TAXII_SSL_VERIFY=true
       - TAXII_COLLECTION_ID=ChangeMe # The collection ID

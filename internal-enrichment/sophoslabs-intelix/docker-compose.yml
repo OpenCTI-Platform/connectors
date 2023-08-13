@@ -1,7 +1,7 @@
 version: '3'
 services:
-  opencti-intelix-connector:
-    image: 0xbennyv/sophoslabs-intelix-lookup:latest
+  sophoslabs-intelix:
+    image: opencti/connector-sophoslabs-intelix:5.9.6
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=Url,IPv4-Addr,Domain,File,File-Sha256,Artifact,StixFile
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=50
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - INTELIX_CLIENT_ID=ChangeMe
       - INTELIX_CLIENT_SECRET=ChangeMe
       - INTELIX_REGION_URI=ChangeMe

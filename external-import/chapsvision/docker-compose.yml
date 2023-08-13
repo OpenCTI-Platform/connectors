@@ -12,7 +12,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_RUN_AND_TERMINATE=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CHAPSVISION_CERTIFICATE=Certificate_base64
       - CHAPSVISION_KEY=Key_base64
       - CHAPSVISION_QUERY_PARAMETER=_params

@@ -10,7 +10,7 @@ services:
       - "CONNECTOR_NAME=IronNet threat intel"
       - CONNECTOR_SCOPE=ironnet
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - IRONNET_API_URL=https://api.threatanalysis.io/prod/all/1d/json
       - IRONNET_API_KEY=ChangeMe
       - IRONNET_CREATE_INDICATORS=true

@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=MWDB connector
       - CONNECTOR_SCOPE=mwdb
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - MWDB_URL='ChangeMe'
       - MWDB_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
       - MWDB_INTERVAL=3 # In days, must be strictly greater than 1

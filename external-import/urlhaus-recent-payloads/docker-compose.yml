@@ -10,7 +10,7 @@ services:
       - "CONNECTOR_NAME=URLhaus Recent Payloads"
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - URLHAUS_RECENT_PAYLOADS_API_URL=https://urlhaus-api.abuse.ch/v1/
       - URLHAUS_RECENT_PAYLOADS_COOLDOWN_SECONDS=300 # Time to wait in seconds between subsequent requests
       - URLHAUS_RECENT_PAYLOADS_INCLUDE_FILETYPES=exe,dll,docm,docx,doc,xls,xlsx,xlsm,js,xll # (Optional) Only download files if any tag matches. (Comma separated)

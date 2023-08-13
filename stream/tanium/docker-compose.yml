@@ -13,7 +13,7 @@ services:
       - CONNECTOR_NAME=Tanium
       - CONNECTOR_SCOPE=tanium
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - TANIUM_URL=https://console.changeme.com
       - TANIUM_SSL_VERIFY=true
       - TANIUM_LOGIN=ChangeMe

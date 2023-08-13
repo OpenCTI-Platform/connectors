@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=cuckoo
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CUCKOO_CREATE_INDICATORS=true
       - CUCKOO_ENABLE_NETWORK_TRAFFIC=false # enable creation of net Traffic (Very Loud)
       - CUCKOO_ENABLE_REGISTRY_KEYS=false # enable creation of Created registry Keys (Very Loud)

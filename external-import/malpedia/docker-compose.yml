@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=malpedia
       - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - MALPEDIA_AUTH_KEY= # Empty key only fetches TLP:WHITE information
       - MALPEDIA_INTERVAL_SEC=86400 # Run once every day
       - MALPEDIA_IMPORT_INTRUSION_SETS=false

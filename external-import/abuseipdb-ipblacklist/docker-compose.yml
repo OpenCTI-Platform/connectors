@@ -10,7 +10,7 @@ services:
       - "CONNECTOR_NAME=AbuseIPDB IP Blacklist"
       - CONNECTOR_SCOPE=abuseipdb
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - ABUSEIPDB_URL=https://api.abuseipdb.com/api/v2/blacklist
       - ABUSEIPDB_API_KEY=ChangeMe
       - ABUSEIPDB_SCORE=100

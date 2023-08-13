@@ -10,6 +10,6 @@ services:
       - CONNECTOR_NAME=ExportFileCsv
       - CONNECTOR_SCOPE=text/csv
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - "EXPORT_FILE_CSV_DELIMITER=;"
     restart: always

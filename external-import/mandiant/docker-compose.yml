@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=mandiant
       - CONNECTOR_CONFIDENCE_LEVEL=80
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - MANDIANT_API_V4_KEY_ID=
       - MANDIANT_API_V4_KEY_SECRET=
     restart: always

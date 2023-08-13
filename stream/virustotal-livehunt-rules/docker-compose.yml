@@ -13,7 +13,7 @@ services:
       - "CONNECTOR_NAME=OpenCTI Virustotal Live Hunting"
       - CONNECTOR_SCOPE=Virustotal
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - VIRUSTOTAL_LIVEHUNT_TOKEN=ChangeMe
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATION_EMAILS=[] #Example: ["wcoyte@acme.com", "rrunner@acme.com"]
       - VIRUSTOTAL_LIVEHUNT_SHARED_OWNERS=[] # VirusTotal users or groups ID to share rule with. Example: ["johndd", "jimtold"]

@@ -12,7 +12,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_RUN_AND_TERMINATE=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - FLASHPOINT_API_KEY=ChangeMe
       - FLASHPOINT_IMPORT_APT=true
       - FLASHPOINT_IMPORT_MALWARE=true

@@ -11,7 +11,7 @@ services:
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_NAME=BackupFiles
       - CONNECTOR_SCOPE=backup
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - BACKUP_PROTOCOL=local # Protocol for file copy (only `local` is supported for now).
       - BACKUP_PATH=/tmp # Path to be used to copy the data, can be relative or absolute.
     restart: always

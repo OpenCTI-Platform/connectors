@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=kaspersky
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - KASPERSKY_BASE_URL=https://tip.kaspersky.com
       - KASPERSKY_USER=ChangeMe
       - KASPERSKY_PASSWORD=ChangeMe
