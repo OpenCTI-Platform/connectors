@@ -13,7 +13,7 @@ services:
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_RUN_AND_TERMINATE=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - OPENCSAM_API_URL=ChangeMe
       - OPENCSAM_API_KEY=ChangeMe
       - OPENCSAM_IMPORT_START_DATE=2022-01-01

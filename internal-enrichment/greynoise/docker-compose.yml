@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - GREYNOISE_KEY=ChangeMe
       - GREYNOISE_MAX_TLP=TLP:AMBER
       - "GREYNOISE_NAME=GreyNoise sensors"

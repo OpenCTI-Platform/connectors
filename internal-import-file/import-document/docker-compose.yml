@@ -13,6 +13,6 @@ services:
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_ONLY_CONTEXTUAL=true # Only extract data related to an entity (a report, a threat actor, etc.)
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - IMPORT_DOCUMENT_CREATE_INDICATOR=false
     restart: always

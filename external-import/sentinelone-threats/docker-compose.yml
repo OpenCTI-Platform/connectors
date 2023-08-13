@@ -11,7 +11,7 @@ services:
       - "CONNECTOR_NAME=SentinelOne Threats"
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - SENTINELONE_THREATS_BASE_URL=https://changeme.sentinelone.net # SentinelOne host
       # SentinelOne API Token with Threats View and Download Threat permissions, WARNING: S1 tokens expire every 6 months, see README
       - SENTINELONE_THREATS_API_TOKEN=ChangeMe

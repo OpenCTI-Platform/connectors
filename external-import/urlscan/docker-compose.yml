@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Urlscan
       - CONNECTOR_SCOPE=urlscan
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_CREATE_INDICATORS=true

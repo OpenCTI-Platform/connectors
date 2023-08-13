@@ -10,5 +10,5 @@ services:
       - CONNECTOR_NAME=Template
       - CONNECTOR_SCOPE=Template_Scope # MIME type or Stix Object
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
     restart: always

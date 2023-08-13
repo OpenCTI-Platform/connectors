@@ -10,6 +10,6 @@ services:
       - CONNECTOR_NAME=crowdsec
       - CONNECTOR_SCOPE=IPv4-Addr # MIME type or Stix Object
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CROWDSEC_KEY= #Add API Key
     restart: always

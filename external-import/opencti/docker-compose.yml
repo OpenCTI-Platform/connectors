@@ -12,7 +12,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=90
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       - CONNECTOR_RUN_AND_TERMINATE=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONFIG_INTERVAL=7 # In days
       - CONFIG_REMOVE_CREATOR=false
     restart: always

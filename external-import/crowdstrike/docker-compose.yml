@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=crowdstrike
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CROWDSTRIKE_BASE_URL=https://api.crowdstrike.com
       - CROWDSTRIKE_CLIENT_ID=ChangeMe
       - CROWDSTRIKE_CLIENT_SECRET=ChangeMe

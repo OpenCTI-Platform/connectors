@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=Artifact
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - UNPAC_ME_API_KEY=ChangeMe # See https://www.unpac.me/account
       - UNPAC_ME_PRIVATE=false # Mark samples are private (only available to PRO users)
       - "UNPAC_ME_USER_AGENT=UnpacMe OpenCTI Connector v1.0.0" # User agent for UnpacMeApi instantiation

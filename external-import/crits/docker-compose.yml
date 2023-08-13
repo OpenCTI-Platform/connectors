@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=crits
       - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CRITS_URL=http://localhost
       - CRITS_REFERENCE_URL= # Optional, used to create references to CRITs entities, defaults to URL
       - CRITS_USER=ChangeMe

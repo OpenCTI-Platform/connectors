@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=Artifact
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - INTEZER_SANDBOX_API_KEY=ChangeMe # See https://analyze.intezer.com/account-details
       - INTEZER_SANDBOX_FAMILY_COLOR=#0059f7 # Label color for family
       - INTEZER_SANDBOX_MALICIOUS_COLOR=#d90e18 # Label color for malicious verdict

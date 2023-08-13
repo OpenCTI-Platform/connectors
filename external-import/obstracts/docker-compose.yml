@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software
       - CONNECTOR_CONFIDENCE_LEVEL=70
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - TAXII2_DISCOVERY_URL=https://app.obstracts.com/taxii/taxii2
       - TAXII2_USERNAME=CHANGEME
       - TAXII2_PASSWORD=CHANGEME

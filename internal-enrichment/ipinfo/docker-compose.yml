@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - IPINFO_TOKEN=ChangeMe
       - IPINFO_MAX_TLP=TLP:AMBER
     restart: always

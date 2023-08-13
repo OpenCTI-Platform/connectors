@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - TAXII2_DISCOVERY_URL=ChangeMe # Required
       - TAXII2_CERT_PATH=ChangeMe # Optional (.pem)
       - TAXII2_USERNAME=ChangeMe # Required

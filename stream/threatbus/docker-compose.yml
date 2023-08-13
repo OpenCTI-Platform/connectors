@@ -13,7 +13,7 @@ services:
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_ENTITY_NAME=ChangeMe
       - CONNECTOR_ENTITY_DESCRIPTION=ChangeMe
       - THREATBUS_ZMQ_HOST=localhost

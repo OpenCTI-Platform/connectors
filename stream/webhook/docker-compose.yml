@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=Webhook
       - CONNECTOR_SCOPE=webhook
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - WEBHOOK_GRAPHQL_POLLING_INTERVAL=5 # In seconds. How often the connector polls the GraphQL API to look for changes.
       - WEBHOOK_GRAPHQL_QUERY={{works(filters:[{{key:completed_time,operator:"gt",values:["LAST_POLL_TIME"]}}]){{edges{{node{{event_source_id}}}}}}}} # The query to make to the GraphQL endpoint. The GraphQL query should include a time filter aspect to it to ensure that results coming back are only new since the last poll. The variable 'LAST_POLL_TIME' in the query string will be replaced with the time of the last successfully executed poll in epoch milliseconds. The query is evaluated as a python format string before being queried so that complex logic can be included in the query; because of this, use single curly braces ( { ) for python interpretation and double curly braces for GraphQL interpretation ( {{ ). GraphQL also requires double quotes ( " ) be used for declarations.
       - WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION=['data']['works']['edges'] # Where to look for data in a successfully returned query. If the data does not exist or returns an empty array/string, the connector will ignore it. Use single quotes ( ' ) for string declarations.

@@ -13,7 +13,7 @@ services:
       - 'CONNECTOR_NAME=OpenCTI Sentinel Connector'
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - TENANT_ID=ChangeMe # Azure Tentant ID
       - CLIENT_ID=ChangeMe # Azure App Client ID
       - CLIENT_SECRET=ChangeMe # Azure App Client Secret

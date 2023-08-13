@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=Artifact,Url
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       # Download/upload as external ref files for these report types
       # json/xml are only allowed to be used with Joe Sandbox Cloud Pro
       - JOE_SANDBOX_REPORT_TYPES=executive,html,iochtml,iocjson,iocxml,unpackpe,stix,ida,pdf,pdfexecutive,misp,pcap,maec,memdumps,json,lightjsonfixed,xml,lightxml,pcapunified,pcapsslinspection

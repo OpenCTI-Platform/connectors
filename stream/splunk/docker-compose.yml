@@ -13,7 +13,7 @@ services:
       - "CONNECTOR_NAME=OpenCTI Splunk Connector"
       - CONNECTOR_SCOPE=splunk
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - SPLUNK_URL=https://splunk1.changeme.com:8089
       - SPLUNK_TOKEN=Token1
       - SPLUNK_OWNER=nobody

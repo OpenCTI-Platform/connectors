@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=Feedly
       - CONNECTOR_SCOPE=feedly # MIME type or Stix Object
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - FEEDLY_INTERVAL=60 # in minutes
       - FEEDLY_STREAM_IDS= # Comma separated list of stream ids
       - FEEDLY_DAYS_TO_BACK_FILL=7 # Number of days to back fill for new stream ids

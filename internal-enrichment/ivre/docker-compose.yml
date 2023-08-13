@@ -11,6 +11,6 @@ services:
       - CONNECTOR_SCOPE=autonomous-system,domain-name,ipv4-addr,ipv6-addr,mac-addr,x509-certificate
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - IVRE_MAX_TLP=TLP:AMBER
     restart: always

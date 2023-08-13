@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=StixFile,Artifact,IPv4-Addr,Domain-Name,Url
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - VIRUSTOTAL_TOKEN=ChangeMe
       - VIRUSTOTAL_MAX_TLP=TLP:AMBER
       - VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE=false # Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).

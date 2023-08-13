@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=External-Reference
       - CONNECTOR_AUTO=false # Enable/disable auto-import of external references
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF=true # Import as PDF file
       - IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD=true # Import as MarkDown file
       - IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD=true # If import_as_md is true, try to convert PDF as Markdown

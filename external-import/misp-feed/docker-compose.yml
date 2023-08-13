@@ -12,7 +12,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=20 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_RUN_AND_TERMINATE=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - MISP_FEED_URL=https://changeme.com/misp-feed
       - MISP_FEED_SSL_VERIFY=true # Required
       - MISP_FEED_IMPORT_FROM_DATE=2000-01-01 # Required, import all event from this date
