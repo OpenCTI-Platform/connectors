@@ -3,15 +3,15 @@
 <head>
     <meta charset="utf-8">
     <link href="intrusion-set.css" rel="stylesheet">
-    <title>{{ entities.threat_actor.0.name }}_{{ report_date }}</title>
-    <meta name="description" content="{{ entities.threat_actor.0.name }}_{{ report_date }}">
+    <title>{{ entities.threat_actor_individual.0.name }}_{{ report_date }}</title>
+    <meta name="description" content="{{ entities.threat_actor_individual.0.name }}_{{ report_date }}">
 </head>
 
 <body>
 <article id="cover">
     <div id="report-date">{{ report_date }}</div>
-    <div id="report-heading">Threat Actor Report</div>
-    <div id="report-sub-heading">{{ entities.threat_actor.0.name }}</div>
+    <div id="report-heading">Threat Actor Individual Report</div>
+    <div id="report-sub-heading">{{ entities.threat_actor_individual.0.name }}</div>
     <div id="report-address">
         <address style="margin-right: 1cm;">
             {{ company_address_line_1 }}
@@ -36,32 +36,32 @@
         <li><a href="#confidence-title"></a></li>
         <li><a href="#marking-definitions-title"></a></li>
         <li><a href="#labels-title"></a></li>
-        {% if entities.threat_actor.0.aliases is not none %}
+        {% if entities.threat_actor_individual.0.aliases is not none %}
         <li><a href="#aliases-title"></a></li>
         {% endif %}
         <li><a href="#first-seen-title"></a></li>
         <li><a href="#last-seen-title"></a></li>
         <li><a href="#originates-from-title"></a></li>
-        {% if entities.threat_actor.0.resource_level is not none %}
+        {% if entities.threat_actor_individual.0.resource_level is not none %}
         <li><a href="#resource-level-title"></a></li>
         {% endif %}
-        {% if entities.threat_actor.0.goals is not none %}
+        {% if entities.threat_actor_individual.0.goals is not none %}
         <li><a href="#goals-title"></a></li>
         {% endif %}
-        {% if entities.threat_actor.0.primary_motivation is not none %}
+        {% if entities.threat_actor_individual.0.primary_motivation is not none %}
         <li><a href="#primary-motivation-title"></a></li>
         {% endif %}
-        {% if entities.threat_actor.0.secondary_motivations is not none %}
+        {% if entities.threat_actor_individual.0.secondary_motivations is not none %}
         <li><a href="#secondary-motivations-title"></a></li>
         {% endif %}
-        {% if entities.threat_actor.0.externalReferences %}
+        {% if entities.threat_actor_individual.0.externalReferences %}
         <li><a href="#sources-title"></a></li>
         {% endif %}
     </ul>
     <h3>Entities</h3>
     <ul>
-        {% if entities.threat_actor %}
-        <li><a href="#threat-actors-title"></a></li>
+        {% if entities.threat_actor_individual %}
+        <li><a href="#threat-actors-individual-title"></a></li>
         {% endif %}
         {% if entities.indicator %}
         <li><a href="#indicators-title"></a></li>
@@ -98,7 +98,7 @@
             Author
         </h3>
         <p>
-            {{ entities.threat_actor.0.createdBy.name }}
+            {{ entities.threat_actor_individual.0.createdBy.name }}
         </p>
     </section>
     <section>
@@ -106,7 +106,7 @@
             Created At
         </h3>
         <p>
-            {{ entities.threat_actor.0.created_at }}
+            {{ entities.threat_actor_individual.0.created_at }}
         </p>
     </section>
     <section>
@@ -114,7 +114,7 @@
             Description
         </h3>
         <p>
-            {{ entities.threat_actor.0.description }}
+            {{ entities.threat_actor_individual.0.description }}
         </p>
     </section>
     <section>
@@ -122,7 +122,7 @@
             Confidence
         </h3>
         <p>
-            {{ entities.threat_actor.0.confidence }} / 100
+            {{ entities.threat_actor_individual.0.confidence }} / 100
             <br>
             <em>
                 This value represents the confidence in the correctness of the data contained within this report.
@@ -134,7 +134,7 @@
             Marking Definitions
         </h3>
         <ul>
-            {% for marking_definiton in entities.threat_actor.0.objectMarking %}
+            {% for marking_definiton in entities.threat_actor_individual.0.objectMarking %}
             <li>{{ marking_definiton.definition }}</li>
             {% endfor %}
         </ul>
@@ -144,18 +144,18 @@
             Labels
         </h3>
         <ul>
-            {% for label in entities.threat_actor.0.objectLabel %}
+            {% for label in entities.threat_actor_individual.0.objectLabel %}
             <li>{{ label.value }}</li>
             {% endfor %}
         </ul>
     </section>
-    {% if entities.threat_actor.0.aliases is not none %}
+    {% if entities.threat_actor_individual.0.aliases is not none %}
     <section>
         <h3 id="aliases-title">
             Aliases
         </h3>
         <ul>
-            {% for alias in entities.threat_actor.0.aliases %}
+            {% for alias in entities.threat_actor_individual.0.aliases %}
             <li>{{ alias }}</li>
             {% endfor %}
         </ul>
@@ -166,7 +166,7 @@
             First Seen
         </h3>
         <p>
-            {{ entities.threat_actor.0.first_seen }}
+            {{ entities.threat_actor_individual.0.first_seen }}
         </p>
     </section>
     <section>
@@ -174,7 +174,7 @@
             Last Seen
         </h3>
         <p>
-            {{ entities.threat_actor.0.last_seen }}
+            {{ entities.threat_actor_individual.0.last_seen }}
         </p>
     </section>
     <section>
@@ -190,57 +190,57 @@
             {% endfor %}
         </ul>
     </section>
-    {% if entities.threat_actor.0.resource_level is not none %}
+    {% if entities.threat_actor_individual.0.resource_level is not none %}
     <section>
         <h3 id="resource-level-title">
             Resource Level
         </h3>
         <p>
-            {{ entities.threat_actor.0.resource_level }}
+            {{ entities.threat_actor_individual.0.resource_level }}
         </p>
     </section>
     {% endif %}
-    {% if entities.threat_actor.0.goals is not none %}
+    {% if entities.threat_actor_individual.0.goals is not none %}
     <section>
         <h3 id="goals-title">
             Goals
         </h3>
         <ul>
-            {% for goal in entities.threat_actor.0.goals %}
+            {% for goal in entities.threat_actor_individual.0.goals %}
             <li>{{ goal }}</li>
             {% endfor %}
         </ul>
     </section>
     {% endif %}
-    {% if entities.threat_actor.0.primary_motivation is not none %}
+    {% if entities.threat_actor_individual.0.primary_motivation is not none %}
     <section>
         <h3 id="primary-motivation-title">
             Primary Motivation
         </h3>
         <p>
-            {{ entities.threat_actor.0.primary_motivation }}
+            {{ entities.threat_actor_individual.0.primary_motivation }}
         </p>
     </section>
     {% endif %}
-    {% if entities.threat_actor.0.secondary_motivations is not none %}
+    {% if entities.threat_actor_individual.0.secondary_motivations is not none %}
     <section>
         <h3 id="secondary-motivations-title">
             Secondary Motivations
         </h3>
         <ul>
-            {% for secondary_motivation in entities.threat_actor.0.secondary_motivations %}
+            {% for secondary_motivation in entities.threat_actor_individual.0.secondary_motivations %}
             <li>{{ secondary_motivation }}</li>
             {% endfor %}
         </ul>
     </section>
     {% endif %}
-    {% if entities.threat_actor.0.externalReferences %}
+    {% if entities.threat_actor_individual.0.externalReferences %}
     <section>
         <h3 id="sources-title">
             Sources
         </h3>
         <ul>
-            {% for external_ref in entities.threat_actor.0.externalReferences %}
+            {% for external_ref in entities.threat_actor_individual.0.externalReferences %}
             <li><a href="{{ external_ref.url }}" target="_blank">{{ external_ref.url }}</a></li>
             {% endfor %}
         </ul>
@@ -250,10 +250,10 @@
 </article>
 
 <article id="entities">
-    {% if entities.threat_actor %}
-    <h2 id="threat-actors--title">Threat Actors</h2>
-    <section id="threat-actors">
-        {% for threat_actor in entities.threat_actor %}
+    {% if entities.threat_actor_individual %}
+    <h2 id="threat-actors-individual-title">Threat Actors Individual</h2>
+    <section id="threat-actors-individual">
+        {% for threat_actor_individual in entities.threat_actor_individual %}
         <table>
             <tbody>
             <tr>
@@ -261,26 +261,26 @@
             </tr>
             <tr>
                 <td>
-                    {{ threat_actor.name }}
+                    {{ threat_actor_individual.name }}
                 </td>
             </tr>
-            {% if threat_actor.description %}
+            {% if threat_actor_individual.description %}
             <tr>
                 <th>Description</th>
             </tr>
             <tr>
                 <td>
-                    {{ threat_actor.description }}
+                    {{ threat_actor_individual.description }}
                 </td>
             </tr>
             {% endif %}
-            {% if threat_actor.objectMarking %}
+            {% if threat_actor_individual.objectMarking %}
             <tr>
                 <th>Marking Definitions</th>
             </tr>
             <tr>
                 <td>
-                    {% for marking in threat_actor.objectMarking %}
+                    {% for marking in threat_actor_individual.objectMarking %}
                     <p style="background-color: {{marking.x_opencti_color}}" >{{ marking.definition }}</p>
                     {% endfor %}
                 </td>
