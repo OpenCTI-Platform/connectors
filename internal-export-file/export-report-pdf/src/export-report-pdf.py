@@ -394,7 +394,7 @@ class ExportReportPdf:
         env = Environment(
             loader=FileSystemLoader(self.current_dir), finalize=self._finalize
         )
-        template = env.get_template("resources/threat-actor-group.html")
+        template = env.get_template("resources/threat-actor.html")
         html_string = template.render(context)
 
         # Generate pdf from html string
@@ -489,7 +489,7 @@ class ExportReportPdf:
         env = Environment(
             loader=FileSystemLoader(self.current_dir), finalize=self._finalize
         )
-        template = env.get_template("resources/threat-actor-individual.html")
+        template = env.get_template("resources/threat-actor.html")
         html_string = template.render(context)
 
         # Generate pdf from html string
