@@ -161,6 +161,16 @@
         </ul>
     </section>
     {% endif %}
+    {% if entities.threat_actor.0.threat_actor_types is not none %}
+    <section>
+        <h3 id="threat-actor-types-title">
+            Threat Actor Types
+        </h3>
+        <p>
+            {{ entities.threat_actor.0.threat_actor_types }}
+        </p>
+
+        {% endif %}
     <section>
         <h3 id="first-seen-title">
             First Seen
@@ -177,7 +187,27 @@
             {{ entities.threat_actor.0.last_seen }}
         </p>
     </section>
+    {% if entities.threat_actor.0.sophistication is not none %}
     <section>
+        <h3 id="sophistication-title">
+            Sophistication
+        </h3>
+        <p>
+            {{ entities.threat_actor.0.sophistication }}
+        </p>
+
+        {% endif %}
+        {% if entities.threat_actor.0.roles is not none %}
+        <section>
+            <h3 id="roles-title">
+                Roles
+            </h3>
+            <p>
+                {{ entities.threat_actor.0.roles }}
+            </p>
+
+            {% endif %}
+        <section>
         <h3 id="originates-from-title">
             Originates From
         </h3>
