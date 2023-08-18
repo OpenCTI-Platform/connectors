@@ -41,6 +41,12 @@
         {% endif %}
         <li><a href="#first-seen-title"></a></li>
         <li><a href="#last-seen-title"></a></li>
+        {% if entities.threat_actor.0.sophistication is not none %}
+        <li><a href="#sophistication-title"></a></li>
+        {% endif %}
+        {% if entities.threat_actor.0.roles is not none %}
+        <li><a href="#roles-title"></a></li>
+        {% endif %}
         <li><a href="#originates-from-title"></a></li>
         {% if entities.threat_actor.0.resource_level is not none %}
         <li><a href="#resource-level-title"></a></li>
