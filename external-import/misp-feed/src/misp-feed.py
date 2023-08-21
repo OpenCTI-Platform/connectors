@@ -1892,6 +1892,7 @@ class MispFeed:
                 labels=event_tags,
                 object_refs=object_refs,
                 external_references=event_external_references,
+                confidence=self.helper.connect_confidence_level,
                 custom_properties={
                     "x_opencti_report_status": 2,
                     "x_opencti_files": added_files,
