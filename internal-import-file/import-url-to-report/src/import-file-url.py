@@ -20,6 +20,7 @@ class ImportUrlToReport:
             if os.path.isfile(config_file_path)
             else {}
         )
+        self.dummy = stix2.ThreatActor(name="Dummy Actor")
         self.helper = OpenCTIConnectorHelper(config)
 
     def _process_message(self, data: Dict) -> str:
@@ -40,7 +41,7 @@ class ImportUrlToReport:
         for url in url_list:
             reference = stix2.ExternalReference(source_name="External", url=url)
             now = datetime.datetime.now()
-            report = stix2.Report(name=url, published=now, external_references=[reference], object_refs=[reference])
+            report = stix2.Report(name=url, published=now, external_references=[reference], object_refs=[self.dummy])
             bundle += json.loads(report.serialize())
             bundle += json.loads(reference.serialize())
         bundle = {
