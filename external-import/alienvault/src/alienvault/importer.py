@@ -32,6 +32,7 @@ class PulseImporterConfig(NamedTuple):
     filter_indicators: bool
     enable_relationships: bool
     enable_attack_patterns_indicates: bool
+    pulse_blacklist : Set[str]
     malware_blacklist: Set[str]
 
 
@@ -68,6 +69,7 @@ class PulseImporter:
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
 
+        self.pulse_blacklist = config.pulse_blacklist
         self.malware_blacklist: Set[str] = config.malware_blacklist
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
@@ -103,6 +105,10 @@ class PulseImporter:
         pulse_count = len(pulses)
 
         self._info("{0} pulse(s) since {1}...", pulse_count, latest_pulse_datetime)
+
+        self.report_cache = []
+
+        self._get_present_reports()
 
         if self.filter_indicators:
             total_remaining = 0
@@ -140,6 +146,11 @@ class PulseImporter:
         latest_pulse_modified_datetime = latest_pulse_datetime
 
         for count, pulse in enumerate(pulses, start=1):
+
+            if pulse.name in self.pulse_blacklist:
+                self._info("Skipping blacklisted pulse {0}", pulse.name)
+                continue
+
             result = self._process_pulse(pulse)
             if not result:
                 failed += 1
@@ -168,6 +179,40 @@ class PulseImporter:
         )
 
         return self._create_pulse_state(latest_pulse_modified_datetime)
+    
+
+    def _get_present_reports(self):
+        self.report_cache = []
+        query = """
+            query Reports($after: ID) {
+                reports(first: 5000, after: $after) {
+                    edges {
+                        node {
+                            name
+                            published
+                        }
+                    }
+                    pageInfo {
+                        startCursor
+                        endCursor
+                        hasNextPage
+                        hasPreviousPage
+                        globalCount
+                    }
+                }
+            }
+
+        """
+
+        reports_list = self.helper.api.query(query, {"after": ""})
+        reports = reports_list["data"]["reports"]["edges"]
+
+        while reports_list["data"]["reports"]["pageInfo"]["hasNextPage"]:
+            reports_list = self.helper.api.query(query, {"after": reports_list["data"]["reports"]["pageInfo"]["endCursor"]})
+            reports += reports_list["data"]["reports"]["edges"]
+
+        for report in reports:
+            self.report_cache.append((report["node"]["name"], report["node"]["published"]))
 
     def _create_pulse_state(self, latest_pulse_timestamp: datetime) -> Dict[str, Any]:
         return {self._LATEST_PULSE_TIMESTAMP: latest_pulse_timestamp.isoformat()}
@@ -235,7 +280,7 @@ class PulseImporter:
             malware_blacklist=self.malware_blacklist
         )
 
-        bundle_builder = PulseBundleBuilder(config, self.helper)
+        bundle_builder = PulseBundleBuilder(config, self.helper, self.report_cache)
 
         try:
             return bundle_builder.build()
