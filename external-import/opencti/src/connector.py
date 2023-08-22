@@ -13,7 +13,7 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 
 CONFIG_SECTORS_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json"
 CONFIG_GEOGRAPHY_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json"
-# CONFIG_COMPANIES_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json"
+CONFIG_COMPANIES_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json"
 
 
 def days_to_seconds(days):
@@ -54,9 +54,11 @@ class OpenCTI:
                 config,
                 default=CONFIG_GEOGRAPHY_FILE_URL,
             ),
-            # get_config_variable(
-            #     "CONFIG_COMPANIES_FILE_URL", [""], default=CONFIG_COMPANIES_FILE_URL
-            # )
+            get_config_variable(
+                "CONFIG_COMPANIES_FILE_URL",
+                ["config", ""],
+                default=CONFIG_COMPANIES_FILE_URL,
+            ),
         ]
         self.urls = list(filter(lambda url: url is not False, urls))
         self.interval = days_to_seconds(self.config_interval)

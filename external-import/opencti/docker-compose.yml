@@ -9,10 +9,13 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=OpenCTI Datasets"
       - CONNECTOR_SCOPE=marking-definition,identity,location
-      - CONNECTOR_CONFIDENCE_LEVEL=90
+      - CONNECTOR_CONFIDENCE_LEVEL=100
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=error
-      - CONFIG_INTERVAL=7 # In days
+      - CONFIG_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
+      - CONFIG_GEOGRAPHY_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json
+      - CONFIG_COMPANIES_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json
       - CONFIG_REMOVE_CREATOR=false
+      - CONFIG_INTERVAL=7 # In days
     restart: always

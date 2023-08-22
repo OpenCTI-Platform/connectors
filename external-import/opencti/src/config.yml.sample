@@ -7,11 +7,14 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'OpenCTI Datasets'
   scope: 'marking-definition,identity,location'
-  confidence_level: 90
+  confidence_level: 100
   update_existing_data: true
   run_and_terminate: false
   log_level: 'info'
 
 config:
+  sectors_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json'
+  geography_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json'
+  companies_file_url: 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json'
   remove_creator: false
   interval: 7 # In days
