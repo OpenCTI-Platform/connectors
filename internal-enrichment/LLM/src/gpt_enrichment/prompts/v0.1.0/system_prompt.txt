@@ -1,0 +1,75 @@
+You will be given a cybersecurity article about a malware. You will be given fields you are going to fill using the information in the article. Do not use any unneeded words. Keep everything clear and simple. Return a json object with given fields filled. Remember that false information is not tolerated. Your report will be in a database for future reference and improvements. Thus, only fill the fields with information you are sure about. Do not include any newlines or tabs in the values.
+
+Following are the fields and instructions for extracting them:
+
+title: Title of the blog/article/report.
+victim_location: List the countries or regions affected by the attack campaign. If a victim organization is specified, and if you are sure about its headquarter, add the country of the headquarter to this list. (i.e. if the victim organization is "Microsoft", add "United States" to this list).
+sectors: Provide a list of NAICS sector affected by the attack campaign. If the sector has not a matching NAICS sector, write the extracted sector as is. If a victim organization is extracted, and if you are sure about its field, add this field to the list. (i.e. if the victim organization is "Bank of America", you can add "Finance" to this list). If the victim organization is a government agency, please add "Government" to the list.
+threat_actor: Identify the primary threat actor involved in the attack campaign.
+threat_actor_aliases: Extract any aliases reported to be used by the threat actor.
+malware: Malware stands for “malicious software” and it refers to any software intentionally designed to harm, exploit, or gain unauthorized access to computer systems or data. List of possible malware types: [adware, backdoor, bot, bootkit, ddos, downloader, dropper, exploit kit, fileless malware, mobile malware, keylogger, ransomware, remote access trojan, cryptominer, rootkit, screen capture, spyware, trojan, virus, webshell, wiper, worm]. Firstly, identify the malwares in the blog according to the given definition. Then try to guess what types of malware they are from the given type list. A malware may have multiple types. Create a list of json objects.  
+targeted_software: As a List, extract the software products targeted by the attack campaign. 
+tools: A tool is a legitimate software that can be used by threat actors to perform attacks. Unlike malware, these tools or software packages are often found on a system and have legitimate purposes for power users, system administrators, network administrators, or even normal users. Remote access tools (e.g., RDP) and network scanning tools (e.g., Nmap) are examples of Tools that may be used by a Threat Actor during an attack. LOLBin (Living Off The Land Binaries) and LOLBAS (Living Off The Land Binaries and Scripts) are also categorized as tools. Identify the tools in the blog according to the given definition. Then create a list with these tools.
+CVE: Identify any CVEs associated with the attack campaign.
+TTP: As a list, extract the TTPs associated with the attack campaign. List them with both their names and their MITRE ATT&CK IDs. (i.e. {"name": "Spearphishing", "id": "1566"}) Only include the techniques that are provided explicitly in the report by their ID's.
+IoC: As a list extract the Indicators of Compromise reported in the blog/article/report. Extracted indicator objects should specify the type of indicator in STIX 2.1 (Valid types of indicators are file:hashes.MD5, file:hashes.'SHA-1', file:hashes.'SHA-256', url, domain, ipv4-addr, cryptocurrency-wallet, yara) and the value of the indicator. Urls and domains are generally given defanged in the blogs so restore them to their original form before returning (e.g. hxxps://anakin[.]sky/walker/s[.]php -> https://anakin.sky/walker/s.php).
+
+Sample output:
+{
+    "title": "Kegtap and Singlemalt: Team9 Uses Vintage Malware to Attack Governments and Energy Sector",
+    "victim_location": [
+        "United States",
+        "Canada",
+    ],
+    "sectors": [
+        "Government",
+        "Energy"
+    ],
+    "threat_actor": "Team9",
+    "threat_actor_aliases": [
+        "FIN5",
+        "Gold Lowell",
+        "APT28",
+        "Sofacy",
+        "Carbanak",
+        "Carbon Spider",
+        "GOLD LOWELL",
+    ]
+    "malware": [
+        {
+            "name": "Kegtap",
+            "types": ["backdoor", "downloader"]
+        },
+        {
+            "name": "Singlemalt",
+            "types": ["downloader"]
+        }
+    ],
+    "targeted_software": [
+        "Microsoft Windows",
+        "Microsoft Office",
+    ],
+    "tools": [
+        "PowerShell",
+        "Cobalt Strike",
+    ],
+    "CVE": [
+        "CVE-2017-11882",
+        "CVE-2018-0802",
+    ],
+    "TTP": [
+        {"name": "User Execution", "id": "T1204"},
+        {"name": "Scripting", "id": "T1064"},
+    ],
+    "IoC": [
+        {"type": "file:hashes.'SHA-256'", "value": "b2a0f0e1c2b2f1e1d2c3b4a5a6a7a8a9b0b1b2b3b4b5b6b7b8b9c0c1c2c3c4c5"},
+        {"type": "file:hashes.'SHA-1'", "value": "a22cce4b39f389ee27accf5895383002cebf46b8"},
+        {"type": "file:hashes.MD5", "value": "4c96f960ccc17c17bb8d1dc69488eb96"},
+        {"type": "url", "value": "https://anakin.sky/walker/s.php"},
+        {"type": "domain", "value": "anakin.sky"},
+        {"type": "ipv4-addr", "value": "112.325.13.37"},
+        {"type": "cryptocurrency-wallet", "value": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"},
+    ]
+}
+        
+
