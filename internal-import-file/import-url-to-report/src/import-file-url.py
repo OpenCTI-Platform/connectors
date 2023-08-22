@@ -40,7 +40,7 @@ class ImportUrlToReport:
         for url in url_list:
             reference = stix2.ExternalReference(source_name="External", url=url)
             now = datetime.datetime.now()
-            report = stix2.Report(name=url, published=now, external_references=[reference], object_refs=[reference.id])
+            report = stix2.Report(name=url, published=now, external_references=[reference], object_refs=[])
             bundle += json.loads(report.serialize())
             bundle += json.loads(reference.serialize())
         bundle = {
