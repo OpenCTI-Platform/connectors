@@ -45,7 +45,7 @@ class ImportUrlToReport:
             bundle += report
             bundle += reference
         serialized_bundle = stix2.Bundle(
-            objects=self.bundle, allow_custom=True
+            objects=bundle, allow_custom=True
         ).serialize()
         bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
             
