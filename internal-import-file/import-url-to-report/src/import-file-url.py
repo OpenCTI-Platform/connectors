@@ -44,17 +44,11 @@ class ImportUrlToReport:
             report = stix2.Report(name=url, published=now, external_references=[reference], object_refs=[self.dummy])
             bundle += report
             bundle += reference
-        bundle = {
-            "type": "bundle",
-            "id": "bundle--" + str(uuid.uuid4()),
-            "objects": bundle,
-        }
-        file_content = json.dumps(bundle)
-        bundles_sent = self.helper.send_stix2_bundle(
-            file_content,
-            bypass_validation=bypass_validation,
-            file_name=data["file_id"]
-        )
+        serialized_bundle = stix2.Bundle(
+            objects=self.bundle, allow_custom=True
+        ).serialize()
+        bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
+            
         if self.helper.get_validate_before_import() and not bypass_validation:
             return "Generated bundle sent for validation"
         else:
