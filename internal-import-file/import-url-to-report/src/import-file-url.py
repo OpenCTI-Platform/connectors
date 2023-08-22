@@ -33,29 +33,26 @@ class ImportUrlToReport:
             self.helper.log_debug("Not a text file")
             return "Error: Given file not a text file"
         
-        entity_id = data.get("entity_id", None)
         self.helper.log_debug(f"Data: {data}")
         
-        if entity_id:
-            url_list = file_content.split("\n")
-            bundle = []
-            for url in url_list:
-                reference = stix2.ExternalReference(source_name="External", url=url)
-                now = datetime().now()
-                report = stix2.Report(name=url, published=now, external_references=[reference])
-                bundle += json.loads(report.serialize())
-                bundle += json.loads(reference.serialize())
-            bundle = {
-                "type": "bundle",
-                "id": "bundle--" + str(uuid.uuid4()),
-                "objects": bundle,
-            }
-            file_content = json.dumps(bundle)
+        url_list = file_content.split("\n")
+        bundle = []
+        for url in url_list:
+            reference = stix2.ExternalReference(source_name="External", url=url)
+            now = datetime().now()
+            report = stix2.Report(name=url, published=now, external_references=[reference])
+            bundle += json.loads(report.serialize())
+            bundle += json.loads(reference.serialize())
+        bundle = {
+            "type": "bundle",
+            "id": "bundle--" + str(uuid.uuid4()),
+            "objects": bundle,
+        }
+        file_content = json.dumps(bundle)
         bundles_sent = self.helper.send_stix2_bundle(
             file_content,
             bypass_validation=bypass_validation,
-            file_name=data["file_id"],
-            entity_id=entity_id,
+            file_name=data["file_id"]
         )
         if self.helper.get_validate_before_import() and not bypass_validation:
             return "Generated bundle sent for validation"
