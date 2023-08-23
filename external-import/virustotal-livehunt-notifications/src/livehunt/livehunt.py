@@ -125,6 +125,7 @@ class VirustotalLivehuntNotifications:
             ["virustotal_livehunt_notifications", "min_positives"],
             config,
             True,
+            default=1,
         )
 
         upload_artifact = get_config_variable(
