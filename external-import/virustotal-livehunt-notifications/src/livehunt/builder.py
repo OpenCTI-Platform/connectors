@@ -194,11 +194,15 @@ class LivehuntBuilder:
             id=incident_id,
             incident_type="alert",
             name=name,
-            description=f'Snippet:\n{vtobj._context_attributes["notification_snippet"]}',
+            description=f'Date of the alert on VirusTotal: {datetime.datetime.fromtimestamp(vtobj._context_attributes["notification_date"])}',
             source=self._SOURCE,
             created_by_ref=self.author["standard_id"],
             confidence=self.helper.connect_confidence_level,
-            labels=vtobj._context_attributes["notification_tags"],
+            labels=[
+                t
+                for t in vtobj._context_attributes["notification_tags"]
+                if t not in {vtobj.id, self.tag}
+            ],
             external_references=[external_reference],
             allow_custom=True,
         )
