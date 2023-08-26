@@ -1,2 +1,2 @@
-pycti==5.9.6
+pycti==5.10.0
 pyzipper==0.3.6

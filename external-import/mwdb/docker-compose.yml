@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-mwdb:
-    image: opencti/connector-mwdb:5.9.6
+    image: opencti/connector-mwdb:5.10.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN='ChangeMe'

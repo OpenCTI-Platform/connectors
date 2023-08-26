@@ -74,7 +74,7 @@ class VirusTotalBuilderTest(unittest.TestCase):
             "standard_id": "domain-name--c3967e18-f6e3-5b6a-8d40-16dca535fca3",
             "id": "c3967e18-f6e3-5b6a-8d40-16dca535fca3",
         }
-        ipv4 = "65.9.643.66"
+        ipv4 = "65.10.043.66"
         builder = VirusTotalBuilder(
             self.helper,
             self.author,
