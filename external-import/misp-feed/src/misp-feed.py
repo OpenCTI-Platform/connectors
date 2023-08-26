@@ -1152,7 +1152,7 @@ class MispFeed:
                     else:
                         sighted_by = None
 
-                    if indicator is not None:
+                    if indicator is not None and sighted_by is not None:
                         sighting = stix2.Sighting(
                             id=StixSightingRelationship.generate_id(
                                 indicator["id"],
