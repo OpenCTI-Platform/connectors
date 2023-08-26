@@ -12,7 +12,7 @@ connector:
   log_level: 'info'
 
 cybercrime-tracker:
-  feed_url: 'http://cybercrime-tracker.net/rss.xml'
+  feed_url: 'https://cybercrime-tracker.net/rss.xml'
   tlp: 'CLEAR'
   interval: 86400  # seconds
   create_indicators: True # Required, create indicators for attributes
