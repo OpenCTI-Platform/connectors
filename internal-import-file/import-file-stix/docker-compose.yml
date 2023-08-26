@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
       - CONNECTOR_NAME=ImportFileStix
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
-      - CONNECTOR_SCOPE=application/json,text/xml
+      - CONNECTOR_SCOPE=application/json,application/xml
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
