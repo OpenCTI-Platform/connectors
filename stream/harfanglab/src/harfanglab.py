@@ -37,6 +37,9 @@ class HarfangLabConnector:
         self.harfanglab_password = get_config_variable(
             "HARFLANGLAB_PASSWORD", ["harfanglab", "password"], config
         )
+        self.indicators_scope = get_config_variable(
+            "HARFLANGLAB_INDICATORS_SCOPE", ["harfanglab", "indicators_scope"], config
+        ).split(',')
 
     def _process_message(self, msg):
         # _process_message
@@ -59,26 +62,54 @@ class HarfangLabConnector:
             # TODO YARA, Sigma and IoC
             # TODO Only revoked=false
             # TODO Handle creation source list
-            if data["type"] == "indicator":
-                self.helper.log_info(
-                    "[CREATE] Processing indicator {"
-                    + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                    + "}"
-                )
-                indicator = {
-                    "content": data["pattern"],
-                    "enabled": True,
-                    "hl_local_testing_status": "in_progress",
-                    "hl_status": "stable",
-                    "name": data["name"],
-                    "source_id": "92e3513d-8639-44a6-b322-e839ad456295"
-                }
-                response = requests.post(
-                    url + '/SigmaRule/',
-                    headers=headers,
-                    json=indicator
-                )
-                self.helper.log_info(f'Indicator created = {response}')
+            if data["type"] == "indicator" and data["pattern_type"] in self.indicators_scope:
+                if data["pattern_type"] == "sigma":
+                    self.helper.log_info(
+                        "[CREATE] Processing indicator {"
+                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                        + "}"
+                    )
+                    indicator = {
+                        "content": data["pattern"],
+                        "enabled": True,
+                        "hl_local_testing_status": "in_progress",
+                        "hl_status": "stable",
+                        "name": data["name"],
+                        "source_id": "92e3513d-8639-44a6-b322-e839ad456295"
+                    }
+                    response = requests.post(
+                        url + '/SigmaRule/',
+                        headers=headers,
+                        json=indicator
+                    )
+                    self.helper.log_info(f'Indicator created = {response}')
+                elif data["pattern_type"] == "yara":
+                    self.helper.log_info(
+                        "[CREATE] Processing indicator {"
+                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                        + "}"
+                    )
+                    indicator = {
+                        "content": data["pattern"],
+                        "enabled": True,
+                        "hl_local_testing_status": "in_progress",
+                        "hl_status": "stable",
+                        "name": data["name"],
+                        "source_id": "92e3513d-8639-44a6-b322-e839ad456295"
+                    }
+                    response = requests.post(
+                        url + '/YaraFile/',
+                        headers=headers,
+                        json=indicator
+                    )
+                    self.helper.log_info(f'Indicator created = {response}')
+                elif data["pattern_type"] == "stix":
+                    # TODO check if it's the right name to get the type?
+                    if data["x_opencti_main_observable_type"] in ["StixFile", "Domain-Name", "IPv4-Addr", "IPv6-Addr", "Url"]:
+                        # TODO Exctract data from pattern
+                        data["pattern"]
+
+
 
             return
         # Handle update
