@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-logrhythm:
-    image: opencti/connector-logrhythm:5.7.6
+    image: opencti/connector-logrhythm:5.10.0
     environment:
       OPENCTI_URL: http://localhost
       OPENCTI_TOKEN: ChangeMe
