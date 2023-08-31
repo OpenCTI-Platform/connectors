@@ -1,3 +1,7 @@
+# v1.1.1  
+
+- Upgraded `Titan-Client` to version `1.19.7.2` to fix PyYAML dependency.
+
 # v1.1.0  
   
 - Upgraded `Titan-Client` to version `1.19.7`. It provides following changes to STIX mappers:
