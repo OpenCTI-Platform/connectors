@@ -1106,7 +1106,7 @@ class Misp:
             if self.misp_create_observables and observable_type is not None:
                 try:
                     custom_properties = {
-                        "description": attribute["comment"],
+                        "x_opencti_description": attribute["comment"],
                         "x_opencti_score": score,
                         "labels": attribute_tags,
                         "created_by_ref": author["id"],
