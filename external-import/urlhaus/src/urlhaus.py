@@ -96,11 +96,17 @@ class URLhaus:
                 if self.threats_from_labels:
                     treat_cache = {}
 
-            
-                response = urllib.request.urlopen(
-                    self.urlhaus_csv_url,
-                    context=ssl.create_default_context(cafile=certifi.where()),
-                )
+                try: 
+                    response = urllib.request.urlopen(
+                        self.urlhaus_csv_url,
+                        context=ssl.create_default_context(cafile=certifi.where()),
+                    )
+                except urllib.error.HTTPError:
+                    # we only accept HTTPError
+                    self.helper.log_error(traceback.format_exc())
+                    time.sleep(60)
+                    continue
+
                 image = response.read()
                 with open(
                     os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
@@ -335,8 +341,14 @@ class URLhaus:
 if __name__ == "__main__":
     try:
         URLhausConnector = URLhaus()
-        URLhausConnector.run()
     except Exception:
         print(traceback.format_exc())
         time.sleep(10)
         sys.exit(0)
+    
+    try: 
+        URLhausConnector.run()
+    except Exception:
+        URLhausConnector.helper.log_error(traceback.format_exc())
+        time.sleep(10)
+        sys.exit(0)   
