@@ -1,4 +1,4 @@
-pycti==5.10.0
+pycti==5.10.1
 pydantic==1.10.12
 valhallaAPI==0.6.0
 python-dateutil==2.8.2

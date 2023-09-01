@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-recordedfuture-enrichment:
-    image: opencti/connector-recordedfuture-enrichment:5.10.0
+    image: opencti/connector-recordedfuture-enrichment:5.10.1
     environment:
       - OPENCTI_URL=http://opencti:4000
       - OPENCTI_TOKEN=CHANGME
