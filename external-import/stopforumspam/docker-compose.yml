@@ -1,7 +1,7 @@
 version: '3'
 services :
   connector-stopforumspam:
-    image: opencti/connector-stopforumspam:5.10.0
+    image: opencti/connector-stopforumspam:5.10.1
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
