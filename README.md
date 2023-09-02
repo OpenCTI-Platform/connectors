@@ -1,6 +1,6 @@
 # OpenCTI connectors
 
-[![Website](https://img.shields.io/badge/website-opencti.io-blue.svg)](https://www.opencti.io)
+[![Website](https://img.shields.io/badge/website-opencti.io-blue.svg)](https://opencti.io)
 [![CircleCI](https://circleci.com/gh/OpenCTI-Platform/connectors.svg?style=shield)](https://circleci.com/gh/OpenCTI-Platform/connectors/tree/master)
 [![Slack Status](https://img.shields.io/badge/slack-3K%2B%20members-4A154B)](https://community.filigran.io)
 
@@ -20,7 +20,7 @@ If you want to help use improve or develop new connector, please check out the *
 
 ## About
 
-OpenCTI is a product designed and developed by the company [Filigran](https://www.filigran.io).
+OpenCTI is a product designed and developed by the company [Filigran](https://filigran.io).
 
-<a href="https://www.filigran.io" alt="Filigran"><img src="https://www.filigran.io/wp-content/uploads/2023/08/filigran_text_small.png" width="200" /></a>
+<a href="https://filigran.io" alt="Filigran"><img src="https://filigran.io/wp-content/uploads/2023/08/filigran_text_medium.png" width="200" /></a>
 
