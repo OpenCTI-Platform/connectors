@@ -61,7 +61,18 @@ class HarfangLabConnector:
             headers=self.headers,
             params={'search': self.harfanglab_yara_list_name}
         )
-        print(response.content)
+        list_of_yara_sources = json.loads(response.content)['results']
+
+        element = next((x for x in list_of_yara_sources if x["name"] == self.harfanglab_yara_list_name), None)
+        if element is None:
+            # create list
+            response = requests.post(
+                self.api_url + '/YaraSource/',
+                headers=self.headers,
+                # TODO put right parameters
+            )
+        else:
+            self.harfanglab_yara_list_id = element['id']
 
     def _process_message(self, msg):
         # _process_message
