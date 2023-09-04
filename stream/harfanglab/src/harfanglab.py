@@ -66,11 +66,16 @@ class HarfangLabConnector:
         element = next((x for x in list_of_yara_sources if x["name"] == self.harfanglab_yara_list_name), None)
         if element is None:
             # create list
+            yara_list = {
+                "name": self.harfanglab_yara_list_name,
+                "enabled": True,
+            }
             response = requests.post(
                 self.api_url + '/YaraSource/',
                 headers=self.headers,
-                # TODO put right parameters
+                json=yara_list
             )
+            self.harfanglab_yara_list_id = json.loads(response.content)['id']
         else:
             self.harfanglab_yara_list_id = element['id']
 
