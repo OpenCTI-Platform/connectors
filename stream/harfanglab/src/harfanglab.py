@@ -105,7 +105,7 @@ class HarfangLabConnector:
                         json=indicator
                     )
                     self.helper.log_info(f'Indicator created = {response}')
-                elif data["pattern_type"] == "yara":
+                elif data["pattern_type"] == "yara" and data["revoked"] is False and OpenCTIConnectorHelper.get_attribute_in_extension("detection", data) is True:
                     self.helper.log_info(
                         "[CREATE] Processing indicator {"
                         + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
@@ -113,7 +113,7 @@ class HarfangLabConnector:
                     )
                     yara_indicator = {
                         "content": data["pattern"],
-                        "enabled": data["detection"],
+                        "enabled": OpenCTIConnectorHelper.get_attribute_in_extension("detection", data),
                         "hl_local_testing_status": "in_progress",
                         "hl_status": "stable",
                         "name": data["name"],
