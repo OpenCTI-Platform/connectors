@@ -84,7 +84,7 @@ class HarfangLabConnector:
         if msg.event == "create":
             # TODO YARA, Sigma and IoC
             # TODO Only revoked=false
-            if data["type"] == "indicator":
+            if data["type"] == "indicator" and data["revoked"] is False and OpenCTIConnectorHelper.get_attribute_in_extension("detection", data) is True:
                 if data["pattern_type"] == "sigma":
                     self.helper.log_info(
                         "[CREATE] Processing indicator {"
@@ -105,7 +105,7 @@ class HarfangLabConnector:
                         json=indicator
                     )
                     self.helper.log_info(f'Indicator created = {response}')
-                elif data["pattern_type"] == "yara" and data["revoked"] is False and OpenCTIConnectorHelper.get_attribute_in_extension("detection", data) is True:
+                elif data["pattern_type"] == "yara":
                     self.helper.log_info(
                         "[CREATE] Processing indicator {"
                         + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
