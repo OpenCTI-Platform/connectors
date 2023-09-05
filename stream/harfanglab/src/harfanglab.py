@@ -37,21 +37,14 @@ class HarfangLabConnector:
         self.harfanglab_password = get_config_variable(
             "HARFLANGLAB_PASSWORD", ["harfanglab", "password"], config
         )
-
-        self.indicators_scope = get_config_variable(
-            "HARFLANGLAB_INDICATORS_SCOPE", ["harfanglab", "indicators_scope"], config
-        ).split(',')
-
         self.api_url = (
                 self.harfanglab_url
                 + "/api/data/threat_intelligence"
         )
-
         self.headers = {
             "Accept": "application/json",
             "Authorization": "Token " + self.harfanglab_token
         }
-
         self.harfanglab_yara_list_name = get_config_variable(
             "HARFLANGLAB_YARA_LIST_NAME", ["harfanglab", "yara_list_name"], config
         )
@@ -88,13 +81,10 @@ class HarfangLabConnector:
         # Handle creation
         self.helper.log_info(f'Processing the object {data["id"]}')
 
-        # https://4cc1e4989b9de1af.hurukai.io:8443/api/data/threat_intelligence/YaraFile/
-
         if msg.event == "create":
             # TODO YARA, Sigma and IoC
             # TODO Only revoked=false
-            # TODO Handle creation source list
-            if data["type"] == "indicator" and data["pattern_type"] in self.indicators_scope:
+            if data["type"] == "indicator":
                 if data["pattern_type"] == "sigma":
                     self.helper.log_info(
                         "[CREATE] Processing indicator {"
@@ -121,18 +111,18 @@ class HarfangLabConnector:
                         + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
                         + "}"
                     )
-                    indicator = {
+                    yara_indicator = {
                         "content": data["pattern"],
-                        "enabled": True,
+                        "enabled": data["detection"],
                         "hl_local_testing_status": "in_progress",
                         "hl_status": "stable",
                         "name": data["name"],
-                        "source_id": "92e3513d-8639-44a6-b322-e839ad456295"
+                        "source_id": self.harfanglab_yara_list_id
                     }
                     response = requests.post(
                         self.api_url + '/YaraFile/',
                         headers=self.headers,
-                        json=indicator
+                        json=yara_indicator
                     )
                     self.helper.log_info(f'Indicator created = {response}')
                 # elif data["pattern_type"] == "stix":
