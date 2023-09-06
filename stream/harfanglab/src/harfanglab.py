@@ -125,7 +125,11 @@ class HarfangLabConnector:
                         headers=self.headers,
                         json=yara_indicator
                     )
-                    self.helper.log_info(f'Indicator YARA created = {response}')
+                    #TODO handle case where status contains many elements
+                    if json.loads(response.content)['status'][0]['status'] is False:
+                        self.helper.log_error(f"Error = {json.loads(response.content)['status'][0]['content']}")
+                    else:
+                        self.helper.log_info(f'Indicator YARA created = {response}')
 
                 elif data["pattern_type"] == "sigma":
                     self.helper.log_info(
@@ -147,18 +151,52 @@ class HarfangLabConnector:
                         headers=self.headers,
                         json=sigma_indicator
                     )
-                    self.helper.log_info(f'Indicator SIGMA created = {response}')
+                    if json.loads(response.content)['status'][0]['status'] is False:
+                        self.helper.log_error(f"{json.loads(response.content)['status'][0]['content']}")
+                    else:
+                        self.helper.log_info(f'Indicator SIGMA created = {response}')
+
                 # elif data["pattern_type"] == "stix":
                 #     # TODO check if it's the right name to get the type?
                 #     if data["x_opencti_main_observable_type"] in ["StixFile", "Domain-Name", "IPv4-Addr", "IPv6-Addr", "Url"]:
                 #         # TODO Exctract data from pattern
                 #         data["pattern"]
 
-
-
             return
+
         # Handle update
         if msg.event == "update":
+            if data["type"] == "indicator":
+                if data["pattern_type"] == "yara":
+                    self.helper.log_info(
+                        "[UPDATE] Processing indicator {"
+                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                        + "}"
+                    )
+
+                    yara_indicator = {
+                        "name": data["name"],
+                        "content": data["pattern"],
+                        "enabled": True,
+                        "source_id": self.harfanglab_yara_list_id
+                    }
+
+                    yara_name_indicator_reverse_patch = json.loads(msg.data)['context']['reverse_patch'][0]['value']
+                    response_get = requests.get(
+                        self.api_url + f'/YaraFile/?search={yara_name_indicator_reverse_patch}',
+                    )
+                    self.helper.log_info(f'Indicator old name = {response_get}')
+                    # response = requests.put(
+                    #     self.api_url + '/YaraFile/',
+                    #     headers=self.headers,
+                    #     json=yara_indicator
+                    # )
+                    # #TODO handle case where status contains many elements
+                    # if json.loads(response.content)['status'][0]['status'] is False:
+                    #     self.helper.log_error(f"Error = {json.loads(response.content)['status'][0]['content']}")
+                    # else:
+                    #     self.helper.log_info(f'Indicator YARA created = {response}')
+
             return
         if msg.event == "delete":
             return
