@@ -45,32 +45,53 @@ class HarfangLabConnector:
             "Accept": "application/json",
             "Authorization": "Token " + self.harfanglab_token
         }
-        self.harfanglab_yara_list_name = get_config_variable(
-            "HARFLANGLAB_YARA_LIST_NAME", ["harfanglab", "yara_list_name"], config
+        self.harfanglab_source_list_name = get_config_variable(
+            "HARFLANGLAB_SOURCE_LIST_NAME", ["harfanglab", "source_list_name"], config
         )
+        self.source_list = {
+            "name": self.harfanglab_source_list_name,
+            "enabled": True,
+        }
 
+        # Yara pattern
         response = requests.get(
             self.api_url + '/YaraSource/',
             headers=self.headers,
-            params={'search': self.harfanglab_yara_list_name}
+            params={'search': self.harfanglab_source_list_name}
         )
         list_of_yara_sources = json.loads(response.content)['results']
 
-        element = next((x for x in list_of_yara_sources if x["name"] == self.harfanglab_yara_list_name), None)
+        element = next((x for x in list_of_yara_sources if x["name"] == self.harfanglab_source_list_name), None)
         if element is None:
             # create list
-            yara_list = {
-                "name": self.harfanglab_yara_list_name,
-                "enabled": True,
-            }
             response = requests.post(
                 self.api_url + '/YaraSource/',
                 headers=self.headers,
-                json=yara_list
+                json=self.source_list
             )
             self.harfanglab_yara_list_id = json.loads(response.content)['id']
         else:
             self.harfanglab_yara_list_id = element['id']
+
+        # Sigma pattern
+        response = requests.get(
+            self.api_url + '/SigmaSource/',
+            headers=self.headers,
+            params={'search': self.harfanglab_source_list_name}
+        )
+        list_of_sigma_sources = json.loads(response.content)['results']
+
+        element = next((x for x in list_of_sigma_sources if x["name"] == self.harfanglab_source_list_name), None)
+        if element is None:
+            # create list
+            response = requests.post(
+                self.api_url + '/SigmaSource/',
+                headers=self.headers,
+                json=self.source_list
+            )
+            self.harfanglab_sigma_list_id = json.loads(response.content)['id']
+        else:
+            self.harfanglab_sigma_list_id = element['id']
 
     def _process_message(self, msg):
         # _process_message
@@ -85,27 +106,7 @@ class HarfangLabConnector:
             # TODO YARA, Sigma and IoC
             # TODO Only revoked=false
             if data["type"] == "indicator" and data["revoked"] is False and OpenCTIConnectorHelper.get_attribute_in_extension("detection", data) is True:
-                if data["pattern_type"] == "sigma":
-                    self.helper.log_info(
-                        "[CREATE] Processing indicator {"
-                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                        + "}"
-                    )
-                    indicator = {
-                        "content": data["pattern"],
-                        "enabled": True,
-                        "hl_local_testing_status": "in_progress",
-                        "hl_status": "stable",
-                        "name": data["name"],
-                        "source_id": "92e3513d-8639-44a6-b322-e839ad456295"
-                    }
-                    response = requests.post(
-                        self.api_url + '/SigmaRule/',
-                        headers=self.headers,
-                        json=indicator
-                    )
-                    self.helper.log_info(f'Indicator created = {response}')
-                elif data["pattern_type"] == "yara":
+                if data["pattern_type"] == "yara":
                     self.helper.log_info(
                         "[CREATE] Processing indicator {"
                         + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
@@ -113,7 +114,7 @@ class HarfangLabConnector:
                     )
                     yara_indicator = {
                         "content": data["pattern"],
-                        "enabled": OpenCTIConnectorHelper.get_attribute_in_extension("detection", data),
+                        "enabled": True,
                         "hl_local_testing_status": "in_progress",
                         "hl_status": "stable",
                         "name": data["name"],
@@ -124,7 +125,29 @@ class HarfangLabConnector:
                         headers=self.headers,
                         json=yara_indicator
                     )
-                    self.helper.log_info(f'Indicator created = {response}')
+                    self.helper.log_info(f'Indicator YARA created = {response}')
+
+                elif data["pattern_type"] == "sigma":
+                    self.helper.log_info(
+                        "[CREATE] Processing indicator {"
+                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                        + "}"
+                    )
+                    sigma_indicator = {
+                        "block_on_agent": True,
+                        "content": data["pattern"],
+                        "enabled": True,
+                        "hl_local_testing_status": "in_progress",
+                        "hl_status": "stable",
+                        "name": data["name"],
+                        "source_id": self.harfanglab_sigma_list_id
+                    }
+                    response = requests.post(
+                        self.api_url + '/SigmaRule/',
+                        headers=self.headers,
+                        json=sigma_indicator
+                    )
+                    self.helper.log_info(f'Indicator SIGMA created = {response}')
                 # elif data["pattern_type"] == "stix":
                 #     # TODO check if it's the right name to get the type?
                 #     if data["x_opencti_main_observable_type"] in ["StixFile", "Domain-Name", "IPv4-Addr", "IPv6-Addr", "Url"]:
