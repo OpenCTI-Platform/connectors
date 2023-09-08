@@ -174,9 +174,10 @@ class HarfangLabConnector:
                         + "}"
                     )
 
-                    yara_name_indicator_reverse_patch = json.loads(msg.data)['context']['reverse_patch'][0]['value']
+                    yara_indicator_previous_name = json.loads(msg.data)['context']['reverse_patch'][0]['value']
+                    # TODO Problem
                     response_yara_name_indicator = requests.get(
-                        self.api_url + f'/YaraFile/?search={yara_name_indicator_reverse_patch}',
+                        self.api_url + f'/YaraFile/?search={yara_indicator_previous_name}',
                         headers=self.headers,
                     )
 
@@ -188,7 +189,8 @@ class HarfangLabConnector:
                         msg_log = f'[UPDATE] The request returned code {response_yara_status_code}'
                         self.helper.log_error(msg_log),
                     elif response_yara_content_count == 0:
-                        msg_log = f'[UPDATE] The searched name of the Yara indicator ({yara_name_indicator_reverse_patch}) does not exist in HarfangLab'
+                        # TODO : Creates an indicator when count = 0
+                        msg_log = f'[UPDATE] The searched name of the Yara indicator ({yara_indicator_previous_name}) does not exist in HarfangLab'
                         self.helper.log_error(msg_log),
                     else:
                         response_yara_content_id = json.loads(response_yara_content)['results'][0]['id']
@@ -218,9 +220,9 @@ class HarfangLabConnector:
                         + "}"
                     )
 
-                    sigma_name_indicator_reverse_patch = json.loads(msg.data)['context']['reverse_patch'][0]['value']
+                    sigma_indicator_previous_name = json.loads(msg.data)['context']['reverse_patch'][0]['value']
                     response_sigma_name_indicator = requests.get(
-                        self.api_url + f'/SigmaRule/?search={sigma_name_indicator_reverse_patch}',
+                        self.api_url + f'/SigmaRule/?search={sigma_indicator_previous_name}',
                         headers=self.headers,
                         )
 
@@ -232,7 +234,7 @@ class HarfangLabConnector:
                         msg_log = f'[UPDATE] The request returned code {response_sigma_status_code}'
                         self.helper.log_error(msg_log),
                     elif response_sigma_content_count == 0:
-                        msg_log = f'[UPDATE] The searched name of the Sigma indicator ({sigma_name_indicator_reverse_patch}) does not exist in HarfangLab'
+                        msg_log = f'[UPDATE] The searched name of the Sigma indicator ({sigma_indicator_previous_name}) does not exist in HarfangLab'
                         self.helper.log_error(msg_log),
                     else:
                         response_sigma_content_id = json.loads(response_sigma_content)['results'][0]['id']
@@ -258,8 +260,6 @@ class HarfangLabConnector:
             return
         if msg.event == "delete":
             return
-
-
 
 
     def start(self):
