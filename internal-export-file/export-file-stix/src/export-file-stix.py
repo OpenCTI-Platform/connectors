@@ -87,7 +87,7 @@ class ExportFileStix:
                     entities_list.append(entity_data)
 
                 bundle = self.helper.api_impersonate.stix2.export_selected(
-                    entity_type, entities_list, export_type, max_marking, element_id
+                    entities_list, export_type, max_marking
                 )
 
             else:  # export_scope = 'query'
@@ -106,8 +106,8 @@ class ExportFileStix:
                     list_params["filters"],
                     list_params["orderBy"],
                     list_params["orderMode"],
-                    max_marking,
                     export_type,
+                    max_marking,
                     list_params.get("types"),
                     list_params.get("elementId"),
                     list_params.get("fromId"),
