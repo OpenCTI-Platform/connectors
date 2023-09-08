@@ -1,0 +1,4 @@
+.env
+.venv
+.python-version
+src/data/training_data
