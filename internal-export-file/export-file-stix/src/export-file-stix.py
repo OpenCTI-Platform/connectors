@@ -52,11 +52,6 @@ class ExportFileStix:
             )
 
         else:  # export_scope = 'query' or 'selection'
-            if "element_id" in data:
-                element_id = data["element_id"]
-            else:
-                element_id = None
-
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
                 list_filters = "selected_ids"
@@ -109,14 +104,13 @@ class ExportFileStix:
                     export_type,
                     max_marking,
                     list_params.get("types"),
-                    list_params.get("elementId"),
+                    list_params.get("elementId"),  # data["element_id"] ?
                     list_params.get("fromId"),
                     list_params.get("toId"),
                     list_params.get("elementWithTargetTypes"),
                     list_params.get("fromTypes"),
                     list_params.get("toTypes"),
                     list_params.get("relationship_type"),
-                    element_id,
                 )
                 list_filters = json.dumps(list_params)
 
