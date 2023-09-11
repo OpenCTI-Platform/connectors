@@ -1,5 +1,5 @@
 # OpenCTI Attribution Tools Connector
-The attribution tools connector provides incident attribution capability for OpenCTI. The tool is trained from OpenCTI intrusion-set data and can be launched as an enrichment for OpenCTI incidents.
+The attribution tools connector developed by WithSecure provides incident attribution capability for OpenCTI. The tool is trained from OpenCTI intrusion-set data and can be launched as an enrichment for OpenCTI incidents.
 
 The tool will assess the best matching intrusion-sets for the incident based on the collection of related objects within it.
 ## Configuration
@@ -18,7 +18,7 @@ The tool will assess the best matching intrusion-sets for the incident based on 
 | `attributiontools.default_relation_confidence`            | `ATTRIBUTIONTOOLS_DEFAULT_RELATION_CONFIDENCE`     | An integer between `[0,100]` | true      |The confidence number for automatically created relations.|
 | `attributiontools.automatic_relation_creation`            | `ATTRIBUTIONTOOLS_AUTOMATIC_RELATION_CREATION`     | `boolean` | true      |A boolean which dictates whether relations should be created automatically or not.|
 | `attributiontools.relation_creation_probability_treshold` | `ATTRIBUTIONTOOLS_RELATION_CREATION_PROBABILITY_TRESHOLD` | A decimal number between `[0,1]`| true      |The minimum probability of a prediction that is considered good enough to warrant automatic attribution relation creation. |
-| `attributiontools.creator_org_identity_id`                | `ATTRIBUTIONTOOLS_CREATOR_ORG_IDENTITY_ID`      | A Stix Standard ID | true      |The `standard_id` (Stix ID) of the identity object that the connector should set as creator when creating relations or note objects. This should be the ID of the WithSecure organization object.|
+| `attributiontools.creator_org_identity_id`                | `ATTRIBUTIONTOOLS_CREATOR_ORG_IDENTITY_ID`      | A Stix Standard ID | true      |The `standard_id` (Stix ID) of the identity object that the connector should set as creator when creating relations or note objects. This should be the ID of your organization object.|
 
 ## Model Persistence
 In order to save the model (actually just training data) and have it persist over container restarts, persistent storage needs to be mounted to the container. A storage volume should be mounted to the path `/opt/opencti-connector-attribution-tools/data/training_data` inside the container. The connector will store 3 of the latest models that it has used and deletes the older ones once new ones are fetched and trained.

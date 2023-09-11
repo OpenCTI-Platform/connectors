@@ -1,17 +1,14 @@
 version: '3'
 services:
   connector-attribution-tools:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: always
+    image: opencti/connector-attribution-tools:5.10.1
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=7cc3c440-95cf-4687-b651-771a3031cc8f
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=attribution-tools
-      - CONNECTOR_SCOPE=incident
+      - CONNECTOR_SCOPE=Incident
       - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=3
       - CONNECTOR_LOG_LEVEL=info
@@ -21,3 +18,4 @@ services:
       - ATTRIBUTIONTOOLS_AUTOMATIC_RELATION_CREATION=false
       - ATTRIBUTIONTOOLS_RELATION_CREATION_PROBABILITY_TRESHOLD=0.95
       - ATTRIBUTIONTOOLS_CREATOR_ORG_IDENTITY_ID=identity--b0963901-cb74-56b2-9add-92c6d1a10332
+    restart: always
