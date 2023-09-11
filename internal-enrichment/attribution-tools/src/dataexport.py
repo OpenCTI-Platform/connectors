@@ -1,4 +1,3 @@
-import os.path
 import uuid
 from typing import Dict, List, Optional
 
