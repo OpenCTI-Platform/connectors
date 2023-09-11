@@ -27,3 +27,5 @@ The connector will initiate a training data fetch sequence on startup if it does
 
 ### CC-Driver
 This package was developed as a part of [CC-Driver project](https://www.ccdriver-h2020.com/), funded by the European Union’s Horizon 2020 Research and Innovation Programme under Grant Agreement No. 883543
+
+For more reading on the attribution-tools project: https://www.preprints.org/manuscript/202308.1936/v1

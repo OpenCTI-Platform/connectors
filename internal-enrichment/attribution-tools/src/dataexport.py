@@ -1,21 +1,22 @@
-from typing import Dict, List, Optional
-import uuid
 import os.path
-from pycti import OpenCTIApiClient
-from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
-from joblib import Parallel, delayed
+import uuid
+from typing import Dict, List, Optional
+
 from custom_attributes import (
     CUSTOM_ATTRIBUTES,
     CUSTOM_ATTRIBUTES_NO_NAME,
     CUSTOM_ATTRIBUTES_OBSERVABLE,
-    CUSTOM_ATTRIBUTES_RELATIONSHIP
+    CUSTOM_ATTRIBUTES_RELATIONSHIP,
 )
+from joblib import Parallel, delayed
+from pycti import OpenCTIApiClient
+from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 # Spec version
 SPEC_VERSION = "2.1"
 
-class DataExport():
 
+class DataExport:
     def __init__(self, client: OpenCTIApiClient) -> None:
         self.opencti = client
         pass
@@ -103,7 +104,6 @@ class DataExport():
         types: List = None,
         n_threads=4,
     ) -> list:
-
         max_marking_definition_entity = (
             self.opencti.marking_definition.read(id=max_marking_definition)
             if max_marking_definition is not None
@@ -131,7 +131,10 @@ class DataExport():
             entity_type = "Stix-Cyber-Observable"
         # List
         lister = {
-            "Stix-Domain-Object": (self.opencti.stix_domain_object.list, CUSTOM_ATTRIBUTES_NO_NAME),
+            "Stix-Domain-Object": (
+                self.opencti.stix_domain_object.list,
+                CUSTOM_ATTRIBUTES_NO_NAME,
+            ),
             "Attack-Pattern": (self.opencti.attack_pattern.list, CUSTOM_ATTRIBUTES),
             "Campaign": (self.opencti.campaign.list, CUSTOM_ATTRIBUTES),
             "Identity": (self.opencti.identity.list, CUSTOM_ATTRIBUTES),
@@ -144,8 +147,14 @@ class DataExport():
             "Tool": (self.opencti.tool.list, CUSTOM_ATTRIBUTES),
             "Vulnerability": (self.opencti.vulnerability.list, CUSTOM_ATTRIBUTES),
             "Incident": (self.opencti.incident.list, CUSTOM_ATTRIBUTES),
-            "Stix-Cyber-Observable": (self.opencti.stix_cyber_observable.list, CUSTOM_ATTRIBUTES_OBSERVABLE),
-            "stix_core_relationship": (self.opencti.stix_core_relationship.list, CUSTOM_ATTRIBUTES_NO_NAME),
+            "Stix-Cyber-Observable": (
+                self.opencti.stix_cyber_observable.list,
+                CUSTOM_ATTRIBUTES_OBSERVABLE,
+            ),
+            "stix_core_relationship": (
+                self.opencti.stix_core_relationship.list,
+                CUSTOM_ATTRIBUTES_NO_NAME,
+            ),
         }
         do_list, attributes = lister.get(
             entity_type, lambda **kwargs: self.unknown_type({"type": entity_type})
@@ -159,6 +168,7 @@ class DataExport():
             types=types,
             getAll=True,
         )
+
         def process_entity(entity):
             """gets the entity and adjacent relations
             :param entity: entity to be processed
@@ -178,7 +188,9 @@ class DataExport():
                 return individual_bundle
 
         # Run fetching of adjacent entities in parallel
-        bundle_list = Parallel(n_jobs=n_threads, prefer="threads")(delayed(process_entity)(entity) for entity in entities_list)
+        bundle_list = Parallel(n_jobs=n_threads, prefer="threads")(
+            delayed(process_entity)(entity) for entity in entities_list
+        )
 
         # Filter repeated uuids
         uuids = []
@@ -209,6 +221,7 @@ class DataExport():
                 if "id" in item and item["id"] not in uuids:
                     result.append(item)
         return result
+
     def pick_aliases(self, stix_object: Dict) -> Optional[List]:
         """check stix2 object for multiple aliases and return a list
         :param stix_object: valid stix2 object
@@ -226,6 +239,7 @@ class DataExport():
         elif "aliases" in stix_object:
             return stix_object["aliases"]
         return None
+
     def check_max_marking_definition(
         self, max_marking_definition_entity: Dict, entity_marking_definitions: List
     ) -> bool:
@@ -259,6 +273,7 @@ class DataExport():
             ):
                 return True
         return False
+
     def generate_export(self, entity: Dict) -> Dict:
         # Handle model deviation
         # Identities
@@ -367,6 +382,7 @@ class DataExport():
         if "updated_at" in entity:
             del entity["updated_at"]
         return {k: v for k, v in entity.items() if self.opencti.not_empty(v)}
+
     def prepare_export(
         self,
         entity: Dict,
@@ -545,7 +561,7 @@ class DataExport():
             # Get extra relations (from)
             stix_core_relationships = self.opencti.stix_core_relationship.list(
                 elementId=entity["x_opencti_id"],
-                customAttributes=CUSTOM_ATTRIBUTES_RELATIONSHIP
+                customAttributes=CUSTOM_ATTRIBUTES_RELATIONSHIP,
             )
             for stix_core_relationship in stix_core_relationships:
                 if self.check_max_marking_definition(
@@ -628,8 +644,14 @@ class DataExport():
                 "Tool": (self.opencti.tool.read, CUSTOM_ATTRIBUTES),
                 "Vulnerability": (self.opencti.vulnerability.read, CUSTOM_ATTRIBUTES),
                 "Incident": (self.opencti.incident.read, CUSTOM_ATTRIBUTES),
-                "Stix-Cyber-Observable": (self.opencti.stix_cyber_observable.read, CUSTOM_ATTRIBUTES_OBSERVABLE),
-                "stix_core_relationship": (self.opencti.stix_core_relationship.read, CUSTOM_ATTRIBUTES_NO_NAME),
+                "Stix-Cyber-Observable": (
+                    self.opencti.stix_cyber_observable.read,
+                    CUSTOM_ATTRIBUTES_OBSERVABLE,
+                ),
+                "stix_core_relationship": (
+                    self.opencti.stix_core_relationship.read,
+                    CUSTOM_ATTRIBUTES_NO_NAME,
+                ),
             }
             # Get extra objects
             for entity_object in objects_to_get:
@@ -655,8 +677,7 @@ class DataExport():
                             ),
                         )
                         entity_object_data = do_read(
-                            id=entity_object["id"],
-                            customAttributes=query_attributes
+                            id=entity_object["id"], customAttributes=query_attributes
                         )
                         stix_entity_object = self.prepare_export(
                             self.generate_export(entity_object_data),
@@ -679,7 +700,7 @@ class DataExport():
                 relation_object_data = self.prepare_export(
                     self.opencti.stix_core_relationship.read(
                         id=relation_object["id"],
-                        customAttributes=CUSTOM_ATTRIBUTES_RELATIONSHIP
+                        customAttributes=CUSTOM_ATTRIBUTES_RELATIONSHIP,
                     )
                 )
                 relation_object_bundle = self.filter_objects(
