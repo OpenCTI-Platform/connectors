@@ -2,9 +2,8 @@
 from typing import Any
 from bs4 import BeautifulSoup
 class Preprocessor:
-    def __init__(self,helper):
-        super().__init__() #this is not used for now. Idea is to create a TextProcessor class and have Preprocessor and Postprocessor inherit from it.
-        self.helper=helper
+    def __init__(self):
+        super().__init__()
 
     
     def extract_p_text(self,HTML):
@@ -29,7 +28,7 @@ class Preprocessor:
         blog = soup.get_text()
         return blog
     
-    def preprocess(self, blog : str) -> str: #this is the main function
+    def preprocess(self, blog : str) -> str:
         blog = self.extract_p_text(blog)
         return blog
 

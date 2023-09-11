@@ -14,7 +14,6 @@ class BlogFetcher:
         }
 
     def get_html(self,helper: OpenCTIConnectorHelper, url : str) -> str:
-        helper.log_debug(f"Fetching blog from {url}")
         blog_html = requests.get(url, headers=self.EXTERNAL_HEADERS).text
         helper.log_debug(f"html:\n{blog_html}")
         return blog_html

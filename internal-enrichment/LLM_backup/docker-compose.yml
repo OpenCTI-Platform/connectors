@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-gpt-enrichment:
+    image: opencti/connector-gpt-enrichment
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=GPT Enrichment
+      - CONNECTOR_SCOPE=Report # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - GPT_ENRICHMENT_TEMPERATURE=0.5 # From 0 (Conservative) to 1 (Aggressive)
+      - GPT_ENRICHMENT_MODEL=GPT-3.5-turbo-16k
+      - GPT_ENRICHMENT_API_KEY=ChangeMe
+      - GPT_ENRICHMENT_PROMPT_VERSION=v0.0.1
+    restart: always

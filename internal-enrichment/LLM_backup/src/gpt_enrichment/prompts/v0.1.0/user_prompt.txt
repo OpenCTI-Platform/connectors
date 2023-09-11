@@ -1,0 +1,17 @@
+Please extract the following fields from the provided cyber attack report. Use the instructions provided for extracting the fields. If a field is not specified in the report, write "N/A".
+
+title:
+victim_location:
+sectors:
+threat_actor:
+threat_actor_aliases:
+malware:
+targeted_software:
+tools:
+CVE:
+TTP:
+IoC:
+
+Please return a single json object, where each key is the name of the field.
+
+The blog starts here.
