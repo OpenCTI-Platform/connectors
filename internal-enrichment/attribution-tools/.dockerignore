@@ -1,0 +1,5 @@
+.env
+src/data/training_data
+__pycache__
+.venv/
+.pytest_cache
