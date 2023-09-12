@@ -323,12 +323,16 @@ class Taxii2Connector:
                         more = False
             else:
                 # Assuming newer versions will support next
-                while more != False:
+                while True:
                     objects = process_response(objects, response, version)
-                    # Get the next set of objects
-                    if (more := response["more"]) == True:
+
+                    # Check if "more" exists in response and its value is True
+                    if "more" in response and response["more"] == True:
                         filters["next"] = response["next"]
                         response = collection.get_objects(**filters)
+                    else:
+                        # "more" doesn't exist or is not True, exit the loop
+                        break
 
             # Create bundle
             new_bundle = {
