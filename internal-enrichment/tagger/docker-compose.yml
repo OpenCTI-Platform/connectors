@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-tagger:
-    image: opencti/connector-tagger:5.10.1
+    image: opencti/connector-tagger:5.10.2
     env_file:
       - .env
     restart: always
