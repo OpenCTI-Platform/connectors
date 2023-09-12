@@ -48,50 +48,58 @@ class HarfangLabConnector:
         self.harfanglab_source_list_name = get_config_variable(
             "HARFLANGLAB_SOURCE_LIST_NAME", ["harfanglab", "source_list_name"], config
         )
+        self.harfanglab_indicator_delete = get_config_variable(
+            "HARFLANGLAB_INDICATOR_DELETE", ["harfanglab", "indicator_delete"], config
+        )
         self.source_list = {
             "name": self.harfanglab_source_list_name,
+            "description": "Cyber Threat Intelligence knowledge imported from OpenCTI.",
             "enabled": True,
         }
 
-        # Yara pattern
-        response = requests.get(
-            self.api_url + '/YaraSource/',
-            headers=self.headers,
-            params={'search': self.harfanglab_source_list_name}
-        )
-        list_of_yara_sources = json.loads(response.content)['results']
+        # Check Live Stream ID
+        if (
+                self.helper.connect_live_stream_id is None
+                or self.helper.connect_live_stream_id == "ChangeMe"
+        ):
+            raise ValueError("Missing Live Stream ID")
 
-        element = next((x for x in list_of_yara_sources if x["name"] == self.harfanglab_source_list_name), None)
-        if element is None:
-            # create list
-            response = requests.post(
-                self.api_url + '/YaraSource/',
-                headers=self.headers,
-                json=self.source_list
-            )
-            self.harfanglab_yara_list_id = json.loads(response.content)['id']
+        # Yara Pattern
+        self.create_or_get_entity_source("YaraSource", "yara")
+        # Sigma Pattern
+        self.create_or_get_entity_source("SigmaSource", "sigma")
+        # Stix Pattern
+        self.create_or_get_entity_source("IOCSource", "stix")
+
+    def create_or_get_entity_source(self, uri, pattern):
+        response = self._query("get", f"/{uri}/", {'search': self.harfanglab_source_list_name})
+        list_of_sources = response['results']
+
+        source = self.find_source_match(list_of_sources)
+        if source is None:
+            create_source = self._query("post", f"/{uri}/", self.source_list)
+            if pattern == 'yara':
+                self.yara_list_id = create_source['id']
+                return self.helper.log_info(f'Yara Source ID create = {self.yara_list_id}')
+            elif pattern == 'sigma':
+                self.sigma_list_id = create_source['id']
+                return self.helper.log_info(f'Sigma Source ID create = {self.sigma_list_id}')
+            else:
+                self.stix_list_id = create_source['id']
+                return self.helper.log_info(f'Stix Source ID create = {self.stix_list_id}')
         else:
-            self.harfanglab_yara_list_id = element['id']
+            if pattern == 'yara':
+                self.yara_list_id = source['id']
+                return self.helper.log_info(f'Yara Source ID existing = {self.yara_list_id}')
+            elif pattern == 'sigma':
+                self.sigma_list_id = source['id']
+                return self.helper.log_info(f'Sigma Source ID existing = {self.sigma_list_id}')
+            else:
+                self.stix_list_id = source['id']
+                return self.helper.log_info(f'Stix Source ID existing = {self.stix_list_id}')
 
-        # Sigma pattern
-        response = requests.get(
-            self.api_url + '/SigmaSource/',
-            headers=self.headers,
-            params={'search': self.harfanglab_source_list_name}
-        )
-        list_of_sigma_sources = json.loads(response.content)['results']
-
-        element = next((x for x in list_of_sigma_sources if x["name"] == self.harfanglab_source_list_name), None)
-        if element is None:
-            # create list
-            response = requests.post(
-                self.api_url + '/SigmaSource/',
-                headers=self.headers,
-                json=self.source_list
-            )
-            self.harfanglab_sigma_list_id = json.loads(response.content)['id']
-        else:
-            self.harfanglab_sigma_list_id = element['id']
+    def find_source_match(self, source):
+        return next((x for x in source if x["name"] == self.harfanglab_source_list_name), None)
 
     def _process_message(self, msg):
         # _process_message
@@ -99,168 +107,163 @@ class HarfangLabConnector:
             data = json.loads(msg.data)["data"]
         except:
             raise ValueError("Cannot process the message")
-        # Handle creation
-        self.helper.log_info(f'Processing the object {data["id"]}')
 
+        # Handle create
         if msg.event == "create":
-            # TODO YARA, Sigma and IoC
-            # TODO Only revoked=false
             if data["type"] == "indicator" and data["revoked"] is False and OpenCTIConnectorHelper.get_attribute_in_extension("detection", data) is True:
-                if data["pattern_type"] == "yara":
-                    self.helper.log_info(
-                        "[CREATE] Processing indicator {"
-                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                        + "}"
-                    )
-                    yara_indicator = {
-                        "content": data["pattern"],
-                        "enabled": True,
-                        "hl_local_testing_status": "in_progress",
-                        "hl_status": "stable",
-                        "name": data["name"],
-                        "source_id": self.harfanglab_yara_list_id
-                    }
-                    response = requests.post(
-                        self.api_url + '/YaraFile/',
-                        headers=self.headers,
-                        json=yara_indicator
-                    )
-                    #TODO handle case where status contains many elements
-                    if json.loads(response.content)['status'][0]['status'] is False:
-                        self.helper.log_error(f"Error = {json.loads(response.content)['status'][0]['content']}")
-                    else:
-                        self.helper.log_info(f'Indicator YARA created = {response}')
-
-                elif data["pattern_type"] == "sigma":
-                    self.helper.log_info(
-                        "[CREATE] Processing indicator {"
-                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                        + "}"
-                    )
-                    sigma_indicator = {
-                        "block_on_agent": True,
-                        "content": data["pattern"],
-                        "enabled": True,
-                        "hl_local_testing_status": "in_progress",
-                        "hl_status": "stable",
-                        "name": data["name"],
-                        "source_id": self.harfanglab_sigma_list_id
-                    }
-                    response = requests.post(
-                        self.api_url + '/SigmaRule/',
-                        headers=self.headers,
-                        json=sigma_indicator
-                    )
-                    if json.loads(response.content)['status'][0]['status'] is False:
-                        self.helper.log_error(f"[CREATE] Error = {json.loads(response.content)['status'][0]['content']}")
-                    else:
-                        self.helper.log_info(f'Indicator SIGMA created = {response}')
-
-                # elif data["pattern_type"] == "stix":
-                #     # TODO check if it's the right name to get the type?
-                #     if data["x_opencti_main_observable_type"] in ["StixFile", "Domain-Name", "IPv4-Addr", "IPv6-Addr", "Url"]:
-                #         # TODO Exctract data from pattern
-                #         data["pattern"]
-
+                self.create_indicator(data, "yara", "YaraFile", self.yara_list_id)
+                self.create_indicator(data, "sigma", "SigmaRule", self.sigma_list_id)
+                self.create_indicator(data, "stix", "IOCRule", self.stix_list_id)
             return
 
         # Handle update
         if msg.event == "update":
             if data["type"] == "indicator":
-                if data["pattern_type"] == "yara":
-                    self.helper.log_info(
-                        "[UPDATE] Processing indicator {"
-                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                        + "}"
-                    )
-
-                    yara_indicator_previous_name = json.loads(msg.data)['context']['reverse_patch'][0]['value']
-                    # TODO Problem
-                    response_yara_name_indicator = requests.get(
-                        self.api_url + f'/YaraFile/?search={yara_indicator_previous_name}',
-                        headers=self.headers,
-                    )
-
-                    response_yara_content = response_yara_name_indicator.content
-                    response_yara_content_count = json.loads(response_yara_content)['count']
-                    response_yara_status_code = response_yara_name_indicator.status_code
-
-                    if response_yara_status_code != 200:
-                        msg_log = f'[UPDATE] The request returned code {response_yara_status_code}'
-                        self.helper.log_error(msg_log),
-                    elif response_yara_content_count == 0:
-                        # TODO : Creates an indicator when count = 0
-                        msg_log = f'[UPDATE] The searched name of the Yara indicator ({yara_indicator_previous_name}) does not exist in HarfangLab'
-                        self.helper.log_error(msg_log),
-                    else:
-                        response_yara_content_id = json.loads(response_yara_content)['results'][0]['id']
-
-                        yara_indicator = {
-                            "name": data["name"],
-                            "content": data["pattern"],
-                            "source_id": self.harfanglab_yara_list_id
-                        }
-
-                        response = requests.put(
-                            self.api_url + f'/YaraFile/{response_yara_content_id}/',
-                            headers=self.headers,
-                            json=yara_indicator
-                        )
-                        # TODO handle case where status contains many elements
-                        if response.status_code != 200:
-                            msg_log = f"[UPDATE] Error {response.status_code} = {json.loads(response.content)['detail']}"
-                            self.helper.log_error(msg_log)
-                        else:
-                            self.helper.log_info(f'Indicator YARA updated')
-
-                if data["pattern_type"] == "sigma":
-                    self.helper.log_info(
-                        "[UPDATE] Processing indicator {"
-                        + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                        + "}"
-                    )
-
-                    sigma_indicator_previous_name = json.loads(msg.data)['context']['reverse_patch'][0]['value']
-                    response_sigma_name_indicator = requests.get(
-                        self.api_url + f'/SigmaRule/?search={sigma_indicator_previous_name}',
-                        headers=self.headers,
-                        )
-
-                    response_sigma_content = response_sigma_name_indicator.content
-                    response_sigma_content_count = json.loads(response_sigma_content)['count']
-                    response_sigma_status_code = response_sigma_name_indicator.status_code
-
-                    if response_sigma_status_code != 200:
-                        msg_log = f'[UPDATE] The request returned code {response_sigma_status_code}'
-                        self.helper.log_error(msg_log),
-                    elif response_sigma_content_count == 0:
-                        msg_log = f'[UPDATE] The searched name of the Sigma indicator ({sigma_indicator_previous_name}) does not exist in HarfangLab'
-                        self.helper.log_error(msg_log),
-                    else:
-                        response_sigma_content_id = json.loads(response_sigma_content)['results'][0]['id']
-
-                        sigma_indicator = {
-                            "name": data["name"],
-                            "content": data["pattern"],
-                            "source_id": self.harfanglab_sigma_list_id
-                        }
-
-                        response = requests.put(
-                            self.api_url + f'/SigmaRule/{response_sigma_content_id}/',
-                            headers=self.headers,
-                            json=sigma_indicator
-                        )
-                        # TODO handle case where status contains many elements
-                        if response.status_code != 200:
-                            msg = f"[UPDATE] Error {response.status_code} = {json.loads(response.content)['detail']}"
-                            self.helper.log_error(msg)
-                        else:
-                            self.helper.log_info(f'Indicator SIGMA updated')
-
+                self.update_indicator(data, msg, "yara", "YaraFile", self.yara_list_id)
+                self.update_indicator(data, msg, "sigma", "SigmaRule", self.sigma_list_id)
+                self.update_indicator(data, msg, "stix", "IOCRule", self.stix_list_id)
             return
+
+        # Handle delete
         if msg.event == "delete":
             return
 
+    def create_indicator(self, data, pattern, uri, list_id):
+        if data["pattern_type"] == f"{pattern}":
+            self.helper.log_info(
+                f"[CREATE] Processing {pattern} indicator" + " {"
+                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                + "}"
+            )
+
+            payload = self.pattern_payload(data, pattern, list_id)
+            response = self._query("post", f"/{uri}/", payload)
+
+            # TODO handle case where status contains many elements ?
+            # Be careful sometimes there is a return response HarfangLab {'status':[]}
+            if not response['status']:
+                return self.helper.log_error(f"Error missing value")
+            elif response['status'][0]['status'] is False:
+                # {"ERROR", "message": "Error duplicate_rule = A rule with this ID already exists"}
+                return self.helper.log_error(f"Error {response['status'][0]['code']} = {response['status'][0]['content']}")
+            elif response is None:
+                return self.helper.log_error(f"[CREATE] Indicator {pattern} not created")
+            else:
+                return self.helper.log_info(f"[CREATE] Indicator {pattern} created = {response['status'][0]['id']}")
+
+    def update_indicator(self, data, msg, pattern, uri, list_id):
+        if data["pattern_type"] == f"{pattern}":
+            self.helper.log_info(
+                f"[UPDATE] Processing {pattern} indicator" + " {"
+                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                + "}"
+            )
+
+            indicator_previous_name = json.loads(msg.data)['context']['reverse_patch'][0]['value']
+
+            # TODO Problem
+            response_name_indicator = self._query("get", f"/{uri}/?search={indicator_previous_name}")
+
+            response_element = next((x for x in response_name_indicator['results'] if x["name"] == indicator_previous_name), None)
+
+            if response_element is None:
+                # TODO : Creates an indicator when response_element is None
+                msg_log = f'[UPDATE] The searched name of the {pattern} indicator ({indicator_previous_name}) does not exist in HarfangLab'
+                return self.helper.log_error(msg_log),
+            else:
+                response_id = response_element['id']
+
+                payload = self.pattern_payload(data, pattern, list_id)
+                response = self._query("put", f"/{uri}/{response_id}/", payload)
+
+                # TODO handle case where status contains many elements
+                if response is None:
+                    return self.helper.log_error(f"[UPDATE] Indicator {pattern} not updated = {response_id}")
+                else:
+                    return self.helper.log_info(f"[UPDATE] Indicator {pattern} updated = {response_id}")
+
+    def pattern_payload(self, data, pattern, list_id):
+        if pattern == 'yara':
+            return {
+                "content": data["pattern"],
+                "name": data["name"],
+                "source_id": list_id,
+
+                "enabled": True,
+                "hl_local_testing_status": "in_progress",
+                "hl_status": "stable"
+            }
+        elif pattern == 'sigma':
+            return {
+                "content": data["pattern"],
+                "name": data["name"],
+                "source_id": list_id,
+
+                "enabled": True,
+                "hl_local_testing_status": "in_progress",
+                "hl_status": "stable",
+                # "block_on_agent": True,
+                # "rule_level_override": "critical"
+            }
+        elif pattern == "stix":
+            return {
+                # "source_id": list_id,
+                # "type": ["domain_name", "filename", "filepath", "hash", "ip_both", "ip_dst", "ip_src", "url"],
+                # "value": data,
+
+                # "enabled": True,
+                # "hl_local_testing_status": "in_progress",
+                # "hl_status": "stable",
+                # "description": "string",
+                # "comment": "string",
+                # "category": "string",
+                # "info": "string",
+                # "reference": ["string"]
+            }
+        else:
+            raise ValueError("Unsupported Pattern")
+
+    def _query(self, method, uri, payload=None):
+        if method == "get":
+            response = requests.get(
+                self.api_url + uri,
+                headers=self.headers,
+                params=payload,
+                )
+        elif method == "post":
+            response = requests.post(
+                self.api_url + uri,
+                headers=self.headers,
+                json=payload,
+                )
+        elif method == "put":
+            response = requests.put(
+                self.api_url + uri,
+                headers=self.headers,
+                json=payload,
+            )
+        elif method == "delete":
+            response = requests.delete(
+                self.api_url + uri,
+                headers=self.headers,
+                json=payload,
+            )
+        else:
+            raise ValueError("Unsupported method")
+        if response.status_code == 200 or response.status_code == 201:
+            try:
+                return response.json()
+            except:
+                return response.text
+        elif response.status_code == 400:
+            msg_log = f"Status code 400 : Bad Request = {json.loads(response.content)}"
+            return self.helper.log_error(msg_log)
+        elif response.status_code == 401:
+            msg_log = "Status code 401 : Query failed, permission denied"
+            self.helper.log_error(msg_log)
+            raise ValueError(msg_log)
+        else:
+            self.helper.log_info(f"{response.text}")
 
     def start(self):
         self.helper.listen_stream(self._process_message)
