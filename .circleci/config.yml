@@ -591,6 +591,10 @@ jobs:
           name: Build Docker image opencti/connector-phishunt
           command: docker build -t opencti/connector-phishunt:latest . && docker tag opencti/connector-phishunt:latest opencti/connector-phishunt:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/attribution-tools
+          name: Build Docker image opencti/connector-attribution-tools
+          command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -698,6 +702,8 @@ jobs:
             docker push opencti/connector-stopforumspam:${CIRCLE_TAG}
             docker push opencti/connector-phishunt:latest
             docker push opencti/connector-phishunt:${CIRCLE_TAG}
+            docker push opencti/connector-attribution-tools:latest
+            docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1193,6 +1199,10 @@ jobs:
           name: Build Docker image opencti/connector-phishunt
           command: docker build -t opencti/connector-phishunt:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/attribution-tools
+          name: Build Docker image opencti/connector-attribution-tools
+          command: docker build -t opencti/connector-attribution-tools:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1249,6 +1259,7 @@ jobs:
             docker push opencti/connector-lastinfosec-enrichment:rolling
             docker push opencti/connector-stopforumspam:rolling
             docker push opencti/connector-phishunt:rolling
+            docker push opencti/connector-attribution-tools:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
