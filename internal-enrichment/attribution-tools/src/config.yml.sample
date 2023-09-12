@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: ChangeMe
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'attribution-tools'
+  scope: 'Incident'
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: True
+  log_level: 'info'
+
+# attribution tools specific settings
+attributiontools:
+  # Schedule of automatic model retraining in cron format (UTC)
+  model_training_cron_utc: '0 0 * * *'
+  # >0 Number threads used to fetch data from the platform in parallel for training
+  n_training_query_threads: 4
+  # 0-100 default confidence of automatically created relations
+  default_relation_confidence: 1
+  # boolean: enable or disable automatic relation creation
+  automatic_relation_creation: false
+  # 0.0-1.0 minimum probability required for automatic relation creation
+  relation_creation_probability_treshold: 0.9
+  # Stix id of identity object that is marked as the creator of the automatically created relations
+  creator_org_identity_id: 'identity--b0963901-cb74-56b2-9add-92c6d1a10332'
