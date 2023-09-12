@@ -1,4 +1,4 @@
-FROM python:3.8-slim
+FROM python:3.11-slim
 
 # Copy the worker
 COPY src /opt/opencti-connector-attribution-tools
