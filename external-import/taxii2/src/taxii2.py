@@ -295,9 +295,6 @@ class Taxii2Connector:
         self.helper.log_info(f"Polling Collection {collection.title}")
 
         # Initial request
-        # If configured for Taxii 2.1, add next to filters
-        if self.taxii2v21:
-            filters["next"] = None
         response = collection.get_objects(**filters)
         more = None
         objects = []
