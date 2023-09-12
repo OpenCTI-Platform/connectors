@@ -297,7 +297,7 @@ requests = ">=2.9"
 six = "*"
 
 [package.extras]
-dev = ["black (>=23.1.0,<23.2.0)", "build (>=0.8.0,<0.9.0)", "isort (>=5.10.1,<5.11.0)", "pre-commit (>=2.20.0,<2.21.0)", "pytest (>=7.1.2,<7.2.0)", "pytest-cases (>=3.6.13,<3.7.0)", "pytest-cov (>=3.0.0,<3.1.0)", "pytest-randomly (>=3.12.0,<3.13.0)", "types-python-dateutil (>=2.8.19,<2.9.0)", "types-pytz (>=2022.2.1.0,<2022.3.0.0)", "wheel (>=0.37.1,<0.38.0)"]
+dev = ["black (>=23.1.0,<23.2.0)", "build (>=0.8.0,<0.9.0)", "isort (>=5.10.2,<5.11.0)", "pre-commit (>=2.20.0,<2.21.0)", "pytest (>=7.1.2,<7.2.0)", "pytest-cases (>=3.6.13,<3.7.0)", "pytest-cov (>=3.0.0,<3.1.0)", "pytest-randomly (>=3.12.0,<3.13.0)", "types-python-dateutil (>=2.8.19,<2.9.0)", "types-pytz (>=2022.2.1.0,<2022.3.0.0)", "wheel (>=0.37.1,<0.38.0)"]
 doc = ["autoapi (>=2.0.1,<2.1.0)", "sphinx-autodoc-typehints (>=1.19.2,<1.20.0)", "sphinx-rtd-theme (>=1.0.0,<1.1.0)"]
 
 [[package]]
@@ -470,14 +470,14 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.10.1"
+version = "5.10.2"
 description = "Python API client for OpenCTI."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.10.1-py3-none-any.whl", hash = "sha256:ea5c510e1d1460fb81ec4545631817ba1ae4e2d080ed216d1987061325ce82dd"},
-    {file = "pycti-5.10.1.tar.gz", hash = "sha256:797912a2dcb2554219b9101c82f0abdfb2626215bd1db87b8b279fb34807b670"},
+    {file = "pycti-5.10.2-py3-none-any.whl", hash = "sha256:ea5c510e1d1460fb81ec4545631817ba1ae4e2d080ed216d1987061325ce82dd"},
+    {file = "pycti-5.10.2.tar.gz", hash = "sha256:797912a2dcb2554219b9101c82f0abdfb2626215bd1db87b8b279fb34807b670"},
 ]
 
 [package.dependencies]

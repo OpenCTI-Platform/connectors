@@ -7,7 +7,7 @@ authors = []
 [tool.poetry.dependencies]
 python = "^3.10"
 requests = "^2.28.0"
-pycti = "5.10.1"
+pycti = "5.10.2"
 validators = "^0.22.0"
 pydantic = "^1.10.11"
 
