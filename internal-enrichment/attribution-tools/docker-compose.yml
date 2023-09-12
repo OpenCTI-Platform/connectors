@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-attribution-tools:
-    image: opencti/connector-attribution-tools:5.10.1
+    image: opencti/connector-attribution-tools:5.10.2
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
