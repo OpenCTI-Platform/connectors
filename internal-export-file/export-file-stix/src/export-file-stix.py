@@ -52,11 +52,6 @@ class ExportFileStix:
             )
 
         else:  # export_scope = 'query' or 'selection'
-            if "element_id" in data:
-                element_id = data["element_id"]
-            else:
-                element_id = None
-
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
                 list_filters = "selected_ids"
@@ -87,7 +82,7 @@ class ExportFileStix:
                     entities_list.append(entity_data)
 
                 bundle = self.helper.api_impersonate.stix2.export_selected(
-                    entity_type, entities_list, export_type, max_marking, element_id
+                    entities_list, export_type, max_marking
                 )
 
             else:  # export_scope = 'query'
@@ -106,17 +101,16 @@ class ExportFileStix:
                     list_params["filters"],
                     list_params["orderBy"],
                     list_params["orderMode"],
-                    max_marking,
                     export_type,
+                    max_marking,
                     list_params.get("types"),
-                    list_params.get("elementId"),
+                    list_params.get("elementId"),  # data["element_id"] ?
                     list_params.get("fromId"),
                     list_params.get("toId"),
                     list_params.get("elementWithTargetTypes"),
                     list_params.get("fromTypes"),
                     list_params.get("toTypes"),
                     list_params.get("relationship_type"),
-                    element_id,
                 )
                 list_filters = json.dumps(list_params)
 
