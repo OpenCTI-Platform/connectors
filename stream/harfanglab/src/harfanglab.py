@@ -102,7 +102,6 @@ class HarfangLabConnector:
         return next((x for x in source if x["name"] == self.harfanglab_source_list_name), None)
 
     def _process_message(self, msg):
-        # _process_message
         try:
             data = json.loads(msg.data)["data"]
         except:
@@ -140,14 +139,14 @@ class HarfangLabConnector:
             response = self._query("post", f"/{uri}/", payload)
 
             # TODO handle case where status contains many elements ?
+            if response is None:
+                return self.helper.log_error(f"[CREATE] Indicator {pattern} not created")
             # Be careful sometimes there is a return response HarfangLab {'status':[]}
-            if not response['status']:
+            elif not response['status']:
                 return self.helper.log_error(f"Error missing value")
             elif response['status'][0]['status'] is False:
                 # {"ERROR", "message": "Error duplicate_rule = A rule with this ID already exists"}
                 return self.helper.log_error(f"Error {response['status'][0]['code']} = {response['status'][0]['content']}")
-            elif response is None:
-                return self.helper.log_error(f"[CREATE] Indicator {pattern} not created")
             else:
                 return self.helper.log_info(f"[CREATE] Indicator {pattern} created = {response['status'][0]['id']}")
 
@@ -163,13 +162,19 @@ class HarfangLabConnector:
 
             # TODO Problem
             response_name_indicator = self._query("get", f"/{uri}/?search={indicator_previous_name}")
-
             response_element = next((x for x in response_name_indicator['results'] if x["name"] == indicator_previous_name), None)
 
             if response_element is None:
-                # TODO : Creates an indicator when response_element is None
-                msg_log = f'[UPDATE] The searched name of the {pattern} indicator ({indicator_previous_name}) does not exist in HarfangLab'
-                return self.helper.log_error(msg_log),
+                # UPSERT
+                if data["pattern_type"] == "yara":
+                    self.create_indicator(data, "yara", "YaraFile", self.yara_list_id)
+                elif data["pattern_type"] == "sigma":
+                    self.create_indicator(data, "sigma", "SigmaRule", self.sigma_list_id)
+                elif data["pattern_type"] == "stix":
+                    self.create_indicator(data, "stix", "IOCRule", self.stix_list_id)
+                else:
+                    raise ValueError("Unsupported Pattern")
+                return
             else:
                 response_id = response_element['id']
 
@@ -207,14 +212,15 @@ class HarfangLabConnector:
             }
         elif pattern == "stix":
             return {
-                # "source_id": list_id,
+                "source_id": list_id,
                 # "type": ["domain_name", "filename", "filepath", "hash", "ip_both", "ip_dst", "ip_src", "url"],
-                # "value": data,
+                "type": "domain_name",
+                "value": data['pattern'],
 
-                # "enabled": True,
+                "enabled": True,
                 # "hl_local_testing_status": "in_progress",
                 # "hl_status": "stable",
-                # "description": "string",
+                "description": data['description'],
                 # "comment": "string",
                 # "category": "string",
                 # "info": "string",
@@ -246,7 +252,6 @@ class HarfangLabConnector:
             response = requests.delete(
                 self.api_url + uri,
                 headers=self.headers,
-                json=payload,
             )
         else:
             raise ValueError("Unsupported method")
