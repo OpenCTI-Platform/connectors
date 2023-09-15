@@ -6,18 +6,19 @@ from typing import Any, Mapping, Optional
 import stix2
 from dateutil import parser
 from pycti import (
-    OpenCTIConnectorHelper,
-    Report,
-    IntrusionSet,
-    Malware,
-    Tool,
     AttackPattern,
     Identity,
-    Location,
     Indicator,
-    Vulnerability,
+    IntrusionSet,
+    Location,
+    Malware,
+    OpenCTIConnectorHelper,
+    Report,
     StixCoreRelationship,
+    Tool,
+    Vulnerability,
 )
+
 from .utils import datetime_to_timestamp
 
 
