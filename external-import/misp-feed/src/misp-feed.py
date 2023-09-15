@@ -337,6 +337,7 @@ class MispFeed:
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
                                 name=name,
+                                confidence=self.helper.connect_confidence_level,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author["id"],
@@ -490,7 +491,7 @@ class MispFeed:
                                 stix2.IntrusionSet(
                                     id=IntrusionSet.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    description="Imported from MISP tag",
+                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -503,7 +504,7 @@ class MispFeed:
                                     id=Malware.generate_id(threat["name"]),
                                     name=threat["name"],
                                     is_family=True,
-                                    description="Imported from MISP tag",
+                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -515,7 +516,7 @@ class MispFeed:
                                 stix2.Tool(
                                     id=Tool.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    description="Imported from MISP tag",
+                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -527,7 +528,7 @@ class MispFeed:
                                 stix2.AttackPattern(
                                     id=AttackPattern.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    description="Imported from MISP tag",
+                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -564,7 +565,7 @@ class MispFeed:
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
                                 name=name,
-                                description="Imported from MISP tag",
+                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -587,7 +588,7 @@ class MispFeed:
                             stix2.Tool(
                                 id=Tool.generate_id(name),
                                 name=name,
-                                description="Imported from MISP tag",
+                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -616,7 +617,7 @@ class MispFeed:
                                 id=Malware.generate_id(name),
                                 name=name,
                                 is_family=True,
-                                description="Imported from MISP tag",
+                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -637,7 +638,7 @@ class MispFeed:
                             stix2.AttackPattern(
                                 id=AttackPattern.generate_id(name),
                                 name=name,
-                                description="Imported from MISP tag",
+                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -654,7 +655,7 @@ class MispFeed:
                             stix2.Identity(
                                 id=Identity.generate_id(name, "class"),
                                 name=name,
-                                description="Imported from MISP tag",
+                                confidence=self.helper.connect_confidence_level,
                                 identity_class="class",
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
