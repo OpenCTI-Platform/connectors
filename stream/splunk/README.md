@@ -41,5 +41,15 @@ This connector allows organizations to feed a **Splunk** KV Store using OpenCTI 
 - You may have to whitelist your connector EGRESS IP address to hit the API endpoint: Settings > Server Settings > IP allow list > Search head API Access (tab)
 - As a splunk_url, it is recommended to use your search head instance, so that the created kvstore is replicated across your other splunk instances. Note that any kvstore created on "non-search head" won't be replicated nor visible on the search head.
 - The connector will create a kvstore named as per splunk_kv_store_name field value. Note that no other existing object in your splunk instance can have the same name.
-- Once the kvstore created, you want to create some lookup definitions for CRUD operations against your kvstore: Settings > Knowledge > Lookups > Lookup definitions > Add new
-  - As an example of lookup definition, you may want to extract the following supported fields `_key,type,value,hashes,pattern,created_at,updated_at,score,labels,splunk_queries.queries,created_by`
+- Once the kvstore is created, you want to create some lookup definitions for CRUD operations against your kvstore: Settings > Knowledge > Lookups > Lookup definitions > Add new
+  - As an example of lookup definition, you may want to extract the following supported fields:
+
+| type        | supported fields                                                                         |
+| ----------- | ---------------------------------------------------------------------------------------- |
+| domain-name | `_key,type,value,created_at,updated_at,score,labels,created_by`                          |
+| url         | `_key,type,value,created_at,updated_at,score,labels,created_by`                          |
+| ipv4-addr   | `_key,type,value,created_at,updated_at,score,labels,created_by`                          |
+| url         | `_key,type,value,created_at,updated_at,score,labels,created_by`                          |
+| file        | `_key,type,hashes,created_at,updated_at,score,labels,created_by`                         |
+| indicator   | `_key,type,pattern,created_at,updated_at,score,labels,splunk_queries.queries,created_by` |
+| ...         | ...etc...                                                                                |
