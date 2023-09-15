@@ -47,9 +47,9 @@ class RiskIQConnector:
         password = get_config_variable(
             "RISKIQ_PASSWORD", ["riskiq", "password"], config
         )
-        self.create_indicators = get_config_variable(
-            "RISKIQ_CREATE_INDICATORS",
-            ["riskiq", "create_indicators"],
+        self.create_observables = get_config_variable(
+            "RISKIQ_CREATE_OBSERVABLES",
+            ["riskiq", "create_observables"],
             config,
             False,
             True,
@@ -157,7 +157,7 @@ class RiskIQConnector:
                                 self.helper,
                                 article,
                                 self.author,
-                                self.create_indicators,
+                                self.create_observables,
                             )
                             importer_state = importer.run(work_id, current_state)
                             if importer_state:
