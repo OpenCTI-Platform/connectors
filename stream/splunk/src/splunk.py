@@ -209,9 +209,6 @@ class SplunkConnector:
                     except:
                         payload["mapped_values"] = []
 
-                payload["value"] = payload["pattern"]
-                del payload["pattern"]
-
             # add creator's name
             created_by = payload.get("created_by_ref", None)
             if created_by is not None:
