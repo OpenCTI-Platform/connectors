@@ -258,8 +258,8 @@ class Taxii2Connector:
                 if self.add_custom_label == True:
                     new_labels.append(self.custom_label)
                     object["labels"] = new_labels
-                # Force name to be pattern and enumerate main observable type.
-                if self.force_pattern_as_name == True and object["type"] == "indicator":
+                # Enumerate main observable type
+                if object["type"] == "indicator":
                     match = re.search(r"\[(.*?):.*'(.*?)\'\]", object["pattern"])
                     if match != None:
                         if match[1] == "ipv4-addr":
@@ -274,11 +274,13 @@ class Taxii2Connector:
                             object["x_opencti_main_observable_type"] = "Url"
                         elif match[1] == "email-addr":
                             object["x_opencti_main_observable_type"] = "Email-Addr"
-                    if " AND " in object["pattern"] or " OR " in object["pattern"]:
-                        object["name"] = self.force_multiple_pattern_name
-                    else:
-                        if match != None:
-                            object["name"] = match[2]
+                    # Force name to be derived from pattern
+                    if self.force_pattern_as_name == True:
+                        if " AND " in object["pattern"] or " OR " in object["pattern"]:
+                            object["name"] = self.force_multiple_pattern_name
+                        else:
+                            if match != None:
+                                object["name"] = match[2]
                 objects.append(object)
             return objects
 
@@ -293,9 +295,6 @@ class Taxii2Connector:
         self.helper.log_info(f"Polling Collection {collection.title}")
 
         # Initial request
-        # If configured for Taxii 2.1, add next to filters
-        if self.taxii2v21:
-            filters["next"] = None
         response = collection.get_objects(**filters)
         more = None
         objects = []
@@ -323,12 +322,16 @@ class Taxii2Connector:
                         more = False
             else:
                 # Assuming newer versions will support next
-                while more != False:
+                while True:
                     objects = process_response(objects, response, version)
-                    # Get the next set of objects
-                    if (more := response["more"]) == True:
+
+                    # Check if "more" exists in response and its value is True
+                    if "more" in response and response["more"] == True:
                         filters["next"] = response["next"]
                         response = collection.get_objects(**filters)
+                    else:
+                        # "more" doesn't exist or is not True, exit the loop
+                        break
 
             # Create bundle
             new_bundle = {
