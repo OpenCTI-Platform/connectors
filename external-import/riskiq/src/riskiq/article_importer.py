@@ -736,40 +736,41 @@ class ArticleImporter:
             + indicators_observables_relationships
             + relationships
         )
-        report = stix2.Report(
-            id=Report.generate_id(
-                self.article.get("title", "RiskIQ Threat Report"), published
-            ),
-            type="report",
-            name=self.article.get("title", "RiskIQ Threat Report"),
-            description=self.article["summary"],
-            report_types=["threat-report"],
-            confidence=self.helper.connect_confidence_level,
-            created_by_ref=self.author,
-            created=created,
-            published=published,
-            lang="en",
-            labels=self.article["tags"],
-            object_refs=objects,
-            object_marking_refs=report_tlp,
-            external_references=[
-                {
-                    "source_name": "riskiq",
-                    "url": self.article["link"],
-                    "external_id": self.article["guid"],
-                }
-            ],
-            allow_custom=True,
-        )
-        self.helper.log_debug(f"[RiskIQ] Report = {report}")
+        if len(objects) > 0:
+            report = stix2.Report(
+                id=Report.generate_id(
+                    self.article.get("title", "RiskIQ Threat Report"), published
+                ),
+                type="report",
+                name=self.article.get("title", "RiskIQ Threat Report"),
+                description=self.article["summary"],
+                report_types=["threat-report"],
+                confidence=self.helper.connect_confidence_level,
+                created_by_ref=self.author,
+                created=created,
+                published=published,
+                lang="en",
+                labels=self.article["tags"],
+                object_refs=objects,
+                object_marking_refs=report_tlp,
+                external_references=[
+                    {
+                        "source_name": "riskiq",
+                        "url": self.article["link"],
+                        "external_id": self.article["guid"],
+                    }
+                ],
+                allow_custom=True,
+            )
+            self.helper.log_debug(f"[RiskIQ] Report = {report}")
 
-        bundle = stix2.Bundle(
-            objects=objects + [report, self.author], allow_custom=True
-        )
-        self.helper.log_info("[RiskIQ] Sending report STIX2 bundle")
-        self._send_bundle(bundle)
+            bundle = stix2.Bundle(
+                objects=objects + [report, self.author], allow_custom=True
+            )
+            self.helper.log_info("[RiskIQ] Sending report STIX2 bundle")
+            self._send_bundle(bundle)
 
-        return self._create_state(created)
+            return self._create_state(created)
 
     @classmethod
     def _create_state(
