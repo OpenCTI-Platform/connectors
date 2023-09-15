@@ -15,6 +15,7 @@ from pycti import (
     Identity,
     Location,
     Indicator,
+    Vulnerability,
     StixCoreRelationship,
 )
 from .utils import datetime_to_timestamp
@@ -70,6 +71,7 @@ class ArticleImporter:
                     pattern = "[file:hashes.'MD5' = '" + v + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v,
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -101,6 +103,7 @@ class ArticleImporter:
                     pattern = "[file:hashes.'SHA-1' = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v,
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -535,6 +538,7 @@ class ArticleImporter:
             "malwares": [],
             "tools": [],
             "attack_patterns": [],
+            "vulnerabilities": [],
         }
         relationships = []
         # Resolve objects
@@ -547,6 +551,7 @@ class ArticleImporter:
                     "Attack-Pattern",
                     "Sector",
                     "Country",
+                    "Vulnerability",
                 ],
                 filters=[{"key": ["name", "x_mitre_id"], "values": [tag]}],
             )
@@ -614,6 +619,16 @@ class ArticleImporter:
                             allow_custom=True,
                         )
                     )
+                if entity["entity_type"] == "Vulnerability":
+                    elements["vulnerabilities"].append(
+                        stix2.Vulnerability(
+                            id=Vulnerability.generate_id(entity["name"]),
+                            name=entity["name"],
+                            created_by_ref=self.author,
+                            object_marking_refs=report_tlp,
+                            allow_custom=True,
+                        )
+                    )
         threats = elements["intrusion_sets"] + elements["malwares"] + elements["tools"]
         victims = elements["sectors"] + elements["countries"]
         for threat in threats:
@@ -647,6 +662,21 @@ class ArticleImporter:
                         allow_custom=True,
                     )
                 )
+            for vulnerability in elements["vulnerabilities"]:
+                relationships.append(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "targets", threat.id, vulnerability.id
+                        ),
+                        relationship_type="targets",
+                        created_by_ref=self.author,
+                        source_ref=threat.id,
+                        target_ref=vulnerability.id,
+                        object_marking_refs=report_tlp,
+                        confidence=self.helper.connect_confidence_level,
+                        allow_custom=True,
+                    )
+                )
             for attack_pattern in elements["attack_patterns"]:
                 relationships.append(
                     stix2.Relationship(
@@ -664,6 +694,7 @@ class ArticleImporter:
                 )
         objects = (
             elements["attack_patterns"]
+            + elements["vulnerabilities"]
             + elements["intrusion_sets"]
             + elements["malwares"]
             + elements["tools"]
