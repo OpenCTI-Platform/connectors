@@ -15,5 +15,5 @@ riskiq:
   base_url: "https://api.riskiq.net/pt/v2/"
   user: 'ChangeMe'
   password: 'ChangeMe'
-  create_indicators: true
+  create_observables: true
   interval_sec: 86400
