@@ -516,7 +516,7 @@ class ArticleImporter:
                             target_ref=observable.id,
                             allow_custom=True,
                         )
-                        objects["indicators"].append(observable)
+                        objects["observables"].append(observable)
                         objects["relationships"].append(relationship)
             return objects
         except Exception as e:
