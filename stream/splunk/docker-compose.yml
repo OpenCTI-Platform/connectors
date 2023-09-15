@@ -20,5 +20,5 @@ services:
       - SPLUNK_SSL_VERIFY=true
       - SPLUNK_APP=search
       - SPLUNK_KV_STORE_NAME=opencti
-      - SPLUNK_IGNORE_TYPES=label,marking-definition,identity
+      - SPLUNK_IGNORE_TYPES="attack-pattern,campaign,course-of-action,data-component,data-source,external-reference,identity,intrusion-set,kill-chain-phase,label,location,malware,marking-definition,relationship,threat-actor,tool,vocabulary,vulnerability"
     restart: always

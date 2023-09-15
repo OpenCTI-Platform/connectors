@@ -21,7 +21,7 @@ splunk:
   ssl_verify: true
   app: 'search'
   kv_store_name: 'opencti'
-  ignore_types: 'label,marking-definition,identity'
+  ignore_types: 'attack-pattern,campaign,course-of-action,data-component,data-source,external-reference,identity,intrusion-set,kill-chain-phase,label,location,malware,marking-definition,relationship,threat-actor,tool,vocabulary,vulnerability'
 
 metrics:
   enable: true # set to true to expose prometheus metrics

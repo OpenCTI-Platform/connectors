@@ -171,44 +171,46 @@ class SplunkConnector:
         # add stream name
         payload["stream_name"] = self.helper.get_stream_collection()["name"]
 
-        if (
-            "type" in payload
-            and payload["type"] == "indicator"
-            and payload["pattern_type"].startswith("stix")
-        ):
-            # add splunk query
-            try:
-                translation = stix_translation.StixTranslation()
-                response = translation.translate(
-                    "splunk", "query", "{}", payload["pattern"]
-                )
-                payload["splunk_queries"] = response
-            except:
-                pass
-
-            # add mapped values
-            try:
-                parsed = translation.translate(
-                    "splunk", "parse", "{}", payload["pattern"]
-                )
-                if "parsed_stix" in parsed:
-                    payload["mapped_values"] = []
-                    for value in parsed["parsed_stix"]:
-                        formatted_value = {}
-                        formatted_value[sanitize_key(value["attribute"])] = value[
-                            "value"
-                        ]
-                        payload["mapped_values"].append(formatted_value)
-            except:
+        if "type" in payload:
+            if payload["type"] == "indicator" and payload["pattern_type"].startswith(
+                "stix"
+            ):
+                # add splunk query
                 try:
-                    splitted = payload["pattern"].split(" = ")
-                    key = sanitize_key(splitted[0].replace("[", ""))
-                    value = splitted[1].replace("'", "").replace("]", "")
-                    formatted_value = {}
-                    formatted_value[key] = value
-                    payload["mapped_values"] = [formatted_value]
+                    translation = stix_translation.StixTranslation()
+                    response = translation.translate(
+                        "splunk", "query", "{}", payload["pattern"]
+                    )
+                    payload["splunk_queries"] = response
                 except:
-                    payload["mapped_values"] = []
+                    pass
+
+                # add mapped values
+                try:
+                    parsed = translation.translate(
+                        "splunk", "parse", "{}", payload["pattern"]
+                    )
+                    if "parsed_stix" in parsed:
+                        payload["mapped_values"] = []
+                        for value in parsed["parsed_stix"]:
+                            formatted_value = {}
+                            formatted_value[sanitize_key(value["attribute"])] = value[
+                                "value"
+                            ]
+                            payload["mapped_values"].append(formatted_value)
+                except:
+                    try:
+                        splitted = payload["pattern"].split(" = ")
+                        key = sanitize_key(splitted[0].replace("[", ""))
+                        value = splitted[1].replace("'", "").replace("]", "")
+                        formatted_value = {}
+                        formatted_value[key] = value
+                        payload["mapped_values"] = [formatted_value]
+                    except:
+                        payload["mapped_values"] = []
+
+                payload["value"] = payload["pattern"]
+                del payload["pattern"]
 
             # add creator's name
             created_by = payload.get("created_by_ref", None)
@@ -216,6 +218,24 @@ class SplunkConnector:
                 org_name = self.get_org_name(created_by)
                 if org_name is not None:
                     payload["created_by"] = org_name
+
+        if "extensions" in payload:
+            to_remove = []
+            for k, extension_definition in payload["extensions"].items():
+                for attribute_name in [
+                    "score",
+                    "created_at",
+                    "updated_at",
+                    "labels",
+                    "is_inferred",
+                ]:
+                    attribute_value = extension_definition.get(attribute_name)
+                    if attribute_value:
+                        payload[attribute_name] = attribute_value
+                to_remove.append(k)
+            # remove extension-definition-UUID
+            for k in to_remove:
+                del payload["extensions"][k]
 
         return payload
 
