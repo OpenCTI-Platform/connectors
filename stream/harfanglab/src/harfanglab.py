@@ -75,7 +75,7 @@ class HarfangLabConnector:
         response = self._query("get", f"/{uri}/", {'search': self.harfanglab_source_list_name})
         list_of_sources = response['results']
 
-        source = self.find_source_match(list_of_sources)
+        source = self.find_data_name_match(list_of_sources, self.harfanglab_source_list_name)
         if source is None:
             create_source = self._query("post", f"/{uri}/", self.source_list)
             if pattern == 'yara':
@@ -98,9 +98,6 @@ class HarfangLabConnector:
                 self.stix_list_id = source['id']
                 return self.helper.log_info(f'Stix Source ID existing = {self.stix_list_id}')
 
-    def find_source_match(self, source):
-        return next((x for x in source if x["name"] == self.harfanglab_source_list_name), None)
-
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
@@ -110,21 +107,40 @@ class HarfangLabConnector:
         # Handle create
         if msg.event == "create":
             if data["type"] == "indicator" and data["revoked"] is False and OpenCTIConnectorHelper.get_attribute_in_extension("detection", data) is True:
-                self.create_indicator(data, "yara", "YaraFile", self.yara_list_id)
-                self.create_indicator(data, "sigma", "SigmaRule", self.sigma_list_id)
-                self.create_indicator(data, "stix", "IOCRule", self.stix_list_id)
+                if data['pattern_type'] == "yara":
+                    self.create_indicator(data, "yara", "YaraFile", self.yara_list_id)
+                elif data['pattern_type'] == "sigma":
+                    self.create_indicator(data, "sigma", "SigmaRule", self.sigma_list_id)
+                # elif data['pattern_type'] == "stix":
+                    # self.create_indicator(data, "stix", "IOCRule", self.stix_list_id)
+                else:
+                    raise ValueError("Unsupported Pattern Type")
             return
 
         # Handle update
         if msg.event == "update":
             if data["type"] == "indicator":
-                self.update_indicator(data, msg, "yara", "YaraFile", self.yara_list_id)
-                self.update_indicator(data, msg, "sigma", "SigmaRule", self.sigma_list_id)
-                self.update_indicator(data, msg, "stix", "IOCRule", self.stix_list_id)
+                if data['pattern_type'] == "yara":
+                    self.update_indicator(data, msg, "yara", "YaraFile", self.yara_list_id)
+                elif data['pattern_type'] == "sigma":
+                    self.update_indicator(data, msg, "sigma", "SigmaRule", self.sigma_list_id)
+                # elif data['pattern_type'] == "stix":
+                    # self.update_indicator(data, msg, "stix", "IOCRule", self.stix_list_id)
+                else:
+                    raise ValueError("Unsupported Pattern Type")
             return
 
         # Handle delete
         if msg.event == "delete":
+            if data["type"] == "indicator":
+                if data['pattern_type'] == "yara":
+                    self.delete_indicator(data, "yara", "YaraFile")
+                elif data['pattern_type'] == "sigma":
+                    self.delete_indicator(data, "sigma", "SigmaRule")
+                # elif data['pattern_type'] == "stix":
+                #     self.update_indicator(data, msg, "stix", "IOCRule")
+                else:
+                    raise ValueError("Unsupported Pattern")
             return
 
     def create_indicator(self, data, pattern, uri, list_id):
@@ -162,7 +178,7 @@ class HarfangLabConnector:
 
             # TODO Problem
             response_name_indicator = self._query("get", f"/{uri}/?search={indicator_previous_name}")
-            response_element = next((x for x in response_name_indicator['results'] if x["name"] == indicator_previous_name), None)
+            response_element = self.find_data_name_match(response_name_indicator['results'], indicator_previous_name)
 
             if response_element is None:
                 # UPSERT
@@ -187,6 +203,33 @@ class HarfangLabConnector:
                 else:
                     return self.helper.log_info(f"[UPDATE] Indicator {pattern} updated = {response_id}")
 
+    def delete_indicator(self, data, pattern, uri):
+        if data["pattern_type"] == f"{pattern}":
+            self.helper.log_info(
+                f"[DELETE] Processing {pattern} indicator" + " {"
+                + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+                + "}"
+            )
+
+        indicator_name = data['name']
+        response_name_indicator = self._query("get", f"/{uri}/?search={indicator_name}")
+        response_element = self.find_data_name_match(response_name_indicator['results'], indicator_name)
+
+        if response_element is None:
+            msg_log = f'[DELETE] The searched name of the {pattern} indicator ({indicator_name}) does not exist in HarfangLab'
+            return self.helper.log_error(msg_log),
+        else:
+            response_id = response_element['id']
+            response = self._query("delete", f"/{uri}/{response_id}/")
+
+            if response is None:
+                return self.helper.log_error(f"[DELETE] Indicator {pattern} not delete = {response_id}")
+            else:
+                return self.helper.log_info(f"[DELETE] Indicator {pattern} deleted = {response_id}")
+
+    def find_data_name_match(self, data, name):
+        return next((x for x in data if x["name"] == name), None)
+
     def pattern_payload(self, data, pattern, list_id):
         if pattern == 'yara':
             return {
@@ -195,8 +238,11 @@ class HarfangLabConnector:
                 "source_id": list_id,
 
                 "enabled": True,
+                # Local testing status : [ in_progress, rejected, validated ]
                 "hl_local_testing_status": "in_progress",
+                # status : [ experimental, stable, testing ]
                 "hl_status": "stable"
+                # "last_modifier": {"username": "string"},
             }
         elif pattern == 'sigma':
             return {
@@ -208,7 +254,9 @@ class HarfangLabConnector:
                 "hl_local_testing_status": "in_progress",
                 "hl_status": "stable",
                 # "block_on_agent": True,
+                # Rule level override: [ critical, high, informational, low, medium ]
                 # "rule_level_override": "critical"
+                # "last_modifier": {"username": "string"},
             }
         elif pattern == "stix":
             return {
@@ -221,6 +269,7 @@ class HarfangLabConnector:
                 # "hl_local_testing_status": "in_progress",
                 # "hl_status": "stable",
                 "description": data['description'],
+                # "last_modifier": {"username": "string"},
                 # "comment": "string",
                 # "category": "string",
                 # "info": "string",
