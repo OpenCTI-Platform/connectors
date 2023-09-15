@@ -72,7 +72,7 @@ class ArticleImporter:
                     pattern = "[file:hashes.'MD5' = '" + v + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
-                        name=v,
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -105,7 +105,7 @@ class ArticleImporter:
                     pattern = "[file:hashes.'SHA-1' = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
-                        name=v,
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -139,6 +139,7 @@ class ArticleImporter:
                     pattern = "[file:hashes.'SHA-256' = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -172,6 +173,7 @@ class ArticleImporter:
                     pattern = "[domain-name:value = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -205,6 +207,7 @@ class ArticleImporter:
                     pattern = "[email-addr:value = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -238,6 +241,7 @@ class ArticleImporter:
                     pattern = "[file:name = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -270,6 +274,7 @@ class ArticleImporter:
                     pattern = "[ipv4-addr:value = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -303,6 +308,7 @@ class ArticleImporter:
                     pattern = "[mutex:name = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -336,6 +342,7 @@ class ArticleImporter:
                     pattern = "[url:value = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -370,6 +377,7 @@ class ArticleImporter:
                     pattern = "[x509-certificate:hashes.'SHA-1' = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -406,6 +414,7 @@ class ArticleImporter:
                     pattern = "[x509-certificate:issuer = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -443,6 +452,7 @@ class ArticleImporter:
                     pattern = "[x509-certificate:subject = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
@@ -479,6 +489,7 @@ class ArticleImporter:
                     pattern = "[x509-certificate:serial_number = '" + v.strip() + "']"
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
+                        name=v.strip(),
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
