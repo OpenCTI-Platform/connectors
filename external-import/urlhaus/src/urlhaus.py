@@ -66,7 +66,6 @@ class URLhaus:
     def run(self):
         self.helper.log_info("Fetching URLhaus dataset...")
         while True:
-
             # Get the current timestamp and check
             timestamp = int(time.time())
             current_state = self.helper.get_state()
@@ -96,7 +95,7 @@ class URLhaus:
                 if self.threats_from_labels:
                     treat_cache = {}
 
-                try: 
+                try:
                     response = urllib.request.urlopen(
                         self.urlhaus_csv_url,
                         context=ssl.create_default_context(cafile=certifi.where()),
@@ -221,15 +220,17 @@ class URLhaus:
                                             standard_id
                                             entity_type
                                         """
-                                        threat = self.helper.api.stix_domain_object.read(
-                                            filters=[
-                                                {
-                                                    "key": "name",
-                                                    "values": [label],
-                                                }
-                                            ],
-                                            first=1,
-                                            customAttributes=custom_attributes,
+                                        threat = (
+                                            self.helper.api.stix_domain_object.read(
+                                                filters=[
+                                                    {
+                                                        "key": "name",
+                                                        "values": [label],
+                                                    }
+                                                ],
+                                                first=1,
+                                                customAttributes=custom_attributes,
+                                            )
                                         )
                                         treat_cache[label] = threat
 
@@ -249,12 +250,8 @@ class URLhaus:
                                             stop_time=entry_date
                                             + datetime.timedelta(0, 3),
                                             confidence=self.helper.connect_confidence_level,
-                                            created_by_ref=self.identity[
-                                                "standard_id"
-                                            ],
-                                            object_marking_refs=[
-                                                stix2.TLP_WHITE
-                                            ],
+                                            created_by_ref=self.identity["standard_id"],
+                                            object_marking_refs=[stix2.TLP_WHITE],
                                             created=entry_date,
                                             modified=entry_date,
                                             allow_custom=True,
@@ -274,12 +271,8 @@ class URLhaus:
                                             stop_time=entry_date
                                             + datetime.timedelta(0, 3),
                                             confidence=self.helper.connect_confidence_level,
-                                            created_by_ref=self.identity[
-                                                "standard_id"
-                                            ],
-                                            object_marking_refs=[
-                                                stix2.TLP_WHITE
-                                            ],
+                                            created_by_ref=self.identity["standard_id"],
+                                            object_marking_refs=[stix2.TLP_WHITE],
                                             created=entry_date,
                                             modified=entry_date,
                                             allow_custom=True,
@@ -302,10 +295,8 @@ class URLhaus:
                 if os.path.exists(
                     os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
                 ):
-                    os.remove(
-                        os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
-                    )
-                
+                    os.remove(os.path.dirname(os.path.abspath(__file__)) + "/data.csv")
+
                 # Store the current timestamp as a last run
                 message = "Connector successfully run, storing last_run as " + str(
                     timestamp
@@ -345,10 +336,10 @@ if __name__ == "__main__":
         print(traceback.format_exc())
         time.sleep(10)
         sys.exit(0)
-    
-    try: 
+
+    try:
         URLhausConnector.run()
     except Exception:
         URLhausConnector.helper.log_error(traceback.format_exc())
         time.sleep(10)
-        sys.exit(0)   
+        sys.exit(0)
