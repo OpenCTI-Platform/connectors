@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI RiskIQ's article importer module."""
 import datetime
-import itertools
 from typing import Any, Mapping, Optional
 
 import stix2
@@ -18,8 +17,6 @@ from pycti import (
     Indicator,
     StixCoreRelationship,
 )
-from stix2 import utils
-from stix2.v21 import _Observable
 from .utils import datetime_to_timestamp
 
 
@@ -571,6 +568,7 @@ class ArticleImporter:
                             id=Location.generate_id(entity["name"], "Country"),
                             name=entity["name"],
                             x_opencti_location_type="Country",
+                            country=entity["name"],
                             created_by_ref=self.author,
                             allow_custom=True,
                         )
