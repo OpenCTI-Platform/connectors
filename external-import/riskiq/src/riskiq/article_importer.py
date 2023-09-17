@@ -569,7 +569,10 @@ class ArticleImporter:
         for tag in self.article["tags"]:
             entities = self.helper.api.stix_domain_object.list(
                 types=[
+                    "Threat-Actor",
                     "Intrusion-Set",
+                    "Campaign",
+                    "Incident",
                     "Malware",
                     "Tool",
                     "Attack-Pattern",
