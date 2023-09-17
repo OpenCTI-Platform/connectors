@@ -171,6 +171,7 @@ class URLhaus:
                             confidence=self.helper.connect_confidence_level,
                             pattern_type="stix",
                             valid_from=entry_date,
+                            created=entry_date,
                             pattern=pattern,
                             external_references=[external_reference],
                             object_marking_refs=[stix2.TLP_WHITE],
