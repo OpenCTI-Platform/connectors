@@ -170,12 +170,13 @@ class URLhaus:
                             created_by_ref=self.identity["standard_id"],
                             confidence=self.helper.connect_confidence_level,
                             pattern_type="stix",
+                            valid_from=entry_date,
                             pattern=pattern,
                             external_references=[external_reference],
                             object_marking_refs=[stix2.TLP_WHITE],
                             custom_properties={
                                 "x_opencti_score": 80,
-                                "x_opencti_main_observable_type": "IPv6-Addr",
+                                "x_opencti_main_observable_type": "Url",
                             },
                         )
                         stix_observable = stix2.URL(
@@ -210,8 +211,9 @@ class URLhaus:
                         bundle_objects.append(stix_relationship)
                         if self.threats_from_labels:
                             for label in row[6].split(","):
-                                if label:
+                                if label and label is not None:
                                     # implementing a primitive caching
+                                    threat = None
                                     try:
                                         threat = treat_cache[label]
                                     except KeyError:
@@ -220,20 +222,25 @@ class URLhaus:
                                             standard_id
                                             entity_type
                                         """
-                                        threat = (
-                                            self.helper.api.stix_domain_object.read(
-                                                filters=[
-                                                    {
-                                                        "key": "name",
-                                                        "values": [label],
-                                                    }
+                                        entities = (
+                                            self.helper.api.stix_domain_object.list(
+                                                types=[
+                                                    "Threat-Actor",
+                                                    "Intrusion-Set",
+                                                    "Malware",
+                                                    "Campaign",
+                                                    "Incident",
+                                                    "Tool",
                                                 ],
-                                                first=1,
+                                                filters=[
+                                                    {"key": ["name"], "values": [label]}
+                                                ],
                                                 customAttributes=custom_attributes,
                                             )
                                         )
-                                        treat_cache[label] = threat
-
+                                        if len(entities) > 0:
+                                            threat = entities[0]
+                                            treat_cache[label] = threat
                                     if threat is not None:
                                         stix_threat_relation_indicator = stix2.Relationship(
                                             id=StixCoreRelationship.generate_id(
