@@ -15,6 +15,8 @@ import yaml
 from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes, get_config_variable
 from requests.exceptions import HTTPError
 from taxii2client.exceptions import TAXIIServiceException
+from taxii2client.common import TokenAuth
+from requests.auth import HTTPBasicAuth
 
 
 class Taxii2Connector:
@@ -37,6 +39,12 @@ class Taxii2Connector:
         password = get_config_variable(
             "TAXII2_PASSWORD", ["taxii2", "password"], config
         )
+        use_token = get_config_variable(
+            "TAXII2_USE_TOKEN", ["taxii2", "use_token"], config, default=False
+        )
+        token = get_config_variable(
+            "TAXII2_TOKEN", ["taxii2", "token"], config
+        )
         server_url = get_config_variable(
             "TAXII2_DISCOVERY_URL", ["taxii2", "discovery_url"], config
         )
@@ -50,19 +58,21 @@ class Taxii2Connector:
         self.taxii2v21 = get_config_variable(
             "TAXII2_V21", ["taxii2", "v2.1"], config, default=True
         )
+        if use_token:
+            auth = TokenAuth(token)
+        else:
+            auth = HTTPBasicAuth(username, password)
         if self.taxii2v21:
             self.server = tx21.Server(
                 server_url,
-                user=username,
-                password=password,
+                auth=auth,
                 verify=self.verify_ssl,
                 cert=cert_path,
             )
         else:
             self.server = tx20.Server(
                 server_url,
-                user=username,
-                password=password,
+                auth=auth,
                 verify=self.verify_ssl,
                 cert=cert_path,
             )
