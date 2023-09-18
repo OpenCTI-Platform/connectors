@@ -9,7 +9,6 @@ import time
 import urllib.request
 from datetime import datetime
 
-import certifi
 import yaml
 from cvetostix2 import convert
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -64,9 +63,7 @@ class Cve:
         try:
             # Downloading json.gz file
             self.helper.log_info("Requesting the file " + url)
-            response = urllib.request.urlopen(
-                url, context=ssl.create_default_context(cafile=certifi.where())
-            )
+            response = urllib.request.urlopen(url, context=ssl.create_default_context())
             image = response.read()
             with open("/tmp/data.json.gz", "wb") as file:
                 file.write(image)

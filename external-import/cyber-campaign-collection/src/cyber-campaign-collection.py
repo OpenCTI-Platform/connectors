@@ -9,7 +9,6 @@ import urllib
 from datetime import date, datetime
 from typing import Optional
 
-import certifi
 import requests
 import stix2
 import yaml
@@ -88,7 +87,7 @@ class CyberMonitor:
             return (
                 urllib.request.urlopen(
                     url,
-                    context=ssl.create_default_context(cafile=certifi.where()),
+                    context=ssl.create_default_context(),
                 )
                 .read()
                 .decode("utf-8")

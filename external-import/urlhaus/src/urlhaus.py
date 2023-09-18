@@ -7,7 +7,6 @@ import time
 import traceback
 import urllib.request
 
-import certifi
 import stix2
 import yaml
 from dateutil.parser import parse
@@ -98,7 +97,7 @@ class URLhaus:
                 try:
                     response = urllib.request.urlopen(
                         self.urlhaus_csv_url,
-                        context=ssl.create_default_context(cafile=certifi.where()),
+                        context=ssl.create_default_context(),
                     )
                 except urllib.error.HTTPError:
                     # we only accept HTTPError

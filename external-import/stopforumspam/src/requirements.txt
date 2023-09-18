@@ -1,3 +1,2 @@
 pycti==5.10.2
 urllib3==2.0.4
-certifi==2023.7.22
