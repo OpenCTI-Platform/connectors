@@ -217,8 +217,7 @@ class SplunkConnector:
                     payload["created_by"] = org_name
 
         if "extensions" in payload:
-            to_remove = []
-            for k, extension_definition in payload["extensions"].items():
+            for extension_definition in payload["extensions"].values():
                 for attribute_name in [
                     "score",
                     "created_at",
@@ -229,10 +228,8 @@ class SplunkConnector:
                     attribute_value = extension_definition.get(attribute_name)
                     if attribute_value:
                         payload[attribute_name] = attribute_value
-                to_remove.append(k)
-            # remove extension-definition-UUID
-            for k in to_remove:
-                del payload["extensions"][k]
+            # remove extensions
+            del payload["extensions"]
 
         return payload
 
