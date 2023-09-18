@@ -319,7 +319,16 @@ class Taxii2Connector:
                     objects = process_response(objects, response, version)
                     # Get the manifest for the last object
                     last_obj = response["objects"][-1]
-                    manifest = collection.get_manifest(id=last_obj["id"])
+                    manifest = {'objects': []}
+                    try:
+                        manifest = collection.get_manifest(id=last_obj["id"])
+                    except HTTPError as e:
+                        if e.response.status_code == 404:
+                            # Handle the 404 error gracefully
+                            print(f"The collection '{last_obj['id']}' does not exist or is not accessible.")
+                        else:
+                            # Handle other HTTP errors if necessary
+                            print(f"HTTP Error: {e.response.status_code} - {e.response.reason}")
                     # Check manifest size
                     if len(manifest["objects"]) > 0:
                         date_added = manifest["objects"][0]["date_added"]
