@@ -2,7 +2,6 @@ import os
 import ssl
 import urllib.request
 
-import certifi
 import html2text
 import pdfkit
 import yaml
@@ -65,7 +64,7 @@ class ImportExternalReferenceConnector:
                     file_name = url_to_import.split("/")[-1]
                     req = urllib.request.Request(url_to_import, headers=self.headers)
                     response = urllib.request.urlopen(
-                        req, context=ssl.create_default_context(cafile=certifi.where())
+                        req, context=ssl.create_default_context()
                     )
                     data = response.read()
                     self.helper.api.external_reference.add_file(
@@ -162,7 +161,7 @@ class ImportExternalReferenceConnector:
                     text_maker.mark_code = True
                     req = urllib.request.Request(url_to_import, headers=self.headers)
                     response = urllib.request.urlopen(
-                        req, context=ssl.create_default_context(cafile=certifi.where())
+                        req, context=ssl.create_default_context()
                     )
                     html = response.read().decode("utf-8")
                     data = text_maker.handle(html)

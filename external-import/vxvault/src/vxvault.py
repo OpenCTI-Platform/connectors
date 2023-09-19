@@ -6,7 +6,6 @@ import time
 import urllib.request
 from datetime import datetime
 
-import certifi
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import TLP_WHITE, URL, Bundle, ExternalReference
@@ -90,7 +89,7 @@ class VXVault:
                         self.helper.connect_id, friendly_name
                     )
                     try:
-                        ctx = ssl.create_default_context(cafile=certifi.where())
+                        ctx = ssl.create_default_context()
                         if not bool(self.verify_ssl):
                             ctx.check_hostname = False
                             ctx.verify_mode = ssl.CERT_NONE
