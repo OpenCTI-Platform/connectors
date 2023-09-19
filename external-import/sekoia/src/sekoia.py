@@ -180,6 +180,7 @@ class Sekoia(object):
             self._clean_external_references_fields(items)
             items = self._clean_ic_fields(items)
             self._add_files_to_items(items)
+            self._add_confidence_to_objects(items)
             bundle = self.helper.stix2_create_bundle(items)
             try:
                 self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
@@ -255,6 +256,26 @@ class Sekoia(object):
                 item[
                     "x_opencti_main_observable_type"
                 ] = OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
+
+    def _add_confidence_to_objects(self, items: List[Dict]):
+        object_types_with_confidence = [
+            "attack-pattern",
+            "course-of-action",
+            "threat-actor",
+            "intrusion-set",
+            "campaign",
+            "malware",
+            "tool",
+            "vulnerability",
+            "report",
+            "relationship",
+            "identity",
+            "location",
+        ]
+        for item in items:
+            object_type = item["type"]
+            if object_type in object_types_with_confidence:
+                item["confidence"] = int(self.helper.connect_confidence_level)
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
