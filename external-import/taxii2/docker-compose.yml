@@ -16,6 +16,8 @@ services:
       - TAXII2_CERT_PATH=ChangeMe # Optional (.pem)
       - TAXII2_USERNAME=ChangeMe # Required
       - TAXII2_PASSWORD=ChangeMe
+      - TAXII2_USE_TOKEN=false
+      - TAXII2_TOKEN=ChangeMe # change TAXII2_USE_TOKEN to true to use this
       - TAXII2_V21=true # Is TAXII v2.1
       - TAXII2_COLLECTIONS=*.* # Required
       - TAXII2_INITIAL_HISTORY= 24 # Required, in hours

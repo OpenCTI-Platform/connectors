@@ -120,13 +120,16 @@ class ExportReportPdf:
         """
         # Get the Report
         report_dict = self.helper.api_impersonate.report.read(id=entity_id)
-
+        content_query = "{report (id:\""+entity_id+"\") {content}}"
+        report_dict['content'] = (self.helper.api_impersonate.query(query=content_query))["data"]["report"].get("content", "No content available.")
+        
         # Extract values for inclusion in output pdf
         report_marking = report_dict.get("objectMarking", None)
         if report_marking:
             report_marking = report_marking[-1]["definition"]
         report_name = report_dict["name"]
         report_description = report_dict.get("description", "No description available.")
+        report_content = report_dict["content"]
         report_confidence = report_dict["confidence"]
         report_id = report_dict["id"]
         report_external_refs = [
@@ -139,6 +142,7 @@ class ExportReportPdf:
         context = {
             "report_name": report_name,
             "report_description": report_description,
+            "report_content": report_content,
             "report_marking": report_marking,
             "report_confidence": report_confidence,
             "report_external_refs": report_external_refs,

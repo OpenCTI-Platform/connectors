@@ -32,6 +32,7 @@
       <ul>
         <li><a href="#description-title"></a></li>
         <li><a href="#confidence-title"></a></li>
+        <li><a href="#content-title"></a></li>
       </ul>
 
       {% if entities %}
@@ -83,6 +84,12 @@
           {{ report_confidence }} / 100
         </p>
       </section>
+    </article>
+    <article id="content">
+      <h2 id="content-title">
+        Content
+      </h2>
+      {{report_content}}
     </article>
     <article id="entities">
       {% for entity_type in entities %}
