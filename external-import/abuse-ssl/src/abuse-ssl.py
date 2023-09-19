@@ -136,7 +136,8 @@ class AbuseSSLImportConnector:
                 object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
                     "x_opencti_description": "Malicious SSL connections",
-                    "created_by_ref": f"{self.author.id}",
+                    "x_opencti_created_by_ref": f"{self.author.id}",
+                    "x_opencti_labels": ["osint", "ssl-blacklist"],
                 },
             )
             observables.append(observable)
@@ -161,7 +162,7 @@ class AbuseSSLImportConnector:
                 confidence=self.helper.connect_confidence_level,
                 pattern_type="stix",
                 pattern=pattern,
-                labels="osint",
+                labels=["osint", "ssl-blacklist"],
                 object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
                     "x_opencti_main_observable_type": "IPv4-Addr",
