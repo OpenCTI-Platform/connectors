@@ -120,9 +120,11 @@ class ExportReportPdf:
         """
         # Get the Report
         report_dict = self.helper.api_impersonate.report.read(id=entity_id)
-        content_query = "{report (id:\""+entity_id+"\") {content}}"
-        report_dict['content'] = (self.helper.api_impersonate.query(query=content_query))["data"]["report"].get("content", "No content available.")
-        
+        content_query = '{report (id:"' + entity_id + '") {content}}'
+        report_dict["content"] = (
+            self.helper.api_impersonate.query(query=content_query)
+        )["data"]["report"].get("content", "No content available.")
+
         # Extract values for inclusion in output pdf
         report_marking = report_dict.get("objectMarking", None)
         if report_marking:
