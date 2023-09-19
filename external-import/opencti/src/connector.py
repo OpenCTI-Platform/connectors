@@ -7,7 +7,6 @@ import urllib.request
 from datetime import datetime
 from typing import Optional
 
-import certifi
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -81,7 +80,7 @@ class OpenCTI:
             return json.loads(
                 urllib.request.urlopen(
                     url,
-                    context=ssl.create_default_context(cafile=certifi.where()),
+                    context=ssl.create_default_context(),
                 )
                 .read()
                 .decode("utf-8")

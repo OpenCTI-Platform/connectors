@@ -6,7 +6,6 @@ import time
 import urllib.request
 from datetime import datetime
 
-import certifi
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import TLP_WHITE, Bundle, DomainName, ExternalReference
@@ -87,7 +86,7 @@ class Stopforumspam:
                     try:
                         response = urllib.request.urlopen(
                             self.stopforumspam_url,
-                            context=ssl.create_default_context(cafile=certifi.where()),
+                            context=ssl.create_default_context(),
                         )
                         image = response.read()
                         with open(

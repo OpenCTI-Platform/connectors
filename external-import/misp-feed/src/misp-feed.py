@@ -8,7 +8,6 @@ import urllib.request
 from datetime import datetime
 from typing import Optional
 
-import certifi
 import pytz
 import stix2
 import yaml
@@ -202,7 +201,7 @@ class MispFeed:
             return (
                 urllib.request.urlopen(
                     url,
-                    context=ssl.create_default_context(cafile=certifi.where()),
+                    context=ssl.create_default_context(),
                 )
                 .read()
                 .decode("utf-8")

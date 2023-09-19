@@ -7,7 +7,6 @@ import urllib
 from datetime import datetime
 from urllib import parse
 
-import certifi
 import stix2
 import yaml
 from pycti import (
@@ -109,7 +108,7 @@ class abuseipdbipblacklistimport:
 
                         response = urllib.request.urlopen(
                             req,
-                            context=ssl.create_default_context(cafile=certifi.where()),
+                            context=ssl.create_default_context(),
                             data=body,
                         )
                         image = response.read()
