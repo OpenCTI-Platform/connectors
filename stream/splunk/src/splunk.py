@@ -51,7 +51,7 @@ class KVStore:
 
     @property
     def collection_url(self) -> str:
-        return f"{self.splunk_url}/servicesNS/{self.splunk_owner}/{self.splunk_app}/storage/collections/"
+        return f"{self.splunk_url}/servicesNS/{self.splunk_owner}/{self.splunk_app}/storage/collections"
 
     @property
     def headers(self) -> dict:
