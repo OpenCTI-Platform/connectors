@@ -978,6 +978,7 @@ class Misp:
             "name": attr_value,
             "data": attr_data,
             "mime_type": "application/pdf",
+            "no_trigger_import": True,
         }
 
     def process_attribute(

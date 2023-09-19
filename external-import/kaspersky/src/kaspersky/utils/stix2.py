@@ -581,6 +581,7 @@ def create_file_pdf(name: str, data: bytes) -> Mapping[str, str]:
         "name": name,
         "data": base64_data.decode("utf-8"),
         "mime_type": "application/pdf",
+        "no_trigger_import": True,
     }
 
 

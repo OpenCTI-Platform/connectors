@@ -530,11 +530,13 @@ class OrangeCyberDefense:
             "name": "analysis.html",
             "mime_type": "text/html",
             "data": base64.b64encode(analysis_html.encode("utf-8")).decode("utf-8"),
+            "no_trigger_import": True,
         }
         file_technical = {
             "name": "technical_appendix.html",
             "mime_type": "text/html",
             "data": base64.b64encode(technical_html.encode("utf-8")).decode("utf-8"),
+            "no_trigger_import": True,
         }
         report_stix = stix2.Report(
             id=Report.generate_id(curated_title, report["timestamp_detected"]),

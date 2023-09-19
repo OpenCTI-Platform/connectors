@@ -869,6 +869,7 @@ class MispFeed:
             "name": attr_value,
             "data": attr_data,
             "mime_type": "application/pdf",
+            "no_trigger_import": True,
         }
 
     def _threat_level_to_score(self, threat_level):

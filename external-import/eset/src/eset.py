@@ -118,6 +118,7 @@ class Eset:
                     "name": report["filename"],
                     "data": file_data_encoded.decode("utf-8"),
                     "mime_type": "application/pdf",
+                    "no_trigger_import": True,
                 }
                 stix_report = stix2.Report(
                     id=Report.generate_id(name, date),
