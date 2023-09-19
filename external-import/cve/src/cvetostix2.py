@@ -87,6 +87,9 @@ def convert(filename, output="output.json"):
                 modified=mdate,
                 description=description,
                 created_by_ref=author,
+                confidence=100
+                if description is not None and len(description) > 0
+                else 60,
                 external_references=external_references,
                 custom_properties={
                     "x_opencti_base_score": base_score,
