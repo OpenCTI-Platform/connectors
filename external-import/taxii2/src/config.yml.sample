@@ -16,6 +16,8 @@ taxii2:
   cert_path: 'ChangeMe' # Optional (.pem)
   username: ChangeMe # Required
   password: ChangeMe
+  use_token: false
+  token: ChangeMe
   v2.1: true
   collections: '*.*'
   initial_history: 24 # Required, in hours
