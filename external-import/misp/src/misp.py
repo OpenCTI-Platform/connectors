@@ -1803,62 +1803,63 @@ class Misp:
                     tag_value = tag_value_split[0]
                 else:
                     tag_value = tag_value_split[1].replace('"', "")
-                threats = self.helper.api.stix_domain_object.list(
-                    types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
-                    filters=[{"key": "name", "values": [tag_value]}],
-                )
-                if len(threats) > 0:
-                    threat = threats[0]
-                    if threat["name"] not in added_names:
-                        if threat["entity_type"] == "Intrusion-Set":
-                            elements["intrusion_sets"].append(
-                                stix2.IntrusionSet(
-                                    id=IntrusionSet.generate_id(threat["name"]),
-                                    name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
-                                    created_by_ref=author["id"],
-                                    object_marking_refs=markings,
-                                    allow_custom=True,
+                if len(tag_value) > 0:
+                    threats = self.helper.api.stix_domain_object.list(
+                        types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
+                        filters=[{"key": "name", "values": [tag_value]}],
+                    )
+                    if len(threats) > 0:
+                        threat = threats[0]
+                        if threat["name"] not in added_names:
+                            if threat["entity_type"] == "Intrusion-Set":
+                                elements["intrusion_sets"].append(
+                                    stix2.IntrusionSet(
+                                        id=IntrusionSet.generate_id(threat["name"]),
+                                        name=threat["name"],
+                                        confidence=self.helper.connect_confidence_level,
+                                        created_by_ref=author["id"],
+                                        object_marking_refs=markings,
+                                        allow_custom=True,
+                                    )
                                 )
-                            )
-                            added_names.append(threat["name"])
-                        if threat["entity_type"] == "Malware":
-                            elements["malwares"].append(
-                                stix2.Malware(
-                                    id=Malware.generate_id(threat["name"]),
-                                    name=threat["name"],
-                                    is_family=True,
-                                    confidence=self.helper.connect_confidence_level,
-                                    created_by_ref=author["id"],
-                                    object_marking_refs=markings,
-                                    allow_custom=True,
+                                added_names.append(threat["name"])
+                            if threat["entity_type"] == "Malware":
+                                elements["malwares"].append(
+                                    stix2.Malware(
+                                        id=Malware.generate_id(threat["name"]),
+                                        name=threat["name"],
+                                        is_family=True,
+                                        confidence=self.helper.connect_confidence_level,
+                                        created_by_ref=author["id"],
+                                        object_marking_refs=markings,
+                                        allow_custom=True,
+                                    )
                                 )
-                            )
-                            added_names.append(threat["name"])
-                        if threat["entity_type"] == "Tool":
-                            elements["tools"].append(
-                                stix2.Tool(
-                                    id=Tool.generate_id(threat["name"]),
-                                    name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
-                                    created_by_ref=author["id"],
-                                    object_marking_refs=markings,
-                                    allow_custom=True,
+                                added_names.append(threat["name"])
+                            if threat["entity_type"] == "Tool":
+                                elements["tools"].append(
+                                    stix2.Tool(
+                                        id=Tool.generate_id(threat["name"]),
+                                        name=threat["name"],
+                                        confidence=self.helper.connect_confidence_level,
+                                        created_by_ref=author["id"],
+                                        object_marking_refs=markings,
+                                        allow_custom=True,
+                                    )
                                 )
-                            )
-                            added_names.append(threat["name"])
-                        if threat["entity_type"] == "Attack-Pattern":
-                            elements["attack_patterns"].append(
-                                stix2.AttackPattern(
-                                    id=AttackPattern.generate_id(threat["name"]),
-                                    name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
-                                    created_by_ref=author["id"],
-                                    object_marking_refs=markings,
-                                    allow_custom=True,
+                                added_names.append(threat["name"])
+                            if threat["entity_type"] == "Attack-Pattern":
+                                elements["attack_patterns"].append(
+                                    stix2.AttackPattern(
+                                        id=AttackPattern.generate_id(threat["name"]),
+                                        name=threat["name"],
+                                        confidence=self.helper.connect_confidence_level,
+                                        created_by_ref=author["id"],
+                                        object_marking_refs=markings,
+                                        allow_custom=True,
+                                    )
                                 )
-                            )
-                            added_names.append(threat["name"])
+                                added_names.append(threat["name"])
             # Get the linked intrusion sets
             if (
                 tag["name"].startswith("misp-galaxy:threat-actor")
