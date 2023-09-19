@@ -187,6 +187,7 @@ class Flashpoint:
                                 "data": base64.b64encode(
                                     report["body"].encode("utf-8")
                                 ).decode("utf-8"),
+                                "no_trigger_import": True,
                             }
                             stix_report = stix2.Report(
                                 id=Report.generate_id(

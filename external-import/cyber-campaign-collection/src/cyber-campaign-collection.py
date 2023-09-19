@@ -167,6 +167,7 @@ class CyberMonitor:
                                     "mime_type": mimetypes.guess_type(
                                         file.download_url
                                     )[0],
+                                    "no_trigger_import": True,
                                 }
                             )
                     report = stix2.Report(

@@ -473,6 +473,7 @@ class Sekoia(object):
                             "name": file["file_name"],
                             "data": base64.b64encode(data).decode("utf-8"),
                             "mime_type": file.get("mime_type", "text/plain"),
+                            "no_trigger_import": True,
                         }
                     )
 

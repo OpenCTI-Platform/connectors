@@ -100,6 +100,7 @@ class Report:
                     "name": f"{self.report_id}.pdf",
                     "data": base64.b64encode(self.pdf).decode("utf-8"),
                     "mime_type": "application/pdf",
+                    "no_trigger_import": True,
                 }
             )
 

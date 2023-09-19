@@ -947,6 +947,7 @@ def create_file_from_download(download: Download) -> Mapping[str, str]:
         "name": filename,
         "data": base64_data.decode("utf-8"),
         "mime_type": "application/pdf",
+        "no_trigger_import": True,
     }
 
 
