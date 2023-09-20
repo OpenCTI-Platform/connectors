@@ -79,7 +79,9 @@ class RestoreFilesConnector:
                     missing_element = self.find_element(dir_date, ref)
                     if missing_element is not None:
                         acc.insert(0, missing_element)
-                        self.resolve_missing(dir_date, element_ids, missing_element, acc)
+                        self.resolve_missing(
+                            dir_date, element_ids, missing_element, acc
+                        )
 
     def restore_files(self):
         stix2_splitter = OpenCTIStix2Splitter()
