@@ -205,6 +205,23 @@ class URLHausRecentPayloads:
                         id=response["id"], label_id=label["id"]
                     )
 
+                    # Search for signature in OpenCTI and create relationship
+                    custom_attributes = """
+                        id
+                        standard_id
+                        entity_type
+                    """
+                    entities = self.helper.api.stix_domain_object.list(
+                        types=["Intrusion-Set", "Malware", "Campaign"],
+                        filters=[{"key": ["name"], "values": [signature]}],
+                        customAttributes=custom_attributes,
+                    )
+                    if len(entities) > 0:
+                        self.helper.api.stix_core_relationship.create(
+                            relationship_type="related-to",
+                            fromId=response["id"],
+                            toId=entities[0]["id"],
+                        )
                     self.helper.set_state({"last_first_seen": first_seen})
 
                 self.helper.log_info(
