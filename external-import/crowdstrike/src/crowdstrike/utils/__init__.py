@@ -810,7 +810,7 @@ def create_report(
     external_references: Optional[List[stix2.ExternalReference]] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
     x_opencti_report_status: Optional[int] = None,
-    x_opencti_files: Optional[List[Mapping[str, str]]] = None,
+    x_opencti_files: Optional[List[Mapping[str, Union[str, bool]]]] = None,
 ) -> stix2.Report:
     """Create a report."""
     return stix2.Report(
@@ -844,7 +844,7 @@ def create_stix2_report_from_report(
     confidence: int,
     object_markings: List[stix2.MarkingDefinition],
     x_opencti_report_status: int,
-    x_opencti_files: Optional[List[Mapping[str, str]]] = None,
+    x_opencti_files: Optional[List[Mapping[str, Union[str, bool]]]] = None,
 ) -> stix2.Report:
     """Create a STIX2 report from Report."""
     report_name = report.name
@@ -934,7 +934,7 @@ def create_regions_and_countries_from_entities(
     return regions, countries
 
 
-def create_file_from_download(download: Download) -> Mapping[str, str]:
+def create_file_from_download(download: Download) -> Mapping[str, Union[str, bool]]:
     """Create file mapping from Download model."""
     filename = download.filename
     if filename is None or not filename:

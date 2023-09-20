@@ -180,7 +180,7 @@ class ReportImporter(BaseImporter):
 
         # with open(f"report_bundle_{report.id}.json", "w") as f:
         #     f.write(report_bundle.serialize(pretty=True))
-
+        print(report_bundle)
         self._send_bundle(report_bundle)
 
     def _get_report_pdf(self, report_id: int) -> Optional[Mapping[str, str]]:

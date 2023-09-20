@@ -203,7 +203,7 @@ class ReportBundleBuilder:
     def _create_stix2_report_from_report(
         self,
         objects: List[Union[_DomainObject, _RelationshipObject]],
-        files: List[Mapping[str, str]],
+        files: List[Mapping[str, Union[str, bool]]],
     ) -> STIXReport:
         return create_stix2_report_from_report(
             self.report,

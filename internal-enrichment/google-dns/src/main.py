@@ -75,21 +75,22 @@ class GoogleDNSConnector:
             self.helper.log_debug("Created Domain Name")
 
             # Create resolves-to Relationship from Domain Name to Domain Name
-            relationship = Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "resolves-to", domain["standard_id"], ns_domain.id
-                ),
-                relationship_type="resolves-to",
-                source_ref=domain["standard_id"],
-                target_ref=ns_domain.id,
-                description="name-server",
-                object_marking_refs=TLP_WHITE,
-                confidence=100,
-            )
-            objects.append(relationship)
-            self.helper.log_debug(
-                "Created Relationship from Domain Name to Domain Name"
-            )
+            if domain["standard_id"] != ns_domain.id:
+                relationship = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "resolves-to", domain["standard_id"], ns_domain.id
+                    ),
+                    relationship_type="resolves-to",
+                    source_ref=domain["standard_id"],
+                    target_ref=ns_domain.id,
+                    description="name-server",
+                    object_marking_refs=TLP_WHITE,
+                    confidence=100,
+                )
+                objects.append(relationship)
+                self.helper.log_debug(
+                    "Created Relationship from Domain Name to Domain Name"
+                )
 
         return objects
 
@@ -107,21 +108,22 @@ class GoogleDNSConnector:
             self.helper.log_debug("Created Domain Name")
 
             # Create resolves-to Relationship from Domain Name to Domain Name
-            relationship = Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "resolves-to", domain["standard_id"], cname_domain.id
-                ),
-                relationship_type="resolves-to",
-                source_ref=domain["standard_id"],
-                target_ref=cname_domain.id,
-                description="cname",
-                object_marking_refs=TLP_WHITE,
-                confidence=100,
-            )
-            objects.append(relationship)
-            self.helper.log_debug(
-                "Created Relationship from Domain Name to Domain Name"
-            )
+            if domain["standard_id"] != cname_domain.id:
+                relationship = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "resolves-to", domain["standard_id"], cname_domain.id
+                    ),
+                    relationship_type="resolves-to",
+                    source_ref=domain["standard_id"],
+                    target_ref=cname_domain.id,
+                    description="cname",
+                    object_marking_refs=TLP_WHITE,
+                    confidence=100,
+                )
+                objects.append(relationship)
+                self.helper.log_debug(
+                    "Created Relationship from Domain Name to Domain Name"
+                )
 
         return objects
 
@@ -139,21 +141,22 @@ class GoogleDNSConnector:
             self.helper.log_debug("Created Domain Name")
 
             # Create resolves-to Relationship from Domain Name to Domain Name
-            relationship = Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "resolves-to", domain["standard_id"], mx_domain.id
-                ),
-                relationship_type="resolves-to",
-                source_ref=domain["standard_id"],
-                target_ref=mx_domain.id,
-                description="mx",
-                object_marking_refs=TLP_WHITE,
-                confidence=100,
-            )
-            objects.append(relationship)
-            self.helper.log_debug(
-                "Created Relationship from Domain Name to Domain Name"
-            )
+            if domain["standard_id"] != mx_domain.id:
+                relationship = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "resolves-to", domain["standard_id"], mx_domain.id
+                    ),
+                    relationship_type="resolves-to",
+                    source_ref=domain["standard_id"],
+                    target_ref=mx_domain.id,
+                    description="mx",
+                    object_marking_refs=TLP_WHITE,
+                    confidence=100,
+                )
+                objects.append(relationship)
+                self.helper.log_debug(
+                    "Created Relationship from Domain Name to Domain Name"
+                )
 
         return objects
 
