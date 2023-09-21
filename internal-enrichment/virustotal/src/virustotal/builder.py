@@ -79,10 +79,10 @@ class VirusTotalBuilder:
                 )
                 * 100
             )
-        except ZeroDivisionError:
+        except ZeroDivisionError as err:
             raise ValueError(
                 "Cannot compute score. VirusTotal may have no record of the observable or it is currently being processed"
-            )
+            ) from err
         if self.observable["x_opencti_score"] and not self.replace_with_lower_score:
             if vt_score < self.observable["x_opencti_score"]:
                 self.create_note(
@@ -177,7 +177,7 @@ class VirusTotalBuilder:
             )
             # If the valid_minutes field is NULL or blank for files with no expiry, set a default value
             minutes = indicator_config.valid_minutes
-            if minutes == None:
+            if minutes is None:
                 minutes = 2880  # 48 hours
             valid_until = now_time + datetime.timedelta(minutes)
 
@@ -430,8 +430,10 @@ class VirusTotalBuilder:
         str
             String with the number of bundle sent.
         """
+        self.helper.metric.state("idle")
         if self.bundle is not None:
             self.helper.log_debug(f"[VirusTotal] sending bundle: {self.bundle}")
+            self.helper.metric.inc("record_send", len(self.bundle))
             serialized_bundle = stix2.Bundle(
                 objects=self.bundle, allow_custom=True
             ).serialize()

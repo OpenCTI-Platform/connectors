@@ -64,14 +64,19 @@ class VirusTotalClient:
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")
+            self.helper.metric.inc("client_error_count")
         except requests.exceptions.ConnectionError as errc:
             self.helper.log_error(f"[VirusTotal] Error connecting: {errc}")
+            self.helper.metric.inc("client_error_count")
         except requests.exceptions.Timeout as errt:
             self.helper.log_error(f"[VirusTotal] Timeout error: {errt}")
+            self.helper.metric.inc("client_error_count")
         except requests.exceptions.RequestException as err:
             self.helper.log_error(f"[VirusTotal] Something else happened: {err}")
+            self.helper.metric.inc("client_error_count")
         except Exception as err:
             self.helper.log_error(f"[VirusTotal] Unknown error {err}")
+            self.helper.metric.inc("client_error_count")
         try:
             self.helper.log_debug(f"[VirusTotal] data retrieved: {response.json()}")
             return response.json()
@@ -79,6 +84,7 @@ class VirusTotalClient:
             self.helper.log_error(
                 f"[VirusTotal] Error decoding the json: {err} - {response.text}"
             )
+            self.helper.metric.inc("client_error_count")
             return None
 
     def _post(self, url, data=None, files=None, additional_headers=None):
@@ -104,22 +110,29 @@ class VirusTotalClient:
         response = None
         headers = (
             self.headers
-            if additional_headers == None
+            if additional_headers is None
             else self.headers | additional_headers
         )
         try:
-            response = requests.post(url, data=data, files=files, headers=headers)
+            response = requests.post(
+                url, data=data, files=files, headers=headers, timeout=10
+            )
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")
+            self.helper.metric.inc("client_error_count")
         except requests.exceptions.ConnectionError as errc:
             self.helper.log_error(f"[VirusTotal] Error connecting: {errc}")
+            self.helper.metric.inc("client_error_count")
         except requests.exceptions.Timeout as errt:
             self.helper.log_error(f"[VirusTotal] Timeout error: {errt}")
+            self.helper.metric.inc("client_error_count")
         except requests.exceptions.RequestException as err:
             self.helper.log_error(f"[VirusTotal] Something else happened: {err}")
+            self.helper.metric.inc("client_error_count")
         except Exception as err:
             self.helper.log_error(f"[VirusTotal] Unknown error {err}")
+            self.helper.metric.inc("client_error_count")
         try:
             self.helper.log_debug(f"[VirusTotal] data retrieved: {response.json()}")
             return response.json()
@@ -127,6 +140,7 @@ class VirusTotalClient:
             self.helper.log_error(
                 f"[VirusTotal] Error decoding the json: {err} - {response.text}"
             )
+            self.helper.metric.inc("client_error_count")
             return None
 
     def get_file_info(self, hash256) -> dict:
