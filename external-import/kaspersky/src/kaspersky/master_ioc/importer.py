@@ -4,6 +4,10 @@ import itertools
 from datetime import datetime
 from typing import Any, List, Mapping, Optional, Set, Tuple
 
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2.exceptions import STIXError  # type: ignore
+
 from kaspersky.client import KasperskyClient
 from kaspersky.importer import BaseImporter
 from kaspersky.master_ioc.builder import IndicatorGroupBundleBuilder
@@ -15,9 +19,6 @@ from kaspersky.utils import (
     is_current_weekday_before_datetime,
     timestamp_to_datetime,
 )
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
 
 
 class MasterIOCImporter(BaseImporter):
@@ -251,6 +252,7 @@ class MasterIOCImporter(BaseImporter):
         try:
             return bundle_builder.build()
         except STIXError as e:
+            self.helper.metric.inc("error_count")
             self._error(
                 "Failed to build indicator group bundle for '{0}': {1}",
                 indicator_group[0],

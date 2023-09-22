@@ -2,9 +2,10 @@
 
 from typing import List, NamedTuple
 
-from kaspersky.utils.common import is_ip_address, is_ipv4_address
 from stix2 import ObjectPath  # type: ignore
 from stix2 import EqualityComparisonExpression, ObservationExpression, StringConstant
+
+from kaspersky.utils.common import is_ip_address, is_ipv4_address
 
 _OBJECT_TYPE_IPV4_ADDR = "ipv4-addr"
 _OBJECT_TYPE_IPV6_ADDR = "ipv6-addr"

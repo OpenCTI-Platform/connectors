@@ -3,9 +3,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Mapping, Optional
 
-from kaspersky.client import KasperskyClient
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+
+from kaspersky.client import KasperskyClient
 
 
 class BaseImporter(ABC):
@@ -74,6 +75,7 @@ class BaseImporter(ABC):
         return self.helper.connect_confidence_level
 
     def _send_bundle(self, bundle: Bundle) -> None:
+        self.helper.metric.inc("record_send", len(bundle.objects))
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(
             serialized_bundle, work_id=self.work_id, update=self.update_existing_data

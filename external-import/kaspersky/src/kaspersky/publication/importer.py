@@ -3,14 +3,15 @@
 from datetime import datetime
 from typing import Any, List, Mapping, Optional, Set
 
+from pycti import OpenCTIConnectorHelper  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2.exceptions import STIXError  # type: ignore
+
 from kaspersky.client import KasperskyClient
 from kaspersky.importer import BaseImporter
 from kaspersky.models import Publication
 from kaspersky.publication.builder import PublicationBundleBuilder
 from kaspersky.utils import datetime_to_timestamp, timestamp_to_datetime
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
 
 
 class PublicationImporter(BaseImporter):
@@ -213,6 +214,7 @@ class PublicationImporter(BaseImporter):
         try:
             return bundle_builder.build()
         except STIXError as e:
+            self.helper.metric.inc("error_count")
             self._error(
                 "Failed to build publication bundle for '{0}' ({1}): {2}",
                 publication.name,

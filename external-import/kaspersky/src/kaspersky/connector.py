@@ -6,6 +6,9 @@ import time
 from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable  # type: ignore
+from stix2 import Identity, MarkingDefinition  # type: ignore
+
 from kaspersky.client import KasperskyClient
 from kaspersky.master_ioc.importer import MasterIOCImporter
 from kaspersky.master_yara.importer import MasterYaraImporter
@@ -17,8 +20,6 @@ from kaspersky.utils import (
     get_tlp_string_marking_definition,
     timestamp_to_datetime,
 )
-from pycti import OpenCTIConnectorHelper, get_config_variable  # type: ignore
-from stix2 import Identity, MarkingDefinition  # type: ignore
 
 
 class KasperskyConnector:
@@ -246,7 +247,9 @@ class KasperskyConnector:
         self.helper = OpenCTIConnectorHelper(config)
 
         # Create Kaspersky client.
-        self.client = KasperskyClient(base_url, user, password, certificate_path)
+        self.client = KasperskyClient(
+            self.helper, base_url, user, password, certificate_path
+        )
 
         # Create connector author identity.
         author = self._create_author()
@@ -380,6 +383,8 @@ class KasperskyConnector:
                     current_state, self._STATE_LATEST_RUN_TIMESTAMP
                 )
                 if self._is_scheduled(last_run, timestamp):
+                    self.helper.metric.inc("run_count")
+                    self.helper.metric.state("running")
                     work_id = self._initiate_work(timestamp)
 
                     new_state = current_state.copy()
@@ -418,21 +423,27 @@ class KasperskyConnector:
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
+                    self.helper.metric.state("stopped")
                     sys.exit(0)
 
+                self.helper.metric.state("idle")
                 self._sleep(delay_sec=run_interval)
 
             except (KeyboardInterrupt, SystemExit):
                 self._info("Kaspersky connector stop")
+                self.helper.metric.state("stopped")
                 sys.exit(0)
 
             except Exception as e:  # noqa: B902
                 self._error("Kaspersky connector internal error: {0}", str(e))
+                self.helper.metric.inc("error_count")
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
+                    self.helper.metric.state("stopped")
                     sys.exit(0)
 
+                self.helper.metric.state("idle")
                 self._sleep()
 
     def _initiate_work(self, timestamp: int) -> str:

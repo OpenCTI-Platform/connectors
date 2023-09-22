@@ -6,19 +6,19 @@ from datetime import datetime
 from typing import Any, List, Mapping, NoReturn, Optional
 
 import requests
-from kaspersky.models import Publication
-from kaspersky.utils import datetime_to_timestamp, decode_base64_gzip_to_string
+from pycti import OpenCTIConnectorHelper
 from pydantic.tools import parse_obj_as
 from requests import RequestException, Response
 from requests.exceptions import ConnectTimeout, ReadTimeout
+
+from kaspersky.models import Publication
+from kaspersky.utils import datetime_to_timestamp, decode_base64_gzip_to_string
 
 log = logging.getLogger(__name__)
 
 
 class KasperskyClientException(Exception):
     """Kaspersky client exception."""
-
-    pass
 
 
 class KasperskyClient:
@@ -54,9 +54,15 @@ class KasperskyClient:
     _PUBLICATIONS_FIELD_PUBLICATIONS = "publications"
 
     def __init__(
-        self, base_url: str, user: str, password: str, certificate_path: str
+        self,
+        helper: OpenCTIConnectorHelper,
+        base_url: str,
+        user: str,
+        password: str,
+        certificate_path: str,
     ) -> None:
         """Initialize Kaspersky client."""
+        self.helper = helper
         self.base_url = base_url if not base_url.endswith("/") else base_url[:-1]
 
         self.session = requests.Session()
@@ -105,8 +111,10 @@ class KasperskyClient:
                 self._duration_ms(start_time_ms),
             )
 
-    @staticmethod
-    def _raise_client_exception(message: str, log_stacktrace: bool = False) -> NoReturn:
+    def _raise_client_exception(
+        self, message: str, log_stacktrace: bool = False
+    ) -> NoReturn:
+        self.helper.metric.inc("client_error_count")
         if log_stacktrace:
             log.exception(message)
         else:
