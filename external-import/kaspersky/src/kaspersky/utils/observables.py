@@ -2,14 +2,23 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional, Union
 
+from kaspersky.utils.common import (
+    DEFAULT_X_OPENCTI_SCORE,
+    X_OPENCTI_CREATED_BY_REF,
+    X_OPENCTI_DESCRIPTION,
+    X_OPENCTI_LABELS,
+    X_OPENCTI_SCORE,
+    is_ip_address,
+    is_ipv4_address,
+)
 from pycti import (
     CustomObservableCryptocurrencyWallet,
     CustomObservableHostname,
     CustomObservableUserAgent,
 )
-from stix2 import DomainName  # type: ignore
 from stix2 import (
     URL,
+    DomainName,
     EmailAddress,
     EmailMessage,
     File,
@@ -20,16 +29,6 @@ from stix2 import (
     Mutex,
     Process,
     X509Certificate,
-)
-
-from kaspersky.utils.common import (
-    DEFAULT_X_OPENCTI_SCORE,
-    X_OPENCTI_CREATED_BY_REF,
-    X_OPENCTI_DESCRIPTION,
-    X_OPENCTI_LABELS,
-    X_OPENCTI_SCORE,
-    is_ip_address,
-    is_ipv4_address,
 )
 
 

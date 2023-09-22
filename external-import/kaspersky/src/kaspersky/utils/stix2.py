@@ -5,17 +5,6 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Union
 
 import stix2
-from pycti import (
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Location,
-    Report,
-    StixCoreRelationship,
-)
-from pycti.utils.constants import LocationTypes  # type: ignore
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
-
 from kaspersky.utils.common import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_FILES,
@@ -68,6 +57,16 @@ from kaspersky.utils.observables import (
     create_observable_x509_certificate_serial_number,
     create_observable_x509_certificate_subject,
 )
+from pycti import (
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Report,
+    StixCoreRelationship,
+)
+from pycti.utils.constants import LocationTypes
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
 _TLP_MARKING_DEFINITION_MAPPING = {
     "white": stix2.TLP_WHITE,

@@ -4,10 +4,6 @@ import itertools
 from datetime import datetime
 from typing import Any, List, Mapping, Optional, Tuple
 
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
-
 from kaspersky.client import KasperskyClient
 from kaspersky.importer import BaseImporter
 from kaspersky.master_yara.builder import YaraRuleGroupBundleBuilder
@@ -20,6 +16,9 @@ from kaspersky.utils import (
     is_current_weekday_before_datetime,
     timestamp_to_datetime,
 )
+from pycti import OpenCTIConnectorHelper
+from stix2 import Bundle, Identity, MarkingDefinition
+from stix2.exceptions import STIXError
 
 
 class MasterYaraImporter(BaseImporter):
