@@ -54,6 +54,7 @@ class DomainToolsConnector:
             " activity on their networks.",
             confidence=self.helper.connect_confidence_level,
         )
+        self.helper.metric.state("idle")
 
     def _enrich_domaintools(self, builder: DtBuilder, observable: dict) -> str:
         """
@@ -150,6 +151,7 @@ class DomainToolsConnector:
                 for values in entry.get(category, ()):
                     if (domain := values["domain"]["value"]) != entry["domain"]:
                         if not validators.domain(domain):
+                            self.helper.metric.inc("error_count")
                             self.helper.log_warning(
                                 f"[DomainTools] domain {domain} is not correctly "
                                 "formatted. Skipping."
@@ -226,6 +228,9 @@ class DomainToolsConnector:
         return "Observable not found on DomainTools."
 
     def _process_file(self, observable):
+        self.helper.metric.state("running")
+        self.helper.metric.inc("run_count")
+
         builder = DtBuilder(self.helper, self.author)
 
         # Enrichment using DomainTools API.

@@ -136,6 +136,7 @@ class DtBuilder:
             Id of the inserted domain or None if the domain is invalid.
         """
         if not validators.domain(domain):
+            self.helper.metric.inc("error_count")
             self.helper.log_warning(
                 f"[DomainTools] domain {domain} is not correctly "
                 "formatted. Skipping."
@@ -166,6 +167,7 @@ class DtBuilder:
             Id of the inserted email or None if the domain is invalid.
         """
         if not validators.email(email):
+            self.helper.metric.inc("error_count")
             self.helper.log_warning(
                 f"[DomainTools] email {email} is " "not correctly formatted. Skipping."
             )
@@ -195,6 +197,7 @@ class DtBuilder:
             Id of the inserted ip or None if the ip is invalid.
         """
         if not validators.ipv4(ip):
+            self.helper.metric.inc("error_count")
             self.helper.log_warning(
                 f"[DomainTools] ip {ip} is not correctly " "formatted. Skipping."
             )
@@ -439,6 +442,7 @@ class DtBuilder:
 
         Note: `allow_custom` must be set to True in order to specify the author of an object.
         """
+        self.helper.metric.inc("record_send", 1 + len(self.bundle))
         self.helper.send_stix2_bundle(
             Bundle(objects=[self.author] + self.bundle, allow_custom=True).serialize(),
             allow_custom=True,
