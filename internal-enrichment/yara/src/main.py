@@ -56,6 +56,13 @@ class YaraConnector:
         self.helper.log_debug("Getting all YARA Indicators in OpenCTI")
 
         data = {"pagination": {"hasNextPage": True, "endCursor": None}}
+        customAttributes = """
+        id
+        name
+        standard_id
+        pattern
+        pattern_type
+        """
         while data["pagination"]["hasNextPage"]:
             after = data["pagination"]["endCursor"]
             data = self.helper.api.indicator.list(
@@ -65,6 +72,7 @@ class YaraConnector:
                 orderBy="created_at",
                 orderMode="asc",
                 withPagination=True,
+                customAttributes=customAttributes,
             )
         return data["entities"]
 
