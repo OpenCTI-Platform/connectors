@@ -56,7 +56,7 @@ class Mitre:
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            yaml.load(open(config_file_path, encoding="utf8"), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
             else {}
         )
@@ -153,6 +153,7 @@ class Mitre:
             urllib.error.ContentTooShortError,
         ) as urllib_error:
             self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
+            self.helper.metric.inc("client_error_count")
         return None
 
     def add_confidence_to_bundle_objects(self, stix_bundle: dict):
@@ -189,6 +190,9 @@ class Mitre:
             return
 
         self.helper.log_info(f"Connector will run now {time_now}.")
+        self.helper.metric.inc("run_count")
+        self.helper.metric.state("running")
+
         friendly_name = f"MITRE run @ {time_now}"
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
@@ -208,6 +212,7 @@ class Mitre:
                 update=self.update_existing_data,
                 work_id=work_id,
             )
+            self.helper.metric.inc("record_send", len(data["objects"]))
 
         message = f"Connector successfully run, storing last_run as {time_now}"
         self.helper.log_info(message)
@@ -227,10 +232,12 @@ class Mitre:
                 self.process_data()
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
+                self.helper.metric.state("stopped")
                 sys.exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
             finally:
+                self.helper.metric.state("idle")
                 time.sleep(60)
 
 
