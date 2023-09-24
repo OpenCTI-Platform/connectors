@@ -11,6 +11,7 @@ connector:
   update_existing_data: false
   run_and_terminate: false
   log_level: 'info'
+  expose_metrics: False
 
 mitre:
   interval: 7 # In days
