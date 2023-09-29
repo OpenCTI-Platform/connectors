@@ -10,8 +10,8 @@ from kaspersky.utils import (
     create_yara_indicator,
     datetime_utc_now,
 )
-from stix2 import Bundle, Identity, Indicator, MarkingDefinition, Report  # type: ignore
-from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
+from stix2 import Bundle, Identity, Indicator, MarkingDefinition, Report
+from stix2.v21 import _DomainObject, _RelationshipObject
 
 log = logging.getLogger(__name__)
 

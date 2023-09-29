@@ -15,9 +15,9 @@ from kaspersky.utils import (
     is_current_weekday_before_datetime,
     timestamp_to_datetime,
 )
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
+from pycti import OpenCTIConnectorHelper
+from stix2 import Bundle, Identity, MarkingDefinition
+from stix2.exceptions import STIXError
 
 
 class MasterIOCImporter(BaseImporter):
@@ -251,6 +251,7 @@ class MasterIOCImporter(BaseImporter):
         try:
             return bundle_builder.build()
         except STIXError as e:
+            self.helper.metric.inc("error_count")
             self._error(
                 "Failed to build indicator group bundle for '{0}': {1}",
                 indicator_group[0],

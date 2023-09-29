@@ -12,8 +12,8 @@ from kaspersky.utils import (
     create_report,
     get_observation_factory_by_openioc_indicator_type,
 )
-from stix2 import Bundle, Identity, MarkingDefinition, Report  # type: ignore
-from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition, Report
+from stix2.v21 import _DomainObject, _RelationshipObject
 
 log = logging.getLogger(__name__)
 

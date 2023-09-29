@@ -26,17 +26,17 @@ from kaspersky.utils import (
     decode_base64_gzip_to_string,
     get_observation_factory_by_openioc_search,
 )
-from stix2 import IntrusionSet  # type: ignore
 from stix2 import (
     Bundle,
     Identity,
     Indicator,
+    IntrusionSet,
     Location,
     MarkingDefinition,
     Relationship,
     Report,
 )
-from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
+from stix2.v21 import _DomainObject, _RelationshipObject
 
 log = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ class PublicationBundleBuilder:
         )
 
         # TODO: Ignore reports without any references or not?
-        # Hack, the report must have at least on object reference.
+        # Hack, the report must have at least one object reference.
         if not object_refs:
             dummy_object = self._create_dummy_object()
 

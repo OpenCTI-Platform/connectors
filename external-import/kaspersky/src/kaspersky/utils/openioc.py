@@ -27,7 +27,7 @@ from kaspersky.utils.stix2 import (
     OBSERVATION_FACTORY_X509_CERTIFICATE_SUBJECT,
     ObservationFactory,
 )
-from lxml.etree import Element, fromstring  # type: ignore
+from lxml.etree import Element, fromstring
 
 log = logging.getLogger(__name__)
 
