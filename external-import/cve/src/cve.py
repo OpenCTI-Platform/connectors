@@ -74,7 +74,8 @@ class Cve:
                     shutil.copyfileobj(f_in, f_out)
             # Converting the file to stix2
             self.helper.log_info("Converting the file")
-            convert("/tmp/data.json", "/tmp/data-stix2.json")
+            bundle_length = convert("/tmp/data.json", "/tmp/data-stix2.json")
+            self.helper.metric.inc("record_send", bundle_length)
             with open("/tmp/data-stix2.json") as stix_json:
                 contents = stix_json.read()
                 self.helper.send_stix2_bundle(
@@ -88,6 +89,7 @@ class Cve:
         except Exception as e:
             self.delete_files()
             self.helper.log_error(str(e))
+            self.helper.metric.inc("client_error_count")
             time.sleep(60)
 
     def process_data(self):
@@ -108,6 +110,8 @@ class Cve:
             if last_run is None or (
                 (timestamp - last_run) > ((int(self.cve_interval) - 1) * 60 * 60 * 24)
             ):
+                self.helper.metric.state("running")
+                self.helper.metric.inc("run_count")
                 timestamp = int(time.time())
                 now = datetime.utcfromtimestamp(timestamp)
                 friendly_name = "CVE run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
@@ -141,6 +145,7 @@ class Cve:
                 )
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(message)
+                self.helper.metric.state("idle")
             else:
                 new_interval = self.get_interval() - (timestamp - last_run)
                 self.helper.log_info(
@@ -151,6 +156,7 @@ class Cve:
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
+            self.helper.metric.state("stopped")
             sys.exit(0)
 
         except Exception as e:

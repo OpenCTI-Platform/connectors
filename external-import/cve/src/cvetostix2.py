@@ -6,7 +6,7 @@ import datetime
 import json
 import sys
 
-# Umporting the STIX module
+# Importing the STIX module
 import stix2
 from pycti import Identity, Vulnerability
 
@@ -19,7 +19,7 @@ def convert(filename, output="output.json"):
         identity_class="organization",
     )
     count = 0
-    with open(filename) as json_file:
+    with open(filename, encoding="utf-8") as json_file:
         vulnerabilities_bundle = [author]
         data = json.load(json_file)
         for cves in data["CVE_Items"]:
@@ -107,8 +107,11 @@ def convert(filename, output="output.json"):
     bundle_json = bundle.serialize()
 
     # Write to file
-    with open(output, "w") as f:
+    with open(output, "w", encoding="utf-8") as f:
         f.write(bundle_json)
+
+    # Return the length of the bundle.
+    return len(vulnerabilities_bundle)
 
 
 if __name__ == "__main__":
