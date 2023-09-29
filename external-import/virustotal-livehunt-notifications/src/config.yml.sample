@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'virustotal_livehunt_notifications'
   type: 'EXTERNAL_IMPORT'
-  name: 'Virustotal Livehunt Notifications'
+  name: 'VirusTotal Livehunt Notifications'
   scope: 'StixFile,Indicator,Incident'
   confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
   create_indicator: False

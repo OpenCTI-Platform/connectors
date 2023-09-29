@@ -232,6 +232,7 @@ class Identity(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Identity(
+            id=pycti.Identity.generate_id(self.name, self.create_id_class()),
             name=self.name,
             identity_class=self.create_id_class(),
             created_by_ref=self.author.id,
@@ -253,7 +254,11 @@ class ThreatActor(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.ThreatActor(name=self.name, created_by_ref=self.author.id)
+        self.stix_obj = stix2.ThreatActor(
+            id=pycti.ThreatActor.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
+        )
 
     def create_id_class(self):
         """Creates a STIX2 identity class"""
@@ -266,7 +271,9 @@ class IntrusionSet(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.IntrusionSet(
-            name=self.name, created_by_ref=self.author.id
+            id=pycti.IntrusionSet.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
         )
 
 
@@ -276,7 +283,10 @@ class Malware(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Malware(
-            name=self.name, is_family=False, created_by_ref=self.author.id
+            id=pycti.Malware.generate_id(self.name),
+            name=self.name,
+            is_family=False,
+            created_by_ref=self.author.id,
         )
 
 
@@ -287,7 +297,9 @@ class Vulnerability(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Vulnerability(
-            name=self.name, created_by_ref=self.author.id
+            id=pycti.Vulnerability.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
         )
 
 
@@ -309,7 +321,7 @@ class DetectionRule(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Indicator(
-            id=pycti.Indicator.generate_id(self.content()),
+            id=pycti.Indicator.generate_id(self.content),
             name=self.name,
             pattern_type=self.type,
             pattern=self.content,
@@ -361,7 +373,11 @@ class EnrichedIndicator:
 
     def _create_author(self):
         """Creates Recorded Future Author"""
-        return stix2.Identity(name="Recorded Future", identity_class="organization")
+        return stix2.Identity(
+            id=pycti.Identity.generate_id("Recorded Future", "organization"),
+            name="Recorded Future",
+            identity_class="organization",
+        )
 
     def from_json(self, name, risk, evidenceDetails, links):
         """Creates STIX objects from enriched entity json"""
