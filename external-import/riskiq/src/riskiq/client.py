@@ -56,17 +56,22 @@ class RiskIQClient:
         http = requests.Session()
         http.mount("https://", adapter)
         http.mount("http://", adapter)
+        error = False
         try:
             response = http.get(url, auth=(self.user, self.password))
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[RiskIQ] Http error: {errh}")
+            error = True
         except requests.exceptions.ConnectionError as errc:
             self.helper.log_error(f"[RiskIQ] Error connecting: {errc}")
+            error = True
         except requests.exceptions.Timeout as errt:
             self.helper.log_error(f"[RiskIQ] Timeout error: {errt}")
+            error = True
         except requests.exceptions.RequestException as err:
             self.helper.log_error(f"[RiskIQ] Something else happened: {err}")
+            error = True
         else:
             try:
                 self.helper.log_debug(f"[RiskIQ] data retrieved: {response.json()}")
@@ -75,6 +80,10 @@ class RiskIQClient:
                 self.helper.log_error(
                     f"[RiskIQ] Error decoding the json: {err} - {response.text}"
                 )
+                self.helper.metric.inc("client_error_count")
+        finally:
+            if error:
+                self.helper.metric.inc("client_error_count")
         return None
 
     def get_articles(
