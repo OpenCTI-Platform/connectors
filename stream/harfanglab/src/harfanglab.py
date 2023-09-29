@@ -1,11 +1,10 @@
-import os.path
-
-import yaml
 import json
-import time
+import os.path
 import sys
-import requests
+import time
 
+import requests
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -313,7 +312,7 @@ class HarfangLabConnector:
                 return self.helper.log_error(f"[CREATE] Indicator {pattern} not created")
             # Be careful sometimes there is a return response HarfangLab {'status':[]}
             elif not response["status"]:
-                return self.helper.log_error(f"Error missing value")
+                return self.helper.log_error("Error missing value")
             elif response["status"][0]["status"] is False:
                 return self.helper.log_error(f"Error {response['status'][0]['code']} = {response['status'][0]['content']}")
             else:
