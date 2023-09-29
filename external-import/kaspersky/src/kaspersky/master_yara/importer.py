@@ -16,9 +16,9 @@ from kaspersky.utils import (
     is_current_weekday_before_datetime,
     timestamp_to_datetime,
 )
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
+from pycti import OpenCTIConnectorHelper
+from stix2 import Bundle, Identity, MarkingDefinition
+from stix2.exceptions import STIXError
 
 
 class MasterYaraImporter(BaseImporter):
@@ -189,6 +189,7 @@ class MasterYaraImporter(BaseImporter):
         try:
             return bundle_builder.build()
         except STIXError as e:
+            self.helper.metric.inc("error_count")
             self._error(
                 "Failed to build YARA rule bundle for '{0}': {1}",
                 yara_rule_group[0],

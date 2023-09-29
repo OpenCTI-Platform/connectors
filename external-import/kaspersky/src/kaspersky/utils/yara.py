@@ -8,8 +8,8 @@ from typing import Any, List, Mapping, Optional, Tuple
 
 from kaspersky.models import Yara, YaraRule
 from kaspersky.utils.stix2 import create_indicator
-from pycti import OpenCTIConnectorHelper  # type: ignore
-from stix2 import Identity, Indicator, MarkingDefinition  # type: ignore
+from pycti import OpenCTIConnectorHelper
+from stix2 import Identity, Indicator, MarkingDefinition
 
 log = logging.getLogger(__name__)
 

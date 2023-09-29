@@ -16,9 +16,9 @@ from pycti import (
     CustomObservableHostname,
     CustomObservableUserAgent,
 )
-from stix2 import DomainName  # type: ignore
 from stix2 import (
     URL,
+    DomainName,
     EmailAddress,
     EmailMessage,
     File,

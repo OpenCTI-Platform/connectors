@@ -65,8 +65,8 @@ from pycti import (
     Report,
     StixCoreRelationship,
 )
-from pycti.utils.constants import LocationTypes  # type: ignore
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
+from pycti.utils.constants import LocationTypes
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
 _TLP_MARKING_DEFINITION_MAPPING = {
     "white": stix2.TLP_WHITE,
