@@ -136,6 +136,8 @@ class RiskIQConnector:
                     current_state, self._STATE_LATEST_RUN_TIMESTAMP
                 )
                 if self._is_scheduled(last_run, timestamp):
+                    self.helper.metric.inc("run_count")
+                    self.helper.metric.state("running")
                     work_id = self._initiate_work(timestamp)
                     new_state = current_state.copy()
                     last_article = self._get_state_value(
@@ -188,12 +190,17 @@ class RiskIQConnector:
                         f"[RiskIQ] Connector will not run, next run in {run_interval} seconds"
                     )
 
+                # Set the state as `idle` before sleeping.
+                self.helper.metric.state("idle")
             except (KeyboardInterrupt, SystemExit):
+                self.helper.metric.state("stopped")
                 self.helper.log_info("RiskIQ connector stop")
                 sys.exit(0)
 
             except Exception as e:
                 self.helper.log_error(str(e))
+                self.helper.metric.inc("error_count")
+                self.helper.metric.state("stopped")
                 sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
