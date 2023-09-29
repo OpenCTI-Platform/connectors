@@ -261,6 +261,10 @@ jobs:
           name: Build Docker image opencti/connector-logrhythm
           command: docker build -t opencti/connector-logrhythm:latest . && docker tag opencti/connector-logrhythm:latest opencti/connector-logrhythm:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/orion-malware
+          name: Build Docker image opencti/connector-orion-malware
+          command: docker build -t opencti/connector-orion-malware:latest . && docker tag opencti/connector-orion-malware:latest opencti/connector-orion-malware:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -368,6 +372,8 @@ jobs:
             docker push opencti/connector-feedly:${CIRCLE_TAG}
             docker push opencti/connector-logrhythm:latest
             docker push opencti/connector-logrhythm:${CIRCLE_TAG}
+            docker push opencti/connector-orion-malware:latest
+            docker push opencti/connector-orion-malware:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -919,6 +925,10 @@ jobs:
           name: Build Docker image opencti/connector-logrhythm
           command: docker build -t opencti/connector-logrhythm:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/orion-malware
+          name: Build Docker image opencti/connector-orion-malware
+          command: docker build -t opencti/connector-orion-malware:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -972,6 +982,7 @@ jobs:
             docker push opencti/connector-taxii-post:rolling
             docker push opencti/connector-feedly:rolling
             docker push opencti/connector-logrhythm:rolling
+            docker push opencti/connector-orion-malware:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
