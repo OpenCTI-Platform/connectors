@@ -29,6 +29,7 @@ class Malpedia:
             if os.path.isfile(config_file_path)
             else {}
         )
+
         # Extra config
         self.confidence_level = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL",
@@ -64,6 +65,8 @@ class Malpedia:
 
         self.helper = OpenCTIConnectorHelper(config)
         self.helper.log_info(f"loaded malpedia config: {config}")
+
+        self.helper.metric.state("idle")
 
         # Create Malpedia client and importers
         self.client = MalpediaClient(self.helper, self.AUTH_KEY)
@@ -150,6 +153,8 @@ class Malpedia:
                     last_malpedia_version, current_malpedia_version
                 ):
                     self.helper.log_info("running importers")
+                    self.helper.metric.inc("run_count")
+                    self.helper.metric.state("running")
 
                     knowledge_importer_state = self._run_knowledge_importer(
                         current_state
@@ -176,16 +181,20 @@ class Malpedia:
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("connector stop")
+                self.helper.metric.state("stopped")
                 sys.exit(0)
 
             except Exception as e:
                 self.helper.log_error(str(e))
+                self.helper.metric.state("stopped")
                 sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
+                self.helper.metric.state("stopped")
                 sys.exit(0)
 
+            self.helper.metric.state("idle")
             time.sleep(60)
 
     def _run_knowledge_importer(

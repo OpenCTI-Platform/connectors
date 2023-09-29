@@ -8,6 +8,8 @@ from pycti import OpenCTIConnectorHelper
 
 
 class MalpediaClient:
+    """Malpedia client."""
+
     _DEFAULT_API_URL = "https://malpedia.caad.fkie.fraunhofer.de/api/"
 
     def __init__(self, helper: OpenCTIConnectorHelper, api_key: str) -> None:
@@ -27,22 +29,24 @@ class MalpediaClient:
         url = urljoin(self._DEFAULT_API_URL, url_path)
         try:
             if self.unauthenticated:
-                r = requests.get(url)
+                r = requests.get(url, timeout=10)
                 data = r.json()
             else:
                 r = requests.get(
-                    url, headers={"Authorization": "apitoken " + self.api_key}
+                    url,
+                    headers={"Authorization": "apitoken " + self.api_key},
+                    timeout=10,
                 )
                 data = r.json()
         except requests.exceptions.RequestException as e:
             self.helper.log_error(f"error in malpedia query: {e}")
+            self.helper.metric.inc("client_error_count")
             return None
         return data
 
     def token_check(self) -> bool:
         response_json = self.query("check/apikey")
-        if "Valid token" in response_json["detail"]:
-            return True
+        return "Valid token" in response_json["detail"]
 
     def current_version(self) -> int:
         response_json = self.query("get/version")
