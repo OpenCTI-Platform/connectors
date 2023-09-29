@@ -135,7 +135,7 @@ class VirusTotalConnector:
             self.helper.log_debug(message)
             # Larger files can sometimes take a few seconds to propogate through the system and be added to the observable
             # It appears to be about 1 second for every 30-50MB
-            if not len(observable["importFiles"]):
+            if not observable["importFiles"]:
                 await asyncio.sleep(5)
                 observable = self.helper.api.stix_cyber_observable.read(
                     id=observable["id"]
@@ -150,8 +150,8 @@ class VirusTotalConnector:
                 artifact = self.helper.api.fetch_opencti_file(artifact_url, binary=True)
             except Exception as err:
                 raise ValueError(
-                    f"[VirusTotal] Error occurred while fetching artifact from OpenCTI: {err}"
-                )
+                    "[VirusTotal] Error fetching artifact from OpenCTI"
+                ) from err
             try:
                 analysis_id = self.client.upload_artifact(
                     observable["importFiles"][0]["name"], artifact
@@ -160,16 +160,16 @@ class VirusTotalConnector:
                 self.client.get_file_info(observable["observable_value"])
             except Exception as err:
                 raise ValueError(
-                    f"[VirusTotal] Error occurred uploading artifact to VirusTotal: {err}"
-                )
+                    "[VirusTotal] Error uploading artifact to VirusTotal"
+                ) from err
             try:
                 await self.client.check_upload_status(
                     "artifact", observable["observable_value"], analysis_id
                 )
             except Exception as err:
                 raise ValueError(
-                    f"[VirusTotal] Error occurred while waiting for VirusTotal to analyze artifact: {err}"
-                )
+                    "[VirusTotal] Error waiting for VirusTotal to analyze artifact"
+                ) from err
             json_data = self.client.get_file_info(observable["observable_value"])
             assert json_data
         if "error" in json_data:
@@ -302,16 +302,16 @@ class VirusTotalConnector:
                 analysis_id = self.client.upload_url(observable["observable_value"])
             except Exception as err:
                 raise ValueError(
-                    f"[VirusTotal] Error occurred uploading URL to VirusTotal: {err}"
-                )
+                    "[VirusTotal] Error uploading URL to VirusTotal"
+                ) from err
             try:
                 await self.client.check_upload_status(
                     "URL", observable["observable_value"], analysis_id
                 )
             except Exception as err:
                 raise ValueError(
-                    f"[VirusTotal] Error occurred while waiting for VirusTotal to analyze URL: {err}"
-                )
+                    "[VirusTotal] Error waiting for VirusTotal to analyze URL"
+                ) from err
             json_data = self.client.get_url_info(observable["observable_value"])
             assert json_data
         print(json_data, flush=True)
@@ -336,6 +336,8 @@ class VirusTotalConnector:
         return builder.send_bundle()
 
     async def _process_message(self, data):
+        self.helper.metric.inc("run_count")
+        self.helper.metric.state("running")
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
         if observable is None:
@@ -374,4 +376,5 @@ class VirusTotalConnector:
 
     def start(self):
         """Start the main loop."""
+        self.helper.metric.state("idle")
         self.helper.listen(self._process_message)
