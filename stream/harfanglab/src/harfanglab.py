@@ -263,7 +263,7 @@ class HarfangLabConnector:
             )
 
             if not entity:
-                indicator_id = data['id']
+                indicator_id = data["id"]
                 observables = self._query(
                     "get",
                     f"/{uri}/?search={indicator_id}&source_id={self.stix_list_id}",
