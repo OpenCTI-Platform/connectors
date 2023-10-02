@@ -261,14 +261,27 @@ class HarfangLabConnector:
             entity = self.helper.api.indicator.read(
                 id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
             )
-            observables = entity["observables"]
+
+            if not entity:
+                indicator_id = data['id']
+                observables = self._query(
+                    "get",
+                    f"/{uri}/?search={indicator_id}&source_id={self.stix_list_id}",
+                )
+                observables = observables["results"]
+            else:
+                observables = entity["observables"]
+
             if not observables:
                 self.helper.log_error(
                     f"{indicator_delete} The indicator has no observables"
                 )
             else:
                 for observable in observables:
-                    observable_value = observable["observable_value"]
+                    if "observable_value" in observable:
+                        observable_value = observable["observable_value"]
+                    else:
+                        observable_value = observable["value"]
                     self.check_and_delete_observable_id(
                         entity, pattern, uri, observable_value
                     )
@@ -292,7 +305,7 @@ class HarfangLabConnector:
                 indicator_platforms,
             ) = observable_comment.values()
 
-            if entity["standard_id"] == indicator_id:
+            if not entity or entity["standard_id"] == indicator_id:
                 if self.harfanglab_indicator_delete is True:
                     response = self._query("delete", f"/{uri}/{observable_id}/")
 
