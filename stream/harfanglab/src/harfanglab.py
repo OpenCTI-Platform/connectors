@@ -25,16 +25,16 @@ class HarfangLabConnector:
         )
 
         self.harfanglab_ssl_verify = get_config_variable(
-            "HARFLANGLAB_SSL_VERIFY", ["harfanglab", "ssl_verify"], config, False, True
+            "HARFANGLAB_SSL_VERIFY", ["harfanglab", "ssl_verify"], config, False, True
         )
         self.harfanglab_token = get_config_variable(
-            "HARFLANGLAB_TOKEN", ["harfanglab", "token"], config
+            "HARFANGLAB_TOKEN", ["harfanglab", "token"], config
         )
         self.harfanglab_login = get_config_variable(
-            "HARFLANGLAB_LOGIN", ["harfanglab", "login"], config
+            "HARFANGLAB_LOGIN", ["harfanglab", "login"], config
         )
         self.harfanglab_password = get_config_variable(
-            "HARFLANGLAB_PASSWORD", ["harfanglab", "password"], config
+            "HARFANGLAB_PASSWORD", ["harfanglab", "password"], config
         )
         self.api_url = self.harfanglab_url + "/api/data/threat_intelligence"
         self.headers = {
@@ -42,13 +42,13 @@ class HarfangLabConnector:
             "Authorization": "Token " + self.harfanglab_token,
         }
         self.harfanglab_source_list_name = get_config_variable(
-            "HARFLANGLAB_SOURCE_LIST_NAME", ["harfanglab", "source_list_name"], config
+            "HARFANGLAB_SOURCE_LIST_NAME", ["harfanglab", "source_list_name"], config
         )
         self.harfanglab_indicator_delete = get_config_variable(
-            "HARFLANGLAB_INDICATOR_DELETE", ["harfanglab", "indicator_delete"], config
+            "HARFANGLAB_INDICATOR_DELETE", ["harfanglab", "indicator_delete"], config
         )
         self.harfanglab_rule_maturity = get_config_variable(
-            "HARFLANGLAB_RULE_MATURITY", ["harfanglab", "rule_maturity"], config
+            "HARFANGLAB_RULE_MATURITY", ["harfanglab", "rule_maturity"], config
         )
         self.source_list = {
             "name": self.harfanglab_source_list_name,
