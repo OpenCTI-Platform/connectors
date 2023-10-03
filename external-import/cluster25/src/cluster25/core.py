@@ -23,7 +23,15 @@ class Cluster25:
 
     _STATE_LAST_RUN = "last_run"
     _ALLOWED_INDICATOR_TYPES = [
-        "ipv4", "domain", "md5", "sha1", "sha256", "url", "email", "ipv6", "filename"
+        "ipv4",
+        "domain",
+        "md5",
+        "sha1",
+        "sha256",
+        "url",
+        "email",
+        "ipv6",
+        "filename",
     ]
 
     def __init__(self) -> None:
@@ -38,16 +46,18 @@ class Cluster25:
         self.client_id = self._get_configuration(config, self._CONFIG_CLIENT_ID)
         self.client_secret = self._get_configuration(config, self._CONFIG_CLIENT_SECRET)
 
-        self.interval_sec = self._get_configuration(
-            config, self._CONFIG_INTERVAL_SEC, is_number=True
-        ) or self._CONNECTOR_RUN_INTERVAL_SEC
+        self.interval_sec = (
+            self._get_configuration(config, self._CONFIG_INTERVAL_SEC, is_number=True)
+            or self._CONNECTOR_RUN_INTERVAL_SEC
+        )
 
         self.current_token = None
         self.last_token_timestamp = None
 
-        self.indicator_types = self._get_configuration(
-            config, self._CONFIG_INDICATOR_TYPES
-        ) or self._ALLOWED_INDICATOR_TYPES
+        self.indicator_types = (
+            self._get_configuration(config, self._CONFIG_INDICATOR_TYPES)
+            or self._ALLOWED_INDICATOR_TYPES
+        )
 
     @staticmethod
     def _get_yaml_path(config_name: str) -> List[str]:
@@ -66,7 +76,7 @@ class Cluster25:
 
     @classmethod
     def _get_configuration(
-            cls, config: Dict[str, Any], config_name: str, is_number: bool = False
+        cls, config: Dict[str, Any], config_name: str, is_number: bool = False
     ) -> Any:
         yaml_path = cls._get_yaml_path(config_name)
         env_var_name = cls._get_environment_variable_name(yaml_path)
@@ -87,7 +97,7 @@ class Cluster25:
 
     @staticmethod
     def _get_state_value(
-            state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
+        state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
     ) -> Any:
         if state is not None:
             return state.get(key, default)
@@ -108,32 +118,31 @@ class Cluster25:
         r = requests.post(url=f"{self.base_url}/token", json=payload)
 
         if r.status_code != 200:
-            self.helper.log_error(f"Unable to retrieve the token from C25 platform, status {r.status_code}")
+            self.helper.log_error(
+                f"Unable to retrieve the token from C25 platform, status {r.status_code}"
+            )
             self.helper.log_info("Connector stop")
             sys.exit(0)
 
         return r.json()["data"]["token"]
 
     def _get_c25_observables(self, timestamp: int) -> str:
-
         params = {
             "export_format": "stix2",
             "types": self.indicator_types,
             "start": datetime.datetime.fromtimestamp(timestamp).isoformat(),
-            "include_info": True
+            "include_info": True,
         }
-        headers = {
-            "Authorization": f"Bearer {self.current_token}"
-        }
+        headers = {"Authorization": f"Bearer {self.current_token}"}
 
         r = requests.get(
-            url=f"{self.base_url}/export/indicators",
-            params=params,
-            headers=headers
+            url=f"{self.base_url}/export/indicators", params=params, headers=headers
         )
 
         if r.status_code != 200:
-            self.helper.log_error(f"Unable to retrieve observables from C25 platform, status {r.status_code}")
+            self.helper.log_error(
+                f"Unable to retrieve observables from C25 platform, status {r.status_code}"
+            )
             self.helper.log_info("Connector stop")
             sys.exit(0)
 
@@ -165,7 +174,9 @@ class Cluster25:
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
                 if self._is_scheduled(last_run, timestamp):
                     now = datetime.datetime.utcfromtimestamp(timestamp)
-                    friendly_name = f"Cluster25 run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
+                    friendly_name = (
+                        f"Cluster25 run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
+                    )
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
@@ -185,7 +196,9 @@ class Cluster25:
 
                     self.helper.log_info(f"Storing new state: {new_state}")
                     self.helper.set_state(new_state)
-                    message = f"State stored, next run in: {self._get_interval()} seconds"
+                    message = (
+                        f"State stored, next run in: {self._get_interval()} seconds"
+                    )
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(message)
                 else:
