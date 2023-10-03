@@ -1,10 +1,8 @@
-import json
 import os
 
-import stix2
 import tldextract
 import yaml
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from pymispwarninglists import WarningLists
 
 # At the moment it is not possible to map lists to their upstream path.
@@ -103,7 +101,7 @@ class HygieneConnector:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
 
         warninglists_slow_search = bool(
             get_config_variable(
