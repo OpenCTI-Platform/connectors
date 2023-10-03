@@ -1,8 +1,10 @@
+import json
 import os
 
+import stix2
 import tldextract
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2, get_config_variable
 from pymispwarninglists import WarningLists
 
 # At the moment it is not possible to map lists to their upstream path.
@@ -127,16 +129,18 @@ class HygieneConnector:
 
         # Create Hygiene Tag
         self.label_hygiene = self.helper.api.label.create(
-            value="Hygiene", color="#fc0341"
+            value="hygiene", color="#fc0341"
         )
 
         if self.enrich_subdomains:
             self.label_hygiene_parent = self.helper.api.label.create(
-                value="Hygiene_parent", color="#fc0341"
+                value="hygiene_parent", color="#fc0341"
             )
 
     def _process_observable(self, observable) -> str:
         # Extract IPv4, IPv6 and Domain from entity data
+        observable_id = observable["standard_id"]
+        indicators_ids = observable["indicatorsIds"]
         observable_value = observable["observable_value"]
         observable_type = observable["entity_type"]
 
@@ -166,72 +170,115 @@ class HygieneConnector:
 
                 # We set the score based on the number of warning list entries
                 if len(result) >= 5:
-                    score = "5"
+                    score = 5
                 elif len(result) >= 3:
-                    score = "10"
+                    score = 10
                 elif len(result) == 1:
-                    score = "15"
+                    score = 15
                 else:
-                    score = "20"
+                    score = 20
 
                 self.helper.log_info(
                     f"number of hits ({len(result)}) setting score to {score}"
                 )
-                self.helper.api.stix_cyber_observable.add_label(
-                    id=observable["id"],
-                    label_id=self.label_hygiene["id"]
-                    if use_parent is False
-                    else self.label_hygiene_parent["id"],
+                # Generate bundle
+                stix_objects = self.helper.api.stix2.prepare_export(
+                    self.helper.api.stix2.generate_export(observable)
                 )
-                self.helper.api.stix_cyber_observable.update_field(
-                    id=observable["id"],
-                    input={"key": "x_opencti_score", "value": score},
-                )
-                for indicator_id in observable["indicatorsIds"]:
-                    self.helper.api.stix_domain_object.add_label(
-                        id=indicator_id,
-                        label_id=self.label_hygiene["id"]
-                        if use_parent is False
-                        else self.label_hygiene_parent["id"],
+                stix_observable = [e for e in stix_objects if e["id"] == observable_id][
+                    0
+                ]
+
+                # Add labels
+                if use_parent:
+                    stix_observable["x_opencti_labels"] = (
+                        (
+                            stix_observable["x_opencti_labels"]
+                            + [self.label_hygiene_parent["value"]]
+                        )
+                        if "x_opencti_labels" in stix_observable
+                        else [self.label_hygiene_parent["value"]]
                     )
-                    self.helper.api.stix_domain_object.update_field(
-                        id=indicator_id,
-                        input={"key": "x_opencti_score", "value": score},
+                else:
+                    stix_observable["x_opencti_labels"] = (
+                        (
+                            stix_observable["x_opencti_labels"]
+                            + [self.label_hygiene["value"]]
+                        )
+                        if "x_opencti_labels" in stix_observable
+                        else [self.label_hygiene["value"]]
                     )
 
-                # Create external references
-                external_reference_id = self.helper.api.external_reference.create(
-                    source_name="misp-warninglist",
-                    url="https://github.com/MISP/misp-warninglists/tree/main/"
-                    + LIST_MAPPING[hit.name],
-                    external_id=hit.name,
-                    description=hit.description,
-                )
-                self.helper.api.stix_cyber_observable.add_external_reference(
-                    id=observable["id"],
-                    external_reference_id=external_reference_id["id"],
+                # Update score
+                stix_observable["x_opencti_score"] = score
+
+                # External references
+                stix_observable["external_references"] = (
+                    stix_observable["external_references"]
+                    + [
+                        {
+                            "source_name": "misp-warninglist",
+                            "url": "https://github.com/MISP/misp-warninglists/tree/main/"
+                            + LIST_MAPPING[hit.name],
+                            "external_id": hit.name,
+                            "description": hit.description,
+                        }
+                    ]
+                    if "external_references" in stix_observable
+                    else [
+                        {
+                            "source_name": "misp-warninglist",
+                            "url": "https://github.com/MISP/misp-warninglists/tree/main/"
+                            + LIST_MAPPING[hit.name],
+                            "external_id": hit.name,
+                            "description": hit.description,
+                        }
+                    ]
                 )
 
+                # Add indicators
+                for indicator_id in indicators_ids:
+                    stix_indicator_objects = self.helper.api.stix2.prepare_export(
+                        self.helper.api.stix2.generate_export(
+                            self.helper.api.indicator.read(id=indicator_id)
+                        )
+                    )
+                    stix_indicator = [
+                        e
+                        for e in stix_indicator_objects
+                        if e.get("x_opencti_id") == indicator_id
+                    ][0]
+
+                    # Add labels
+                    if use_parent:
+                        stix_indicator["labels"] = (
+                            (
+                                stix_indicator["labels"]
+                                + [self.label_hygiene_parent["value"]]
+                            )
+                            if "labels" in stix_indicator
+                            else [self.label_hygiene_parent["value"]]
+                        )
+                    else:
+                        stix_indicator["labels"] = (
+                            (stix_indicator["labels"] + [self.label_hygiene["value"]])
+                            if "labels" in stix_indicator
+                            else [self.label_hygiene["value"]]
+                        )
+
+                    # Update score
+                    stix_indicator["x_opencti_score"] = score
+
+                    # Append
+                    stix_objects.append(stix_indicator)
+
+                serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
+                self.helper.send_stix2_bundle(serialized_bundle)
             return "Observable value found on warninglist and tagged accordingly"
 
     def _process_message(self, data) -> str:
         entity_id = data["entity_id"]
-
-        custom_attributes = """
-            id
-            observable_value
-            entity_type
-            indicators {
-              edges {
-                node {
-                  id
-                }
-              }
-            }
-        """
-        observable = self.helper.api.stix_cyber_observable.read(
-            id=entity_id, customAttributes=custom_attributes
-        )
+        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
 
         if observable is None:
             raise ValueError(

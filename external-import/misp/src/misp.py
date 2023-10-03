@@ -9,6 +9,8 @@ import pytz
 import stix2
 import yaml
 from dateutil.parser import parse
+
+import pycti
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -875,7 +877,6 @@ class Misp:
                 description = (
                     attributes[0]["value"] if attributes else event["Event"]["info"]
                 )
-
                 report = stix2.Report(
                     id=Report.generate_id(
                         event["Event"]["info"],
