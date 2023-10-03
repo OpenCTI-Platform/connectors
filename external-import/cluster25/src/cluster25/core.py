@@ -2,7 +2,7 @@ import datetime
 import os
 import sys
 import time
-from typing import Dict, Any, List, Optional, Mapping, Union
+from typing import Dict, Any, List, Optional, Mapping
 
 import requests
 import yaml
