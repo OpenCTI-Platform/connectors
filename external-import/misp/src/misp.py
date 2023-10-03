@@ -9,8 +9,6 @@ import pytz
 import stix2
 import yaml
 from dateutil.parser import parse
-
-import pycti
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
