@@ -1,14 +1,16 @@
 FROM python:3.11-alpine
 
-# Copy the connector
-COPY src /opt/opencti-cluster25
+COPY requirements.txt /opt/opencti-connector-cluster25/
 
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev && \
-    cd /opt/opencti-connector-template && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev && \
+    cd /opt/opencti-connector-cluster25 && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apk del git build-base && \
+    rm -rf /var/cache/apk/*
+
+# Copy the connector
+COPY src /opt/opencti-connector-cluster25
 
 # Expose and entrypoint
 COPY entrypoint.sh /

@@ -1,44 +1,39 @@
 # OpenCTI Cluster25 Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+The OpenCTI Cluster25 connector can be used to import indicators from the C25 platform into OpenCTI.
+It uses che current V1 public APIs to get a valid token and import the supported indicators.
+In the current implementation, the connector is able to import indicators only.
+With future releases, it would be possible to import observables, threat actors and various contents as well.
+
+Note: in order to use the connector, you need a valid pair of CLIENT_ID and CLIENT_SECRET provided by the C25 team.
+All the results are implicitly filtered by the user's TLP. 
 
 ## Installation
 
-### Requirements
+The OpenCTI Cluster25 connector is a standalone Python process that must have access
+to the OpenCTI platform and the RabbitMQ. RabbitMQ credentials and connection parameters
+are provided by the API directly, as configured in the platform settings.
 
-- OpenCTI Platform >= 5.10.3
+Enabling this connector could be done by launching the Python process directly after
+providing the correct configuration in the `config.yml` file or within a Docker with
+the image `opencti/connector-cluster25:latest`. We provide an example of
+[`docker-compose.yml`](docker-compose.yml) file that could be used independently or
+integrated to the global `docker-compose.yml` file of OpenCTI.
 
+If you are using it independently, remember that the connector will try to connect to
+the RabbitMQ on the port configured in the OpenCTI platform.
 ### Configuration
 
-| Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
-| ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `opencti_url`                        | `OPENCTI_URL`                       | Yes          | The URL of the OpenCTI platform.                                                                                                                           |
-| `opencti_token`                      | `OPENCTI_TOKEN`                     | Yes          | The default admin token configured in the OpenCTI platform parameters file.                                                                                |
-| `connector_id`                       | `CONNECTOR_ID`                      | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                         |
-| `connector_type`                     | `CONNECTOR_TYPE`                    | Yes          | Must be `Template_Type` (this is the connector type).                                                                                                      |
-| `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | Option `Template`                                                                                                                                          |
-| `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope: Template Scope (MIME Type or Stix Object)                                                                                                 |
-| `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 4).                                                                             |
-| `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
-| `template_attribute`                 | `TEMPLATE_ATTRIBUTE`                | Yes          | Additional setting for the connector itself                                                                                                                |
 
-### Debugging ###
+| Config Parameter | Docker env var              | Default                                                                | Description                                                                            |
+|------------------|-----------------------------|------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| `base_url`       | `CLUSTER25_BASE_URL`        | `https://api.intelligence.cluster25.io/api/v1`                         | The base URL of the C25 platform. It can be the default one, or your private instance. |
+| `client_id`      | `CLUSTER25_CLIENT_ID`       | `ChangeMe`                                                             | The C25 client_id.                                                                     |
+| `client_secret`  | `CLUSTER25_CLIENT_SECRET`   | `ChangeMe`                                                             | The C25 client_secret.                                                                 |
+| `indicator_types`  | `CLUSTER25_INDICATOR_TYPES` | "ipv4","domain","md5","sha1","sha256","url","email","ipv6","filename"  | The indicators type you want to ingest. By default, all the indicators are collected.  |
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
-### Additional information
+### Issues
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+In case of errors, bugs, or any other issues please feel free to contact the main developer [@CorraMatte](https://github.com/CorraMatte).
 
