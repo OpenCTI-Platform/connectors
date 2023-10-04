@@ -21,7 +21,7 @@ class IpInfoConnector:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
         self.token = get_config_variable("IPINFO_TOKEN", ["ipinfo", "token"], config)
         self.max_tlp = get_config_variable(
             "IPINFO_MAX_TLP", ["ipinfo", "max_tlp"], config
