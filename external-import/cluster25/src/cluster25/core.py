@@ -1,12 +1,13 @@
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from typing import Dict, Any, List, Optional, Mapping
 import datetime
 import json
 import os
-import requests
 import sys
 import time
+from typing import Any, Dict, List, Mapping, Optional
+
+import requests
 import yaml
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class Cluster25:
