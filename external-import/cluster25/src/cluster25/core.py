@@ -57,7 +57,7 @@ class Cluster25:
         self.last_token_timestamp = None
 
         self.indicator_types = (
-            self._get_configuration(config, self._CONFIG_INDICATOR_TYPES)
+            self._get_configuration(config, self._CONFIG_INDICATOR_TYPES, is_list=True)
             or self._ALLOWED_INDICATOR_TYPES
         )
 
@@ -78,10 +78,19 @@ class Cluster25:
 
     @classmethod
     def _get_configuration(
-        cls, config: Dict[str, Any], config_name: str, is_number: bool = False
+        cls,
+        config: Dict[str, Any],
+        config_name: str,
+        is_number: bool = False,
+        is_list: bool = False,
     ) -> Any:
         yaml_path = cls._get_yaml_path(config_name)
         env_var_name = cls._get_environment_variable_name(yaml_path)
+
+        if is_list:
+            values = get_config_variable(env_var_name, yaml_path, config)
+            return values.split(",") if not isinstance(values, list) else values
+
         return get_config_variable(env_var_name, yaml_path, config, isNumber=is_number)
 
     def _get_interval(self) -> int:

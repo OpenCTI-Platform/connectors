@@ -30,7 +30,7 @@ the RabbitMQ on the port configured in the OpenCTI platform.
 | `base_url`       | `CLUSTER25_BASE_URL`        | `https://api.intelligence.cluster25.io/api/v1`                         | The base URL of the C25 platform. It can be the default one, or your private instance. |
 | `client_id`      | `CLUSTER25_CLIENT_ID`       | `ChangeMe`                                                             | The C25 client_id.                                                                     |
 | `client_secret`  | `CLUSTER25_CLIENT_SECRET`   | `ChangeMe`                                                             | The C25 client_secret.                                                                 |
-| `indicator_types`  | `CLUSTER25_INDICATOR_TYPES` | "ipv4","domain","md5","sha1","sha256","url","email","ipv6","filename"  | The indicators type you want to ingest. By default, all the indicators are collected.  |
+| `indicator_types`  | `CLUSTER25_INDICATOR_TYPES` | `ipv4,domain,md5,sha1,sha256,url,email,ipv6,filename`  | The indicators type you want to ingest. By default, all the indicators are collected.  |
 
 
 ### Issues
