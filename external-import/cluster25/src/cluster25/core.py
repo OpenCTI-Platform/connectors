@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import sys
 import time
@@ -20,6 +21,7 @@ class Cluster25:
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
 
     _CONNECTOR_RUN_INTERVAL_SEC = 600
+    _TZ_INFO = datetime.datetime.now().astimezone().tzinfo
 
     _STATE_LAST_RUN = "last_run"
     _ALLOWED_INDICATOR_TYPES = [
@@ -126,14 +128,20 @@ class Cluster25:
 
         return r.json()["data"]["token"]
 
-    def _get_c25_observables(self, timestamp: int) -> str:
+    def _get_c25_observables(self, timestamp: int) -> Dict[str, Any]:
         params = {
             "export_format": "stix2",
             "types": self.indicator_types,
-            "start": datetime.datetime.fromtimestamp(timestamp).isoformat(),
+            "start": datetime.datetime.fromtimestamp(timestamp)
+            .replace(tzinfo=self._TZ_INFO)
+            .isoformat(),
             "include_info": True,
         }
         headers = {"Authorization": f"Bearer {self.current_token}"}
+
+        self.helper.log_debug(
+            f"IOC from {datetime.datetime.fromtimestamp(timestamp).isoformat()} to {datetime.datetime.now().isoformat()}"
+        )
 
         r = requests.get(
             url=f"{self.base_url}/export/indicators", params=params, headers=headers
@@ -146,7 +154,7 @@ class Cluster25:
             self.helper.log_info("Connector stop")
             sys.exit(0)
 
-        return r.text
+        return r.json()
 
     def run(self):
         """Run Cluster25 connector."""
@@ -184,8 +192,11 @@ class Cluster25:
                     bundle = self._get_c25_observables(timestamp - self._get_interval())
 
                     if "objects" in bundle:
+                        self.helper.log_info(
+                            f"Uploading: {len(bundle['objects'])} observables"
+                        )
                         self.helper.send_stix2_bundle(
-                            bundle,
+                            json.dumps(bundle),
                             entities_types=self.helper.connect_scope,
                             update=True,
                             work_id=work_id,
