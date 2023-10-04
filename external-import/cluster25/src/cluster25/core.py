@@ -1,9 +1,10 @@
 import datetime
+from typing import Dict, Any, List, Optional, Mapping
+
 import json
 import os
 import sys
 import time
-from typing import Dict, Any, List, Optional, Mapping
 
 import requests
 import yaml
