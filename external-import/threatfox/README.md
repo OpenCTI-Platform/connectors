@@ -39,7 +39,7 @@ The connectors adds the following Entities:
 | `connector_scope`      | `CONNECTOR_SCOPE`                | Yes       | Supported scope: Template Scope (MIME Type or Stix Object)                                                              |
 | `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | Yes       | Set the confidence level for this data                                                                                  |
 | `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | Yes       | Update data alrerady in the platform based on the Threat Fox data pull                                                  |
-| `log_level`            | `CONNECTOR_LOG_LEVEL`            | Yes       | Log output for the connector                                                                                            
+| `log_level`            | `CONNECTOR_LOG_LEVEL`            | Yes       | Log output for the connector                                                                                            |
 | `csv_url`              | `THREATFOX_CSV_URL`              | Yes       |                                                                                                                         |
 | `import_offline`       | `THREATFOX_IMPORT_OFFLINE`       | Yes       |                                                                                                                         |
 | `create_indicators`    | `THREATFOX_CREATE_INDICATORS`    | Yes       |                                                                                                                         |

@@ -114,6 +114,9 @@ class ThreatFox:
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
+
+                    last_processed_entry_running_max = 0
+
                     try:
                         response = urllib.request.urlopen(
                             self.threatfox_csv_url,
@@ -131,8 +134,9 @@ class ThreatFox:
                         )
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
-                        # the csv-file hast the following columns
-                        # id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
+                        # the csv-file has the following columns:
+                        # first_seen_utc, ioc_id, ioc_value, ioc_type, threat_type, fk_malware, malware_alias,
+                        # malware_printable, last_seen_utc, reference, tags, anonymous, reporter
 
                         if (
                                 current_state is not None
@@ -163,9 +167,9 @@ class ThreatFox:
                             ioc_type = row[3].strip().strip('"')
                             self.helper.log_info(f"ioc_type: '{ioc_type}'")
 
-                            # Avoids unwanted IOC types
+                            # Skip unwanted IOC types
                             if not (ioc_type in wanted_iocs):
-                                self.helper.log_info(f"Unwanted ioc_type: {ioc_type}")
+                                self.helper.log_info(f"Unwanted ioc_type skipped: {ioc_type}")
                                 continue
 
                             entry_date = datetime.datetime.strptime(
