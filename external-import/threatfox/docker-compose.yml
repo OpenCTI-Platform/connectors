@@ -17,4 +17,5 @@ services:
       - THREATFOX_CREATE_INDICATORS=true
       - THREATFOX_THREATS_FROM_LABELS=true
       - THREATFOX_INTERVAL=3 # In days, must be strictly greater than 1
+      - THREATFOX_IOC_TYPES=ip:port,domain,url # List of IOC types to retrieve
     restart: always
