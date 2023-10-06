@@ -1,3 +1,7 @@
+# v1.1.2  
+
+- Upgraded `Titan-Client` to version `1.19.7.3` to properly handle CVE reports without GiRs.
+
 # v1.1.1  
 
 - Upgraded `Titan-Client` to version `1.19.7.2` to fix PyYAML dependency.
