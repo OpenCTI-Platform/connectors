@@ -57,9 +57,9 @@ class ThreatFox:
             False,
             True,
         )
-        self.ioc_type_list = get_config_variable(
-            "THREATFOX_IOC_TYPES",
-            ["threatfox", "ioc_types"],
+        self.ioc_to_import = get_config_variable(
+            "THREATFOX_IOC_TO_IMPORT",
+            ["threatfox", "ioc_to_import"],
             config,
             False,
             'all_types',
@@ -155,9 +155,9 @@ class ThreatFox:
 
                         # If importing a subset of IOCs
                         wanted_iocs = []
-                        if self.ioc_type_list:
-                            for type in self.ioc_type_list.split(","):
-                                wanted_iocs.append(type.strip())
+                        if self.ioc_to_import:
+                            for ioc in self.ioc_to_import.split(","):
+                                wanted_iocs.append(ioc.strip())
                         else:
                             wanted_iocs.append('all_types')
 
