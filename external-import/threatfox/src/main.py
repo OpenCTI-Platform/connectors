@@ -194,29 +194,35 @@ class ThreatFox:
                                         + "']"
                                 )
                                 indicator_type = "IP"
+                                observable_type = "IPv4-Addr"
                             elif ioc_type == "domain":
                                 pattern_value = (
                                         "[domain-name:value = '" + ioc_value + "']"
                                 )
                                 indicator_type = "malicious-activity"
+                                observable_type = "Domain-Name"
                             elif ioc_type == "url":
                                 pattern_value = "[url:value = '" + ioc_value + "']"
                                 indicator_type = "malicious-activity"
+                                observable_type = "Url"
                             elif ioc_type == "md5_hash":
                                 pattern_value = (
                                         "[file:hashes.MD5 = '" + ioc_value + "']"
                                 )
                                 indicator_type = "malicious-activity"
+                                observable_type = "StixFile"
                             elif ioc_type == "sha1_hash":
                                 pattern_value = (
                                         "[file:hashes.SHA1 = '" + ioc_value + "']"
                                 )
                                 indicator_type = "malicious-activity"
+                                observable_type = "StixFile"
                             elif ioc_type == "sha256_hash":
                                 pattern_value = (
                                         "[file:hashes.'SHA-256' = '" + ioc_value + "']"
                                 )
                                 indicator_type = "malicious-activity"
+                                observable_type = "StixFile"
                             else:
                                 self.helper.log_warning(
                                     f"Unrecognized ioc_type: {ioc_type}"
@@ -227,12 +233,13 @@ class ThreatFox:
                             if validators.url(row[10]):
                                 indicator_external_reference = [
                                     stix2.ExternalReference(
-                                        source_name="ThreatFox reference source",
+                                        source_name="ThreatFox source reference",
                                         url=row[10],
                                     )
                                 ]
 
                                 stix_indicator = stix2.Indicator(
+                                    name=ioc_value,
                                     id=Indicator.generate_id(pattern_value),
                                     indicator_types=[indicator_type],
                                     pattern_type="stix",
@@ -248,10 +255,12 @@ class ThreatFox:
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     created_by_ref=self.identity["standard_id"],
                                     external_references=indicator_external_reference,
+                                    x_opencti_main_observable_type=observable_type,
                                 )
 
                             else:
                                 stix_indicator = stix2.Indicator(
+                                    name=ioc_value,
                                     id=Indicator.generate_id(pattern_value),
                                     indicator_types=[indicator_type],
                                     pattern_type="stix",
@@ -266,6 +275,7 @@ class ThreatFox:
                                     ],
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     created_by_ref=self.identity["standard_id"],
+                                    x_opencti_main_observable_type=observable_type,
                                 )
 
                             self.helper.log_info(
