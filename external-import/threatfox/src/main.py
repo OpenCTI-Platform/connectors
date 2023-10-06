@@ -193,7 +193,7 @@ class ThreatFox:
                                         + ioc_value.split(":")[0]
                                         + "']"
                                 )
-                                indicator_type = "IP"
+                                indicator_type = "malicious-activity"
                                 observable_type = "IPv4-Addr"
                             elif ioc_type == "domain":
                                 pattern_value = (
@@ -209,19 +209,19 @@ class ThreatFox:
                                 pattern_value = (
                                         "[file:hashes.MD5 = '" + ioc_value + "']"
                                 )
-                                indicator_type = "malicious-activity"
+                                indicator_type = "malicious-file"
                                 observable_type = "StixFile"
                             elif ioc_type == "sha1_hash":
                                 pattern_value = (
                                         "[file:hashes.SHA1 = '" + ioc_value + "']"
                                 )
-                                indicator_type = "malicious-activity"
+                                indicator_type = "malicious-file"
                                 observable_type = "StixFile"
                             elif ioc_type == "sha256_hash":
                                 pattern_value = (
                                         "[file:hashes.'SHA-256' = '" + ioc_value + "']"
                                 )
-                                indicator_type = "malicious-activity"
+                                indicator_type = "malicious-file"
                                 observable_type = "StixFile"
                             else:
                                 self.helper.log_warning(
