@@ -13,4 +13,4 @@ connector:
 
 abusessl:
   url: 'https://sslbl.abuse.ch/blacklist/sslipblacklist.csv' # Required
-  interval: 10 # Required, in minutes
+  interval: 360 # Required, in minutes
