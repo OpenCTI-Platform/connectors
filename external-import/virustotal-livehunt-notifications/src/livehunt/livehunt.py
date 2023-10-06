@@ -55,6 +55,7 @@ class VirustotalLivehuntNotifications:
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC",
             ["virustotal_livehunt_notifications", "interval_sec"],
             config,
+            isNumber=True,
         )
 
         tag = get_config_variable(
