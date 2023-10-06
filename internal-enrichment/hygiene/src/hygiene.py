@@ -101,7 +101,7 @@ class HygieneConnector:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
 
         warninglists_slow_search = bool(
             get_config_variable(
