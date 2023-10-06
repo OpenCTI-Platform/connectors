@@ -154,12 +154,12 @@ class ThreatFox:
                         last_processed_entry_running_max = last_processed_entry
 
                         # If importing a subset of IOCs
-                        wanted_iocs = []
+                        wanted_ioc = []
                         if self.ioc_to_import:
                             for ioc in self.ioc_to_import.split(","):
-                                wanted_iocs.append(ioc.strip())
+                                wanted_ioc.append(ioc.strip())
                         else:
-                            wanted_iocs.append('all_types')
+                            wanted_ioc.append('all_types')
 
                         for i, row in enumerate(rdr):
                             # Pre-process row data for efficiency
@@ -168,7 +168,7 @@ class ThreatFox:
                             self.helper.log_info(f"ioc_type: '{ioc_type}'")
 
                             # Skip unwanted IOC types
-                            if not (ioc_type in wanted_iocs):
+                            if not (ioc_type in wanted_ioc):
                                 self.helper.log_info(f"Unwanted ioc_type skipped: {ioc_type}")
                                 continue
 
@@ -284,7 +284,6 @@ class ThreatFox:
 
                             bundle_objects.append(stix_indicator)
 
-                            malware_type = ""
                             if row[4] == "botnet_cc":
                                 malware_type = "Bot"
                             elif row[4] == "payload_delivery":
