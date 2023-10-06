@@ -3,11 +3,11 @@ import os
 import tldextract
 import yaml
 from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    STIX_EXT_OCTI_SCO,
     STIX_EXT_OCTI,
+    STIX_EXT_OCTI_SCO,
+    OpenCTIConnectorHelper,
     OpenCTIStix2,
+    get_config_variable,
 )
 from pymispwarninglists import WarningLists
 
