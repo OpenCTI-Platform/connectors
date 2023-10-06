@@ -26,7 +26,7 @@ class HybridAnalysis:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config, True)
+        self.helper = OpenCTIConnectorHelper(config)
         self.api_key = get_config_variable(
             "HYBRID_ANALYSIS_TOKEN", ["hybrid_analysis", "api_key"], config
         )
