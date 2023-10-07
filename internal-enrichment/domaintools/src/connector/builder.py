@@ -5,18 +5,8 @@ from datetime import datetime
 from typing import Optional, Union
 
 import validators
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship
-from stix2 import (
-    TLP_AMBER,
-    AutonomousSystem,
-    Bundle,
-    DomainName,
-    EmailAddress,
-    Identity,
-    IPv4Address,
-    Relationship,
-)
-
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship, STIX_EXT_OCTI_SCO
+import stix2
 from .constants import EntityType
 
 
@@ -27,27 +17,21 @@ class DtBuilder:
     """
 
     def __init__(
-        self,
-        helper: OpenCTIConnectorHelper,
-        author: Identity,
+        self, helper: OpenCTIConnectorHelper, author: stix2.Identity, stix_objects: []
     ):
         """Initialize DtBuilder."""
         self.helper = helper
         self.author = author
 
         # Use custom properties to set the author and the confidence level of the object.
-        self.custom_props = {
-            "x_opencti_created_by_ref": author["id"],
-        }
-
-        self.bundle: list[
-            Union[AutonomousSystem, DomainName, EmailAddress, IPv4Address, Relationship]
-        ] = []
+        self.extensions = {}
+        self.extensions[STIX_EXT_OCTI_SCO] = {"created_by_ref": author["id"]}
+        self.bundle = stix_objects + [self.author]
 
     def reset_score(self):
         """Reset the score used."""
-        if "x_opencti_score" in self.custom_props:
-            self.custom_props.pop("x_opencti_score")
+        if "score" in self.extensions[STIX_EXT_OCTI_SCO]:
+            self.extensions[STIX_EXT_OCTI_SCO].pop("score")
 
     def set_score(self, score: int):
         """
@@ -58,7 +42,7 @@ class DtBuilder:
         score : int
             Score to use as `x_opencti_score`
         """
-        self.custom_props["x_opencti_score"] = score
+        self.extensions[STIX_EXT_OCTI_SCO]["score"] = score
 
     def create_autonomous_system(self, number: int) -> Optional[str]:
         """
@@ -74,13 +58,12 @@ class DtBuilder:
         str
             Id of the inserted autonomous system or None.
         """
-        auto_system = AutonomousSystem(
+        auto_system = stix2.AutonomousSystem(
             type="autonomous-system",
             number=number,
-            object_marking_refs=TLP_AMBER,
-            custom_properties=self.custom_props,
+            object_marking_refs=[stix2.TLP_AMBER],
+            extensions=self.extensions,
         )
-
         self.bundle.append(auto_system)
         return auto_system.id
 
@@ -91,7 +74,7 @@ class DtBuilder:
         start_date: datetime,
         end_date: datetime,
         description: Optional[str] = None,
-    ) -> Relationship:
+    ) -> stix2.Relationship:
         """
         Create the `belongs-to` relationship between the source and the target.
         The relation is added to the bundle.
@@ -117,7 +100,6 @@ class DtBuilder:
         rel = self.create_relationship(
             "belongs-to", source_id, target_id, start_date, end_date, description
         )
-
         self.bundle.append(rel)
         return rel
 
@@ -142,13 +124,12 @@ class DtBuilder:
                 "formatted. Skipping."
             )
             return None
-        domain_obj = DomainName(
+        domain_obj = stix2.DomainName(
             type="domain-name",
             value=domain,
-            object_marking_refs=TLP_AMBER,
-            custom_properties=self.custom_props,
+            object_marking_refs=[stix2.TLP_AMBER],
+            extensions=self.extensions,
         )
-
         self.bundle.append(domain_obj)
         return domain_obj.id
 
@@ -172,13 +153,12 @@ class DtBuilder:
                 f"[DomainTools] email {email} is " "not correctly formatted. Skipping."
             )
             return None
-        email_obj = EmailAddress(
+        email_obj = stix2.EmailAddress(
             type="email-addr",
             value=email,
-            object_marking_refs=TLP_AMBER,
-            custom_properties=self.custom_props,
+            object_marking_refs=[stix2.TLP_AMBER],
+            extensions=self.extensions,
         )
-
         self.bundle.append(email_obj)
         return email_obj.id
 
@@ -202,13 +182,12 @@ class DtBuilder:
                 f"[DomainTools] ip {ip} is not correctly " "formatted. Skipping."
             )
             return None
-        ip_obj = IPv4Address(
+        ip_obj = stix2.IPv4Address(
             type="ipv4-addr",
             value=ip,
-            object_marking_refs=TLP_AMBER,
-            custom_properties=self.custom_props,
+            object_marking_refs=[stix2.TLP_AMBER],
+            extensions=self.extensions,
         )
-
         self.bundle.append(ip_obj)
         return ip_obj.id
 
@@ -219,7 +198,7 @@ class DtBuilder:
         start_date: datetime,
         end_date: datetime,
         description: Optional[str] = None,
-    ) -> Relationship:
+    ) -> stix2.Relationship:
         """
         Create the `related-to` relationship between the source and the target.
         The relation is added to the bundle.
@@ -245,7 +224,6 @@ class DtBuilder:
         rel = self.create_relationship(
             "related-to", source_id, target_id, start_date, end_date, description
         )
-
         self.bundle.append(rel)
         return rel
 
@@ -257,7 +235,7 @@ class DtBuilder:
         start_date: datetime,
         end_date: datetime,
         description: Optional[str] = None,
-    ) -> Relationship:
+    ) -> stix2.Relationship:
         """
         Create a relationship between the source and the target.
 
@@ -291,7 +269,7 @@ class DtBuilder:
             kwargs["description"] = description
         if start_date != "" and end_date != "":
             kwargs |= {"start_time": start_date, "stop_time": end_date}
-        return Relationship(
+        return stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 relationship_type, source_id, target_id, start_date, end_date
             ),
@@ -308,7 +286,7 @@ class DtBuilder:
         start_date: datetime,
         end_date: datetime,
         description: Optional[str] = None,
-    ) -> Relationship:
+    ) -> stix2.Relationship:
         """
         Create the `resolves-to` relationship between the source and the target.
         The relation is added to the bundle.
@@ -334,7 +312,6 @@ class DtBuilder:
         rel = self.create_relationship(
             "resolves-to", source_id, target_id, start_date, end_date, description
         )
-
         self.bundle.append(rel)
         return rel
 
@@ -443,6 +420,9 @@ class DtBuilder:
         Note: `allow_custom` must be set to True in order to specify the author of an object.
         """
         self.helper.metric.inc("record_send", 1 + len(self.bundle))
+        serialized_bundle = self.helper.stix2_create_bundle(self.bundle)
+        self.helper.send_stix2_bundle(serialized_bundle)
+
         self.helper.send_stix2_bundle(
             Bundle(objects=[self.author] + self.bundle, allow_custom=True).serialize(),
             allow_custom=True,
