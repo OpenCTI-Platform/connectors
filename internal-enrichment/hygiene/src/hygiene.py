@@ -141,37 +141,23 @@ class HygieneConnector:
                 value="hygiene_parent", color="#fc0341"
             )
 
-    def _process_observable(self, entity_id, observable, bundle=None) -> str:
-        observable_type = observable["entity_type"]
-        indicators_ids = observable["indicatorsIds"]
-
-        # Extract IPv4, IPv6 and Domain from entity data
-        if bundle is None:
-            # Generate bundle
-            stix_objects = self.helper.api.stix2.prepare_export(
-                self.helper.api.stix2.generate_export(observable)
-            )
-        else:
-            stix_objects = bundle["objects"]
-
-        stix_observable = [e for e in stix_objects if e["id"] == entity_id][0]
-
+    def _process_observable(self, stix_objects, stix_entity, opencti_entity) -> str:
         # Search in warninglist
-        result = self.warninglists.search(stix_observable["value"])
+        result = self.warninglists.search(stix_entity["value"])
 
         # If not found and the domain is a subdomain, search with the parent.
         use_parent = False
         if not result and self.enrich_subdomains is True:
-            if observable_type == "Domain-Name":
-                ext = tldextract.extract(stix_observable["value"])
-                if stix_observable["value"] != ext.domain + "." + ext.suffix:
+            if stix_entity["type"] == "domain-name":
+                ext = tldextract.extract(stix_entity["value"])
+                if stix_entity["value"] != ext.domain + "." + ext.suffix:
                     result = self.warninglists.search(ext.domain + "." + ext.suffix)
                     use_parent = True
 
         # Iterate over the hits
         if result:
             self.helper.log_info(
-                "Hit found for %s in warninglists" % (stix_observable["value"])
+                "Hit found for %s in warninglists" % (stix_entity["value"])
             )
 
             for hit in result:
@@ -196,16 +182,16 @@ class HygieneConnector:
 
                 # Add labels
                 if use_parent:
-                    stix_observable = OpenCTIStix2.put_attribute_in_extension(
-                        stix_observable,
+                    stix_entity = OpenCTIStix2.put_attribute_in_extension(
+                        stix_entity,
                         STIX_EXT_OCTI_SCO,
                         "labels",
                         self.label_hygiene_parent["value"],
                         True,
                     )
                 else:
-                    stix_observable = OpenCTIStix2.put_attribute_in_extension(
-                        stix_observable,
+                    stix_entity = OpenCTIStix2.put_attribute_in_extension(
+                        stix_entity,
                         STIX_EXT_OCTI_SCO,
                         "labels",
                         self.label_hygiene["value"],
@@ -213,13 +199,13 @@ class HygieneConnector:
                     )
 
                 # Update score
-                stix_observable = OpenCTIStix2.put_attribute_in_extension(
-                    stix_observable, STIX_EXT_OCTI_SCO, "score", score
+                stix_entity = OpenCTIStix2.put_attribute_in_extension(
+                    stix_entity, STIX_EXT_OCTI_SCO, "score", score
                 )
 
                 # External references
-                stix_observable = OpenCTIStix2.put_attribute_in_extension(
-                    stix_observable,
+                stix_entity = OpenCTIStix2.put_attribute_in_extension(
+                    stix_entity,
                     STIX_EXT_OCTI_SCO,
                     "external_references",
                     {
@@ -233,7 +219,7 @@ class HygieneConnector:
                 )
 
                 # Add indicators
-                for indicator_id in indicators_ids:
+                for indicator_id in opencti_entity["indicatorsIds"]:
                     stix_indicator_objects = self.helper.api.stix2.prepare_export(
                         self.helper.api.stix2.generate_export(
                             self.helper.api.indicator.read(id=indicator_id)
@@ -275,13 +261,17 @@ class HygieneConnector:
             return "Observable value found on warninglist and tagged accordingly"
 
     def _process_message(self, data) -> str:
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
+        opencti_entity = self.helper.api.stix_cyber_observable.read(
+            id=data["entity_id"]
+        )
+        if opencti_entity is None:
             raise ValueError(
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
-        return self._process_observable(entity_id, observable, data.get("bundle", None))
+        result = self.helper.get_data_from_enrichment(data, opencti_entity)
+        return self._process_observable(
+            result["stix_objects"], result["stix_entity"], opencti_entity
+        )
 
     # Start the main loop
     def start(self):
