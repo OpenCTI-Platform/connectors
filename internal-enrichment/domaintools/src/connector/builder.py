@@ -4,9 +4,10 @@
 from datetime import datetime
 from typing import Optional, Union
 
-import validators
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, STIX_EXT_OCTI_SCO
 import stix2
+import validators
+from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, StixCoreRelationship
+
 from .constants import EntityType
 
 

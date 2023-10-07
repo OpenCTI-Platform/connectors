@@ -8,12 +8,12 @@ import requests
 import stix2
 import yaml
 from pycti import (
+    STIX_EXT_OCTI_SCO,
     AttackPattern,
     MalwareAnalysis,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
-    STIX_EXT_OCTI_SCO,
 )
 from stix2 import DomainName, File, IPv4Address, IPv6Address
 
