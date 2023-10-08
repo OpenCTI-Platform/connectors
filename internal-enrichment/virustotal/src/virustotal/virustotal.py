@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """VirusTotal enrichment module."""
-import asyncio
 import json
 from pathlib import Path
 
 import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable, Identity
 
 from .builder import VirusTotalBuilder
 from .client import VirusTotalClient
@@ -22,13 +21,12 @@ class VirusTotalConnector:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = Path(__file__).parent.parent.resolve() / "config.yml"
-
         config = (
             yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
             if config_file_path.is_file()
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
         token = get_config_variable("VIRUSTOTAL_TOKEN", ["virustotal", "token"], config)
         self.max_tlp = get_config_variable(
             "VIRUSTOTAL_MAX_TLP", ["virustotal", "max_tlp"], config
@@ -39,8 +37,9 @@ class VirusTotalConnector:
             config,
         )
         self.author = stix2.Identity(
+            id=Identity.generate_id(self._SOURCE_NAME, "organization"),
             name=self._SOURCE_NAME,
-            identity_class="Organization",
+            identity_class="organization",
             description="VirusTotal",
             confidence=self.helper.connect_confidence_level,
         )
@@ -49,8 +48,6 @@ class VirusTotalConnector:
 
         # Cache to store YARA rulesets.
         self.yara_cache = {}
-
-        self.bundle = [self.author]
 
         self.confidence_level = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL",
@@ -64,11 +61,13 @@ class VirusTotalConnector:
             "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT",
             ["virustotal", "file_create_note_full_report"],
             config,
+            default=False,
         )
         self.file_upload_unseen_artifacts = get_config_variable(
             "VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS",
             ["virustotal", "file_upload_unseen_artifacts"],
             config,
+            default=True,
         )
         self.file_indicator_config = IndicatorConfig.load_indicator_config(
             config, "FILE"
@@ -97,8 +96,17 @@ class VirusTotalConnector:
             "VIRUSTOTAL_URL_UPLOAD_UNSEEN",
             ["virustotal", "url_upload_unseen"],
             config,
+            default=True,
         )
         self.url_indicator_config = IndicatorConfig.load_indicator_config(config, "URL")
+
+    def resolve_default_value(self, stix_entity):
+        if "hashes" in stix_entity and "SHA-256" in stix_entity["hashes"]:
+            return stix_entity["hashes"]["SHA-256"]
+        if "hashes" in stix_entity and "SHA-1" in stix_entity["hashes"]:
+            return stix_entity["hashes"]["SHA-1"]
+        if "hashes" in stix_entity and "MD5" in stix_entity["hashes"]:
+            return stix_entity["hashes"]["MD5"]
 
     def _retrieve_yara_ruleset(self, ruleset_id: str) -> dict:
         """
@@ -121,31 +129,27 @@ class VirusTotalConnector:
             self.yara_cache[ruleset_id] = ruleset
         return ruleset
 
-    async def _process_file(self, observable):
-        json_data = self.client.get_file_info(observable["observable_value"])
+    def _process_file(self, stix_objects, stix_entity, opencti_entity):
+        json_data = self.client.get_file_info(self.resolve_default_value(stix_entity))
         assert json_data
         if (
             "error" in json_data
             and json_data["error"]["code"] == "NotFoundError"
             and self.file_upload_unseen_artifacts
-            and observable["entity_type"] == "Artifact"
+            and opencti_entity["entity_type"] == "Artifact"
         ):
-            message = f"The file {observable['observable_value']} was not found in VirusTotal repositories. Beginning upload and analysis"
+            message = f"The file {self.resolve_default_value(stix_entity)} was not found in VirusTotal repositories. Beginning upload and analysis"
             self.helper.api.work.to_received(self.helper.work_id, message)
             self.helper.log_debug(message)
-            # Larger files can sometimes take a few seconds to propogate through the system and be added to the observable
-            # It appears to be about 1 second for every 30-50MB
-            if not observable["importFiles"]:
-                await asyncio.sleep(5)
-                observable = self.helper.api.stix_cyber_observable.read(
-                    id=observable["id"]
-                )
+            if len(opencti_entity["importFiles"]) == 0:
+                return
+
             # File must be smaller than 32MB for VirusTotal upload
-            if observable["importFiles"][0]["size"] > 33554432:
+            if opencti_entity["importFiles"][0]["size"] > 33554432:
                 raise ValueError(
                     "The file attempting to be uploaded is greater than VirusTotal's 32MB limit"
                 )
-            artifact_url = f'{self.helper.opencti_url}/storage/get/{observable["importFiles"][0]["id"]}'
+            artifact_url = f'{self.helper.opencti_url}/storage/get/{opencti_entity["importFiles"][0]["id"]}'
             try:
                 artifact = self.helper.api.fetch_opencti_file(artifact_url, binary=True)
             except Exception as err:
@@ -154,23 +158,25 @@ class VirusTotalConnector:
                 ) from err
             try:
                 analysis_id = self.client.upload_artifact(
-                    observable["importFiles"][0]["name"], artifact
+                    opencti_entity["importFiles"][0]["name"], artifact
                 )
                 # Attempting to get the file info immediately queues the artifact for more immediate analysis
-                self.client.get_file_info(observable["observable_value"])
+                self.client.get_file_info(self.resolve_default_value(stix_entity))
             except Exception as err:
                 raise ValueError(
                     "[VirusTotal] Error uploading artifact to VirusTotal"
                 ) from err
             try:
-                await self.client.check_upload_status(
-                    "artifact", observable["observable_value"], analysis_id
+                self.client.check_upload_status(
+                    "artifact", self.resolve_default_value(stix_entity), analysis_id
                 )
             except Exception as err:
                 raise ValueError(
                     "[VirusTotal] Error waiting for VirusTotal to analyze artifact"
                 ) from err
-            json_data = self.client.get_file_info(observable["observable_value"])
+            json_data = self.client.get_file_info(
+                self.resolve_default_value(stix_entity)
+            )
             assert json_data
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
@@ -181,19 +187,20 @@ class VirusTotalConnector:
             self.helper,
             self.author,
             self.replace_with_lower_score,
-            observable,
+            stix_objects,
+            stix_entity,
+            opencti_entity,
             json_data["data"],
         )
-
         builder.update_hashes()
 
         # Set the size and names (main and additional)
-        if observable["entity_type"] == "StixFile":
+        if opencti_entity["entity_type"] == "StixFile":
             builder.update_size()
 
         builder.update_names(
-            observable["entity_type"] == "StixFile"
-            and (observable["name"] is None or len(observable["name"]) == 0)
+            opencti_entity["entity_type"] == "StixFile"
+            and (opencti_entity["name"] is None or len(opencti_entity["name"]) == 0)
         )
 
         builder.create_indicator_based_on(
@@ -224,8 +231,8 @@ class VirusTotalConnector:
             )
         return builder.send_bundle()
 
-    def _process_ip(self, observable):
-        json_data = self.client.get_ip_info(observable["observable_value"])
+    def _process_ip(self, stix_objects, stix_entity, opencti_entity):
+        json_data = self.client.get_ip_info(opencti_entity["observable_value"])
         assert json_data
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
@@ -236,7 +243,9 @@ class VirusTotalConnector:
             self.helper,
             self.author,
             self.replace_with_lower_score,
-            observable,
+            stix_objects,
+            stix_entity,
+            opencti_entity,
             json_data["data"],
         )
 
@@ -246,13 +255,13 @@ class VirusTotalConnector:
 
         builder.create_indicator_based_on(
             self.ip_indicator_config,
-            f"""[ipv4-addr:value = '{observable["observable_value"]}']""",
+            f"""[ipv4-addr:value = '{opencti_entity["observable_value"]}']""",
         )
         builder.create_notes()
         return builder.send_bundle()
 
-    def _process_domain(self, observable):
-        json_data = self.client.get_domain_info(observable["observable_value"])
+    def _process_domain(self, stix_objects, stix_entity, opencti_entity):
+        json_data = self.client.get_domain_info(opencti_entity["observable_value"])
         assert json_data
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
@@ -263,7 +272,9 @@ class VirusTotalConnector:
             self.helper,
             self.author,
             self.replace_with_lower_score,
-            observable,
+            stix_objects,
+            stix_entity,
+            opencti_entity,
             json_data["data"],
         )
 
@@ -276,45 +287,44 @@ class VirusTotalConnector:
                 if r["type"] == "A"
             ]:
                 self.helper.log_debug(
-                    f'[VirusTotal] adding ip {ip} to domain {observable["observable_value"]}'
+                    f'[VirusTotal] adding ip {ip} to domain {opencti_entity["observable_value"]}'
                 )
                 builder.create_ip_resolves_to(ip)
 
         builder.create_indicator_based_on(
             self.domain_indicator_config,
-            f"""[domain-name:value = '{observable["observable_value"]}']""",
+            f"""[domain-name:value = '{opencti_entity["observable_value"]}']""",
         )
         builder.create_notes()
         return builder.send_bundle()
 
-    async def _process_url(self, observable):
-        json_data = self.client.get_url_info(observable["observable_value"])
+    def _process_url(self, stix_objects, stix_entity, opencti_entity):
+        json_data = self.client.get_url_info(opencti_entity["observable_value"])
         assert json_data
         if (
             "error" in json_data
             and json_data["error"]["code"] == "NotFoundError"
             and self.url_upload_unseen
         ):
-            message = f"The URL {observable['observable_value']} was not found in VirusTotal repositories. Beginning upload and analysis"
+            message = f"The URL {opencti_entity['observable_value']} was not found in VirusTotal repositories. Beginning upload and analysis"
             self.helper.api.work.to_received(self.helper.work_id, message)
             self.helper.log_debug(message)
             try:
-                analysis_id = self.client.upload_url(observable["observable_value"])
+                analysis_id = self.client.upload_url(opencti_entity["observable_value"])
             except Exception as err:
                 raise ValueError(
                     "[VirusTotal] Error uploading URL to VirusTotal"
                 ) from err
             try:
-                await self.client.check_upload_status(
-                    "URL", observable["observable_value"], analysis_id
+                self.client.check_upload_status(
+                    "URL", opencti_entity["observable_value"], analysis_id
                 )
             except Exception as err:
                 raise ValueError(
                     "[VirusTotal] Error waiting for VirusTotal to analyze URL"
                 ) from err
-            json_data = self.client.get_url_info(observable["observable_value"])
+            json_data = self.client.get_url_info(opencti_entity["observable_value"])
             assert json_data
-        print(json_data, flush=True)
         if "error" in json_data:
             raise ValueError(json_data["error"]["message"])
         if "data" not in json_data or "attributes" not in json_data["data"]:
@@ -324,31 +334,36 @@ class VirusTotalConnector:
             self.helper,
             self.author,
             self.replace_with_lower_score,
-            observable,
+            stix_objects,
+            stix_entity,
+            opencti_entity,
             json_data["data"],
         )
 
         builder.create_indicator_based_on(
             self.ip_indicator_config,
-            f"""[url:value = '{observable["observable_value"]}']""",
+            f"""[url:value = '{opencti_entity["observable_value"]}']""",
         )
         builder.create_notes()
         return builder.send_bundle()
 
-    async def _process_message(self, data):
+    def _process_message(self, data):
         self.helper.metric.inc("run_count")
         self.helper.metric.state("running")
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
+        opencti_entity = self.helper.api.stix_cyber_observable.read(
+            id=data["entity_id"]
+        )
+        if opencti_entity is None:
             raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, "
-                "check the group of the connector user)"
+                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
+        result = self.helper.get_data_from_enrichment(data, opencti_entity)
+        stix_objects = result["stix_objects"]
+        stix_entity = result["stix_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
-        for marking_definition in observable.get("objectMarking", []):
+        for marking_definition in opencti_entity.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
@@ -358,20 +373,22 @@ class VirusTotalConnector:
             )
 
         self.helper.log_debug(
-            f"[VirusTotal] starting enrichment of observable: {observable}"
+            "[VirusTotal] starting enrichment of observable: {"
+            + opencti_entity["observable_value"]
+            + "}"
         )
-        match observable["entity_type"]:
+        match opencti_entity["entity_type"]:
             case "StixFile" | "Artifact":
-                return await self._process_file(observable)
+                return self._process_file(stix_objects, stix_entity, opencti_entity)
             case "IPv4-Addr":
-                return self._process_ip(observable)
+                return self._process_ip(stix_objects, stix_entity, opencti_entity)
             case "Domain-Name":
-                return self._process_domain(observable)
+                return self._process_domain(stix_objects, stix_entity, opencti_entity)
             case "Url":
-                return await self._process_url(observable)
+                return self._process_url(stix_objects, stix_entity, opencti_entity)
             case _:
                 raise ValueError(
-                    f'{observable["entity_type"]} is not a supported entity type.'
+                    f'{opencti_entity["entity_type"]} is not a supported entity type.'
                 )
 
     def start(self):

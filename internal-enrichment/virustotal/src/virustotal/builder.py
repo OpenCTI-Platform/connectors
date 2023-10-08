@@ -13,6 +13,8 @@ from pycti import (
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
+    OpenCTIStix2,
+    STIX_EXT_OCTI_SCO,
 )
 
 from .indicator_config import IndicatorConfig
@@ -26,22 +28,24 @@ class VirusTotalBuilder:
         helper: OpenCTIConnectorHelper,
         author: stix2.Identity,
         replace_with_lower_score: bool,
-        observable: dict,
+        stix_objects: [],
+        stix_entity: dict,
+        opencti_entity: dict,
         data: dict,
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
         self.author = author
         self.replace_with_lower_score = replace_with_lower_score
-        self.bundle = [self.author]
-        self.observable = observable
+        self.bundle = stix_objects + [self.author]
+        self.opencti_entity = opencti_entity
+        self.stix_entity = stix_entity
         self.attributes = data["attributes"]
         self.score = self._compute_score(self.attributes["last_analysis_stats"])
 
         # Update score of observable.
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.observable["id"],
-            input={"key": "x_opencti_score", "value": str(self.score)},
+        OpenCTIStix2.put_attribute_in_extension(
+            stix_entity, STIX_EXT_OCTI_SCO, "score", self.score
         )
 
         # Add the external reference.
@@ -83,13 +87,18 @@ class VirusTotalBuilder:
             raise ValueError(
                 "Cannot compute score. VirusTotal may have no record of the observable or it is currently being processed"
             ) from err
-        if self.observable["x_opencti_score"] and not self.replace_with_lower_score:
-            if vt_score < self.observable["x_opencti_score"]:
+        opencti_score = (
+            self.stix_entity["x_opencti_score"]
+            if "x_opencti_score" in self.stix_entity
+            else self.helper.api.get_attribute_in_extension("score", self.stix_entity)
+        )
+        if opencti_score is not None and not self.replace_with_lower_score:
+            if vt_score < opencti_score:
                 self.create_note(
                     "VirusTotal Score",
                     f"```\n{vt_score}\n```",
                 )
-                return self.observable["x_opencti_score"]
+                return opencti_score
         return vt_score
 
     def create_asn_belongs_to(self):
@@ -103,12 +112,12 @@ class VirusTotalBuilder:
         relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 "belongs-to",
-                self.observable["standard_id"],
+                self.stix_entity["id"],
                 as_stix.id,
             ),
             relationship_type="belongs-to",
             created_by_ref=self.author,
-            source_ref=self.observable["standard_id"],
+            source_ref=self.stix_entity["id"],
             target_ref=as_stix.id,
             confidence=self.helper.connect_confidence_level,
             allow_custom=True,
@@ -119,7 +128,7 @@ class VirusTotalBuilder:
         self,
         url: str,
         description: str,
-    ) -> ExternalReference:
+    ) -> dict:
         """
         Create an external reference with the given url.
         The external reference is added to the observable being enriched.
@@ -135,15 +144,17 @@ class VirusTotalBuilder:
         ExternalReference
             Newly created external reference.
         """
-        # Create/attach external reference
-        external_reference = self.helper.api.external_reference.create(
-            source_name=self.author["name"],
-            url=url,
-            description=description,
-        )
-        self.helper.api.stix_cyber_observable.add_external_reference(
-            id=self.observable["id"],
-            external_reference_id=external_reference["id"],
+        external_reference = {
+            "source_name": self.author["name"],
+            "url": url,
+            "description": description,
+        }
+        OpenCTIStix2.put_attribute_in_extension(
+            self.stix_entity,
+            STIX_EXT_OCTI_SCO,
+            "external_references",
+            external_reference,
+            True,
         )
         return external_reference
 
@@ -183,7 +194,7 @@ class VirusTotalBuilder:
 
             indicator = stix2.Indicator(
                 created_by_ref=self.author,
-                name=self.observable["observable_value"],
+                name=self.opencti_entity["observable_value"],
                 description=(
                     "Created by VirusTotal connector as the positive count "
                     f"was >= {indicator_config.threshold}"
@@ -197,7 +208,9 @@ class VirusTotalBuilder:
                 if self.external_reference is not None
                 else None,
                 custom_properties={
-                    "x_opencti_main_observable_type": self.observable["entity_type"],
+                    "x_opencti_main_observable_type": self.opencti_entity[
+                        "entity_type"
+                    ],
                     "x_opencti_detection": indicator_config.detect,
                     "x_opencti_score": self.score,
                 },
@@ -206,12 +219,12 @@ class VirusTotalBuilder:
                 id=StixCoreRelationship.generate_id(
                     "based-on",
                     indicator.id,
-                    self.observable["standard_id"],
+                    self.stix_entity["id"],
                 ),
                 relationship_type="based-on",
                 created_by_ref=self.author,
                 source_ref=indicator.id,
-                target_ref=self.observable["standard_id"],
+                target_ref=self.stix_entity["id"],
                 confidence=self.helper.connect_confidence_level,
                 allow_custom=True,
             )
@@ -237,12 +250,12 @@ class VirusTotalBuilder:
         relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 "resolves-to",
-                self.observable["standard_id"],
+                self.stix_entity["id"],
                 ipv4_stix.id,
             ),
             relationship_type="resolves-to",
             created_by_ref=self.author,
-            source_ref=self.observable["standard_id"],
+            source_ref=self.stix_entity["id"],
             target_ref=ipv4_stix.id,
             confidence=self.helper.connect_confidence_level,
             allow_custom=True,
@@ -262,12 +275,12 @@ class VirusTotalBuilder:
         relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 "located-at",
-                self.observable["standard_id"],
+                self.stix_entity["id"],
                 location_stix.id,
             ),
             relationship_type="located-at",
             created_by_ref=self.author,
-            source_ref=self.observable["standard_id"],
+            source_ref=self.stix_entity["id"],
             target_ref=location_stix.id,
             confidence=self.helper.connect_confidence_level,
             allow_custom=True,
@@ -294,7 +307,7 @@ class VirusTotalBuilder:
                 abstract=abstract,
                 content=content,
                 created_by_ref=self.author,
-                object_refs=[self.observable["standard_id"]],
+                object_refs=[self.stix_entity["id"]],
             )
         )
 
@@ -382,12 +395,12 @@ class VirusTotalBuilder:
         relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 "related-to",
-                self.observable["standard_id"],
+                self.stix_entity["id"],
                 indicator.id,
             ),
             created_by_ref=self.author,
             relationship_type="related-to",
-            source_ref=self.observable["standard_id"],
+            source_ref=self.stix_entity["id"],
             target_ref=indicator.id,
             confidence=self.helper.connect_confidence_level,
             allow_custom=True,
@@ -434,9 +447,7 @@ class VirusTotalBuilder:
         if self.bundle is not None:
             self.helper.log_debug(f"[VirusTotal] sending bundle: {self.bundle}")
             self.helper.metric.inc("record_send", len(self.bundle))
-            serialized_bundle = stix2.Bundle(
-                objects=self.bundle, allow_custom=True
-            ).serialize()
+            serialized_bundle = self.helper.stix2_create_bundle(self.bundle)
             bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         return "Nothing to attach"
@@ -447,13 +458,9 @@ class VirusTotalBuilder:
             self.helper.log_debug(
                 f'[VirusTotal] updating hash {algo}: {self.attributes[algo.lower().replace("-", "")]}'
             )
-            self.helper.api.stix_cyber_observable.update_field(
-                id=self.observable["id"],
-                input={
-                    "key": f"hashes.{algo}",
-                    "value": self.attributes[algo.lower().replace("-", "")],
-                },
-            )
+            self.stix_entity["hashes"][algo] = self.attributes[
+                algo.lower().replace("-", "")
+            ]
 
     def update_labels(self):
         """Update the labels of the file using the tags."""
@@ -461,9 +468,12 @@ class VirusTotalBuilder:
             f'[VirusTotal] updating labels with {self.attributes["tags"]}'
         )
         for tag in self.attributes["tags"]:
-            tag_vt = self.helper.api.label.create(value=tag, color="#0059f7")
-            self.helper.api.stix_cyber_observable.add_label(
-                id=self.observable["id"], label_id=tag_vt["id"]
+            OpenCTIStix2.put_attribute_in_extension(
+                self.stix_entity,
+                STIX_EXT_OCTI_SCO,
+                "labels",
+                tag,
+                True,
             )
 
     def update_names(self, main: bool = False):
@@ -480,29 +490,23 @@ class VirusTotalBuilder:
         )
         names = self.attributes["names"]
         if len(names) > 0 and main:
-            self.helper.api.stix_cyber_observable.update_field(
-                id=self.observable["id"],
-                input={"key": "name", "value": names[0]},
-            )
+            self.stix_entity["name"] = names[0]
             del names[0]
         if len(names) > 0:
-            if "name" in self.observable:
-                names = [n for n in names if n != self.observable["name"]]
-            self.helper.api.stix_cyber_observable.update_field(
-                id=self.observable["id"],
-                input={
-                    "key": "x_opencti_additional_names",
-                    "value": names,
-                    "operation": "add",
-                },
-            )
+            if "name" in self.stix_entity:
+                names = [n for n in names if n != self.stix_entity["name"]]
+            for name in names:
+                self.helper.api.stix2.put_attribute_in_extension(
+                    self.stix_entity,
+                    STIX_EXT_OCTI_SCO,
+                    "additional_names",
+                    name,
+                    True,
+                )
 
     def update_size(self):
         """Update the size of the file."""
         self.helper.log_debug(
             f'[VirusTotal] updating size with {self.attributes["size"]}'
         )
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.observable["id"],
-            input={"key": "size", "value": str(self.attributes["size"])},
-        )
+        self.stix_entity["size"] = self.attributes["size"]
