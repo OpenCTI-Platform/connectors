@@ -5,7 +5,7 @@ from pathlib import Path
 
 import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable, Identity
+from pycti import Identity, OpenCTIConnectorHelper, get_config_variable
 
 from .builder import VirusTotalBuilder
 from .client import VirusTotalClient

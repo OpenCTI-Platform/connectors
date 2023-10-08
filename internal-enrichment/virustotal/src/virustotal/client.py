@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Virustotal client module."""
-import time
 import base64
 import hashlib
 import json
+import time
 import urllib.parse
 
 import requests

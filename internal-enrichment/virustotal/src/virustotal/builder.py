@@ -8,13 +8,12 @@ import plyara
 import plyara.utils
 import stix2
 from pycti import (
-    ExternalReference,
+    STIX_EXT_OCTI_SCO,
     Location,
     Note,
     OpenCTIConnectorHelper,
-    StixCoreRelationship,
     OpenCTIStix2,
-    STIX_EXT_OCTI_SCO,
+    StixCoreRelationship,
 )
 
 from .indicator_config import IndicatorConfig
