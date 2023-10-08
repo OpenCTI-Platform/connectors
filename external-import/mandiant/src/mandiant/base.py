@@ -1,10 +1,10 @@
 import importlib
+import os
 import sys
 import time
 import traceback
-import os
-import yaml
 
+import yaml
 from mandiant.api import MandiantAPI
 from mandiant.utils import Timestamp
 from pycti import OpenCTIConnectorHelper, get_config_variable

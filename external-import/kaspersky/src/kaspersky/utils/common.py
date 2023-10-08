@@ -97,5 +97,4 @@ def is_ip_address(address: str) -> bool:
 
 def is_ipv4_address(ip_address_value: str) -> bool:
     """Return True if given IP address is IPv4, otherwise False."""
-    ip_address = ipaddress.ip_address(ip_address_value)
-    return ip_address.version == 4
+    return len(ip_address_value) <= 16
