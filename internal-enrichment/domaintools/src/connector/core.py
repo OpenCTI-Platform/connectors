@@ -5,10 +5,10 @@ from datetime import datetime
 from pathlib import Path
 
 import domaintools
+import stix2
 import validators
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Identity
+from pycti import Identity, OpenCTIConnectorHelper, get_config_variable
 
 from .builder import DtBuilder
 from .constants import DEFAULT_RISK_SCORE, DOMAIN_FIELDS, EMAIL_FIELDS, EntityType
@@ -23,13 +23,12 @@ class DomainToolsConnector:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = Path(__file__).parent.parent.resolve() / "config.yml"
-
         config = (
             yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
             if config_file_path.is_file()
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
 
         # DomainTools
         api_username = get_config_variable(
@@ -44,7 +43,8 @@ class DomainToolsConnector:
         )
         self.api = domaintools.API(api_username, api_key)
 
-        self.author = Identity(
+        self.author = stix2.Identity(
+            id=Identity.generate_id(self._DEFAULT_AUTHOR, "organization"),
             name=self._DEFAULT_AUTHOR,
             identity_class="organization",
             description=" DomainTools is a leading provider of Whois and other DNS"
@@ -56,7 +56,7 @@ class DomainToolsConnector:
         )
         self.helper.metric.state("idle")
 
-    def _enrich_domaintools(self, builder: DtBuilder, observable: dict) -> str:
+    def _enrich_domaintools(self, builder, opencti_entity) -> str:
         """
         Enrich observable using DomainTools API.
 
@@ -77,25 +77,25 @@ class DomainToolsConnector:
             String informing the state of the enrichment.
         """
         self.helper.log_info("Starting enrichment using DomainTools API.")
-        self.helper.log_info(f"Type of the observable: {observable['entity_type']}")
-        if observable["entity_type"] == "Domain-Name":
+        self.helper.log_info(f"Type of the observable: {opencti_entity['entity_type']}")
+        if opencti_entity["entity_type"] == "Domain-Name":
             results = (
-                self.api.iris_investigate(observable["observable_value"])
+                self.api.iris_investigate(opencti_entity["observable_value"])
                 .response()
                 .get("results", ())
             )
-        elif observable["entity_type"] == "IPv4-Addr":
+        elif opencti_entity["entity_type"] == "IPv4-Addr":
             results = (
-                self.api.iris_investigate(ip=observable["observable_value"])
+                self.api.iris_investigate(ip=opencti_entity["observable_value"])
                 .response()
                 .get("results", ())
             )
         else:
             self.helper.log_error(
-                f"Entity type of the observable: {observable['entity_type']} not supported."
+                f"Entity type of the observable: {opencti_entity['entity_type']} not supported."
             )
             raise ValueError(
-                f"Entity type of the observable: {observable['entity_type']} not supported."
+                f"Entity type of the observable: {opencti_entity['entity_type']} not supported."
             )
 
         for entry in results:
@@ -122,8 +122,8 @@ class DomainToolsConnector:
             # In case of IP enrichment, create the domain as it might not exist.
             domain_source_id = (
                 builder.create_domain(entry["domain"])
-                if observable["entity_type"] == "IPv4-Addr"
-                else observable["standard_id"]
+                if opencti_entity["entity_type"] == "IPv4-Addr"
+                else opencti_entity["standard_id"]
             )
 
             # Get ip
@@ -227,19 +227,25 @@ class DomainToolsConnector:
             return f"Observable found on DomainTools, {len(builder.bundle)} knowledge attached."
         return "Observable not found on DomainTools."
 
-    def _process_file(self, observable):
+    def _process_file(self, stix_objects, opencti_entity):
         self.helper.metric.state("running")
         self.helper.metric.inc("run_count")
 
-        builder = DtBuilder(self.helper, self.author)
+        builder = DtBuilder(self.helper, self.author, stix_objects)
 
         # Enrichment using DomainTools API.
-        return self._enrich_domaintools(builder, observable)
+        return self._enrich_domaintools(builder, opencti_entity)
 
     def _process_message(self, data):
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        return self._process_file(observable)
+        opencti_entity = self.helper.api.stix_cyber_observable.read(
+            id=data["entity_id"]
+        )
+        if opencti_entity is None:
+            raise ValueError(
+                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
+            )
+        result = self.helper.get_data_from_enrichment(data, opencti_entity)
+        return self._process_file(result["stix_objects"], opencti_entity)
 
     def start(self):
         """Start the main loop."""

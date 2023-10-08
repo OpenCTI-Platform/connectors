@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Virustotal client module."""
-import asyncio
 import base64
 import hashlib
 import json
+import time
 import urllib.parse
 
 import requests
@@ -115,7 +115,7 @@ class VirusTotalClient:
         )
         try:
             response = requests.post(
-                url, data=data, files=files, headers=headers, timeout=10
+                url, data=data, files=files, headers=headers, timeout=60
             )
             response.raise_for_status()
         except requests.exceptions.HTTPError as errh:
@@ -273,7 +273,7 @@ class VirusTotalClient:
             "data"
         ]["id"]
 
-    async def check_upload_status(self, upload_type, name, analysis_id):
+    def check_upload_status(self, upload_type, name, analysis_id):
         """
         Wait for the uploaded queued artifact or URL to finish being analyzed
 
@@ -304,7 +304,7 @@ class VirusTotalClient:
                     f"analysis status: {current_status}. Checking status update "
                     f"attempt #{i} of {total_attempts} in {current_retry_delay} seconds."
                 )
-                await asyncio.sleep(current_retry_delay)
+                time.sleep(current_retry_delay)
             else:
                 return
         raise ValueError(
