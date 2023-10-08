@@ -2,8 +2,16 @@ import os
 from collections import defaultdict
 
 import requests
+import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    STIX_EXT_OCTI_SCO,
+    Location,
+    OpenCTIConnectorHelper,
+    OpenCTIStix2,
+    StixSightingRelationship,
+    get_config_variable,
+)
 
 
 class AbuseIPDBConnector:
@@ -55,16 +63,20 @@ class AbuseIPDBConnector:
         return mapping.get(str(category_number), "unknown category")
 
     def _process_message(self, data):
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
+        opencti_entity = self.helper.api.stix_cyber_observable.read(
+            id=data["entity_id"]
+        )
+        if opencti_entity is None:
             raise ValueError(
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
+        result = self.helper.get_data_from_enrichment(data, opencti_entity)
+        stix_objects = result["stix_objects"]
+        stix_entity = result["stix_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
-        for marking_definition in observable.get("objectMarking", []):
+        for marking_definition in opencti_entity.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
@@ -73,43 +85,49 @@ class AbuseIPDBConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
         # Extract IP from entity data
-        observable_id = observable["standard_id"]
-        observable_value = observable["value"]
         url = "https://api.abuseipdb.com/api/v2/check"
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded",
             "Key": "%s" % self.api_key,
         }
-        params = {"maxAgeInDays": 365, "verbose": "True", "ipAddress": observable_value}
+        params = {
+            "maxAgeInDays": 365,
+            "verbose": "True",
+            "ipAddress": stix_entity["value"],
+        }
         r = requests.get(url, headers=headers, params=params)
         r.raise_for_status()
         data = r.json()
         data = data["data"]
-        self.helper.api.stix_cyber_observable.update_field(
-            id=observable_id,
-            input={
-                "key": "x_opencti_score",
-                "value": str(data["abuseConfidenceScore"]),
-            },
+
+        OpenCTIStix2.put_attribute_in_extension(
+            stix_entity, STIX_EXT_OCTI_SCO, "score", data["abuseConfidenceScore"]
         )
         if data["isWhitelisted"]:
-            external_reference = self.helper.api.external_reference.create(
-                source_name="AbuseIPDB (whitelist)",
-                url="https://www.abuseipdb.com/check/" + observable_value,
-                description="This IP address is from within our whitelist.",
+            # External references
+            OpenCTIStix2.put_attribute_in_extension(
+                stix_entity,
+                STIX_EXT_OCTI_SCO,
+                "external_references",
+                {
+                    "source_name": "AbuseIPDB (whitelist)",
+                    "url": "https://www.abuseipdb.com/check/"
+                    + opencti_entity["observable_value"],
+                    "description": "This IP address is from within our whitelist.",
+                },
+                True,
             )
-            self.helper.api.stix_cyber_observable.add_external_reference(
-                id=observable_id, external_reference_id=external_reference["id"]
+            OpenCTIStix2.put_attribute_in_extension(
+                stix_entity,
+                STIX_EXT_OCTI_SCO,
+                "labels",
+                self.whitelist_label["value"],
+                True,
             )
-            self.helper.api.stix_cyber_observable.add_label(
-                id=observable_id, label_id=self.whitelist_label["id"]
-            )
-            return "IP found in AbuseIPDB WHITELIST."
-        if len(data["reports"]) > 0:
+        elif len(data["reports"]) > 0:
             found = []
             cl = defaultdict(dict)
-
             for report in data["reports"]:
                 countryN = report["reporterCountryCode"]
                 if countryN in cl:
@@ -124,32 +142,43 @@ class AbuseIPDBConnector:
                     if category not in found:
                         found.append(category)
                         category_text = self.extract_abuse_ipdb_category(category)
-                        label = self.helper.api.label.create(value=category_text)
-                        self.helper.api.stix_cyber_observable.add_label(
-                            id=observable_id, label_id=label["id"]
+                        OpenCTIStix2.put_attribute_in_extension(
+                            stix_entity,
+                            STIX_EXT_OCTI_SCO,
+                            "labels",
+                            category_text,
+                            True,
                         )
 
             for ckey in list(cl.keys()):
-                country = self.helper.api.location.read(
-                    filters=[
-                        {
-                            "key": "x_opencti_aliases",
-                            "values": [ckey],
-                        }
-                    ],
-                    getAll=True,
+                country_location = stix2.Location(
+                    id=Location.generate_id(ckey, "Country"),
+                    name=ckey,
+                    country=ckey,
+                    custom_properties={
+                        "x_opencti_location_type": "Country",
+                        "x_opencti_aliases": [ckey],
+                    },
                 )
-                if country is None:
-                    self.helper.log_info("No country found with Alpha 2 code " + ckey)
-                else:
-                    self.helper.api.stix_sighting_relationship.create(
-                        fromId=observable_id,
-                        toId=country["id"],
-                        count=cl[ckey]["count"],
-                        first_seen=cl[ckey]["firstseen"],
-                        last_seen=cl[ckey]["lastseen"],
-                    )
-            return "IP found in AbuseIPDB with reports, knowledge attached."
+                stix_objects.append(country_location)
+                sighting = stix2.Sighting(
+                    id=StixSightingRelationship.generate_id(
+                        stix_entity["id"],
+                        country_location.id,
+                        cl[ckey]["firstseen"],
+                        cl[ckey]["lastseen"],
+                    ),
+                    sighting_of_ref=stix_entity["id"],
+                    where_sighted_refs=[country_location.id],
+                    count=cl[ckey]["count"],
+                    first_seen=cl[ckey]["firstseen"],
+                    last_seen=cl[ckey]["lastseen"],
+                )
+                stix_objects.append(sighting)
+        serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
+        print(serialized_bundle)
+        self.helper.send_stix2_bundle(serialized_bundle, update=True)
+        return "IP found in AbuseIPDB, knowledge attached."
 
     # Start the main loop
     def start(self):

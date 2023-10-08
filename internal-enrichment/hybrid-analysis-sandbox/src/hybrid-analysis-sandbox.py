@@ -8,6 +8,7 @@ import requests
 import stix2
 import yaml
 from pycti import (
+    STIX_EXT_OCTI_SCO,
     AttackPattern,
     MalwareAnalysis,
     OpenCTIConnectorHelper,
@@ -26,7 +27,7 @@ class HybridAnalysis:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
         self.api_key = get_config_variable(
             "HYBRID_ANALYSIS_TOKEN", ["hybrid_analysis", "api_key"], config
         )
@@ -53,40 +54,31 @@ class HybridAnalysis:
         )["standard_id"]
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
 
-    def _send_knowledge(self, observable, report):
-        bundle_objects = []
-        observable_name = observable["name"] if "name" in observable else None
-        observable_value = observable["observable_value"]
-        observable_type = observable["entity_type"]
-        observable_id = observable["standard_id"]
-        stix_objects = self.helper.api.stix2.prepare_export(
-            self.helper.api.stix2.generate_export(observable)
-        )
-        stix_observable = [e for e in stix_objects if e["id"] == observable_id][0]
-        if observable_type in ["StixFile", "Artifact"]:
+    def _send_knowledge(self, stix_objects, stix_entity, opencti_entity, report):
+        if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
             if report["md5"] is not None:
-                stix_observable["hashes"]["MD5"] = report["md5"]
+                stix_entity["hashes"]["MD5"] = report["md5"]
             if report["sha1"] is not None:
-                stix_observable["hashes"]["SHA-1"] = report["sha1"]
+                stix_entity["hashes"]["SHA-1"] = report["sha1"]
             if report["sha256"] is not None:
-                stix_observable["hashes"]["SHA-256"] = report["sha256"]
-            if observable_name is None:
-                if "x_opencti_additional_names" in stix_observable:
-                    stix_observable["x_opencti_additional_names"].append(
-                        report["submit_name"]
-                    )
-                else:
-                    stix_observable["x_opencti_additional_names"] = [
-                        report["submit_name"]
-                    ]
-            if observable_type == "StixFile":
-                stix_observable["size"] = report["size"]
-
-        stix_observable["x_opencti_score"] = report["threat_score"]
+                stix_entity["hashes"]["SHA-256"] = report["sha256"]
+            self.helper.api.stix2.put_attribute_in_extension(
+                stix_entity,
+                STIX_EXT_OCTI_SCO,
+                "additional_names",
+                report["submit_name"],
+                True,
+            )
+            if opencti_entity["entity_type"] == "StixFile":
+                stix_entity["size"] = report["size"]
+        self.helper.api.stix2.put_attribute_in_extension(
+            stix_entity, STIX_EXT_OCTI_SCO, "score", report["threat_score"]
+        )
         # Sandbox Operating System
+        operating_system = None
         if report["environment_id"] is not None:
             operating_system = stix2.Software(name=report["environment_description"])
-            bundle_objects.append(operating_system)
+            stix_objects.append(operating_system)
         # List of all the referenced SCO of the analysis
         analysis_sco_refs = []
 
@@ -98,11 +90,9 @@ class HybridAnalysis:
         )
         # Create tags
         for tag in report["type_short"]:
-            if "labels" in stix_observable:
-                stix_observable["labels"].append(tag)
-            else:
-                stix_observable["labels"] = [tag]
-        bundle_objects.append(stix_observable)
+            self.helper.api.stix2.put_attribute_in_extension(
+                stix_entity, STIX_EXT_OCTI_SCO, "labels", tag, True
+            )
         # Attach the TTPs
         for tactic in report["mitre_attcks"]:
             if (
@@ -122,19 +112,19 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_observable["id"], attack_pattern.id
+                        "related-to", stix_entity["id"], attack_pattern.id
                     ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
-                    source_ref=stix_observable["id"],
+                    source_ref=stix_entity["id"],
                     target_ref=attack_pattern.id,
                     object_marking_refs=[stix2.TLP_WHITE],
                 )
-                bundle_objects.append(attack_pattern)
-                bundle_objects.append(relationship)
+                stix_objects.append(attack_pattern)
+                stix_objects.append(relationship)
         # Attach the domains
         for domain in report["domains"]:
-            if domain != observable_value:
+            if domain != opencti_entity["observable_value"]:
                 domain_stix = DomainName(
                     value=domain,
                     object_marking_refs=[stix2.TLP_WHITE],
@@ -144,18 +134,18 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_observable["id"], domain_stix.id
+                        "related-to", stix_entity["id"], domain_stix.id
                     ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
-                    source_ref=stix_observable["id"],
+                    source_ref=stix_entity["id"],
                     target_ref=domain_stix.id,
                     object_marking_refs=[stix2.TLP_WHITE],
                 )
                 # Attach IP to Malware Analysis (through analysis_sco_refs)
                 analysis_sco_refs.append(domain_stix.id)
-                bundle_objects.append(domain_stix)
-                bundle_objects.append(relationship)
+                stix_objects.append(domain_stix)
+                stix_objects.append(relationship)
         # Attach the IP addresses
         for host in report["hosts"]:
             if self.detect_ip_version(host) == "IPv4-Addr":
@@ -176,18 +166,18 @@ class HybridAnalysis:
                 )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    "related-to", stix_observable["id"], host_stix.id
+                    "related-to", stix_entity["id"], host_stix.id
                 ),
                 relationship_type="related-to",
                 created_by_ref=self.identity,
-                source_ref=stix_observable["id"],
+                source_ref=stix_entity["id"],
                 target_ref=host_stix.id,
                 object_marking_refs=[stix2.TLP_WHITE],
             )
             # Attach IP to Malware Analysis (through analysis_sco_refs)
             analysis_sco_refs.append(host_stix.id)
-            bundle_objects.append(host_stix)
-            bundle_objects.append(relationship)
+            stix_objects.append(host_stix)
+            stix_objects.append(relationship)
         # Attach other files
         for file in report["extracted_files"]:
             if file["threat_level"] > 0:
@@ -205,18 +195,18 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "drops", stix_observable["id"], file_stix.id
+                        "drops", stix_entity["id"], file_stix.id
                     ),
                     relationship_type="drops",
                     created_by_ref=self.identity,
-                    source_ref=stix_observable["id"],
+                    source_ref=stix_entity["id"],
                     target_ref=file_stix.id,
                 )
                 # Attach file to Malware Analysis (through analysis_sco_refs)
                 analysis_sco_refs.append(file_stix.id)
 
-                bundle_objects.append(file_stix)
-                bundle_objects.append(relationship)
+                stix_objects.append(file_stix)
+                stix_objects.append(relationship)
         for tactic in report["mitre_attcks"]:
             if (
                 tactic["malicious_identifiers_count"] > 0
@@ -234,17 +224,17 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_observable["id"], attack_pattern.id
+                        "related-to", stix_entity["id"], attack_pattern.id
                     ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
-                    source_ref=stix_observable["id"],
+                    source_ref=stix_entity["id"],
                     target_ref=attack_pattern.id,
                 )
-                bundle_objects.append(attack_pattern)
-                bundle_objects.append(relationship)
+                stix_objects.append(attack_pattern)
+                stix_objects.append(relationship)
         # Creating the Malware Analysis
-        result_name = "Result " + observable_value
+        result_name = "Result " + opencti_entity["observable_value"]
         analysis_started = (
             datetime.now()
             if report["analysis_start_time"] is None
@@ -259,28 +249,31 @@ class HybridAnalysis:
             analysis_started=analysis_started,
             submitted=datetime.now(),
             result=report["verdict"],
-            sample_ref=stix_observable["id"],
+            sample_ref=stix_entity["id"],
             created_by_ref=self.identity,
             operating_system_ref=operating_system["id"]
-            if "operating_system" in locals()
+            if operating_system is not None
             else None,
             analysis_sco_refs=analysis_sco_refs,
             external_references=[external_reference],
         )
-        bundle_objects.append(malware_analysis)
-        if len(bundle_objects) > 0:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
+        stix_objects.append(malware_analysis)
+        if len(stix_objects) > 0:
+            serialized_bundle = stix2.Bundle(
+                objects=stix_objects,
+                allow_custom=True,
+            ).serialize()
+            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle, update=True)
             return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
             )
         else:
             return "Nothing to attach"
 
-    def _submit_url(self, observable):
+    def _submit_url(self, stix_objects, stix_entity, opencti_entity):
         self.helper.log_info("Observable is a URL, triggering the sandbox...")
         values = {
-            "url": observable["observable_value"],
+            "url": opencti_entity["observable_value"],
             "environment_id": self.environment_id,
         }
         r = requests.post(
@@ -314,12 +307,12 @@ class HybridAnalysis:
             raise ValueError(r.text)
         result = r.json()
         self.helper.log_info("Analysis done, attaching knowledge...")
-        return self._send_knowledge(observable, result)
+        return self._send_knowledge(stix_objects, stix_entity, opencti_entity, result)
 
-    def _trigger_sandbox(self, observable):
+    def _trigger_sandbox(self, stix_objects, stix_entity, opencti_entity):
         self.helper.log_info("File not found in HA, triggering the sandbox...")
-        file_name = observable["importFiles"][0]["name"]
-        file_uri = observable["importFiles"][0]["id"]
+        file_name = opencti_entity["importFiles"][0]["name"]
+        file_uri = opencti_entity["importFiles"][0]["id"]
         file_content = self.helper.api.fetch_opencti_file(
             self.helper.opencti_url + "/storage/get/" + file_uri, True
         )
@@ -363,18 +356,18 @@ class HybridAnalysis:
             raise ValueError(r.text)
         result = r.json()
         self.helper.log_info("Analysis done, attaching knowledge...")
-        return self._send_knowledge(observable, result)
+        return self._send_knowledge(stix_objects, stix_entity, opencti_entity, result)
 
-    def _process_observable(self, observable):
+    def _process_observable(self, stix_objects, stix_entity, opencti_entity):
         self.helper.log_info(
-            "Processing the observable " + observable["observable_value"]
+            "Processing the observable " + opencti_entity["observable_value"]
         )
         # If File or Artifact
         result = []
-        if observable["entity_type"] in ["StixFile", "Artifact"]:
+        if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
             # First, check if the file is present is HA
             values = None
-            for hash in observable["hashes"]:
+            for hash in opencti_entity["hashes"]:
                 if hash["algorithm"] == "SHA-256":
                     values = {"hash": hash["hash"]}
                 elif hash["algorithm"] == "SHA-1":
@@ -393,34 +386,42 @@ class HybridAnalysis:
         if len(result) > 0:
             # One report is found
             self.helper.log_info("Already found in HA, attaching knowledge...")
-            return self._send_knowledge(observable, result[0])
+            return self._send_knowledge(
+                stix_objects, stix_entity, opencti_entity, result[0]
+            )
         # If URL
-        if observable["entity_type"] in ["Url", "Domain-Name", "Hostname"]:
-            return self._submit_url(observable)
+        if opencti_entity["entity_type"] in ["Url", "Domain-Name", "Hostname"]:
+            return self._submit_url(stix_objects, stix_entity, opencti_entity)
         # If no file
-        if "importFiles" not in observable or len(observable["importFiles"]) == 0:
+        if (
+            "importFiles" not in opencti_entity
+            or len(opencti_entity["importFiles"]) == 0
+        ):
             return "Observable not found and no file to upload in the sandbox"
-        return self._trigger_sandbox(observable)
+        return self._trigger_sandbox(stix_objects, stix_entity, opencti_entity)
 
     def _process_message(self, data):
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
+        opencti_entity = self.helper.api.stix_cyber_observable.read(
+            id=data["entity_id"]
+        )
+        if opencti_entity is None:
             raise ValueError(
-                "Observable not found "
-                "(may be linked to data seggregation, check your group and permissions)"
+                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
+        result = self.helper.get_data_from_enrichment(data, opencti_entity)
 
         # Extract TLP
         tlp = "TLP:CLEAR"
-        for marking_definition in observable["objectMarking"]:
+        for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-        return self._process_observable(observable)
+        return self._process_observable(
+            result["stix_objects"], result["stix_entity"], opencti_entity
+        )
 
     # Start the main loop
     def start(self):

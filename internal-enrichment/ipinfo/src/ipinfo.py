@@ -21,13 +21,13 @@ class IpInfoConnector:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
         self.token = get_config_variable("IPINFO_TOKEN", ["ipinfo", "token"], config)
         self.max_tlp = get_config_variable(
             "IPINFO_MAX_TLP", ["ipinfo", "max_tlp"], config
         )
 
-    def _generate_stix_bundle(self, country, city, loc, observable_id):
+    def _generate_stix_bundle(self, stix_objects, stix_entity, country, city, loc):
         # Generate stix bundle
         country_location = stix2.Location(
             id=Location.generate_id(country.name, "Country"),
@@ -44,6 +44,7 @@ class IpInfoConnector:
                 ],
             },
         )
+        stix_objects.append(country_location)
         loc_split = loc.split(",")
         city_location = stix2.Location(
             id=Location.generate_id(city, "City"),
@@ -55,6 +56,7 @@ class IpInfoConnector:
             longitude=loc_split[1],
             custom_properties={"x_opencti_location_type": "City"},
         )
+        stix_objects.append(city_location)
         city_to_country = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 "located-at", city_location.id, country_location.id
@@ -63,36 +65,34 @@ class IpInfoConnector:
             source_ref=city_location.id,
             target_ref=country_location.id,
         )
+        stix_objects.append(city_to_country)
         observable_to_city = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
-                "located-at", observable_id, city_location.id
+                "located-at", stix_entity["id"], city_location.id
             ),
             relationship_type="located-at",
-            source_ref=observable_id,
+            source_ref=stix_entity["id"],
             target_ref=city_location.id,
             confidence=self.helper.connect_confidence_level,
         )
-        return stix2.Bundle(
-            objects=[
-                country_location,
-                city_location,
-                city_to_country,
-                observable_to_city,
-            ],
-            allow_custom=True,
-        ).serialize()
+        stix_objects.append(observable_to_city)
+        return self.helper.stix2_create_bundle(stix_objects)
 
     def _process_message(self, data):
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
+        opencti_entity = self.helper.api.stix_cyber_observable.read(
+            id=data["entity_id"]
+        )
+        if opencti_entity is None:
             raise ValueError(
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
+        result = self.helper.get_data_from_enrichment(data, opencti_entity)
+        stix_objects = result["stix_objects"]
+        stix_entity = result["stix_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
-        for marking_definition in observable["objectMarking"]:
+        for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
@@ -101,11 +101,10 @@ class IpInfoConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
-        # Extract IP from entity data
-        observable_id = observable["standard_id"]
-        observable_value = observable["value"]
         # Get the geo loc from the API
-        api_url = "https://ipinfo.io/" + observable_value + "/json/?token=" + self.token
+        api_url = (
+            "https://ipinfo.io/" + stix_entity["value"] + "/json/?token=" + self.token
+        )
         response = requests.request(
             "GET",
             api_url,
@@ -122,9 +121,9 @@ class IpInfoConnector:
                 "IpInfo was not able to find a country for this IP address"
             )
         bundle = self._generate_stix_bundle(
-            country, json_data["city"], json_data["loc"], observable_id
+            stix_objects, stix_entity, country, json_data["city"], json_data["loc"]
         )
-        bundles_sent = self.helper.send_stix2_bundle(bundle)
+        bundles_sent = self.helper.send_stix2_bundle(bundle, update=True)
         return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
 
     # Start the main loop
