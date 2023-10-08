@@ -395,9 +395,9 @@ class Report:
         if len(vulnerabilities) == 1:
             definitions += [
                 {
-                    "type": "related-to",
-                    "sources": vulnerabilities,
-                    "destinations": softwares,
+                    "type": "has",
+                    "sources": softwares,
+                    "destinations": vulnerabilities,
                 },
                 {
                     "type": "mitigates",

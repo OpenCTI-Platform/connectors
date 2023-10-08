@@ -2,6 +2,8 @@ import importlib
 import sys
 import time
 import traceback
+import os
+import yaml
 
 from mandiant.api import MandiantAPI
 from mandiant.utils import Timestamp
@@ -14,29 +16,36 @@ STATE_END = "end_epoch"
 
 class Mandiant:
     def __init__(self):
-        self.helper = OpenCTIConnectorHelper({})
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
+        config = (
+            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            if os.path.isfile(config_file_path)
+            else {}
+        )
+        self.helper = OpenCTIConnectorHelper(config)
 
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
+            config,
         )
         self.mandiant_api_v4_key_id = get_config_variable(
-            "MANDIANT_API_V4_KEY_ID",
-            ["mandiant", "api_v4_key_id"],
+            "MANDIANT_API_V4_KEY_ID", ["mandiant", "api_v4_key_id"], config
         )
         self.mandiant_api_v4_key_secret = get_config_variable(
-            "MANDIANT_API_V4_KEY_SECRET",
-            ["mandiant", "api_v4_key_secret"],
+            "MANDIANT_API_V4_KEY_SECRET", ["mandiant", "api_v4_key_secret"], config
         )
         self.mandiant_interval = get_config_variable(
             "MANDIANT_INTERVAL",
             ["mandiant", "interval"],
+            config,
             isNumber=True,
             default=120,
         )
         self.mandiant_import_start_date = get_config_variable(
             "MANDIANT_IMPORT_START_DATE",
             ["mandiant", "import_start_date"],
+            config,
             default="2023-01-01",
         )
 
@@ -45,6 +54,7 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_IMPORT_ACTORS",
             ["mandiant", "import_actors"],
+            config,
             default=True,
         ):
             self.mandiant_collections.append("actors")
@@ -52,6 +62,7 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_IMPORT_REPORTS",
             ["mandiant", "import_reports"],
+            config,
             default=True,
         ):
             self.mandiant_collections.append("reports")
@@ -59,6 +70,7 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_IMPORT_MALWARES",
             ["mandiant", "import_malwares"],
+            config,
             default=True,
         ):
             self.mandiant_collections.append("malwares")
@@ -66,6 +78,7 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_IMPORT_CAMPAIGNS",
             ["mandiant", "import_campaigns"],
+            config,
             default=False,
         ):
             self.mandiant_collections.append("campaigns")
@@ -73,6 +86,7 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_IMPORT_INDICATORS",
             ["mandiant", "import_indicators"],
+            config,
             default=True,
         ):
             self.mandiant_collections.append("indicators")
@@ -80,6 +94,7 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_IMPORT_VULNERABILITIES",
             ["mandiant", "import_vulnerabilities"],
+            config,
             default=True,
         ):
             self.mandiant_collections.append("vulnerabilities")
@@ -89,11 +104,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_ACTOR_PROFILE_REPORT",
             ["mandiant", "actor_profile_report"],
+            config,
             default=True,
         ):
             actor_profile_report_type = get_config_variable(
                 "MANDIANT_ACTOR_PROFILE_REPORT_TYPE",
                 ["mandiant", "actor_profile_report_type"],
+                config,
                 default="actor-profile",
             )
             self.mandiant_report_types["Actor Profile"] = actor_profile_report_type
@@ -101,11 +118,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_COUNTRY_PROFILE_REPORT",
             ["mandiant", "country_profile_report"],
+            config,
             default=True,
         ):
             country_profile_report_type = get_config_variable(
                 "MANDIANT_COUNTRY_PROFILE_REPORT_TYPE",
                 ["mandiant", "country_profile_report_type"],
+                config,
                 default="country-profile",
             )
             self.mandiant_report_types["Country Profile"] = country_profile_report_type
@@ -113,11 +132,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT",
             ["mandiant", "event_coverage_implication_report"],
+            config,
             default=True,
         ):
             event_coverage_implication_report_type = get_config_variable(
                 "MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT_TYPE",
                 ["mandiant", "event_coverage_implication_report_type"],
+                config,
                 default="event-coverage",
             )
             self.mandiant_report_types[
@@ -127,11 +148,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT",
             ["mandiant", "executive_perspective_report"],
+            config,
             default=True,
         ):
             executive_perspective_report_type = get_config_variable(
                 "MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT_TYPE",
                 ["mandiant", "executive_perspective_report_type"],
+                config,
                 default="executive-perspective",
             )
             self.mandiant_report_types[
@@ -141,11 +164,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_ICS_SECURITY_ROUNDUP_REPORT",
             ["mandiant", "ics_security_roundup_report"],
+            config,
             default=True,
         ):
             ics_security_roundup_report_type = get_config_variable(
                 "MANDIANT_ICS_SECURITY_ROUNDUP_REPORT_TYPE",
                 ["mandiant", "ics_security_roundup_report_type"],
+                config,
                 default="ics-security-roundup",
             )
             self.mandiant_report_types[
@@ -155,11 +180,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_INDUSTRY_REPORTING_REPORT",
             ["mandiant", "industry_reporting_report"],
+            config,
             default=True,
         ):
             industry_reporting_report_type = get_config_variable(
                 "MANDIANT_INDUSTRY_REPORTING_REPORT_TYPE",
                 ["mandiant", "industry_reporting_report_type"],
+                config,
                 default="industry",
             )
             self.mandiant_report_types[
@@ -169,11 +196,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_MALWARE_PROFILE_REPORT",
             ["mandiant", "malware_profile_report"],
+            config,
             default=True,
         ):
             malware_profile_report_type = get_config_variable(
                 "MANDIANT_MALWARE_PROFILE_REPORT_TYPE",
                 ["mandiant", "malware_profile_report_type"],
+                config,
                 default="malware-profile",
             )
             self.mandiant_report_types["Malware Profile"] = malware_profile_report_type
@@ -181,11 +210,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_NETWORK_ACTIVITY_REPORT",
             ["mandiant", "network_activity_report"],
+            config,
             default=True,
         ):
             network_activity_report_type = get_config_variable(
                 "MANDIANT_NETWORK_ACTIVITY_REPORT_TYPE",
                 ["mandiant", "network_activity_report_type"],
+                config,
                 default="network-activity",
             )
             self.mandiant_report_types[
@@ -195,11 +226,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_PATCH_REPORT",
             ["mandiant", "patch_report"],
+            config,
             default=True,
         ):
             patch_report_type = get_config_variable(
                 "MANDIANT_PATCH_REPORT_TYPE",
                 ["mandiant", "patch_report_type"],
+                config,
                 default="patch",
             )
             self.mandiant_report_types["Patch Report"] = patch_report_type
@@ -207,11 +240,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_TTP_DEEP_DIVE_REPORT",
             ["mandiant", "ttp_deep_dive_report"],
+            config,
             default=True,
         ):
             ttp_deep_dive_report_type = get_config_variable(
                 "MANDIANT_TTP_DEEP_DIVE_REPORT_TYPE",
                 ["mandiant", "ttp_deep_dive_report_type"],
+                config,
                 default="ttp-deep-dive",
             )
             self.mandiant_report_types["TTP Deep Dive"] = ttp_deep_dive_report_type
@@ -219,11 +254,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_THREAT_ACTIVITY_ALERT_REPORT",
             ["mandiant", "threat_activity_alert_report"],
+            config,
             default=True,
         ):
             threat_activity_alert_report_type = get_config_variable(
                 "MANDIANT_THREAT_ACTIVITY_ALERT_REPORT_TYPE",
                 ["mandiant", "threat_activity_alert_report_type"],
+                config,
                 default="threat-alert",
             )
             self.mandiant_report_types[
@@ -233,11 +270,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_THREAT_ACTIVITY_REPORT",
             ["mandiant", "threat_activity_report"],
+            config,
             default=True,
         ):
             threat_activity_report_type = get_config_variable(
                 "MANDIANT_THREAT_ACTIVITY_REPORT_TYPE",
                 ["mandiant", "threat_activity_report_type"],
+                config,
                 default="threat-activity",
             )
             self.mandiant_report_types[
@@ -247,11 +286,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_TRENDS_AND_FORECASTING_REPORT",
             ["mandiant", "trends_and_forecasting_report"],
+            config,
             default=True,
         ):
             trends_and_forecasting_report_type = get_config_variable(
                 "MANDIANT_TRENDS_AND_FORECASTING_REPORT_TYPE",
                 ["mandiant", "trends_and_forecasting_report_type"],
+                config,
                 default="trends-forecasting",
             )
             self.mandiant_report_types[
@@ -261,11 +302,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_VULNERABILITY_REPORT",
             ["mandiant", "vulnerability_report"],
+            config,
             default=True,
         ):
             vulnerability_report_type = get_config_variable(
                 "MANDIANT_VULNERABILITY_REPORT_TYPE",
                 ["mandiant", "vulnerability_report_type"],
+                config,
                 default="vulnerability",
             )
             self.mandiant_report_types[
@@ -275,11 +318,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT",
             ["mandiant", "weekly_vulnerability_exploitation_report"],
+            config,
             default=True,
         ):
             weekly_vulnerability_exploitation_report_type = get_config_variable(
                 "MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT_TYPE",
                 ["mandiant", "weekly_vulnerability_exploitation_report_type"],
+                config,
                 default="vulnerability-exploitation",
             )
             self.mandiant_report_types[
@@ -289,11 +334,13 @@ class Mandiant:
         if get_config_variable(
             "MANDIANT_NEWS_ANALYSIS_REPORT",
             ["mandiant", "news_analysis_report"],
+            config,
             default=False,
         ):
             news_analysis_report_type = get_config_variable(
                 "MANDIANT_NEWS_ANALYSIS_REPORT_TYPE",
                 ["mandiant", "news_analysis_report_type"],
+                config,
                 default="news-analysis",
             )
             self.mandiant_report_types["News Analysis"] = news_analysis_report_type
@@ -311,13 +358,14 @@ class Mandiant:
         self.mandiant_indicator_minimum_score = get_config_variable(
             "MANDIANT_INDICATOR_MINIMUM_SCORE",
             ["mandiant", "indicator_minimum_score"],
+            config,
             default=80,
         )
 
         self.mandiant_interval = int(self.mandiant_interval) * 60
 
         self.identity = self.helper.api.identity.create(
-            name="Mandiant, Inc.",
+            name="Mandiant",
             type="Organization",
         )
 
@@ -440,8 +488,8 @@ class Mandiant:
 
         except (KeyboardInterrupt, SystemExit, BaseException) as error:
             """
-            Save current state before exitting in order to provide
-            the capability to start near the moment where it exitted.
+            Save current state before exiting in order to provide
+            the capability to start near the moment where it exited.
             """
             if collection == "vulnerabilities":
                 state[collection][STATE_START] = item["publish_date"]
