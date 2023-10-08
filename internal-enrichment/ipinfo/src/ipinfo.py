@@ -123,7 +123,7 @@ class IpInfoConnector:
         bundle = self._generate_stix_bundle(
             stix_objects, stix_entity, country, json_data["city"], json_data["loc"]
         )
-        bundles_sent = self.helper.send_stix2_bundle(bundle)
+        bundles_sent = self.helper.send_stix2_bundle(bundle, update=True)
         return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
 
     # Start the main loop

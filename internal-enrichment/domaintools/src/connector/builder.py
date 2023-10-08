@@ -2,7 +2,7 @@
 """Builder for DomainTools."""
 
 from datetime import datetime
-from typing import Optional, Union
+from typing import Optional
 
 import stix2
 import validators
@@ -422,10 +422,4 @@ class DtBuilder:
         """
         self.helper.metric.inc("record_send", 1 + len(self.bundle))
         serialized_bundle = self.helper.stix2_create_bundle(self.bundle)
-        self.helper.send_stix2_bundle(serialized_bundle)
-
-        self.helper.send_stix2_bundle(
-            Bundle(objects=[self.author] + self.bundle, allow_custom=True).serialize(),
-            allow_custom=True,
-            update=True,
-        )
+        self.helper.send_stix2_bundle(serialized_bundle, update=True)

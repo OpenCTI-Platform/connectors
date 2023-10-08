@@ -182,7 +182,7 @@ class HygieneConnector:
 
                 # Add labels
                 if use_parent:
-                    stix_entity = OpenCTIStix2.put_attribute_in_extension(
+                    OpenCTIStix2.put_attribute_in_extension(
                         stix_entity,
                         STIX_EXT_OCTI_SCO,
                         "labels",
@@ -190,7 +190,7 @@ class HygieneConnector:
                         True,
                     )
                 else:
-                    stix_entity = OpenCTIStix2.put_attribute_in_extension(
+                    OpenCTIStix2.put_attribute_in_extension(
                         stix_entity,
                         STIX_EXT_OCTI_SCO,
                         "labels",
@@ -199,12 +199,12 @@ class HygieneConnector:
                     )
 
                 # Update score
-                stix_entity = OpenCTIStix2.put_attribute_in_extension(
+                OpenCTIStix2.put_attribute_in_extension(
                     stix_entity, STIX_EXT_OCTI_SCO, "score", score
                 )
 
                 # External references
-                stix_entity = OpenCTIStix2.put_attribute_in_extension(
+                OpenCTIStix2.put_attribute_in_extension(
                     stix_entity,
                     STIX_EXT_OCTI_SCO,
                     "external_references",
@@ -220,16 +220,9 @@ class HygieneConnector:
 
                 # Add indicators
                 for indicator_id in opencti_entity["indicatorsIds"]:
-                    stix_indicator_objects = self.helper.api.stix2.prepare_export(
-                        self.helper.api.stix2.generate_export(
-                            self.helper.api.indicator.read(id=indicator_id)
-                        )
+                    stix_indicator = self.helper.api.stix2.export_entity(
+                        "Indicator", indicator_id, only_entity=True
                     )
-                    stix_indicator = [
-                        e
-                        for e in stix_indicator_objects
-                        if e.get("x_opencti_id") == indicator_id
-                    ][0]
 
                     # Add labels
                     if use_parent:
@@ -257,7 +250,7 @@ class HygieneConnector:
                     stix_objects.append(stix_indicator)
 
                 serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
-                self.helper.send_stix2_bundle(serialized_bundle)
+                self.helper.send_stix2_bundle(serialized_bundle, update=True)
             return "Observable value found on warninglist and tagged accordingly"
 
     def _process_message(self, data) -> str:

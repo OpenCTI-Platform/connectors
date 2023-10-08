@@ -91,7 +91,7 @@ class HybridAnalysis:
         # Create tags
         for tag in report["type_short"]:
             self.helper.api.stix2.put_attribute_in_extension(
-                stix_entity, STIX_EXT_OCTI_SCO, "labels", report["threat_score"], True
+                stix_entity, STIX_EXT_OCTI_SCO, "labels", tag, True
             )
         # Attach the TTPs
         for tactic in report["mitre_attcks"]:
@@ -263,7 +263,7 @@ class HybridAnalysis:
                 objects=stix_objects,
                 allow_custom=True,
             ).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
+            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle, update=True)
             return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
             )
