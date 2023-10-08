@@ -2,15 +2,15 @@ import os
 from collections import defaultdict
 
 import requests
-import yaml
 import stix2
+import yaml
 from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-    OpenCTIStix2,
     STIX_EXT_OCTI_SCO,
-    StixSightingRelationship,
     Location,
+    OpenCTIConnectorHelper,
+    OpenCTIStix2,
+    StixSightingRelationship,
+    get_config_variable,
 )
 
 
