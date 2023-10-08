@@ -601,6 +601,10 @@ jobs:
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/cluster25
+          name: Build Docker image opencti/connector-cluster25
+          command: docker build -t opencti/connector-cluster25:latest . && docker tag opencti/connector-cluster25:latest opencti/connector-cluster25:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -710,6 +714,8 @@ jobs:
             docker push opencti/connector-phishunt:${CIRCLE_TAG}
             docker push opencti/connector-attribution-tools:latest
             docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
+            docker push opencti/connector-cluster25:latest
+            docker push opencti/connector-cluster25:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1214,6 +1220,10 @@ jobs:
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:rolling .
       - run:
+          working_directory: ~/opencti/external-import/cluster25
+          name: Build Docker image opencti/connector-cluster25
+          command: docker build -t opencti/connector-cluster25:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1271,6 +1281,7 @@ jobs:
             docker push opencti/connector-stopforumspam:rolling
             docker push opencti/connector-phishunt:rolling
             docker push opencti/connector-attribution-tools:rolling
+            docker push opencti/connector-cluster25:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
