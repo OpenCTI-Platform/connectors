@@ -102,10 +102,10 @@ class AbuseIPDBConnector:
         data = r.json()
         data = data["data"]
 
-        OpenCTIStix2.put_attribute_in_extension(
-            stix_entity, STIX_EXT_OCTI_SCO, "score", data["abuseConfidenceScore"]
-        )
         if data["isWhitelisted"]:
+            OpenCTIStix2.put_attribute_in_extension(
+                stix_entity, STIX_EXT_OCTI_SCO, "score", data["abuseConfidenceScore"]
+            )
             # External references
             OpenCTIStix2.put_attribute_in_extension(
                 stix_entity,
@@ -127,6 +127,9 @@ class AbuseIPDBConnector:
                 True,
             )
         elif len(data["reports"]) > 0:
+            OpenCTIStix2.put_attribute_in_extension(
+                stix_entity, STIX_EXT_OCTI_SCO, "score", data["abuseConfidenceScore"]
+            )
             found = []
             cl = defaultdict(dict)
             for report in data["reports"]:
