@@ -8,7 +8,7 @@ connector:
   name: 'MITRE Datasets'
   scope: 'tool,report,malware,identity,campaign,intrusion-set,attack-pattern,course-of-action,x-mitre-data-source,x-mitre-data-component,x-mitre-matrix,x-mitre-tactic,x-mitre-collection'
   confidence_level: 75
-  update_existing_data: false
+  update_existing_data: true
   run_and_terminate: false
   log_level: 'info'
   expose_metrics: False
