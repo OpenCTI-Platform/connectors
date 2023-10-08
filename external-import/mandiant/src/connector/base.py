@@ -1,13 +1,15 @@
 import importlib
-import os
-import sys
-import time
 import traceback
-
 import yaml
-from mandiant.api import MandiantAPI
-from mandiant.utils import Timestamp
+import time
+import sys
+import os
+
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+from .api import MandiantAPI
+from .utils import Timestamp
+
 
 STATE_START = "start_epoch"
 STATE_OFFSET = "offset"
@@ -370,7 +372,8 @@ class Mandiant:
         )
 
         self.api = MandiantAPI(
-            self.mandiant_api_v4_key_id, self.mandiant_api_v4_key_secret
+            self.mandiant_api_v4_key_id,
+            self.mandiant_api_v4_key_secret,
         )
 
         if not self.helper.get_state():
