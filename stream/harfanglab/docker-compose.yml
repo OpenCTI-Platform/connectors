@@ -1,0 +1,25 @@
+version: "3"
+services:
+  connector-harfanglab:
+    image: opencti/connector-harfanglab:5.10.3
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false # Necessary to detect observables in the stream
+      - CONNECTOR_NAME=HarfangLab
+      - CONNECTOR_SCOPE=harfanglab
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=error
+      - HARFANGLAB_URL=https://console.changeme.com
+      - HARFANGLAB_SSL_VERIFY=true
+      - HARFANGLAB_TOKEN=ChangeMe
+      - HARFANGLAB_LOGIN=ChangeMe
+      - HARFANGLAB_PASSWORD=ChangeMe
+      - HARFLANGLAB_SOURCE_LIST_NAME=from_OpenCTI
+      - HARFLANGLAB_INDICATOR_DELETE=true # Removed or disabled rule in HarfangLab
+      - HARFLANGLAB_RULE_MATURITY=stable # Possible maturity rule: stable, testing
+    restart: always
