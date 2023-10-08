@@ -4,6 +4,7 @@ from collections import defaultdict
 import requests
 import stix2
 import yaml
+from dateutil.parser import parse
 from pycti import (
     STIX_EXT_OCTI_SCO,
     Location,
@@ -161,22 +162,23 @@ class AbuseIPDBConnector:
                     },
                 )
                 stix_objects.append(country_location)
+                fake_indicator_id = "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
                 sighting = stix2.Sighting(
                     id=StixSightingRelationship.generate_id(
                         stix_entity["id"],
                         country_location.id,
-                        cl[ckey]["firstseen"],
-                        cl[ckey]["lastseen"],
+                        parse(cl[ckey]["firstseen"]),
+                        parse(cl[ckey]["lastseen"]),
                     ),
-                    sighting_of_ref=stix_entity["id"],
+                    sighting_of_ref=fake_indicator_id,
+                    custom_properties={"x_opencti_sighting_of_ref": stix_entity["id"]},
                     where_sighted_refs=[country_location.id],
                     count=cl[ckey]["count"],
-                    first_seen=cl[ckey]["firstseen"],
-                    last_seen=cl[ckey]["lastseen"],
+                    first_seen=parse(cl[ckey]["firstseen"]),
+                    last_seen=parse(cl[ckey]["lastseen"]),
                 )
                 stix_objects.append(sighting)
         serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
-        print(serialized_bundle)
         self.helper.send_stix2_bundle(serialized_bundle, update=True)
         return "IP found in AbuseIPDB, knowledge attached."
 
