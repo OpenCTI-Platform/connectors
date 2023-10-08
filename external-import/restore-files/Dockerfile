@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.12-alpine
 
 # Copy the worker
 COPY src /opt/opencti-connector-restore-files
