@@ -588,7 +588,7 @@ class HarfangLabConnector:
                             f"[ENABLE] Successful reactivated of existing {pattern_type} observable = {observable_id}"
                         )
             else:
-                msg_log = f"[CREATE] The request failed because the indicator id in the comment of the observable is different"
+                msg_log = "[CREATE] The request failed because the indicator id in the comment of the observable is different"
                 self.helper.log_error(msg_log)
         else:
             response = self._query("post", f"/{uri}/", data)
@@ -683,7 +683,7 @@ class HarfangLabConnector:
                             f"{config_remove_indicator} Successful {pattern_type} observable deactivation = {observable_id}"
                         )
             else:
-                msg_log = f"[DELETE] The request failed because the indicator id in the comment of the observable is different"
+                msg_log = "[DELETE] The request failed because the indicator id in the comment of the observable is different"
                 self.helper.log_error(msg_log)
 
     @staticmethod
