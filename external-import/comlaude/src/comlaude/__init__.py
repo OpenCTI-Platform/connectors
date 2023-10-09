@@ -5,7 +5,7 @@ import logging
 import jwt  # pip install pyjwt
 from requests import Session
 
-API_BASE_URL = 'https://api.comlaude.com'
+API_BASE_URL = "https://api.comlaude.com"
 
 DEFAULT_PAGE_LIMIT = 500
 DEFAULT_TIMEOUT = 30
@@ -17,6 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 class ComLaudeAuth(object):
     """ComLaude API to collect audit data."""
+
     def __init__(  # noqa: WPS211
         self,
         username,
@@ -40,9 +41,9 @@ class ComLaudeAuth(object):
         """
 
         self._creds = {
-            'username': username,
-            'password': password,
-            'api_key': api_key,
+            "username": username,
+            "password": password,
+            "api_key": api_key,
         }
 
         if http_session is None:
@@ -81,28 +82,21 @@ class ComLaudeAuth(object):
         Args:
             token: Authentication bearer token to be decoded.
         """
-        jwt_options = {'verify_signature': False}
+        jwt_options = {"verify_signature": False}
         self._token = token
         try:
             self._decoded_token = jwt.decode(
-                self._token['access_token'],
-                options=jwt_options
-                )
+                self._token["access_token"], options=jwt_options
+            )
         except jwt.exceptions.DecodeError:
-            LOGGER.debug(
-                'Poorly formatted Access Token, fetching token using _creds'
-                )
+            LOGGER.debug("Poorly formatted Access Token, fetching token using _creds")
             self.retrieve_token()
         except TypeError:
-            LOGGER.debug(
-                'Token TypeError, fetching token using _creds'
-                )
+            LOGGER.debug("Token TypeError, fetching token using _creds")
             self.retrieve_token()
 
         self.authorization_header = {
-            'authorization': 'Bearer {0}'.format(
-                self._token.get('access_token')
-                ),
+            "authorization": "Bearer {0}".format(self._token.get("access_token")),
         }
 
     def _request_token(self):
@@ -111,38 +105,32 @@ class ComLaudeAuth(object):
         Returns:
             Return response Authentication Bearer token from request.
         """
-        auth_endpoint = '{}{}'.format(
-            self.api_base_url,
-            '/api_login'
-            )
-        headers = {'content-type': 'application/json'}
+        auth_endpoint = "{}{}".format(self.api_base_url, "/api_login")
+        headers = {"content-type": "application/json"}
         response = self._http_session.request(
-            'POST',
+            "POST",
             auth_endpoint,
             json=self._creds,
             headers=headers,
             timeout=self._timeout,
         )
 
-        LOGGER.debug('Token JSON: %s', self._creds)  # noqa: WPS323
-        LOGGER.debug('Token Response: %s', response.text)  # noqa: WPS323
+        LOGGER.debug("Token JSON: %s", self._creds)  # noqa: WPS323
+        LOGGER.debug("Token Response: %s", response.text)  # noqa: WPS323
 
         # Check for response errors.
-        _response_error("Can't get token for user {0}".format(
-                self._creds.get('username')
-                ),
-            response)
+        _response_error(
+            "Can't get token for user {0}".format(self._creds.get("username")), response
+        )
 
-        return json.loads(response.text)['data']
+        return json.loads(response.text)["data"]
 
     def _verify_token(self):
         """Check to see if token is expiring in 12 hours."""
-        token_expiration = datetime.fromtimestamp(
-            self._decoded_token['exp']
-            )
+        token_expiration = datetime.fromtimestamp(self._decoded_token["exp"])
         time_difference = datetime.now() + timedelta(hours=12)  # noqa: E501
-        LOGGER.debug('Token expiration time: %s', token_expiration)  # noqa: E501
-        LOGGER.debug('Token comparison time: %s', time_difference)  # noqa: E501
+        LOGGER.debug("Token expiration time: %s", token_expiration)  # noqa: E501
+        LOGGER.debug("Token comparison time: %s", time_difference)  # noqa: E501
 
         if token_expiration <= time_difference:
             self.refresh_token()
@@ -179,11 +167,11 @@ class ComLaudeSearch(object):
         self.api_base_url = comlaude_auth.api_base_url
 
         self.parameters = {
-                'limit': DEFAULT_PAGE_LIMIT,
-                'page': 1,  # Start on first page.
-                'filter[updated_before]': max_updated_time,
-                'filter[updated_after]': min_updated_time,
-                }
+            "limit": DEFAULT_PAGE_LIMIT,
+            "page": 1,  # Start on first page.
+            "filter[updated_before]": max_updated_time,
+            "filter[updated_after]": min_updated_time,
+        }
 
         if http_session is None:
             self._http_session = Session()
@@ -193,56 +181,56 @@ class ComLaudeSearch(object):
         self.get_search_results()
 
     def _request_search(self):
-        api_search_url = '{}{}{}{}'.format(
+        api_search_url = "{}{}{}{}".format(
             self._comlaude_auth.api_base_url,
-            '/groups/',
+            "/groups/",
             self._group_id,
-            '/domains/search'
-            )
+            "/domains/search",
+        )
 
         headers = dict(
-            {'content-type': 'application/json'},
+            {"content-type": "application/json"},
             **self._comlaude_auth.authorization_header
-            )
+        )
 
         response = self._http_session.request(
-            'POST',
+            "POST",
             api_search_url,
             headers=headers,
             params=self.parameters,
             timeout=self._timeout,
         )
 
-        LOGGER.debug('get_events Response: %s', response.text)  # noqa: WPS323
+        LOGGER.debug("get_events Response: %s", response.text)  # noqa: WPS323
 
         # Check for response errors.
-        _response_error('Impossible to retreive events', response)
+        _response_error("Impossible to retreive events", response)
         return response.json()
 
     def get_search_results(self):
         """
-            Return first events from ComLaude API
-            within specified period of time and limit.
+        Return first events from ComLaude API
+        within specified period of time and limit.
         """
 
         self.results = self._request_search()
 
         # Check if API_SEARCH_LIMIT event count is being returned.
-        if self.results['pagination']['next'] is not None:
+        if self.results["pagination"]["next"] is not None:
             self.has_next = True
         else:
             self.has_next = False
 
     def get_next_page(self):
         """
-            Return next set of events from ComLaude API
-            within specified period of time and limit.
+        Return next set of events from ComLaude API
+        within specified period of time and limit.
         """
         if self.has_next:
-            self.parameters['page'] = self.parameters['page']+1
+            self.parameters["page"] = self.parameters["page"] + 1
             self.get_search_results()
         else:
-            raise 'Next page DNE.'
+            raise "Next page DNE."
 
 
 def _response_error(message, response):
@@ -258,7 +246,6 @@ def _response_error(message, response):
         """Message:{0}.
             Response code returned:{1}.
             Eror message returned:{2}.""".format(
-                                                message,
-                                                response.status_code,
-                                                error_message),
+            message, response.status_code, error_message
+        ),
     )
