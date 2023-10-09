@@ -20,7 +20,7 @@ class RecordedFutureClient:
         if not _is_valid_token(api_token):
             raise ValueError("API token is not a valid token.")
         self.api_token = api_token
-        self.labels    = labels
+        self.labels = labels
         self.headers = DEFAULT_HEADER.copy()
         self.headers["x-rftoken"] = self.api_token
 
@@ -59,7 +59,9 @@ class RecordedFutureClient:
 
         return self._request_data(path)
 
-    def fetch_data_bundle_transform(self, dataset_key, connect_confidence_level, days_threshold=None):
+    def fetch_data_bundle_transform(
+        self, dataset_key, connect_confidence_level, days_threshold=None
+    ):
         """Fetch data for a given dataset key."""
 
         def transform_dataset(data_set):
@@ -77,31 +79,40 @@ class RecordedFutureClient:
         # Transform data to STIX format if a transformer is defined for the dataset
         transformer = dataset_info.get("transformer")
         # Set STIX labels
-        transform_labels = dataset_info.get("labels").split(',')
+        transform_labels = dataset_info.get("labels").split(",")
         transform_labels.extend(self.labels)
         transformer.set_stix_labels(stix_labels=transform_labels)
-        transformer.set_confidence_level(connect_confidence_level=connect_confidence_level)
+        transformer.set_confidence_level(
+            connect_confidence_level=connect_confidence_level
+        )
         LOGGER.info(
             f"Transforming data for ({dataset_key}) with transform ({transformer.__class__.__name__}) and labels ({transformer.stix_labels})."
         )
-        
+
         if transformer:
             with ThreadPoolExecutor() as executor:
                 data_to_process = data["results"] if "results" in data else data
-                LOGGER.info(f'Total objects to process ({len(data_to_process)})')
-                if transformer.filter_data_by_days_ago(data_list=data_to_process, days_ago=days_threshold):
-                    stix_objects = [obj for obj in chain.from_iterable(
-                        executor.map(
-                            transform_dataset,
-                            transformer.filtered_data_set
+                LOGGER.info(f"Total objects to process ({len(data_to_process)})")
+                if transformer.filter_data_by_days_ago(
+                    data_list=data_to_process, days_ago=days_threshold
+                ):
+                    stix_objects = [
+                        obj
+                        for obj in chain.from_iterable(
+                            executor.map(
+                                transform_dataset, transformer.filtered_data_set
                             )
-                        ) if obj]
+                        )
+                        if obj
+                    ]
                 else:
-                    LOGGER.warning('Filtering data failed.')
+                    LOGGER.warning("Filtering data failed.")
                 del data
                 del data_to_process
 
-                LOGGER.info(f'Total objects to process returned after transform ({len(stix_objects)})')
+                LOGGER.info(
+                    f"Total objects to process returned after transform ({len(stix_objects)})"
+                )
                 return stix_objects
         else:
             # If no transformer is associated, simply return the raw data (or handle as needed)

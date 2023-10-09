@@ -10,6 +10,7 @@ from gc import collect
 
 CONFIG_FILE_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
 
+
 def _format_time(utc_time):
     """
     Format the given UTC time to a specific string format.
@@ -18,6 +19,7 @@ def _format_time(utc_time):
     :return: Formatted string representation of the datetime object.
     """
     return utc_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
 
 class RecordedFutureConnector:
     """
@@ -50,9 +52,8 @@ class RecordedFutureConnector:
         self.helper = OpenCTIConnectorHelper(self.config)
         self._initialize_configurations()
         self.rf_client = RecordedFutureClient(
-            api_token=self.rf_api_key,
-            labels=self.labels
-            )
+            api_token=self.rf_api_key, labels=self.labels
+        )
 
     def _initialize_configurations(self):
         self.config_interval = get_config_variable(
@@ -88,7 +89,10 @@ class RecordedFutureConnector:
             default="recordedfuture",
         ).split(",")
         self.rf_days_threshold = get_config_variable(
-            "RF_DAYS_THRESHOLD", ["recordedfuture", "days_threshold"], self.config, default=None
+            "RF_DAYS_THRESHOLD",
+            ["recordedfuture", "days_threshold"],
+            self.config,
+            default=None,
         )
 
     def _load_config(self) -> dict:
@@ -146,12 +150,12 @@ class RecordedFutureConnector:
         stix_objects = self.rf_client.fetch_data_bundle_transform(
             dataset_key=feed,
             days_threshold=self.rf_days_threshold,
-            connect_confidence_level=self.helper.connect_confidence_level
-            )
-        if stix_objects != None: 
+            connect_confidence_level=self.helper.connect_confidence_level,
+        )
+        if stix_objects is not None:
             self._process_in_chunks(feed, stix_objects)
         else:
-            self.helper.log_info(f'No new updates for feed ({feed})')
+            self.helper.log_info(f"No new updates for feed ({feed})")
 
     def _iterate_feeds(self):
         """

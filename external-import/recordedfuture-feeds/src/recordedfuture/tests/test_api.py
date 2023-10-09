@@ -6,7 +6,8 @@ import hashlib
 from recordedfuture.core import RecordedFutureClient
 from recordedfuture.core.constants import DATASET
 
-DEFAULT_LABEL = ['recordedfuture']
+DEFAULT_LABEL = ["recordedfuture"]
+
 
 def generate_random_md5():
     """Generate a random MD5 for token"""

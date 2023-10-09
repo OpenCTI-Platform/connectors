@@ -28,7 +28,8 @@ from recordedfuture.core.transformer import (
 )
 
 DEFAULT_DAYS_THRESHOLD = 1
-DEFAULT_DAYS_THRESHOLD_STR = '1'
+DEFAULT_DAYS_THRESHOLD_STR = "1"
+
 
 def load_fixture(filename):
     """Load a fixture file and return its content."""
@@ -41,6 +42,7 @@ def load_fixture(filename):
             raise ValueError(f"Fixture {filename} is empty.")
         return json.loads(content)
 
+
 def test_c2stix_detect_transform_to_stix():
     c2_ips_detect = load_fixture("C2_IPS_DETECT.json")
     transformer = C2STIXTransformer()
@@ -52,16 +54,27 @@ def test_c2stix_detect_transform_to_stix():
         assert len(result) >= 1
         assert all(
             isinstance(
-                item, (Malware, Indicator, Relationship, IPv4Address, IPv6Address, ObservedData)
+                item,
+                (
+                    Malware,
+                    Indicator,
+                    Relationship,
+                    IPv4Address,
+                    IPv6Address,
+                    ObservedData,
+                ),
             )
             for item in result
         )
 
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(c2_ips_detect["results"], days_ago=DEFAULT_DAYS_THRESHOLD_STR)
+    transformer.filter_data_by_days_ago(
+        c2_ips_detect["results"], days_ago=DEFAULT_DAYS_THRESHOLD_STR
+    )
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix(indicator)
         assert result == []
+
 
 def test_c2stix_prevent_transform_to_stix():
     c2_ips_prevent = load_fixture("C2_IPS_PREVENT.json")
@@ -74,16 +87,27 @@ def test_c2stix_prevent_transform_to_stix():
         assert len(result) >= 1
         assert all(
             isinstance(
-                item, (Malware, Indicator, Relationship, IPv4Address, IPv6Address, ObservedData)
+                item,
+                (
+                    Malware,
+                    Indicator,
+                    Relationship,
+                    IPv4Address,
+                    IPv6Address,
+                    ObservedData,
+                ),
             )
             for item in result
         )
 
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(c2_ips_prevent["results"], days_ago=DEFAULT_DAYS_THRESHOLD)
+    transformer.filter_data_by_days_ago(
+        c2_ips_prevent["results"], days_ago=DEFAULT_DAYS_THRESHOLD
+    )
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix(data_entry=indicator)
         assert result == []
+
 
 def test_ddnsips_tranform_to_stix():
     ddns_ips = load_fixture("DDNS_IPS.json")
@@ -95,7 +119,10 @@ def test_ddnsips_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(item, (Indicator, Relationship, IPv4Address, IPv6Address, ObservedData)) for item in result
+            isinstance(
+                item, (Indicator, Relationship, IPv4Address, IPv6Address, ObservedData)
+            )
+            for item in result
         )
 
     # Test days_threshold filter
@@ -103,6 +130,7 @@ def test_ddnsips_tranform_to_stix():
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix()
         assert result == []
+
 
 def test_ffluxips_tranform_to_stix():
     fflux_ips = load_fixture("FFLUX_IPS.json")
@@ -114,7 +142,10 @@ def test_ffluxips_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(item, (Indicator, Relationship, IPv4Address, IPv6Address, ObservedData)) for item in result
+            isinstance(
+                item, (Indicator, Relationship, IPv4Address, IPv6Address, ObservedData)
+            )
+            for item in result
         )
 
     # Test days_threshold filter
@@ -123,23 +154,32 @@ def test_ffluxips_tranform_to_stix():
         result = transformer.transform_to_stix()
         assert result == []
 
+
 def test_domains_detect_tranform_to_stix():
     domains_detect = load_fixture("DOMAINS_DETECT.json")
     transformer = DomainSTIXTransformer()
     transformer.filter_data_by_days_ago(domains_detect["results"])
-    
+
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix(indicator)
         # # Basic checkss
         assert result
         assert len(result) >= 1
-        assert all(isinstance(item, (Indicator, Relationship, ObservedData, DomainName)) for item in result)
-    
+        assert all(
+            isinstance(item, (Indicator, Relationship, ObservedData, DomainName))
+            for item in result
+        )
+
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(domains_detect["results"], days_ago=DEFAULT_DAYS_THRESHOLD)
+    transformer.filter_data_by_days_ago(
+        domains_detect["results"], days_ago=DEFAULT_DAYS_THRESHOLD
+    )
     for indicator in transformer.filtered_data_set:
-        result = transformer.transform_to_stix(data_entry=indicator, days_threshold=DEFAULT_DAYS_THRESHOLD)
+        result = transformer.transform_to_stix(
+            data_entry=indicator, days_threshold=DEFAULT_DAYS_THRESHOLD
+        )
         assert result == []
+
 
 def test_domains_prevent_tranform_to_stix():
     domains_prevent = load_fixture("DOMAINS_PREVENT.json")
@@ -150,13 +190,21 @@ def test_domains_prevent_tranform_to_stix():
         # # Basic checkss
         assert result
         assert len(result) >= 1
-        assert all(isinstance(item, (Indicator, Relationship, ObservedData, DomainName)) for item in result)
-    
+        assert all(
+            isinstance(item, (Indicator, Relationship, ObservedData, DomainName))
+            for item in result
+        )
+
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(domains_prevent["results"], days_ago=DEFAULT_DAYS_THRESHOLD)
+    transformer.filter_data_by_days_ago(
+        domains_prevent["results"], days_ago=DEFAULT_DAYS_THRESHOLD
+    )
     for indicator in transformer.filtered_data_set:
-        result = transformer.transform_to_stix(data_entry=indicator, days_threshold=DEFAULT_DAYS_THRESHOLD)
+        result = transformer.transform_to_stix(
+            data_entry=indicator, days_threshold=DEFAULT_DAYS_THRESHOLD
+        )
         assert result == []
+
 
 def test_emerging_malware_tranform_to_stix():
     emerging_malware = load_fixture("EMERGING_MALWARE_HASHES.json")
@@ -167,13 +215,19 @@ def test_emerging_malware_tranform_to_stix():
         # # Basic checkss
         assert result
         assert len(result) >= 1
-        assert all(isinstance(item, (Indicator, File, ObservedData, Relationship)) for item in result)
+        assert all(
+            isinstance(item, (Indicator, File, ObservedData, Relationship))
+            for item in result
+        )
 
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(emerging_malware, days_ago=DEFAULT_DAYS_THRESHOLD_STR)
+    transformer.filter_data_by_days_ago(
+        emerging_malware, days_ago=DEFAULT_DAYS_THRESHOLD_STR
+    )
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix()
         assert result == []
+
 
 def test_rat_controller_tranform_to_stix():
     rat_controller = load_fixture("RAT_CONTROLLERS_IPS.json")
@@ -184,20 +238,46 @@ def test_rat_controller_tranform_to_stix():
         # # Basic checkss
         assert result
         assert len(result) >= 1
-        
+
         for item in result:
-            if not isinstance(item, (Indicator, Malware, Relationship, ObservedData, IPv4Address, IPv6Address, URL)):
+            if not isinstance(
+                item,
+                (
+                    Indicator,
+                    Malware,
+                    Relationship,
+                    ObservedData,
+                    IPv4Address,
+                    IPv6Address,
+                    URL,
+                ),
+            ):
                 print(f"Unexpected object type: {type(item)}, Value: {item}")
 
         assert all(
-            isinstance(item, (Indicator, Malware, Relationship, ObservedData, IPv4Address, IPv6Address, URL)) for item in result
+            isinstance(
+                item,
+                (
+                    Indicator,
+                    Malware,
+                    Relationship,
+                    ObservedData,
+                    IPv4Address,
+                    IPv6Address,
+                    URL,
+                ),
+            )
+            for item in result
         )
-        
+
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(rat_controller, days_ago=DEFAULT_DAYS_THRESHOLD_STR)
+    transformer.filter_data_by_days_ago(
+        rat_controller, days_ago=DEFAULT_DAYS_THRESHOLD_STR
+    )
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix()
         assert result == []
+
 
 def test_urls_prevent_tranform_to_stix():
     urls_prevent = load_fixture("URLS_PREVENT.json")
@@ -208,19 +288,27 @@ def test_urls_prevent_tranform_to_stix():
         # # Basic checkss
         assert result
         assert len(result) >= 1
-        assert all(isinstance(item, (Indicator, URL, Relationship, ObservedData)) for item in result)
-        
+        assert all(
+            isinstance(item, (Indicator, URL, Relationship, ObservedData))
+            for item in result
+        )
+
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(urls_prevent["results"], days_ago=DEFAULT_DAYS_THRESHOLD)
+    transformer.filter_data_by_days_ago(
+        urls_prevent["results"], days_ago=DEFAULT_DAYS_THRESHOLD
+    )
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix(data_entry=indicator)
         assert result == []
-        
+
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(urls_prevent["results"], days_ago=DEFAULT_DAYS_THRESHOLD_STR)
+    transformer.filter_data_by_days_ago(
+        urls_prevent["results"], days_ago=DEFAULT_DAYS_THRESHOLD_STR
+    )
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix(indicator)
         assert result == []
+
 
 def test_vulns_patch_tranform_to_stix():
     vulns_patch = load_fixture("VULNS_PATCH.json")
@@ -232,15 +320,21 @@ def test_vulns_patch_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(item, (Relationship, Indicator, Vulnerability, Malware, ObservedData, File))
+            isinstance(
+                item,
+                (Relationship, Indicator, Vulnerability, Malware, ObservedData, File),
+            )
             for item in result
         )
-        
+
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(vulns_patch["results"], days_ago=DEFAULT_DAYS_THRESHOLD_STR)
+    transformer.filter_data_by_days_ago(
+        vulns_patch["results"], days_ago=DEFAULT_DAYS_THRESHOLD_STR
+    )
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix()
         assert result == []
+
 
 def test_hashes_prevent_tranform_to_stix():
     hashes_prevent = load_fixture("HASHES_PREVENT.json")
@@ -252,10 +346,15 @@ def test_hashes_prevent_tranform_to_stix():
         assert result
         assert len(result) >= 1
         for item in result:
-            if not isinstance(item, (Relationship, Vulnerability, Malware, Indicator, ObservedData)):
+            if not isinstance(
+                item, (Relationship, Vulnerability, Malware, Indicator, ObservedData)
+            ):
                 print(f"Unexpected object type: {type(item)}, Value: {item}")
         assert all(
-            isinstance(item, (Relationship, Vulnerability, Malware, Indicator, ObservedData, File))
+            isinstance(
+                item,
+                (Relationship, Vulnerability, Malware, Indicator, ObservedData, File),
+            )
             for item in result
         )
     # # Test days_threshold filter
@@ -263,6 +362,7 @@ def test_hashes_prevent_tranform_to_stix():
     # for indicator in transformer.filtered_data_set:
     #     result = transformer.transform_to_stix(data_entry=indicator)
     #     assert result == []
+
 
 def test_tor_ips_tranform_to_stix():
     tor_ips = load_fixture("TOR_IPS.json")
@@ -274,15 +374,19 @@ def test_tor_ips_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(item, (Indicator, IPv4Address, IPv6Address, ObservedData, Relationship)) for item in result
+            isinstance(
+                item, (Indicator, IPv4Address, IPv6Address, ObservedData, Relationship)
+            )
+            for item in result
         )
-    
+
     # Test days_threshold filter
     transformer.filter_data_by_days_ago(tor_ips, days_ago=DEFAULT_DAYS_THRESHOLD)
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix(data_entry=indicator)
         assert result
         assert len(result) >= 1
+
 
 def test_low_detect_malware_tranform_to_stix():
     low_detect_malware = load_fixture("LOW_DETECT_MALWARE_HASHES.json")
@@ -293,12 +397,17 @@ def test_low_detect_malware_tranform_to_stix():
         if result != []:
             assert result
             assert len(result) == 4
-            assert all(isinstance(item, (Indicator, File, Relationship, ObservedData)) for item in result)
+            assert all(
+                isinstance(item, (Indicator, File, Relationship, ObservedData))
+                for item in result
+            )
         else:
             assert result == []
-        
+
     # Test days_threshold filter
-    transformer.filter_data_by_days_ago(low_detect_malware, days_ago=DEFAULT_DAYS_THRESHOLD_STR)
+    transformer.filter_data_by_days_ago(
+        low_detect_malware, days_ago=DEFAULT_DAYS_THRESHOLD_STR
+    )
     for indicator in transformer.filtered_data_set:
         result = transformer.transform_to_stix(data_entry=indicator)
         assert result == []
