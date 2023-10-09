@@ -16,6 +16,7 @@ services:
       - OCD_PORTAL_API_KEY=ChangeMe
       - OCD_DATALAKE_LOGIN=ChangeMe
       - OCD_DATALAKE_PASSWORD=ChangeMe
+      - OCD_DATALAKE_ZIP_FILE_PATH=/opt/opencti-connector-orange-cyberdefense
       - OCD_VULNERABILITIES_LOGIN=ChangeMe
       - OCD_VULNERABILITIES_PASSWORD=ChangeMe
       - OCD_IMPORT_WORLDWATCH=true
@@ -27,7 +28,6 @@ services:
       - OCD_IMPORT_DATALAKE_ATOM_TYPES=apk,as,cc,crypto,cve,domain,email,file,fqdn,iban,ip,ip_range,paste,phone_number,regkey,ssl,url
       - OCD_IMPORT_DATALAKE_THREAT_TYPES=ddos,fraud,hack,leak,malware,phishing,scam,scan,spam
       - OCD_IMPORT_DATALAKE_MINIMUM_RISK_SCORE=80
-      - OCD_IMPORT_DATALAKE_START_DATE=2022-01-01
       - OCD_CREATE_OBSERVABLES=true  # Create observables from indicators
       - OCD_CURATE_LABELS=true # Curated labels
       - OCD_THREAT_ACTOR_AS_INTRUSION_SET=true
