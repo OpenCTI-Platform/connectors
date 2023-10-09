@@ -1,4 +1,4 @@
-from .lib.internal_enrichment import InternalEnrichmentConnector
+from lib.internal_enrichment import InternalEnrichmentConnector
 
 
 class CustomConnector(InternalEnrichmentConnector):
