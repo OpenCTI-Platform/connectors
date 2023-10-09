@@ -20,5 +20,5 @@ harfanglab:
   login: 'ChangeMe' # Login for basic auth
   password: 'ChangeMe' # Password for basic auth
   source_list_name: 'from_OpenCTI'
-  indicator_delete: 'true'
+  remove_indicator: true
   rule_maturity: 'ChangeMe' # stable, testing
