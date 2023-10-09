@@ -1,6 +1,5 @@
 import json
 import os
-from urllib.parse import quote
 
 from stix2 import (
     URL,

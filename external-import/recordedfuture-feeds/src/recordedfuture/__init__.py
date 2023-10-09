@@ -4,4 +4,4 @@
 __version__ = "1.0.0"
 
 # Simplify imports for the end-users
-from .core.api import RecordedFutureClient
+from .core.api import RecordedFutureClient  # noqa: F401
