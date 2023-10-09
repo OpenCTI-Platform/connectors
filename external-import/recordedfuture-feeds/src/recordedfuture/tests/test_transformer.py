@@ -1,30 +1,31 @@
 import json
 import os
 from urllib.parse import quote
+
 from stix2 import (
-    Vulnerability,
-    Malware,
     URL,
-    Indicator,
-    Relationship,
-    IPv4Address,
-    IPv6Address,
-    ObservedData,
     DomainName,
     File,
+    Indicator,
+    IPv4Address,
+    IPv6Address,
+    Malware,
+    ObservedData,
+    Relationship,
+    Vulnerability,
 )
 
 from recordedfuture.core.transformer import (
-    DomainSTIXTransformer,
-    URLSTIXTransformer,
     C2STIXTransformer,
-    VulnerabilitySTIXTransformer,
-    HashSTIXTransformer,
-    TorIPSTIXTransformer,
+    DomainSTIXTransformer,
     EmergingMalwareSTIXTransformer,
-    RATSTIXTransformer,
+    HashSTIXTransformer,
     IPSTIXTransformer,
     LowHashSTIXTransformer,
+    RATSTIXTransformer,
+    TorIPSTIXTransformer,
+    URLSTIXTransformer,
+    VulnerabilitySTIXTransformer,
 )
 
 DEFAULT_DAYS_THRESHOLD = 1

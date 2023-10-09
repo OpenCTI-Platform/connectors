@@ -1,8 +1,10 @@
-import pytest
+import hashlib
 import json
 import os
 import uuid
-import hashlib
+
+import pytest
+
 from recordedfuture.core import RecordedFutureClient
 from recordedfuture.core.constants import DATASET
 

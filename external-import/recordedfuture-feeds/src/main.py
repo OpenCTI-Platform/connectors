@@ -1,12 +1,14 @@
+import datetime
 import os
 import sys
 import time
-import datetime
-from recordedfuture import RecordedFutureClient
+from gc import collect
+
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Bundle
-from gc import collect
+
+from recordedfuture import RecordedFutureClient
 
 CONFIG_FILE_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
 

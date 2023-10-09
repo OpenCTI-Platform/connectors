@@ -1,18 +1,20 @@
-from stix2 import (
-    Vulnerability,
-    Malware,
-    Indicator,
-    Relationship,
-    IPv4Address,
-    IPv6Address,
-    ObservedData,
-    File,
-    DomainName,
-    URL,
-)
 from datetime import datetime
 from urllib.parse import quote
-from .utils import is_ipv6, is_ipv4, identify_hash
+
+from stix2 import (
+    URL,
+    DomainName,
+    File,
+    Indicator,
+    IPv4Address,
+    IPv6Address,
+    Malware,
+    ObservedData,
+    Relationship,
+    Vulnerability,
+)
+
+from .utils import identify_hash, is_ipv4, is_ipv6
 
 PATTERN_TYPE_STIX = "stix"
 

@@ -1,7 +1,9 @@
 import hashlib
 import ipaddress
 import random
+
 import pytest
+
 from recordedfuture.core.utils import (
     identify_hash,
     is_ipv4,

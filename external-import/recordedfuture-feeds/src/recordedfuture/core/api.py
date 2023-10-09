@@ -1,11 +1,13 @@
 # recordedfuture/core/api.py
 
-import requests
 import re
-from .constants import RECORDED_FUTURE_API_ENDPOINT, DEFAULT_HEADER, DATASET
-from .utils import configure_logger
 from concurrent.futures import ThreadPoolExecutor
 from itertools import chain
+
+import requests
+
+from .constants import DATASET, DEFAULT_HEADER, RECORDED_FUTURE_API_ENDPOINT
+from .utils import configure_logger
 
 LOGGER = configure_logger(__name__)
 

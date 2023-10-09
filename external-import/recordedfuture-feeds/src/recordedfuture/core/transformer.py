@@ -1,11 +1,8 @@
-from stix2 import (
-    exceptions as stix2_exceptions,
-)
-from stix2.base import _STIXBase
-from typing import Dict, List, Any
-
 from datetime import datetime, timedelta
-from .utils import is_url, configure_logger, validate_required_keys
+from typing import Any, Dict, List
+
+from stix2 import exceptions as stix2_exceptions
+from stix2.base import _STIXBase
 
 from .indicator import (
     create_relationship,
@@ -13,9 +10,10 @@ from .indicator import (
     transform_domain_to_indicator,
     transform_hash_to_indicator,
     transform_ip_to_indicator,
-    transform_url_to_indicator,
     transform_malware_relationship,
+    transform_url_to_indicator,
 )
+from .utils import configure_logger, is_url, validate_required_keys
 
 LOGGER = configure_logger(__name__)
 PATTERN_TYPE_STIX = "stix"
