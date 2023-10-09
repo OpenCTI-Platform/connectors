@@ -208,7 +208,11 @@ class Phishunt:
                     )
                     bundle_objects.append(stix_relationship_url_domain)
                     stix_organization = stix2.Identity(
+                        id=Identity.generate_id(
+                            url["company"].capitalize(), "organization"
+                        ),
                         name=url["company"].capitalize(),
+                        identity_class="organization",
                         object_marking_refs=[stix2.TLP_WHITE],
                         created_by_ref=self.identity["standard_id"],
                     )
@@ -247,6 +251,7 @@ class Phishunt:
                     )
                     bundle_objects.append(stix_relationship_domain_ip)
                     stix_location = stix2.Location(
+                        id=Location.generate_id(url["country"], "Country"),
                         name=url["country"],
                         country=url["country"],
                         created_by_ref=self.identity["standard_id"],
