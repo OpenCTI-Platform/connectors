@@ -1,19 +1,6 @@
 import json
 import os
 
-from stix2 import (
-    URL,
-    DomainName,
-    File,
-    Indicator,
-    IPv4Address,
-    IPv6Address,
-    Malware,
-    ObservedData,
-    Relationship,
-    Vulnerability,
-)
-
 from recordedfuture.core.transformer import (
     C2STIXTransformer,
     DomainSTIXTransformer,
@@ -25,6 +12,18 @@ from recordedfuture.core.transformer import (
     TorIPSTIXTransformer,
     URLSTIXTransformer,
     VulnerabilitySTIXTransformer,
+)
+from stix2 import (
+    URL,
+    DomainName,
+    File,
+    Indicator,
+    IPv4Address,
+    IPv6Address,
+    Malware,
+    ObservedData,
+    Relationship,
+    Vulnerability,
 )
 
 DEFAULT_DAYS_THRESHOLD = 1
