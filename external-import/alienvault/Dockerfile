@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.11-alpine
 
 COPY requirements.txt /opt/opencti-connector-alienvault/
 

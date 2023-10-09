@@ -13,6 +13,6 @@ connector:
   log_level: 'info'
 
 phishunt:
-  url: 'https://phishunt.io/feed.txt'
+  api_key: '' # Optional, if not provided, consume only https://phishunt.io/feed.txt
   create_indicators: True
   interval: 3 # In days, must be strictly greater than 1

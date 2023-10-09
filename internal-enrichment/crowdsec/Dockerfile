@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.11
 
 # Copy the connector
 COPY src /opt/opencti-crowdsec
