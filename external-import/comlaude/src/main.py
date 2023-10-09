@@ -3,11 +3,11 @@ import os
 import sys
 import time
 
-import comlaude
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Bundle, DomainName, Indicator
 
+import comlaude
 
 CONFIG_FILE_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
 X_OPENCTI_PREFIX = "x_opencti_"
