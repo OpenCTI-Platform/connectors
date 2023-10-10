@@ -364,7 +364,7 @@ class Report:
                     "type": "related-to",
                     "sources": intrusion_sets,
                     "destinations": scos,
-                }
+                },
             ]
 
         if len(malwares) == 1:

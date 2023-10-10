@@ -1,15 +1,14 @@
 import importlib
-import traceback
-import yaml
-import time
-import sys
 import os
+import sys
+import time
+import traceback
 
+import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 from .api import MandiantAPI
 from .utils import Timestamp
-
 
 STATE_START = "start_epoch"
 STATE_OFFSET = "offset"
