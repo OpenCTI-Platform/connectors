@@ -1,0 +1,4 @@
+pycti==5.10.3
+stix2
+requests
+pytest

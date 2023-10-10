@@ -1,0 +1,33 @@
+{
+    "count": 2,
+    "results": [
+        {
+            "ip": "10.10.10.10",
+            "ports": [
+                {
+                    "port": 443,
+                    "protocol": "TCP"
+                }
+            ],
+            "malware": [
+                "Cobalt Strike: jQuery Malleable Profile"
+            ],
+            "last_seen_active": "2023-09-24",
+            "last_scan": "2023-09-26"
+        },
+        {
+            "ip": "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+            "ports": [
+                {
+                    "port": 443,
+                    "protocol": "TCP"
+                }
+            ],
+            "malware": [
+                "Cobalt Strike: jQuery Malleable Profile"
+            ],
+            "last_seen_active": "2023-09-24",
+            "last_scan": "2023-09-26"
+        }
+    ]
+}
