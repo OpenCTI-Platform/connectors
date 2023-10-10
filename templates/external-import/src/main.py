@@ -4,7 +4,7 @@ import time
 
 import stix2
 
-from .lib.external_import import ExternalImportConnector
+from lib.external_import import ExternalImportConnector
 
 
 class CustomConnector(ExternalImportConnector):
