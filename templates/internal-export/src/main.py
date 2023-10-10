@@ -1,6 +1,6 @@
 # import stix2
 
-from .lib.internal_export import InternalExportConnector
+from lib.internal_export import InternalExportConnector
 
 
 class CustomConnector(InternalExportConnector):
