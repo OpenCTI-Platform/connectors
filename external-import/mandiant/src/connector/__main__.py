@@ -8,7 +8,7 @@ try:
     mandiantConnector = Mandiant()
     while True:
         mandiantConnector.run()
-except Exception as e:
+except Exception:
     print(traceback.format_exc())
     time.sleep(10)
     sys.exit(0)
