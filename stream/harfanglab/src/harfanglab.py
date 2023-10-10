@@ -833,9 +833,9 @@ class HarfangLabConnector:
                     new_stix_attribute = stix_attribute.replace(
                         "file:hashes.'SHA-256'", "hash"
                     )
-                elif stix_attribute == "file:hashes.'MD5'":
+                elif stix_attribute == "file:hashes.MD5":
                     new_stix_attribute = stix_attribute.replace(
-                        "file:hashes.'MD5'", "hash"
+                        "file:hashes.MD5", "hash"
                     )
                 elif stix_attribute == "file:hashes.'SHA-1'":
                     new_stix_attribute = stix_attribute.replace(
