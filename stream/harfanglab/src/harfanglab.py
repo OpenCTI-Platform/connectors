@@ -238,6 +238,9 @@ class HarfangLabConnector:
                     new_observable = self.build_stix_observable_object(
                         observable, entity, True, True
                     )
+                    if new_observable is None:
+                        return
+
                     observable_matched = self.get_and_match_element(
                         uri, new_observable["value"], source_list_id
                     )
