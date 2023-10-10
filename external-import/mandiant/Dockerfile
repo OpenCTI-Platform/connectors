@@ -1,12 +1,13 @@
 FROM python:3.11-alpine
 
+RUN apk --no-cache add git build-base libmagic libffi-dev
+
 COPY src/requirements.txt /tmp/
 
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    pip3 install --no-cache-dir -r /tmp/requirements.txt && \
+RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
     apk del git build-base
 
-COPY src /opt/connector
-WORKDIR /opt/connector
+COPY src/ /opt/
+WORKDIR /opt/
 
-ENTRYPOINT ["python", "connector.py"]
+ENTRYPOINT ["python", "-m", "connector"]

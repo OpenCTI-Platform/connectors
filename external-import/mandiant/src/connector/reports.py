@@ -166,7 +166,7 @@ class Report:
         report = utils.retrieve(self.bundle, "type", "report")
         report["confidence"] = self.confidence
         report["created_by_ref"] = self.identity["standard_id"]
-        report["report_type"] = self.report_type
+        report["report_types"] = [self.report_type]
 
     def create_note(self):
         # Report Analysis Note
@@ -303,6 +303,8 @@ class Report:
         urls = list(utils.retrieve_all(self.bundle, "type", "url"))
         files = list(utils.retrieve_all(self.bundle, "type", "file"))
 
+        scos = ipv4_addresses + ipv6_addresses + domain_names + urls + files
+
         sectors = [
             identity for identity in identities if identity["identity_class"] == "class"
         ]
@@ -353,6 +355,16 @@ class Report:
                     "sources": intrusion_sets,
                     "destinations": vulnerabilities,
                 },
+                {
+                    "type": "indicates",
+                    "sources": indicators,
+                    "destinations": intrusion_sets,
+                },
+                {
+                    "type": "related-to",
+                    "sources": intrusion_sets,
+                    "destinations": scos,
+                }
             ]
 
         if len(malwares) == 1:
