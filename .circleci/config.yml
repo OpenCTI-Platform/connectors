@@ -952,8 +952,8 @@ jobs:
           command: docker build -t opencti/connector-comlaude:rolling .
       - run:
           working_directory: ~/opencti/external-import/recordedfuture-feeds
-          name: Build Docker image opencti/recordedfuture-feeds
-          command: docker build -t opencti/recordedfuture-feeds:rolling .
+          name: Build Docker image opencti/connector-recordedfuture-feeds
+          command: docker build -t opencti/connector-recordedfuture-feeds:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
