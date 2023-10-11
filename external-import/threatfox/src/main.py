@@ -2,14 +2,14 @@ import csv
 import datetime
 import os
 import ssl
+import stix2
 import sys
 import time
 import traceback
 import urllib.request
 import validators
-
-import stix2
 import yaml
+
 from pycti import (
     Indicator,
     Malware,
@@ -177,7 +177,7 @@ class ThreatFox:
                             )
                             if i % 5000 == 0:
                                 self.helper.log_info(
-                                    f"Process entry {i} with date added='{entry_date.strftime('%Y-%m-%d %H:%M:%S')}'"
+                                    f"Process entry {i} with dateadded='{entry_date.strftime('%Y-%m-%d %H:%M:%S')}'"
                                 )
 
                             # skip entry if newer events already processed in the past
