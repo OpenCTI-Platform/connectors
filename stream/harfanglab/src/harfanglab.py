@@ -344,6 +344,24 @@ class HarfangLabConnector:
                     data, entity, uri, pattern_type, observable_matched
                 )
 
+            data_context = json.loads(msg.data)["context"]
+            check_patch_path = data_context["patch"][0]["path"]
+
+            if check_patch_path == "/pattern":
+                indicator_previous_value = data_context["reverse_patch"][0]["value"]
+                new_data = data.copy()
+                new_data["pattern"] = indicator_previous_value
+
+                indicators_array_parsed = self.stix_translation_parser(new_data, entity)
+                last_indicator_parsed = indicators_array_parsed[-1]
+
+                new_indicator_matched = self.get_and_match_element(
+                    uri, last_indicator_parsed["value"], source_list_id
+                )
+                if new_indicator_matched:
+                    new_data["id"] = new_indicator_matched["id"]
+                    self.delete_indicator(new_data, pattern_type, uri, source_list_id)
+
             indicators = self.stix_translation_parser(data, entity)
             for indicator in indicators:
                 indicator_matched = self.get_and_match_element(
@@ -352,6 +370,7 @@ class HarfangLabConnector:
                 self.process_update_indicator(
                     data, entity, uri, pattern_type, indicator_matched
                 )
+
         else:
             data_context = json.loads(msg.data)["context"]
             check_patch_path = data_context["patch"][0]["path"]
