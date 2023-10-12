@@ -20,7 +20,7 @@ class HarfangLabConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
 
-        # Initialiaze the Harfang Lab API
+        # Initialize the Harfang Lab API
         self.harfanglab_url = get_config_variable(
             "HARFANGLAB_URL", ["harfanglab", "url"], config
         )
@@ -122,13 +122,14 @@ class HarfangLabConnector:
         return
 
     def _process_message(self, msg):
-        data_type = json.loads(msg.data)["data"]["type"]
-        if data_type != "indicator" and data_type != "relationship":
-            return
         try:
             data = json.loads(msg.data)["data"]
         except Exception:
             raise ValueError("Cannot process the message")
+
+        data_type = json.loads(msg.data)["data"]["type"]
+        if data_type != "indicator" and data_type != "relationship":
+            return
 
         # Handle create
         if msg.event == "create":
@@ -257,7 +258,7 @@ class HarfangLabConnector:
                             )
 
         else:
-            indicator_name = self.check_length_indicator_name(data)
+            indicator_name = self.truncate_indicator_name(data)
             indicator_matched = self.get_and_match_element(
                 uri, indicator_name, source_list_id
             )
@@ -364,7 +365,7 @@ class HarfangLabConnector:
                     data, entity, uri, pattern_type, indicator_matched
                 )
             else:
-                indicator_name = self.check_length_indicator_name(data)
+                indicator_name = self.truncate_indicator_name(data)
                 indicator_matched = self.get_and_match_element(
                     uri, indicator_name, source_list_id
                 )
@@ -419,7 +420,7 @@ class HarfangLabConnector:
             observable_matched["description"] = data.get(
                 "description", "No description"
             )
-            observable = self.build_stix_indicator_object(
+            observable = self.build_stix_observable_object(
                 observable_matched, entity, observable_matched["enabled"], True
             )
 
@@ -490,7 +491,7 @@ class HarfangLabConnector:
                         )
 
         else:
-            indicator_name = self.check_length_indicator_name(data)
+            indicator_name = self.truncate_indicator_name(data)
             indicator_matched = self.get_and_match_element(
                 uri, indicator_name, source_list_id
             )
@@ -690,7 +691,7 @@ class HarfangLabConnector:
                 self.helper.log_error(msg_log)
 
     @staticmethod
-    def check_length_indicator_name(data):
+    def truncate_indicator_name(data):
         if len(data["name"]) > 100:
             return data["name"][0:99]
         else:
@@ -714,6 +715,8 @@ class HarfangLabConnector:
             new_indicator["entity_type"] = data["type"]
             new_indicator["value"] = data["value"]
             new_indicator["description"] = entity.get("description", "No description")
+            if entity["description"] == "":
+                new_indicator["description"] = "No description"
         else:
             new_indicator["id"] = data["id"]
             new_indicator["entity_type"] = data["stix_attribute"]
@@ -735,8 +738,12 @@ class HarfangLabConnector:
         self, data, entity, enabled, existing_indicator=None
     ):
         new_indicator = {}
-        new_indicator["pattern_type"] = entity["pattern_type"]
         new_indicator["name"] = data["name"]
+
+        if entity is not None:
+            new_indicator["pattern_type"] = entity["pattern_type"]
+        else:
+            new_indicator["pattern_type"] = data["pattern_type"]
 
         if existing_indicator:
             new_indicator["content"] = data["content"]
@@ -744,7 +751,7 @@ class HarfangLabConnector:
             new_indicator["content"] = data["pattern"]
 
         payload = self.pattern_payload(new_indicator, enabled)
-        payload["name"] = self.check_length_indicator_name(data)
+        payload["name"] = self.truncate_indicator_name(data)
         return payload
 
     def build_stix_observable_object(
@@ -795,7 +802,7 @@ class HarfangLabConnector:
         new_observable["score"] = entity["x_opencti_score"]
         new_observable["platforms"] = entity["x_mitre_platforms"]
 
-        new_observable["description"] = entity["description"]
+        new_observable["description"] = data.get("description", "No description")
         new_observable["comment"] = {
             "indicator_id": new_observable["id"],
             "indicator_score": new_observable["score"],
