@@ -826,6 +826,10 @@ class HarfangLabConnector:
                     new_stix_attribute = stix_attribute.replace(
                         "domain-name:value", "domain_name"
                     )
+                elif stix_attribute == "hostname:value":
+                    new_stix_attribute = stix_attribute.replace(
+                        "hostname:value", "domain_name"
+                    )
                 elif stix_attribute == "ipv4-addr:value":
                     new_stix_attribute = stix_attribute.replace(
                         "ipv4-addr:value", "ip_both"
