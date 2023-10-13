@@ -36,7 +36,7 @@ from stix2 import (
 from thehive4py.api import TheHiveApi
 from thehive4py.query import Child, Gt, Or
 
-from utils import is_ipv4, is_ipv6
+from utils import is_ipv4, is_ipv6  # isort: skip
 
 OBSERVABLES_MAPPING = {
     "autonomous-system": "Autonomous-System.number",
