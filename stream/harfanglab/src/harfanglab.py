@@ -204,8 +204,9 @@ class HarfangLabConnector:
             indicators = self.stix_translation_parser(data, entity)
             for indicator in indicators:
                 indicator_matched = self.get_and_match_element(
-                    uri, indicator["value"], source_list_id
+                    data, uri, indicator["value"], source_list_id
                 )
+
                 self.process_create_indicator(
                     data, entity, uri, pattern_type, indicator_matched
                 )
@@ -213,7 +214,7 @@ class HarfangLabConnector:
             observables = entity["observables"]
             for observable in observables:
                 observable_matched = self.get_and_match_element(
-                    uri, observable["observable_value"], source_list_id
+                    data, uri, observable["observable_value"], source_list_id
                 )
                 if (
                     observable_matched is not None
@@ -243,7 +244,7 @@ class HarfangLabConnector:
                         return
 
                     observable_matched = self.get_and_match_element(
-                        uri, new_observable["value"], source_list_id
+                        data, uri, new_observable["value"], source_list_id
                     )
                     if observable_matched is None:
                         response = self._query("post", f"/{uri}/", new_observable)
@@ -260,7 +261,7 @@ class HarfangLabConnector:
         else:
             indicator_name = self.truncate_indicator_name(data)
             indicator_matched = self.get_and_match_element(
-                uri, indicator_name, source_list_id
+                data, uri, indicator_name, source_list_id
             )
             self.process_create_indicator(
                 data, entity, uri, pattern_type, indicator_matched
@@ -295,6 +296,7 @@ class HarfangLabConnector:
         else:
             if pattern_type == "stix":
                 indicators = self.stix_translation_parser(data, entity)
+
                 for indicator in indicators:
                     response = self._query("post", f"/{uri}/", indicator)
 
@@ -333,39 +335,51 @@ class HarfangLabConnector:
             id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         )
         self.log_info_process(data, pattern_type, "[UPDATE]", "indicator")
+        data_context = json.loads(msg.data)["context"]
+        check_patch_path = data_context["patch"][0]["path"]
+        data_reverse_patch = data_context["reverse_patch"]
 
         if pattern_type == "stix":
             observables = entity["observables"]
             for observable in observables:
                 observable_matched = self.get_and_match_element(
-                    uri, observable["observable_value"], source_list_id
+                    data,
+                    uri,
+                    observable["observable_value"],
+                    source_list_id,
+                    data_reverse_patch,
                 )
                 self.process_update_observable(
                     data, entity, uri, pattern_type, observable_matched
                 )
-
-            data_context = json.loads(msg.data)["context"]
-            check_patch_path = data_context["patch"][0]["path"]
 
             if check_patch_path == "/pattern":
                 indicator_previous_value = data_context["reverse_patch"][0]["value"]
                 new_data = data.copy()
                 new_data["pattern"] = indicator_previous_value
 
-                indicators_array_parsed = self.stix_translation_parser(new_data, entity)
-                last_indicator_parsed = indicators_array_parsed[-1]
+                indicators_list_parsed = self.stix_translation_parser(new_data, entity)
+                for indicator_parsed in indicators_list_parsed:
+                    new_indicator_matched = self.get_and_match_element(
+                        data,
+                        uri,
+                        indicator_parsed["value"],
+                        source_list_id,
+                        data_reverse_patch,
+                    )
 
-                new_indicator_matched = self.get_and_match_element(
-                    uri, last_indicator_parsed["value"], source_list_id
-                )
-                if new_indicator_matched:
-                    new_data["id"] = new_indicator_matched["id"]
-                    self.delete_indicator(new_data, pattern_type, uri, source_list_id)
+                    if new_indicator_matched:
+                        new_data["id"] = json.loads(new_indicator_matched["comment"])[
+                            "indicator_id"
+                        ]
+                        self.delete_indicator(
+                            new_data, pattern_type, uri, source_list_id
+                        )
 
             indicators = self.stix_translation_parser(data, entity)
             for indicator in indicators:
                 indicator_matched = self.get_and_match_element(
-                    uri, indicator["value"], source_list_id
+                    data, uri, indicator["value"], source_list_id, data_reverse_patch
                 )
                 self.process_update_indicator(
                     data, entity, uri, pattern_type, indicator_matched
@@ -378,15 +392,20 @@ class HarfangLabConnector:
             if check_patch_path == "/name":
                 indicator_previous_name = data_context["reverse_patch"][0]["value"]
                 indicator_matched = self.get_and_match_element(
-                    uri, indicator_previous_name, source_list_id
+                    data,
+                    uri,
+                    indicator_previous_name,
+                    source_list_id,
+                    data_reverse_patch,
                 )
+
                 self.process_update_indicator(
                     data, entity, uri, pattern_type, indicator_matched
                 )
             else:
                 indicator_name = self.truncate_indicator_name(data)
                 indicator_matched = self.get_and_match_element(
-                    uri, indicator_name, source_list_id
+                    data, uri, indicator_name, source_list_id, data_reverse_patch
                 )
                 self.process_update_indicator(
                     data, entity, uri, pattern_type, indicator_matched
@@ -469,7 +488,7 @@ class HarfangLabConnector:
                 observables = entity["observables"]
                 for observable in observables:
                     observable_matched = self.get_and_match_element(
-                        uri, observable["observable_value"], source_list_id
+                        data, uri, observable["observable_value"], source_list_id
                     )
                     self.process_delete_observable(
                         data,
@@ -484,7 +503,7 @@ class HarfangLabConnector:
                 for indicator in indicators:
                     if indicator["type"] is not None:
                         indicator_matched = self.get_and_match_element(
-                            uri, indicator["value"], source_list_id
+                            data, uri, indicator["value"], source_list_id
                         )
                         self.process_delete_indicator(
                             data,
@@ -495,24 +514,24 @@ class HarfangLabConnector:
                             indicator_matched,
                         )
             else:
-                observables = self._query(
+                ioc_list = self._query(
                     "get", f"/{uri}/?search={data['id']}&source_id={source_list_id}"
                 )
-                if observables is not None:
-                    for observable in observables["results"]:
-                        self.process_delete_indicator(
-                            observable,
-                            entity,
-                            uri,
-                            pattern_type,
-                            config_remove_indicator,
-                            observable,
-                        )
+
+                for ioc in ioc_list["results"]:
+                    self.process_delete_indicator(
+                        ioc,
+                        entity,
+                        uri,
+                        pattern_type,
+                        config_remove_indicator,
+                        ioc,
+                    )
 
         else:
             indicator_name = self.truncate_indicator_name(data)
             indicator_matched = self.get_and_match_element(
-                uri, indicator_name, source_list_id
+                data, uri, indicator_name, source_list_id
             )
             if indicator_matched:
                 self.process_delete_indicator(
@@ -580,7 +599,7 @@ class HarfangLabConnector:
         if observable is not None:
             observable_value = observable["value"]
             observable_matched = self.get_and_match_element(
-                uri, observable_value, source_list_id
+                data, uri, observable_value, source_list_id
             )
 
             self.process_create_observable(
@@ -640,7 +659,7 @@ class HarfangLabConnector:
         if observable is not None:
             observable_value = observable["value"]
             observable_matched = self.get_and_match_element(
-                uri, observable_value, source_list_id
+                data, uri, observable_value, source_list_id
             )
             self.process_delete_observable(
                 data,
@@ -733,23 +752,30 @@ class HarfangLabConnector:
             new_indicator["id"] = json.loads(data["comment"])["indicator_id"]
             new_indicator["entity_type"] = data["type"]
             new_indicator["value"] = data["value"]
-            new_indicator["description"] = entity.get("description", "No description")
-            if entity["description"] == "":
-                new_indicator["description"] = "No description"
         else:
             new_indicator["id"] = data["id"]
             new_indicator["entity_type"] = data["stix_attribute"]
             new_indicator["value"] = data["stix_value"]
             new_indicator["description"] = data.get("description", "No description")
 
-        new_indicator["pattern_type"] = entity["pattern_type"]
-        indicator_score = entity["x_opencti_score"]
-        indicator_platforms = entity["x_mitre_platforms"]
-        new_indicator["comment"] = {
-            "indicator_id": new_indicator["id"],
-            "indicator_score": indicator_score,
-            "indicator_platforms": indicator_platforms,
-        }
+        if entity is None:
+            new_indicator["pattern_type"] = "stix"
+            new_indicator["comment"] = json.loads(data["comment"])
+            new_indicator["description"] = data["description"]
+        else:
+            new_indicator["description"] = entity.get("description", "No description")
+            if entity["description"] == "":
+                new_indicator["description"] = "No description"
+
+            new_indicator["pattern_type"] = entity["pattern_type"]
+            indicator_score = entity["x_opencti_score"]
+            indicator_platforms = entity["x_mitre_platforms"]
+
+            new_indicator["comment"] = {
+                "indicator_id": new_indicator["id"],
+                "indicator_score": indicator_score,
+                "indicator_platforms": indicator_platforms,
+            }
 
         return self.pattern_payload(new_indicator, enabled)
 
@@ -888,14 +914,34 @@ class HarfangLabConnector:
                 )
             return results_build
 
-    def get_and_match_element(self, uri, data_search, source_list_id):
+    def get_and_match_element(
+        self, data, uri, data_search, source_list_id, reverse_patch=None
+    ):
         get_indicator = self._query(
             "get", f"/{uri}/?search={data_search}&source_id={source_list_id}"
         )
-        if get_indicator is None:
-            return
-        else:
-            return self.find_data_name_match(get_indicator["results"], data_search)
+        if uri == "IOCRule":
+            if get_indicator is None or get_indicator["count"] == 0:
+                return
+            else:
+                data_id = data["id"]
+                harfanglab_ioc_id = json.loads(get_indicator["results"][0]["comment"])[
+                    "indicator_id"
+                ]
+
+                if reverse_patch is not None:
+                    if len(reverse_patch) > 3:
+                        data_previous_id = reverse_patch[3]["value"]
+                        if harfanglab_ioc_id != data_previous_id:
+                            return
+                    else:
+                        if data_id != harfanglab_ioc_id:
+                            return
+                else:
+                    if data_id != harfanglab_ioc_id:
+                        return
+
+        return self.find_data_name_match(get_indicator["results"], data_search)
 
     def pattern_payload(self, data, enabled=True):
         if data["pattern_type"] == "yara":
