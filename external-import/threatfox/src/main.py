@@ -2,14 +2,14 @@ import csv
 import datetime
 import os
 import ssl
-import stix2
 import sys
 import time
 import traceback
 import urllib.request
+
+import stix2
 import validators
 import yaml
-
 from pycti import (
     Indicator,
     Malware,
@@ -62,7 +62,7 @@ class ThreatFox:
             ["threatfox", "ioc_to_import"],
             config,
             False,
-            'all_types',
+            "all_types",
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -74,8 +74,8 @@ class ThreatFox:
             type="Organization",
             name="Threat Fox | Abuse.ch",
             description="abuse.ch is operated by a random swiss guy fighting malware for non-profit, running a couple "
-                        "of projects helping internet service providers and network operators protecting their "
-                        "infrastructure from malware.",
+            "of projects helping internet service providers and network operators protecting their "
+            "infrastructure from malware.",
         )
 
     def get_interval(self, offset=0):
@@ -104,7 +104,7 @@ class ThreatFox:
                     self.helper.log_info("Connector has never run")
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
-                        (timestamp - last_run) > self.get_interval(offset=-1)
+                    (timestamp - last_run) > self.get_interval(offset=-1)
                 ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.datetime.utcfromtimestamp(timestamp)
@@ -124,8 +124,8 @@ class ThreatFox:
                         )
                         image = response.read()
                         with open(
-                                os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
-                                "wb",
+                            os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
+                            "wb",
                         ) as file:
                             file.write(image)
                         fp = open(
@@ -139,8 +139,8 @@ class ThreatFox:
                         # malware_printable, last_seen_utc, reference, tags, anonymous, reporter
 
                         if (
-                                current_state is not None
-                                and "last_processed_entry" in current_state
+                            current_state is not None
+                            and "last_processed_entry" in current_state
                         ):
                             last_processed_entry = current_state[
                                 "last_processed_entry"
@@ -159,7 +159,7 @@ class ThreatFox:
                             for ioc in self.ioc_to_import.split(","):
                                 wanted_ioc.append(ioc.strip())
                         else:
-                            wanted_ioc.append('all_types')
+                            wanted_ioc.append("all_types")
 
                         for i, row in enumerate(rdr):
                             # Pre-process row data for efficiency
@@ -169,7 +169,9 @@ class ThreatFox:
 
                             # Skip unwanted IOC types
                             if not (ioc_type in wanted_ioc):
-                                self.helper.log_info(f"Unwanted ioc_type skipped: {ioc_type}")
+                                self.helper.log_info(
+                                    f"Unwanted ioc_type skipped: {ioc_type}"
+                                )
                                 continue
 
                             entry_date = datetime.datetime.strptime(
@@ -189,15 +191,15 @@ class ThreatFox:
 
                             if ioc_type == "ip:port":
                                 pattern_value = (
-                                        "[ipv4-addr:value = '"
-                                        + ioc_value.split(":")[0]
-                                        + "']"
+                                    "[ipv4-addr:value = '"
+                                    + ioc_value.split(":")[0]
+                                    + "']"
                                 )
                                 indicator_type = "malicious-activity"
                                 observable_type = "IPv4-Addr"
                             elif ioc_type == "domain":
                                 pattern_value = (
-                                        "[domain-name:value = '" + ioc_value + "']"
+                                    "[domain-name:value = '" + ioc_value + "']"
                                 )
                                 indicator_type = "malicious-activity"
                                 observable_type = "Domain-Name"
@@ -207,19 +209,19 @@ class ThreatFox:
                                 observable_type = "Url"
                             elif ioc_type == "md5_hash":
                                 pattern_value = (
-                                        "[file:hashes.MD5 = '" + ioc_value + "']"
+                                    "[file:hashes.MD5 = '" + ioc_value + "']"
                                 )
                                 indicator_type = "malicious-file"
                                 observable_type = "StixFile"
                             elif ioc_type == "sha1_hash":
                                 pattern_value = (
-                                        "[file:hashes.SHA1 = '" + ioc_value + "']"
+                                    "[file:hashes.SHA1 = '" + ioc_value + "']"
                                 )
                                 indicator_type = "malicious-file"
                                 observable_type = "StixFile"
                             elif ioc_type == "sha256_hash":
                                 pattern_value = (
-                                        "[file:hashes.'SHA-256' = '" + ioc_value + "']"
+                                    "[file:hashes.'SHA-256' = '" + ioc_value + "']"
                                 )
                                 indicator_type = "malicious-file"
                                 observable_type = "StixFile"
@@ -304,18 +306,16 @@ class ThreatFox:
                                 created_by_ref=self.identity["standard_id"],
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 description="Threat: "
-                                            + row[5].replace('"', "")
-                                            + " - Reporter: "
-                                            + row[13].replace('"', ""),
+                                + row[5].replace('"', "")
+                                + " - Reporter: "
+                                + row[13].replace('"', ""),
                                 is_family="false",
                                 labels=[
                                     row[i].replace('"', "")
                                     for i in range(4, 9)
                                     if row[i] != "None"
                                 ],
-                                malware_types=[malware_type]
-                                if malware_type
-                                else None,
+                                malware_types=[malware_type] if malware_type else None,
                             )
                             self.helper.log_info(
                                 "Malware object created: " + str(malware_object)
@@ -353,7 +353,7 @@ class ThreatFox:
                         )
                         print(bundle)
                         if os.path.exists(
-                                os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
+                            os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
                         ):
                             os.remove(
                                 os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
