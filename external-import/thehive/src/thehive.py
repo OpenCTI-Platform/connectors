@@ -41,7 +41,7 @@ from thehive4py.query import Child, Gt, Or
 from utils import is_ipv4, is_ipv6  # isort: skip
 
 OBSERVABLES_MAPPING = {
-    "asset": None,
+    "asset": "Identity.name",
     "autonomous-system": "Autonomous-System.number",
     "cve": "Vulnerability.name",
     "domain": "Domain-Name.value",
@@ -50,7 +50,7 @@ OBSERVABLES_MAPPING = {
     "file_sha1": "File.hashes.SHA-1",
     "file_sha256": "File.hashes.SHA-256",
     "filename": "File.name",
-    "fqdn": "Hostname.value",
+    "fqdn": "Domain-Name.value",
     "hostname": "Hostname.value",
     "hash": None,
     "identity": "Identity.name",
@@ -63,18 +63,19 @@ OBSERVABLES_MAPPING = {
     "email_subject": "Email-Message.subject",
     "email_address": "Email-Address.value",
     "other": "Text.value",
-    "organisation": None,
+    "organisation": "Identity.name",
     "organization": "Identity.name",
     "regexp": "Text.value",
     "registry": "Windows-Registry-Key.key",
-    "risk_object_asset": None,
-    "risk_object_identity": None,
+    "risk_object_asset": "Identity.name",
+    "risk_object_identity": "Identity.name",
     "system": "Identity.name",
     "uri_path": "Text.value",
     "url": "Url.value",
+    "user_agent": "User-Agent.value",
     "user-agent": "User-Agent.value",
-    "supplier": None,
-    "vendor": None,
+    "supplier": "Identity.name",
+    "vendor": "Identity.name",
 }
 
 
@@ -171,7 +172,8 @@ class TheHive:
 
     def convert_observable(self, observable, markings):
         stix_observable = None
-        if observable.get("dataType") == "hash":
+        data_type = None
+        if observable.get("dataType") in ["hash", "file"]:
             if len(observable.get("data")) == 32:
                 data_type = "file_md5"
             elif len(observable.get("data")) == 40:
@@ -180,21 +182,20 @@ class TheHive:
                 data_type = "file_sha256"
             else:
                 data_type = "unknown"
-        elif observable.get("dataType") == "risk_object_identity":
-            data_type = "identity"
-        elif observable.get("dataType") in ["risk_object_asset", "asset"]:
-            data_type = "system"
-        elif observable.get("dataType") in ["supplier", "vendor", "organisation"]:
-            data_type = "organization"
-        elif observable.get("dataType") == "ip" and is_ipv4(observable.get("data")):
+        if observable.get("dataType") in ["ip", "ipv4"] and is_ipv4(
+            observable.get("data")
+        ):
             data_type = "ipv4"
-        elif observable.get("dataType") == "ip" and is_ipv6(observable.get("data")):
+        if observable.get("dataType") in ["ip", "ipv6"] and is_ipv6(
+            observable.get("data")
+        ):
             data_type = "ipv6"
-        else:
+        if data_type is None:
             data_type = observable.get("dataType")
         observable_key = (
             OBSERVABLES_MAPPING[data_type] if data_type in OBSERVABLES_MAPPING else None
         )
+        self.helper.log_debug(f"Observable data_type ({data_type}) observable_key ({observable_key})")
         if observable_key is not None:
             if data_type == "autonomous-system":
                 stix_observable = AutonomousSystem(
@@ -219,7 +220,7 @@ class TheHive:
                         "created_by_ref": self.identity.get("standard_id"),
                     },
                 )
-            elif data_type == "domain":
+            elif data_type in ["fqdn", "domain"]:
                 stix_observable = DomainName(
                     value=observable.get("data"),
                     object_marking_refs=markings,
@@ -298,35 +299,7 @@ class TheHive:
                         "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
-            elif data_type == "fqdn":
-                stix_observable = CustomObservableHostname(
-                    value=observable.get("data"),
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable.get("message")
-                        if observable.get("message")
-                        else "Imported from TheHive",
-                        "labels": observable.get("tags"),
-                        "x_opencti_score": 80 if observable.get("ioc") else 50,
-                        "created_by_ref": self.identity.get("standard_id"),
-                        "x_opencti_create_indicator": observable.get("ioc"),
-                    },
-                )
-            elif data_type == "hostname":
-                stix_observable = CustomObservableHostname(
-                    value=observable.get("data"),
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable.get("message")
-                        if observable.get("message")
-                        else "Imported from TheHive",
-                        "labels": observable.get("tags"),
-                        "x_opencti_score": 80 if observable.get("ioc") else 50,
-                        "created_by_ref": self.identity.get("standard_id"),
-                        "x_opencti_create_indicator": observable.get("ioc"),
-                    },
-                )
-            elif data_type == "identity":
+            elif data_type in ["risk_object_identity", "identity"]:
                 stix_observable = Identity(
                     type="identity",
                     name=observable.get("data").lower(),
@@ -398,7 +371,7 @@ class TheHive:
                         "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
-            elif data_type == "organization":
+            elif data_type in ["supplier", "vendor", "organisation", "organization"]:
                 stix_observable = Identity(
                     type="identity",
                     name=observable.get("data").title(),
@@ -454,7 +427,7 @@ class TheHive:
                         "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
-            elif data_type == "system":
+            elif data_type in ["risk_object_asset", "asset", "system", "hostname"]:
                 stix_observable = Identity(
                     type="identity",
                     name=observable.get("data").lower(),
@@ -496,7 +469,7 @@ class TheHive:
                         "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
-            elif data_type == "user-agent":
+            elif data_type in ["user-agent", "user_agent"]:
                 stix_observable = CustomObservableUserAgent(
                     value=observable.get("data"),
                     object_marking_refs=markings,
@@ -510,8 +483,11 @@ class TheHive:
                         "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
+            else:
+                self.helper.log_warning(f"Observable data_type ({data_type}) not supported: {observable}.")
         else:
-            self.helper.log_warning(f"Observable not supported: {observable}")
+            self.helper.log_warning(f"Observable data_type ({data_type}) not supported: {observable}.")
+        self.helper.log_debug(f"Observable data_type ({data_type}), stix observable: {stix_observable}.")
         return stix_observable
 
     def generate_case_bundle(self, case):
