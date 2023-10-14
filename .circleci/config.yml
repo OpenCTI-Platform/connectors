@@ -85,10 +85,6 @@ jobs:
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:latest . && docker tag opencti/connector-crowdstrike:latest opencti/connector-crowdstrike:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/cryptolaemus
-          name: Build Docker image opencti/connector-cryptolaemus
-          command: docker build -t opencti/connector-cryptolaemus:latest . && docker tag opencti/connector-cryptolaemus:latest opencti/connector-cryptolaemus:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
           command: docker build -t opencti/connector-cuckoo:latest . && docker tag opencti/connector-cuckoo:latest opencti/connector-cuckoo:${CIRCLE_TAG}
@@ -292,8 +288,6 @@ jobs:
             docker push opencti/connector-alienvault:${CIRCLE_TAG}
             docker push opencti/connector-crowdstrike:latest
             docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
-            docker push opencti/connector-cryptolaemus:latest
-            docker push opencti/connector-cryptolaemus:${CIRCLE_TAG}
             docker push opencti/connector-cuckoo:latest
             docker push opencti/connector-cuckoo:${CIRCLE_TAG}
             docker push opencti/connector-cape:latest
@@ -775,10 +769,6 @@ jobs:
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:rolling .
       - run:
-          working_directory: ~/opencti/external-import/cryptolaemus
-          name: Build Docker image opencti/connector-cryptolaemus
-          command: docker build -t opencti/connector-cryptolaemus:rolling .
-      - run:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
           command: docker build -t opencti/connector-cuckoo:rolling .
@@ -966,7 +956,6 @@ jobs:
             docker push opencti/connector-hygiene:rolling
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-crowdstrike:rolling
-            docker push opencti/connector-cryptolaemus:rolling
             docker push opencti/connector-cuckoo:rolling
             docker push opencti/connector-cape:rolling
             docker push opencti/connector-misp:rolling
