@@ -11,7 +11,6 @@ from pycti import (
     CaseIncident,
     CustomObjectCaseIncident,
     CustomObjectTask,
-    CustomObservableHostname,
     CustomObservableText,
     CustomObservableUserAgent,
     Incident,
@@ -195,7 +194,9 @@ class TheHive:
         observable_key = (
             OBSERVABLES_MAPPING[data_type] if data_type in OBSERVABLES_MAPPING else None
         )
-        self.helper.log_debug(f"Observable data_type ({data_type}) observable_key ({observable_key})")
+        self.helper.log_debug(
+            f"Observable data_type ({data_type}) observable_key ({observable_key})"
+        )
         if observable_key is not None:
             if data_type == "autonomous-system":
                 stix_observable = AutonomousSystem(
@@ -484,10 +485,16 @@ class TheHive:
                     },
                 )
             else:
-                self.helper.log_warning(f"Observable data_type ({data_type}) not supported: {observable}.")
+                self.helper.log_warning(
+                    f"Observable data_type ({data_type}) not supported: {observable}."
+                )
         else:
-            self.helper.log_warning(f"Observable data_type ({data_type}) not supported: {observable}.")
-        self.helper.log_debug(f"Observable data_type ({data_type}), stix observable: {stix_observable}.")
+            self.helper.log_warning(
+                f"Observable data_type ({data_type}) not supported: {observable}."
+            )
+        self.helper.log_debug(
+            f"Observable data_type ({data_type}), stix observable: {stix_observable}."
+        )
         return stix_observable
 
     def generate_case_bundle(self, case):
