@@ -63,8 +63,8 @@ OBSERVABLES_MAPPING = {
     "email_subject": "Email-Message.subject",
     "email_address": "Email-Address.value",
     "other": "Text.value",
-    "organisation":  None,
-    "organization":  "Identity.name",
+    "organisation": None,
+    "organization": "Identity.name",
     "regexp": "Text.value",
     "registry": "Windows-Registry-Key.key",
     "risk_object_asset": None,
@@ -73,8 +73,8 @@ OBSERVABLES_MAPPING = {
     "uri_path": "Text.value",
     "url": "Url.value",
     "user-agent": "User-Agent.value",
-    "supplier":  None,
-    "vendor":  None,
+    "supplier": None,
+    "vendor": None,
 }
 
 
@@ -184,7 +184,7 @@ class TheHive:
             data_type = "identity"
         elif observable.get("dataType") in ["risk_object_asset", "asset"]:
             data_type = "system"
-        elif observable.get("dataType") in ["supplier", "vendor", "organisation"]: 
+        elif observable.get("dataType") in ["supplier", "vendor", "organisation"]:
             data_type = "organization"
         elif observable.get("dataType") == "ip" and is_ipv4(observable.get("data")):
             data_type = "ipv4"
@@ -331,7 +331,7 @@ class TheHive:
                     type="identity",
                     name=observable.get("data").lower(),
                     object_marking_refs=markings,
-                    identity_class='individual',
+                    identity_class="individual",
                     custom_properties={
                         "description": observable.get("message")
                         if observable.get("message")
@@ -403,7 +403,7 @@ class TheHive:
                     type="identity",
                     name=observable.get("data").title(),
                     object_marking_refs=markings,
-                    identity_class='organization',
+                    identity_class="organization",
                     custom_properties={
                         "description": observable.get("message")
                         if observable.get("message")
@@ -459,7 +459,7 @@ class TheHive:
                     type="identity",
                     name=observable.get("data").lower(),
                     object_marking_refs=markings,
-                    identity_class='system',
+                    identity_class="system",
                     custom_properties={
                         "description": observable.get("message")
                         if observable.get("message")

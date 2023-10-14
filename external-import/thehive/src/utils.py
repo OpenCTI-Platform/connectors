@@ -13,6 +13,7 @@ def is_ipv6(ip_str):
         except (ipaddress.AddressValueError, ipaddress.NetmaskValueError):
             return False
 
+
 def is_ipv4(ip_str):
     """Determine whether the provided string is an IPv4 address or valid IPv4 CIDR."""
     try:
