@@ -834,6 +834,19 @@ class TheHive:
     def get_interval(self):
         return int(self.thehive_interval) * 60
 
+    def get_updated_date(self, item, last_date):
+        new_date = (
+            (int(item["updatedAt"] / 1000) + 1)
+            if "updatedAt" in item and item["updatedAt"] is not None
+            else (int(item.get("createdAt") / 1000) + 1)
+        )
+
+        # Update last_date if it's not defined or if new_date is more recent
+        if last_date is None or new_date > last_date:
+            return new_date
+        else:
+            return last_date
+
     def run(self):
         self.helper.log_info("Starting TheHive Connector...")
         while True:
@@ -855,8 +868,8 @@ class TheHive:
                 if current_state is not None and "last_alert_date" in current_state:
                     last_alert_date = current_state["last_alert_date"]
                     self.helper.log_info(
-                        "Connector last_case_date: "
-                        + datetime.utcfromtimestamp(last_case_date).strftime(
+                        "Connector last_alert_date: "
+                        + datetime.utcfromtimestamp(last_alert_date).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -894,11 +907,7 @@ class TheHive:
                                 update=self.update_existing_data,
                                 work_id=work_id,
                             )
-                            last_case_date = (
-                                (int(case["updatedAt"] / 1000) + 1)
-                                if "updatedAt" in case and case["updatedAt"] is not None
-                                else (int(case.get("createdAt") / 1000) + 1)
-                            )
+                            last_case_date = self.get_updated_date(case, last_case_date)
                         else:
                             self.helper.log_warn(
                                 f"Ignoring case ({case.get('title')}) due to TLP too high."
@@ -923,12 +932,7 @@ class TheHive:
                                     update=self.update_existing_data,
                                     work_id=work_id,
                                 )
-                                last_alert_date = (
-                                    (int(alert.get("updatedAt") / 1000) + 1)
-                                    if "updatedAt" in alert
-                                    and alert.get("updatedAt") is not None
-                                    else (int(alert.get("createdAt") / 1000)) + 1
-                                )
+                                last_alert_date = self.get_updated_date(alert, last_case_date)
                             else:
                                 self.helper.log_info(
                                     "Ignoring alert '"
