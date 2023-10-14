@@ -932,7 +932,9 @@ class TheHive:
                                     update=self.update_existing_data,
                                     work_id=work_id,
                                 )
-                                last_alert_date = self.get_updated_date(alert, last_case_date)
+                                last_alert_date = self.get_updated_date(
+                                    alert, last_case_date
+                                )
                             else:
                                 self.helper.log_info(
                                     "Ignoring alert '"
