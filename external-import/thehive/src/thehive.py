@@ -29,8 +29,10 @@ from stix2 import (
     EmailAddress,
     EmailMessage,
     File,
+    Identity,
     IPv4Address,
     IPv6Address,
+    Vulnerability,
     WindowsRegistryKey,
 )
 from thehive4py.api import TheHiveApi
@@ -39,7 +41,9 @@ from thehive4py.query import Child, Gt, Or
 from utils import is_ipv4, is_ipv6  # isort: skip
 
 OBSERVABLES_MAPPING = {
+    "asset": None,
     "autonomous-system": "Autonomous-System.number",
+    "cve": "Vulnerability.name",
     "domain": "Domain-Name.value",
     "file": None,
     "file_md5": "File.hashes.MD5",
@@ -49,6 +53,7 @@ OBSERVABLES_MAPPING = {
     "fqdn": "Hostname.value",
     "hostname": "Hostname.value",
     "hash": None,
+    "identity": "Identity.name",
     "ip": None,
     "ipv4": "IPv4-Addr.value",
     "ipv6": "IPv6-Addr.value",
@@ -58,11 +63,18 @@ OBSERVABLES_MAPPING = {
     "email_subject": "Email-Message.subject",
     "email_address": "Email-Address.value",
     "other": "Text.value",
+    "organisation":  None,
+    "organization":  "Identity.name",
     "regexp": "Text.value",
     "registry": "Windows-Registry-Key.key",
+    "risk_object_asset": None,
+    "risk_object_identity": None,
+    "system": "Identity.name",
     "uri_path": "Text.value",
     "url": "Url.value",
     "user-agent": "User-Agent.value",
+    "supplier":  None,
+    "vendor":  None,
 }
 
 
@@ -168,6 +180,12 @@ class TheHive:
                 data_type = "file_sha256"
             else:
                 data_type = "unknown"
+        elif observable.get("dataType") == "risk_object_identity":
+            data_type = "identity"
+        elif observable.get("dataType") in ["risk_object_asset", "asset"]:
+            data_type = "system"
+        elif observable.get("dataType") in ["supplier", "vendor", "organisation"]: 
+            data_type = "organization"
         elif observable.get("dataType") == "ip" and is_ipv4(observable.get("data")):
             data_type = "ipv4"
         elif observable.get("dataType") == "ip" and is_ipv6(observable.get("data")):
@@ -190,12 +208,38 @@ class TheHive:
                         "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
+            elif data_type == "cve":
+                stix_observable = Vulnerability(
+                    type="vulnerability",
+                    name=observable.get("data").lower(),
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable.get("message"),
+                        "labels": observable.get("tags"),
+                        "created_by_ref": self.identity.get("standard_id"),
+                    },
+                )
             elif data_type == "domain":
                 stix_observable = DomainName(
                     value=observable.get("data"),
                     object_marking_refs=markings,
                     custom_properties={
                         "description": observable.get("message"),
+                        "labels": observable.get("tags"),
+                        "x_opencti_score": 80 if observable.get("ioc") else 50,
+                        "created_by_ref": self.identity.get("standard_id"),
+                        "x_opencti_create_indicator": observable.get("ioc"),
+                    },
+                )
+            elif data_type == "email_address":
+                stix_observable = EmailAddress(
+                    type="email-addr",
+                    value=observable.get("data"),
+                    object_marking_refs=markings,
+                    custom_properties={
+                        "description": observable.get("message")
+                        if observable.get("message")
+                        else "Imported from TheHive",
                         "labels": observable.get("tags"),
                         "x_opencti_score": 80 if observable.get("ioc") else 50,
                         "created_by_ref": self.identity.get("standard_id"),
@@ -282,6 +326,20 @@ class TheHive:
                         "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
+            elif data_type == "identity":
+                stix_observable = Identity(
+                    type="identity",
+                    name=observable.get("data").lower(),
+                    object_marking_refs=markings,
+                    identity_class='individual',
+                    custom_properties={
+                        "description": observable.get("message")
+                        if observable.get("message")
+                        else "Imported from TheHive",
+                        "labels": observable.get("tags"),
+                        "created_by_ref": self.identity.get("standard_id"),
+                    },
+                )
             elif data_type == "ipv4":
                 stix_observable = IPv4Address(
                     value=observable.get("data"),
@@ -340,19 +398,18 @@ class TheHive:
                         "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
-            elif data_type == "email_address":
-                stix_observable = EmailAddress(
-                    type="email-addr",
-                    value=observable.get("data"),
+            elif data_type == "organization":
+                stix_observable = Identity(
+                    type="identity",
+                    name=observable.get("data").title(),
                     object_marking_refs=markings,
+                    identity_class='organization',
                     custom_properties={
                         "description": observable.get("message")
                         if observable.get("message")
                         else "Imported from TheHive",
                         "labels": observable.get("tags"),
-                        "x_opencti_score": 80 if observable.get("ioc") else 50,
                         "created_by_ref": self.identity.get("standard_id"),
-                        "x_opencti_create_indicator": observable.get("ioc"),
                     },
                 )
             elif data_type == "other":
@@ -395,6 +452,20 @@ class TheHive:
                         "x_opencti_score": 80 if observable.get("ioc") else 50,
                         "created_by_ref": self.identity.get("standard_id"),
                         "x_opencti_create_indicator": observable.get("ioc"),
+                    },
+                )
+            elif data_type == "system":
+                stix_observable = Identity(
+                    type="identity",
+                    name=observable.get("data").lower(),
+                    object_marking_refs=markings,
+                    identity_class='system',
+                    custom_properties={
+                        "description": observable.get("message")
+                        if observable.get("message")
+                        else "Imported from TheHive",
+                        "labels": observable.get("tags"),
+                        "created_by_ref": self.identity.get("standard_id"),
                     },
                 )
             elif data_type == "uri_path":
