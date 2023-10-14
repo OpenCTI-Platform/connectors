@@ -933,7 +933,7 @@ class TheHive:
                                     work_id=work_id,
                                 )
                                 last_alert_date = self.get_updated_date(
-                                    alert, last_case_date
+                                    alert, last_alert_date
                                 )
                             else:
                                 self.helper.log_info(
