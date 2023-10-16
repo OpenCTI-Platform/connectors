@@ -1,4 +1,10 @@
 import ipaddress
+from datetime import datetime
+
+
+def format_datetime(timestamp, time_format):
+    """formatting the date based on the provided timestamp and time_format."""
+    return datetime.utcfromtimestamp(int(timestamp)).strftime(time_format)
 
 
 def is_ipv6(ip_str):
@@ -25,3 +31,16 @@ def is_ipv4(ip_str):
             return True
         except (ipaddress.AddressValueError, ipaddress.NetmaskValueError):
             return False
+
+
+def check_hash_type(value):
+    """Check hash type based on length, this is not the best check. It's recommended to use file_<hash type> instead."""
+    value_length = len(value)
+    if value_length == 32:
+        return "MD5"
+    elif value_length == 40:
+        return "SHA-1"
+    elif value_length == 64:
+        return "SHA-256"
+    else:
+        return "unknown-hash"
