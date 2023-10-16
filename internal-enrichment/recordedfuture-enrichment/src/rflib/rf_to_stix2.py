@@ -10,11 +10,11 @@
 """
 
 from datetime import datetime
-
-import pycti
 import stix2
+import pycti
 
-SUPPORTED_RF_TYPES = ("IpAddress", "InternetDomainName", "Hash", "URL")
+
+SUPPORTED_RF_TYPES = ('IpAddress', 'InternetDomainName', 'Hash', 'URL')
 INDICATES_RELATIONSHIP = [
     stix2.AttackPattern,
     stix2.Campaign,
@@ -90,9 +90,7 @@ class Indicator(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         if not self.obs_id:
-            self.stix_observable = (
-                self._create_obs()
-            )  # pylint: disable=assignment-from-no-return
+            self.stix_observable = self._create_obs()  # pylint: disable=assignment-from-no-return
         self.stix_indicator = self._create_indicator()
         self.stix_relationship = self._create_rel()
 
@@ -101,7 +99,7 @@ class Indicator(RFStixEntity):
         return stix2.Indicator(
             id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
-            pattern_type="stix",
+            pattern_type='stix',
             confidence=self.risk_score,
             valid_from=datetime.now(),
             pattern=self._create_pattern(),
@@ -121,11 +119,9 @@ class Indicator(RFStixEntity):
         """Creates Relationship object linking indicator and observable"""
         return stix2.Relationship(
             id=pycti.StixCoreRelationship.generate_id(
-                "based-on",
-                self.stix_indicator.id,
-                self.obs_id or self.stix_observable.id,
+                "based-on", self.stix_indicator.id, self.obs_id or self.stix_observable.id
             ),
-            relationship_type="based-on",
+            relationship_type='based-on',
             source_ref=self.stix_indicator.id,
             target_ref=self.obs_id or self.stix_observable.id,
             start_time=datetime.now(),
@@ -158,7 +154,7 @@ class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
     def _create_pattern(self):
-        ioc = self.name.replace("\\", "\\\\")
+        ioc = self.name.replace('\\', '\\\\')
         ioc = ioc.replace("'", "\\'")
         return f"[url:value = '{ioc}']"
 
@@ -176,14 +172,14 @@ class FileHash(Indicator):
     def _determine_algorithm(self):
         """Determine file hash algorithm from length"""
         if len(self.name) == 64:
-            return "SHA-256"
+            return 'SHA-256'
         elif len(self.name) == 40:
-            return "SHA-1"
+            return 'SHA-1'
         elif len(self.name) == 32:
-            return "MD5"
+            return 'MD5'
         msg = (
-            f"Could not determine hash type for {self.name}. Only MD5, SHA1"
-            " and SHA256 hashes are supported"
+            f'Could not determine hash type for {self.name}. Only MD5, SHA1'
+            ' and SHA256 hashes are supported'
         )
         raise ConversionError(msg)
 
@@ -203,7 +199,7 @@ class TLPMarking(RFStixEntity):
             id=pycti.AttackPattern.generate_id(self.name, self.name),
             name=self.name,
             created_by_ref=self.author.id,
-            custom_properties={"x_mitre_id": self.name},
+            custom_properties={'x_mitre_id': self.name},
         )
 
 
@@ -216,7 +212,7 @@ class TTP(RFStixEntity):
             id=pycti.AttackPattern.generate_id(self.name, self.name),
             name=self.name,
             created_by_ref=self.author.id,
-            custom_properties={"x_mitre_id": self.name},
+            custom_properties={'x_mitre_id': self.name},
         )
 
 
@@ -224,18 +220,15 @@ class Identity(RFStixEntity):
     """Converts various RF entity types to a STIX2 Identity"""
 
     type_to_class = {
-        "Company": "organization",
-        "Organization": "organization",
-        "Person": "individual",
+        'Company': 'organization',
+        'Organization': 'organization',
+        'Person': 'individual',
     }
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Identity(
-            id=pycti.Identity.generate_id(self.name, self.create_id_class()),
-            name=self.name,
-            identity_class=self.create_id_class(),
-            created_by_ref=self.author.id,
+            name=self.name, identity_class=self.create_id_class(), created_by_ref=self.author.id
         )
 
     def create_id_class(self):
@@ -247,18 +240,14 @@ class ThreatActor(RFStixEntity):
     """Converts various RF Threat Actor Organization to a STIX2 Threat Actor"""
 
     type_to_class = {
-        "Company": "organization",
-        "Organization": "organization",
-        "Person": "individual",
+        'Company': 'organization',
+        'Organization': 'organization',
+        'Person': 'individual',
     }
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.ThreatActor(
-            id=pycti.ThreatActor.generate_id(self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-        )
+        self.stix_obj = stix2.ThreatActor(name=self.name, created_by_ref=self.author.id)
 
     def create_id_class(self):
         """Creates a STIX2 identity class"""
@@ -270,11 +259,7 @@ class IntrusionSet(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.IntrusionSet(
-            id=pycti.IntrusionSet.generate_id(self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-        )
+        self.stix_obj = stix2.IntrusionSet(name=self.name, created_by_ref=self.author.id)
 
 
 class Malware(RFStixEntity):
@@ -283,10 +268,7 @@ class Malware(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Malware(
-            id=pycti.Malware.generate_id(self.name),
-            name=self.name,
-            is_family=False,
-            created_by_ref=self.author.id,
+            name=self.name, is_family=False, created_by_ref=self.author.id
         )
 
 
@@ -296,11 +278,7 @@ class Vulnerability(RFStixEntity):
     # TODO: add vuln descriptions
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.Vulnerability(
-            id=pycti.Vulnerability.generate_id(self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-        )
+        self.stix_obj = stix2.Vulnerability(name=self.name, created_by_ref=self.author.id)
 
 
 class DetectionRule(RFStixEntity):
@@ -309,19 +287,19 @@ class DetectionRule(RFStixEntity):
     def __init__(self, name, type_, content):
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
 
-        self.name = name.split(".")[0]
+        self.name = name.split('.')[0]
         self.type = type_
         self.content = content
         self.stix_obj = None
 
-        if self.type not in ("yara", "snort"):
-            msg = f"Detection rule of type {self.type} is not supported"
+        if self.type not in ('yara', 'snort'):
+            msg = f'Detection rule of type {self.type} is not supported'
             raise ConversionError(msg)
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Indicator(
-            id=pycti.Indicator.generate_id(self.content),
+            id=pycti.Indicator.generate_id(self.content()),
             name=self.name,
             pattern_type=self.type,
             pattern=self.content,
@@ -334,16 +312,16 @@ class EnrichedIndicator:
     """Class for converting Indicator + risk score + links to OpenCTI bundle"""
 
     entity_mapper = {
-        "IpAddress": IPAddress,
-        "InternetDomainName": Domain,
-        "URL": URL,
-        "Hash": FileHash,
-        "MitreAttackIdentifier": TTP,
-        "Company": Identity,
-        "Person": Identity,
-        "Organization": Identity,
-        "Malware": Malware,
-        "CyberVulnerability": Vulnerability,
+        'IpAddress': IPAddress,
+        'InternetDomainName': Domain,
+        'URL': URL,
+        'Hash': FileHash,
+        'MitreAttackIdentifier': TTP,
+        'Company': Identity,
+        'Person': Identity,
+        'Organization': Identity,
+        'Malware': Malware,
+        'CyberVulnerability': Vulnerability,
     }
 
     def __init__(self, type_, observable_id, opencti_helper, create_indicator=True):
@@ -355,9 +333,7 @@ class EnrichedIndicator:
         """
         if type_ not in SUPPORTED_RF_TYPES:
             raise ConversionError(
-                "Enriched Indicator must be of a supported type. {} is not supported".format(
-                    type_
-                )
+                'Enriched Indicator must be of a supported type. {} is not supported'.format(type_)
             )
         self.type = type_
         self.author = self._create_author()
@@ -373,11 +349,7 @@ class EnrichedIndicator:
 
     def _create_author(self):
         """Creates Recorded Future Author"""
-        return stix2.Identity(
-            id=pycti.Identity.generate_id("Recorded Future", "organization"),
-            name="Recorded Future",
-            identity_class="organization",
-        )
+        return stix2.Identity(name='Recorded Future', identity_class='organization')
 
     def from_json(self, name, risk, evidenceDetails, links):
         """Creates STIX objects from enriched entity json"""
@@ -393,8 +365,8 @@ class EnrichedIndicator:
 
         self.notes.append(
             stix2.Note(
-                abstract="Recorded Future Risk Score",
-                content="{}/99".format(risk),
+                abstract='Recorded Future Risk Score',
+                content='{}/99'.format(risk),
                 created_by_ref=self.author.id,
                 object_refs=object_refs,
             )
@@ -410,33 +382,31 @@ class EnrichedIndicator:
             )
             self.linked_sdos.append(
                 stix2.AttackPattern(
-                    id=pycti.AttackPattern.generate_id(rule["rule"], rule["rule"]),
-                    name=rule["rule"],
+                    id=pycti.AttackPattern.generate_id(rule['rule'], rule['rule']),
+                    name=rule['rule'],
                     created_by_ref=self.author.id,
                     custom_properties={
-                        "x_rf_criticality": rule["criticality"],
-                        "x_rf_critcality_label": rule["criticalityLabel"],
-                        "x_mitre_id": rule["rule"],
+                        'x_rf_criticality': rule['criticality'],
+                        'x_rf_critcality_label': rule['criticalityLabel'],
+                        'x_mitre_id': rule['rule'],
                     },
                 )
             )
         for link in links:
             try:
-                type_ = link["type"].split("type:")[1]
+                type_ = link['type'].split('type:')[1]
 
                 if type_ not in self.entity_mapper:
-                    msg = "Cannot convert entity {} to STIX2 because it is of type {}".format(
-                        link["name"], type_
+                    msg = 'Cannot convert entity {} to STIX2 because it is of type {}'.format(
+                        link['name'], type_
                     )
                     self.helper.log_warning(msg)
                     continue
-                if any(attr.get("id") == "threat_actor" for attr in link["attributes"]):
-                    link_object = ThreatActor(link["name"], self.author, type_=type_)
+                if any(attr.get("id") == "threat_actor" for attr in link['attributes']):
+                    link_object = ThreatActor(link['name'], self.author, type_=type_)
 
                 else:
-                    link_object = self.entity_mapper[type_](
-                        link["name"], self.author, type_=type_
-                    )
+                    link_object = self.entity_mapper[type_](link['name'], self.author, type_=type_)
                 link_object.create_stix_objects()
                 if isinstance(link_object, Indicator):
                     self.linked_sdos.append(link_object.stix_indicator)
@@ -451,9 +421,9 @@ class EnrichedIndicator:
     def _create_relationships(self, sdo):
         """Creates relationships between the indicators and riskrules + links"""
         ret_val = []
-        rel_type = "related-to"
+        rel_type = 'related-to'
         if any(isinstance(sdo, stixtype) for stixtype in INDICATES_RELATIONSHIP):
-            rel_type = "indicates"
+            rel_type = 'indicates'
         try:
             if self.create_indicator:
                 ret_val.append(
@@ -469,10 +439,8 @@ class EnrichedIndicator:
                 )
             ret_val.append(
                 stix2.Relationship(
-                    id=pycti.StixCoreRelationship.generate_id(
-                        "related-to", self.obs_id, sdo.id
-                    ),
-                    relationship_type="related-to",
+                    id=pycti.StixCoreRelationship.generate_id('related-to', self.obs_id, sdo.id),
+                    relationship_type='related-to',
                     source_ref=self.obs_id,
                     target_ref=sdo.id,
                     created_by_ref=self.author.id,
@@ -481,7 +449,7 @@ class EnrichedIndicator:
             return ret_val
         except Exception as err:
             self.helper.log_error(
-                "Could not create relationship when source is {} and target_ref is {}".format(
+                'Could not create relationship when source is {} and target_ref is {}'.format(
                     str(self.indicator), sdo.id
                 )
             )
@@ -513,14 +481,14 @@ class EnrichedIndicator:
 # maps RF types to the corresponding python object
 ENTITY_TYPE_MAPPER = {
     # TODO: add more supported types, starting with location
-    "IpAddress": IPAddress,
-    "InternetDomainName": Domain,
-    "URL": URL,
-    "Hash": FileHash,
-    "MitreAttackIdentifier": TTP,
-    "Company": Identity,
-    "Person": Identity,
-    "Organization": Identity,
-    "Malware": Malware,
-    "CyberVulnerability": Vulnerability,
+    'IpAddress': IPAddress,
+    'InternetDomainName': Domain,
+    'URL': URL,
+    'Hash': FileHash,
+    'MitreAttackIdentifier': TTP,
+    'Company': Identity,
+    'Person': Identity,
+    'Organization': Identity,
+    'Malware': Malware,
+    'CyberVulnerability': Vulnerability,
 }
