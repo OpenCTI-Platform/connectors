@@ -1,3 +1,3 @@
-pycti==5.11.1
+pycti==5.11.2
 stix-shifter==6.2.2
 prometheus-client==0.17.1
