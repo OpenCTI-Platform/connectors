@@ -22,7 +22,7 @@ Setting up TheHive Connector is straightforward. The following table provides de
 | `thehive.check_ssl`             | `THEHIVE_CHECK_SSL`           | Yes       | Whether to validate the SSL certificate of TheHive instance.   |
 | `thehive.organization_name`     | `THEHIVE_ORGANIZATION_NAME`   | Yes       | Name of your organization in TheHive.                           |
 | `thehive.import_from_date`      | `THEHIVE_IMPORT_FROM_DATE`    | No        | Date from which to start importing data.                        |
-| `thehive.import_only_tlp`       | `THEHIVE_IMPORT_ONLY_TLP`     | No        | Levels of the Traffic Light Protocol (TLP) to be imported.      |
+| `thehive.import_only_tlp`       | `THEHIVE_IMPORT_ONLY_TLP`     | No        | Levels of the Traffic Light Protocol (TLP) to be imported. e.g., `0,1,2,3,4`      |
 | `thehive.import_alerts`         | `THEHIVE_IMPORT_ALERTS`       | No        | Whether to import alerts from TheHive.                          |
 | `thehive.severity_mapping`      | `THEHIVE_SEVERITY_MAPPING`    | No        | Mapping of severity levels between TheHive and OpenCTI. e.g., `1:low,2:medium,3:high,4:critical`         |
 | `thehive.case_status_mapping`   | `THEHIVE_CASE_STATUS_MAPPING` | No        | Status mapping for cases. e.g., `hive_status_1:opencti_status_id_2,hive_status_2:opencti_status_id_2`                                       |
