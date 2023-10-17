@@ -143,7 +143,7 @@ class HygieneConnector:
 
     def _process_observable(self, stix_objects, stix_entity, opencti_entity) -> str:
         # Search in warninglist
-        result = self.warninglists.search(stix_entity["value"])
+        result = self.warninglists.search(opencti_entity["observable_value"])
 
         # If not found and the domain is a subdomain, search with the parent.
         use_parent = False
