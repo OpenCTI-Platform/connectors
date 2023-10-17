@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-rf-notes:
-    image: opencti-rf-notes:latest
+    image: opencti/connector-recordedfuture-notes:5.11.1
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
