@@ -1,2 +1,2 @@
-pycti==5.11.3
+pycti==5.11.4
 prometheus-client==0.17.1
