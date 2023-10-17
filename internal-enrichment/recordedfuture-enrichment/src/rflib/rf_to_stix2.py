@@ -190,30 +190,12 @@ class FileHash(Indicator):
         return stix2.File(hashes={self.algorithm: self.name})
 
 
-class TLPMarking(RFStixEntity):
-    """Creates TLP marking for report"""
-
-    def create_stix_objects(self):
-        """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.AttackPattern(
-            id=pycti.AttackPattern.generate_id(self.name, self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-            custom_properties={'x_mitre_id': self.name},
-        )
-
-
 class TTP(RFStixEntity):
     """Converts MITRE T codes to AttackPattern"""
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.AttackPattern(
-            id=pycti.AttackPattern.generate_id(self.name, self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-            custom_properties={'x_mitre_id': self.name},
-        )
+        self.stix_obj = stix2.TLPMarking()
 
 
 class Identity(RFStixEntity):
@@ -228,7 +210,10 @@ class Identity(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Identity(
-            name=self.name, identity_class=self.create_id_class(), created_by_ref=self.author.id
+            id=pycti.Identity.generate_id(self.name, self.create_id_class()),
+            name=self.name,
+            identity_class=self.create_id_class(),
+            created_by_ref=self.author.id,
         )
 
     def create_id_class(self):
@@ -247,7 +232,11 @@ class ThreatActor(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.ThreatActor(name=self.name, created_by_ref=self.author.id)
+        self.stix_obj = stix2.ThreatActor(
+            id=pycti.ThreatActor.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
+        )
 
     def create_id_class(self):
         """Creates a STIX2 identity class"""
@@ -259,7 +248,11 @@ class IntrusionSet(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.IntrusionSet(name=self.name, created_by_ref=self.author.id)
+        self.stix_obj = stix2.IntrusionSet(
+            id=pycti.IntrusionSet.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
+        )
 
 
 class Malware(RFStixEntity):
@@ -268,7 +261,10 @@ class Malware(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.Malware(
-            name=self.name, is_family=False, created_by_ref=self.author.id
+            id=pycti.Malware.generate_id(self.name),
+            name=self.name,
+            is_family=False,
+            created_by_ref=self.author.id,
         )
 
 
@@ -278,7 +274,11 @@ class Vulnerability(RFStixEntity):
     # TODO: add vuln descriptions
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.Vulnerability(name=self.name, created_by_ref=self.author.id)
+        self.stix_obj = stix2.Vulnerability(
+            id=pycti.Vulnerability.generate_id(self.name),
+            name=self.name,
+            created_by_ref=self.author.id,
+        )
 
 
 class DetectionRule(RFStixEntity):
