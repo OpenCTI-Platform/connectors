@@ -153,10 +153,6 @@ jobs:
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:latest . && docker tag opencti/connector-valhalla:latest opencti/connector-valhalla:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/cybercrime-tracker
-          name: Build Docker image opencti/connector-cybercrime-tracker
-          command: docker build -t opencti/connector-cybercrime-tracker:latest . && docker tag opencti/connector-cybercrime-tracker:latest opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:latest . && docker tag opencti/connector-tanium:latest opencti/connector-tanium:${CIRCLE_TAG}
@@ -322,8 +318,6 @@ jobs:
             docker push opencti/connector-riskiq:${CIRCLE_TAG}
             docker push opencti/connector-valhalla:latest
             docker push opencti/connector-valhalla:${CIRCLE_TAG}
-            docker push opencti/connector-cybercrime-tracker:latest
-            docker push opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
             docker push opencti/connector-tanium:latest
             docker push opencti/connector-tanium:${CIRCLE_TAG}
             docker push opencti/connector-mandiant:latest
@@ -829,10 +823,6 @@ jobs:
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:rolling .
       - run:
-          working_directory: ~/opencti/external-import/cybercrime-tracker
-          name: Build Docker image opencti/connector-cybercrime-tracker
-          command: docker build -t opencti/connector-cybercrime-tracker:rolling .
-      - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
           command: docker build -t opencti/connector-tanium:rolling .
@@ -971,7 +961,6 @@ jobs:
             docker push opencti/connector-mwdb:rolling
             docker push opencti/connector-riskiq:rolling
             docker push opencti/connector-valhalla:rolling
-            docker push opencti/connector-cybercrime-tracker:rolling
             docker push opencti/connector-tanium:rolling
             docker push opencti/connector-mandiant:rolling
             docker push opencti/connector-kaspersky:rolling
