@@ -297,7 +297,7 @@ class DetectionRule(RFStixEntity):
         self.content = content
         self.stix_obj = None
 
-        if self.type not in ("yara", "snort"):
+        if self.type not in ("yara", "snort", "sigma"):
             msg = f"Detection rule of type {self.type} is not supported"
             raise ConversionError(msg)
 
