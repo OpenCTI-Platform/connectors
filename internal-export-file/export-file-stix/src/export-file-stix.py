@@ -59,12 +59,12 @@ class ExportFileStix:
 
                 for entity_id in selected_ids:
                     entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                        id=entity_id
+                        id=entity_id, withFiles=True
                     )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=entity_id
+                                id=entity_id, withFiles=True
                             )
                         )
                     if entity_data is None:

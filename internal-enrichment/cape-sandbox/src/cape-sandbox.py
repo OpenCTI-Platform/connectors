@@ -636,7 +636,9 @@ class CapeSandboxConnector:
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        observable = self.helper.api.stix_cyber_observable.read(
+            id=entity_id, withFiles=True
+        )
         if observable is None:
             raise ValueError(
                 "Observable not found "

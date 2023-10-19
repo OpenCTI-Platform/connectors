@@ -917,7 +917,9 @@ class JoeSandboxConnector:
 
     def _process_message(self, data):
         entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        observable = self.helper.api.stix_cyber_observable.read(
+            id=entity_id, withFiles=True
+        )
         if not observable:
             raise ValueError(
                 "Observable not found "

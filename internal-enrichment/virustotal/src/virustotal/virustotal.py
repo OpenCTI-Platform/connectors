@@ -351,7 +351,7 @@ class VirusTotalConnector:
         self.helper.metric.inc("run_count")
         self.helper.metric.state("running")
         opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
+            id=data["entity_id"], withFiles=True
         )
         if opencti_entity is None:
             raise ValueError(
