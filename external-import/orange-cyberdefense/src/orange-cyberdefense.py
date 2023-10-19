@@ -126,6 +126,51 @@ def extract_and_read_zip_file(filepath, extract_path):
     return json_files_content
 
 
+def generate_markdown_table(data):
+    markdown_str = "## Threat scores\n"
+    markdown_str += (
+        "| DDoS | Fraud | Hack | Leak | Malware | Phishing | Scam | Scan | Spam |\n"
+    )
+    markdown_str += (
+        "|------|-------|------|------|---------|----------|------|------|------|\n"
+    )
+
+    threat_scores = data.get("x_datalake_score", {})
+    ddos = threat_scores.get("ddos", "-")
+    fraud = threat_scores.get("fraud", "-")
+    hack = threat_scores.get("hack", "-")
+    leak = threat_scores.get("leak", "-")
+    malware = threat_scores.get("malware", "-")
+    phishing = threat_scores.get("phishing", "-")
+    scam = threat_scores.get("scam", "-")
+    scan = threat_scores.get("scan", "-")
+    spam = threat_scores.get("spam", "-")
+
+    markdown_str += f"| {ddos} | {fraud} | {hack} | {leak} | {malware} | {phishing} | {scam} | {scan} | {spam} |\n"
+
+    markdown_str += "## Threat intelligence sources\n"
+    markdown_str += (
+        "| source_id | count | first_seen | last_updated | min_depth | max_depth |\n"
+    )
+    markdown_str += (
+        "|-----------|-------|------------|--------------|-----------|-----------|\n"
+    )
+
+    threat_sources = data.get("x_datalake_sources", [])
+
+    for source in threat_sources:
+        source_id = source.get("source_id", "-")
+        count = source.get("count", "-")
+        first_seen = source.get("first_seen", "-")
+        last_updated = source.get("last_updated", "-")
+        min_depth = source.get("min_depth", "-")
+        max_depth = source.get("max_depth", "-")
+
+        markdown_str += f"| {source_id} | {count} | {first_seen} | {last_updated} | {min_depth} | {max_depth} |\n"
+
+    return markdown_str
+
+
 class OrangeCyberDefense:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -136,7 +181,7 @@ class OrangeCyberDefense:
         if not config:
             logging.warning("Failed to load configuration.")
         else:
-            logging.info("Configuration loaded successfully !")
+            logging.info(f"Configuration loaded successfully !")
         self.helper = OpenCTIConnectorHelper(config)
         self.ocd_portal_api_url = "https://api-tdc.cert.orangecyberdefense.com/v1"
         self.ocd_vulnerabilities_api_url = ""
@@ -360,6 +405,16 @@ class OrangeCyberDefense:
                 object["target_ref"] = object["target_ref"].replace(
                     "threat-actor", "intrusion-set"
                 )
+        if object["type"] == "indicator":
+            threat_scores = object.get("x_datalake_score", {})
+            for threat_type, score in threat_scores.items():
+                if (
+                    threat_type in self.ocd_import_datalake_threat_types
+                    and score >= self.ocd_import_datalake_minimum_risk_score
+                ):
+                    new_label = f"dtl_{threat_type}_{self.ocd_import_datalake_minimum_risk_score}"
+                    if "labels" in object:
+                        object["labels"].append(new_label)
         return object
 
     def _create_magic_bundle(self, objects, date, markings):
@@ -525,10 +580,7 @@ class OrangeCyberDefense:
         report_objects = self._get_alert_entities(
             report["id"],
             parse(report["timestamp_detected"]),
-            [
-                stix2.TLP_GREEN.get("id"),
-                self.marking["standard_id"],
-            ],
+            [stix2.TLP_GREEN.get("id"), self.marking["standard_id"]],
         )
         if report_objects is None:
             report_objects = []
@@ -631,8 +683,7 @@ class OrangeCyberDefense:
                     report_objects = self._generate_report(report)
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
-                            objects=report_objects,
-                            allow_custom=True,
+                            objects=report_objects, allow_custom=True
                         ).serialize(),
                         update=self.update_existing_data,
                         work_id=work_id,
@@ -655,10 +706,7 @@ class OrangeCyberDefense:
                 report_objects = self._generate_report(report)
                 keep_first(report_objects, "id")
                 self.helper.send_stix2_bundle(
-                    stix2.Bundle(
-                        objects=report_objects,
-                        allow_custom=True,
-                    ).serialize(),
+                    stix2.Bundle(objects=report_objects, allow_custom=True).serialize(),
                     update=self.update_existing_data,
                     work_id=work_id,
                 )
@@ -804,9 +852,7 @@ class OrangeCyberDefense:
         if url_stix is not None:
             incident_url_relation = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    "related-to",
-                    url_stix.get("id"),
-                    incident_stix.get("id"),
+                    "related-to", url_stix.get("id"), incident_stix.get("id")
                 ),
                 relationship_type="related-to",
                 created_by_ref=self.identity["standard_id"],
@@ -891,8 +937,7 @@ class OrangeCyberDefense:
                     incident_objects = self._generate_incident(report)
                     self.helper.send_stix2_bundle(
                         stix2.Bundle(
-                            objects=incident_objects,
-                            allow_custom=True,
+                            objects=incident_objects, allow_custom=True
                         ).serialize(),
                         update=self.update_existing_data,
                         work_id=work_id,
@@ -917,8 +962,7 @@ class OrangeCyberDefense:
                 incident_objects = self._generate_incident(report)
                 self.helper.send_stix2_bundle(
                     stix2.Bundle(
-                        objects=incident_objects,
-                        allow_custom=True,
+                        objects=incident_objects, allow_custom=True
                     ).serialize(),
                     update=self.update_existing_data,
                     work_id=work_id,
@@ -936,6 +980,7 @@ class OrangeCyberDefense:
 
     def _import_datalake(self, work_id, current_state):
         # Define query parameters
+        last_entity_timestamp = None
         calculated_interval = (int(self.ocd_interval) + 15) * 60
         query_body = {
             "AND": [
@@ -968,9 +1013,7 @@ class OrangeCyberDefense:
                 }
             ]
         }
-
         logging.info(query_body)
-
         # Create the bulk search task
         datalake_login = os.environ.get("OCD_DATALAKE_LOGIN")
         datalake_password = os.environ.get("OCD_DATALAKE_PASSWORD")
@@ -1004,15 +1047,24 @@ class OrangeCyberDefense:
                     if "objects" in data:
                         for object in data["objects"]:
                             processed_object = self._process_object(object)
-                            objects.append(processed_object)
-
-                            # Check for the 'modified' field and append the object
+                            if processed_object["type"] == "indicator":
+                                creation_date = processed_object.get("created", {})
+                                technical_md = generate_markdown_table(processed_object)
+                                note_stix = stix2.Note(
+                                    id=Note.generate_id(creation_date, technical_md),
+                                    confidence=self.helper.connect_confidence_level,
+                                    abstract="OCD-CERT Datalake additional informations",
+                                    content=technical_md,
+                                    created=creation_date,
+                                    modified=processed_object["modified"],
+                                    created_by_ref=self.identity["standard_id"],
+                                    object_marking_refs=[self.marking["standard_id"]],
+                                    object_refs=[processed_object.get("id")],
+                                )
+                                objects.append(note_stix)
+                                objects.append(processed_object)
                             if "modified" in object:
                                 last_entity_timestamp = object.get("modified")
-                                if last_entity_timestamp:
-                                    objects.append(object)
-                            else:
-                                logging.warning("'modified' not in data")
                     else:
                         logging.warning("'objects' key is not in data")
 
@@ -1038,15 +1090,9 @@ class OrangeCyberDefense:
 
         # Create a bundle of the processed objects
         if len(objects):
-            bundle = {
-                "id": f"bundle--{uuid.uuid4()}",
-                "type": "bundle",
-                "objects": objects,
-            }
-
             # Send the created bundle
             self.helper.send_stix2_bundle(
-                json.dumps(bundle),
+                stix2.Bundle(objects=objects, allow_custom=True).serialize(),
                 update=self.update_existing_data,
                 work_id=work_id,
             )
@@ -1107,10 +1153,7 @@ class OrangeCyberDefense:
                         )
                     )
                 self.helper.send_stix2_bundle(
-                    stix2.Bundle(
-                        objects=objects,
-                        allow_custom=True,
-                    ).serialize(),
+                    stix2.Bundle(objects=objects, allow_custom=True).serialize(),
                     update=self.update_existing_data,
                     work_id=work_id,
                 )
