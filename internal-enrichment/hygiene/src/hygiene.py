@@ -254,8 +254,15 @@ class HygieneConnector:
             return "Observable value found on warninglist and tagged accordingly"
 
     def _process_message(self, data) -> str:
+        custom_attributes = """
+            id
+            entity_type
+            parent_types
+            observable_value
+            standard_id
+        """
         opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
+            id=data["entity_id"], customAttributes=custom_attributes
         )
         if opencti_entity is None:
             raise ValueError(
