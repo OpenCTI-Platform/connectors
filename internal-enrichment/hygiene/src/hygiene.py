@@ -157,7 +157,8 @@ class HygieneConnector:
         # Iterate over the hits
         if result:
             self.helper.log_info(
-                "Hit found for %s in warninglists" % (stix_entity["value"])
+                "Hit found for %s in warninglists"
+                % (opencti_entity["observable_value"])
             )
 
             for hit in result:
