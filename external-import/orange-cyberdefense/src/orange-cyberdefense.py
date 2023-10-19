@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 import time
-import uuid
 import xml.etree.ElementTree as ET
 import zipfile
 from html.parser import HTMLParser
@@ -181,7 +180,7 @@ class OrangeCyberDefense:
         if not config:
             logging.warning("Failed to load configuration.")
         else:
-            logging.info(f"Configuration loaded successfully !")
+            logging.info("Configuration loaded successfully !")
         self.helper = OpenCTIConnectorHelper(config)
         self.ocd_portal_api_url = "https://api-tdc.cert.orangecyberdefense.com/v1"
         self.ocd_vulnerabilities_api_url = ""
