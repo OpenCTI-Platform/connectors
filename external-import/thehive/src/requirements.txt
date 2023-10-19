@@ -1,2 +1,2 @@
-pycti==5.11.4
+pycti==5.11.5
 thehive4py
