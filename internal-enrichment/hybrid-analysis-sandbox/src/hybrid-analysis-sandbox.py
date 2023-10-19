@@ -402,7 +402,7 @@ class HybridAnalysis:
 
     def _process_message(self, data):
         opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
+            id=data["entity_id"], withFiles=True
         )
         if opencti_entity is None:
             raise ValueError(
