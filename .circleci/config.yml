@@ -65,10 +65,6 @@ jobs:
           name: Build Docker image opencti/connector-export-file-stix
           command: docker build -t opencti/connector-export-file-stix:latest . && docker tag opencti/connector-export-file-stix:latest opencti/connector-export-file-stix:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/internal-export-file/export-file-csv
-          name: Build Docker image opencti/connector-export-file-csv
-          command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/internal-export-file/export-file-txt
           name: Build Docker image opencti/connector-export-file-txt
           command: docker build -t opencti/connector-export-file-txt:latest . && docker tag opencti/connector-export-file-txt:latest opencti/connector-export-file-txt:${CIRCLE_TAG}
@@ -88,6 +84,10 @@ jobs:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
           command: docker build -t opencti/connector-cuckoo:latest . && docker tag opencti/connector-cuckoo:latest opencti/connector-cuckoo:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-csv
+          name: Build Docker image opencti/connector-export-file-csv
+          command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/cape
           name: Build Docker image opencti/connector-cape
@@ -743,10 +743,6 @@ jobs:
           name: Build Docker image opencti/connector-export-file-stix
           command: docker build -t opencti/connector-export-file-stix:rolling .
       - run:
-          working_directory: ~/opencti/internal-export-file/export-file-csv
-          name: Build Docker image opencti/connector-export-file-csv
-          command: docker build -t opencti/connector-export-file-csv:rolling .
-      - run:
           working_directory: ~/opencti/internal-export-file/export-file-txt
           name: Build Docker image opencti/connector-export-file-txt
           command: docker build -t opencti/connector-export-file-txt:rolling .
@@ -766,6 +762,10 @@ jobs:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
           command: docker build -t opencti/connector-cuckoo:rolling .
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-csv
+          name: Build Docker image opencti/connector-export-file-csv
+          command: docker build -t opencti/connector-export-file-csv:rolling .
       - run:
           working_directory: ~/opencti/external-import/cape
           name: Build Docker image opencti/connector-cape
