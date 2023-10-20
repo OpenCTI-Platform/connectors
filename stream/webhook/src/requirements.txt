@@ -1,2 +1,2 @@
-pycti==5.11.6
+pycti==5.11.7
 aiohttp_retry==2.8.3
