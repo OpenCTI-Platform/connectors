@@ -66,6 +66,9 @@ class RFNotes:
             ["rf-notes", "TA_to_intrusion_set"],
             config,
         )
+        self.risk_as_score = get_config_variable(
+            "RECORDED_FUTURE_RISK_AS_SCORE", ["rf-notes", "risk_as_score"], config
+        )
 
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -141,9 +144,11 @@ class RFNotes:
             stixnote = StixNote(
                 self.helper,
                 tas,
+                self.rfapi,
                 self.tlp,
                 self.rf_person_to_TA,
                 self.rf_TA_to_intrusion_set,
+                self.risk_as_score,
             )
             stixnote.from_json(note)
             bundle = stixnote.to_stix_bundle()

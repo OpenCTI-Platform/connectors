@@ -118,3 +118,18 @@ class RFClient:
         for entity in json.loads(res):
             ret.add(entity["entity"])
         return ret
+
+    def get_risk_score(self, type: str, value: str) -> int:
+        """Gets risk score for an indicator
+        Args:
+            * type: indicator type
+            * value: indicator value
+        Returns:
+            The risk score as an int
+        """
+        indicator_params = {"fields": "risk"}
+        res = self.session.get(
+            CONNECT_BASE + "/" + type + "/" + value, params=indicator_params
+        )
+        res.raise_for_status()
+        return res.json()["data"]["risk"]["score"]

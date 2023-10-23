@@ -21,4 +21,4 @@ rf-notes:
   topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' #optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
   person_to_TA: False #optional
   TA_to_intrusion_set: False #optional
-
+  risk_as_score: False #optional
