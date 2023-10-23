@@ -18,7 +18,7 @@ rf-notes:
   TLP: white
   pull_signatures: False #Pull Yara/Snort/Sigma rules into OpenCTI. optional
   insikt_only: True #optional
-  topic: 'ChangeMe' #optional
+  topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' #optional
   person_to_TA: False #optional
   TA_to_intrusion_set: False #optional
 

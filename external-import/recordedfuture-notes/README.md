@@ -54,7 +54,7 @@ Please note that if you don't want to use an optional variable, best practice is
 | RECORDED_FUTURE_TLP | TLP | TLP marking of the report. One of White, Green, Amber, Red
 | RECORDED_FUTURE_PULL_SIGNATURES     | pull_signatures        | A boolean flag of whether to pull YARA, SIGMA, and SNORT rules from hunting packages into OpenCTI. Defaults to False
 | RECORDED_FUTURE_INSIKT_ONLY     | insikt_only        | A boolean flag of whether to pull analyst notes only from the Insikt research team, or whether to include notes written by Users. Defaults to True
-| RECORDED_FUTURE_TOPIC     | topic        | Filter Analyst Notes on a specific topic. Topics can be found [here](https://support.recordedfuture.com/hc/en-us/articles/360006361774-Analyst-Note-API). You **must** use the topic RFID, for example aUyI9M. Only one topic per connector is allowed. Optional
+| RECORDED_FUTURE_TOPIC     | topic        | Filter Analyst Notes on a specific topic. Topics can be found [here](https://support.recordedfuture.com/hc/en-us/articles/360006361774-Analyst-Note-API). You **must** use the topic RFID, for example aUyI9M. Multiple topics are allowed (separated by ','). Optional
 | RECORDED_FUTUTRE_PERSON_TO_TA | person_to_TA | Converts all Recorded Future entities of type person to STIX object "Threat Actor" instead of individual. DO NOT USE unless you **really** know what you're doing
 | RECORDED_FUTURE_TA_TO_INTRUSION_SET| TA_to_intrusion_set | Converts all Recorded Future Threat Actors to STIX Object "Intrusion Set" instead of "Threat Actor". DO NOT USE unless you **really** know what you're doing
 

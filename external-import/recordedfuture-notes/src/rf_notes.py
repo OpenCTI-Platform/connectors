@@ -55,9 +55,9 @@ class RFNotes:
         self.rf_insikt_only = get_config_variable(
             "RECORDED_FUTURE_INSIKT_ONLY", ["rf-notes", "insikt_only"], config
         )
-        self.rf_topic = get_config_variable(
+        self.rf_topics = get_config_variable(
             "RECORDED_FUTURE_TOPIC", ["rf-notes", "topic"], config
-        )
+        ).split(',')
         self.rf_person_to_TA = get_config_variable(
             "RECORDED_FUTUTRE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
         )
@@ -123,12 +123,19 @@ class RFNotes:
             f"Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
         )
         self.helper.log_info(
-            f"Topic is {str(self.rf_topic)} of type {type(self.rf_topic)}"
+            f"Topics are {str(self.rf_topics)} of type {type(self.rf_topics)}"
         )
+        notes = []
+        notes_ids = []
+        for topic in self.rf_topics:
+            new_notes = self.rfapi.get_notes(
+                published, self.rf_pull_signatures, self.rf_insikt_only, topic
+            )
+            for new_note in new_notes:
+                if new_note['id'] not in notes_ids:
+                    notes.append(new_note)
+                    notes_ids.append(new_note['id'])
 
-        notes = self.rfapi.get_notes(
-            published, self.rf_pull_signatures, self.rf_insikt_only, self.rf_topic
-        )
         self.helper.log_info(f"fetched {len(notes)} Analyst notes from API")
         for note in notes:
             stixnote = StixNote(
