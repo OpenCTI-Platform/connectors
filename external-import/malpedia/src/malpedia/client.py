@@ -29,13 +29,13 @@ class MalpediaClient:
         url = urljoin(self._DEFAULT_API_URL, url_path)
         try:
             if self.unauthenticated:
-                r = requests.get(url, timeout=10)
+                r = requests.get(url, timeout=30)
                 data = r.json()
             else:
                 r = requests.get(
                     url,
                     headers={"Authorization": "apitoken " + self.api_key},
-                    timeout=10,
+                    timeout=30,
                 )
                 data = r.json()
         except requests.exceptions.RequestException as e:
