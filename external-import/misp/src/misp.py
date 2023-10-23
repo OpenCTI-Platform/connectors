@@ -358,7 +358,7 @@ class Misp:
                 current_page = 1
             number_events = 0
             while True:
-                kwargs["limit"] = 50
+                kwargs["limit"] = 10
                 kwargs["page"] = current_page
                 if self.misp_import_keyword is not None:
                     kwargs["value"] = self.misp_import_keyword
@@ -591,6 +591,9 @@ class Misp:
                 author,
                 event_markings,
             )
+            self.helper.log_info(
+                "This event contains " + str(len(event_elements)) + " related elements"
+            )
             # Tags
             event_tags = []
             if "Tag" in event["Event"]:
@@ -611,6 +614,12 @@ class Misp:
             event_external_references = [event_external_reference]
             indicators = []
             # Get attributes of event
+            self.helper.log_info(
+                "This event contains "
+                + str(len(event["Event"]["Attribute"]))
+                + " attributes..."
+            )
+            create_relationships = len(event["Event"]["Attribute"]) < 10000
             for attribute in event["Event"]["Attribute"]:
                 indicator = self.process_attribute(
                     author,
@@ -621,6 +630,7 @@ class Misp:
                     [],
                     attribute,
                     event["Event"]["threat_level_id"],
+                    create_relationships,
                 )
                 if (
                     attribute["type"] == "link"
@@ -708,6 +718,7 @@ class Misp:
                         )
                         objects_observables.append(object_observable)
                 object_attributes = []
+                create_relationships = len(object["Attribute"]) < 10000
                 for attribute in object["Attribute"]:
                     indicator = self.process_attribute(
                         author,
@@ -718,6 +729,7 @@ class Misp:
                         attribute_external_references,
                         attribute,
                         event["Event"]["threat_level_id"],
+                        create_relationships,
                     )
                     if indicator is not None:
                         indicators.append(indicator)
@@ -1004,6 +1016,7 @@ class Misp:
         attribute_external_references,
         attribute,
         event_threat_level,
+        create_relationships,
     ):
         if attribute["type"] == "link" and attribute["category"] == "External analysis":
             return None
@@ -1256,7 +1269,10 @@ class Misp:
             identities = []
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
-                    if "Organisation" in misp_sighting:
+                    if (
+                        "Organisation" in misp_sighting
+                        and misp_sighting["Organisation"]["name"] != author.name
+                    ):
                         sighted_by = stix2.Identity(
                             id=Identity.generate_id(
                                 misp_sighting["Organisation"]["name"], "organization"
@@ -1310,6 +1326,16 @@ class Misp:
 
             ### Create the relationships
             relationships = []
+            if not create_relationships:
+                return {
+                    "indicator": indicator,
+                    "observable": observable,
+                    "relationships": relationships,
+                    "attribute_elements": attribute_elements,
+                    "markings": attribute_markings,
+                    "identities": identities,
+                    "sightings": sightings,
+                }
             if indicator is not None and observable is not None:
                 relationships.append(
                     stix2.Relationship(
