@@ -407,6 +407,13 @@ INDICATOR_TYPE_URL_MAPPER = {
     "Hash": "hash",
 }
 
+INDICATOR_TYPE_URL_MAPPER = {
+    "IpAddress": "ip",
+    "InternetDomainName": "domain",
+    "URL": "url",
+    "Hash": "hash",
+}
+
 
 class StixNote:
     """Represents Analyst Note"""
