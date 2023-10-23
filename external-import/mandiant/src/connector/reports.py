@@ -10,7 +10,6 @@ def process(connector, report):
     report_id = report.get("report_id", report.get("reportId", None))
     report_type = report.get("report_type", report.get("reportType", None))
     report_title = report.get("title", report.get("reportTitle", None))
-
     if report_type not in connector.mandiant_report_types:
         connector.helper.log_debug(
             f"Ignoring report based on type [{report_id}][{report_type}] {report_title} ..."
@@ -172,10 +171,23 @@ class Report:
         # Report Analysis Note
         report = utils.retrieve(self.bundle, "type", "report")
 
-        del report["x_mandiant_com_tracking_info"]
-        del report["x_mandiant_com_metadata"]["report_type"]
-        del report["x_mandiant_com_metadata"]["subscriptions"]
-        del report["x_mandiant_com_additional_description_sections"]["analysis"]
+        if "x_mandiant_com_tracking_info" in report:
+            del report["x_mandiant_com_tracking_info"]
+        if (
+            "x_mandiant_com_metadata" in report
+            and "report_type" in report["x_mandiant_com_metadata"]
+        ):
+            del report["x_mandiant_com_metadata"]["report_type"]
+        if (
+            "x_mandiant_com_metadata" in report
+            and "subscriptions" in report["x_mandiant_com_metadata"]
+        ):
+            del report["x_mandiant_com_metadata"]["subscriptions"]
+        if (
+            "x_mandiant_com_additional_description_sections" in report
+            and "analysis" in report["x_mandiant_com_additional_description_sections"]
+        ):
+            del report["x_mandiant_com_additional_description_sections"]["analysis"]
 
         data = {}
 
@@ -276,8 +288,7 @@ class Report:
         ]
 
     def _get_objects_from_tags(self, section):
-        tags = self.details["tags"].get(section, [])
-
+        tags = self.details.get("tags", {}).get(section, [])
         for tag in tags:
             for item in self.bundle.get("objects"):
                 if tag == item.get("name"):
