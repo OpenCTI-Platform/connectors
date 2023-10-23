@@ -57,7 +57,7 @@ class RFNotes:
         )
         self.rf_topics = get_config_variable(
             "RECORDED_FUTURE_TOPIC", ["rf-notes", "topic"], config
-        ).split(',')
+        ).split(",")
         self.rf_person_to_TA = get_config_variable(
             "RECORDED_FUTUTRE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
         )
@@ -132,9 +132,9 @@ class RFNotes:
                 published, self.rf_pull_signatures, self.rf_insikt_only, topic
             )
             for new_note in new_notes:
-                if new_note['id'] not in notes_ids:
+                if new_note["id"] not in notes_ids:
                     notes.append(new_note)
-                    notes_ids.append(new_note['id'])
+                    notes_ids.append(new_note["id"])
 
         self.helper.log_info(f"fetched {len(notes)} Analyst notes from API")
         for note in notes:
