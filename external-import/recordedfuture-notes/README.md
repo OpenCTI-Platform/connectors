@@ -32,7 +32,7 @@ Currently context entities are not converted into entities. For Note entities, o
 
 ## Installation
 
-Please refer to [these](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://www.notion.so/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://www.notion.so/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
+Please refer to [these](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76) [three](https://docs.opencti.io/latest/deployment/connectors/) [articles](https://docs.opencti.io/latest/development/connectors/) in OpenCTI's documentation as the authoritative source on installing connectors.
 
 ### Docker
 Build a Docker Image using the provided `Dockerfile`. Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`
