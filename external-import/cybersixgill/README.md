@@ -22,7 +22,7 @@ global `docker-compose.yml` file of OpenCTI.
 
 ### Requirements
 
-- OpenCTI Platform >= 5.11.8
+- OpenCTI Platform >= 5.11.9
 - Cybersixgill Client ID and Client Secret
 
 ### Configuration
