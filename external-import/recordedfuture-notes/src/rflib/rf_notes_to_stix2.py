@@ -56,7 +56,6 @@ class RFStixEntity:
         """Returns STIX Bundle as JSON"""
         return self.to_stix_bundle().serialize()
 
-
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
@@ -66,6 +65,7 @@ class Indicator(RFStixEntity):
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
+        self.risk_score = None
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -92,6 +92,9 @@ class Indicator(RFStixEntity):
             valid_from=datetime.now(),
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
+            custom_properties={
+                "x_opencti_score": self.risk_score,
+            },
         )
         pass
 
@@ -289,13 +292,14 @@ class Vulnerability(RFStixEntity):
 class DetectionRule(RFStixEntity):
     """Represents a Yara or SNORT rule"""
 
-    def __init__(self, name, type_, content):
+    def __init__(self, name, type_, content, author):
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
 
         self.name = name.split(".")[0]
         self.type = type_
         self.content = content
         self.stix_obj = None
+        self.author = author
 
         if self.type not in ("yara", "snort", "sigma"):
             msg = f"Detection rule of type {self.type} is not supported"
@@ -312,6 +316,24 @@ class DetectionRule(RFStixEntity):
             created_by_ref=self.author.id,
         )
 
+class Software(RFStixEntity):
+    def __init__(self, name, type_, author):
+        self.name = name
+        self.author = author
+        self.software_object = None
+
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.software_object:
+            self.create_stix_objects()
+        return [self.software_object]
+
+    def create_stix_objects(self):
+        self.software_object = stix2.Software(
+            name=self.name,
+            author=self.author.id
+        )
+
 
 # maps RF types to the corresponding python object
 ENTITY_TYPE_MAPPER = {
@@ -326,8 +348,10 @@ ENTITY_TYPE_MAPPER = {
     "Organization": Identity,
     "Malware": Malware,
     "CyberVulnerability": Vulnerability,
+    "Product": Software,
 }
 
+# maps RF types to the corresponding url to get the risk score
 INDICATOR_TYPE_URL_MAPPER = {
     "IpAddress": "ip",
     "InternetDomainName": "domain",
@@ -370,9 +394,11 @@ class StixNote:
         self,
         opencti_helper,
         tas,
+        rfapi,
         tlp="white",
         person_to_ta=False,
         ta_to_intrusion_set=False,
+        risk_as_score=False,
     ):
         self.author = self._create_author()
         self.name = None
@@ -386,7 +412,9 @@ class StixNote:
         self.tas = tas
         self.person_to_ta = person_to_ta
         self.ta_to_intrusion_set = ta_to_intrusion_set
+        self.risk_as_score = risk_as_score
         self.tlp = TLP_MAP.get(tlp.lower(), None)
+        self.rfapi = rfapi
 
     def _create_author(self):
         """Creates Recorded Future Author"""
@@ -432,13 +460,33 @@ class StixNote:
                 self.helper.log_warning(msg)
                 continue
             else:
-                stix_objs = ENTITY_TYPE_MAPPER[type_](
-                    name, type_, self.author
-                ).to_stix_objects()
+                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author)
+                if self.risk_as_score and type_ in [
+                    "IpAddress",
+                    "InternetDomainName",
+                    "URL",
+                    "Hash",
+                ]:
+                    # call api to get risk score of indicator
+                    try:
+                        risk_score = self.rfapi.get_risk_score(
+                            INDICATOR_TYPE_URL_MAPPER[type_], name
+                        )
+                        rf_object.risk_score = risk_score
+                    except (KeyError, IndexError):
+                        self.helper.log_error(
+                            "Problem with API response for get risk score for indicator {}. Risk score will not be added".format(
+                                name
+                            )
+                        )
+                stix_objs = rf_object.to_stix_objects()
             self.objects.extend(stix_objs)
         if "attachment_content" in attr:
             rule = DetectionRule(
-                attr["attachment"], attr["attachment_type"], attr["attachment_content"]
+                attr["attachment"],
+                attr["attachment_type"],
+                attr["attachment_content"],
+                self.author,
             )
             self.objects.extend(rule.to_stix_objects())
 
