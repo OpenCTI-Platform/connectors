@@ -56,7 +56,6 @@ class RFStixEntity:
         """Returns STIX Bundle as JSON"""
         return self.to_stix_bundle().serialize()
 
-
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
@@ -318,6 +317,24 @@ class DetectionRule(RFStixEntity):
             created_by_ref=self.author.id,
         )
 
+class Software(RFStixEntity):
+    def __init__(self, name, type_, author):
+        self.name = name
+        self.author = author
+        self.software_object = None
+
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.software_object:
+            self.create_stix_objects()
+        return [self.software_object]
+
+    def create_stix_objects(self):
+        self.software_object = stix2.Software(
+            name=self.name,
+            author=self.author.id
+        )
+
 
 class Software(RFStixEntity):
     def __init__(self, name, type_, author):
@@ -407,6 +424,7 @@ INDICATOR_TYPE_URL_MAPPER = {
     "Hash": "hash",
 }
 
+# maps RF types to the corresponding url to get the risk score
 INDICATOR_TYPE_URL_MAPPER = {
     "IpAddress": "ip",
     "InternetDomainName": "domain",
