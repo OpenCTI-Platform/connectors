@@ -56,6 +56,7 @@ class RFStixEntity:
         """Returns STIX Bundle as JSON"""
         return self.to_stix_bundle().serialize()
 
+
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
@@ -316,6 +317,7 @@ class DetectionRule(RFStixEntity):
             valid_from=datetime.now(),
             created_by_ref=self.author.id,
         )
+
 
 class Software(RFStixEntity):
     def __init__(self, name, type_, author):
