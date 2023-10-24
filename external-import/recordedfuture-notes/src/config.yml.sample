@@ -22,3 +22,4 @@ rf-notes:
   person_to_TA: False #optional
   TA_to_intrusion_set: False #optional
   risk_as_score: False #optional
+  risk_threshold: 60 # optional

@@ -56,6 +56,7 @@ class RFStixEntity:
         """Returns STIX Bundle as JSON"""
         return self.to_stix_bundle().serialize()
 
+
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
@@ -316,6 +317,7 @@ class DetectionRule(RFStixEntity):
             created_by_ref=self.author.id,
         )
 
+
 class Software(RFStixEntity):
     def __init__(self, name, type_, author):
         self.name = name
@@ -397,6 +399,7 @@ class StixNote:
         person_to_ta=False,
         ta_to_intrusion_set=False,
         risk_as_score=False,
+        risk_threshold=None,
     ):
         self.author = self._create_author()
         self.name = None
@@ -411,6 +414,7 @@ class StixNote:
         self.person_to_ta = person_to_ta
         self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
+        self.risk_threshold = risk_threshold
         self.tlp = TLP_MAP.get(tlp.lower(), None)
         self.rfapi = rfapi
 
@@ -459,22 +463,30 @@ class StixNote:
                 continue
             else:
                 rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author)
-                if self.risk_as_score and type_ in [
+                if type_ in [
                     "IpAddress",
                     "InternetDomainName",
                     "URL",
                     "Hash",
                 ]:
-                    # call api to get risk score of indicator
-                    try:
+                    risk_score = None
+                    if self.risk_threshold:
+                        # If a min threshold was defined, we ignore the indicator if the score is lower than the defined threshold
                         risk_score = self.rfapi.get_risk_score(
                             INDICATOR_TYPE_URL_MAPPER[type_], name
                         )
-                        rf_object.risk_score = risk_score
-                    except (KeyError, IndexError):
-                        self.helper.log_error(
-                            "Problem with API response for get risk score for indicator {}. Risk score will not be added".format(
-                                name
+                        if risk_score < self.risk_threshold:
+                            self.helper.log_info(
+                                f"Ignoring entity {name} as its risk score is lower than the defined risk threshold"
+                            )
+                            continue
+                    if self.risk_as_score:
+                        # We get the risk_score if it was already set. Otherwise, we get it from the API
+                        rf_object.risk_score = (
+                            risk_score
+                            if risk_score
+                            else self.rfapi.get_risk_score(
+                                INDICATOR_TYPE_URL_MAPPER[type_], name
                             )
                         )
                 stix_objs = rf_object.to_stix_objects()
