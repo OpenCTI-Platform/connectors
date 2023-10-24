@@ -55,9 +55,8 @@ class RFNotes:
         self.rf_insikt_only = get_config_variable(
             "RECORDED_FUTURE_INSIKT_ONLY", ["rf-notes", "insikt_only"], config
         )
-        self.rf_topics = get_config_variable(
-            "RECORDED_FUTURE_TOPIC", ["rf-notes", "topic"], config
-        ).split(",")
+        topics_value = get_config_variable("RECORDED_FUTURE_TOPIC", ["rf-notes", "topic"], config)
+        self.rf_topics = topics_value.split(",") if topics_value else [None]
         self.rf_person_to_TA = get_config_variable(
             "RECORDED_FUTUTRE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
         )

@@ -319,7 +319,6 @@ class DetectionRule(RFStixEntity):
 class Software(RFStixEntity):
     def __init__(self, name, type_, author):
         self.name = name
-        self.author = author
         self.software_object = None
 
     def to_stix_objects(self):
@@ -331,7 +330,6 @@ class Software(RFStixEntity):
     def create_stix_objects(self):
         self.software_object = stix2.Software(
             name=self.name,
-            author=self.author.id
         )
 
 
