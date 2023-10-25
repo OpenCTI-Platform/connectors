@@ -543,7 +543,7 @@ class StixNote:
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",
-                    "URL",
+                    # "URL", // bug on the RF API when fetching the score of a url
                     "Hash",
                 ]:
                     risk_score = None
