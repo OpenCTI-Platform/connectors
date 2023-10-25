@@ -338,7 +338,6 @@ class Software(RFStixEntity):
 
 
 class Location(RFStixEntity):
-
     rf_type_to_stix = {
         "Country": "Country",
         "City": "City",
@@ -380,7 +379,7 @@ ENTITY_TYPE_MAPPER = {
     "Product": Software,
     # "Source" : Channel
     "Country": Location,
-    "City": Location
+    "City": Location,
 }
 
 # maps RF types to the corresponding url to get the risk score
