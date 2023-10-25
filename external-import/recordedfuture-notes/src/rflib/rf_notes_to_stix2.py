@@ -378,7 +378,7 @@ ENTITY_TYPE_MAPPER = {
     # "Source" : Channel
     "Country": Location,
     "City": Location,
-    "ProvinceOrState": Location
+    "ProvinceOrState": Location,
 }
 
 # maps RF types to the corresponding url to get the risk score
