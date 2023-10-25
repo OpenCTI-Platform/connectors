@@ -5,7 +5,7 @@ This OpenCTI connector allows the ability to create or delete data from your Ope
 
 ### Requirements
 
-- OpenCTI Platform >= 5.11.9
+- OpenCTI Platform >= 5.11.10
 
 ### Configuration
 

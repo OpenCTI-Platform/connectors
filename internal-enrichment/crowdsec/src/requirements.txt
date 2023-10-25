@@ -1,2 +1,2 @@
-pycti==5.11.9
+pycti==5.11.10
 pycountry
