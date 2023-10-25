@@ -71,39 +71,40 @@ class KVStore:
         return r.status_code < 300
 
     def create(self, id: str, payload: dict):
-        payload["_key"] = id
-        r = requests.post(
-            f"{self.collection_url}/data/{self.splunk_kv_store_name}",
-            json=payload,
-            headers=self.headers,
-            verify=self.splunk_ssl_verify,
-        )
-        if r.status_code != 409:
-            r.raise_for_status()
+        if id is not None and payload is not None:
+            payload["_key"] = id
+            r = requests.post(
+                f"{self.collection_url}/data/{self.splunk_kv_store_name}",
+                json=payload,
+                headers=self.headers,
+                verify=self.splunk_ssl_verify,
+            )
+            if r.status_code != 409:
+                r.raise_for_status()
 
     def update(self, id: str, payload: dict):
-        payload["_key"] = id
-
-        r = requests.put(
-            f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
-            json=payload,
-            headers=self.headers,
-            verify=self.splunk_ssl_verify,
-        )
-
-        if r.status_code == 404:
-            self.create(id, payload)
-        else:
-            r.raise_for_status()
+        if id is not None and payload is not None:
+            payload["_key"] = id
+            r = requests.put(
+                f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
+                json=payload,
+                headers=self.headers,
+                verify=self.splunk_ssl_verify,
+            )
+            if r.status_code == 404:
+                self.create(id, payload)
+            else:
+                r.raise_for_status()
 
     def delete(self, id: str):
-        r = requests.delete(
-            f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
-            headers=self.headers,
-            verify=self.splunk_ssl_verify,
-        )
-        if r.status_code != 404:
-            r.raise_for_status()
+        if id is not None:
+            r = requests.delete(
+                f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
+                headers=self.headers,
+                verify=self.splunk_ssl_verify,
+            )
+            if r.status_code != 404:
+                r.raise_for_status()
 
 
 class Metrics:
