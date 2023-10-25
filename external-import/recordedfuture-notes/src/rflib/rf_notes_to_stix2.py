@@ -11,8 +11,10 @@
 
 from datetime import datetime
 
-import pycti
+import pycti  # type: ignore
 import stix2
+
+from pycti.utils.constants import LocationTypes  # type: ignore
 
 TLP_MAP = {
     "white": stix2.TLP_WHITE,
@@ -334,6 +336,43 @@ class Software(RFStixEntity):
             name=self.name,
         )
 
+# TODO => Channel not created in stix2 sdo.py
+# class Channel(RFStixEntity):
+#     def __init__(self, name, type_, author):
+#         self.name = name
+#         self.channel_object = None
+#
+#     def to_stix_objects(self):
+#         """Returns a list of STIX objects"""
+#         if not self.channel_object:
+#             self.create_stix_objects()
+#         return [self.channel_object]
+#
+#     def create_stix_objects(self):
+#         self.channel_object = stix2.Channel(
+#             name=self.name,
+#         )
+
+class Location(RFStixEntity):
+
+    def __init__(self, name, type_, author):
+        self.name = name
+        self.type = type_
+        self.location_object = None
+
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.location_object:
+            self.create_stix_objects()
+        return [self.location_object]
+
+    def create_stix_objects(self):
+        self.location_object = stix2.Location(
+            name=self.name,
+            country=self.name,
+            custom_properties={"x_opencti_location_type": self.type},
+        )
+
 
 # maps RF types to the corresponding python object
 ENTITY_TYPE_MAPPER = {
@@ -349,6 +388,9 @@ ENTITY_TYPE_MAPPER = {
     "Malware": Malware,
     "CyberVulnerability": Vulnerability,
     "Product": Software,
+    # "Source" : Channel
+    "Country": Location,
+    "City": Location
 }
 
 # maps RF types to the corresponding url to get the risk score
