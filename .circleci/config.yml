@@ -113,10 +113,6 @@ jobs:
           name: Build Docker image opencti/connector-cve
           command: docker build -t opencti/connector-cve:latest . && docker tag opencti/connector-cve:latest opencti/connector-cve:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/amitt
-          name: Build Docker image opencti/connector-amitt
-          command: docker build -t opencti/connector-amitt:latest . && docker tag opencti/connector-amitt:latest opencti/connector-amitt:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/external-import/sentinelone-threats
           name: Build Docker image opencti/connector-sentinelone-threats
           command: docker build -t opencti/connector-sentinelone-threats:latest . && docker tag opencti/connector-sentinelone-threats:latest opencti/connector-sentinelone-threats:${CIRCLE_TAG}
@@ -298,8 +294,6 @@ jobs:
             docker push opencti/connector-opencti:${CIRCLE_TAG}
             docker push opencti/connector-cve:latest
             docker push opencti/connector-cve:${CIRCLE_TAG}
-            docker push opencti/connector-amitt:latest
-            docker push opencti/connector-amitt:${CIRCLE_TAG}
             docker push opencti/connector-sentinelone-threats:latest
             docker push opencti/connector-sentinelone-threats:${CIRCLE_TAG}
             docker push opencti/connector-ipinfo:latest
@@ -787,10 +781,6 @@ jobs:
           name: Build Docker image opencti/connector-cve
           command: docker build -t opencti/connector-cve:rolling .
       - run:
-          working_directory: ~/opencti/external-import/amitt
-          name: Build Docker image opencti/connector-amitt
-          command: docker build -t opencti/connector-amitt:rolling .
-      - run:
           working_directory: ~/opencti/internal-enrichment/ipinfo
           name: Build Docker image opencti/connector-ipinfo
           command: docker build -t opencti/connector-ipinfo:rolling .
@@ -952,7 +942,6 @@ jobs:
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling
             docker push opencti/connector-cve:rolling
-            docker push opencti/connector-amitt:rolling
             docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-virustotal:rolling
             docker push opencti/connector-virustotal-downloader:rolling
