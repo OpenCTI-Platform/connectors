@@ -336,22 +336,6 @@ class Software(RFStixEntity):
             name=self.name,
         )
 
-# TODO => Channel not created in stix2 sdo.py
-# class Channel(RFStixEntity):
-#     def __init__(self, name, type_, author):
-#         self.name = name
-#         self.channel_object = None
-#
-#     def to_stix_objects(self):
-#         """Returns a list of STIX objects"""
-#         if not self.channel_object:
-#             self.create_stix_objects()
-#         return [self.channel_object]
-#
-#     def create_stix_objects(self):
-#         self.channel_object = stix2.Channel(
-#             name=self.name,
-#         )
 
 class Location(RFStixEntity):
 
