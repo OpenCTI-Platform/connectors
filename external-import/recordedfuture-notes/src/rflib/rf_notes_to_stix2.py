@@ -339,9 +339,15 @@ class Software(RFStixEntity):
 
 class Location(RFStixEntity):
 
+    rf_type_to_stix = {
+        "Country": "Country",
+        "City": "City",
+        "ProvinceOrState": "Administrative-Area",
+    }
+
     def __init__(self, name, type_, author):
         self.name = name
-        self.type = type_
+        self.type = self.rf_type_to_stix[type_]
         self.location_object = None
 
     def to_stix_objects(self):
