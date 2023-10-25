@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-recordedfuture-feed:
-    image: opencti/connector-recordedfuture-feeds:5.11.10
+    image: opencti/connector-recordedfuture-feeds:5.11.11
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

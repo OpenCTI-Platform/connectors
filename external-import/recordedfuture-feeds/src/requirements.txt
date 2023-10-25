@@ -1,4 +1,4 @@
-pycti==5.11.10
+pycti==5.11.11
 stix2
 requests
 pytest
