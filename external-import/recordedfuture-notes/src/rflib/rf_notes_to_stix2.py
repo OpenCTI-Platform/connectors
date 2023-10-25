@@ -293,7 +293,7 @@ class Vulnerability(RFStixEntity):
 
 
 class DetectionRule(RFStixEntity):
-    """Represents a Yara or SNORT rule"""
+    """Represents a Yara, Sigma or SNORT rule"""
 
     def __init__(self, name, type_, content, author):
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
@@ -492,7 +492,7 @@ class StixNote:
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",
-                    "URL",
+                    # "URL", // bug on the RF API when fetching the score of a url
                     "Hash",
                 ]:
                     risk_score = None
