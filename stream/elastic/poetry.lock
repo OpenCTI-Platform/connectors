@@ -478,13 +478,13 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.11.9"
+version = "5.11.10"
 description = "Python API client for OpenCTI."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.11.9-py3-none-any.whl", hash = "sha256:410556a66a863818a65f16ca8ea03421c6452eb8b7c6cda1c06f48ac1be10a80"},
-    {file = "pycti-5.11.9.tar.gz", hash = "sha256:2cc43c4b4333b012348184b8eec2adfa16cac48035dd000fcb6e66bde35fe14c"},
+    {file = "pycti-5.11.10-py3-none-any.whl", hash = "sha256:6a8df11f960e81675a9fa224d3013ca854e516ad48a083d5988149ac5a082d01"},
+    {file = "pycti-5.11.10.tar.gz", hash = "sha256:327fb02cfea448b9b3f3c6c5759e7fdcdef7f364995126e0c2ac11c0b2940418"},
 ]
 
 [package.dependencies]
@@ -1101,4 +1101,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "bc63c55abdad8afb536adc646333da559f88fa2d30d8813a36b5edbc1c47d4f5"
+content-hash = "5d65bcb9da081b66eec5f6ebb2af50e892540f882ce2077b6360375e9aa5c102"
