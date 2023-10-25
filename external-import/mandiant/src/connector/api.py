@@ -130,12 +130,10 @@ class MandiantAPI:
         mode: str = "json",
     ) -> Iterable[object]:
         url = self._get_endpoint(name=name, item_id=item_id, **parameters)
-
         required_parameters = {param: parameters[param] for param in required}
 
         while True:
             response = self._query(url, self.modes.get(mode))
-
             if response is None:
                 yield response
                 return
