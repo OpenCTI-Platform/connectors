@@ -16,8 +16,7 @@ connector:
 tanium:
   url: 'https://console.changeme.com'
   ssl_verify: true
-  login: 'ChangeMe'
-  password: 'ChangeMe'
+  token: 'ChangeMe'
   hashes_in_reputation: true
   no_hashes_in_intels: true
   auto_quickscan: False # trigger a quick scan when an intel document is imported

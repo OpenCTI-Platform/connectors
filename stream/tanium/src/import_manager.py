@@ -14,7 +14,7 @@ class IntelManager:
     def _add_external_reference(self, data, intel_document_id):
         external_reference = self.helper.api.external_reference.create(
             source_name="Tanium",
-            url=self.tanium_api_handler.get_url()
+            url=self.tanium_api_handler.get_url().replace("-api", "")
             + "/#/threatresponse/intel/"
             + str(intel_document_id),
             external_id=str(intel_document_id),

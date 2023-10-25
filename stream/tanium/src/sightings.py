@@ -25,7 +25,9 @@ class Sightings(threading.Thread):
         self.helper.log_info("[SIGHTINGS] Starting alerts gatherer")
         while True:
             alerts = self.tanium_api_handler._query(
-                "get", "/plugin/products/detect3/api/v1/alerts", {"sort": "-createdAt"}
+                "get",
+                "/plugin/products/threat-response/api/v1/alerts",
+                {"sort": "-createdAt"},
             )
             state = self.helper.get_state()
             if state and "lastAlertTimestamp" in state:

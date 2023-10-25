@@ -29,11 +29,8 @@ class TaniumConnector:
         self.tanium_ssl_verify = get_config_variable(
             "TANIUM_SSL_VERIFY", ["tanium", "ssl_verify"], config, False, True
         )
-        self.tanium_login = get_config_variable(
-            "TANIUM_LOGIN", ["tanium", "login"], config
-        )
-        self.tanium_password = get_config_variable(
-            "TANIUM_PASSWORD", ["tanium", "password"], config
+        self.tanium_token = get_config_variable(
+            "TANIUM_TOKEN", ["tanium", "token"], config
         )
         self.tanium_hashes_in_reputation = get_config_variable(
             "TANIUM_HASHES_IN_REPUTATION",
@@ -49,14 +46,10 @@ class TaniumConnector:
             False,
             True,
         )
-        # Launch quickscan automatically (true/false)
-        self.tanium_auto_quickscan = get_config_variable(
-            "TANIUM_AUTO_QUICKSCAN", ["tanium", "auto_quickscan"], config, False, False
+        # Target computer group of the automatic quickscan (if enable)
+        self.tanium_computer_group = get_config_variable(
+            "TANIUM_COMPUTER_GROUP", ["tanium", "computer_group"], config, False, 2
         )
-        # Target computer groups of the automatic quickscan (if enable)
-        self.tanium_computer_groups = get_config_variable(
-            "TANIUM_COMPUTER_GROUPS", ["tanium", "computer_groups"], config, False, ""
-        ).split(",")
 
         # Check Live Stream ID
         if (
@@ -69,11 +62,9 @@ class TaniumConnector:
         self.tanium_api_handler = TaniumApiHandler(
             self.helper,
             self.tanium_url,
-            self.tanium_login,
-            self.tanium_password,
+            self.tanium_token,
             self.tanium_ssl_verify,
-            self.tanium_auto_quickscan,
-            self.tanium_computer_groups,
+            self.tanium_computer_group,
         )
 
         # Initialize managers

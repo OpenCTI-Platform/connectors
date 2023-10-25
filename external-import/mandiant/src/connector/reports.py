@@ -3,6 +3,7 @@ import itertools
 
 import stix2
 
+from pycti import Note
 from . import utils
 
 
@@ -246,6 +247,7 @@ class Report:
 
         note = utils.generate_note(
             {
+                "id": Note.generate_id(report["created"], text),
                 "abstract": "Analysis",
                 "content": text,
                 "confidence": self.confidence,

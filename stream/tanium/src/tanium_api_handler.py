@@ -13,8 +13,7 @@ class TaniumApiHandler:
         self,
         helper,
         url,
-        login,
-        password,
+        token,
         ssl_verify=True,
         auto_quickscan=False,
         auto_quickscan_computer_groups=[],
@@ -22,53 +21,31 @@ class TaniumApiHandler:
         # Variables
         self.helper = helper
         self.url = url
-        self.login = login
-        self.password = password
+        self.token = token
         self.ssl_verify = ssl_verify
         self.auto_quickscan = auto_quickscan
         self.auto_quickscan_computer_groups = auto_quickscan_computer_groups
 
-        # Session
-        self.session = None
-        self._acquire_session()
-
         # Intelligence documents source
         self.source_id = None
-        sources = self._query("get", "/plugin/products/detect3/api/v1/sources")
+        sources = self._query("get", "/plugin/products/threat-response/api/v1/sources")
         for source in sources:
             if source["name"] == "OpenCTI":
                 self.source_id = str(source["id"])
         if self.source_id is None:
             source = self._query(
                 "post",
-                "/plugin/products/detect3/api/v1/sources",
+                "/plugin/products/threat-response/api/v1/sources",
                 {
                     "type": "api-client",
                     "name": "OpenCTI",
                     "description": "Cyber Threat Intelligence knowledge imported from OpenCTI.",
-                    "canAutoQuickScan": True,
                 },
             )
             self.source_id = str(source["id"])
 
     def get_url(self):
         return self.url
-
-    def _acquire_session(self):
-        payload = {
-            "username": self.login,
-            "password": self.password,
-        }
-        r = requests.post(
-            self.url + "/api/v2/session/login",
-            json=payload,
-            verify=self.ssl_verify,
-        )
-        if r.status_code == 200:
-            result = r.json()
-            self.session = result["data"]["session"]
-        else:
-            raise ValueError("Cannot access or login to the Tanium API")
 
     def _query(
         self,
@@ -77,10 +54,9 @@ class TaniumApiHandler:
         payload=None,
         content_type="application/json",
         type=None,
-        retry=False,
     ):
         self.helper.log_info("Query " + method + " on " + uri)
-        headers = {"session": self.session}
+        headers = {"session": self.token}
         if method != "upload":
             headers["content-type"] = content_type
         if type is not None:
@@ -170,12 +146,9 @@ class TaniumApiHandler:
             raise ValueError("Unsupported method")
         if r.status_code == 200:
             try:
-                return r.json()
+                return r.json()["data"]
             except:
                 return r.text
-        elif r.status_code == 401 and not retry:
-            self._acquire_session()
-            return self._query(method, uri, payload, content_type, type, True)
         elif r.status_code == 401:
             raise ValueError("Query failed, permission denied")
         else:
@@ -191,21 +164,19 @@ class TaniumApiHandler:
             True,
         )
         # Convert the STIX 2 bundle in STIX 1
-        try:
-            initialize_options()
-            stix_indicator = slide_string(stix2_bundle)
-            payload = {"intelDoc": stix_indicator}
-            intel_document = self._query(
-                "post",
-                "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
-                payload,
-                "application/xml",
-                "stix",
-            )
-            return intel_document
-        except Exception as e:
-            self.helper.log_error(str(e))
-            return None
+        initialize_options()
+        stix_indicator = slide_string(stix2_bundle)
+        payload = {"intelDoc": stix_indicator}
+        intel_document = self._query(
+            "post",
+            "/plugin/products/threat-response/api/v1/sources/"
+            + self.source_id
+            + "/intels",
+            payload,
+            "application/xml",
+            "stix",
+        )
+        return intel_document
 
     def update_indicator_stix(self, intel_id, entity):
         # Export to STIX bundle
@@ -223,7 +194,7 @@ class TaniumApiHandler:
             payload = {"intelDoc": stix_indicator}
             intel_document = self._query(
                 "put",
-                "/plugin/products/detect3/api/v1/intels/" + intel_id,
+                "/plugin/products/threat-response/api/v1/intels/" + intel_id,
                 payload,
                 "application/xml",
                 "stix",
@@ -237,7 +208,9 @@ class TaniumApiHandler:
         filename = entity["name"] + ".yara"
         intel_document = self._query(
             "post",
-            "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
+            "/plugin/products/threat-response/api/v1/sources/"
+            + self.source_id
+            + "/intels",
             {
                 "filename": filename,
                 "document": entity["pattern"],
@@ -253,7 +226,7 @@ class TaniumApiHandler:
         filename = entity["name"] + ".yara"
         intel_document = self._query(
             "put",
-            "/plugin/products/detect3/api/v1/intels/" + intel_id,
+            "/plugin/products/threat-response/api/v1/intels/" + intel_id,
             {
                 "filename": filename,
                 "document": entity["pattern"],
@@ -277,7 +250,9 @@ class TaniumApiHandler:
                     )
         intel_document = self._query(
             "post",
-            "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
+            "/plugin/products/threat-response/api/v1/sources/"
+            + self.source_id
+            + "/intels",
             {
                 "name": entity["name"],
                 "description": entity["description"],
@@ -299,7 +274,7 @@ class TaniumApiHandler:
                     )
         intel_document = self._query(
             "put",
-            "/plugin/products/detect3/api/v1/intels/" + intel_id,
+            "/plugin/products/threat-response/api/v1/intels/" + intel_id,
             {
                 "name": entity["name"],
                 "description": entity["description"],
@@ -343,7 +318,7 @@ class TaniumApiHandler:
             return None
         openioc = self._query(
             "post",
-            "/plugin/products/detect3/api/v1/intels/quick-add",
+            "/plugin/products/threat-response/api/v1/intels/quick-add",
             {
                 "exact": True,
                 "name": name,
@@ -364,7 +339,9 @@ class TaniumApiHandler:
         payload = {"intelDoc": openioc}
         intel_document = self._query(
             "post",
-            "/plugin/products/detect3/api/v1/sources/" + self.source_id + "/intels",
+            "/plugin/products/threat-response/api/v1/sources/"
+            + self.source_id
+            + "/intels",
             payload,
             "application/xml",
             "openioc",
@@ -405,7 +382,7 @@ class TaniumApiHandler:
             return None
         openioc = self._query(
             "post",
-            "/plugin/products/detect3/api/v1/intels/quick-add",
+            "/plugin/products/threat-response/api/v1/intels/quick-add",
             {
                 "exact": True,
                 "name": name,
@@ -426,7 +403,7 @@ class TaniumApiHandler:
         payload = {"intelDoc": openioc}
         intel_document = self._query(
             "put",
-            "/plugin/products/detect3/api/v1/intels/" + intel_id,
+            "/plugin/products/threat-response/api/v1/intels/" + intel_id,
             payload,
             "application/xml",
             "openioc",
@@ -476,7 +453,7 @@ class TaniumApiHandler:
     def delete_intel(self, intel_id):
         self._query(
             "delete",
-            "/plugin/products/detect3/api/v1/intels/?id=" + intel_id,
+            "/plugin/products/threat-response/api/v1/intels/?id=" + intel_id,
         )
 
     def delete_reputation(self, reputation_id):
@@ -490,7 +467,7 @@ class TaniumApiHandler:
             for computer_group in self.auto_quickscan_computer_groups:
                 self._query(
                     "post",
-                    "/plugin/products/detect3/api/v1/quick-scans",
+                    "/plugin/products/threat-response/api/v1/quick-scans",
                     {
                         "computerGroupId": int(computer_group),
                         "intelDocId": intel_document_id,
@@ -500,14 +477,16 @@ class TaniumApiHandler:
     def add_label(self, intel_id, label):
         self._query(
             "put",
-            "/plugin/products/detect3/api/v1/intels/" + str(intel_id) + "/labels",
+            "/plugin/products/threat-response/api/v1/intels/"
+            + str(intel_id)
+            + "/labels",
             {"id": label["id"]},
         )
 
     def get_labels(self, labels):
         # List labels
         tanium_labels = self._query(
-            "get", "/plugin/products/detect3/api/v1/labels", {"limit": 500}
+            "get", "/plugin/products/threat-response/api/v1/labels", {"limit": 500}
         )
         tanium_labels_dict = {}
         for tanium_label in tanium_labels:
@@ -521,7 +500,7 @@ class TaniumApiHandler:
             else:
                 created_label = self._query(
                     "post",
-                    "/plugin/products/detect3/api/v1/labels",
+                    "/plugin/products/threat-response/api/v1/labels",
                     {
                         "name": label,
                         "description": "Label imported from OpenCTI",
