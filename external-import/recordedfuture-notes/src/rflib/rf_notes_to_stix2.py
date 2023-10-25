@@ -360,6 +360,12 @@ class Location(RFStixEntity):
         "ProvinceOrState": "Administrative-Area",
     }
 
+    rf_type_to_stix = {
+        "Country": "Country",
+        "City": "City",
+        "ProvinceOrState": "Administrative-Area",
+    }
+
     def __init__(self, name, type_, author):
         self.name = name
         self.type = self.rf_type_to_stix[type_]
