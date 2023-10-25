@@ -360,10 +360,8 @@ class Location(RFStixEntity):
             custom_properties={"x_opencti_location_type": self.type},
         )
 
-
 # maps RF types to the corresponding python object
 ENTITY_TYPE_MAPPER = {
-    # TODO: add more supported types, starting with location
     "IpAddress": IPAddress,
     "InternetDomainName": Domain,
     "URL": URL,
@@ -487,6 +485,9 @@ class StixNote:
                     stix_objs = IntrusionSet(name, type_, self.author).to_stix_objects()
                 else:
                     stix_objs = ThreatActor(name, type_, self.author).to_stix_objects()
+            elif type_ == "Source":
+                external_reference = {"source_name": name, "url": name}
+                self.external_references.append(external_reference)
             elif type_ not in ENTITY_TYPE_MAPPER:
                 msg = f"Cannot convert entity {name} to STIX2 because it is of type {type_}"
                 self.helper.log_warning(msg)
