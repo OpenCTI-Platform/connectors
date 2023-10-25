@@ -14,8 +14,6 @@ from datetime import datetime
 import pycti  # type: ignore
 import stix2
 
-from pycti.utils.constants import LocationTypes  # type: ignore
-
 TLP_MAP = {
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
@@ -380,6 +378,7 @@ ENTITY_TYPE_MAPPER = {
     # "Source" : Channel
     "Country": Location,
     "City": Location,
+    "ProvinceOrState": Location
 }
 
 # maps RF types to the corresponding url to get the risk score
