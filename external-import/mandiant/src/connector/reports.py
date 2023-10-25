@@ -2,8 +2,8 @@ import base64
 import itertools
 
 import stix2
-
 from pycti import Note
+
 from . import utils
 
 
