@@ -360,6 +360,7 @@ class Location(RFStixEntity):
             custom_properties={"x_opencti_location_type": self.type},
         )
 
+
 # maps RF types to the corresponding python object
 ENTITY_TYPE_MAPPER = {
     "IpAddress": IPAddress,
