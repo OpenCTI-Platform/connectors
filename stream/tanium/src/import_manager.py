@@ -81,6 +81,7 @@ class IntelManager:
                 str(intel_document["id"]),
             )
             self._add_external_reference(data, str(intel_document["id"]))
+            self.tanium_api_handler.deploy_intel()
             self.tanium_api_handler.trigger_quickscan(intel_document["id"])
             if len(data["labels"]) > 0:
                 labels = self.tanium_api_handler.get_labels(data["labels"])
@@ -135,6 +136,7 @@ class IntelManager:
                 str(intel_document["id"]),
             )
             self._add_external_reference(data, str(intel_document["id"]))
+            self.tanium_api_handler.deploy_intel()
             self.tanium_api_handler.trigger_quickscan(intel_document["id"])
             if (
                 OpenCTIConnectorHelper.get_attribute_in_extension("labels", data)

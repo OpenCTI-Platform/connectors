@@ -15,16 +15,16 @@ class TaniumApiHandler:
         url,
         token,
         ssl_verify=True,
-        auto_quickscan=False,
-        auto_quickscan_computer_groups=[],
+        auto_ondemand_scan=False,
+        auto_ondemand_scan_computer_groups=[],
     ):
         # Variables
         self.helper = helper
         self.url = url
         self.token = token
         self.ssl_verify = ssl_verify
-        self.auto_quickscan = auto_quickscan
-        self.auto_quickscan_computer_groups = auto_quickscan_computer_groups
+        self.auto_ondemand_scan = auto_ondemand_scan
+        self.auto_ondemand_scan_computer_groups = auto_ondemand_scan_computer_groups
 
         # Intelligence documents source
         self.source_id = None
@@ -163,6 +163,9 @@ class TaniumApiHandler:
             None,
             True,
         )
+        stix_entity = [e for e in stix2_bundle["objects"] if e["id"] == entity["id"]][0]
+        if "indicator_types" not in stix_entity:
+            stix_entity["indicator_types"] = "unknown"
         # Convert the STIX 2 bundle in STIX 1
         initialize_options()
         stix_indicator = slide_string(stix2_bundle)
@@ -462,12 +465,15 @@ class TaniumApiHandler:
             "/plugin/products/reputation/v3/reputations/custom/" + reputation_id,
         )
 
+    def deploy_intel(self):
+        self._query("post", "/plugin/products/threat-response/api/v1/intel/deploy")
+
     def trigger_quickscan(self, intel_document_id):
-        if self.auto_quickscan:
-            for computer_group in self.auto_quickscan_computer_groups:
+        if self.auto_ondemand_scan:
+            for computer_group in self.auto_ondemand_scan_computer_groups:
                 self._query(
                     "post",
-                    "/plugin/products/threat-response/api/v1/quick-scans",
+                    "/plugin/products/threat-response/api/v1/on-demand-scans",
                     {
                         "computerGroupId": int(computer_group),
                         "intelDocId": intel_document_id,

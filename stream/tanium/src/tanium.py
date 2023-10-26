@@ -46,10 +46,17 @@ class TaniumConnector:
             False,
             True,
         )
-        # Target computer group of the automatic quickscan (if enable)
-        self.tanium_computer_group = get_config_variable(
-            "TANIUM_COMPUTER_GROUP", ["tanium", "computer_group"], config, False, 2
+        self.tanium_auto_ondemand_scan = get_config_variable(
+            "TANIUM_AUTO_ONDEMAND_SCAN",
+            ["tanium", "ondemand_scan"],
+            config,
+            False,
+            True,
         )
+        # Target computer group of the automatic quickscan (if enable)
+        self.tanium_computer_groups = get_config_variable(
+            "TANIUM_COMPUTER_GROUPS", ["tanium", "computer_groups"], config, False, "1"
+        ).split(",")
 
         # Check Live Stream ID
         if (
@@ -64,7 +71,8 @@ class TaniumConnector:
             self.tanium_url,
             self.tanium_token,
             self.tanium_ssl_verify,
-            self.tanium_computer_group,
+            self.tanium_auto_ondemand_scan,
+            self.tanium_computer_groups,
         )
 
         # Initialize managers
