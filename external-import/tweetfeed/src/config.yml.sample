@@ -14,7 +14,7 @@ tweetfeed:
   create_indicators: True
   create_observables: True
   interval: 1 # In days, must be strictly greater than 1
-  update_existing_data: True
+  update_existing_data: false
   org_description: 'Tweetfeed, a connector to import IOC from Twitter.'
   org_name: 'Tweetfeed'
   days_back_in_time: 30

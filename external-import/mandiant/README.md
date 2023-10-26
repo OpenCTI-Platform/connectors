@@ -14,6 +14,7 @@ The connector can be configured with the following variables:
 | `MANDIANT_INTERVAL` | 1 | Number of the days between each collection. |
 | `MANDIANT_IMPORT_START_DATE` | 2023-01-01 | Date to start collect data |
 | `MANDIANT_INDICATOR_MINIMUM_SCORE` | 80 | Minimum score (based on mscore) that an indicator must have to be processed |
+| `MANDIANT_CREATE_NOTES` | False | Create notes |
 | `MANDIANT_IMPORT_ACTORS` | True | Enable to collect actors |
 | `MANDIANT_IMPORT_REPORTS` | True | Enable to collect reports |
 | `MANDIANT_IMPORT_MALWARES` | True | Enable to collect malwares |
