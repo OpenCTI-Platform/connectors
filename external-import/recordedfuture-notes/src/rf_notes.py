@@ -156,6 +156,7 @@ class RFNotes:
                 self.risk_threshold,
             )
             stixnote.from_json(note)
+            stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
                 "Sending Bundle to server with " + str(len(bundle.objects)) + " objects"

@@ -532,6 +532,60 @@ class StixNote:
             )
             self.objects.extend(rule.to_stix_objects())
 
+    RELATIONSHIPS_MAPPER = [
+        {
+            "from": "threat-actor",
+            "to": [
+                {
+                    "entity": "vulnerability",
+                    "relation": "targets"
+                },
+                {
+                    "entity": "malware",
+                    "relation": "uses"
+                },
+                {
+                    "entity": "attack-pattern",
+                    "relation": "uses"
+                },
+                {
+                    "entity": "location",
+                    "relation": "targets"
+                },
+            ]
+
+        },
+        {
+            "from": "intrusion-set",
+            "to": [
+                {
+                    "entity": "vulnerability",
+                    "relation": "targets"
+                },
+                {
+                    "entity": "malware",
+                    "relation": "uses"
+                },
+                {
+                    "entity": "attack-pattern",
+                    "relation": "uses"
+                },
+                {
+                    "entity": "location",
+                    "relation": "targets"
+                },
+            ]
+
+        }
+    ]
+    def create_relations(self):
+        for entity in self.objects:
+            entity_possible_relationships = (list(filter(lambda obj: obj["from"] == entity["type"], self.RELATIONSHIPS_MAPPER)))[0]
+            for element in entity_possible_relationships["to"]:
+                test = list(filter(lambda obj: obj["type"] == element["entity"], self.objects))
+                print(test)
+
+
     def _create_report_types(self, topics):
         """Converts Insikt Topics to STIX2 Report types"""
         ret = set()
