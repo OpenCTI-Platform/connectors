@@ -537,12 +537,12 @@ class StixNote:
             "from": "threat-actor",
             "to": [
                 {
-                    "entity": "vulnerability",
-                    "relation": "targets"
-                },
-                {
                     "entity": "malware",
                     "relation": "uses"
+                },
+                {
+                    "entity": "vulnerability",
+                    "relation": "targets"
                 },
                 {
                     "entity": "attack-pattern",
@@ -550,6 +550,10 @@ class StixNote:
                 },
                 {
                     "entity": "location",
+                    "relation": "targets"
+                },
+                {
+                    "entity": "sector",
                     "relation": "targets"
                 },
             ]
@@ -559,12 +563,12 @@ class StixNote:
             "from": "intrusion-set",
             "to": [
                 {
-                    "entity": "vulnerability",
-                    "relation": "targets"
-                },
-                {
                     "entity": "malware",
                     "relation": "uses"
+                },
+                {
+                    "entity": "vulnerability",
+                    "relation": "targets"
                 },
                 {
                     "entity": "attack-pattern",
@@ -574,16 +578,69 @@ class StixNote:
                     "entity": "location",
                     "relation": "targets"
                 },
+                {
+                    "entity": "sector",
+                    "relation": "targets"
+                },
+            ]
+
+        },
+        {
+            "from": "indicator",
+            "to": [
+                {
+                    "entity": "malware",
+                    "relation": "indicates"
+                },
+                {
+                    "entity": "threat-actor",
+                    "relation": "indicates"
+                },
+            ]
+
+        },
+        {
+            "from": "malware",
+            "to": [
+                {
+                    "entity": "attack-pattern",
+                    "relation": "uses"
+                },
+                {
+                    "entity": "location",
+                    "relation": "targets"
+                },
+                {
+                    "entity": "sector",
+                    "relation": "targets"
+                },
             ]
 
         }
     ]
+
+    def _create_rel(self, from_id, to_id, relation):
+        """Creates Relationship object"""
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relation, from_id, to_id
+            ),
+            relationship_type=relation,
+            source_ref= from_id,
+            target_ref=to_id,
+            created_by_ref=self.author.id,
+        )
+
     def create_relations(self):
-        for entity in self.objects:
-            entity_possible_relationships = (list(filter(lambda obj: obj["from"] == entity["type"], self.RELATIONSHIPS_MAPPER)))[0]
-            for element in entity_possible_relationships["to"]:
-                test = list(filter(lambda obj: obj["type"] == element["entity"], self.objects))
-                print(test)
+        relationships = []
+        for source_entity in self.objects:
+            entity_possible_relationships = (list(filter(lambda obj: obj["from"] == source_entity["type"], self.RELATIONSHIPS_MAPPER)))
+            if len(entity_possible_relationships) != 0:
+                for to_entity in entity_possible_relationships[0]["to"]:
+                    target_entities = list(filter(lambda obj: obj["type"] == to_entity["entity"], self.objects))
+                    for target_entity in target_entities:
+                        relationships.append(self._create_rel(source_entity["id"], target_entity["id"], to_entity["relation"]))
+        self.objects.extend(relationships)
 
 
     def _create_report_types(self, topics):
