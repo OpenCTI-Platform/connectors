@@ -37,6 +37,7 @@ def process(connector, report):
         identity=connector.identity,
         report_type=connector.mandiant_report_types[report_type],
         report_link=report["report_link"],
+        create_notes=connector.mandiant_create_notes,
     )
 
     bundle = report.generate()
@@ -51,7 +52,15 @@ def process(connector, report):
 
 class Report:
     def __init__(
-        self, bundle, details, pdf, confidence, identity, report_type, report_link
+        self,
+        bundle,
+        details,
+        pdf,
+        confidence,
+        identity,
+        report_type,
+        report_link,
+        create_notes,
     ):
         self.bundle = bundle
         self.details = details
@@ -61,6 +70,7 @@ class Report:
         self.report_id = details.get("report_id", details.get("reportId", None))
         self.report_type = report_type
         self.report_link = report_link
+        self.create_notes = create_notes
 
     def generate(self):
         self.save_files()
@@ -70,8 +80,9 @@ class Report:
         self.update_report()
         self.update_intrusionset()
         self.update_vulnerability()
-        self.create_note()
         self.create_relationships()
+        if self.create_notes:
+            self.create_note()
         return stix2.parse(self.bundle, allow_custom=True)
 
     def save_files(self):

@@ -49,6 +49,12 @@ class Mandiant:
             config,
             default="2023-01-01",
         )
+        self.mandiant_create_notes = get_config_variable(
+            "MANDIANT_CREATE_NOTES",
+            ["mandiant", "create_notes"],
+            config,
+            default=False,
+        )
 
         self.mandiant_collections = []
 
