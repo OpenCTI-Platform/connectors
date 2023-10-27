@@ -214,7 +214,7 @@ class Identity(RFStixEntity):
         "Company": "organization",
         "Organization": "organization",
         "Person": "individual",
-        "Industry": "class"
+        "Industry": "class",
     }
 
     def create_stix_objects(self):
@@ -378,7 +378,7 @@ ENTITY_TYPE_MAPPER = {
     "Country": Location,
     "City": Location,
     "ProvinceOrState": Location,
-    "Industry": Identity
+    "Industry": Identity,
 }
 
 # maps RF types to the corresponding url to get the risk score
@@ -538,95 +538,44 @@ class StixNote:
         {
             "from": "threat-actor",
             "to": [
-                {
-                    "entity": "malware",
-                    "relation": "uses"
-                },
-                {
-                    "entity": "vulnerability",
-                    "relation": "targets"
-                },
-                {
-                    "entity": "attack-pattern",
-                    "relation": "uses"
-                },
-                {
-                    "entity": "location",
-                    "relation": "targets"
-                },
-                {
-                    "entity": "identity",
-                    "relation": "targets"
-                }
-            ]
-
+                {"entity": "malware", "relation": "uses"},
+                {"entity": "vulnerability", "relation": "targets"},
+                {"entity": "attack-pattern", "relation": "uses"},
+                {"entity": "location", "relation": "targets"},
+                {"entity": "identity", "relation": "targets"},
+            ],
         },
         {
             "from": "intrusion-set",
             "to": [
-                {
-                    "entity": "malware",
-                    "relation": "uses"
-                },
-                {
-                    "entity": "vulnerability",
-                    "relation": "targets"
-                },
-                {
-                    "entity": "attack-pattern",
-                    "relation": "uses"
-                },
-                {
-                    "entity": "location",
-                    "relation": "targets"
-                },
-                {
-                    "entity": "identity",
-                    "relation": "targets"
-                }
-            ]
-
+                {"entity": "malware", "relation": "uses"},
+                {"entity": "vulnerability", "relation": "targets"},
+                {"entity": "attack-pattern", "relation": "uses"},
+                {"entity": "location", "relation": "targets"},
+                {"entity": "identity", "relation": "targets"},
+            ],
         },
         {
             "from": "indicator",
             "to": [
-                {
-                    "entity": "malware",
-                    "relation": "indicates"
-                },
-                {
-                    "entity": "threat-actor",
-                    "relation": "indicates"
-                },
-            ]
-
+                {"entity": "malware", "relation": "indicates"},
+                {"entity": "threat-actor", "relation": "indicates"},
+            ],
         },
         {
             "from": "malware",
             "to": [
-                {
-                    "entity": "attack-pattern",
-                    "relation": "uses"
-                },
-                {
-                    "entity": "location",
-                    "relation": "targets"
-                },
-                {
-                    "entity": "identity",
-                    "relation": "targets"
-                }
-            ]
-
-        }
+                {"entity": "attack-pattern", "relation": "uses"},
+                {"entity": "location", "relation": "targets"},
+                {"entity": "identity", "relation": "targets"},
+            ],
+        },
     ]
 
     def _create_rel(self, from_id, to_id, relation):
         """Creates Relationship object"""
         return stix2.Relationship(
-            id=pycti.StixCoreRelationship.generate_id(
-                relation, from_id, to_id
-            ),
+            id=pycti.StixCoreRelationship.generate_id(relation, from_id, to_id),
             relationship_type=relation,
             source_ref=from_id,
             target_ref=to_id,
@@ -636,14 +585,28 @@ class StixNote:
     def create_relations(self):
         relationships = []
         for source_entity in self.objects:
-            entity_possible_relationships = (list(filter(lambda obj: obj["from"] == source_entity["type"], self.RELATIONSHIPS_MAPPER)))
+            entity_possible_relationships = list(
+                filter(
+                    lambda obj: obj["from"] == source_entity["type"],
+                    self.RELATIONSHIPS_MAPPER,
+                )
+            )
             if len(entity_possible_relationships) != 0:
                 for to_entity in entity_possible_relationships[0]["to"]:
-                    target_entities = list(filter(lambda obj: obj["type"] == to_entity["entity"], self.objects))
+                    target_entities = list(
+                        filter(
+                            lambda obj: obj["type"] == to_entity["entity"], self.objects
+                        )
+                    )
                     for target_entity in target_entities:
-                        relationships.append(self._create_rel(source_entity["id"], target_entity["id"], to_entity["relation"]))
+                        relationships.append(
+                            self._create_rel(
+                                source_entity["id"],
+                                target_entity["id"],
+                                to_entity["relation"],
+                            )
+                        )
         self.objects.extend(relationships)
-
 
     def _create_report_types(self, topics):
         """Converts Insikt Topics to STIX2 Report types"""
