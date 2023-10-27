@@ -255,7 +255,7 @@ class SplunkConnector:
         # processing message
         try:
             self._consume()
-        except Exception as e:
+        except Exception:
             error_msg = traceback.format_exc()
             self.helper.log_error("An error occurred while consuming messages")
             self.helper.log_error(error_msg)
