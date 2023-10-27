@@ -362,6 +362,24 @@ class Location(RFStixEntity):
         )
 
 
+class Campaign(RFStixEntity):
+
+    def __init__(self, name, type_, author):
+        self.name = name
+        self.campaign_object = None
+
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.campaign_object:
+            self.create_stix_objects()
+        return [self.campaign_object]
+
+    def create_stix_objects(self):
+        self.campaign_object = stix2.Campaign(
+            name=self.name,
+        )
+
+
 # maps RF types to the corresponding python object
 ENTITY_TYPE_MAPPER = {
     "IpAddress": IPAddress,
@@ -379,6 +397,7 @@ ENTITY_TYPE_MAPPER = {
     "City": Location,
     "ProvinceOrState": Location,
     "Industry": Identity,
+    "Operation": Campaign
 }
 
 # maps RF types to the corresponding url to get the risk score
