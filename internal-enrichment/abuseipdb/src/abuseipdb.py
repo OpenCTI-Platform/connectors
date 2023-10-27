@@ -24,7 +24,7 @@ class AbuseIPDBConnector:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
         self.api_key = get_config_variable(
             "ABUSEIPDB_API_KEY", ["abuseipdb", "api_key"], config
         )
