@@ -279,9 +279,11 @@ class Report:
 
     def update_country(self):
         for location in utils.retrieve_all(self.bundle, "type", "location"):
-            location.update(
-                {"country": location["name"], "x_opencti_location_type": "Country"}
-            )
+            location.update({"x_opencti_location_type": "Country"})
+            if "country" not in location and "name" in location:
+                location.update({"country": location["name"]})
+            else:
+                location.update({"country": "Unknown"})
 
     def convert_threat_actor_to_intrusion_set(self):
         for item in utils.retrieve_all(self.bundle, "type", "threat-actor"):
