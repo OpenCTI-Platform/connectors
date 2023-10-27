@@ -5,6 +5,7 @@
 import json
 import logging
 import os
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
@@ -211,6 +212,9 @@ class SplunkConnector:
                         payload["mapped_values"] = []
 
             # add creator's name
+            payload["values"] = sum(
+                [list(value.values()) for value in payload["mapped_values"]], []
+            )
             created_by = payload.get("created_by_ref", None)
             if created_by is not None:
                 org_name = self.get_org_name(created_by)
@@ -252,21 +256,21 @@ class SplunkConnector:
         try:
             self._consume()
         except Exception as e:
-            self.helper.log_error("an error occurred while consuming messages")
-            self.helper.log_error(e)
+            error_msg = traceback.format_exc()
+            self.helper.log_error("An error occurred while consuming messages")
+            self.helper.log_error(error_msg)
             os._exit(1)  # exit the current process, killing all threads
 
     def _consume(self):
         while True:
             msg = self.queue.get()
-
             payload = json.loads(msg.data)["data"]
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
-            self.helper.log_debug(f"processing message with id {id}")
+            self.helper.log_info(f"processing message with id {id}")
 
             if self.is_filtered(payload):
-                self.helper.log_debug(f"item with id {id} is filtered")
+                self.helper.log_info(f"item with id {id} is filtered")
                 continue
 
             payload = self.enrich_payload(payload)
@@ -274,14 +278,14 @@ class SplunkConnector:
             match msg.event:
                 case "create":
                     self.kvstore.create(id, payload)
-                    self.helper.log_debug(f"kvstore item with id {id} created")
+                    self.helper.log_info(f"kvstore item with id {id} created")
 
                 case "update":
                     self.kvstore.update(id, payload)
-                    self.helper.log_debug(f"kvstore item with id {id} updated")
+                    self.helper.log_info(f"kvstore item with id {id} updated")
 
                 case "delete":
-                    self.helper.log_debug(f"kvstore item with id {id} deleted")
+                    self.helper.log_info(f"kvstore item with id {id} deleted")
                     self.kvstore.delete(id)
 
             if self.metrics is not None:
