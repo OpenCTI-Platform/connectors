@@ -363,7 +363,6 @@ class Location(RFStixEntity):
 
 
 class Campaign(RFStixEntity):
-
     def __init__(self, name, type_, author):
         self.name = name
         self.campaign_object = None
@@ -397,7 +396,7 @@ ENTITY_TYPE_MAPPER = {
     "City": Location,
     "ProvinceOrState": Location,
     "Industry": Identity,
-    "Operation": Campaign
+    "Operation": Campaign,
 }
 
 # maps RF types to the corresponding url to get the risk score
