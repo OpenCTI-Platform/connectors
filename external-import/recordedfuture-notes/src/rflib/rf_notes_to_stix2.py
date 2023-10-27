@@ -214,6 +214,7 @@ class Identity(RFStixEntity):
         "Company": "organization",
         "Organization": "organization",
         "Person": "individual",
+        "Industry": "class"
     }
 
     def create_stix_objects(self):
@@ -374,10 +375,10 @@ ENTITY_TYPE_MAPPER = {
     "Malware": Malware,
     "CyberVulnerability": Vulnerability,
     "Product": Software,
-    # "Source" : Channel
     "Country": Location,
     "City": Location,
     "ProvinceOrState": Location,
+    "Industry": Identity
 }
 
 # maps RF types to the corresponding url to get the risk score
@@ -489,6 +490,7 @@ class StixNote:
             elif type_ == "Source":
                 external_reference = {"source_name": name, "url": name}
                 self.external_references.append(external_reference)
+                continue
             elif type_ not in ENTITY_TYPE_MAPPER:
                 msg = f"Cannot convert entity {name} to STIX2 because it is of type {type_}"
                 self.helper.log_warning(msg)
@@ -553,9 +555,9 @@ class StixNote:
                     "relation": "targets"
                 },
                 {
-                    "entity": "sector",
+                    "entity": "identity",
                     "relation": "targets"
-                },
+                }
             ]
 
         },
@@ -579,9 +581,9 @@ class StixNote:
                     "relation": "targets"
                 },
                 {
-                    "entity": "sector",
+                    "entity": "identity",
                     "relation": "targets"
-                },
+                }
             ]
 
         },
@@ -611,9 +613,9 @@ class StixNote:
                     "relation": "targets"
                 },
                 {
-                    "entity": "sector",
+                    "entity": "identity",
                     "relation": "targets"
-                },
+                }
             ]
 
         }
@@ -626,7 +628,7 @@ class StixNote:
                 relation, from_id, to_id
             ),
             relationship_type=relation,
-            source_ref= from_id,
+            source_ref=from_id,
             target_ref=to_id,
             created_by_ref=self.author.id,
         )
