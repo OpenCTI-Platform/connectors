@@ -182,7 +182,7 @@ class AbuseIPDBConnector:
                 )
                 stix_objects.append(sighting)
         serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
-        self.helper.send_stix2_bundle(serialized_bundle, update=True)
+        self.helper.send_stix2_bundle(serialized_bundle)
         return "IP found in AbuseIPDB, knowledge attached."
 
     # Start the main loop

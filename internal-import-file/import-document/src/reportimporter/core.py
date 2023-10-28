@@ -616,7 +616,6 @@ class ReportImporter:
             bundle = stix2.Bundle(objects=final_objects, allow_custom=True).serialize()
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle=bundle,
-                update=True,
                 bypass_validation=bypass_validation,
                 file_name=file_name + ".json",
                 entity_id=entity["id"] if entity is not None else None,

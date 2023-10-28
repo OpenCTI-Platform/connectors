@@ -39,7 +39,6 @@ class MalBeaconConnector:
             campaigns in the wild who are logging in to these malware C2 \
             panels can now be tracked. MalBeacon is a tool for the good guys \
             that provides additional intelligence on attack attribution.""",
-            update=True,
         )
 
     def _process_observable(self, observable) -> str:
