@@ -35,6 +35,7 @@ class IpInfoConnector:
             country=country.official_name
             if hasattr(country, "official_name")
             else country.name,
+            confidence=self.helper.connect_confidence_level,
             custom_properties={
                 "x_opencti_location_type": "Country",
                 "x_opencti_aliases": [
@@ -54,6 +55,7 @@ class IpInfoConnector:
             else country.name,
             latitude=loc_split[0],
             longitude=loc_split[1],
+            confidence=self.helper.connect_confidence_level,
             custom_properties={"x_opencti_location_type": "City"},
         )
         stix_objects.append(city_location)
@@ -64,6 +66,7 @@ class IpInfoConnector:
             relationship_type="located-at",
             source_ref=city_location.id,
             target_ref=country_location.id,
+            confidence=self.helper.connect_confidence_level,
         )
         stix_objects.append(city_to_country)
         observable_to_city = stix2.Relationship(
@@ -123,7 +126,7 @@ class IpInfoConnector:
         bundle = self._generate_stix_bundle(
             stix_objects, stix_entity, country, json_data["city"], json_data["loc"]
         )
-        bundles_sent = self.helper.send_stix2_bundle(bundle, update=True)
+        bundles_sent = self.helper.send_stix2_bundle(bundle)
         return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
 
     # Start the main loop

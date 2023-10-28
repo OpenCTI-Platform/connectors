@@ -148,7 +148,6 @@ class TweetFeed:
             description=self.org_desc,
             externalReferences=[external_reference_org["id"]],
             contact_information="'TWITTER: https://twitter.com/0xDanielLopez'",
-            update=True,
         )
         self.update_existing_data = get_config_variable(
             "TWEETFEED_UPDATE_EXISTING_DATA",

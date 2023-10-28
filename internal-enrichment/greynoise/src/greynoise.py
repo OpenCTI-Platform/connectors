@@ -94,7 +94,6 @@ class GreyNoiseConnector:
             external_reference = self.helper.api.external_reference.create(
                 source_name=self.greynoise_ent_name,
                 url="https://www.greynoise.io/viz/ip/" + observable["observable_value"],
-                update=True,
             )
             self.helper.api.stix_cyber_observable.add_external_reference(
                 id=observable["id"], external_reference_id=external_reference["id"]
@@ -156,7 +155,6 @@ class GreyNoiseConnector:
                             malware_types="worm",
                             first_seen=first_seen,
                             last_seen=last_seen,
-                            update=True,
                         )
                     # if malicous activty, create malware object
                     elif (
@@ -168,7 +166,6 @@ class GreyNoiseConnector:
                             description=tag_details["description"],
                             first_seen=first_seen,
                             last_seen=last_seen,
-                            update=True,
                         )
                     # create white label otherwise
                     else:
@@ -187,7 +184,6 @@ class GreyNoiseConnector:
                             fromId=observable["id"],
                             toId=malware["id"],
                             relationship_type="related-to",
-                            update=True,
                             start_time=first_seen,
                             stop_time=last_seen,
                             confidence=confidence,
@@ -239,13 +235,11 @@ class GreyNoiseConnector:
                     name=json_data["actor"],
                     first_seen=first_seen,
                     last_seen=last_seen,
-                    update=True,
                 )
                 self.helper.api.stix_core_relationship.create(
                     fromId=observable["id"],
                     toId=actor["id"],
                     relationship_type="related-to",
-                    update=True,
                     start_time=first_seen,
                     stop_time=last_seen,
                     confidence=confidence,
@@ -258,7 +252,6 @@ class GreyNoiseConnector:
                         fromId=observable["id"],
                         toId=vuln["id"],
                         relationship_type="related-to",
-                        update=True,
                         start_time=first_seen,
                         stop_time=last_seen,
                         confidence=confidence,
@@ -266,13 +259,12 @@ class GreyNoiseConnector:
             # add VPN tool and relationship
             if json_data.get("vpn"):
                 vpn = self.helper.api.tool.create(
-                    name="VPN: " + json_data["vpn_service"], update=True
+                    name="VPN: " + json_data["vpn_service"]
                 )
                 self.helper.api.stix_core_relationship.create(
                     fromId=observable["id"],
                     toId=vpn["id"],
                     relationship_type="related-to",
-                    update=True,
                     start_time=first_seen,
                     stop_time=last_seen,
                     confidence=confidence,
@@ -280,7 +272,8 @@ class GreyNoiseConnector:
             # add label for known bot activity
             if json_data.get("bot"):
                 label = self.helper.api.label.create(
-                    value="Known BOT Activity", color="#7e4ec2", update=True
+                    value="Known BOT Activity",
+                    color="#7e4ec2",
                 )
                 self.helper.api.stix_cyber_observable.add_label(
                     id=observable["id"], label_id=label["id"]
@@ -288,7 +281,8 @@ class GreyNoiseConnector:
             # add label for Tor Exit Node Status
             if json_data["metadata"].get("tor"):
                 label = self.helper.api.label.create(
-                    value="Known TOR Exit Node", color="#7e4ec2", update=True
+                    value="Known TOR Exit Node",
+                    color="#7e4ec2",
                 )
                 self.helper.api.stix_cyber_observable.add_label(
                     id=observable["id"], label_id=label["id"]
@@ -326,13 +320,11 @@ class GreyNoiseConnector:
                     fromId=city_object["id"],
                     toId=country_object["id"],
                     relationship_type="located-at",
-                    update=True,
                 )
                 self.helper.api.stix_core_relationship.create(
                     fromId=observable["id"],
                     toId=city_object["id"],
                     relationship_type="located-at",
-                    update=True,
                     confidence=confidence,
                 )
 

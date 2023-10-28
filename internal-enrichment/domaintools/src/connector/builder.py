@@ -422,4 +422,4 @@ class DtBuilder:
         """
         self.helper.metric.inc("record_send", 1 + len(self.bundle))
         serialized_bundle = self.helper.stix2_create_bundle(self.bundle)
-        self.helper.send_stix2_bundle(serialized_bundle, update=True)
+        self.helper.send_stix2_bundle(serialized_bundle)

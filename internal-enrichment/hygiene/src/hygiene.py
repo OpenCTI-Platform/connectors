@@ -251,7 +251,7 @@ class HygieneConnector:
                     stix_objects.append(stix_indicator)
 
                 serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
-                self.helper.send_stix2_bundle(serialized_bundle, update=True)
+                self.helper.send_stix2_bundle(serialized_bundle)
             return "Observable value found on warninglist and tagged accordingly"
 
     def _process_message(self, data) -> str:
