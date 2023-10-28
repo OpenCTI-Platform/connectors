@@ -278,16 +278,17 @@ class SplunkConnector:
             match msg.event:
                 case "create":
                     self.kvstore.create(id, payload)
-                    self.helper.log_info(f"kvstore item with id {id} created")
-
+                    self.helper.log_info(
+                        f"kvstore item with id {id} created (payload: {json.dumps(payload)})"
+                    )
                 case "update":
                     self.kvstore.update(id, payload)
-                    self.helper.log_info(f"kvstore item with id {id} updated")
-
+                    self.helper.log_info(
+                        f"kvstore item with id {id} updated (payload: {json.dumps(payload)})"
+                    )
                 case "delete":
                     self.helper.log_info(f"kvstore item with id {id} deleted")
                     self.kvstore.delete(id)
-
             if self.metrics is not None:
                 self.metrics.msg(msg.event)
                 self.metrics.state(msg.id)
