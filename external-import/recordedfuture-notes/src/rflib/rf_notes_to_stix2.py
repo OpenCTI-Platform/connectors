@@ -617,13 +617,17 @@ class StixNote:
                         )
                     )
                     for target_entity in target_entities:
-                        relationships.append(
-                            self._create_rel(
-                                source_entity["id"],
-                                target_entity["id"],
-                                to_entity["relation"],
+                        if (
+                            to_entity["entity"] != "identity"
+                            or target_entity["identity_class"] == "class"
+                        ):
+                            relationships.append(
+                                self._create_rel(
+                                    source_entity["id"],
+                                    target_entity["id"],
+                                    to_entity["relation"],
+                                )
                             )
-                        )
         self.objects.extend(relationships)
 
     def _create_report_types(self, topics):
