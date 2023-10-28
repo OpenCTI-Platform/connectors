@@ -397,8 +397,8 @@ class Report:
                 },
                 {
                     "type": "related-to",
-                    "sources": intrusion_sets,
-                    "destinations": scos,
+                    "sources": scos,
+                    "destinations": intrusion_sets,
                 },
             ]
 
