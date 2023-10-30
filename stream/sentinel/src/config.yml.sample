@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'STREAM'
-  name: 'Microsoft Azure Sentinel'
+  name: 'Microsoft Sentinel'
   scope: 'sentinel' # MIME type or SCO
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
@@ -26,7 +26,7 @@ sentinel:
   use_new_sentinel_api: false
   confidence_level: 50 
   expire_time: 30
-  action: allow 
+  action: alert
   tlp_level: amber 
   passive_only: true
   import_incidents: true

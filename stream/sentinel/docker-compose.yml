@@ -10,9 +10,9 @@ services:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - "CONNECTOR_NAME=Microsoft"
+      - "CONNECTOR_NAME=Microsoft Sentinel"
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
-      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_CONFIDENCE_LEVEL=60 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - TENANT_ID=ChangeMe # Azure Tentant ID
       - WORKSPACE_ID=ChangeMe # Sentinel Workspace ID (only for Azure Sentinel)
@@ -27,8 +27,8 @@ services:
       - USE_NEW_SENTINEL_API=false # Use the new API, only supporting indicators and not supporting action (not supported yet)
       - CONFIDENCE_LEVEL=50 # Alerts equal to or higher than this will be blocked, Lower will be alerted, and 0 will be allowed
       - EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
-      - ACTION=block # Optional: Setting this will override all alerts to be this action (unknown, allow, block, alert)
+      - ACTION=alert # Optional: Setting this will override all alerts to be this action (unknown, allow, block, alert)
       - TLP_LEVEL=amber # Optional: This will override all TLP submitted to Sentinel. (unknown, white, green, amber, red)
-      - PASSIVE_ONLY=true # Optional: Defaults to false.
+      - PASSIVE_ONLY=false # Optional: Defaults to false.
       - IMPORT_INCIDENTS=true
     restart: always
