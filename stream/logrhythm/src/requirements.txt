@@ -1,2 +1,2 @@
 pycti==5.11.12
-prometheus-client==0.17.1
+prometheus-client==0.18.0
