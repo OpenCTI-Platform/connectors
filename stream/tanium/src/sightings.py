@@ -260,6 +260,7 @@ class Sightings(threading.Thread):
                             objects.append(stix_relation_file)
                         if (
                             "mitreAttack" in intel
+                            and intel["mitreAttack"] is not None
                             and "techniques" in intel["mitreAttack"]
                         ):
                             for technique in intel["mitreAttack"]["techniques"]:
