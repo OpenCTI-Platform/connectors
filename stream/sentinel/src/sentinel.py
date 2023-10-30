@@ -230,7 +230,7 @@ class SentinelConnector:
         # Confidence
         confidence = data.get("confidence", 50)
         # Passive only
-        if self.passive_only == "True":
+        if self.passive_only:
             passive_only = "true"
         else:
             passive_only = "false"
@@ -392,9 +392,6 @@ class SentinelConnector:
                     + " status code."
                 )
 
-    def _delete_indicator(self, data):
-        self._graph_api_authorization()
-
     def _delete_object(self, data):
         self._graph_api_authorization()
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
@@ -414,6 +411,20 @@ class SentinelConnector:
                     headers=self.headers,
                 )
                 self.helper.log_info("[DELETE] ID {" + internal_id + "} Success")
+                if data["type"] == "indicator":
+                    entity = self.helper.api.indicator.read(id=internal_id)
+                else:
+                    entity = self.helper.api.stix_cyber_observable.read(id=internal_id)
+                if (
+                    entity
+                    and "externalReferences" in entity
+                    and len(entity["externalReferences"]) > 0
+                ):
+                    for external_reference in entity["externalReferences"]:
+                        if external_reference["source_name"] == self.target_product:
+                            self.helper.api.external_reference.delete(
+                                external_reference["id"]
+                            )
                 did_delete = 1
         # Logs not found if no IOCs were deleted
         if did_delete == 0:
