@@ -175,6 +175,7 @@ class Misp:
             config,
             default="",
         ).split(",")
+        self.helper.log_info(f"keep_original_tags_as_label: {self.keep_original_tags_as_label}")
         self.misp_enforce_warning_list = get_config_variable(
             "MISP_ENFORCE_WARNING_LIST",
             ["misp", "enforce_warning_list"],
@@ -2223,13 +2224,16 @@ class Misp:
             return opencti_tags
 
         for tag in tags:
+            self.helper.log_info(f"found tag: {tag}")
             # we take the tag as-is if it starts by a prefix stored in the keep_original_tags_as_label configuration
             if any(
                 map(
-                    lambda s: s.startswith(tag["name"]),
+                    lambda s: tag["name"].startswith(s),
                     self.keep_original_tags_as_label,
                 )
             ):
+
+                self.helper.log_info(f"keeping raw tag: {tag}")
                 opencti_tags.append(tag["name"])
 
             elif (
