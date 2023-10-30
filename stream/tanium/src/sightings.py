@@ -256,8 +256,29 @@ class Sightings(threading.Thread):
                                 relationship_type="related-to",
                                 source_ref=stix_file.id,
                                 target_ref=stix_incident.id,
+                                object_marking_refs=[stix2.TLP_RED],
+                                created_by_ref=self.identity["standard_id"],
                             )
                             objects.append(stix_relation_file)
+                        if intel["type"] == "processInjection":
+                            stix_attack_pattern = stix2.AttackPattern(
+                                id=AttackPattern.generate_id("T1055", "T1055"),
+                                name="T1055",
+                                allow_custom=True,
+                                custom_properties={"x_mitre_id": "T1055"},
+                            )
+                            objects.append(stix_attack_pattern)
+                            stix_relation_attack_pattern = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "uses", stix_incident.id, stix_attack_pattern.id
+                                ),
+                                relationship_type="uses",
+                                source_ref=stix_incident.id,
+                                target_ref=stix_attack_pattern.id,
+                                object_marking_refs=[stix2.TLP_RED],
+                                created_by_ref=self.identity["standard_id"],
+                            )
+                            objects.append(stix_relation_attack_pattern)
                         if (
                             "mitreAttack" in intel
                             and intel["mitreAttack"] is not None
