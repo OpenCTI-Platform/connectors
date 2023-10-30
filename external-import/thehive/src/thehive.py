@@ -168,7 +168,7 @@ class TheHive:
             object_marking_refs=markings,
             labels=alert.get("tags", []),
             created_by_ref=self.identity.get("standard_id", ""),
-            confidence=str(self.helper.connect_confidence_level),
+            confidence=self.helper.connect_confidence_level,
             allow_custom=True,
             custom_properties={
                 "source": alert.get("source", ""),
@@ -212,7 +212,7 @@ class TheHive:
 
         # Create STIX bundle
         try:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.log_info(f"Completed import for alert '{alert.get('title')}'")
             return bundle
         except Exception as e:
@@ -247,7 +247,7 @@ class TheHive:
 
         # Finalize bundle
         try:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.log_info(
                 f"Completed generation of STIX bundle for case: {case.get('title')}"
             )
