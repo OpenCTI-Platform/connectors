@@ -365,6 +365,7 @@ class Sightings(threading.Thread):
                         ],
                         confidence=self.helper.connect_confidence_level,
                         created_by_ref=self.identity["standard_id"],
+                        object_marking_refs=[stix2.TLP_RED],
                         object_refs=bundle_objects,
                     )
                     bundle_objects.append(stix_case)
