@@ -1730,7 +1730,7 @@ class MispFeed:
                     if (
                         indicator["indicator"] is not None
                         and object["meta-category"] == "file"
-                        and indicator["indicator"].x_opencti_main_observable_type
+                        and indicator["indicator"]["x_opencti_main_observable_type"]
                         in FILETYPES
                     ):
                         object_attributes.append(indicator)
