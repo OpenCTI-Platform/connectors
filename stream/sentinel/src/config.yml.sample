@@ -26,6 +26,7 @@ sentinel:
   use_new_sentinel_api: false
   confidence_level: 50 
   expire_time: 30
+  target_product: 'Azure Sentinel'
   action: alert
   tlp_level: amber 
   passive_only: true

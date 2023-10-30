@@ -369,7 +369,7 @@ class SentinelConnector:
                 self.helper.log_info("[CREATE] ID {" + internal_id + " Success }")
                 result = response.json()
                 external_reference = self.helper.api.external_reference.create(
-                    source_name=self.target_product,
+                    source_name=self.target_product.replace("Azure", "Microsoft"),
                     external_id=result["id"],
                     description="Intel within the Microsoft platform.",
                 )
@@ -421,7 +421,9 @@ class SentinelConnector:
                     and len(entity["externalReferences"]) > 0
                 ):
                     for external_reference in entity["externalReferences"]:
-                        if external_reference["source_name"] == self.target_product:
+                        if external_reference[
+                            "source_name"
+                        ] == self.target_product.replace("Azure", "Microsoft"):
                             self.helper.api.external_reference.delete(
                                 external_reference["id"]
                             )
@@ -429,7 +431,10 @@ class SentinelConnector:
         # Logs not found if no IOCs were deleted
         if did_delete == 0:
             self.helper.log_info(
-                "[DELETE] ID {" + internal_id + "} Not found on " + self.target_product
+                "[DELETE] ID {"
+                + internal_id
+                + "} Not found on "
+                + self.target_product.replace("Azure", "Microsoft")
             )
 
     def _process_message(self, msg):

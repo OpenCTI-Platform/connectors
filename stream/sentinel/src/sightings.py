@@ -167,14 +167,18 @@ class Sightings(threading.Thread):
                             confidence=self.helper.connect_confidence_level,
                             external_references=[
                                 {
-                                    "source_name": self.target_product,
+                                    "source_name": self.target_product.replace(
+                                        "Azure", "Microsoft"
+                                    ),
                                     "url": alert["alertWebUrl"],
                                     "external_id": alert["id"],
                                 }
                             ],
                             allow_custom=True,
                             custom_properties={
-                                "source": self.target_product,
+                                "source": self.target_product.replace(
+                                    "Azure", "Microsoft"
+                                ),
                                 "severity": alert["severity"],
                                 "incident_type": "alert",
                             },
@@ -342,7 +346,7 @@ class Sightings(threading.Thread):
                         ),
                         name=incident["displayName"],
                         description="Incident from "
-                        + self.target_product
+                        + self.target_product.replace("Azure", "Microsoft")
                         + " | classification: "
                         + incident["classification"]
                         + " | determination: "
@@ -352,7 +356,9 @@ class Sightings(threading.Thread):
                         created=incident_date,
                         external_references=[
                             {
-                                "source_name": self.target_product,
+                                "source_name": self.target_product.replace(
+                                    "Azure", "Microsoft"
+                                ),
                                 "external_id": incident["id"],
                                 "url": incident["incidentWebUrl"],
                             }
