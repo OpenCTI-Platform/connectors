@@ -859,7 +859,6 @@ class HarfangLabConnector:
     def stix_translation_parser(self, data, entity):
         translation = stix_translation.StixTranslation()
         parsed = translation.translate("splunk", "parse", "{}", data["pattern"])
-
         if "parsed_stix" in parsed:
             results = parsed["parsed_stix"]
             results_build = []

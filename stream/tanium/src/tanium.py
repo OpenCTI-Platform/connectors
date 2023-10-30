@@ -57,6 +57,13 @@ class TaniumConnector:
         self.tanium_computer_groups = get_config_variable(
             "TANIUM_COMPUTER_GROUPS", ["tanium", "computer_groups"], config, False, "1"
         ).split(",")
+        self.tanium_import_alerts = get_config_variable(
+            "TANIUM_IMPORT_ALERTS",
+            ["tanium", "import_alerts"],
+            config,
+            False,
+            True,
+        )
 
         # Check Live Stream ID
         if (
@@ -157,7 +164,9 @@ class TaniumConnector:
         return
 
     def start(self):
-        self.sightings = Sightings(self.helper, self.tanium_api_handler)
+        self.sightings = Sightings(
+            self.helper, self.tanium_api_handler, self.tanium_import_alerts
+        )
         self.sightings.start()
         self.helper.listen_stream(self._process_message)
 

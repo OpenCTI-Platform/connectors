@@ -204,9 +204,9 @@ class AbuseSSLImportConnector:
         :return: Serialized STIX Bundle object
         """
         self.helper.log_info("Creating STIX Bundle")
-        bundle = stix2.Bundle(
-            self.author, observables, indicators, relationships, allow_custom=True
-        ).serialize()
+        bundle = self.helper.stix2_create_bundle(
+            [self.author, observables, indicators, relationships]
+        )
         return bundle
 
     def send_bundle(self, bundle, work_id):
