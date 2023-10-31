@@ -21,4 +21,6 @@ services:
       - RECORDED_FUTURE_TOPIC=ChangeMe #optional, can remove
       - RECORDED_FUTUTRE_PERSON_TO_TA=False #optional, can remove
       - RECORDED_FUTURE_TA_TO_INTRUSION_SET=False #optional, can remove
+      - RECORDED_FUTURE_RISK_AS_SCORE=True #optional, can remove
+      - RECORDED_FUTURE_RISK_THRESHOLD=60 #optional, can remove
     restart: always
