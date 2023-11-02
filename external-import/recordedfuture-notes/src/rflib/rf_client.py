@@ -13,6 +13,7 @@ from urllib import parse
 
 import requests
 import requests.exceptions
+from urllib.parse import quote
 
 API_BASE = "https://api.recordedfuture.com"
 CONNECT_BASE = API_BASE + "/v2"
