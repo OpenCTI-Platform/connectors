@@ -64,7 +64,7 @@ class Sightings(threading.Thread):
                         entity = self.helper.api.stix_domain_object.read(
                             filters=[
                                 {
-                                    "key": "hasExternalReference",
+                                    "key": "externalReferences",
                                     "values": [external_reference["id"]],
                                 }
                             ]
@@ -73,7 +73,7 @@ class Sightings(threading.Thread):
                             entity = self.helper.api.stix_cyber_observable.read(
                                 filters=[
                                     {
-                                        "key": "hasExternalReference",
+                                        "key": "externalReferences",
                                         "values": [external_reference["id"]],
                                     }
                                 ]
