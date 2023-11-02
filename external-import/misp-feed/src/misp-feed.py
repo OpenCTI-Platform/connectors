@@ -480,7 +480,11 @@ class MispFeed:
                     tag_value = tag_value_split[1].replace('"', "")
                 threats = self.helper.api.stix_domain_object.list(
                     types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
-                    filters=[{"key": "name", "values": [tag_value]}],
+                    filters={
+                        "mode": "and",
+                        "filters": [{"key": "name", "values": [tag_value]}],
+                        "filterGroups": [],
+                    },
                 )
                 if len(threats) > 0:
                     threat = threats[0]
