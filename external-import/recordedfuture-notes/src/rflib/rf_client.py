@@ -9,10 +9,10 @@
 ################################################################################
 """
 import json
+from urllib import parse
 
 import requests
 import requests.exceptions
-from urllib.parse import quote
 
 API_BASE = "https://api.recordedfuture.com"
 CONNECT_BASE = API_BASE + "/v2"
@@ -129,7 +129,7 @@ class RFClient:
             The risk score as an int
         """
         indicator_params = {"fields": "risk"}
-        value_indicator = value if type != "url" else quote(value, safe="")
+        value_indicator = value if type != "url" else parse.quote(value, safe="")
         res = self.session.get(
             CONNECT_BASE + "/" + type + "/" + value_indicator, params=indicator_params
         )
