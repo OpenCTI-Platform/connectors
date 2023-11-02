@@ -578,6 +578,7 @@ class StixNote:
             "to": [
                 {"entity": "malware", "relation": "indicates"},
                 {"entity": "threat-actor", "relation": "indicates"},
+                {"entity": "intrusion-set", "relation": "indicates"},
             ],
         },
         {
