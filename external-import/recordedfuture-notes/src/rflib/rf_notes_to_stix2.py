@@ -518,7 +518,7 @@ class StixNote:
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",
-                    # "URL", // bug on the RF API when fetching the score of a url
+                    "URL",
                     "Hash",
                 ]:
                     risk_score = None
