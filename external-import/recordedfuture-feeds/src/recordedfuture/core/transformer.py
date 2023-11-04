@@ -484,7 +484,7 @@ class HashSTIXTransformer(BaseSTIXTransformer):
                     malware=data_entry.get("malware"),
                     is_family=False,
                     stix_labels=self.stix_labels,
-                    description=f"Malware related to file hash {hash_value}"
+                    description=f"Malware related to file hash {hash_value}",
                 )
                 stix_objects.append(malware_sdo)
                 # Establish a relationship between the malware and the vulnerability
