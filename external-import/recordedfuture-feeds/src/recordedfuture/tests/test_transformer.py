@@ -1,6 +1,18 @@
 import json
 import os
 
+from stix2 import (
+    URL,
+    DomainName,
+    File,
+    IPv4Address,
+    IPv6Address,
+    Malware,
+    ObservedData,
+    Relationship,
+    Vulnerability,
+)
+
 from recordedfuture.core.transformer import (
     C2STIXTransformer,
     DomainSTIXTransformer,
@@ -12,18 +24,6 @@ from recordedfuture.core.transformer import (
     TorIPSTIXTransformer,
     URLSTIXTransformer,
     VulnerabilitySTIXTransformer,
-)
-from stix2 import (
-    URL,
-    DomainName,
-    File,
-    Indicator,
-    IPv4Address,
-    IPv6Address,
-    Malware,
-    ObservedData,
-    Relationship,
-    Vulnerability,
 )
 
 DEFAULT_DAYS_THRESHOLD = 1
@@ -56,7 +56,6 @@ def test_c2stix_detect_transform_to_stix():
                 item,
                 (
                     Malware,
-                    Indicator,
                     Relationship,
                     IPv4Address,
                     IPv6Address,
@@ -89,7 +88,6 @@ def test_c2stix_prevent_transform_to_stix():
                 item,
                 (
                     Malware,
-                    Indicator,
                     Relationship,
                     IPv4Address,
                     IPv6Address,
@@ -118,9 +116,7 @@ def test_ddnsips_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(
-                item, (Indicator, Relationship, IPv4Address, IPv6Address, ObservedData)
-            )
+            isinstance(item, (Relationship, IPv4Address, IPv6Address, ObservedData))
             for item in result
         )
 
@@ -141,9 +137,7 @@ def test_ffluxips_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(
-                item, (Indicator, Relationship, IPv4Address, IPv6Address, ObservedData)
-            )
+            isinstance(item, (Relationship, IPv4Address, IPv6Address, ObservedData))
             for item in result
         )
 
@@ -165,7 +159,7 @@ def test_domains_detect_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(item, (Indicator, Relationship, ObservedData, DomainName))
+            isinstance(item, (Relationship, ObservedData, DomainName))
             for item in result
         )
 
@@ -190,7 +184,7 @@ def test_domains_prevent_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(item, (Indicator, Relationship, ObservedData, DomainName))
+            isinstance(item, (Relationship, ObservedData, DomainName))
             for item in result
         )
 
@@ -215,8 +209,7 @@ def test_emerging_malware_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(item, (Indicator, File, ObservedData, Relationship))
-            for item in result
+            isinstance(item, (File, ObservedData, Relationship)) for item in result
         )
 
     # Test days_threshold filter
@@ -242,7 +235,6 @@ def test_rat_controller_tranform_to_stix():
             if not isinstance(
                 item,
                 (
-                    Indicator,
                     Malware,
                     Relationship,
                     ObservedData,
@@ -257,7 +249,6 @@ def test_rat_controller_tranform_to_stix():
             isinstance(
                 item,
                 (
-                    Indicator,
                     Malware,
                     Relationship,
                     ObservedData,
@@ -288,8 +279,7 @@ def test_urls_prevent_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(item, (Indicator, URL, Relationship, ObservedData))
-            for item in result
+            isinstance(item, (URL, Relationship, ObservedData)) for item in result
         )
 
     # Test days_threshold filter
@@ -321,7 +311,7 @@ def test_vulns_patch_tranform_to_stix():
         assert all(
             isinstance(
                 item,
-                (Relationship, Indicator, Vulnerability, Malware, ObservedData, File),
+                (Relationship, Vulnerability, Malware, ObservedData, File),
             )
             for item in result
         )
@@ -346,13 +336,13 @@ def test_hashes_prevent_tranform_to_stix():
         assert len(result) >= 1
         for item in result:
             if not isinstance(
-                item, (Relationship, Vulnerability, Malware, Indicator, ObservedData)
+                item, (Relationship, Vulnerability, Malware, ObservedData)
             ):
                 print(f"Unexpected object type: {type(item)}, Value: {item}")
         assert all(
             isinstance(
                 item,
-                (Relationship, Vulnerability, Malware, Indicator, ObservedData, File),
+                (Relationship, Vulnerability, Malware, ObservedData, File),
             )
             for item in result
         )
@@ -373,9 +363,7 @@ def test_tor_ips_tranform_to_stix():
         assert result
         assert len(result) >= 1
         assert all(
-            isinstance(
-                item, (Indicator, IPv4Address, IPv6Address, ObservedData, Relationship)
-            )
+            isinstance(item, (IPv4Address, IPv6Address, ObservedData, Relationship))
             for item in result
         )
 
@@ -395,10 +383,9 @@ def test_low_detect_malware_tranform_to_stix():
         result = transformer.transform_to_stix(indicator)
         if result != []:
             assert result
-            assert len(result) == 4
+            assert len(result) == 2
             assert all(
-                isinstance(item, (Indicator, File, Relationship, ObservedData))
-                for item in result
+                isinstance(item, (File, Relationship, ObservedData)) for item in result
             )
         else:
             assert result == []
