@@ -6,7 +6,12 @@ from datetime import datetime
 
 import stix2
 import yaml
+from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
 from dateutil.parser import parse
+from hive_observable_transform import (
+    HiveObservableTransform,
+    UnsupportedIndicatorTypeError,
+)
 from pycti import (
     CaseIncident,
     CustomObjectCaseIncident,
@@ -20,12 +25,6 @@ from pycti import (
 )
 from thehive4py.api import TheHiveApi
 from thehive4py.query import Child, Gt, Or
-
-from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
-from hive_observable_transform import (
-    HiveObservableTransform,
-    UnsupportedIndicatorTypeError,
-)
 
 from utils import format_datetime  # isort: skip
 

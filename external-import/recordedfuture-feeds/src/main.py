@@ -6,9 +6,8 @@ from gc import collect
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Bundle
-
 from recordedfuture import RecordedFutureClient
+from stix2 import Bundle
 
 CONFIG_FILE_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
 DEFAULT_CHUNK_SIZE = 1000

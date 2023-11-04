@@ -4,7 +4,6 @@ import os
 import uuid
 
 import pytest
-
 from recordedfuture.core import RecordedFutureClient
 from recordedfuture.core.constants import DATASET
 
