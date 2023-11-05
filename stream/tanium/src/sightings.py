@@ -4,10 +4,12 @@
 import json
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
+import pytz
 import stix2
 from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -26,7 +28,7 @@ class Sightings(threading.Thread):
 
         # Identity
         self.identity = self.helper.api.identity.create(
-            type="Organization",
+            type="System",
             name=self.helper.get_name(),
             description=self.helper.get_name(),
         )
@@ -40,17 +42,17 @@ class Sightings(threading.Thread):
                 {"sort": "-createdAt"},
             )
             state = self.helper.get_state()
-            if state and "lastAlertTimestamp" in state:
-                last_timestamp = state["lastAlertTimestamp"]
+            if state and "lastAlertDate" in state:
+                last_alert_date = parse(state["lastAlertDate"])
             else:
-                last_timestamp = 0
+                last_alert_date = datetime.now().astimezone(pytz.UTC) - relativedelta(
+                    years=1
+                )
+
             alerts = reversed(alerts)
             for alert in alerts:
-                alert_timestamp = int(round(parse(alert["createdAt"]).timestamp()))
-                if (
-                    int(alert_timestamp) > int(last_timestamp)
-                    and alert["state"] != "suppressed"
-                ):
+                alert_date = parse(alert["createdAt"]).astimezone(pytz.UTC)
+                if alert_date > last_alert_date and alert["state"] != "suppressed":
                     # Get intel
                     intel = self.tanium_api_handler._query(
                         "get",
@@ -58,15 +60,12 @@ class Sightings(threading.Thread):
                         + str(alert["intelDocId"]),
                     )
                     alert_details = json.loads(alert["details"])
-                    alert_date = parse(alert["createdAt"]).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    )
                     # Mark as processed
                     if state is not None:
-                        state["lastAlertTimestamp"] = alert_timestamp
+                        state["lastAlertDate"] = alert_date.isoformat()
                         self.helper.set_state(state)
                     else:
-                        self.helper.set_state({"lastAlertTimestamp": alert_timestamp})
+                        self.helper.set_state({"lastAlertDate": alert_date.isoformat()})
                     # Create the bundle
                     objects = []
                     # Check if the intel is in OpenCTI
@@ -203,6 +202,7 @@ class Sightings(threading.Thread):
                         objects.append(stix_relation_ip)
                         if (
                             "match" in alert_details
+                            and alert_details["match"] is not None
                             and "properties" in alert_details["match"]
                             and "user" in alert_details["match"]["properties"]
                         ):
@@ -230,6 +230,7 @@ class Sightings(threading.Thread):
                             objects.append(stix_relation_user)
                         if (
                             "match" in alert_details
+                            and alert_details["match"] is not None
                             and "properties" in alert_details["match"]
                             and "file" in alert_details["match"]["properties"]
                         ):
@@ -308,9 +309,9 @@ class Sightings(threading.Thread):
 
                     if len(objects) > 0:
                         stix_bundle = self.helper.stix2_create_bundle(objects)
-                        now = datetime.now(tz=timezone.utc)
-                        friendly_name = "Tanium run @ " + now.strftime(
-                            "%Y-%m-%d %H:%M:%S"
+                        friendly_name = (
+                            "Tanium run @ "
+                            + datetime.now().astimezone(pytz.UTC).isoformat()
                         )
                         work_id = self.helper.api.work.initiate_work(
                             self.helper.connect_id, friendly_name
