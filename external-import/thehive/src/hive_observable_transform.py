@@ -256,7 +256,6 @@ class HiveObservableTransform:
     def create_registry_value(self):
         return WindowsRegistryValueType(
             data=str(self.observable.get("data")),
-            object_marking_refs=self.markings,
             custom_properties=self.create_custom_properties(),
         )
 

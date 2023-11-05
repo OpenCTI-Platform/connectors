@@ -13,3 +13,4 @@ Pipfile*
 *.key
 *.crt
 .env
+.pytest_cache
