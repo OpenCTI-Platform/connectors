@@ -26,6 +26,9 @@ class TaniumConnector:
 
         # Initialize the Tanium API Handler
         self.tanium_url = get_config_variable("TANIUM_URL", ["tanium", "url"], config)
+        self.tanium_url_console = get_config_variable(
+            "TANIUM_URL_CONSOLE", ["tanium", "url_console"], config
+        )
         self.tanium_ssl_verify = get_config_variable(
             "TANIUM_SSL_VERIFY", ["tanium", "ssl_verify"], config, False, True
         )
@@ -165,7 +168,10 @@ class TaniumConnector:
 
     def start(self):
         self.sightings = Sightings(
-            self.helper, self.tanium_api_handler, self.tanium_import_alerts
+            self.helper,
+            self.tanium_api_handler,
+            self.tanium_import_alerts,
+            self.tanium_url_console,
         )
         self.sightings.start()
         self.helper.listen_stream(self._process_message)

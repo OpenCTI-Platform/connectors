@@ -15,6 +15,7 @@ connector:
 
 tanium:
   url: 'https://console.changeme.com'
+  url_console: 'https://console.changeme.com'
   ssl_verify: true
   token: 'ChangeMe'
   hashes_in_reputation: true
