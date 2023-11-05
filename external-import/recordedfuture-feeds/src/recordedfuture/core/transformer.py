@@ -192,11 +192,12 @@ class DomainSTIXTransformer(BaseSTIXTransformer):
             detections = [
                 k for k, v in detection_strings.items() if v
             ]  # List detected items
-            description = f"Last Seen: ({indicator_date.isoformat()}),\n"
+            description = f"Last Seen: ({indicator_date.isoformat()})"
             description += (
-                f"Service Provider: ({data_entry.get('service_provider')}),\n"
+                f",\nService Provider: ({data_entry.get('service_provider')})"
             )
-            description += "Detections: (" + ", ".join(detections) + ")"
+            if detections:
+                description += ",\nDetections: (" + ", ".join(detections) + ")"
 
             return transform_domain_to_indicator(
                 domain,
@@ -255,9 +256,10 @@ class URLSTIXTransformer(BaseSTIXTransformer):
             detections = [
                 k for k, v in detection_strings.items() if v
             ]  # List detected items
-            description = f"Last Seen: {indicator_date.isoformat()}\n"
-            description += f"Service Provider: {data_entry.get('service_provider')}\n"
-            description += "Detections: " + ", ".join(detections)
+            description = f"Last Seen: {indicator_date.isoformat()}"
+            description += f",\nService Provider: {data_entry.get('service_provider')}"
+            if detections:
+                description += ",\nDetections: " + ", ".join(detections)
             return transform_url_to_indicator(
                 url=data_entry.get("url"),
                 connect_confidence_level=self.connect_confidence_level,
@@ -307,9 +309,10 @@ class C2STIXTransformer(BaseSTIXTransformer):
             # Determine IP version and create STIX IP Address object
             ip_address = data_entry.get("ip")
             # Create an Indicator object for malware detections
-            description = f"Last Seen Active: {indicator_date.isoformat()}\n"
-            description += f"Last Scan: {indicator_date}\n"
-            description += "Malware: " + ", ".join(str(data_entry.get("malware")))
+            description = f"Last Seen Active: {indicator_date.isoformat()}"
+            description += f",\nLast Scan: {indicator_date}"
+            if data_entry.get("malware"):
+                description += ",\nMalware: " + ", ".join(data_entry.get("malware"))
             name = f"Activity Indicator for IP {ip_address}"
             # Add IP Indicator relationships.
             ip_indicator_list = transform_ip_to_indicator(
@@ -452,9 +455,10 @@ class HashSTIXTransformer(BaseSTIXTransformer):
             indicator_date = data_entry[DEFAULT_DATE_KEY]
             hash_value = data_entry.get("hash")
             hash_type = data_entry.get("algorithm")
-            description = f"Last Seen Active: {indicator_date.isoformat()}\n"
-            description += f"Hash Type: {hash_type}\n"
-            description += "Malware: " + ", ".join(str(data_entry.get("malware")))
+            description = f"Last Seen Active: {indicator_date.isoformat()}"
+            description += f",\nHash Type: {hash_type}"
+            if data_entry.get("malware"):
+                description += ",\nMalware: " + ", ".join(data_entry.get("malware"))
 
             indicator_list = transform_hash_to_indicator(
                 connect_confidence_level=self.connect_confidence_level,
@@ -630,9 +634,10 @@ class RATSTIXTransformer(BaseSTIXTransformer):
             name = f"RAT Activity Indicator for {data_value}"
             description = (
                 f"Data associated with RAT activity. Malware: {malware}, "
-                f"Port: {port}, Protocol: {protocol}\n"
+                f"Port: {port}, Protocol: {protocol}"
             )
-            description += "Signal: " + ", ".join(str(data_entry.get("signal")))
+            if data_entry.get("signal"):
+                description += ",\nSignal: " + ", ".join(data_entry.get("signal"))
 
             # Check if the value is a URL
             if is_url(data_value):
