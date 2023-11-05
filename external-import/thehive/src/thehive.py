@@ -159,12 +159,16 @@ class TheHive:
             self.helper.log_warning(f"Observable not supported: {observable}.")
         return stix_observable
 
-    def create_stix_alert_incident(self, alert, markings, created):
+    def create_stix_alert_incident(self, alert, markings, created, modified):
         """Function to create STIX incident from alert."""
         return stix2.Incident(
             id=Incident.generate_id(alert.get("title", ""), created),
             name=alert.get("title", ""),
             description=alert.get("description", ""),
+            created=created,
+            modified=modified,
+            first_seen=created,
+            last_seen=modified,
             object_marking_refs=markings,
             labels=alert.get("tags", []),
             created_by_ref=self.identity.get("standard_id", ""),
@@ -192,13 +196,18 @@ class TheHive:
         except Exception as e:
             self.helper.log_error(f"Error processing markings: {str(e)}")
 
-        # Extract and format alert creation time
+        # Extract and format alert creation and modification times.
+        created_epoch = alert.get("createdAt", 0) / 1000
         created = format_datetime(
-            alert.get("createdAt", 0) / 1000, DEFAULT_UTC_DATETIME
+            created_epoch, DEFAULT_UTC_DATETIME
+        )
+        modified = format_datetime(
+            self.get_updated_date(item=alert, last_date=created_epoch),
+            DEFAULT_UTC_DATETIME    
         )
 
         # Create STIX Incident
-        stix_incident = self.create_stix_alert_incident(alert, markings, created)
+        stix_incident = self.create_stix_alert_incident(alert, markings, created, modified)
         bundle_objects.append(stix_incident)
 
         # Handle observables and relationships
