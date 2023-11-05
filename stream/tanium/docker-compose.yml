@@ -15,6 +15,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=60 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - TANIUM_URL=https://console.changeme.com
+      - TANIUM_URL_CONSOLE=https://console.changeme.com
       - TANIUM_SSL_VERIFY=true
       - TANIUM_TOKEN=ChangeMe
       - TANIUM_HASHES_IN_REPUTATION=true

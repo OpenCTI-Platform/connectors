@@ -20,11 +20,14 @@ from pycti import (
 
 
 class Sightings(threading.Thread):
-    def __init__(self, helper, tanium_api_handler, tanium_import_alerts):
+    def __init__(
+        self, helper, tanium_api_handler, tanium_import_alerts, tanium_url_console
+    ):
         threading.Thread.__init__(self)
         self.helper = helper
         self.tanium_api_handler = tanium_api_handler
         self.tanium_import_alerts = tanium_import_alerts
+        self.tanium_url_console = tanium_url_console
 
         # Identity
         self.identity = self.helper.api.identity.create(
@@ -124,6 +127,15 @@ class Sightings(threading.Thread):
                             object_marking_refs=[stix2.TLP_RED],
                             created_by_ref=self.identity["standard_id"],
                             confidence=self.helper.connect_confidence_level,
+                            external_references=[
+                                {
+                                    "source_name": "Tanium Threat Response",
+                                    "url": self.tanium_url_console
+                                    + "/ui/threatresponse/alerts?guid="
+                                    + alert["guid"],
+                                    "external_id": alert["guid"],
+                                }
+                            ],
                             allow_custom=True,
                             custom_properties={
                                 "source": "Tanium Threat Response",
