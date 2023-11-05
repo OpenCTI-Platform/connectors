@@ -292,7 +292,7 @@ class TaniumApiHandler:
         value = ""
         name = None
         if entity["type"] == "file":
-            intel_type = "file_hash"
+            intel_type = "File Hashes"
             if "hashes" in entity:
                 if isinstance(entity["hashes"], list):
                     hashes = entity["hashes"]
@@ -314,7 +314,7 @@ class TaniumApiHandler:
             "domain-name",
             "hostname",
         ]:
-            intel_type = "ip_or_host"
+            intel_type = "Network Indicators"
             value = entity["value"]
             name = entity["value"]
         if intel_type is None or len(value) == 0:
@@ -325,14 +325,6 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": OpenCTIConnectorHelper.get_attribute_in_extension(
-                    "description", entity
-                )
-                if OpenCTIConnectorHelper.get_attribute_in_extension(
-                    "description", entity
-                )
-                is not None
-                else "",
                 "type": intel_type,
                 "text": value,
             },

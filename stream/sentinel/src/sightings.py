@@ -50,7 +50,7 @@ class Sightings(threading.Thread):
         self.header = None
         # Identity
         self.identity = self.helper.api.identity.create(
-            type="Organization",
+            type="System",
             name=self.helper.get_name(),
             description=self.helper.get_name(),
         )
