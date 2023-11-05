@@ -5,7 +5,6 @@ from stix2 import (
     URL,
     DomainName,
     File,
-    Indicator,
     IPv4Address,
     IPv6Address,
     Malware,
@@ -35,20 +34,6 @@ def create_default_description(prefix, value, labels):
     return f"{prefix} Indicator for ({value}) with ({', '.join(labels)})"
 
 
-def create_indicator(
-    pattern, name, description, stix_labels, valid_from=datetime.utcnow()
-):
-    """Helper function to create an Indicator object."""
-    return Indicator(
-        name=name,
-        pattern=pattern,
-        pattern_type=PATTERN_TYPE_STIX,
-        valid_from=valid_from,
-        description=description,
-        labels=stix_labels,
-    )
-
-
 def create_relationship(source_ref, target_ref, relationship_type, labels):
     return Relationship(
         source_ref=source_ref,
@@ -60,7 +45,10 @@ def create_relationship(source_ref, target_ref, relationship_type, labels):
 
 def create_malware(name, description, labels, is_family=False):
     return Malware(
-        name=name, is_family=is_family, description=description, labels=labels
+        name=name,
+        is_family=is_family,
+        description=description,
+        labels=labels,
     )
 
 
@@ -88,7 +76,7 @@ def create_vulnerability(name, cve_id, labels, description):
     )
 
 
-def base_transform(observable, pattern, name, description, stix_labels, valid_from):
+def base_transform(observable, stix_labels, valid_from):
     """Helper function to create Indicator, ObservableDate, and Relationship."""
     observable_object = create_observable(
         object_refs=[observable.id],
@@ -96,19 +84,7 @@ def base_transform(observable, pattern, name, description, stix_labels, valid_fr
         first_observed=valid_from,
         last_observed=valid_from,
     )
-
-    indicator_sdo = create_indicator(
-        pattern, name, description, stix_labels, valid_from
-    )
-
-    relationship_sco = create_relationship(
-        source_ref=indicator_sdo.id,
-        target_ref=observable_object.id,
-        relationship_type="based-on",
-        labels=stix_labels,
-    )
-
-    return [indicator_sdo, relationship_sco, observable_object, observable]
+    return [observable_object, observable]
 
 
 def transform_ip_to_indicator(
@@ -133,9 +109,9 @@ def transform_ip_to_indicator(
                 x_opencti_description=description,
                 x_opencti_labels=stix_labels,
                 x_opencti_score=connect_confidence_level,
+                x_opencti_create_indicator=True,
             ),
         )
-        pattern = f"[ipv6-addr:value = '{ip}']"
     elif is_ipv4(ip):
         type_prefix = "ipv4-addr"
         # Create a default name and description if none is provided
@@ -149,14 +125,14 @@ def transform_ip_to_indicator(
                 x_opencti_description=description,
                 x_opencti_labels=stix_labels,
                 x_opencti_score=connect_confidence_level,
+                x_opencti_create_indicator=True,
             ),
         )
-        pattern = f"[ipv4-addr:value = '{ip}']"
     else:
         # Raise a custom exception indicating an invalid IP address
         raise InvalidIPAddressError(f"'{ip}' is not a valid IPv4 or IPv6 address.")
 
-    return base_transform(ip_sco, pattern, name, description, stix_labels, valid_from)
+    return base_transform(ip_sco, stix_labels, valid_from)
 
 
 def transform_hash_to_indicator(
@@ -177,7 +153,6 @@ def transform_hash_to_indicator(
     description = description or create_default_description(
         "HASH", hash_value, labels=stix_labels
     )
-    pattern = f"[file:hashes.'{norm_hash_type}' = '{hash_value}']"
     file_sco = File(
         type="file",
         hashes={norm_hash_type: hash_value},
@@ -185,9 +160,10 @@ def transform_hash_to_indicator(
             x_opencti_description=description,
             x_opencti_labels=stix_labels,
             x_opencti_score=connect_confidence_level,
+            x_opencti_create_indicator=True,
         ),
     )
-    return base_transform(file_sco, pattern, name, description, stix_labels, valid_from)
+    return base_transform(file_sco, stix_labels, valid_from)
 
 
 def transform_domain_to_indicator(
@@ -204,18 +180,16 @@ def transform_domain_to_indicator(
     description = description or create_default_description(
         "DOMAIN", domain, labels=stix_labels
     )
-    pattern = f"[domain-name:value = '{domain}']"
     domain_sco = DomainName(
         value=domain,
         custom_properties=dict(
             x_opencti_description=description,
             x_opencti_labels=stix_labels,
             x_opencti_score=connect_confidence_level,
+            x_opencti_create_indicator=True,
         ),
     )
-    return base_transform(
-        domain_sco, pattern, name, description, stix_labels, valid_from
-    )
+    return base_transform(domain_sco, stix_labels, valid_from)
 
 
 def transform_url_to_indicator(
@@ -234,20 +208,23 @@ def transform_url_to_indicator(
     )
     # Create an Indicator object for the URL
     escaped_url = quote(url, safe=":/")
-    pattern = f"[url:value = '{escaped_url}']"
     url_sco = URL(
         value=escaped_url,
         custom_properties=dict(
             x_opencti_description=description,
             x_opencti_labels=stix_labels,
             x_opencti_score=connect_confidence_level,
+            x_opencti_create_indicator=True,
         ),
     )
-    return base_transform(url_sco, pattern, name, description, stix_labels, valid_from)
+    return base_transform(url_sco, stix_labels, valid_from)
 
 
-def transform_malware_relationship(
-    malware, description, source_ref, stix_labels, is_family=False
+def transform_malware_sample(
+    malware,
+    description,
+    stix_labels,
+    is_family=False,
 ):
     """Helper function to transform Malware to Malware Relationship."""
     # Create a default description if none is provided
@@ -255,12 +232,10 @@ def transform_malware_relationship(
         "MALWARE", malware, labels=stix_labels
     )
     malware_sdo = create_malware(
-        name=malware, description=description, labels=stix_labels, is_family=is_family
-    )
-    malware_relationship = create_relationship(
-        source_ref=source_ref,
-        target_ref=malware_sdo.id,
-        relationship_type="delivers",
+        name=malware,
+        description=description,
         labels=stix_labels,
+        is_family=is_family,
     )
-    return [malware_sdo, malware_relationship]
+
+    return malware_sdo

@@ -62,6 +62,8 @@ The following is a list of indicator Field Names supported by this integration a
 | organization           | Identity (organization)                  |
 | regexp                 | Custom Observable Text                     |
 | registry               | Windows Registry Key       |
+| registry_key               | Windows Registry Key       |
+| registry_value               | Windows Registry Type Value       |
 | risk_object_asset      | Identity (system)                           |
 | risk_object_identity   | Identity (identity)                           |
 | system                 | Identity (system)                  |

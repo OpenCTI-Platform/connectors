@@ -10,6 +10,7 @@ from recordedfuture import RecordedFutureClient
 from stix2 import Bundle
 
 CONFIG_FILE_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+DEFAULT_CHUNK_SIZE = 1000
 
 
 def _format_time(utc_time):
@@ -128,7 +129,7 @@ class RecordedFutureConnector:
         )
         self.helper.log_debug(f"{friendly_name}")
 
-    def _process_in_chunks(self, feed, stix_objects, chunk_size=500):
+    def _process_in_chunks(self, feed, stix_objects, chunk_size=DEFAULT_CHUNK_SIZE):
         """Iterate through stix_objects and send Stix Bundles in chunks."""
         for i in range(0, len(stix_objects), chunk_size):
             data_chunk = stix_objects[i : i + chunk_size]
