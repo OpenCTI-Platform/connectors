@@ -198,16 +198,16 @@ class TheHive:
 
         # Extract and format alert creation and modification times.
         created_epoch = alert.get("createdAt", 0) / 1000
-        created = format_datetime(
-            created_epoch, DEFAULT_UTC_DATETIME
-        )
+        created = format_datetime(created_epoch, DEFAULT_UTC_DATETIME)
         modified = format_datetime(
             self.get_updated_date(item=alert, last_date=created_epoch),
-            DEFAULT_UTC_DATETIME    
+            DEFAULT_UTC_DATETIME,
         )
 
         # Create STIX Incident
-        stix_incident = self.create_stix_alert_incident(alert, markings, created, modified)
+        stix_incident = self.create_stix_alert_incident(
+            alert, markings, created, modified
+        )
         bundle_objects.append(stix_incident)
 
         # Handle observables and relationships
