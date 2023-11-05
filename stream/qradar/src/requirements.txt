@@ -1,3 +1,2 @@
 pycti==5.11.12
 stix-shifter==6.2.2
-prometheus-client==0.18.0
