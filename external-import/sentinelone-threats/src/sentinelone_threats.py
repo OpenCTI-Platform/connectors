@@ -257,7 +257,7 @@ class SentinelOneThreats:
         """
 
         response = self.helper.api.stix_cyber_observable.read(
-            filters=[{"key": "hashes_SHA1", "values": [sha1]}]
+            filters=[{"key": "hashes.SHA-1", "values": [sha1]}]
         )
 
         if response:

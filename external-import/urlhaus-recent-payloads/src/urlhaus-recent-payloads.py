@@ -277,7 +277,7 @@ class URLHausRecentPayloads:
         """
 
         response = self.helper.api.stix_cyber_observable.read(
-            filters=[{"key": "hashes_SHA256", "values": [sha256]}]
+            filters=[{"key": "hashes.SHA-256", "values": [sha256]}]
         )
 
         if response:
