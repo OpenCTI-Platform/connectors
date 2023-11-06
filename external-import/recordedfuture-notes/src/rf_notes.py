@@ -16,7 +16,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, RFClient, StixNote
+from rflib import APP_VERSION, RFClient, StixNote, IPAddress
 
 
 class RFNotes:
@@ -113,6 +113,7 @@ class RFNotes:
                 published = self.rf_initial_lookback
 
             try:
+                self.get_risk_list()
                 self.convert_and_send(published, tas)
             except Exception as e:
                 self.helper.log_error(str(e))
@@ -165,6 +166,22 @@ class RFNotes:
                 bundle.serialize(),
                 update=self.update_existing_data,
             )
+    def get_risk_list(self):
+        """Pulls indicators with high risk score, converts to Stix2, sends to OpenCTI"""
+        self.risk_list_score_threshold = 65
+        self.helper.log_info(f"Risk score threshold for risk list is {str(self.risk_list_score_threshold)}")
+
+        ip_addresses = self.rfapi.get_risk_ip_addresses()
+        self.helper.log_info(f"fetched {len(ip_addresses)} IP addresses from API")
+        tmp_stix_ips = []
+        for ip_address in ip_addresses:
+            # name, author, risk_score):
+            stix_ip = IPAddress(ip_address["entity"]["name"], 'IpAddress', None)
+            stix_ip.map_data(ip_address)
+            stix_objs = stix_ip.get_all_objects()
+
+            tmp_stix_ips.append(stix_ip)
+        print("End!")
 
 
 if __name__ == "__main__":
