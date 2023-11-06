@@ -87,21 +87,6 @@ def _parse_date(date):
     return parse(date).astimezone().isoformat()
 
 
-def read_config_file(file_path):
-    if not os.path.isfile(file_path):
-        logging.warning(
-            f"Config file {file_path} not found. Using default configuration."
-        )
-        return {}
-
-    with open(file_path, "r") as file:
-        try:
-            return yaml.load(file, Loader=yaml.FullLoader)
-        except yaml.YAMLError as e:
-            logging.error(f"Error parsing YAML file: {e}")
-            return {}
-
-
 def extract_and_read_zip_file(filepath, extract_path):
     if not os.path.exists(filepath):
         logging.warning(f"File path {filepath} does not exist. Exiting...")
@@ -172,22 +157,18 @@ def generate_markdown_table(data):
 
 class OrangeCyberDefense:
     def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config = (
+            yaml.load(open(config_file_path, encoding="utf8"), Loader=yaml.FullLoader)
+            if os.path.isfile(config_file_path)
+            else {}
         )
-        config = read_config_file(config_file_path)
-        if not config:
-            logging.warning("Failed to load configuration.")
-        else:
-            logging.info("Configuration loaded successfully !")
         self.helper = OpenCTIConnectorHelper(config)
         self.ocd_portal_api_url = "https://api-tdc.cert.orangecyberdefense.com/v1"
         self.ocd_vulnerabilities_api_url = ""
         self.ocd_datalake_api_url = (
             "https://datalake.cert.orangecyberdefense.com/api/v2"
         )
-
         self.ocd_portal_api_login = get_config_variable(
             "OCD_PORTAL_API_LOGIN", ["ocd", "portal_api_login"], config
         )
@@ -1158,8 +1139,14 @@ class OrangeCyberDefense:
 
     def _set_initial_state(self):
         initial_state = {
-            "worldwatch": _parse_date(self.ocd_import_worldwatch_start_date),
-            "cybercrime": _parse_date(self.ocd_import_cybercrime_start_date),
+            "worldwatch": _parse_date(
+                self.ocd_import_worldwatch_start_date
+                or datetime.datetime.today().isoformat()
+            ),
+            "cybercrime": _parse_date(
+                self.ocd_import_cybercrime_start_date
+                or datetime.datetime.today().isoformat()
+            ),
             "datalake": _parse_date(datetime.datetime.today().isoformat()),
             "vulnerabilities": (datetime.datetime.today() - datetime.timedelta(days=30))
             .astimezone()
