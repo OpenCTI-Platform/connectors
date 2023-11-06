@@ -1014,14 +1014,8 @@ class OrangeCyberDefense:
         }
         logging.info(query_body)
         # Create the bulk search task
-        datalake_login = os.environ.get("OCD_DATALAKE_LOGIN")
-        datalake_password = os.environ.get("OCD_DATALAKE_PASSWORD")
-
-        if not datalake_login or not datalake_password:
-            raise ValueError("Missing environment variables for Datalake credentials")
-
         datalake_instance = Datalake(
-            username=datalake_login, password=datalake_password
+            username=self.ocd_datalake_login, password=self.ocd_datalake_password
         )
         task = datalake_instance.BulkSearch.create_task(
             for_stix_export=True, query_body=query_body
