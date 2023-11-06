@@ -121,6 +121,14 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
+
+    def __init__(self, name, _type, author):
+        self.name = name
+        self.author = author or self._create_author()
+        self.stix_indicator = None
+        self.stix_observable = None
+        self.stix_relationship = None
+
     """Converts IP address to IP indicator and observable"""
 
     # TODO: add ipv6 compatibility
@@ -129,6 +137,31 @@ class IPAddress(Indicator):
 
     def _create_obs(self):
         return stix2.IPv4Address(value=self.name)
+    def map_data(self, ip):
+        risk_data = ip["risk"]
+        related_entities = ip["relatedEntities"]
+        self.risk_score = risk_data["score"]
+        self.related_entities = []
+        for element in related_entities:
+            if element['type'] in ["RelatedIpAddress", "RelatedMalware"]:
+                # map related ip addresses and malware
+                for related_ip in element['entities']:
+                    type_ = related_ip["entity"]["type"]
+                    name_ = related_ip["entity"]["name"]
+                    self.related_entities.append(ENTITY_TYPE_MAPPER[type_](name_, type_, self.author))
+                    # TODO too early to generate stix objects maybe!
+
+    def get_all_objects(self):
+        pass
+        # TODO get ip, indicator, relationship, related_entities with indicators when possible and relationships
+
+    def _create_author(self):
+        """Creates Recorded Future Author"""
+        return stix2.Identity(
+            id=pycti.Identity.generate_id("Recorded Future", "organization"),
+            name="Recorded Future",
+            identity_class="organization",
+        )
 
 
 class Domain(Indicator):

@@ -17,6 +17,9 @@ import requests.exceptions
 API_BASE = "https://api.recordedfuture.com"
 CONNECT_BASE = API_BASE + "/v2"
 DETECTION_SEARCH = API_BASE + "/detection-rule/search"
+CONNECT_IP_SEARCH = CONNECT_BASE + "/ip/search"
+CONNECT_DOMAIN_SEARCH = CONNECT_BASE + "/domain/search"
+CONNECT_URL_SEARCH = CONNECT_BASE + "/url/search"
 NOTES_BASE = CONNECT_BASE + "/analystnote"
 NOTES_SEARCH = NOTES_BASE + "/search"
 FUSION_FILE_BASE = CONNECT_BASE + "/fusion/files"
@@ -84,6 +87,26 @@ class RFClient:
                     )
             notes.append(note)
         return notes
+
+    def get_risk_ip_addresses(self, limit: int = 1000, risk_threshold = 65):
+        """
+
+        :param limit:
+        :param risk_threshold:
+        :return:
+        """
+        note_params = {
+            "fields": "entity,risk,relatedEntities",
+            "limit": limit,
+            "riskScore": f"[{risk_threshold},)"  # for example [65,) which means riskScore >= 65
+        }
+        res = self.session.get(CONNECT_IP_SEARCH, params=note_params)
+        res.raise_for_status()
+        ip_addresses = []
+        for ip_address in res.json()["data"]["results"]:
+            ip_addresses.append(ip_address)
+        return ip_addresses
+
 
     def get_attachment(self, doc_id: str) -> str:
         """Pulls a hunting package from the detection rules API
