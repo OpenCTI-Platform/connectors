@@ -144,23 +144,24 @@ class IPAddress(Indicator):
     def map_data(self, rf_ip):
         self.risk_score = rf_ip["risk"]["score"]
         rf_related_entities = rf_ip["relatedEntities"]
+        self.related_entities2 = []
         for element in rf_related_entities:
             if element['type'] in ["RelatedIpAddress", "RelatedMalware"]:
                 # map related ip addresses and malware
-                for related_ip in element['entities']:
-                    type_ = related_ip["entity"]["type"]
-                    name_ = related_ip["entity"]["name"]
+                for rf_related_element in element['entities']:
+                    type_ = rf_related_element["entity"]["type"]
+                    name_ = rf_related_element["entity"]["name"]
                     related_element = ENTITY_TYPE_MAPPER[type_](name_, type_, self.author)
                     self.related_entities.extend(related_element.to_stix_objects())
 
-    def get_all_objects(self):
-        # TODO see if this works when the main object is a url or a domain
-        return self.to_stix_objects() + self.related_entities
-        # TODO get ip, indicator, relationship, related_entities with indicators when possible and relationships
-    def add_relations(self):
+    def build_bundle(self):
+        """Adds self and all related entities (indicators, observables, malware, threat-actors, relationships) to objects"""
+        # Put the indicator and its observable and relationship first
         self.objects.extend(self.to_stix_objects())
+        # Then related entities
         self.objects.extend(self.related_entities)
         relationships = []
+        # Then add 'related-to' relationship with all related entities
         for entity in self.related_entities:
             if entity.type in ["indicator", "malware", "threat-actor"]:
                 relationships.append(stix2.Relationship(

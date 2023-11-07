@@ -178,9 +178,8 @@ class RFNotes:
             # s'inspirer du code de mapping pour analyst note
             stix_ip = IPAddress(rf_ip_address["entity"]["name"], 'IpAddress', None)
             stix_ip.map_data(rf_ip_address)
-            stix_objs = stix_ip.get_all_objects()
-            stix_ip.add_relations()
-            bundle = stix_ip.to_stix_bundle();
+            stix_ip.build_bundle()
+            bundle = stix_ip.to_stix_bundle()
             self.helper.log_info(
                 "Sending Bundle to server with " + str(len(bundle.objects)) + " objects"
             )
