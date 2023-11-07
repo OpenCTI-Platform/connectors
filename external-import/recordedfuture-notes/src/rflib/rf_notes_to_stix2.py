@@ -121,7 +121,6 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-
     def __init__(self, name, _type, author):
         self.name = name
         self.author = author or self._create_author()
@@ -132,7 +131,6 @@ class IPAddress(Indicator):
         self.related_entities = []
         self.objects = []
 
-
     """Converts IP address to IP indicator and observable"""
 
     # TODO: add ipv6 compatibility
@@ -141,17 +139,20 @@ class IPAddress(Indicator):
 
     def _create_obs(self):
         return stix2.IPv4Address(value=self.name)
+
     def map_data(self, rf_ip):
         self.risk_score = rf_ip["risk"]["score"]
         rf_related_entities = rf_ip["relatedEntities"]
         self.related_entities2 = []
         for element in rf_related_entities:
-            if element['type'] in ["RelatedIpAddress", "RelatedMalware"]:
+            if element["type"] in ["RelatedIpAddress", "RelatedMalware"]:
                 # map related ip addresses and malware
-                for rf_related_element in element['entities']:
+                for rf_related_element in element["entities"]:
                     type_ = rf_related_element["entity"]["type"]
                     name_ = rf_related_element["entity"]["name"]
-                    related_element = ENTITY_TYPE_MAPPER[type_](name_, type_, self.author)
+                    related_element = ENTITY_TYPE_MAPPER[type_](
+                        name_, type_, self.author
+                    )
                     self.related_entities.extend(related_element.to_stix_objects())
 
     def build_bundle(self):
@@ -164,20 +165,23 @@ class IPAddress(Indicator):
         # Then add 'related-to' relationship with all related entities
         for entity in self.related_entities:
             if entity.type in ["indicator", "malware", "threat-actor"]:
-                relationships.append(stix2.Relationship(
-                    id=pycti.StixCoreRelationship.generate_id(
-                        "related-to", self.stix_indicator.id, entity.id
-                    ),
-                    relationship_type="related-to",
-                    source_ref=self.stix_indicator.id,
-                    target_ref=entity.id,
-                    created_by_ref=self.author.id,
-                ))
+                relationships.append(
+                    stix2.Relationship(
+                        id=pycti.StixCoreRelationship.generate_id(
+                            "related-to", self.stix_indicator.id, entity.id
+                        ),
+                        relationship_type="related-to",
+                        source_ref=self.stix_indicator.id,
+                        target_ref=entity.id,
+                        created_by_ref=self.author.id,
+                    )
+                )
         self.objects.extend(relationships)
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
         return stix2.Bundle(objects=self.objects, allow_custom=True)
+
     def _create_author(self):
         """Creates Recorded Future Author"""
         return stix2.Identity(

@@ -88,7 +88,7 @@ class RFClient:
             notes.append(note)
         return notes
 
-    def get_risk_ip_addresses(self, limit: int = 1000, risk_threshold = 65):
+    def get_risk_ip_addresses(self, limit: int = 1000, risk_threshold=65):
         """
 
         :param limit:
@@ -98,7 +98,7 @@ class RFClient:
         note_params = {
             "fields": "entity,risk,relatedEntities",
             "limit": limit,
-            "riskScore": f"[{risk_threshold},)"  # for example [65,) which means riskScore >= 65
+            "riskScore": f"[{risk_threshold},)",  # for example [65,) which means riskScore >= 65
         }
         res = self.session.get(CONNECT_IP_SEARCH, params=note_params)
         res.raise_for_status()
@@ -106,7 +106,6 @@ class RFClient:
         for ip_address in res.json()["data"]["results"]:
             ip_addresses.append(ip_address)
         return ip_addresses
-
 
     def get_attachment(self, doc_id: str) -> str:
         """Pulls a hunting package from the detection rules API

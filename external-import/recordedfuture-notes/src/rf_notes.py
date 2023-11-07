@@ -166,17 +166,20 @@ class RFNotes:
                 bundle.serialize(),
                 update=self.update_existing_data,
             )
+
     def get_risk_list(self):
         """Pulls indicators with high risk score, converts to Stix2, sends to OpenCTI"""
         self.risk_list_score_threshold = 65
-        self.helper.log_info(f"Risk score threshold for risk list is {str(self.risk_list_score_threshold)}")
+        self.helper.log_info(
+            f"Risk score threshold for risk list is {str(self.risk_list_score_threshold)}"
+        )
 
         ip_addresses = self.rfapi.get_risk_ip_addresses()
         self.helper.log_info(f"fetched {len(ip_addresses)} IP addresses from API")
         for rf_ip_address in ip_addresses:
             # name, author, risk_score):
             # s'inspirer du code de mapping pour analyst note
-            stix_ip = IPAddress(rf_ip_address["entity"]["name"], 'IpAddress', None)
+            stix_ip = IPAddress(rf_ip_address["entity"]["name"], "IpAddress", None)
             stix_ip.map_data(rf_ip_address)
             stix_ip.build_bundle()
             bundle = stix_ip.to_stix_bundle()
