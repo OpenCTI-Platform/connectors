@@ -173,14 +173,21 @@ class RFNotes:
 
         ip_addresses = self.rfapi.get_risk_ip_addresses()
         self.helper.log_info(f"fetched {len(ip_addresses)} IP addresses from API")
-        tmp_stix_ips = []
-        for ip_address in ip_addresses:
+        for rf_ip_address in ip_addresses:
             # name, author, risk_score):
-            stix_ip = IPAddress(ip_address["entity"]["name"], 'IpAddress', None)
-            stix_ip.map_data(ip_address)
+            # s'inspirer du code de mapping pour analyst note
+            stix_ip = IPAddress(rf_ip_address["entity"]["name"], 'IpAddress', None)
+            stix_ip.map_data(rf_ip_address)
             stix_objs = stix_ip.get_all_objects()
-
-            tmp_stix_ips.append(stix_ip)
+            stix_ip.add_relations()
+            bundle = stix_ip.to_stix_bundle();
+            self.helper.log_info(
+                "Sending Bundle to server with " + str(len(bundle.objects)) + " objects"
+            )
+            self.helper.send_stix2_bundle(
+                bundle.serialize(),
+                update=self.update_existing_data,
+            )
         print("End!")
 
 
