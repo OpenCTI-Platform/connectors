@@ -94,13 +94,15 @@ class ExportReportPdf:
         file_name = data["file_name"]
         if "entity_type" not in data or "entity_id" not in data:
             raise ValueError(
-                'This Connector currently only handles direct export (single entity and no list) of the following entity types: "Report", "Intrusion-Set", "Threat-Actor-Individual", and "Threat-Actor-Group"'
+                'This Connector currently only handles direct export (single entity and no list) of the following entity types: "Report", "Intrusion-Set", "Threat-Actor-Individual", "Threat-Actor-Group and Case-Incident"'
             )
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
 
         if entity_type == "Report":
             self._process_report(entity_id, file_name)
+        elif entity_type == "Case-Incident":
+            self._process_case_incident(entity_id, file_name)
         elif entity_type == "Intrusion-Set":
             self._process_intrusion_set(entity_id, file_name)
         elif entity_type == "Threat-Actor-Group":
@@ -109,7 +111,7 @@ class ExportReportPdf:
             self._process_threat_actor_individual(entity_id, file_name)
         else:
             raise ValueError(
-                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", not "{entity_type}".'
+                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual",Case-Incident, not "{entity_type}".'
             )
 
         return "Export done"
@@ -509,6 +511,101 @@ class ExportReportPdf:
             entity_id, file_name, pdf_contents, "application/pdf"
         )
 
+    def _process_case_incident(self, entity_id, file_name):
+        """
+        Process a Case Incident entity and upload as pdf.
+        """
+
+        now_date = datetime.datetime.now().strftime("%b %d %Y")
+
+        # Store context for usage in html template
+        context = {
+            "entities": {},
+            "target_map_country": None,
+            "report_date": now_date,
+            "company_address_line_1": self.company_address_line_1,
+            "company_address_line_2": self.company_address_line_2,
+            "company_address_line_3": self.company_address_line_3,
+            "company_phone_number": self.company_phone_number,
+            "company_email": self.company_email,
+            "company_website": self.company_website,
+        }
+
+        # Get a bundle of all objects affiliated with the intrusion set
+        bundle = self.helper.api_impersonate.stix2.export_entity(
+            "Case-Incident", entity_id, "full"
+        )
+
+        for case_incident_obj in bundle["objects"]:
+            obj_id = case_incident_obj["x_opencti_id"]
+            obj_entity_type = case_incident_obj["type"]
+            reader_func = self._get_reader(obj_entity_type)
+            if reader_func is None:
+                self.helper.log_error(
+                    f'Could not find a function to read entity with type "{obj_entity_type}"'
+                )
+                continue
+
+            time.sleep(0.3)
+            entity_dict = reader_func(id=obj_id)
+
+            # Key names cannot have - in them for jinja2 templating
+            obj_entity_type = obj_entity_type.replace("-", "_")
+            if obj_entity_type not in context["entities"]:
+                context["entities"][obj_entity_type] = []
+
+            context["entities"][obj_entity_type].append(entity_dict)
+
+        # Generate the svg img contents for the targets map
+        if "relationship" in context["entities"]:
+            # Create world map
+            world_map = World()
+            world_map.title = "Targeted Countries"
+            targeted_countries = []
+            for relationship in context["entities"]["relationship"]:
+                if (
+                        relationship["entity_type"] == "targets"
+                        and relationship["relationship_type"] == "targets"
+                        and relationship["to"]["entity_type"] == "Country"
+                ):
+                    country_code = relationship["to"]["name"].lower()
+                    if not self._validate_country_code(country_code):
+                        self.helper.log_warning(
+                            f"{country_code} is not a supported country code, skipping..."
+                        )
+                        continue
+
+                    targeted_countries.append(country_code)
+
+            # Build targeted countries image
+            if targeted_countries:
+                world_map.add("Targeted Countries", targeted_countries)
+                # Convert the svg to base64 png
+                svg_bytes = world_map.render()
+                png_bytes = io.BytesIO()
+                cairosvg.svg2png(bytestring=svg_bytes, write_to=png_bytes)
+                base64_png = base64.b64encode(png_bytes.getvalue()).decode()
+                context["target_map_country"] = f"data:image/png;base64, {base64_png}"
+
+        # Render html with input variables
+        env = Environment(
+            loader=FileSystemLoader(self.current_dir), finalize=self._finalize
+        )
+        template = env.get_template("resources/case-incident.html")
+        html_string = template.render(context)
+
+        # Generate pdf from html string
+        pdf_contents = HTML(
+            string=html_string, base_url=f"{self.current_dir}/resources"
+        ).write_pdf()
+
+        # Upload the output pdf
+        # Upload the output pdf
+        self.helper.log_info(f"Uploading: {file_name}")
+        self.helper.api.stix_domain_object.push_entity_export(
+            entity_id, file_name, pdf_contents, "application/pdf"
+        )
+
     def _set_colors(self):
         for root, dirs, files in os.walk(self.current_dir):
             for file_name in files:
@@ -575,6 +672,8 @@ class ExportReportPdf:
             "language": self.helper.api_impersonate.language.read,
             "vulnerability": self.helper.api_impersonate.vulnerability.read,
             "incident": self.helper.api_impersonate.incident.read,
+            "x-opencti-case-incident": self.helper.api_impersonate.case_incident.read,
+            "case-incident": self.helper.api_impersonate.case_incident.read,
             "city": self.helper.api_impersonate.location.read,
             "country": self.helper.api_impersonate.location.read,
             "region": self.helper.api_impersonate.location.read,
