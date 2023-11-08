@@ -175,7 +175,9 @@ class Misp:
             config,
             default="",
         ).split(",")
-        self.helper.log_info(f"keep_original_tags_as_label: {self.keep_original_tags_as_label}")
+        self.helper.log_info(
+            f"keep_original_tags_as_label: {self.keep_original_tags_as_label}"
+        )
         self.misp_enforce_warning_list = get_config_variable(
             "MISP_ENFORCE_WARNING_LIST",
             ["misp", "enforce_warning_list"],
@@ -2232,7 +2234,6 @@ class Misp:
                     self.keep_original_tags_as_label,
                 )
             ):
-
                 self.helper.log_info(f"keeping raw tag: {tag}")
                 opencti_tags.append(tag["name"])
 
