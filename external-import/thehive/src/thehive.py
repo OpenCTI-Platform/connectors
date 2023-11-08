@@ -435,46 +435,71 @@ class TheHive:
         ]
 
     def process_observables(self, case, markings):
-        """Process all obserables from a case."""
-        observables = self.thehive_api.get_case_observables(
-            case_id=case.get("id")
-        ).json()
-        self.helper.log_info(
-            f"Processing {len(observables)} observables for case: {case.get('title')}"
-        )
+        """Process all observables from a case."""
+        try:
+            response = self.thehive_api.get_case_observables(case_id=case.get("id"))
+            if response.ok:
+                observables = response.json()
+                self.helper.log_info(
+                    f"Processing {len(observables)} observables for case: {case.get('title')}"
+                )
 
-        processed_observables = []
-        object_refs = []
+                processed_observables = []
+                object_refs = []
 
-        for observable in observables:
-            stix_observable = self.convert_observable(observable, markings)
-            if stix_observable is not None:
-                processed_observables.append(stix_observable)
-                object_refs.append(stix_observable.id)
-                sighting = self.generate_sighting(observable, stix_observable)
-                if sighting:
-                    processed_observables.append(sighting)
-        return processed_observables, object_refs
+                for observable in observables:
+                    stix_observable = self.convert_observable(observable, markings)
+                    if stix_observable:
+                        if hasattr(stix_observable, "id"):
+                            processed_observables.append(stix_observable)
+                            object_refs.append(stix_observable.id)
+                            sighting = self.generate_sighting(
+                                observable, stix_observable
+                            )
+                            if sighting:
+                                processed_observables.append(sighting)
+                return processed_observables, object_refs
+            else:
+                self.helper.log_error(
+                    f"Failed to get observables for case: {case.get('title')}"
+                )
+                return [], []
+        except Exception as e:
+            self.helper.log_error(
+                f"Error processing observables for case: {case.get('title')} - {str(e)}"
+            )
+            return [], []
 
     def process_observables_and_relations(self, observable, markings, stix_incident):
         """Function to process observables and create related STIX relations."""
-        stix_observable = self.convert_observable(observable, markings)
-        if not stix_observable:
-            return None, None
-
-        stix_observable_relation = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                "related-to", stix_observable.id, stix_incident.id
-            ),
-            relationship_type="related-to",
-            created_by_ref=self.identity.get("standard_id", ""),
-            source_ref=stix_observable.id,
-            target_ref=stix_incident.id,
-            confidence=int(self.helper.connect_confidence_level),
-            object_marking_refs=markings,
-            allow_custom=True,
-        )
-        return stix_observable, stix_observable_relation
+        try:
+            stix_observable = self.convert_observable(observable, markings)
+            if not stix_observable:
+                return None, None
+            if hasattr(stix_observable, "id"):
+                stix_observable_relation = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_observable.id, stix_incident.id
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.identity.get("standard_id", ""),
+                    source_ref=stix_observable.id,
+                    target_ref=stix_incident.id,
+                    confidence=int(self.helper.connect_confidence_level),
+                    object_marking_refs=markings,
+                    allow_custom=True,
+                )
+            return stix_observable, stix_observable_relation
+        except AttributeError as e:
+            self.helper.log_error(
+                f"Attribute error occurred: {str(e)},\nObservable: {observable}"
+            )
+            return stix_observable, None
+        except Exception as e:
+            self.helper.log_error(
+                f"Error occurred: {str(e)},\nObservable: {observable}"
+            )
+            return stix_observable, None
 
     def process_tasks(self, case, stix_case):
         """Function to process all tasks within a case."""
