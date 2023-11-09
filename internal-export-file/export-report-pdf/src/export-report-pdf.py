@@ -515,77 +515,89 @@ class ExportReportPdf:
         """
         Process a Case Incident entity and upload as pdf.
         """
+        # Get the Report
+        case_dict = self.helper.api_impersonate.case_incident.read(id=entity_id)
+        content_query = '{case (id:"' + entity_id + '") {content}}'
+        case_dict["content"] = (
+            self.helper.api_impersonate.query(query=content_query)
+        )["data"]["case"].get("content", "No content available.")
 
-        now_date = datetime.datetime.now().strftime("%b %d %Y")
-
+        # Extract values for inclusion in output pdf
+        case_marking = case_dict.get("objectMarking", None)
+        if case_marking:
+            case_marking = case_marking[-1]["definition"]
+        case_external_refs = [
+            external_ref_dict["url"]
+            for external_ref_dict in case_dict["externalReferences"]
+        ]
+        case_objs = case_dict["objects"]
+        case_date = datetime.datetime.now().strftime("%b %d %Y")
         # Store context for usage in html template
         context = {
-            "entities": {},
-            "target_map_country": None,
-            "report_date": now_date,
+            "case_name": case_dict["name"],
+            "case_description": case_dict.get("description", "No description available."),
+            "case_content": case_dict["content"],
+            "case_marking": case_marking,
+            "case_confidence": case_dict["confidence"],
+            "case_id": case_dict["id"],
+            "case_external_refs": case_external_refs,
+            "case_date": case_date,
             "company_address_line_1": self.company_address_line_1,
             "company_address_line_2": self.company_address_line_2,
             "company_address_line_3": self.company_address_line_3,
             "company_phone_number": self.company_phone_number,
             "company_email": self.company_email,
             "company_website": self.company_website,
+            "tasks": case_dict["tasks"],
+            "entities": {},
+            "observables": {},
         }
 
-        # Get a bundle of all objects affiliated with the intrusion set
-        bundle = self.helper.api_impersonate.stix2.export_entity(
-            "Case-Incident", entity_id, "full"
-        )
-
-        for case_incident_obj in bundle["objects"]:
-            obj_id = case_incident_obj["x_opencti_id"]
-            obj_entity_type = case_incident_obj["type"]
-            reader_func = self._get_reader(obj_entity_type)
-            if reader_func is None:
-                self.helper.log_error(
-                    f'Could not find a function to read entity with type "{obj_entity_type}"'
+        # Process each STIX Object
+        for case_obj in case_objs:
+            obj_entity_type = case_obj["entity_type"]
+            obj_id = case_obj["standard_id"]
+            # Handle StixCyberObservables entities
+            if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
+                    obj_entity_type
+            ):
+                observable_dict = (
+                    self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
                 )
-                continue
 
-            time.sleep(0.3)
-            entity_dict = reader_func(id=obj_id)
+                # If only include indicators and
+                # the observable doesn't have an indicator, skip it
+                if self.indicators_only and not observable_dict["indicators"]:
+                    self.helper.log_info(
+                        f"Skipping {obj_entity_type} observable with value {observable_dict['observable_value']} as it was not an Indicator."
+                    )
+                    continue
 
-            # Key names cannot have - in them for jinja2 templating
-            obj_entity_type = obj_entity_type.replace("-", "_")
-            if obj_entity_type not in context["entities"]:
-                context["entities"][obj_entity_type] = []
+                if obj_entity_type not in context["observables"]:
+                    context["observables"][obj_entity_type] = []
 
-            context["entities"][obj_entity_type].append(entity_dict)
+                # Defang urls
+                if self.defang_urls and obj_entity_type == "Url":
+                    observable_dict["observable_value"] = observable_dict[
+                        "observable_value"
+                    ].replace("http", "hxxp", 1)
 
-        # Generate the svg img contents for the targets map
-        if "relationship" in context["entities"]:
-            # Create world map
-            world_map = World()
-            world_map.title = "Targeted Countries"
-            targeted_countries = []
-            for relationship in context["entities"]["relationship"]:
-                if (
-                        relationship["entity_type"] == "targets"
-                        and relationship["relationship_type"] == "targets"
-                        and relationship["to"]["entity_type"] == "Country"
-                ):
-                    country_code = relationship["to"]["name"].lower()
-                    if not self._validate_country_code(country_code):
-                        self.helper.log_warning(
-                            f"{country_code} is not a supported country code, skipping..."
-                        )
-                        continue
+                context["observables"][obj_entity_type].append(observable_dict)
 
-                    targeted_countries.append(country_code)
+            # Handle all other entities
+            else:
+                reader_func = self._get_reader(obj_entity_type)
+                if reader_func is None:
+                    self.helper.log_error(
+                        f'Could not find a function to read entity with type "{obj_entity_type}"'
+                    )
+                    continue
+                entity_dict = reader_func(id=obj_id)
 
-            # Build targeted countries image
-            if targeted_countries:
-                world_map.add("Targeted Countries", targeted_countries)
-                # Convert the svg to base64 png
-                svg_bytes = world_map.render()
-                png_bytes = io.BytesIO()
-                cairosvg.svg2png(bytestring=svg_bytes, write_to=png_bytes)
-                base64_png = base64.b64encode(png_bytes.getvalue()).decode()
-                context["target_map_country"] = f"data:image/png;base64, {base64_png}"
+                if obj_entity_type not in context["entities"]:
+                    context["entities"][obj_entity_type] = []
+
+                context["entities"][obj_entity_type].append(entity_dict)
 
         # Render html with input variables
         env = Environment(
@@ -599,7 +611,6 @@ class ExportReportPdf:
             string=html_string, base_url=f"{self.current_dir}/resources"
         ).write_pdf()
 
-        # Upload the output pdf
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
