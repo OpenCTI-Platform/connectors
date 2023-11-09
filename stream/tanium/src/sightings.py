@@ -109,7 +109,7 @@ class Sightings(threading.Thread):
                                     alert_date,
                                 ),
                                 sighting_of_ref=entity["standard_id"],
-                                where_sighted_refs=[self.identity["id"]],
+                                where_sighted_refs=[self.identity["standard_id"]],
                                 count=1,
                                 confidence=self.helper.connect_confidence_level,
                             )
