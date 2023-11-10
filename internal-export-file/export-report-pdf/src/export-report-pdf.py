@@ -115,7 +115,7 @@ class ExportReportPdf:
             self._process_threat_actor_individual(entity_id, file_name)
         else:
             raise ValueError(
-                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual",Case-Incident, not "{entity_type}".'
+                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", not "{entity_type}".'
             )
 
         return "Export done"
