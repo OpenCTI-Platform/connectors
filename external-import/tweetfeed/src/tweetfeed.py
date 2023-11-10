@@ -86,7 +86,7 @@ class TweetFeed:
 
     @staticmethod
     def _get_state_value(
-        state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
+            state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
     ) -> Any:
         if state is not None:
             return state.get(key, default)
@@ -106,7 +106,8 @@ class TweetFeed:
             "TWEETFEED_DAYS_BACK_IN_TIME",
             ["tweetfeed", "days_back_in_time"],
             config,
-            default=30,
+            True,
+            30,
         )
         self.tweetfeed_interval = get_config_variable(
             "TWEETFEED_INTERVAL", ["tweetfeed", "interval"], config, True
@@ -148,7 +149,6 @@ class TweetFeed:
             description=self.org_desc,
             externalReferences=[external_reference_org["id"]],
             contact_information="'TWITTER: https://twitter.com/0xDanielLopez'",
-            update=True,
         )
         self.update_existing_data = get_config_variable(
             "TWEETFEED_UPDATE_EXISTING_DATA",
@@ -224,8 +224,8 @@ class TweetFeed:
                 last_run_datetime = last_run_datetime + timedelta(days=-1)
 
                 if last_run is None or (
-                    (timestamp - last_run)
-                    > ((int(self.tweetfeed_interval)) * 60 * 60 * 24)
+                        (timestamp - last_run)
+                        > ((int(self.tweetfeed_interval)) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
                     datetimex = datetime.utcfromtimestamp(timestamp).strftime(
@@ -390,11 +390,11 @@ class TweetFeed:
                     )
                     if malwsearc:
                         if (
-                            malwsearc["name"].lower().strip()
-                            == taglabel.lower().strip().replace(" ", "")
-                            or malwsearc["name"].lower().strip() == taglabel.lower()
+                                malwsearc["name"].lower().strip()
+                                == taglabel.lower().strip().replace(" ", "")
+                                or malwsearc["name"].lower().strip() == taglabel.lower()
                         ):
-                            ### create relation and continue indicates
+                            # Create relation and continue indicates
                             self.helper.api.stix_core_relationship.create(
                                 fromId=observable["id"],
                                 toId=malwsearc["id"],
@@ -402,7 +402,7 @@ class TweetFeed:
                                 created_by_ref=self.organization["standard_id"],
                             )
 
-                    ## second search for intrusion set like APT
+                    # Second search for intrusion set like APT
                     intrusion = self.helper.api.intrusion_set.read(
                         filters={"key": "name", "values": [taglabel.lower().strip()]}
                     )
@@ -460,9 +460,9 @@ class TweetFeed:
     def process_ioc_per_date(self, last_update):
         delta = datetime.today() - last_update
         for day in reversed(range(0, delta.days + 1)):
-            ## get the date
+            # Get the date
             date = datetime.today() - timedelta(days=day)
-            ## get the url
+            # Get the url
             try:
                 url = self._generate_path(date.strftime("%Y%m%d"))
                 text = self.download_ioc_file(url)

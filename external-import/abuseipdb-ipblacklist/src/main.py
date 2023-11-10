@@ -223,11 +223,10 @@ class abuseipdbipblacklistimport:
                             bundle_objects.append(stix_observable)
                             bundle_objects.append(stix_relationship)
                         # Creating the bundle from the list
-                        bundle = stix2.Bundle(bundle_objects, allow_custom=True)
-                        bundle_json = bundle.serialize()
+                        bundle = self.helper.stix2_create_bundle(bundle_objects)
                         # Sending the bundle
                         self.helper.send_stix2_bundle(
-                            bundle_json,
+                            bundle,
                             update=self.update_existing_data,
                             work_id=work_id,
                         )

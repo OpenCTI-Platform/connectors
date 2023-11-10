@@ -6,55 +6,27 @@ from datetime import datetime
 
 import stix2
 import yaml
+from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
 from dateutil.parser import parse
+from hive_observable_transform import (
+    HiveObservableTransform,
+    UnsupportedIndicatorTypeError,
+)
 from pycti import (
     CaseIncident,
     CustomObjectCaseIncident,
     CustomObjectTask,
-    CustomObservableHostname,
-    CustomObservableText,
-    CustomObservableUserAgent,
     Incident,
-    MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     StixSightingRelationship,
     Task,
     get_config_variable,
 )
-from stix2 import (
-    URL,
-    AutonomousSystem,
-    DomainName,
-    EmailMessage,
-    File,
-    IPv4Address,
-    WindowsRegistryKey,
-)
 from thehive4py.api import TheHiveApi
 from thehive4py.query import Child, Gt, Or
 
-OBSERVABLES_MAPPING = {
-    "autonomous-system": "Autonomous-System.number",
-    "domain": "Domain-Name.value",
-    "file": None,
-    "file_md5": "File.hashes.MD5",
-    "file_sha1": "File.hashes.SHA-1",
-    "file_sha256": "File.hashes.SHA-256",
-    "filename": "File.name",
-    "fqdn": "Hostname.value",
-    "hostname": "Hostname.value",
-    "hash": None,
-    "ip": "IPv4-Addr.value",
-    "mail": "Email-Message.body",
-    "mail-subject": "Email-Message.subject",
-    "other": "Text.value",
-    "regexp": "Text.value",
-    "registry": "Windows-Registry-Key.key",
-    "uri_path": "Text.value",
-    "url": "Url.value",
-    "user-agent": "User-Agent.value",
-}
+from utils import format_datetime  # isort: skip
 
 
 class TheHive:
@@ -85,8 +57,9 @@ class TheHive:
             ["thehive", "import_from_date"],
             config,
             False,
-            datetime.utcfromtimestamp(int(time.time())).strftime("%Y-%m-%d %H:%M:%S"),
+            format_datetime(time.time(), DEFAULT_DATETIME),
         )
+        self.thehive_import_from_date = parse(self.thehive_import_from_date).timestamp()
         self.thehive_import_only_tlp = get_config_variable(
             "THEHIVE_IMPORT_ONLY_TLP",
             ["thehive", "import_only_tlp"],
@@ -148,456 +121,422 @@ class TheHive:
             self.thehive_url, self.thehive_api_key, cert=self.thehive_check_ssl
         )
 
-    def convert_observable(self, observable, markings):
-        stix_observable = None
-        if observable["dataType"] == "hash":
-            if len(observable["data"]) == 32:
-                data_type = "file_md5"
-            elif len(observable["data"]) == 40:
-                data_type = "file_sha1"
-            elif len(observable["data"]) == 64:
-                data_type = "file_sha256"
-            else:
-                data_type = "unknown"
-        else:
-            data_type = observable["dataType"]
-        observable_key = (
-            OBSERVABLES_MAPPING[data_type] if data_type in OBSERVABLES_MAPPING else None
+    def construct_query(self, type, last_date):
+        """Construct query for alert or cases based on the last_date."""
+        self.helper.log_info(
+            f"Constructing query with last date: {format_datetime(last_date, DEFAULT_UTC_DATETIME)}"
         )
-        if observable_key is not None:
-            if data_type == "autonomous-system":
-                stix_observable = AutonomousSystem(
-                    number=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else None,
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "domain":
-                stix_observable = DomainName(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else None,
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "file_md5":
-                stix_observable = File(
-                    hashes={"MD5": observable["data"]},
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else None,
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "file_sha1":
-                stix_observable = File(
-                    hashes={"SHA-1": observable["data"]},
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else None,
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "file_sha256":
-                stix_observable = File(
-                    hashes={"SHA-256": observable["data"]},
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "filename":
-                stix_observable = File(
-                    name=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "fqdn":
-                stix_observable = CustomObservableHostname(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "hostname":
-                stix_observable = CustomObservableHostname(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "ip":
-                stix_observable = IPv4Address(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "mail":
-                stix_observable = EmailMessage(
-                    body=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "mail_subject":
-                stix_observable = EmailMessage(
-                    subject=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "other":
-                stix_observable = CustomObservableText(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "regexp":
-                stix_observable = CustomObservableText(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "registry":
-                stix_observable = WindowsRegistryKey(
-                    key=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "uri_path":
-                stix_observable = URL(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "url":
-                stix_observable = URL(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
-            elif data_type == "user-agent":
-                stix_observable = CustomObservableUserAgent(
-                    value=observable["data"],
-                    object_marking_refs=markings,
-                    custom_properties={
-                        "description": observable["message"]
-                        if "message" in observable
-                        else "Imported from TheHive",
-                        "labels": observable["tags"] if "tags" in observable else [],
-                        "x_opencti_score": 80 if observable["ioc"] else 50,
-                        "created_by_ref": self.identity["standard_id"],
-                        "x_opencti_create_indicator": observable["ioc"],
-                    },
-                )
+        if type == "case":
+            return Or(
+                Gt("updatedAt", int(last_date * 1000)),
+                Gt("createdAt", int(last_date * 1000)),
+                Child("case_task", Gt("createdAt", int(last_date * 1000))),
+                Child("case_artifact", Gt("createdAt", int(last_date * 1000))),
+            )
+        elif type == "alert":
+            return Or(
+                Gt("updatedAt", int(last_date * 1000)),
+                Gt("createdAt", int(last_date * 1000)),
+            )
+        else:
+            raise ValueError(f"Unsupported type in construct_query: {type}")
+
+    def convert_observable(self, observable, markings):
+        """Converts the Hive Observable to a STIX observable."""
+        stix_observable = None
+        try:
+            create_by_ref = self.identity.get("standard_id")
+            u_observable = HiveObservableTransform(
+                observable=observable,
+                markings=markings,
+                created_by_ref=create_by_ref,
+            )
+            stix_observable = u_observable.stix_observable
+            self.helper.log_debug(
+                f"Observable data_type ({u_observable.data_type}), stix observable: {u_observable.stix_observable}."
+            )
+        except UnsupportedIndicatorTypeError:
+            self.helper.log_warning(f"Observable not supported: {observable}.")
         return stix_observable
 
-    def generate_case_bundle(self, case):
-        self.helper.log_info("Importing case '" + case["title"] + "'")
-        case_objects = []
-        bundle_objects = []
-        markings = []
-        if case["tlp"] == 0:
-            markings.append(stix2.TLP_WHITE)
-            bundle_objects.append(stix2.TLP_WHITE)
-        elif case["tlp"] == 1:
-            markings.append(stix2.TLP_GREEN)
-            bundle_objects.append(stix2.TLP_GREEN)
-        elif case["tlp"] == 2:
-            markings.append(stix2.TLP_AMBER)
-            bundle_objects.append(stix2.TLP_AMBER)
-        elif case["tlp"] == 3:
-            markings.append(stix2.TLP_RED)
-            bundle_objects.append(stix2.TLP_RED)
-        elif case["tlp"] == 4:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="TLP",
-                x_opencti_definition="TLP:AMBER+STRICT",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        else:
-            markings.append(stix2.TLP_WHITE)
-            bundle_objects.append(stix2.TLP_WHITE)
-        if case["pap"] == 0:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:WHITE"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:WHITE",
-                x_opencti_color="#ffffff",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        elif case["pap"] == 1:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:GREEN"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:GREEN",
-                x_opencti_color="#2e7d32",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        elif case["pap"] == 2:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:AMBER"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:AMBER",
-                x_opencti_color="#d84315",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        elif case["pap"] == 3:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:RED"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:RED",
-                x_opencti_color="#c62828",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        else:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:WHITE"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:WHITE",
-                x_opencti_color="#ffffff",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-
-        # Get observables
-        observables = self.thehive_api.get_case_observables(case_id=case["id"]).json()
-        for observable in observables:
-            stix_observable = self.convert_observable(observable, markings)
-            if stix_observable is not None:
-                case_objects.append(stix_observable.id)
-                bundle_objects.append(stix_observable)
-                if observable["sighted"]:
-                    fake_indicator_id = (
-                        "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
-                    )
-                    stix_sighting = stix2.Sighting(
-                        id=StixSightingRelationship.generate_id(
-                            stix_observable.id,
-                            self.identity["standard_id"],
-                            datetime.utcfromtimestamp(
-                                int(observable["startDate"] / 1000)
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            datetime.utcfromtimestamp(
-                                int(observable["startDate"] / 1000 + 3600)
-                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        ),
-                        confidence=int(self.helper.connect_confidence_level),
-                        first_seen=datetime.utcfromtimestamp(
-                            int(observable["startDate"] / 1000)
-                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        last_seen=datetime.utcfromtimestamp(
-                            int(observable["startDate"] / 1000 + 3600)
-                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        where_sighted_refs=[self.identity["standard_id"]],
-                        sighting_of_ref=fake_indicator_id,
-                        custom_properties={
-                            "x_opencti_sighting_of_ref": stix_observable.id
-                        },
-                    )
-                    case_objects.append(self.identity["standard_id"])
-                    case_objects.append(stix_sighting.id)
-                    bundle_objects.append(stix_sighting)
-
-        # Create case
-        created = datetime.utcfromtimestamp(int(case["createdAt"] / 1000)).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
+    def create_stix_alert_incident(self, alert, markings, created, modified):
+        """Function to create STIX incident from alert."""
+        return stix2.Incident(
+            id=Incident.generate_id(alert.get("title", ""), created),
+            name=alert.get("title", ""),
+            description=alert.get("description", ""),
+            created=created,
+            modified=modified,
+            first_seen=created,
+            last_seen=modified,
+            object_marking_refs=markings,
+            labels=alert.get("tags", []),
+            created_by_ref=self.identity.get("standard_id", ""),
+            confidence=self.helper.connect_confidence_level,
+            allow_custom=True,
+            custom_properties={
+                "source": alert.get("source", ""),
+                "severity": self.severity_mapping.get(alert.get("severity", ""), ""),
+                "incident_type": "alert",
+            },
         )
+
+    def generate_alert_bundle(self, alert):
+        """Generate a STIX bundle from a given alert."""
+        # Initial logging
+        self.helper.log_info(f"Starting import for alert '{alert.get('title')}'")
+
+        # Initialize the bundle objects list
+        bundle_objects = []
+
+        # Process markings
+        try:
+            markings = self.process_markings(alert)
+            bundle_objects.extend(markings)
+        except Exception as e:
+            self.helper.log_error(f"Error processing markings: {str(e)}")
+
+        # Extract and format alert creation and modification times.
+        created_epoch = alert.get("createdAt", 0) / 1000
+        created = format_datetime(created_epoch, DEFAULT_UTC_DATETIME)
+        modified = format_datetime(
+            self.get_updated_date(item=alert, last_date=created_epoch),
+            DEFAULT_UTC_DATETIME,
+        )
+
+        # Create STIX Incident
+        stix_incident = self.create_stix_alert_incident(
+            alert, markings, created, modified
+        )
+        bundle_objects.append(stix_incident)
+
+        # Handle observables and relationships
+        for observable in alert.get("artifacts", []):
+            stix_observable, stix_relation = self.process_observables_and_relations(
+                observable, markings, stix_incident
+            )
+            if stix_observable:
+                bundle_objects.append(stix_observable)
+                bundle_objects.append(stix_relation)
+
+        # Create STIX bundle
+        try:
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
+            self.helper.log_info(f"Completed import for alert '{alert.get('title')}'")
+            return bundle
+        except Exception as e:
+            self.helper.log_error(
+                f"Error serializing STIX bundle for 'alert': {str(e)}"
+            )
+            return {}
+
+    def generate_case_bundle(self, case):
+        """Generate a stix bundle from a given case."""
+        self.helper.log_info(
+            f"Starting generation of STIX bundle for case: {case.get('title')}"
+        )
+        bundle_objects = []
+
+        # Process markings
+        try:
+            markings = self.process_markings(case)
+            bundle_objects.extend(markings)
+        except Exception as e:
+            self.helper.log_error(f"Error processing markings: {str(e)}")
+
+        # Process observables for current case.
+        processed_observables, case_object_refs = self.process_observables(
+            case, markings
+        )
+        bundle_objects.extend(processed_observables)
+
+        # Process main case and create CustomObjectCaseIncident.
+        stix_case = self.process_main_case(case, markings, case_object_refs)
+        bundle_objects.append(stix_case)
+
+        # Process tasks
+        bundle_objects.extend(self.process_tasks(case, stix_case))
+
+        # Finalize bundle
+        try:
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
+            self.helper.log_info(
+                f"Completed generation of STIX bundle for case: {case.get('title')}"
+            )
+            return bundle
+        except Exception as e:
+            self.helper.log_error(f"Error serializing STIX bundle for 'case': {str(e)}")
+            return {}
+
+    def generate_sighting(self, observable, stix_observable):
+        """Generate a stix sighting from a provided observable and stix observable."""
+        if observable.get("sighted"):
+            fake_indicator_id = "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
+            int_start_date = int(observable.get("startDate")) / 1000
+            stix_sighting = stix2.Sighting(
+                id=StixSightingRelationship.generate_id(
+                    stix_observable.id,
+                    self.identity.get("standard_id"),
+                    format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
+                    format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
+                ),
+                confidence=int(self.helper.connect_confidence_level),
+                first_seen=format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
+                last_seen=format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
+                where_sighted_refs=[self.identity.get("standard_id")],
+                sighting_of_ref=fake_indicator_id,
+                custom_properties={"x_opencti_sighting_of_ref": stix_observable.id},
+            )
+            return stix_sighting
+        return None
+
+    def get_interval(self):
+        """Get the intervale in seconds."""
+        return int(self.thehive_interval) * 60
+
+    def get_last_date(self, date_key, default_date):
+        """Get the last date from the current state or use the default date."""
+        if date_key in self.current_state:
+            last_date = self.current_state[date_key]
+            self.helper.log_info(
+                f"Connector ({date_key}): {format_datetime(last_date, DEFAULT_UTC_DATETIME)}"
+            )
+        else:
+            last_date = default_date
+            self.helper.log_info(
+                f"Using default date ({default_date}) for ({date_key})."
+            )
+        return last_date
+
+    def get_marking(self, mappings, key):
+        """Get the Marking based on the mappings key."""
+        return mappings.get(key, mappings[0])
+
+    def get_updated_date(self, item, last_date):
+        """Get the highest date observed within item and last_date."""
+        if "updatedAt" in item and item["updatedAt"] is not None:
+            new_date = int(item["updatedAt"] / 1000) + 1
+            self.helper.log_debug(
+                f"Using 'updatedAt' for last date calculation: {last_date} new date calculation: {new_date}"
+            )
+        else:
+            new_date = int(item.get("createdAt") / 1000) + 1
+            self.helper.log_debug(
+                f"Using 'createdAt' for last date calculation: {last_date} new date calculation: {new_date}"
+            )
+        return max(last_date, new_date)
+
+    def process_items(self, type, items, process_func, last_date_key):
+        """Process items, execute process_func, and send_stix2_bundle."""
+        friendly_name = f"TheHive processing ({type}) @ {datetime.now().isoformat()}"
+        self.helper.log_info(f"Processing type ({type}) and ({len(items)}) item(s).")
+        last_date = self.current_state.get(last_date_key, self.thehive_import_from_date)
+        updated_last_date = last_date
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+
+        for item in items:
+            self.helper.log_debug(f"item: {items}")
+            if str(item.get("tlp")) in self.thehive_import_only_tlp:
+                stix_bundle = process_func(item)
+                self.helper.send_stix2_bundle(
+                    stix_bundle,
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+                updated_last_date = self.get_updated_date(item, updated_last_date)
+            else:
+                self.helper.log_warn(
+                    f"Ignoring {item.get('title')} due to TLP too high."
+                )
+        message = f"Processing complete, last update: {updated_last_date}"
+        self.helper.api.work.to_processed(work_id, message)
+        return updated_last_date
+
+    def process_logic(self, type, last_date_key, bundle_func):
+        """Process case or alert based on returned query. Update state once complete."""
+        last_date = self.get_last_date(last_date_key, self.thehive_import_from_date)
+        self.helper.log_info(f"Last Date: {last_date}(s)...")
+        query = self.construct_query(type, last_date)
+        self.helper.log_info(f"Start Processing {type}(s)...")
+        # check if type is case or alert, run search based on provided type.
+        if type == "case":
+            items = self.thehive_api.find_cases(
+                query=query, sort="+updatedAt", range="0-10000"
+            ).json()
+        elif type == "alert":
+            items = self.thehive_api.find_alerts(
+                query=query, sort="+updatedAt", range="0-10000"
+            ).json()
+        else:
+            raise ValueError(f"Unsupported type in process_logic: {type}")
+        updated_last_date = self.process_items(
+            type=type,
+            items=items,
+            process_func=bundle_func,
+            last_date_key=last_date_key,
+        )
+        self.helper.log_info(
+            f"Updated last date: {updated_last_date} for {last_date_key}"
+        )
+
+        # Update state for provided key.
+        self.current_state.update({last_date_key: updated_last_date})
+        self.helper.log_info(f"Current state updated: {self.current_state}")
+        self.helper.set_state(self.current_state)
+
+    def process_main_case(self, case, markings, object_refs=None):
+        """Process Hive case and return CustomObjectCaseIncident"""
+        created = format_datetime(
+            int(case.get("createdAt")) / 1000, DEFAULT_UTC_DATETIME
+        )
+
         opencti_case_status = None
         if len(self.thehive_case_status_mapping) > 0:
             for case_status_mapping in self.thehive_case_status_mapping:
                 case_status_mapping_split = case_status_mapping.split(":")
-                if case["extendedStatus"] == case_status_mapping_split[0]:
+                if case.get("extendedStatus") == case_status_mapping_split[0]:
                     opencti_case_status = case_status_mapping_split[1]
+
         opencti_case_user = None
         if len(self.thehive_user_mapping) > 0:
             for user_mapping in self.thehive_user_mapping:
                 user_mapping_split = user_mapping.split(":")
-                if case["owner"] == user_mapping_split[0]:
+                if case.get("owner") == user_mapping_split[0]:
                     opencti_case_user = user_mapping_split[1]
+
         stix_case = CustomObjectCaseIncident(
-            id=CaseIncident.generate_id(case["title"], created),
-            name=case["title"],
-            description=case["description"],
+            id=CaseIncident.generate_id(case.get("title"), created),
+            name=case.get("title"),
+            description=case.get("description"),
             created=created,
             object_marking_refs=markings,
-            labels=case["tags"] if "tags" in case else [],
-            created_by_ref=self.identity["standard_id"],
-            severity=self.severity_mapping[case["severity"]]
-            if case["severity"] in self.severity_mapping
+            labels=case.get("tags") if case.get("tags") else None,
+            created_by_ref=self.identity.get("standard_id"),
+            severity=self.severity_mapping[case.get("severity")]
+            if case.get("severity") in self.severity_mapping
             else None,
             confidence=int(self.helper.connect_confidence_level),
-            object_refs=case_objects,
             x_opencti_workflow_id=opencti_case_status,
             x_opencti_assignee_ids=[opencti_case_user]
             if opencti_case_user is not None
             else None,
+            object_refs=object_refs if object_refs is not None else [],
         )
-        bundle_objects.append(stix_case)
 
-        # Get tasks
-        tasks = self.thehive_api.get_case_tasks(case_id=case["id"]).json()
-        for task in tasks:
-            created = datetime.utcfromtimestamp(int(task["createdAt"] / 1000)).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
+        return stix_case
+
+    def process_markings(self, item):
+        """Process TLP and PAP and return markings."""
+        return [
+            self.get_marking(TLP_MAPPINGS, item.get("tlp")),
+            self.get_marking(PAP_MAPPINGS, item.get("pap")),
+        ]
+
+    def process_observables(self, case, markings):
+        """Process all observables from a case."""
+        try:
+            response = self.thehive_api.get_case_observables(case_id=case.get("id"))
+            if response.ok:
+                observables = response.json()
+                self.helper.log_info(
+                    f"Processing {len(observables)} observables for case: {case.get('title')}"
+                )
+
+                processed_observables = []
+                object_refs = []
+
+                for observable in observables:
+                    stix_observable = self.convert_observable(observable, markings)
+                    if stix_observable:
+                        if hasattr(stix_observable, "id"):
+                            processed_observables.append(stix_observable)
+                            object_refs.append(stix_observable.id)
+                            sighting = self.generate_sighting(
+                                observable, stix_observable
+                            )
+                            if sighting:
+                                processed_observables.append(sighting)
+                return processed_observables, object_refs
+            else:
+                self.helper.log_error(
+                    f"Failed to get observables for case: {case.get('title')}"
+                )
+                return [], []
+        except Exception as e:
+            self.helper.log_error(
+                f"Error processing observables for case: {case.get('title')} - {str(e)}"
             )
+            return [], []
+
+    def process_observables_and_relations(self, observable, markings, stix_incident):
+        """Function to process observables and create related STIX relations."""
+        try:
+            stix_observable = self.convert_observable(observable, markings)
+            if not stix_observable:
+                return None, None
+            if hasattr(stix_observable, "id"):
+                stix_observable_relation = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_observable.id, stix_incident.id
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.identity.get("standard_id", ""),
+                    source_ref=stix_observable.id,
+                    target_ref=stix_incident.id,
+                    confidence=int(self.helper.connect_confidence_level),
+                    object_marking_refs=markings,
+                    allow_custom=True,
+                )
+            return stix_observable, stix_observable_relation
+        except AttributeError as e:
+            self.helper.log_error(
+                f"Attribute error occurred: {str(e)},\nObservable: {observable}"
+            )
+            return stix_observable, None
+        except Exception as e:
+            self.helper.log_error(
+                f"Error occurred: {str(e)},\nObservable: {observable}"
+            )
+            return stix_observable, None
+
+    def process_tasks(self, case, stix_case):
+        """Function to process all tasks within a case."""
+        tasks = self.thehive_api.get_case_tasks(case_id=case.get("id")).json()
+        self.helper.log_info(
+            f"Processing {len(tasks)} tasks for case: {case.get('title')}"
+        )
+
+        processed_tasks = []
+
+        for task in tasks:
+            created = format_datetime(
+                int(task.get("createdAt")) / 1000, DEFAULT_UTC_DATETIME
+            )
+
             opencti_task_status = None
             if len(self.thehive_task_status_mapping) > 0:
                 for task_status_mapping in self.thehive_task_status_mapping:
                     task_status_mapping_split = task_status_mapping.split(":")
-                    if task["status"] == task_status_mapping_split[0]:
+                    if task.get("status") == task_status_mapping_split[0]:
                         opencti_task_status = task_status_mapping_split[1]
+
             opencti_task_user = None
             if len(self.thehive_user_mapping) > 0:
                 for user_mapping in self.thehive_user_mapping:
                     user_mapping_split = user_mapping.split(":")
-                    if task["owner"] == user_mapping_split[0]:
+                    if task.get("owner") == user_mapping_split[0]:
                         opencti_task_user = user_mapping_split[1]
+
             stix_task = CustomObjectTask(
-                id=Task.generate_id(task["title"], created),
-                name=task["title"],
-                description=task["description"],
+                id=Task.generate_id(task.get("title"), created),
+                name=task.get("title"),
+                description=task.get("description"),
                 created=created,
-                due_date=datetime.utcfromtimestamp(
-                    int(task["dueDate"] / 1000)
-                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                due_date=format_datetime(
+                    task.get("dueDate") / 1000, DEFAULT_UTC_DATETIME
+                )
                 if "dueDate" in task
                 else None,
                 confidence=int(self.helper.connect_confidence_level),
@@ -607,275 +546,41 @@ class TheHive:
                 if opencti_task_user is not None
                 else None,
             )
-            bundle_objects.append(stix_task)
+            processed_tasks.append(stix_task)
 
-        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-        return bundle
-
-    def generate_alert_bundle(self, alert):
-        self.helper.log_info("Importing alert '" + alert["title"] + "'")
-        bundle_objects = []
-        markings = []
-        if alert["tlp"] == 0:
-            markings.append(stix2.TLP_WHITE)
-            bundle_objects.append(stix2.TLP_WHITE)
-        elif alert["tlp"] == 1:
-            markings.append(stix2.TLP_GREEN)
-            bundle_objects.append(stix2.TLP_GREEN)
-        elif alert["tlp"] == 2:
-            markings.append(stix2.TLP_AMBER)
-            bundle_objects.append(stix2.TLP_AMBER)
-        elif alert["tlp"] == 3:
-            markings.append(stix2.TLP_RED)
-            bundle_objects.append(stix2.TLP_RED)
-        elif alert["tlp"] == 4:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="TLP",
-                x_opencti_definition="TLP:AMBER+STRICT",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        else:
-            markings.append(stix2.TLP_WHITE)
-            bundle_objects.append(stix2.TLP_WHITE)
-        if alert["pap"] == 0:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:WHITE"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:WHITE",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        elif alert["pap"] == 1:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:GREEN"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:GREEN",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        elif alert["pap"] == 2:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:AMBER"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:AMBER",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        elif alert["pap"] == 3:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:RED"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:RED",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-        else:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("PAP", "PAP:WHITE"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition="PAP:WHITE",
-            )
-            markings.append(marking)
-            bundle_objects.append(marking)
-
-        created = datetime.utcfromtimestamp(int(alert["createdAt"] / 1000)).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
-        stix_incident = stix2.Incident(
-            id=Incident.generate_id(alert["title"], created),
-            name=alert["title"],
-            description=alert["description"],
-            object_marking_refs=markings,
-            labels=alert["tags"] if "tags" in alert else [],
-            created_by_ref=self.identity["standard_id"],
-            confidence=int(self.helper.connect_confidence_level),
-            allow_custom=True,
-            custom_properties={
-                "source": alert["source"],
-                "severity": self.severity_mapping[alert["severity"]]
-                if alert["severity"] in self.severity_mapping
-                else None,
-                "incident_type": "alert",
-            },
-        )
-        bundle_objects.append(stix_incident)
-        for observable in alert["artifacts"]:
-            stix_observable = self.convert_observable(observable, markings)
-            if stix_observable is not None:
-                stix_observable_relation = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", stix_observable.id, stix_incident.id
-                    ),
-                    relationship_type="related-to",
-                    created_by_ref=self.identity["standard_id"],
-                    source_ref=stix_observable.id,
-                    target_ref=stix_incident.id,
-                    confidence=int(self.helper.connect_confidence_level),
-                    object_marking_refs=markings,
-                    allow_custom=True,
-                )
-                bundle_objects.append(stix_observable)
-                bundle_objects.append(stix_observable_relation)
-        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-        return bundle
-
-    def get_interval(self):
-        return int(self.thehive_interval) * 60
+        return processed_tasks
 
     def run(self):
-        self.helper.log_info("Starting TheHive Connector...")
+        """Function to process case, alerts, and pause based on provided interval."""
         while True:
+            self.helper.log_info("Starting TheHive Conncector run loop...")
             try:
-                # Get the current timestamp and check
-                timestamp = int(time.time())
-                current_state = self.helper.get_state()
-                if current_state is not None and "last_case_date" in current_state:
-                    last_case_date = current_state["last_case_date"]
-                    self.helper.log_info(
-                        "Connector last_case_date: "
-                        + datetime.utcfromtimestamp(last_case_date).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-                    )
-                else:
-                    last_case_date = parse(self.thehive_import_from_date).timestamp()
-                    self.helper.log_info("Connector has no last_case_date")
-                if current_state is not None and "last_alert_date" in current_state:
-                    last_alert_date = current_state["last_alert_date"]
-                    self.helper.log_info(
-                        "Connector last_case_date: "
-                        + datetime.utcfromtimestamp(last_case_date).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-                    )
-                else:
-                    last_alert_date = parse(self.thehive_import_from_date).timestamp()
-                    self.helper.log_info("Connector has no last_alert_date")
+                self.current_state = self.helper.get_state() or {}
+                self.helper.log_info(f"Current State: {self.current_state}")
 
-                self.helper.log_info(
-                    "Get cases since last run ("
-                    + datetime.utcfromtimestamp(last_case_date).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    + ")"
-                )
-                query_cases = Or(
-                    Gt("updatedAt", int(last_case_date * 1000)),
-                    Gt("createdAt", int(last_case_date * 1000)),
-                    Child("case_task", Gt("createdAt", int(last_case_date * 1000))),
-                    Child("case_artifact", Gt("createdAt", int(last_case_date * 1000))),
-                )
-                cases = self.thehive_api.find_cases(
-                    query=query_cases, sort="+updatedAt", range="0-10000"
-                ).json()
-                now = datetime.utcfromtimestamp(timestamp)
-                friendly_name = "TheHive run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-                try:
-                    for case in cases:
-                        if str(case["tlp"]) in self.thehive_import_only_tlp:
-                            stix_bundle = self.generate_case_bundle(case)
-                            self.helper.send_stix2_bundle(
-                                stix_bundle,
-                                update=self.update_existing_data,
-                                work_id=work_id,
-                            )
-                            last_case_date = (
-                                (int(case["updatedAt"] / 1000) + 1)
-                                if "updatedAt" in case and case["updatedAt"] is not None
-                                else (int(case["createdAt"] / 1000) + 1)
-                            )
-                        else:
-                            self.helper.log_info(
-                                "Ignoring case '" + case["title"] + "' due TLP too high"
-                            )
-                except Exception:
-                    error_msg = traceback.format_exc()
-                    self.helper.log_error(error_msg)
+                # Cases
+                self.process_logic("case", "last_case_date", self.generate_case_bundle)
+                # Alerts
                 if self.thehive_import_alerts:
-                    query_alerts = Or(
-                        Gt("updatedAt", int(last_alert_date * 1000)),
-                        Gt("createdAt", int(last_alert_date * 1000)),
+                    self.process_logic(
+                        "alert", "last_alert_date", self.generate_alert_bundle
                     )
-                    alerts = self.thehive_api.find_alerts(
-                        query=query_alerts, sort="+updatedAt", range="0-10000"
-                    ).json()
-                    try:
-                        for alert in alerts:
-                            if str(alert["tlp"]) in self.thehive_import_only_tlp:
-                                stix_bundle = self.generate_alert_bundle(alert)
-                                self.helper.send_stix2_bundle(
-                                    stix_bundle,
-                                    update=self.update_existing_data,
-                                    work_id=work_id,
-                                )
-                                last_alert_date = (
-                                    (int(alert["updatedAt"] / 1000) + 1)
-                                    if "updatedAt" in alert
-                                    and alert["updatedAt"] is not None
-                                    else (int(alert["createdAt"] / 1000)) + 1
-                                )
-                            else:
-                                self.helper.log_info(
-                                    "Ignoring alert '"
-                                    + alert["title"]
-                                    + "' due TLP too high"
-                                )
-                    except Exception:
-                        error_msg = traceback.format_exc()
-                        self.helper.log_error(error_msg)
-
-                # Store the current timestamp as a last run
-                message = (
-                    "Connector successfully run, storing last_case_date="
-                    + str(last_case_date)
-                    + ", last_alert_date="
-                    + str(last_alert_date)
-                )
-                self.helper.log_info(message)
-                self.helper.api.work.to_processed(work_id, message)
-                current_state = self.helper.get_state()
-                if current_state is None:
-                    current_state = {
-                        "last_case_date": last_case_date,
-                        "last_alert_date": last_alert_date,
-                    }
-                else:
-                    current_state["last_case_date"] = last_case_date
-                    current_state["last_alert_date"] = last_alert_date
-                self.helper.set_state(current_state)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.log_error(f"Error occurred: {str(e)}")
+                traceback.print_exc()
 
+            # Check run_and_terminate flag, exit if true.
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
+            # pause connector until next scheduled interval.
+            self.helper.log_info(
+                f"End of current run loop, running next interval in {self.get_interval()} second(s)."
+            )
             time.sleep(self.get_interval())
 
 

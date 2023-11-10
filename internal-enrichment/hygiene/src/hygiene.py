@@ -143,7 +143,7 @@ class HygieneConnector:
 
     def _process_observable(self, stix_objects, stix_entity, opencti_entity) -> str:
         # Search in warninglist
-        result = self.warninglists.search(stix_entity["value"])
+        result = self.warninglists.search(opencti_entity["observable_value"])
 
         # If not found and the domain is a subdomain, search with the parent.
         use_parent = False
@@ -157,7 +157,8 @@ class HygieneConnector:
         # Iterate over the hits
         if result:
             self.helper.log_info(
-                "Hit found for %s in warninglists" % (stix_entity["value"])
+                "Hit found for %s in warninglists"
+                % (opencti_entity["observable_value"])
             )
 
             for hit in result:
@@ -250,7 +251,7 @@ class HygieneConnector:
                     stix_objects.append(stix_indicator)
 
                 serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
-                self.helper.send_stix2_bundle(serialized_bundle, update=True)
+                self.helper.send_stix2_bundle(serialized_bundle)
             return "Observable value found on warninglist and tagged accordingly"
 
     def _process_message(self, data) -> str:

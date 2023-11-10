@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-thehive:
-    image: opencti/connector-thehive:5.10.3
+    image: opencti/connector-thehive:5.11.13
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -19,7 +19,7 @@ services:
       - THEHIVE_IMPORT_FROM_DATE=2021-01-01T00:00:00 # Optional
       - THEHIVE_IMPORT_ONLY_TLP=0,1,2,3,4
       - THEHIVE_IMPORT_ALERTS=true
-      - "THEHIVE_SEVERITY_MAPPING= 1:01 - low,2:02 - medium,3:03 - high,4:04 - critical"
+      - "THEHIVE_SEVERITY_MAPPING=1:low,2:medium,3:high,4:critical"
       - THEHIVE_CASE_STATUS_MAPPING= # TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2
       - THEHIVE_TASK_STATUS_MAPPING= # Waiting:OpenCTI_Status_ID1,InProgress:OpenCTI_Status_ID2,Completed:OpenCTI_Status_ID2
       - THEHIVE_ALERT_STATUS_MAPPING= # TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2

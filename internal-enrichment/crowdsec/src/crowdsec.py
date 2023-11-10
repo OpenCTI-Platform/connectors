@@ -141,7 +141,6 @@ class CrowdSecConnector:
                     fromId=observable["id"],
                     toId=vuln["id"],
                     relationship_type="related-to",
-                    update=True,
                     first_seen=cti_data["history"]["first_seen"],
                     last_seen=cti_data["history"]["last_seen"],
                     confidence=self.helper.connect_confidence_level,

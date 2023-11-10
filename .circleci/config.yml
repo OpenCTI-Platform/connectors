@@ -65,10 +65,6 @@ jobs:
           name: Build Docker image opencti/connector-export-file-stix
           command: docker build -t opencti/connector-export-file-stix:latest . && docker tag opencti/connector-export-file-stix:latest opencti/connector-export-file-stix:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/internal-export-file/export-file-csv
-          name: Build Docker image opencti/connector-export-file-csv
-          command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/internal-export-file/export-file-txt
           name: Build Docker image opencti/connector-export-file-txt
           command: docker build -t opencti/connector-export-file-txt:latest . && docker tag opencti/connector-export-file-txt:latest opencti/connector-export-file-txt:${CIRCLE_TAG}
@@ -85,13 +81,13 @@ jobs:
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:latest . && docker tag opencti/connector-crowdstrike:latest opencti/connector-crowdstrike:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/cryptolaemus
-          name: Build Docker image opencti/connector-cryptolaemus
-          command: docker build -t opencti/connector-cryptolaemus:latest . && docker tag opencti/connector-cryptolaemus:latest opencti/connector-cryptolaemus:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
           command: docker build -t opencti/connector-cuckoo:latest . && docker tag opencti/connector-cuckoo:latest opencti/connector-cuckoo:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-csv
+          name: Build Docker image opencti/connector-export-file-csv
+          command: docker build -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest opencti/connector-export-file-csv:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/cape
           name: Build Docker image opencti/connector-cape
@@ -116,10 +112,6 @@ jobs:
           working_directory: ~/opencti/external-import/cve
           name: Build Docker image opencti/connector-cve
           command: docker build -t opencti/connector-cve:latest . && docker tag opencti/connector-cve:latest opencti/connector-cve:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/external-import/amitt
-          name: Build Docker image opencti/connector-amitt
-          command: docker build -t opencti/connector-amitt:latest . && docker tag opencti/connector-amitt:latest opencti/connector-amitt:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/sentinelone-threats
           name: Build Docker image opencti/connector-sentinelone-threats
@@ -156,10 +148,6 @@ jobs:
           working_directory: ~/opencti/external-import/valhalla
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:latest . && docker tag opencti/connector-valhalla:latest opencti/connector-valhalla:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/external-import/cybercrime-tracker
-          name: Build Docker image opencti/connector-cybercrime-tracker
-          command: docker build -t opencti/connector-cybercrime-tracker:latest . && docker tag opencti/connector-cybercrime-tracker:latest opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
@@ -273,6 +261,10 @@ jobs:
           name: Build Docker image opencti/connector-recordedfuture-feeds
           command: docker build -t opencti/connector-recordedfuture-feeds:latest . && docker tag opencti/connector-recordedfuture-feeds:latest opencti/connector-recordedfuture-feeds:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/harfanglab
+          name: Build Docker image opencti/connector-harfanglab
+          command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -292,8 +284,6 @@ jobs:
             docker push opencti/connector-alienvault:${CIRCLE_TAG}
             docker push opencti/connector-crowdstrike:latest
             docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
-            docker push opencti/connector-cryptolaemus:latest
-            docker push opencti/connector-cryptolaemus:${CIRCLE_TAG}
             docker push opencti/connector-cuckoo:latest
             docker push opencti/connector-cuckoo:${CIRCLE_TAG}
             docker push opencti/connector-cape:latest
@@ -308,8 +298,6 @@ jobs:
             docker push opencti/connector-opencti:${CIRCLE_TAG}
             docker push opencti/connector-cve:latest
             docker push opencti/connector-cve:${CIRCLE_TAG}
-            docker push opencti/connector-amitt:latest
-            docker push opencti/connector-amitt:${CIRCLE_TAG}
             docker push opencti/connector-sentinelone-threats:latest
             docker push opencti/connector-sentinelone-threats:${CIRCLE_TAG}
             docker push opencti/connector-ipinfo:latest
@@ -328,8 +316,6 @@ jobs:
             docker push opencti/connector-riskiq:${CIRCLE_TAG}
             docker push opencti/connector-valhalla:latest
             docker push opencti/connector-valhalla:${CIRCLE_TAG}
-            docker push opencti/connector-cybercrime-tracker:latest
-            docker push opencti/connector-cybercrime-tracker:${CIRCLE_TAG}
             docker push opencti/connector-tanium:latest
             docker push opencti/connector-tanium:${CIRCLE_TAG}
             docker push opencti/connector-mandiant:latest
@@ -386,6 +372,8 @@ jobs:
             docker push opencti/connector-comlaude:${CIRCLE_TAG}
             docker push opencti/connector-recordedfuture-feeds:latest
             docker push opencti/connector-recordedfuture-feeds:${CIRCLE_TAG}
+            docker push opencti/connector-harfanglab:latest
+            docker push opencti/connector-harfanglab:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -755,10 +743,6 @@ jobs:
           name: Build Docker image opencti/connector-export-file-stix
           command: docker build -t opencti/connector-export-file-stix:rolling .
       - run:
-          working_directory: ~/opencti/internal-export-file/export-file-csv
-          name: Build Docker image opencti/connector-export-file-csv
-          command: docker build -t opencti/connector-export-file-csv:rolling .
-      - run:
           working_directory: ~/opencti/internal-export-file/export-file-txt
           name: Build Docker image opencti/connector-export-file-txt
           command: docker build -t opencti/connector-export-file-txt:rolling .
@@ -775,13 +759,13 @@ jobs:
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:rolling .
       - run:
-          working_directory: ~/opencti/external-import/cryptolaemus
-          name: Build Docker image opencti/connector-cryptolaemus
-          command: docker build -t opencti/connector-cryptolaemus:rolling .
-      - run:
           working_directory: ~/opencti/external-import/cuckoo
           name: Build Docker image opencti/connector-cuckoo
           command: docker build -t opencti/connector-cuckoo:rolling .
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-csv
+          name: Build Docker image opencti/connector-export-file-csv
+          command: docker build -t opencti/connector-export-file-csv:rolling .
       - run:
           working_directory: ~/opencti/external-import/cape
           name: Build Docker image opencti/connector-cape
@@ -802,10 +786,6 @@ jobs:
           working_directory: ~/opencti/external-import/cve
           name: Build Docker image opencti/connector-cve
           command: docker build -t opencti/connector-cve:rolling .
-      - run:
-          working_directory: ~/opencti/external-import/amitt
-          name: Build Docker image opencti/connector-amitt
-          command: docker build -t opencti/connector-amitt:rolling .
       - run:
           working_directory: ~/opencti/internal-enrichment/ipinfo
           name: Build Docker image opencti/connector-ipinfo
@@ -838,10 +818,6 @@ jobs:
           working_directory: ~/opencti/external-import/valhalla
           name: Build Docker image opencti/connector-valhalla
           command: docker build -t opencti/connector-valhalla:rolling .
-      - run:
-          working_directory: ~/opencti/external-import/cybercrime-tracker
-          name: Build Docker image opencti/connector-cybercrime-tracker
-          command: docker build -t opencti/connector-cybercrime-tracker:rolling .
       - run:
           working_directory: ~/opencti/stream/tanium
           name: Build Docker image opencti/connector-tanium
@@ -952,8 +928,12 @@ jobs:
           command: docker build -t opencti/connector-comlaude:rolling .
       - run:
           working_directory: ~/opencti/external-import/recordedfuture-feeds
-          name: Build Docker image opencti/recordedfuture-feeds
-          command: docker build -t opencti/recordedfuture-feeds:rolling .
+          name: Build Docker image opencti/connector-recordedfuture-feeds
+          command: docker build -t opencti/connector-recordedfuture-feeds:rolling .
+      - run:
+          working_directory: ~/opencti/stream/harfanglab
+          name: Build Docker image opencti/connector-harfanglab
+          command: docker build -t opencti/connector-harfanglab:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -966,14 +946,12 @@ jobs:
             docker push opencti/connector-hygiene:rolling
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-crowdstrike:rolling
-            docker push opencti/connector-cryptolaemus:rolling
             docker push opencti/connector-cuckoo:rolling
             docker push opencti/connector-cape:rolling
             docker push opencti/connector-misp:rolling
             docker push opencti/connector-mitre:rolling
             docker push opencti/connector-opencti:rolling
             docker push opencti/connector-cve:rolling
-            docker push opencti/connector-amitt:rolling
             docker push opencti/connector-ipinfo:rolling
             docker push opencti/connector-virustotal:rolling
             docker push opencti/connector-virustotal-downloader:rolling
@@ -982,7 +960,6 @@ jobs:
             docker push opencti/connector-mwdb:rolling
             docker push opencti/connector-riskiq:rolling
             docker push opencti/connector-valhalla:rolling
-            docker push opencti/connector-cybercrime-tracker:rolling
             docker push opencti/connector-tanium:rolling
             docker push opencti/connector-mandiant:rolling
             docker push opencti/connector-kaspersky:rolling
@@ -1011,6 +988,7 @@ jobs:
             docker push opencti/connector-orion-malware:rolling
             docker push opencti/connector-comlaude:rolling
             docker push opencti/connector-recordedfuture-feeds:rolling
+            docker push opencti/connector-harfanglab:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

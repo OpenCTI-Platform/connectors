@@ -119,7 +119,6 @@ class ShodanConnector:
                             "type"
                         ],
                     },
-                    update=True,
                 )
                 x509s.append(x509)
         return x509s
@@ -133,7 +132,6 @@ class ShodanConnector:
                     "type": "domain-name",
                     "value": domain,
                 },
-                update=True,
             )
             domains.append(domainX)
         return domains
@@ -199,7 +197,6 @@ class ShodanConnector:
                 "number": ASNumber,
                 "name": shodanHostResponse["asn"],
             },
-            update=True,
             objectLabel=tags,
         )
 
@@ -226,7 +223,6 @@ class ShodanConnector:
             fromId=observable["id"],
             toId=org["id"],
             relationship_type="related-to",
-            update=True,
             confidence=self.helper.connect_confidence_level,
         )
 
@@ -239,7 +235,6 @@ class ShodanConnector:
                 pattern=f"[ipv4-addr:value = '{shodanHostResponse['ip_str']}']",
                 x_opencti_main_observable_type="IPv4-Addr",
                 valid_from=now,
-                update=True,
                 objectLabel=tags,
                 confidence=self.helper.connect_confidence_level,
                 x_opencti_detection=True,
@@ -249,7 +244,6 @@ class ShodanConnector:
                 fromId=final_indicator["id"],
                 toId=observable["id"],
                 relationship_type="based-on",
-                update=True,
                 confidence=self.helper.connect_confidence_level,
             )
 
@@ -258,7 +252,6 @@ class ShodanConnector:
             fromId=observable["id"],
             toId=asn["id"],
             relationship_type="obs_belongs-to",
-            update=True,
             confidence=self.helper.connect_confidence_level,
         )
         # Link x509 to Observable
@@ -267,7 +260,6 @@ class ShodanConnector:
                 fromId=observable["id"],
                 toId=x509["id"],
                 relationship_type="related-to",
-                update=True,
                 confidence=self.helper.connect_confidence_level,
             )
 
@@ -277,7 +269,6 @@ class ShodanConnector:
                 fromId=domain["id"],
                 toId=observable["id"],
                 relationship_type="obs_resolves-to",
-                update=True,
                 confidence=self.helper.connect_confidence_level,
             )
 
@@ -288,7 +279,6 @@ class ShodanConnector:
                 fromId=observable["id"],
                 toId=vuln["id"],
                 relationship_type="related-to",
-                update=True,
                 start_time=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
                 stop_time=VulnEOL.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 confidence=self.helper.connect_confidence_level,

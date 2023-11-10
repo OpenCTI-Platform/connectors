@@ -14,7 +14,7 @@ from dateutil.parser import ParserError, parse
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
 
-## MODIFICATION BY CYRILYXE (OPENCTI 5.10.3, the 2022-08-12)
+## MODIFICATION BY CYRILYXE (OPENCTI 5.11.13, the 2022-08-12)
 # By default, the def '_load_data_sets' (line 370ish in this file) uses relative path
 #   But from a manual deployement, we have to use a Daemon for launching the service
 #   So i added a global var : gbl_scriptDir (not mandatory but for visibility purpose only)
@@ -183,13 +183,13 @@ class Sekoia(object):
             self._add_confidence_to_objects(items)
             bundle = self.helper.stix2_create_bundle(items)
             try:
-                self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+                self.helper.send_stix2_bundle(bundle, work_id=work_id)
             except RecursionError:
                 self.helper.log_error(
                     "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
                 )
                 self.helper.send_stix2_bundle(
-                    bundle, update=True, work_id=work_id, bypass_split=True
+                    bundle, work_id=work_id, bypass_split=True
                 )
 
             self.helper.set_state({"last_cursor": cursor})

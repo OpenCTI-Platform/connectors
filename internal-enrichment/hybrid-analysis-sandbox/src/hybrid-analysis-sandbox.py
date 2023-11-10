@@ -44,7 +44,7 @@ class HybridAnalysis:
         self.api_url = "https://www.hybrid-analysis.com/api/v2"
         self.headers = {
             "api-key": self.api_key,
-            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 5.10.3",
+            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 5.11.13",
             "accept": "application/json",
         }
         self.identity = self.helper.api.identity.create(
@@ -141,6 +141,7 @@ class HybridAnalysis:
                     source_ref=stix_entity["id"],
                     target_ref=domain_stix.id,
                     object_marking_refs=[stix2.TLP_WHITE],
+                    confidence=self.helper.connect_confidence_level,
                 )
                 # Attach IP to Malware Analysis (through analysis_sco_refs)
                 analysis_sco_refs.append(domain_stix.id)
@@ -173,6 +174,7 @@ class HybridAnalysis:
                 source_ref=stix_entity["id"],
                 target_ref=host_stix.id,
                 object_marking_refs=[stix2.TLP_WHITE],
+                confidence=self.helper.connect_confidence_level,
             )
             # Attach IP to Malware Analysis (through analysis_sco_refs)
             analysis_sco_refs.append(host_stix.id)
@@ -201,6 +203,7 @@ class HybridAnalysis:
                     created_by_ref=self.identity,
                     source_ref=stix_entity["id"],
                     target_ref=file_stix.id,
+                    confidence=self.helper.connect_confidence_level,
                 )
                 # Attach file to Malware Analysis (through analysis_sco_refs)
                 analysis_sco_refs.append(file_stix.id)
@@ -218,6 +221,7 @@ class HybridAnalysis:
                     ),
                     created_by_ref=self.identity,
                     name=tactic["technique"],
+                    confidence=self.helper.connect_confidence_level,
                     custom_properties={
                         "x_mitre_id": tactic["attck_id"],
                     },
@@ -263,7 +267,7 @@ class HybridAnalysis:
                 objects=stix_objects,
                 allow_custom=True,
             ).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle, update=True)
+            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
             return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
             )
@@ -402,7 +406,7 @@ class HybridAnalysis:
 
     def _process_message(self, data):
         opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
+            id=data["entity_id"], withFiles=True
         )
         if opencti_entity is None:
             raise ValueError(

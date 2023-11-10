@@ -26,14 +26,14 @@ class TaniumConnector:
 
         # Initialize the Tanium API Handler
         self.tanium_url = get_config_variable("TANIUM_URL", ["tanium", "url"], config)
+        self.tanium_url_console = get_config_variable(
+            "TANIUM_URL_CONSOLE", ["tanium", "url_console"], config
+        )
         self.tanium_ssl_verify = get_config_variable(
             "TANIUM_SSL_VERIFY", ["tanium", "ssl_verify"], config, False, True
         )
-        self.tanium_login = get_config_variable(
-            "TANIUM_LOGIN", ["tanium", "login"], config
-        )
-        self.tanium_password = get_config_variable(
-            "TANIUM_PASSWORD", ["tanium", "password"], config
+        self.tanium_token = get_config_variable(
+            "TANIUM_TOKEN", ["tanium", "token"], config
         )
         self.tanium_hashes_in_reputation = get_config_variable(
             "TANIUM_HASHES_IN_REPUTATION",
@@ -49,14 +49,24 @@ class TaniumConnector:
             False,
             True,
         )
-        # Launch quickscan automatically (true/false)
-        self.tanium_auto_quickscan = get_config_variable(
-            "TANIUM_AUTO_QUICKSCAN", ["tanium", "auto_quickscan"], config, False, False
+        self.tanium_auto_ondemand_scan = get_config_variable(
+            "TANIUM_AUTO_ONDEMAND_SCAN",
+            ["tanium", "ondemand_scan"],
+            config,
+            False,
+            True,
         )
-        # Target computer groups of the automatic quickscan (if enable)
+        # Target computer group of the automatic quickscan (if enable)
         self.tanium_computer_groups = get_config_variable(
-            "TANIUM_COMPUTER_GROUPS", ["tanium", "computer_groups"], config, False, ""
+            "TANIUM_COMPUTER_GROUPS", ["tanium", "computer_groups"], config, False, "1"
         ).split(",")
+        self.tanium_import_alerts = get_config_variable(
+            "TANIUM_IMPORT_ALERTS",
+            ["tanium", "import_alerts"],
+            config,
+            False,
+            True,
+        )
 
         # Check Live Stream ID
         if (
@@ -69,10 +79,9 @@ class TaniumConnector:
         self.tanium_api_handler = TaniumApiHandler(
             self.helper,
             self.tanium_url,
-            self.tanium_login,
-            self.tanium_password,
+            self.tanium_token,
             self.tanium_ssl_verify,
-            self.tanium_auto_quickscan,
+            self.tanium_auto_ondemand_scan,
             self.tanium_computer_groups,
         )
 
@@ -158,7 +167,12 @@ class TaniumConnector:
         return
 
     def start(self):
-        self.sightings = Sightings(self.helper, self.tanium_api_handler)
+        self.sightings = Sightings(
+            self.helper,
+            self.tanium_api_handler,
+            self.tanium_import_alerts,
+            self.tanium_url_console,
+        )
         self.sightings.start()
         self.helper.listen_stream(self._process_message)
 

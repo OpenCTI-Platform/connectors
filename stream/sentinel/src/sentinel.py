@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import sys
 import time
@@ -7,6 +8,20 @@ from datetime import datetime, timedelta
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from sightings import Sightings
+from stix_shifter.stix_translation import stix_translation
+
+
+def fix_loggers() -> None:
+    logging.getLogger(
+        "stix_shifter_modules.splunk.stix_translation.query_translator"
+    ).setLevel(logging.CRITICAL)
+    logging.getLogger("stix_shifter.stix_translation.stix_translation").setLevel(
+        logging.CRITICAL
+    )
+    logging.getLogger(
+        "stix_shifter_utils.stix_translation.stix_translation_error_mapper"
+    ).setLevel(logging.CRITICAL)
 
 
 class SentinelConnector:
@@ -39,6 +54,12 @@ class SentinelConnector:
         self.request_url = get_config_variable(
             "REQUEST_URL", ["sentinel", "request_url"], config
         )
+        self.incident_url = get_config_variable(
+            "INCIDENT_URL", ["sentinel", "incident_url"], config
+        )
+        self.sentinel_url = get_config_variable(
+            "SENTINEL_URL", ["sentinel", "sentinel_url"], config
+        )
         self.confidence_level = get_config_variable(
             "CONFIDENCE_LEVEL", ["sentinel", "confidence_level"], config
         )
@@ -55,550 +76,387 @@ class SentinelConnector:
         self.passive_only = get_config_variable(
             "PASSIVE_ONLY", ["sentinel", "passive_only"], config
         )
+        self.import_incidents = get_config_variable(
+            "IMPORT_INCIDENTS", ["sentinel", "import_incidents"], config
+        )
+        self.header = None
 
-    # Read from OpenCTI then push new, update, or delete to Sentinel
+    def _graph_api_authorization(self):
+        try:
+            url = (
+                f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
+            )
+            oauth_data = {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "grant_type": "client_credentials",
+                "scope": "https://graph.microsoft.com/.default",
+            }
+            response = requests.post(url, data=oauth_data)
+            response_json = json.loads(response.text)
+            oauth_token = response_json["access_token"]
+            self.headers = {"Authorization": oauth_token}
+        except Exception as e:
+            raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
+
+    def _extract_action(self, data):
+        # Action condition based on confidence score if action is not set
+        if self.action:
+            action = self.action
+        elif (
+            OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
+            >= self.confidence_level
+        ):
+            action = "block"
+        elif (
+            OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
+            < self.confidence_level
+            and OpenCTIConnectorHelper.get_attribute_in_extension("score", data) != 0
+        ):
+            action = "alert"
+        elif OpenCTIConnectorHelper.get_attribute_in_extension("score", data) == 0:
+            action = "allow"
+        else:
+            action = "unknown"
+        return action
+
+    def _create_indicator(self, data):
+        internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        try:
+            translation = stix_translation.StixTranslation()
+            parsed = translation.translate("splunk", "parse", "{}", data["pattern"])
+            if "parsed_stix" in parsed:
+                results = parsed["parsed_stix"]
+                for result in results:
+                    stix_value = result["value"]
+                    if result["attribute"] in [
+                        "domain-name:value",
+                        "hostname:value",
+                        "ipv4-addr:value",
+                        "ipv6-addr:value",
+                        "url:value",
+                    ]:
+                        stix_type = result["attribute"].replace(":value", "")
+                        data["type"] = stix_type
+                        data["value"] = stix_value
+                        self._create_observable(data)
+                    elif result["attribute"] == "file:hashes.'SHA-256'":
+                        data["type"] = "file"
+                        data["hashes"] = {"SHA-256": stix_value}
+                        self._create_observable(data)
+        except:
+            self.helper.log_warning(
+                "[CREATE] Cannot convert STIX indicator { " + internal_id + "}"
+            )
+
+    def _create_observable(self, data):
+        self._graph_api_authorization()
+        internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        ioc_type = None
+        match data["type"]:
+            case "ipv4-addr":
+                ioc_type = "networkIPv4"
+            case "url":
+                ioc_type = "url"
+            case "domain-name":
+                ioc_type = "domainName"
+            case "ipv6-addr":
+                ioc_type = "networkIPv6"
+            case "email-addr":
+                ioc_type = "email"
+            case "file":
+                ioc_type = "file"
+        action = self._extract_action(data)
+        stix_description = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "description", data
+        )
+        description = (
+            stix_description[0:99] if stix_description is not None else "No description"
+        )
+        updated_at = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "updated_at", data
+        )
+        datetime_object = datetime.strptime(updated_at, "%Y-%m-%dT%H:%M:%S.%fZ")
+        days = int(self.expire_time)
+        age = timedelta(days)
+        expire_datetime = datetime_object + age
+        expiration_datetime = str(expire_datetime.strftime("%Y-%m-%dT%H:%M:%SZ"))
+        labels = OpenCTIConnectorHelper.get_attribute_in_extension("labels", data)
+        tags = labels + ["opencti"] if labels is not None else ["opencti"]
+        # Threat Type - Defaults to WatchList but checks for other tags. Will only use one tag
+        # https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta#threat_type-values
+        threat_type = "WatchList"
+        if labels is not None:
+            for label in labels:
+                if label.upper() == "BOTNET":
+                    threat_type = "Botnet"
+                elif label.upper() == "C2":
+                    threat_type = "C2"
+                elif label.upper() == "CRYPTOMINING":
+                    threat_type = "CryptoMining"
+                elif label.upper() == "DARKNET":
+                    threat_type = "Darknet"
+                elif label.upper() == "DDOS":
+                    threat_type = "DDoS"
+                elif label.upper() == "MALICIOUSURL":
+                    threat_type = "MaliciousUrl"
+                elif label.upper() == "MALWARE":
+                    threat_type = "Malware"
+                elif label.upper() == "PHISHING":
+                    threat_type = "Phishing"
+                elif label.upper() == "PROXY":
+                    threat_type = "Proxy"
+                elif label.upper() == "PUA":
+                    threat_type = "PUA"
+        # TLP
+        # https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta#tlplevel-values
+        if self.tlp_level:
+            tlpLevel = self.tlp_level
+        elif "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed" in str(data):
+            tlpLevel = "red"
+        elif "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37" in str(
+            data
+        ) or "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82" in str(data):
+            tlpLevel = "amber"
+        elif "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da" in str(data):
+            tlpLevel = "green"
+        elif "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9" in str(data):
+            tlpLevel = "white"
+        else:
+            tlpLevel = "unknown"
+        # File
+        file_name = data.get("name", None)
+        file_size = data.get("size", 0)
+        # Confidence
+        confidence = data.get("confidence", 50)
+        # Passive only
+        if self.passive_only:
+            passive_only = "true"
+        else:
+            passive_only = "false"
+
+        self.helper.log_info("[CREATE] Processing data {" + internal_id + "}")
+        # Do any processing needed
+        data["_key"] = internal_id
+
+        # Check for IOC type and send request
+        # This is for network based IOCS
+        response = None
+        if (
+            ioc_type == "networkIPv4"
+            or ioc_type == "url"
+            or ioc_type == "domainName"
+            or ioc_type == "networkIPv6"
+        ):
+            body = {
+                ioc_type: data["value"],
+                "action": action,
+                "description": description,
+                "expiration_datetime": expiration_datetime,
+                "targetProduct": self.target_product,
+                "threatType": threat_type,
+                "tlpLevel": tlpLevel,
+                "externalId": internal_id,
+                "lastReportedDateTime": str(updated_at),
+                "passiveOnly": passive_only,
+                "tags": tags,
+                "confidence": confidence,
+            }
+            response = requests.post(
+                self.resource_url + self.request_url,
+                json=body,
+                headers=self.headers,
+            )
+        # This is for email based IOCs
+        elif ioc_type == "email":
+            body = {
+                "emailSenderAddress": data["value"],
+                "emailSenderName": data["display_name"],
+                "action": action,
+                "description": description,
+                "expirationDateTime": expiration_datetime,
+                "targetProduct": self.target_product,
+                "threatType": threat_type,
+                "tlpLevel": tlpLevel,
+                "externalId": internal_id,
+                "lastReportedDateTime": str(updated_at),
+                "passiveOnly": passive_only,
+                "tags": tags,
+                "confidence": confidence,
+            }
+            response = requests.post(
+                self.resource_url + self.request_url,
+                json=body,
+                headers=self.headers,
+            )
+        # This is for file types. Does a check for MD5, SHA1, and SHA256 being present. Must contain at least one hash value
+        elif ioc_type == "file":
+            if "MD5" in data["hashes"]:
+                body = {
+                    "fileCreatedDateTime": data["ctime"],
+                    "fileHashType": "md5",
+                    "fileHashValue": data["hashes"]["MD5"],
+                    "fileName": file_name,
+                    "fileSize": file_size,
+                    "action": action,
+                    "description": description,
+                    "expirationDateTime": expiration_datetime,
+                    "targetProduct": self.target_product,
+                    "threatType": threat_type,
+                    "tlpLevel": tlpLevel,
+                    "externalId": internal_id,
+                    "lastReportedDateTime": str(updated_at),
+                    "passiveOnly": passive_only,
+                    "tags": tags,
+                }
+                response = requests.post(
+                    self.resource_url + self.request_url,
+                    json=body,
+                    headers=self.headers,
+                )
+            if "SHA-1" in data["hashes"]:
+                body = {
+                    "fileCreatedDateTime": data["ctime"],
+                    "fileHashType": "sha1",
+                    "fileHashValue": data["hashes"]["SHA-1"],
+                    "fileName": file_name,
+                    "fileSize": file_size,
+                    "action": action,
+                    "description": description,
+                    "expirationDateTime": expiration_datetime,
+                    "targetProduct": self.target_product,
+                    "threatType": threat_type,
+                    "tlpLevel": tlpLevel,
+                    "externalId": internal_id,
+                    "lastReportedDateTime": str(updated_at),
+                    "passiveOnly": passive_only,
+                    "tags": tags,
+                    "confidence": confidence,
+                }
+                response = requests.post(
+                    self.resource_url + self.request_url,
+                    json=body,
+                    headers=self.headers,
+                )
+            if "SHA-256" in data["hashes"]:
+                body = {
+                    "fileCreatedDateTime": data["ctime"],
+                    "fileHashType": "sha256",
+                    "fileHashValue": data["hashes"]["SHA-256"],
+                    "fileName": file_name,
+                    "fileSize": file_size,
+                    "action": action,
+                    "description": description,
+                    "expirationDateTime": expiration_datetime,
+                    "targetProduct": self.target_product,
+                    "threatType": threat_type,
+                    "tlpLevel": tlpLevel,
+                    "externalId": internal_id,
+                    "lastReportedDateTime": str(updated_at),
+                    "passiveOnly": passive_only,
+                    "tags": tags,
+                    "confidence": confidence,
+                }
+                response = requests.post(
+                    self.resource_url + self.request_url,
+                    json=body,
+                    headers=self.headers,
+                )
+
+        # Log if the creation was successful or not
+        if response is not None:
+            if "201" in str(response):
+                self.helper.log_info("[CREATE] ID {" + internal_id + " Success }")
+                result = response.json()
+                external_reference = self.helper.api.external_reference.create(
+                    source_name=self.target_product.replace("Azure", "Microsoft"),
+                    external_id=result["id"],
+                    description="Intel within the Microsoft platform.",
+                )
+                if "pattern" in data:
+                    self.helper.api.stix_domain_object.add_external_reference(
+                        id=internal_id,
+                        external_reference_id=external_reference["id"],
+                    )
+                else:
+                    self.helper.api.stix_cyber_observable.add_external_reference(
+                        id=internal_id,
+                        external_reference_id=external_reference["id"],
+                    )
+            else:
+                self.helper.log_info(
+                    "[CREATE] ID {"
+                    + internal_id
+                    + " Failed and got }"
+                    + str(response)
+                    + " status code."
+                )
+
+    def _delete_object(self, data):
+        self._graph_api_authorization()
+        internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        self.helper.log_info("[DELETE] Processing data {" + internal_id + "}")
+        # Gets a list of all IOC in Microsoft Platform and looks for externalID which is for OpenCTI reference
+        response = requests.get(
+            self.resource_url + self.request_url, headers=self.headers
+        )
+        getIOC = response.json()
+        did_delete = 0
+        # Loop through all Microsoft IOCs to see if the external ID matches the OpenCTI Object id
+        for i in range(len(getIOC["value"])):
+            if getIOC["value"][i]["externalId"] == internal_id:
+                ioc_id = getIOC["value"][i]["id"]
+                requests.delete(
+                    self.resource_url + self.request_url + "/" + ioc_id,
+                    headers=self.headers,
+                )
+                self.helper.log_info("[DELETE] ID {" + internal_id + "} Success")
+                if data["type"] == "indicator":
+                    entity = self.helper.api.indicator.read(id=internal_id)
+                else:
+                    entity = self.helper.api.stix_cyber_observable.read(id=internal_id)
+                if (
+                    entity
+                    and "externalReferences" in entity
+                    and len(entity["externalReferences"]) > 0
+                ):
+                    for external_reference in entity["externalReferences"]:
+                        if external_reference[
+                            "source_name"
+                        ] == self.target_product.replace("Azure", "Microsoft"):
+                            self.helper.api.external_reference.delete(
+                                external_reference["id"]
+                            )
+                did_delete = 1
+        # Logs not found if no IOCs were deleted
+        if did_delete == 0:
+            self.helper.log_info(
+                "[DELETE] ID {"
+                + internal_id
+                + "} Not found on "
+                + self.target_product.replace("Azure", "Microsoft")
+            )
+
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
-
-            # Generate oAuth token on create events for specific IOC type.
-            if (
-                (msg.event == "create")
-                and (
-                    data["type"] == "ipv4-addr"
-                    or data["type"] == "url"
-                    or data["type"] == "domain-name"
-                    or data["type"] == "ipv6-addr"
-                    or data["type"] == "email-addr"
-                    or data["type"] == "file"
-                )
-            ) or (msg.event == "delete"):
-                try:
-                    url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
-                    oauth_data = {
-                        "client_id": self.client_id,
-                        "client_secret": self.client_secret,
-                        "grant_type": "client_credentials",
-                        "scope": "https://graph.microsoft.com/.default",
-                    }
-
-                    response = requests.post(url, data=oauth_data)
-                    response_json = json.loads(response.text)
-                    oauth_token = response_json["access_token"]
-                    headers = {"Authorization": oauth_token}
-
-                # Check for oAuth Token failures
-                except Exception as e:
-                    self.helper.log_error(
-                        "[ERROR] Failed generating oauth token {" + str(e) + "}"
-                    )
-                    return None
-
-                try:
-                    # Check on type of IOC for Creation events
-                    # Update events is a future plan msg.event == 'update'
-                    # https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta#indicator-observables
-                    if msg.event == "create":
-                        if data["type"] == "ipv4-addr":
-                            ioc_type = "networkIPv4"
-                        elif data["type"] == "url":
-                            ioc_type = "url"
-                        elif data["type"] == "domain-name":
-                            ioc_type = "domainName"
-                        elif data["type"] == "ipv6-addr":
-                            ioc_type = "networkIPv6"
-                        elif data["type"] == "email-addr":
-                            ioc_type = "email"
-                        elif data["type"] == "file":
-                            ioc_type = "file"
-
-                        # Action condition based on confidence score if action is not set
-                        if self.action:
-                            action = self.action
-                        elif (
-                            OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "score", data
-                            )
-                            >= self.confidence_level
-                        ):
-                            action = "block"
-                        elif (
-                            OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "score", data
-                            )
-                            < self.confidence_level
-                            and OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "score", data
-                            )
-                            != 0
-                        ):
-                            action = "alert"
-                        elif (
-                            OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "score", data
-                            )
-                            == 0
-                        ):
-                            action = "allow"
-                        else:
-                            action = "unknown"
-
-                        # Description - Limited to 100 characters
-                        if (
-                            OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "description", data
-                            )
-                            is not None
-                        ):
-                            description = (
-                                OpenCTIConnectorHelper.get_attribute_in_extension(
-                                    "description", data
-                                )[0:99]
-                            )
-                        else:
-                            description = "No description"
-
-                        # Timestamps
-                        updated_at = OpenCTIConnectorHelper.get_attribute_in_extension(
-                            "updated_at", data
-                        )
-                        datetime_object = datetime.strptime(
-                            updated_at, "%Y-%m-%dT%H:%M:%S.%fZ"
-                        )
-                        days = int(self.expire_time)
-                        age = timedelta(days)
-                        expire_datetime = datetime_object + age
-                        expirationDateTime = str(
-                            expire_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
-                        )
-
-                        # Tags - applies all tags
-                        tags = []
-                        if (
-                            OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "labels", data
-                            )
-                            is not None
-                        ):
-                            for i in range(
-                                len(
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )
-                                )
-                            ):
-                                tags.append(
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i]
-                                )
-
-                        # Threat Type - Defaults to WatchList but checks for other tags. Will only use one tag
-                        # https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta#threattype-values
-                        threatType = "WatchList"
-                        if (
-                            OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "labels", data
-                            )
-                            is not None
-                        ):
-                            for i in range(
-                                len(
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )
-                                )
-                            ):
-                                if (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "BOTNET"
-                                ):
-                                    threatType = "Botnet"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "C2"
-                                ):
-                                    threatType = "C2"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "CRYPTOMINING"
-                                ):
-                                    threatType = "CryptoMining"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "DARKNET"
-                                ):
-                                    threatType = "Darknet"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "DDOS"
-                                ):
-                                    threatType = "DDoS"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "MALICIOUSURL"
-                                ):
-                                    threatType = "MaliciousUrl"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "MALWARE"
-                                ):
-                                    threatType = "Malware"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "PHISHING"
-                                ):
-                                    threatType = "Phishing"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "PROXY"
-                                ):
-                                    threatType = "Proxy"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "PUA"
-                                ):
-                                    threatType = "PUA"
-                                elif (
-                                    OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "labels", data
-                                    )[i].upper()
-                                    == "WATCHLIST"
-                                ):
-                                    threatType = "WatchList"
-
-                        # TLP
-                        # https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta#tlplevel-values
-                        if self.tlp_level:
-                            tlpLevel = self.tlp_level
-                        elif (
-                            "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
-                            in str(data)
-                        ):
-                            tlpLevel = "red"
-                        elif "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37" in str(
-                            data
-                        ) or "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82" in str(
-                            data
-                        ):
-                            tlpLevel = "amber"
-                        elif (
-                            "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
-                            in str(data)
-                        ):
-                            tlpLevel = "green"
-                        elif (
-                            "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
-                            in str(data)
-                        ):
-                            tlpLevel = "white"
-                        else:
-                            tlpLevel = "unknown"
-
-                        # Passive Mode Check
-                        if self.passive_only == "True":
-                            passiveOnly = "true"
-                        else:
-                            passiveOnly = "false"
-
-                        # File Name
-                        try:
-                            if data["name"] is not None:
-                                file_name = data["name"]
-                        except:
-                            file_name = "Not Provided"
-
-                        # File Size
-                        try:
-                            if data["size"] is not None:
-                                file_size = data["size"]
-                        except:
-                            file_size = "0"
-
-                        # Handles creation events
-                        # https://learn.microsoft.com/en-us/graph/api/tiindicators-post?view=graph-rest-beta&tabs=http
-                        if msg.event == "create":
-                            self.helper.log_info(
-                                "[CREATE] Processing data {"
-                                + OpenCTIConnectorHelper.get_attribute_in_extension(
-                                    "id", data
-                                )
-                                + "}"
-                            )
-                            # Do any processing needed
-                            data[
-                                "_key"
-                            ] = OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "id", data
-                            )
-
-                            headers = {"Authorization": oauth_token}
-
-                            # Check for IOC type and send request
-                            # This is for network based IOCS
-                            if (
-                                ioc_type == "networkIPv4"
-                                or ioc_type == "url"
-                                or ioc_type == "domainName"
-                                or ioc_type == "networkIPv6"
-                            ):
-                                body = {
-                                    ioc_type: data["value"],
-                                    "action": action,
-                                    "description": description,
-                                    "expirationDateTime": expirationDateTime,
-                                    "targetProduct": self.target_product,
-                                    "threatType": threatType,
-                                    "tlpLevel": tlpLevel,
-                                    "externalId": OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "id", data
-                                    ),
-                                    "lastReportedDateTime": str(updated_at),
-                                    "passiveOnly": passiveOnly,
-                                    "tags": tags,
-                                }
-                                response = requests.post(
-                                    self.resource_url + self.request_url,
-                                    json=body,
-                                    headers=headers,
-                                )
-                            # This is for email based IOCs
-                            elif ioc_type == "email":
-                                body = {
-                                    "emailSenderAddress": data["value"],
-                                    "emailSenderName": data["display_name"],
-                                    "action": action,
-                                    "description": description,
-                                    "expirationDateTime": expirationDateTime,
-                                    "targetProduct": self.target_product,
-                                    "threatType": threatType,
-                                    "tlpLevel": tlpLevel,
-                                    "externalId": OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "id", data
-                                    ),
-                                    "lastReportedDateTime": str(updated_at),
-                                    "passiveOnly": passiveOnly,
-                                    "tags": tags,
-                                }
-                                response = requests.post(
-                                    self.resource_url + self.request_url,
-                                    json=body,
-                                    headers=headers,
-                                )
-                            # This is for file types. Does a check for MD5, SHA1, and SHA256 being present. Must contain at least one hash value
-                            elif ioc_type == "file":
-                                if "MD5" in data["hashes"]:
-                                    body = {
-                                        "fileCreatedDateTime": data["ctime"],
-                                        "fileHashType": "md5",
-                                        "fileHashValue": data["hashes"]["MD5"],
-                                        "fileName": file_name,
-                                        "fileSize": file_size,
-                                        "action": action,
-                                        "description": description,
-                                        "expirationDateTime": expirationDateTime,
-                                        "targetProduct": self.target_product,
-                                        "threatType": threatType,
-                                        "tlpLevel": tlpLevel,
-                                        "externalId": OpenCTIConnectorHelper.get_attribute_in_extension(
-                                            "id", data
-                                        ),
-                                        "lastReportedDateTime": str(updated_at),
-                                        "passiveOnly": passiveOnly,
-                                        "tags": tags,
-                                    }
-                                    response = requests.post(
-                                        self.resource_url + self.request_url,
-                                        json=body,
-                                        headers=headers,
-                                    )
-                                if "SHA-1" in data["hashes"]:
-                                    body = {
-                                        "fileCreatedDateTime": data["ctime"],
-                                        "fileHashType": "sha1",
-                                        "fileHashValue": data["hashes"]["SHA-1"],
-                                        "fileName": file_name,
-                                        "fileSize": file_size,
-                                        "action": action,
-                                        "description": description,
-                                        "expirationDateTime": expirationDateTime,
-                                        "targetProduct": self.target_product,
-                                        "threatType": threatType,
-                                        "tlpLevel": tlpLevel,
-                                        "externalId": OpenCTIConnectorHelper.get_attribute_in_extension(
-                                            "id", data
-                                        ),
-                                        "lastReportedDateTime": str(updated_at),
-                                        "passiveOnly": passiveOnly,
-                                        "tags": tags,
-                                    }
-                                    response = requests.post(
-                                        self.resource_url + self.request_url,
-                                        json=body,
-                                        headers=headers,
-                                    )
-                                if "SHA-256" in data["hashes"]:
-                                    body = {
-                                        "fileCreatedDateTime": data["ctime"],
-                                        "fileHashType": "sha256",
-                                        "fileHashValue": data["hashes"]["SHA-256"],
-                                        "fileName": file_name,
-                                        "fileSize": file_size,
-                                        "action": action,
-                                        "description": description,
-                                        "expirationDateTime": expirationDateTime,
-                                        "targetProduct": self.target_product,
-                                        "threatType": threatType,
-                                        "tlpLevel": tlpLevel,
-                                        "externalId": OpenCTIConnectorHelper.get_attribute_in_extension(
-                                            "id", data
-                                        ),
-                                        "lastReportedDateTime": str(updated_at),
-                                        "passiveOnly": passiveOnly,
-                                        "tags": tags,
-                                    }
-                                    response = requests.post(
-                                        self.resource_url + self.request_url,
-                                        json=body,
-                                        headers=headers,
-                                    )
-
-                            # Log if the creation was successful or not
-                            if "201" in str(response):
-                                self.helper.log_info(
-                                    "[CREATE] ID {"
-                                    + OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "id", data
-                                    )
-                                    + " Success }"
-                                )
-                            else:
-                                self.helper.log_info(
-                                    "[CREATE] ID {"
-                                    + OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "id", data
-                                    )
-                                    + " Failed and got }"
-                                    + response
-                                    + " status code."
-                                )
-
-                        # Handles update events - This section is not yet fully developed and is commented out
-                        # Only allows the updating of these OpenCTI related fields action, confidence, description, expirationDateTime, externalId, tags, and tlpLevel
-                        # https://learn.microsoft.com/en-us/graph/api/tiindicator-update?view=graph-rest-beta&tabs=http
-                        # if msg.event == "update":
-                        #     self.helper.log_info(
-                        #         "[UPDATE] Processing data {"
-                        #         + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                        #         + "}"
-                        #     )
-                        #     data["_key"] = OpenCTIConnectorHelper.get_attribute_in_extension(
-                        #         "id", data
-                        #     )
-
-                        #     # Gets a list of all IOC in Microsoft Platform and looks for externalID which is for OpenCTI reference
-                        #     response = requests.get(self.resource_url + self.request_url, headers=headers)
-                        #     getIOC = response.json()
-                        #     for i in range(len(getIOC['value'])):
-                        #         if getIOC['value'][i]['externalId'] == OpenCTIConnectorHelper.get_attribute_in_extension("id", data):
-                        #             ioc_id = getIOC['value'][i]['id']
-                        #             break
-                        #         else:
-                        #             ioc_id = None
-
-                        #     if ioc_id is not None:
-                        #         response = requests.patch(self.resource_url + self.request_url + '/' + ioc_id, json=body, headers=headers)
-                        #         self.helper.log_info(
-                        #         "[UPDATE] ID {"
-                        #         + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                        #         + " Success }" +  self.target_product
-                        #     )
-                        #     else:
-                        #         self.helper.log_info(
-                        #         "[UPDATE] ID {"
-                        #         + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                        #         + " Not found on }" +  self.target_product
-                        #     )
-
-                    # Handles delete events
-                    # https://learn.microsoft.com/en-us/graph/api/tiindicator-delete?view=graph-rest-beta&tabs=http
-                    elif msg.event == "delete":
-                        self.helper.log_info(
-                            "[DELETE] Processing data {"
-                            + OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "id", data
-                            )
-                            + "}"
-                        )
-
-                        # Gets a list of all IOC in Microsoft Platform and looks for externalID which is for OpenCTI reference
-                        response = requests.get(
-                            self.resource_url + self.request_url, headers=headers
-                        )
-                        getIOC = response.json()
-                        did_delete = 0
-
-                        # Loop through all Microsoft IOCs to see if the external ID matches the OpenCTI Object id
-                        for i in range(len(getIOC["value"])):
-                            if getIOC["value"][i][
-                                "externalId"
-                            ] == OpenCTIConnectorHelper.get_attribute_in_extension(
-                                "id", data
-                            ):
-                                ioc_id = getIOC["value"][i]["id"]
-                                response = requests.delete(
-                                    self.resource_url + self.request_url + "/" + ioc_id,
-                                    headers=headers,
-                                )
-                                self.helper.log_info(
-                                    "[DELETE] ID {"
-                                    + OpenCTIConnectorHelper.get_attribute_in_extension(
-                                        "id", data
-                                    )
-                                    + "} Success"
-                                )
-                                did_delete = 1
-
-                        # Logs not found if no IOCs were deleted
-                        if did_delete == 0:
-                            self.helper.log_info(
-                                "[DELETE] ID {"
-                                + OpenCTIConnectorHelper.get_attribute_in_extension(
-                                    "id", data
-                                )
-                                + "} Not found on "
-                                + self.target_product
-                            )
-                    return None
-
-                # Error exception for failure
-                except Exception as e:
-                    self.helper.log_error(
-                        "[ERROR] Failed processing data {" + str(e) + "}"
-                    )
-                    self.helper.log_error("[ERROR] Message data {" + str(msg) + "}")
-                    return None
-
+            if msg.event == "create":
+                if data["type"] == "indicator" and data["pattern_type"].startswith(
+                    "stix"
+                ):
+                    self._create_indicator(data)
+                elif data["type"] in [
+                    "ipv4-addr",
+                    "ipv6-addr",
+                    "domain-name",
+                    "hostname",
+                    "url",
+                    "email-addr",
+                    "file",
+                ]:
+                    self._create_observable(data)
+            elif msg.event == "delete":
+                self._delete_object(data)
         except Exception as e:
             self.helper.log_error("[ERROR] Failed processing data {" + str(e) + "}")
             self.helper.log_error("[ERROR] Message data {" + str(msg) + "}")
@@ -606,10 +464,22 @@ class SentinelConnector:
 
     # Listen to OpenCTI stream and calls the _process_message function
     def start(self):
+        if self.import_incidents:
+            self.sightings = Sightings(
+                self.helper,
+                self.tenant_id,
+                self.client_id,
+                self.client_secret,
+                self.resource_url,
+                self.incident_url,
+                self.target_product,
+            )
+            self.sightings.start()
         self.helper.listen_stream(self._process_message)
 
 
 if __name__ == "__main__":
+    fix_loggers()
     try:
         connector = SentinelConnector()
         connector.start()

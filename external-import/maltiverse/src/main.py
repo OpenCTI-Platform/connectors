@@ -77,9 +77,7 @@ class MaltiverseConnector:
 
                     for col in collections:
                         try:
-                            self.helper.send_stix2_bundle(
-                                json.dumps(col.get_objects()), update=True
-                            )
+                            self.helper.send_stix2_bundle(json.dumps(col.get_objects()))
                         except Exception as e:
                             self.helper.log_error("error sending collection: " + str(e))
 

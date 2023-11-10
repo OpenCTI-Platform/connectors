@@ -207,7 +207,6 @@ class Cluster25:
                         self.helper.send_stix2_bundle(
                             json.dumps(bundle),
                             entities_types=self.helper.connect_scope,
-                            update=True,
                             work_id=work_id,
                         )
 

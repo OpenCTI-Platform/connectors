@@ -893,6 +893,7 @@ class MispFeed:
         attribute_external_references,
         attribute,
         event_threat_level,
+        create_relationships,
     ):
         if attribute["type"] == "link" and attribute["category"] == "External analysis":
             return None
@@ -1141,7 +1142,10 @@ class MispFeed:
             identities = []
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
-                    if "Organisation" in misp_sighting:
+                    if (
+                        "Organisation" in misp_sighting
+                        and misp_sighting["Organisation"]["name"] != author.name
+                    ):
                         sighted_by = stix2.Identity(
                             id=Identity.generate_id(
                                 misp_sighting["Organisation"]["name"], "organization"
@@ -1195,6 +1199,16 @@ class MispFeed:
 
             ### Create the relationships
             relationships = []
+            if not create_relationships:
+                return {
+                    "indicator": indicator,
+                    "observable": observable,
+                    "relationships": relationships,
+                    "attribute_elements": attribute_elements,
+                    "markings": attribute_markings,
+                    "identities": identities,
+                    "sightings": sightings,
+                }
             if indicator is not None and observable is not None:
                 relationships.append(
                     stix2.Relationship(
@@ -1599,6 +1613,7 @@ class MispFeed:
         event_external_references = []
         indicators = []
         # Get attributes of event
+        create_relationships = len(event["Event"].get("Attribute", [])) < 10000
         for attribute in event["Event"].get("Attribute", []):
             indicator = self._process_attribute(
                 author,
@@ -1609,6 +1624,7 @@ class MispFeed:
                 [],
                 attribute,
                 event["Event"].get("threat_level_id", "Undefined"),
+                create_relationships,
             )
             if (
                 attribute["type"] == "link"
@@ -1696,6 +1712,7 @@ class MispFeed:
                     )
                     objects_observables.append(object_observable)
             object_attributes = []
+            create_relationships = len(object["Attribute"]) < 10000
             for attribute in object["Attribute"]:
                 indicator = self._process_attribute(
                     author,
@@ -1706,13 +1723,14 @@ class MispFeed:
                     attribute_external_references,
                     attribute,
                     event["Event"].get("threat_level_id", "Undefined"),
+                    create_relationships,
                 )
                 if indicator is not None:
                     indicators.append(indicator)
                     if (
                         indicator["indicator"] is not None
                         and object["meta-category"] == "file"
-                        and indicator["indicator"].x_opencti_main_observable_type
+                        and indicator["indicator"]["x_opencti_main_observable_type"]
                         in FILETYPES
                     ):
                         object_attributes.append(indicator)

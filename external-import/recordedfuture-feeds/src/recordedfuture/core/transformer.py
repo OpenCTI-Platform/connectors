@@ -10,7 +10,7 @@ from .indicator import (
     transform_domain_to_indicator,
     transform_hash_to_indicator,
     transform_ip_to_indicator,
-    transform_malware_relationship,
+    transform_malware_sample,
     transform_url_to_indicator,
 )
 from .utils import configure_logger, is_url, validate_required_keys
@@ -107,18 +107,18 @@ class BaseSTIXTransformer:
                 if self.date_key == "c2_ips":
                     if entry.get("last_seen_active"):
                         date_obj = datetime.strptime(
-                            entry["last_seen_active"], self.date_format
+                            entry.get("last_seen_active"), self.date_format
                         )
                     elif entry.get("last_scan"):
                         date_obj = datetime.strptime(
-                            entry["last_scan"], self.date_format
+                            entry.get("last_scan"), self.date_format
                         )
                     else:
                         date_obj = current_utc
                 elif self.date_key == "signal":
-                    if len(entry["signal"]) != 0:
+                    if len(entry.get("signal")) != 0:
                         date_obj = datetime.strptime(
-                            entry["signal"][0], self.date_format
+                            entry.get("signal")[0], self.date_format
                         )
                     else:
                         date_obj = current_utc
@@ -185,16 +185,19 @@ class DomainSTIXTransformer(BaseSTIXTransformer):
             indicator_date = data_entry[DEFAULT_DATE_KEY]
 
             # Create a STIX DomainName object
-            domain = data_entry["domain"]
+            domain = data_entry.get("domain")
 
             # Generate a description using detection_strings and other attributes
-            detection_strings = data_entry["detection_strings"]
+            detection_strings = data_entry.get("detection_strings")
             detections = [
                 k for k, v in detection_strings.items() if v
             ]  # List detected items
-            description = f"Last Seen: ({indicator_date.isoformat()}),\n"
-            description += f"Service Provider: ({data_entry['service_provider']}),\n"
-            description += "Detections: (" + ", ".join(detections) + ")"
+            description = f"Last Seen: ({indicator_date.isoformat()})"
+            description += (
+                f",\nService Provider: ({data_entry.get('service_provider')})"
+            )
+            if detections:
+                description += ",\nDetections: (" + ", ".join(detections) + ")"
 
             return transform_domain_to_indicator(
                 domain,
@@ -249,15 +252,16 @@ class URLSTIXTransformer(BaseSTIXTransformer):
             indicator_date = data_entry[DEFAULT_DATE_KEY]
 
             # Generate a description using detection_strings and other attributes
-            detection_strings = data_entry["detection_strings"]
+            detection_strings = data_entry.get("detection_strings")
             detections = [
                 k for k, v in detection_strings.items() if v
             ]  # List detected items
-            description = f"Last Seen: {indicator_date.isoformat()}\n"
-            description += f"Service Provider: {data_entry['service_provider']}\n"
-            description += "Detections: " + ", ".join(detections)
+            description = f"Last Seen: {indicator_date.isoformat()}"
+            description += f",\nService Provider: {data_entry.get('service_provider')}"
+            if detections:
+                description += ",\nDetections: " + ", ".join(detections)
             return transform_url_to_indicator(
-                url=data_entry["url"],
+                url=data_entry.get("url"),
                 connect_confidence_level=self.connect_confidence_level,
                 name=None,
                 description=description,
@@ -303,11 +307,12 @@ class C2STIXTransformer(BaseSTIXTransformer):
             indicator_date = data_entry[DEFAULT_DATE_KEY]
 
             # Determine IP version and create STIX IP Address object
-            ip_address = data_entry["ip"]
+            ip_address = data_entry.get("ip")
             # Create an Indicator object for malware detections
-            description = f"Last Seen Active: {indicator_date.isoformat()}\n"
-            description += f"Last Scan: {indicator_date}\n"
-            description += "Malware: " + ", ".join(data_entry["malware"])
+            description = f"Last Seen Active: {indicator_date.isoformat()}"
+            description += f",\nLast Scan: {indicator_date}"
+            if data_entry.get("malware"):
+                description += ",\nMalware: " + ", ".join(data_entry.get("malware"))
             name = f"Activity Indicator for IP {ip_address}"
             # Add IP Indicator relationships.
             ip_indicator_list = transform_ip_to_indicator(
@@ -319,17 +324,6 @@ class C2STIXTransformer(BaseSTIXTransformer):
                 stix_labels=self.stix_labels,
             )
             stix_objects.extend(ip_indicator_list)
-            # Add Malware objects and relationships for each malware detection
-            for malware_name in data_entry["malware"]:
-                stix_objects.extend(
-                    transform_malware_relationship(
-                        malware_name,
-                        description=f"Malware detected in relation to IP {ip_address}",
-                        source_ref=ip_indicator_list[0].id,
-                        is_family=False,
-                        stix_labels=self.stix_labels,
-                    )
-                )
             return stix_objects
 
         except (ValueError, stix2_exceptions.STIXError) as e:
@@ -370,12 +364,12 @@ class VulnerabilitySTIXTransformer(BaseSTIXTransformer):
                 return []
 
             indicator_date = data_entry[DEFAULT_DATE_KEY]
-            description = f"Vulnerability {data_entry['cybervulnerability']} with ID: {data_entry['id']}"
-            external_id = data_entry["cybervulnerability"]
+            external_id = data_entry.get("cybervulnerability")
+            description = f"Vulnerability {external_id} with ID: {data_entry.get('id')}"
 
             # Create Vulnerability object
             vuln_sdo = create_vulnerability(
-                name=data_entry["cybervulnerability"],
+                name=external_id,
                 cve_id=external_id,
                 description=description,
                 labels=self.stix_labels,
@@ -386,7 +380,7 @@ class VulnerabilitySTIXTransformer(BaseSTIXTransformer):
             # Create File objects for each hash
             hash_key_values = [
                 (hash_key, hash_value)
-                for hash_info in data_entry["hashes"]
+                for hash_info in data_entry.get("hashes")
                 for hash_key, hash_value in hash_info.items()
             ]
 
@@ -405,18 +399,16 @@ class VulnerabilitySTIXTransformer(BaseSTIXTransformer):
                 list_indicator_sdos.append(indicator_list[0])
 
             # Create Malware objects for each malware detection
-            for malware_info in data_entry["malwares"]:
-                for indicator_sdo in list_indicator_sdos:
-                    malware_list = transform_malware_relationship(
-                        malware=malware_info["malware"],
-                        is_family=False,
-                        stix_labels=self.stix_labels,
-                        description=f"Malware related to vulnerability {data_entry['cybervulnerability']}",
-                        source_ref=indicator_sdo.id,
-                    )
-                    stix_objects.extend(malware_list)
+            for malware_info in data_entry.get("malwares"):
+                malware_sdo = transform_malware_sample(
+                    malware=malware_info.get("malware"),
+                    is_family=False,
+                    stix_labels=self.stix_labels,
+                    description=f"Malware related to vulnerability {external_id}",
+                )
+                stix_objects.append(malware_sdo)
                 vuln_relationship = create_relationship(
-                    source_ref=malware_list[0].id,
+                    source_ref=malware_sdo.id,
                     target_ref=vuln_sdo.id,
                     relationship_type="exploits",
                     labels=self.stix_labels,
@@ -461,11 +453,12 @@ class HashSTIXTransformer(BaseSTIXTransformer):
                 return []
 
             indicator_date = data_entry[DEFAULT_DATE_KEY]
-            hash_value = data_entry["hash"]
-            hash_type = data_entry["algorithm"]
-            description = f"Last Seen Active: {indicator_date.isoformat()}\n"
-            description += f"Hash Type: {hash_type}\n"
-            description += "Malware: " + ", ".join(data_entry["malware"])
+            hash_value = data_entry.get("hash")
+            hash_type = data_entry.get("algorithm")
+            description = f"Last Seen Active: {indicator_date.isoformat()}"
+            description += f",\nHash Type: {hash_type}"
+            if data_entry.get("malware"):
+                description += ",\nMalware: " + ", ".join(data_entry.get("malware"))
 
             indicator_list = transform_hash_to_indicator(
                 connect_confidence_level=self.connect_confidence_level,
@@ -479,7 +472,7 @@ class HashSTIXTransformer(BaseSTIXTransformer):
 
             # Create Vulnerability objects for each associated CVE
             list_vulnerability_objects = []
-            for cve in data_entry["cybervulnerabilities"]:
+            for cve in data_entry.get("cybervulnerabilities"):
                 vuln_sdo = create_vulnerability(
                     name=cve,
                     cve_id=cve,
@@ -490,20 +483,19 @@ class HashSTIXTransformer(BaseSTIXTransformer):
                 list_vulnerability_objects.append(vuln_sdo)
 
             # Create a Malware object for the associated malware
-            if data_entry["malware"] != "unknown":
-                malware_list = transform_malware_relationship(
-                    malware=data_entry["malware"],
+            if data_entry.get("malware") != "unknown":
+                malware_sdo = transform_malware_sample(
+                    malware=data_entry.get("malware"),
                     is_family=False,
                     stix_labels=self.stix_labels,
                     description=f"Malware related to file hash {hash_value}",
-                    source_ref=indicator_list[0].id,
                 )
-                stix_objects.extend(malware_list)
+                stix_objects.append(malware_sdo)
                 # Establish a relationship between the malware and the vulnerability
                 for vulnerability_object in list_vulnerability_objects:
                     stix_objects.append(
                         create_relationship(
-                            source_ref=malware_list[0].id,
+                            source_ref=malware_sdo.id,
                             target_ref=vulnerability_object.id,
                             relationship_type="exploits",
                             labels=self.stix_labels,
@@ -537,9 +529,9 @@ class TorIPSTIXTransformer(BaseSTIXTransformer):
                 LOGGER.error(f"Missing required keys in data_entry {data_entry}")
                 return []
             indicator_date = data_entry[DEFAULT_DATE_KEY]
-            ip_address = data_entry["ip"]
-            name = f"Tor IP Address Indicator for {data_entry['name']}"
-            description = f"IP address associated with Tor node {data_entry['name']} having flags {data_entry['flags']}"
+            ip_address = data_entry.get("ip")
+            name = f"Tor IP Address Indicator for {data_entry.get('name')}"
+            description = f"IP address associated with Tor node {data_entry.get('name')} having flags {data_entry.get('flags')}"
             return transform_ip_to_indicator(
                 ip_address,
                 connect_confidence_level=self.connect_confidence_level,
@@ -579,8 +571,8 @@ class EmergingMalwareSTIXTransformer(BaseSTIXTransformer):
                 return []
 
             indicator_date = data_entry[DEFAULT_DATE_KEY]
-            hash_value = data_entry["hash"]
-            hash_type = data_entry["algorithm"]
+            hash_value = data_entry.get("hash")
+            hash_type = data_entry.get("algorithm")
             name = f"Emerging Malware {hash_type} Indicator for {hash_value}"
             description = f"Indicator for hash {hash_value}"
             return transform_hash_to_indicator(
@@ -634,17 +626,18 @@ class RATSTIXTransformer(BaseSTIXTransformer):
                 return []
             indicator_date = data_entry[DEFAULT_DATE_KEY]
 
-            data_value = data_entry["ip"]
+            data_value = data_entry.get("ip")
             # Extracting other details for description
-            malware = data_entry["malware"]
-            port = data_entry["port"]
-            protocol = data_entry["protocol"]
+            malware = data_entry.get("malware")
+            port = data_entry.get("port")
+            protocol = data_entry.get("protocol")
             name = f"RAT Activity Indicator for {data_value}"
             description = (
                 f"Data associated with RAT activity. Malware: {malware}, "
-                f"Port: {port}, Protocol: {protocol}\n"
+                f"Port: {port}, Protocol: {protocol}"
             )
-            description += "Signal: " + ", ".join(data_entry["signal"])
+            if data_entry.get("signal"):
+                description += ",\nSignal: " + ", ".join(data_entry.get("signal"))
 
             # Check if the value is a URL
             if is_url(data_value):
@@ -666,18 +659,6 @@ class RATSTIXTransformer(BaseSTIXTransformer):
                     valid_from=indicator_date,
                 )
             stix_objects.extend(indicator_list)
-
-            # Add Malware objects and relationships for each malware detection
-            for malware_name in data_entry["malware"]:
-                if malware_name and malware_name.strip():
-                    malware_list = transform_malware_relationship(
-                        malware=malware_name,
-                        is_family=False,
-                        stix_labels=self.stix_labels,
-                        description=f"Malware detected in relation to {data_value}",
-                        source_ref=indicator_list[0].id,
-                    )
-                    stix_objects.extend(malware_list)
             return stix_objects
 
         except (ValueError, KeyError, stix2_exceptions.STIXError) as e:
@@ -710,7 +691,7 @@ class IPSTIXTransformer(BaseSTIXTransformer):
                 return []
 
             indicator_date = data_entry[DEFAULT_DATE_KEY]
-            ip_address = data_entry["ip"]
+            ip_address = data_entry.get("ip")
             name = f"IP Activity Indicator for {ip_address}"
             description = f"IP address last seen active at {indicator_date.isoformat()}"
             return transform_ip_to_indicator(
@@ -756,8 +737,8 @@ class LowHashSTIXTransformer(BaseSTIXTransformer):
                 return []
 
             indicator_date = data_entry[DEFAULT_DATE_KEY]
-            hash_value = data_entry["hash"]
-            hash_type = data_entry["algorithm"]
+            hash_value = data_entry.get("hash")
+            hash_type = data_entry.get("algorithm")
             name = f"Low Detect Malware {hash_type} Indicator for {hash_value}"
             description = f"Indicator for hash {hash_value}"
 

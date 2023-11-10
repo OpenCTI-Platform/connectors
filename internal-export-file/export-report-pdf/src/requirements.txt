@@ -1,7 +1,7 @@
-pycti==5.10.3
+pycti==5.11.13
 weasyprint==60.1
 Jinja2==3.1.2
 pygal==3.0.0
-wheel==0.41.2
+wheel==0.41.3
 CairoSVG==2.7.1
 pygal_maps_world==1.0.2

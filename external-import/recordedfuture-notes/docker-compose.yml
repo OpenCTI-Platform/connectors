@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-recordedfuture-notes:
-    image: opencti/connector-recordedfuture-notes:5.10.3
+    image: opencti/connector-recordedfuture-notes:5.11.13
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=Recorded Future Analyst Notes
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile
       - CONNECTOR_CONFIDENCE_LEVEL=5
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=error
       - RECORDED_FUTURE_TOKEN=CHANGEME #required
       - RECORDED_FUTURE_INITIAL_LOOKBACK=240 #required

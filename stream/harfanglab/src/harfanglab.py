@@ -6,6 +6,7 @@ import time
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix_shifter.stix_translation import stix_translation
 
 
 class HarfangLabConnector:
@@ -19,7 +20,7 @@ class HarfangLabConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
 
-        # Initialiaze the Harfang Lab API
+        # Initialize the Harfang Lab API
         self.harfanglab_url = get_config_variable(
             "HARFANGLAB_URL", ["harfanglab", "url"], config
         )
@@ -44,8 +45,8 @@ class HarfangLabConnector:
         self.harfanglab_source_list_name = get_config_variable(
             "HARFANGLAB_SOURCE_LIST_NAME", ["harfanglab", "source_list_name"], config
         )
-        self.harfanglab_indicator_delete = get_config_variable(
-            "HARFANGLAB_INDICATOR_DELETE", ["harfanglab", "indicator_delete"], config
+        self.harfanglab_remove_indicator = get_config_variable(
+            "HARFANGLAB_REMOVE_INDICATOR", ["harfanglab", "remove_indicator"], config
         )
         self.harfanglab_rule_maturity = get_config_variable(
             "HARFANGLAB_RULE_MATURITY", ["harfanglab", "rule_maturity"], config
@@ -56,12 +57,31 @@ class HarfangLabConnector:
             "enabled": True,
         }
 
-        # Check Live Stream ID
+        # Check config parameters
+        if (
+            self.harfanglab_remove_indicator is None
+            or self.harfanglab_remove_indicator
+            != bool(self.harfanglab_remove_indicator)
+        ):
+            raise ValueError(
+                "Missing or incorrect value in configuration parameter 'Remove Indicator'"
+            )
+
+        if (
+            self.harfanglab_rule_maturity is None
+            or self.harfanglab_rule_maturity not in ("stable", "testing")
+        ):
+            raise ValueError(
+                "Missing or incorrect value in configuration parameter 'Rule Maturity'"
+            )
+
         if (
             self.helper.connect_live_stream_id is None
             or self.helper.connect_live_stream_id == "ChangeMe"
         ):
-            raise ValueError("Missing Live Stream ID")
+            raise ValueError(
+                "Missing or incorrect value in configuration parameter 'Live Stream ID'"
+            )
 
         # Create or get existing list Yara Pattern
         self.create_or_get_entity_source("YaraSource", "yara")
@@ -102,13 +122,14 @@ class HarfangLabConnector:
         return
 
     def _process_message(self, msg):
-        data_type = json.loads(msg.data)["data"]["type"]
-        if data_type != "indicator" and data_type != "relationship":
-            return
         try:
             data = json.loads(msg.data)["data"]
         except Exception:
             raise ValueError("Cannot process the message")
+
+        data_type = json.loads(msg.data)["data"]["type"]
+        if data_type != "indicator" and data_type != "relationship":
+            return
 
         # Handle create
         if msg.event == "create":
@@ -120,13 +141,13 @@ class HarfangLabConnector:
                         data, "sigma", "SigmaRule", self.sigma_list_id
                     )
                 elif data["pattern_type"] == "stix":
-                    self.create_observable(data, "stix", "IOCRule")
+                    self.create_indicator(data, "stix", "IOCRule", self.stix_list_id)
                 else:
                     self.helper.log_error("[CREATE] Unsupported pattern type")
 
             elif data["type"] == "relationship":
                 if data["relationship_type"] == "based-on":
-                    self.create_observable(data, "stix", "IOCRule")
+                    self.create_observable(data, "stix", "IOCRule", self.stix_list_id)
                 else:
                     return
             return
@@ -135,15 +156,11 @@ class HarfangLabConnector:
         if msg.event == "update":
             if data["type"] == "indicator":
                 if data["pattern_type"] == "yara":
-                    self.update_indicator(
-                        data, msg, "yara", "YaraFile", self.yara_list_id
-                    )
+                    self.update_indicator(msg, "yara", "YaraFile", self.yara_list_id)
                 elif data["pattern_type"] == "sigma":
-                    self.update_indicator(
-                        data, msg, "sigma", "SigmaRule", self.sigma_list_id
-                    )
+                    self.update_indicator(msg, "sigma", "SigmaRule", self.sigma_list_id)
                 elif data["pattern_type"] == "stix":
-                    return
+                    self.update_indicator(msg, "stix", "IOCRule", self.stix_list_id)
                 else:
                     self.helper.log_error("[UPDATE] Unsupported pattern type")
             return
@@ -152,294 +169,251 @@ class HarfangLabConnector:
         if msg.event == "delete":
             if data["type"] == "indicator":
                 if data["pattern_type"] == "yara":
-                    self.delete_indicator(data, "yara", "YaraFile")
+                    self.delete_indicator(data, "yara", "YaraFile", self.yara_list_id)
                 elif data["pattern_type"] == "sigma":
-                    self.delete_indicator(data, "sigma", "SigmaRule")
+                    self.delete_indicator(
+                        data, "sigma", "SigmaRule", self.sigma_list_id
+                    )
                 elif data["pattern_type"] == "stix":
-                    self.delete_observable(data, "stix", "IOCRule")
+                    self.delete_indicator(data, "stix", "IOCRule", self.stix_list_id)
                 else:
                     self.helper.log_error("[DELETE] Unsupported pattern type")
 
             elif data["type"] == "relationship":
                 if data["relationship_type"] == "based-on":
-                    self.delete_observable(data, "stix", "IOCRule")
+                    self.delete_observable(data, "stix", "IOCRule", self.stix_list_id)
                 else:
                     return
             return
 
-    def create_observable(self, data, pattern, uri):
-        self.helper.log_info(f"[CREATE] Processing {pattern} observable {data['id']}")
-
-        if data["type"] == "relationship":
-            entity = self.helper.api.indicator.read(
-                id=OpenCTIConnectorHelper.get_attribute_in_extension("source_ref", data)
-            )
-            new_observable = {}
-            new_observable["id"] = OpenCTIConnectorHelper.get_attribute_in_extension(
-                "target_ref", data
-            )
-            new_observable[
-                "observable_value"
-            ] = OpenCTIConnectorHelper.get_attribute_in_extension("target_value", data)
-            new_observable[
-                "entity_type"
-            ] = OpenCTIConnectorHelper.get_attribute_in_extension("target_type", data)
-            new_observable["description"] = entity["description"]
-            self.check_and_create_observable_id(new_observable, pattern, uri, entity)
-        else:
-            entity = self.helper.api.indicator.read(
-                id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            )
-            if not entity["observables"]:
-                return self.helper.log_error(
-                    "[CREATE] The indicator has no observables"
-                )
-            else:
-                return self.helper.log_info(
-                    "[CREATE] The process between indicator stix and observables has been completed"
-                )
-        return
-
-    def check_and_create_observable_id(self, data, pattern, uri, entity):
-        get_observable = self._query(
-            "get",
-            f"/{uri}/?search={data['observable_value']}&source_id={self.stix_list_id}",
-        )
-
-        if get_observable["count"] > 0:
-            result = get_observable["results"][0]
-            observable_id = result["id"]
-            is_enabled_observable = result["enabled"]
-
-            if is_enabled_observable is False:
-                new_observable = self.observable_object(result)
-                payload = self.pattern_payload(entity, True, new_observable)
-                response = self._query("put", f"/{uri}/{observable_id}/", payload)
-
-                if response is None:
-                    return self.helper.log_error(
-                        f"[UPDATE] Failed to reactivate existing observable {pattern} = {observable_id}"
-                    )
-                else:
-                    return self.helper.log_info(
-                        f"[UPDATE] Successful reactivation of existing observable {pattern} = {observable_id}"
-                    )
-            else:
-                return self.helper.log_error(
-                    "[CREATE] A rule with this ID already exists"
-                )
-        else:
-            payload = self.build_observable(entity, data)
-            response = self._query("post", f"/{uri}/", payload)
-
-            if response is None:
-                self.helper.log_error("[CREATE] The observable type not created")
-            elif response["status_code"] == 201:
-                self.helper.log_info(
-                    f"[CREATE] The observable type created = {response['response']['id']}"
-                )
-            else:
-                return
-
-    def delete_observable(self, data, pattern, uri):
-        indicator_delete = (
-            "[DELETE]" if self.harfanglab_indicator_delete else "[DISABLE]"
-        )
-        self.helper.log_info(
-            f"{indicator_delete} Processing {pattern} observable {data['id']}"
-        )
-
-        if data["type"] == "relationship":
-            entity = self.helper.api.indicator.read(
-                id=OpenCTIConnectorHelper.get_attribute_in_extension("source_ref", data)
-            )
-            observable_value = OpenCTIConnectorHelper.get_attribute_in_extension(
-                "target_value", data
-            )
-            self.check_and_delete_observable_id(entity, pattern, uri, observable_value)
-        else:
-            entity = self.helper.api.indicator.read(
-                id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            )
-
-            if not entity:
-                indicator_id = data["id"]
-                observables = self._query(
-                    "get",
-                    f"/{uri}/?search={indicator_id}&source_id={self.stix_list_id}",
-                )
-                observables = observables["results"]
-            else:
-                observables = entity["observables"]
-
-            if not observables:
-                self.helper.log_error(
-                    f"{indicator_delete} The indicator has no observables"
-                )
-            else:
-                for observable in observables:
-                    if "observable_value" in observable:
-                        observable_value = observable["observable_value"]
-                    else:
-                        observable_value = observable["value"]
-                    self.check_and_delete_observable_id(
-                        entity, pattern, uri, observable_value
-                    )
-            return
-
-    def check_and_delete_observable_id(self, entity, pattern, uri, observable_value):
-        indicator_delete = (
-            "[DELETE]" if self.harfanglab_indicator_delete else "[DISABLE]"
-        )
-        get_observable = self._query(
-            "get", f"/{uri}/?search={observable_value}&source_id={self.stix_list_id}"
-        )
-
-        if get_observable["count"] > 0:
-            observable = get_observable["results"][0]
-            observable_id = observable["id"]
-            observable_comment = json.loads(observable["comment"])
-            (
-                indicator_id,
-                indicator_score,
-                indicator_platforms,
-            ) = observable_comment.values()
-
-            if not entity or entity["standard_id"] == indicator_id:
-                if self.harfanglab_indicator_delete is True:
-                    response = self._query("delete", f"/{uri}/{observable_id}/")
-
-                    if response is None:
-                        self.helper.log_info(
-                            f"[DELETE] Observable {pattern} deleted = {observable_id}"
-                        )
-                    else:
-                        self.helper.log_error(
-                            f"[DELETE] Observable {pattern} not deleted = {observable_id}"
-                        )
-                else:
-                    new_observable = self.observable_object(observable)
-                    payload = self.pattern_payload(
-                        entity, self.harfanglab_indicator_delete, new_observable
-                    )
-                    response = self._query("put", f"/{uri}/{observable_id}/", payload)
-
-                    if response is None:
-                        self.helper.log_error(
-                            f"[DISABLE] Observable {pattern} not disabled = {observable_id}"
-                        )
-                    else:
-                        self.helper.log_info(
-                            f"[DISABLE] Observable {pattern} disabled = {observable_id}"
-                        )
-            else:
-                msg_log = f"{indicator_delete} The request failed because the indicator id in the comment of the observable is different"
-                self.helper.log_error(msg_log)
-        else:
-            msg_log = f"{indicator_delete} The searched observable does not exist in HarfangLab"
-            return (self.helper.log_error(msg_log),)
-
-    def create_indicator(self, data, pattern, uri, source_list_id):
-        self.helper.log_info(
-            f"[CREATE] Processing {pattern} indicator"
+    def log_info_process(self, data, pattern_type, method, element):
+        return self.helper.log_info(
+            f"{method} Processing {pattern_type} {element}"
             + " {"
             + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
             + "}"
         )
 
-        get_indicator = self._query(
-            "get", f"/{uri}/?search={data['name']}&source_id={source_list_id}"
+    def create_indicator(self, data, pattern_type, uri, source_list_id):
+        entity = self.helper.api.indicator.read(
+            id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         )
-        if get_indicator["count"] > 0:
-            indicator = get_indicator["results"][0]
-            indicator_id = indicator["id"]
-            enabled_indicator = indicator["enabled"]
+        self.log_info_process(data, pattern_type, "[CREATE]", "indicator")
 
-            indicator["pattern_type"] = data["pattern_type"]
-            indicator["name"] = data["name"]
-            indicator["content"] = data["pattern"]
+        if pattern_type == "stix":
+            indicators = self.stix_translation_parser(data, entity)
+            for indicator in indicators:
+                indicator_matched = self.get_and_match_element(
+                    data, uri, indicator["value"], source_list_id
+                )
+
+                self.process_create_indicator(
+                    data, entity, uri, pattern_type, indicator_matched
+                )
+
+            observables = entity["observables"]
+            for observable in observables:
+                observable_matched = self.get_and_match_element(
+                    data, uri, observable["observable_value"], source_list_id
+                )
+                if (
+                    observable_matched is not None
+                    and observable_matched["enabled"] is False
+                ):
+                    observable_id = observable_matched["id"]
+                    new_observable = self.build_stix_observable_object(
+                        observable_matched, entity, True, True
+                    )
+                    response = self._query(
+                        "put", f"/{uri}/{observable_id}/", new_observable
+                    )
+
+                    if response is None:
+                        self.helper.log_error(
+                            f"[UPDATE] Failure reactivated of existing {pattern_type} observable = {observable_id}"
+                        )
+                    else:
+                        self.helper.log_info(
+                            f"[UPDATE] Successful reactivated of existing {pattern_type} observable = {observable_id}"
+                        )
+                else:
+                    new_observable = self.build_stix_observable_object(
+                        observable, entity, True, True
+                    )
+                    if new_observable is None:
+                        return
+
+                    observable_matched = self.get_and_match_element(
+                        data, uri, new_observable["value"], source_list_id
+                    )
+                    if observable_matched is None:
+                        response = self._query("post", f"/{uri}/", new_observable)
+
+                        if response is None:
+                            self.helper.log_error(
+                                f"[CREATE] Failure {pattern_type} observable created"
+                            )
+                        elif response["status_code"] == 201:
+                            self.helper.log_info(
+                                f"[CREATE] Successful {pattern_type} observable created = {response['response']['id']}"
+                            )
+
+        else:
+            indicator_name = self.truncate_indicator_name(data)
+            indicator_matched = self.get_and_match_element(
+                data, uri, indicator_name, source_list_id
+            )
+            self.process_create_indicator(
+                data, entity, uri, pattern_type, indicator_matched
+            )
+
+    def process_create_indicator(
+        self, data, entity, uri, pattern_type, indicator_matched
+    ):
+        if indicator_matched is not None:
+            indicator_id = indicator_matched["id"]
+            enabled_indicator = indicator_matched["enabled"]
 
             if enabled_indicator is False:
-                payload = self.pattern_payload(indicator, True)
-                response = self._query("put", f"/{uri}/{indicator_id}/", payload)
+                if pattern_type == "stix":
+                    indicator = self.build_stix_indicator_object(
+                        indicator_matched, entity, True, True
+                    )
+                else:
+                    indicator = self.build_yara_sigma_indicator_object(
+                        indicator_matched, entity, True, True
+                    )
 
+                response = self._query("put", f"/{uri}/{indicator_id}/", indicator)
                 if response is None:
                     return self.helper.log_error(
-                        f"[UPDATE] Failed to reactivate existing indicator {pattern} = {indicator_id}"
+                        f"[ENABLE] Failed reactivated existing {pattern_type} indicator = {indicator_id}"
                     )
                 else:
                     return self.helper.log_info(
-                        f"[UPDATE] Successful reactivation of existing indicator {pattern} = {indicator_id}"
+                        f"[ENABLE] Successful reactivated of existing {pattern_type} indicator = {indicator_id}"
                     )
-            elif (
-                enabled_indicator is True
-                and self.harfanglab_indicator_delete == "false"
-            ):
-                payload = self.pattern_payload(indicator, False)
-                response = self._query("put", f"/{uri}/{indicator_id}/", payload)
-
-                if response is None:
-                    return self.helper.log_error(
-                        f"[UPDATE] Failed to deactivate existing indicator {pattern} = {indicator_id}"
-                    )
-                else:
-                    return self.helper.log_info(
-                        f"[UPDATE] Successful deactivate of existing indicator {pattern} = {indicator_id}"
-                    )
-            else:
-                return
         else:
-            data["content"] = data["pattern"]
-            payload = self.pattern_payload(data)
-            payload["name"] = self.check_length_indicator_name(data)
+            if pattern_type == "stix":
+                indicators = self.stix_translation_parser(data, entity)
 
-            response = self._query("post", f"/{uri}/", payload)
-            if response is None:
-                return self.helper.log_error(
-                    f"[CREATE] Indicator {pattern} not created"
-                )
-            # Be careful sometimes there is a return response HarfangLab {'status':[]}
-            elif not response["status"]:
-                return self.helper.log_error("Error missing value")
-            elif response["status"][0]["status"] is False:
-                return self.helper.log_error(
-                    f"Error {response['status'][0]['code']} = {response['status'][0]['content']}"
-                )
+                for indicator in indicators:
+                    response = self._query("post", f"/{uri}/", indicator)
+
+                    if response is None:
+                        self.helper.log_error(
+                            f"[CREATE] Failed to create {pattern_type} indicator"
+                        )
+                    elif response["status_code"] == 201:
+                        self.helper.log_info(
+                            f"[CREATE] Successful {pattern_type} indicator created = {response['response']['id']}"
+                        )
             else:
-                response_status = response["status"][0]
-                return self.helper.log_info(
-                    f"[CREATE] Indicator {pattern} created = {response_status['id']}"
-                )
+                indicator = self.build_yara_sigma_indicator_object(data, entity, True)
+                response = self._query("post", f"/{uri}/", indicator)
 
-    def update_indicator(self, data, msg, pattern, uri, source_list_id):
-        self.helper.log_info(
-            f"[UPDATE] Processing {pattern} indicator"
-            + " {"
-            + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            + "}"
+                if response is None:
+                    return self.helper.log_error(
+                        f"[CREATE] Failed to create {pattern_type} indicator"
+                    )
+                # Be careful sometimes there is a return response HarfangLab {'status':[]}
+                elif not response["status"]:
+                    return self.helper.log_error("[ERROR] missing value")
+                elif response["status"][0]["status"] is False:
+                    return self.helper.log_error(
+                        f"[ERROR] {response['status'][0]['code']} = {response['status'][0]['content']}"
+                    )
+                else:
+                    response_status = response["status"][0]
+                    return self.helper.log_info(
+                        f"[CREATE] Successful {pattern_type} indicator created = {response_status['id']}"
+                    )
+
+    def update_indicator(self, msg, pattern_type, uri, source_list_id):
+        data = json.loads(msg.data)["data"]
+        entity = self.helper.api.indicator.read(
+            id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         )
-
+        self.log_info_process(data, pattern_type, "[UPDATE]", "indicator")
         data_context = json.loads(msg.data)["context"]
         check_patch_path = data_context["patch"][0]["path"]
+        data_reverse_patch = data_context["reverse_patch"]
 
-        if check_patch_path == "/name":
-            indicator_previous_name = data_context["reverse_patch"][0]["value"]
-            get_indicator = self._query(
-                "get",
-                f"/{uri}/?search={indicator_previous_name}&source_id={source_list_id}",
-            )
-            indicator_matched = self.find_data_name_match(
-                get_indicator["results"], indicator_previous_name
-            )
+        if pattern_type == "stix":
+            observables = entity["observables"]
+            for observable in observables:
+                observable_matched = self.get_and_match_element(
+                    data,
+                    uri,
+                    observable["observable_value"],
+                    source_list_id,
+                    data_reverse_patch,
+                )
+                self.process_update_observable(
+                    data, entity, uri, pattern_type, observable_matched
+                )
+
+            if check_patch_path == "/pattern":
+                indicator_previous_value = data_context["reverse_patch"][0]["value"]
+                new_data = data.copy()
+                new_data["pattern"] = indicator_previous_value
+
+                indicators_list_parsed = self.stix_translation_parser(new_data, entity)
+                for indicator_parsed in indicators_list_parsed:
+                    new_indicator_matched = self.get_and_match_element(
+                        data,
+                        uri,
+                        indicator_parsed["value"],
+                        source_list_id,
+                        data_reverse_patch,
+                    )
+
+                    if new_indicator_matched:
+                        new_data["id"] = json.loads(new_indicator_matched["comment"])[
+                            "indicator_id"
+                        ]
+                        self.delete_indicator(
+                            new_data, pattern_type, uri, source_list_id
+                        )
+
+            indicators = self.stix_translation_parser(data, entity)
+            for indicator in indicators:
+                indicator_matched = self.get_and_match_element(
+                    data, uri, indicator["value"], source_list_id, data_reverse_patch
+                )
+                self.process_update_indicator(
+                    data, entity, uri, pattern_type, indicator_matched
+                )
+
         else:
-            indicator_name = data["name"]
-            get_indicator = self._query(
-                "get", f"/{uri}/?search={indicator_name}&source_id={source_list_id}"
-            )
-            indicator_matched = self.find_data_name_match(
-                get_indicator["results"], indicator_name
-            )
+            data_context = json.loads(msg.data)["context"]
+            check_patch_path = data_context["patch"][0]["path"]
 
+            if check_patch_path == "/name":
+                indicator_previous_name = data_context["reverse_patch"][0]["value"]
+                indicator_matched = self.get_and_match_element(
+                    data,
+                    uri,
+                    indicator_previous_name,
+                    source_list_id,
+                    data_reverse_patch,
+                )
+
+                self.process_update_indicator(
+                    data, entity, uri, pattern_type, indicator_matched
+                )
+            else:
+                indicator_name = self.truncate_indicator_name(data)
+                indicator_matched = self.get_and_match_element(
+                    data, uri, indicator_name, source_list_id, data_reverse_patch
+                )
+                self.process_update_indicator(
+                    data, entity, uri, pattern_type, indicator_matched
+                )
+
+    def process_update_indicator(
+        self, data, entity, uri, pattern_type, indicator_matched
+    ):
         if indicator_matched is None:
             # UPSERT
             if data["pattern_type"] == "yara":
@@ -447,130 +421,315 @@ class HarfangLabConnector:
             elif data["pattern_type"] == "sigma":
                 self.create_indicator(data, "sigma", "SigmaRule", self.sigma_list_id)
             elif data["pattern_type"] == "stix":
-                entity = self.helper.api.indicator.read(
-                    id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-                )
-                self.create_observable(entity, "stix", "IOCRule")
+                self.create_indicator(data, "stix", "IOCRule", self.stix_list_id)
             else:
-                raise ValueError("Unsupported Pattern")
+                return self.helper.log_error("Unsupported Pattern")
             return
-
         else:
-            data["content"] = data["pattern"]
-            payload = self.pattern_payload(data)
             indicator_id = indicator_matched["id"]
-            response = self._query("put", f"/{uri}/{indicator_id}/", payload)
+            if pattern_type == "stix":
+                indicator = self.build_stix_indicator_object(
+                    indicator_matched, entity, indicator_matched["enabled"], True
+                )
+                indicator["source"] = indicator["source_id"]
+            else:
+                indicator = self.build_yara_sigma_indicator_object(
+                    data, entity, indicator_matched["enabled"]
+                )
 
+            response = self._query("put", f"/{uri}/{indicator_id}/", indicator)
             if response is None:
                 return self.helper.log_error(
-                    f"[UPDATE] Indicator {pattern} not updated = {indicator_id}"
+                    f"[UPDATE] Failure {pattern_type} indicator updated = {indicator_id}"
                 )
             else:
                 return self.helper.log_info(
-                    f"[UPDATE] Indicator {pattern} updated = {indicator_id}"
+                    f"[UPDATE] Successful {pattern_type} indicator updated = {indicator_id}"
                 )
 
-    def delete_indicator(self, data, pattern, uri):
-        indicator_delete = (
-            "[DELETE]" if self.harfanglab_indicator_delete else "[DISABLE]"
-        )
-        self.helper.log_info(
-            f"{indicator_delete} Processing {pattern} indicator"
-            + " {"
-            + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            + "}"
-        )
+    def process_update_observable(
+        self, data, entity, uri, pattern_type, observable_matched
+    ):
+        if observable_matched is None:
+            msg_log = f"[UPDATE] The searched for {pattern_type} observable does not exist in HarfangLab"
+            return self.helper.log_error(msg_log)
+        else:
+            observable_id = observable_matched["id"]
+            observable_matched["description"] = data.get(
+                "description", "No description"
+            )
+            observable = self.build_stix_observable_object(
+                observable_matched, entity, observable_matched["enabled"], True
+            )
 
-        indicator_name = self.check_length_indicator_name(data)
-        get_indicator = self._query("get", f"/{uri}/?search={indicator_name}")
-        indicator_matched = self.find_data_name_match(
-            get_indicator["results"], indicator_name
-        )
-
-        if self.harfanglab_indicator_delete is True:
-            if indicator_matched is None:
-                msg_log = f"[DELETE] The searched name of the {pattern} indicator does not exist in HarfangLab"
-                return (self.helper.log_error(msg_log),)
+            response = self._query("put", f"/{uri}/{observable_id}/", observable)
+            if response is None:
+                return self.helper.log_error(
+                    f"[UPDATE] Failure {pattern_type} observable updated = {observable_id}"
+                )
             else:
-                indicator_id = indicator_matched["id"]
+                return self.helper.log_info(
+                    f"[UPDATE] Successful {pattern_type} observable updated = {observable_id}"
+                )
+
+    def delete_indicator(self, data, pattern_type, uri, source_list_id):
+        entity = self.helper.api.indicator.read(
+            id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        )
+        config_remove_indicator = (
+            "[DELETE]" if self.harfanglab_remove_indicator else "[DISABLE]"
+        )
+        self.log_info_process(
+            data, pattern_type, f"{config_remove_indicator}", "indicator"
+        )
+
+        if pattern_type == "stix":
+            if entity is not None:
+                observables = entity["observables"]
+                for observable in observables:
+                    observable_matched = self.get_and_match_element(
+                        data, uri, observable["observable_value"], source_list_id
+                    )
+                    self.process_delete_observable(
+                        data,
+                        entity,
+                        uri,
+                        pattern_type,
+                        config_remove_indicator,
+                        observable_matched,
+                    )
+
+                indicators = self.stix_translation_parser(data, entity)
+                for indicator in indicators:
+                    if indicator["type"] is not None:
+                        indicator_matched = self.get_and_match_element(
+                            data, uri, indicator["value"], source_list_id
+                        )
+                        self.process_delete_indicator(
+                            data,
+                            entity,
+                            uri,
+                            pattern_type,
+                            config_remove_indicator,
+                            indicator_matched,
+                        )
+            else:
+                ioc_list = self._query(
+                    "get", f"/{uri}/?search={data['id']}&source_id={source_list_id}"
+                )
+
+                for ioc in ioc_list["results"]:
+                    self.process_delete_indicator(
+                        ioc,
+                        entity,
+                        uri,
+                        pattern_type,
+                        config_remove_indicator,
+                        ioc,
+                    )
+
+        else:
+            indicator_name = self.truncate_indicator_name(data)
+            indicator_matched = self.get_and_match_element(
+                data, uri, indicator_name, source_list_id
+            )
+            if indicator_matched:
+                self.process_delete_indicator(
+                    data,
+                    entity,
+                    uri,
+                    pattern_type,
+                    config_remove_indicator,
+                    indicator_matched,
+                )
+
+    def process_delete_indicator(
+        self,
+        data,
+        entity,
+        uri,
+        pattern_type,
+        config_remove_indicator,
+        indicator_matched,
+    ):
+        if indicator_matched is None:
+            msg_log = f"{config_remove_indicator} The searched for {pattern_type} indicator does not exist in HarfangLab"
+            return self.helper.log_error(msg_log)
+        else:
+            indicator_id = indicator_matched["id"]
+            if self.harfanglab_remove_indicator is True:
                 response = self._query("delete", f"/{uri}/{indicator_id}/")
 
                 if response is None:
                     return self.helper.log_info(
-                        f"[DELETE] Indicator {pattern} deleted = {indicator_id}"
+                        f"{config_remove_indicator} Successful {pattern_type} indicator deleted = {indicator_id}"
                     )
                 else:
                     return self.helper.log_error(
-                        f"[DELETE] Indicator {pattern} not deleted = {indicator_id}"
+                        f"{config_remove_indicator} Failure {pattern_type} indicator deleted = {indicator_id}"
                     )
-        else:
-            if indicator_matched is None:
-                msg_log = f"[DISABLE] The searched name of the {pattern} indicator does not exist in HarfangLab"
-                return (self.helper.log_error(msg_log),)
-            else:
-                indicator_id = indicator_matched["id"]
-                data["name"] = self.check_length_indicator_name(data)
-                data["content"] = data["pattern"]
 
-                payload = self.pattern_payload(data, self.harfanglab_indicator_delete)
-                response = self._query("put", f"/{uri}/{indicator_id}/", payload)
+            elif self.harfanglab_remove_indicator is False:
+                if pattern_type == "stix":
+                    indicator = self.build_stix_indicator_object(
+                        indicator_matched, entity, False, True
+                    )
+                else:
+                    indicator = self.build_yara_sigma_indicator_object(
+                        data, entity, False
+                    )
+                response = self._query("put", f"/{uri}/{indicator_id}/", indicator)
 
-            if response is None:
-                return self.helper.log_error(
-                    f"[DISABLE] Indicator {pattern} not disabled = {indicator_id}"
-                )
-            else:
-                return self.helper.log_info(
-                    f"[DISABLE] Indicator {pattern} disabled = {indicator_id}"
-                )
+                if response is None:
+                    return self.helper.log_error(
+                        f"{config_remove_indicator} Failure {pattern_type} indicator deactivation = {indicator_id}"
+                    )
+                else:
+                    return self.helper.log_info(
+                        f"{config_remove_indicator} Successful {pattern_type} indicator deactivation = {indicator_id}"
+                    )
 
-    def build_observable(self, entity, observable):
-        if (
-            observable["entity_type"] == "StixFile"
-            or observable["entity_type"] == "Artifact"
-        ):
-            observable["entity_type"] = "hash"
-        elif (
-            observable["entity_type"] == "Domain-Name"
-            or observable["entity_type"] == "Hostname"
-        ):
-            observable["entity_type"] = "domain_name"
-        elif (
-            observable["entity_type"] == "IPv4-Addr"
-            or observable["entity_type"] == "IPv6-Addr"
-        ):
-            observable["entity_type"] = "ip_both"
-        elif observable["entity_type"] == "Url":
-            observable["entity_type"] = "url"
-        else:
-            self.helper.log_error(
-                f"The observable type {observable['entity_type']} is not processed"
+    def create_observable(self, data, pattern_type, uri, source_list_id):
+        entity = self.helper.api.indicator.read(
+            id=OpenCTIConnectorHelper.get_attribute_in_extension("source_ref", data)
+        )
+        self.log_info_process(data, pattern_type, "[CREATE]", "observable")
+
+        observable = self.build_stix_observable_object(data, entity, True)
+        if observable is not None:
+            observable_value = observable["value"]
+            observable_matched = self.get_and_match_element(
+                data, uri, observable_value, source_list_id
             )
 
-        indicator_id = entity["standard_id"]
-        indicator_score = entity["x_opencti_score"]
-        indicator_platforms = entity["x_mitre_platforms"]
+            self.process_create_observable(
+                observable, uri, pattern_type, observable_matched
+            )
 
-        observable["description"] = entity["description"]
-        observable["comment"] = {
-            "indicator_id": indicator_id,
-            "indicator_score": indicator_score,
-            "indicator_platforms": indicator_platforms,
-        }
+    def process_create_observable(self, data, uri, pattern_type, observable_matched):
+        if observable_matched is not None:
+            observable_id = observable_matched["id"]
+            enabled_observable = observable_matched["enabled"]
 
-        return self.pattern_payload(entity, True, observable)
+            observable_comment_id = json.loads(data["comment"])["indicator_id"]
+            observable_matched_comment_id = json.loads(observable_matched["comment"])[
+                "indicator_id"
+            ]
+
+            if observable_comment_id == observable_matched_comment_id:
+                if enabled_observable is False:
+                    data["enabled"] = True
+                    response = self._query("put", f"/{uri}/{observable_id}/", data)
+
+                    if response is None:
+                        return self.helper.log_error(
+                            f"[ENABLE] Failed reactivated existing {pattern_type} observable = {observable_id}"
+                        )
+                    else:
+                        return self.helper.log_info(
+                            f"[ENABLE] Successful reactivated of existing {pattern_type} observable = {observable_id}"
+                        )
+            else:
+                msg_log = "[CREATE] The request failed because the indicator id in the comment of the observable is different"
+                self.helper.log_error(msg_log)
+        else:
+            response = self._query("post", f"/{uri}/", data)
+
+            if response is None:
+                self.helper.log_error(
+                    f"[CREATE] Failure {pattern_type} observable created"
+                )
+            elif response["status_code"] == 201:
+                self.helper.log_info(
+                    f"[CREATE] Successful {pattern_type} observable created = {response['response']['id']}"
+                )
+
+    def delete_observable(self, data, pattern_type, uri, source_list_id):
+        entity = self.helper.api.indicator.read(
+            id=OpenCTIConnectorHelper.get_attribute_in_extension("source_ref", data)
+        )
+        config_remove_indicator = (
+            "[DELETE]" if self.harfanglab_remove_indicator else "[DISABLE]"
+        )
+        self.log_info_process(
+            data, pattern_type, f"{config_remove_indicator}", "observable"
+        )
+
+        observable = self.build_stix_observable_object(data, entity, True)
+        if observable is not None:
+            observable_value = observable["value"]
+            observable_matched = self.get_and_match_element(
+                data, uri, observable_value, source_list_id
+            )
+            self.process_delete_observable(
+                data,
+                entity,
+                uri,
+                pattern_type,
+                config_remove_indicator,
+                observable_matched,
+            )
+
+    def process_delete_observable(
+        self,
+        data,
+        entity,
+        uri,
+        pattern_type,
+        config_remove_indicator,
+        observable_matched,
+    ):
+        if observable_matched is None:
+            msg_log = f"{config_remove_indicator} The searched for {pattern_type} observable does not exist in HarfangLab"
+            return self.helper.log_error(msg_log)
+        else:
+            observable_id = observable_matched["id"]
+
+            if "comment" in data:
+                observable_comment_id = json.loads(data["comment"])["indicator_id"]
+            elif "source_ref" in data:
+                observable_comment_id = data["source_ref"]
+            else:
+                observable_comment_id = data["id"]
+
+            observable_matched_comment_id = json.loads(observable_matched["comment"])[
+                "indicator_id"
+            ]
+            if observable_comment_id == observable_matched_comment_id:
+                if self.harfanglab_remove_indicator is True:
+                    response = self._query("delete", f"/{uri}/{observable_id}/")
+
+                    if response is None:
+                        return self.helper.log_info(
+                            f"{config_remove_indicator} Successful {pattern_type} observable deleted = {observable_id}"
+                        )
+                    else:
+                        return self.helper.log_error(
+                            f"{config_remove_indicator} Failure {pattern_type} observable deleted = {observable_id}"
+                        )
+
+                elif self.harfanglab_remove_indicator is False:
+                    observable = self.build_stix_observable_object(
+                        observable_matched, entity, False, True
+                    )
+                    response = self._query(
+                        "put", f"/{uri}/{observable_id}/", observable
+                    )
+
+                    if response is None:
+                        return self.helper.log_error(
+                            f"{config_remove_indicator} Failure {pattern_type} observable deactivation = {observable_id}"
+                        )
+                    else:
+                        return self.helper.log_info(
+                            f"{config_remove_indicator} Successful {pattern_type} observable deactivation = {observable_id}"
+                        )
+            else:
+                msg_log = "[DELETE] The request failed because the indicator id in the comment of the observable is different"
+                self.helper.log_error(msg_log)
 
     @staticmethod
-    def observable_object(observable):
-        new_observable = {}
-        new_observable["entity_type"] = observable["type"]
-        new_observable["observable_value"] = observable["value"]
-        new_observable["comment"] = json.loads(observable["comment"])
-        new_observable["description"] = observable["description"]
-        return new_observable
-
-    @staticmethod
-    def check_length_indicator_name(data):
+    def truncate_indicator_name(data):
         if len(data["name"]) > 100:
             return data["name"][0:99]
         else:
@@ -578,9 +737,212 @@ class HarfangLabConnector:
 
     @staticmethod
     def find_data_name_match(data, name):
-        return next((x for x in data if x["name"] == name), None)
+        for item in data:
+            if "name" in item and item["name"] == name:
+                return item
+            elif "value" in item and item["value"] == name:
+                return item
 
-    def pattern_payload(self, data, enabled=True, observable=None):
+    def build_stix_indicator_object(
+        self, data, entity, enabled, existing_indicator=None
+    ):
+        new_indicator = {}
+
+        if existing_indicator:
+            new_indicator["id"] = json.loads(data["comment"])["indicator_id"]
+            new_indicator["entity_type"] = data["type"]
+            new_indicator["value"] = data["value"]
+        else:
+            new_indicator["id"] = data["id"]
+            new_indicator["entity_type"] = data["stix_attribute"]
+            new_indicator["value"] = data["stix_value"]
+            new_indicator["description"] = data.get("description", "No description")
+
+        if entity is None:
+            new_indicator["pattern_type"] = "stix"
+            new_indicator["comment"] = json.loads(data["comment"])
+            new_indicator["description"] = data["description"]
+        else:
+            new_indicator["description"] = entity.get("description", "No description")
+            if entity["description"] == "":
+                new_indicator["description"] = "No description"
+
+            new_indicator["pattern_type"] = entity["pattern_type"]
+            indicator_score = entity["x_opencti_score"]
+            indicator_platforms = entity["x_mitre_platforms"]
+
+            new_indicator["comment"] = {
+                "indicator_id": new_indicator["id"],
+                "indicator_score": indicator_score,
+                "indicator_platforms": indicator_platforms,
+            }
+
+        return self.pattern_payload(new_indicator, enabled)
+
+    def build_yara_sigma_indicator_object(
+        self, data, entity, enabled, existing_indicator=None
+    ):
+        new_indicator = {}
+        new_indicator["name"] = data["name"]
+
+        if entity is not None:
+            new_indicator["pattern_type"] = entity["pattern_type"]
+        else:
+            new_indicator["pattern_type"] = data["pattern_type"]
+
+        if existing_indicator:
+            new_indicator["content"] = data["content"]
+        else:
+            new_indicator["content"] = data["pattern"]
+
+        payload = self.pattern_payload(new_indicator, enabled)
+        payload["name"] = self.truncate_indicator_name(data)
+        return payload
+
+    def build_stix_observable_object(
+        self, data, entity, enabled, existing_observable=None
+    ):
+        new_observable = {}
+        new_observable["pattern_type"] = entity["pattern_type"]
+
+        if existing_observable:
+            if "entity_type" in data:
+                new_observable["value"] = data["observable_value"]
+            else:
+                data["entity_type"] = data["type"]
+                new_observable["value"] = data["value"]
+        else:
+            data["entity_type"] = OpenCTIConnectorHelper.get_attribute_in_extension(
+                "target_type", data
+            )
+            new_observable["value"] = OpenCTIConnectorHelper.get_attribute_in_extension(
+                "target_value", data
+            )
+
+        if (
+            data["entity_type"] == "StixFile"
+            or data["entity_type"] == "Artifact"
+            or data["entity_type"] == "hash"
+        ):
+            new_observable["entity_type"] = "hash"
+        elif (
+            data["entity_type"] == "Domain-Name"
+            or data["entity_type"] == "Hostname"
+            or data["entity_type"] == "domain_name"
+        ):
+            new_observable["entity_type"] = "domain_name"
+        elif (
+            data["entity_type"] == "IPv4-Addr"
+            or data["entity_type"] == "IPv6-Addr"
+            or data["entity_type"] == "ip_both"
+        ):
+            new_observable["entity_type"] = "ip_both"
+        elif data["entity_type"] == "Url" or data["entity_type"] == "url":
+            new_observable["entity_type"] = "url"
+        else:
+            return self.helper.log_error(
+                f"[ERROR] The observable type {data['entity_type']} is not processed"
+            )
+        new_observable["id"] = entity["standard_id"]
+        new_observable["score"] = entity["x_opencti_score"]
+        new_observable["platforms"] = entity["x_mitre_platforms"]
+
+        new_observable["description"] = data.get("description", "No description")
+        new_observable["comment"] = {
+            "indicator_id": new_observable["id"],
+            "indicator_score": new_observable["score"],
+            "indicator_platforms": new_observable["platforms"],
+        }
+
+        return self.pattern_payload(new_observable, enabled)
+
+    def stix_translation_parser(self, data, entity):
+        translation = stix_translation.StixTranslation()
+        parsed = translation.translate("splunk", "parse", "{}", data["pattern"])
+        if "parsed_stix" in parsed:
+            results = parsed["parsed_stix"]
+            results_build = []
+            for result in results:
+                stix_attribute = result["attribute"]
+                stix_value = result["value"]
+
+                if stix_attribute == "domain-name:value":
+                    new_stix_attribute = stix_attribute.replace(
+                        "domain-name:value", "domain_name"
+                    )
+                elif stix_attribute == "hostname:value":
+                    new_stix_attribute = stix_attribute.replace(
+                        "hostname:value", "domain_name"
+                    )
+                elif stix_attribute == "ipv4-addr:value":
+                    new_stix_attribute = stix_attribute.replace(
+                        "ipv4-addr:value", "ip_both"
+                    )
+                elif stix_attribute == "ipv6-addr:value":
+                    new_stix_attribute = stix_attribute.replace(
+                        "ipv6-addr:value", "ip_both"
+                    )
+                elif stix_attribute == "url:value":
+                    new_stix_attribute = stix_attribute.replace("url:value", "url")
+                elif stix_attribute == "file:hashes.'SHA-256'":
+                    new_stix_attribute = stix_attribute.replace(
+                        "file:hashes.'SHA-256'", "hash"
+                    )
+                elif stix_attribute == "file:hashes.MD5":
+                    new_stix_attribute = stix_attribute.replace(
+                        "file:hashes.MD5", "hash"
+                    )
+                elif stix_attribute == "file:hashes.'SHA-1'":
+                    new_stix_attribute = stix_attribute.replace(
+                        "file:hashes.'SHA-1'", "hash"
+                    )
+                elif stix_attribute == "file:hashes.'SHA-512'":
+                    new_stix_attribute = stix_attribute.replace(
+                        "file:hashes.'SHA-512'", "hash"
+                    )
+                else:
+                    new_stix_attribute = None
+                    self.helper.log_error(
+                        f"[ERROR] Stix attribute type {stix_attribute} is not supported"
+                    )
+
+                data["stix_attribute"] = new_stix_attribute
+                data["stix_value"] = stix_value
+                results_build.append(
+                    self.build_stix_indicator_object(data, entity, True)
+                )
+            return results_build
+
+    def get_and_match_element(
+        self, data, uri, data_search, source_list_id, reverse_patch=None
+    ):
+        get_indicator = self._query(
+            "get", f"/{uri}/?search={data_search}&source_id={source_list_id}"
+        )
+        if uri == "IOCRule":
+            if get_indicator is None or get_indicator["count"] == 0:
+                return
+            else:
+                data_id = data["id"]
+                harfanglab_ioc_id = json.loads(get_indicator["results"][0]["comment"])[
+                    "indicator_id"
+                ]
+
+                if reverse_patch is not None:
+                    if len(reverse_patch) > 3:
+                        data_previous_id = reverse_patch[3]["value"]
+                        if harfanglab_ioc_id != data_previous_id:
+                            return
+                    else:
+                        if data_id != harfanglab_ioc_id:
+                            return
+                else:
+                    if data_id != harfanglab_ioc_id:
+                        return
+
+        return self.find_data_name_match(get_indicator["results"], data_search)
+
+    def pattern_payload(self, data, enabled=True):
         if data["pattern_type"] == "yara":
             return {
                 "content": data["content"],
@@ -601,13 +963,13 @@ class HarfangLabConnector:
             }
         elif data["pattern_type"] == "stix":
             return {
+                "type": data["entity_type"],
+                "value": data["value"],
                 "source_id": self.stix_list_id,
-                "type": observable["entity_type"],
-                "value": observable["observable_value"],
                 "enabled": enabled,
-                "comment": json.dumps(observable["comment"]),
+                "comment": json.dumps(data["comment"]),
                 "hl_status": self.harfanglab_rule_maturity,
-                "description": observable["description"],
+                "description": data["description"],
             }
         else:
             raise ValueError("Unsupported Pattern")
@@ -648,7 +1010,7 @@ class HarfangLabConnector:
             except:
                 return response.text
         elif response.status_code == 201:
-            msg_log = "Status code 201 : Resource was created"
+            msg_log = "Status code 201 : Resource created successfully"
             self.helper.log_info(msg_log)
             return {"response": response.json(), "status_code": response.status_code}
         elif response.status_code == 204:

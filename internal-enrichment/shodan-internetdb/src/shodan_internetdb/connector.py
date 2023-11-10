@@ -189,7 +189,6 @@ Ports: {format_list(result.ports)}
                 ),
                 objectMarking=markings,
                 createdBy=self._identity_id,
-                update=True,
             )
 
             log.debug("Creating domain relationship")
@@ -200,7 +199,6 @@ Ports: {format_list(result.ports)}
                 createdBy=self._identity_id,
                 objectMarking=markings,
                 confidence=self._helper.connect_confidence_level,
-                update=True,
             )
 
     def _process_tags(
@@ -247,7 +245,6 @@ Ports: {format_list(result.ports)}
                 createdBy=self._identity_id,
                 objectMarking=[self._object_marking_id],
                 confidence=self._helper.connect_confidence_level,
-                update=True,
             )
 
             log.debug("Creating vulnerability relationship")
@@ -260,5 +257,4 @@ Ports: {format_list(result.ports)}
                 stop_time=vuln_eol.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 confidence=self._helper.connect_confidence_level,
                 objectMarking=[self._object_marking_id],
-                update=True,
             )

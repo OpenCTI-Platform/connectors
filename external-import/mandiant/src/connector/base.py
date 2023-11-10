@@ -49,6 +49,12 @@ class Mandiant:
             config,
             default="2023-01-01",
         )
+        self.mandiant_create_notes = get_config_variable(
+            "MANDIANT_CREATE_NOTES",
+            ["mandiant", "create_notes"],
+            config,
+            default=False,
+        )
 
         self.mandiant_collections = []
 
@@ -336,7 +342,7 @@ class Mandiant:
             "MANDIANT_NEWS_ANALYSIS_REPORT",
             ["mandiant", "news_analysis_report"],
             config,
-            default=False,
+            default=True,
         ):
             news_analysis_report_type = get_config_variable(
                 "MANDIANT_NEWS_ANALYSIS_REPORT_TYPE",

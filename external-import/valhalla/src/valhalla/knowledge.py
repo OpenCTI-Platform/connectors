@@ -56,7 +56,6 @@ class KnowledgeImporter:
 
         self.helper.send_stix2_bundle(
             bundle,
-            update=True,
             work_id=work_id,
         )
 

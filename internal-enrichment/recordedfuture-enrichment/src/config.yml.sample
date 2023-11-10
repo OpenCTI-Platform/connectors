@@ -8,7 +8,7 @@ connector:
   name: 'Recorded Future Enrichment'
   scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile'
   confidence_level: 5
-  update_existing_data: true
+  update_existing_data: false
   log_level: 'info'
 
 recordedfuture-enrichment:

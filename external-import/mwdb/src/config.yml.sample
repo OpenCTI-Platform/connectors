@@ -15,7 +15,7 @@ mwdb:
   create_indicators: True
   create_observables: True
   interval: 3 # In days, must be strictly greater than 1
-  update_existing_data: True
+  update_existing_data: false
   token: 'ChangeMe'
   import_config: True
   start_date: '2022-04-01T00:00:00'  # ISO 8601

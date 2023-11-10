@@ -2,6 +2,7 @@ import base64
 import itertools
 
 import stix2
+from pycti import Note
 
 from . import utils
 
@@ -10,7 +11,6 @@ def process(connector, report):
     report_id = report.get("report_id", report.get("reportId", None))
     report_type = report.get("report_type", report.get("reportType", None))
     report_title = report.get("title", report.get("reportTitle", None))
-
     if report_type not in connector.mandiant_report_types:
         connector.helper.log_debug(
             f"Ignoring report based on type [{report_id}][{report_type}] {report_title} ..."
@@ -36,6 +36,8 @@ def process(connector, report):
         confidence=connector.helper.connect_confidence_level,
         identity=connector.identity,
         report_type=connector.mandiant_report_types[report_type],
+        report_link=report["report_link"],
+        create_notes=connector.mandiant_create_notes,
     )
 
     bundle = report.generate()
@@ -49,7 +51,17 @@ def process(connector, report):
 
 
 class Report:
-    def __init__(self, bundle, details, pdf, confidence, identity, report_type):
+    def __init__(
+        self,
+        bundle,
+        details,
+        pdf,
+        confidence,
+        identity,
+        report_type,
+        report_link,
+        create_notes,
+    ):
         self.bundle = bundle
         self.details = details
         self.pdf = pdf
@@ -57,6 +69,8 @@ class Report:
         self.identity = identity
         self.report_id = details.get("report_id", details.get("reportId", None))
         self.report_type = report_type
+        self.report_link = report_link
+        self.create_notes = create_notes
 
     def generate(self):
         self.save_files()
@@ -66,8 +80,9 @@ class Report:
         self.update_report()
         self.update_intrusionset()
         self.update_vulnerability()
-        self.create_note()
         self.create_relationships()
+        if self.create_notes:
+            self.create_note()
         return stix2.parse(self.bundle, allow_custom=True)
 
     def save_files(self):
@@ -167,15 +182,31 @@ class Report:
         report["confidence"] = self.confidence
         report["created_by_ref"] = self.identity["standard_id"]
         report["report_types"] = [self.report_type]
+        report["external_references"] = [
+            {"source_name": "Mandiant", "url": self.report_link}
+        ]
 
     def create_note(self):
         # Report Analysis Note
         report = utils.retrieve(self.bundle, "type", "report")
 
-        del report["x_mandiant_com_tracking_info"]
-        del report["x_mandiant_com_metadata"]["report_type"]
-        del report["x_mandiant_com_metadata"]["subscriptions"]
-        del report["x_mandiant_com_additional_description_sections"]["analysis"]
+        if "x_mandiant_com_tracking_info" in report:
+            del report["x_mandiant_com_tracking_info"]
+        if (
+            "x_mandiant_com_metadata" in report
+            and "report_type" in report["x_mandiant_com_metadata"]
+        ):
+            del report["x_mandiant_com_metadata"]["report_type"]
+        if (
+            "x_mandiant_com_metadata" in report
+            and "subscriptions" in report["x_mandiant_com_metadata"]
+        ):
+            del report["x_mandiant_com_metadata"]["subscriptions"]
+        if (
+            "x_mandiant_com_additional_description_sections" in report
+            and "analysis" in report["x_mandiant_com_additional_description_sections"]
+        ):
+            del report["x_mandiant_com_additional_description_sections"]["analysis"]
 
         data = {}
 
@@ -227,6 +258,7 @@ class Report:
 
         note = utils.generate_note(
             {
+                "id": Note.generate_id(report["created"], text),
                 "abstract": "Analysis",
                 "content": text,
                 "confidence": self.confidence,
@@ -248,6 +280,10 @@ class Report:
     def update_country(self):
         for location in utils.retrieve_all(self.bundle, "type", "location"):
             location.update({"x_opencti_location_type": "Country"})
+            if "country" not in location and "name" in location:
+                location.update({"country": location["name"]})
+            else:
+                location.update({"country": "Unknown"})
 
     def convert_threat_actor_to_intrusion_set(self):
         for item in utils.retrieve_all(self.bundle, "type", "threat-actor"):
@@ -276,8 +312,7 @@ class Report:
         ]
 
     def _get_objects_from_tags(self, section):
-        tags = self.details["tags"].get(section, [])
-
+        tags = self.details.get("tags", {}).get(section, [])
         for tag in tags:
             for item in self.bundle.get("objects"):
                 if tag == item.get("name"):
@@ -362,8 +397,8 @@ class Report:
                 },
                 {
                     "type": "related-to",
-                    "sources": intrusion_sets,
-                    "destinations": scos,
+                    "sources": scos,
+                    "destinations": intrusion_sets,
                 },
             ]
 

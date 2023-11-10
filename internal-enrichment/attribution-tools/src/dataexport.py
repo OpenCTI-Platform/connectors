@@ -77,7 +77,7 @@ class DataExport:
         do_read = reader.get(
             entity_type, lambda **kwargs: self.unknown_type({"type": entity_type})
         )
-        entity = do_read(id=entity_id)
+        entity = do_read(id=entity_id, withFiles=True)
         if entity is None:
             self.opencti.log("error", "Cannot export entity (not found)")
             return bundle

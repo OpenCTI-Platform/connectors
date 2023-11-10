@@ -327,7 +327,7 @@ class SocprimeConnector:
         )
 
         serialized_bundle = Bundle(objects=[author_identity]).serialize()
-        self.helper.send_stix2_bundle(serialized_bundle, update=True, work_id=work_id)
+        self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
         return identity_id
 
     def send_rules_from_tdm(self, work_id: str) -> None:
@@ -370,7 +370,7 @@ class SocprimeConnector:
         ]
         if objects:
             bundle = Bundle(objects=objects).serialize()
-            self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
     def run(self):
         self.helper.log_info("Starting SOC Prime connector...")

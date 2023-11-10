@@ -111,7 +111,7 @@ def validate_required_keys(data_entry, required_keys):
     logger = configure_logger(__name__)
     missing_keys = [key for key in required_keys if key not in data_entry]
     if missing_keys:
-        logger.warn(f"Missing required keys: {', '.join(missing_keys)}.")
+        logger.warning(f"Missing required keys: {', '.join(missing_keys)}.")
         return False
     else:
         return True

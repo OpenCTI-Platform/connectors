@@ -9,7 +9,7 @@ connector:
   scope: 'Incident'
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: True
+  update_existing_data: false
   log_level: 'info'
 
 # attribution tools specific settings

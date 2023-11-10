@@ -5,6 +5,7 @@
 import json
 import logging
 import os
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
@@ -71,39 +72,40 @@ class KVStore:
         return r.status_code < 300
 
     def create(self, id: str, payload: dict):
-        payload["_key"] = id
-        r = requests.post(
-            f"{self.collection_url}/data/{self.splunk_kv_store_name}",
-            json=payload,
-            headers=self.headers,
-            verify=self.splunk_ssl_verify,
-        )
-        if r.status_code != 409:
-            r.raise_for_status()
+        if id is not None and payload is not None:
+            payload["_key"] = id
+            r = requests.post(
+                f"{self.collection_url}/data/{self.splunk_kv_store_name}",
+                json=payload,
+                headers=self.headers,
+                verify=self.splunk_ssl_verify,
+            )
+            if r.status_code != 409:
+                r.raise_for_status()
 
     def update(self, id: str, payload: dict):
-        payload["_key"] = id
-
-        r = requests.put(
-            f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
-            json=payload,
-            headers=self.headers,
-            verify=self.splunk_ssl_verify,
-        )
-
-        if r.status_code == 404:
-            self.create(id, payload)
-        else:
-            r.raise_for_status()
+        if id is not None and payload is not None:
+            payload["_key"] = id
+            r = requests.put(
+                f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
+                json=payload,
+                headers=self.headers,
+                verify=self.splunk_ssl_verify,
+            )
+            if r.status_code == 404:
+                self.create(id, payload)
+            else:
+                r.raise_for_status()
 
     def delete(self, id: str):
-        r = requests.delete(
-            f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
-            headers=self.headers,
-            verify=self.splunk_ssl_verify,
-        )
-        if r.status_code != 404:
-            r.raise_for_status()
+        if id is not None:
+            r = requests.delete(
+                f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
+                headers=self.headers,
+                verify=self.splunk_ssl_verify,
+            )
+            if r.status_code != 404:
+                r.raise_for_status()
 
 
 class Metrics:
@@ -210,6 +212,9 @@ class SplunkConnector:
                         payload["mapped_values"] = []
 
             # add creator's name
+            payload["values"] = sum(
+                [list(value.values()) for value in payload["mapped_values"]], []
+            )
             created_by = payload.get("created_by_ref", None)
             if created_by is not None:
                 org_name = self.get_org_name(created_by)
@@ -250,22 +255,22 @@ class SplunkConnector:
         # processing message
         try:
             self._consume()
-        except Exception as e:
-            self.helper.log_error("an error occurred while consuming messages")
-            self.helper.log_error(e)
+        except Exception:
+            error_msg = traceback.format_exc()
+            self.helper.log_error("An error occurred while consuming messages")
+            self.helper.log_error(error_msg)
             os._exit(1)  # exit the current process, killing all threads
 
     def _consume(self):
         while True:
             msg = self.queue.get()
-
             payload = json.loads(msg.data)["data"]
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
-            self.helper.log_debug(f"processing message with id {id}")
+            self.helper.log_info(f"processing message with id {id}")
 
             if self.is_filtered(payload):
-                self.helper.log_debug(f"item with id {id} is filtered")
+                self.helper.log_info(f"item with id {id} is filtered")
                 continue
 
             payload = self.enrich_payload(payload)
@@ -273,16 +278,17 @@ class SplunkConnector:
             match msg.event:
                 case "create":
                     self.kvstore.create(id, payload)
-                    self.helper.log_debug(f"kvstore item with id {id} created")
-
+                    self.helper.log_info(
+                        f"kvstore item with id {id} created (payload: {json.dumps(payload)})"
+                    )
                 case "update":
                     self.kvstore.update(id, payload)
-                    self.helper.log_debug(f"kvstore item with id {id} updated")
-
+                    self.helper.log_info(
+                        f"kvstore item with id {id} updated (payload: {json.dumps(payload)})"
+                    )
                 case "delete":
-                    self.helper.log_debug(f"kvstore item with id {id} deleted")
+                    self.helper.log_info(f"kvstore item with id {id} deleted")
                     self.kvstore.delete(id)
-
             if self.metrics is not None:
                 self.metrics.msg(msg.event)
                 self.metrics.state(msg.id)

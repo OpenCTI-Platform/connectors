@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-recordedfuture-enrichment:
-    image: opencti/connector-recordedfuture-enrichment:5.10.3
+    image: opencti/connector-recordedfuture-enrichment:5.11.13
     environment:
       - OPENCTI_URL=http://opencti:4000
       - OPENCTI_TOKEN=CHANGME
@@ -11,7 +11,7 @@ services:
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain-name,url,stixfile
       - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=5
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=error
       - RECORDED_FUTURE_TOKEN=CHANGEME #required
       - RECORDED_FUTURE_INFO_MAX_TLP=TLP:AMBER

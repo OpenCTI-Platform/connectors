@@ -142,7 +142,6 @@ class IvreConnector:
                 "number": asnum,
                 "name": asname or f"AS{asnum}",
             },
-            update=True,
         )["id"]
 
     def add_addr(self, addr):
@@ -152,14 +151,12 @@ class IvreConnector:
                 "type": (TYPE_IPV6_ADDR if ":" in addr else TYPE_IPV4_ADDR).lower(),
                 "value": addr,
             },
-            update=True,
         )["id"]
 
     def add_mac(self, addr):
         """Given a MAC address, creates an observable and returns its ID."""
         return self.helper.api.stix_cyber_observable.create(
             observableData={"type": TYPE_MAC_ADDR, "value": addr},
-            update=True,
         )["id"]
 
     def add_domain(self, name):
@@ -169,7 +166,6 @@ class IvreConnector:
                 "type": TYPE_DOMAIN.lower(),
                 "value": name.lower(),
             },
-            update=True,
         )["id"]
 
     def add_country(self, name, code):
@@ -227,7 +223,6 @@ class IvreConnector:
                 data["subject_public_key_modulus"] = pubkey["modulus"]
         cert_id = self.helper.api.stix_cyber_observable.create(
             observableData=data,
-            update=True,
         )["id"]
         self.link_cyber(obs_id, cert_id, firstseen, lastseen)
         if not cert.get("self_signed") and all(
@@ -257,7 +252,6 @@ class IvreConnector:
             toId=to_id,
             createdBy=self.ivre_entity,
             relationship_type=rel_type,
-            update=True,
             confidence=self.confidence,
             start_time=firstseen.strftime("%Y-%m-%dT%H:%M:%SZ"),
             stop_time=lastseen.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -269,7 +263,6 @@ class IvreConnector:
             toId=to_id,
             createdBy=self.ivre_entity,
             relationship_type=rel_type,
-            update=True,
             confidence=self.confidence,
         )
 
