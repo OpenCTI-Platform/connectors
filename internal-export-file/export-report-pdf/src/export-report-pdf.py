@@ -523,6 +523,8 @@ class ExportReportPdf:
         )["data"]["case"].get("content", "No content available.")
 
         # Extract values for inclusion in output pdf
+        case_name = case_dict["name"]
+        case_content = case_dict["content"]
         case_marking = case_dict.get("objectMarking", None)
         if case_marking:
             case_marking = case_marking[-1]["definition"]
@@ -530,16 +532,18 @@ class ExportReportPdf:
             external_ref_dict["url"]
             for external_ref_dict in case_dict["externalReferences"]
         ]
+        case_confidence = case_dict["confidence"]
+        case_id = case_dict["id"]
         case_objs = case_dict["objects"]
         case_date = datetime.datetime.now().strftime("%b %d %Y")
         # Store context for usage in html template
         context = {
-            "case_name": case_dict["name"],
+            "case_name": case_name,
             "case_description": case_dict.get("description", "No description available."),
-            "case_content": case_dict["content"],
+            "case_content": case_content,
             "case_marking": case_marking,
-            "case_confidence": case_dict["confidence"],
-            "case_id": case_dict["id"],
+            "case_confidence": case_confidence,
+            "case_id": case_id,
             "case_external_refs": case_external_refs,
             "case_date": case_date,
             "company_address_line_1": self.company_address_line_1,
@@ -685,6 +689,8 @@ class ExportReportPdf:
             "incident": self.helper.api_impersonate.incident.read,
             "x-opencti-case-incident": self.helper.api_impersonate.case_incident.read,
             "case-incident": self.helper.api_impersonate.case_incident.read,
+            "x-opencti-case-rfi": self.helper.api_impersonate.case_rfi.read,
+            "case-rfi": self.helper.api_impersonate.case_rfi.read,
             "city": self.helper.api_impersonate.location.read,
             "country": self.helper.api_impersonate.location.read,
             "region": self.helper.api_impersonate.location.read,

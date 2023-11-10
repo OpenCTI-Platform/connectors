@@ -1,30 +1,30 @@
 <html>
-<head>
-    <meta charset="utf-8">
-    <link href="report.css" rel="stylesheet">
-    <title>{{ case_incident_name }}_{{ case_incident_date }}</title>
-    <meta name="description" content="{{ case_incident_name }}_{{ case_incident_date }}">
-</head>
+    <head>
+        <meta charset="utf-8">
+        <link href="case-incident.css" rel="stylesheet">
+        <title>{{ case_name }}_{{ case_date }}</title>
+        <meta name="description" content="{{ case_name }}_{{ case_date }}">
+    </head>
 
 <body>
-<article id="cover">
-    <div id="case_incident-marking">{{ case_incident_marking }}</div>
-    <div id="case_incident-date">{{ case_incident_date }}</div>
-    <h1>Intelligence Report</h1>
-    <div id="case_incident-name">{{ case_incident_name }}</div>
-    <div id="case_incident-address">
-        <address>
-            {{ company_address_line_1 }}
-            {{ company_address_line_2 }}
-            {{ company_address_line_3 }}
-            {{ company_phone_number }}
-        </address>
-        <address>
-            {{ company_email }}
-            {{ company_website }}
-        </address>
-    </div>
-</article>
+    <article id="cover">
+        <div id="case-marking">{{ case_marking }}</div>
+        <div id="case-date">{{ case_date }}</div>
+        <h1>Intelligence Report</h1>
+        <div id="case-name">{{ case_name }}</div>
+        <div id="case-address">
+            <address>
+                {{ company_address_line_1 }}
+                {{ company_address_line_2 }}
+                {{ company_address_line_3 }}
+                {{ company_phone_number }}
+            </address>
+            <address>
+                {{ company_email }}
+                {{ company_website }}
+            </address>
+        </div>
+    </article>
 
 <article id="contents">
     <h2>Table of contents</h2>
@@ -33,6 +33,7 @@
         <li><a href="#description-title"></a></li>
         <li><a href="#confidence-title"></a></li>
         <li><a href="#content-title"></a></li>
+        <li><a href="#task_type-title"></a></li>
     </ul>
 
     {% if entities %}
@@ -52,14 +53,6 @@
         {% endfor %}
     </ul>
     {% endif %}
-    {% if tasks %}
-    <h3>Tasks</h3>
-    <ul>
-        {% for task_type in tasks %}
-        <li><a href="#{{ task_type }}-title"></a></li>
-        {% endfor %}
-    </ul>
-    {% endif %}
     {% if case_incident_external_refs %}
     <h3>External References</h3>
     <ul>
@@ -75,7 +68,7 @@
             Description
         </h3>
         <p>
-            {{ case_incident_description }}
+            {{ case_description }}
         </p>
     </section>
     <section>
@@ -88,15 +81,36 @@
             </em>
         </p>
         <p>
-            {{ case_incident_confidence }} / 100
+            {{ case_confidence }} / 100
         </p>
     </section>
+    <section>
+        {% for edges in tasks %}
+        <h3 id="task_type-title">Tasks list</h3>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Due Date</th>
+                    <th>Statut</th>
+                </tr>
+                {% for edge in tasks.edges %}
+                <tr>
+                    <td>{{ edge.node.name }}</td>
+                    <td>{{ edge.node.description }}</td>
+                    <td>{{ edge.node.due_date }}</td>
+                    <td>{{ edge.node.status }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+    </section>
+        {% endfor %}
 </article>
 <article id="content">
     <h2 id="content-title">
         Content
     </h2>
-    {{case_incident_content}}
+    {{case_content}}
 </article>
 <article id="entities">
     {% for entity_type in entities %}
@@ -175,29 +189,6 @@
                 <td>
                     {{ observable.observable_value }}
                 </td>
-            </tr>
-            {% endfor %}
-        </table>
-    </section>
-    {% endfor %}
-</article>
-<article id="tasks">
-    {% for edges in tasks %}
-    <h2 id="{{ task_type }}-title">Tasks list</h2>
-    <section id="{{ task_type }}">
-        <table>
-            <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Due Date</th>
-                <th>Statut</th>
-            </tr>
-            {% for edge in tasks.edges %}
-            <tr>
-                <td>{{ edge.node.name }}</td>
-                <td>{{ edge.node.description }}</td>
-                <td>{{ edge.node.due_date }}</td>
-                <td>{{ edge.node.status }}</td>
             </tr>
             {% endfor %}
         </table>

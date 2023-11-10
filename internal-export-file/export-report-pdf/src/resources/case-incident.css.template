@@ -27,6 +27,16 @@
 }
 
 @page {
+  @top-center {
+    background: #000;
+    color: #fff;
+    content:  string(marking);
+    font-size: 12pt;
+    font-weight: 500;
+    height: 14pt;
+    margin: 0 4px 18px;
+    width: auto;
+  }
   @bottom-left {
     background: <secondary_color>;
     color: #fff;
@@ -64,6 +74,7 @@
 @page :first {
   background: <secondary_color>;
   margin: 0;
+  @top-center { content: none }
 }
 @page chapter {
   background: <secondary_color>;
@@ -71,6 +82,13 @@
   @top-left { content: none }
   @top-center { content: none }
   @top-right { content: none }
+}
+
+#case-marking {
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  string-set: marking content();
 }
 
 html {
@@ -113,54 +131,36 @@ h4 {
 }
 
 #cover {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
   height: 297mm;
+  position: relative;
 }
-
-#report-date {
+#cover #case-date {
   color: #ffffff;
   font-size: 12pt;
   font-weight: 500;
-  margin-left: auto;
-  margin-right: 18px;
-  white-space: pre;
+  margin: 0 18px 0 auto;
+  float: right;
 }
-
-#report-heading {
-  color: <primary_color>;
-  font-size: 38pt;
-  font-weight: 700;
-  margin-left: 2cm;
-  overflow-wrap: break-word;
-  margin-top: 10cm;
-}
-
-#report-sub-heading {
+#cover #case-name {
   color: #ffffff;
   font-size: 38pt;
   font-weight: 700;
-  margin-left: 2cm;
+  margin: 0 2cm;
   overflow-wrap: break-word;
-  margin-bottom: 10cm;
 }
-
-#cover #report-address {
+#cover #case-address {
   background: <primary_color>;
-  padding: 2cm 0;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
   display: flex;
   justify-content: center;
-  flex-direction: row;
-  margin-top: auto;
+  padding: 2cm 0;
 }
-
 #cover address {
   overflow-wrap: break-word;
   white-space: pre;
 }
-
-
 #contents h2 {
   font-size: 33pt;
   font-weight: 400;
@@ -170,7 +170,6 @@ h4 {
   font-weight: 500;
   margin: 3em 0 1em;
 }
-
 #contents h3::before {
   background: <primary_color>;
   content: '';
@@ -179,18 +178,15 @@ h4 {
   margin-bottom: .25cm;
   width: 2cm;
 }
-
 #contents ul {
   list-style: none;
   padding-left: 0;
 }
-
 #contents ul li {
   border-top: .25pt solid #c1c1c1;
   margin: .25cm 0;
   padding-top: .25cm;
 }
-
 #contents ul li::before {
   color: <primary_color>;
   content: '• ';
@@ -198,57 +194,25 @@ h4 {
   line-height: 16pt;
   vertical-align: bottom;
 }
-
 #contents ul li a {
   color: inherit;
   text-decoration-line: inherit;
 }
-
 #contents ul li a::before {
   content: target-text(attr(href));
 }
-
 #contents ul li a::after {
   color: <secondary_color>;
   content: target-counter(attr(href), page);
   float: right;
 }
 
+section {
+  padding-top: 1cm;
+}
+
 #columns section p {
   text-align: left;
-}
-
-#columns h3 {
-  font-weight: 500;
-  margin: 3em 0 1em;
-}
-
-#columns h3::before {
-  background: <primary_color>;
-  content: '';
-  display: block;
-  height: .08cm;
-  margin-bottom: .25cm;
-  width: 2cm;
-}
-
-#columns ul {
-  list-style: none;
-  padding-left: 0;
-}
-
-#columns ul li {
-  border-top: .25pt solid #c1c1c1;
-  margin: .25cm 0;
-  padding-top: .25cm;
-}
-
-#columns ul li::before {
-  color: <primary_color>;
-  content: '• ';
-  font-size: 40pt;
-  line-height: 16pt;
-  vertical-align: bottom;
 }
 
 #observables h3 {
@@ -264,11 +228,10 @@ table {
   empty-cells: show;
   table-layout: auto;
   width: 100%;
-  margin-bottom: 1cm;
 }
 tr,
 td {
-  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 td {
   padding: 15px;
@@ -283,11 +246,26 @@ tr:nth-child(even) {
   background-color: #f2f2f2;
 }
 
-pre {
-  font-family: Fira Sans;
-  white-space: pre-wrap;
+#external-references ul {
+  list-style: none;
+  padding-left: 0;
 }
-
+#external-references ul li {
+  border-top: .25pt solid #c1c1c1;
+  margin: .25cm 0;
+  padding-top: .25cm;
+}
+#external-references ul li::before {
+  color: <primary_color>;
+  content: '• ';
+  font-size: 40pt;
+  line-height: 16pt;
+  vertical-align: bottom;
+}
+#external-references ul li a {
+  color: inherit;
+  text-decoration-line: inherit;
+}
 #chapter {
   align-items: center;
   display: flex;
