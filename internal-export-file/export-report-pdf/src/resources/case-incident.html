@@ -30,6 +30,7 @@
     <h2>Table of contents</h2>
     <h3>Overview</h3>
     <ul>
+        <li><a href="#incident_details-title"></a></li>
         <li><a href="#description-title"></a></li>
         <li><a href="#confidence-title"></a></li>
         <li><a href="#content-title"></a></li>
@@ -64,6 +65,23 @@
 <article id="columns">
     <h2>Overview</h2>
     <section>
+        <h3 id="incident_details-title"> Incident details</h3>
+        <table>
+            <tbody>
+                <tr>
+                    <th>Type</th>
+                    <th>Priority</th>
+                    <th>Severity</th>
+                </tr>
+                <tr>
+                    <td>{{ case_type }}</td>
+                    <td>{{ case_priority }}</td>
+                    <td>{{ case_severity }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+    <section>
         <h3 id="description-title">
             Description
         </h3>
@@ -88,20 +106,22 @@
         {% for edges in tasks %}
         <h3 id="task_type-title">Tasks list</h3>
             <table>
-                <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Due Date</th>
-                    <th>Statut</th>
-                </tr>
-                {% for edge in tasks.edges %}
-                <tr>
-                    <td>{{ edge.node.name }}</td>
-                    <td>{{ edge.node.description }}</td>
-                    <td>{{ edge.node.due_date }}</td>
-                    <td>{{ edge.node.status }}</td>
-                </tr>
+                <tbody>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Due Date</th>
+                        <th>Statut</th>
+                    </tr>
+                    {% for edge in tasks.edges %}
+                    <tr>
+                        <td>{{ edge.node.name }}</td>
+                        <td>{{ edge.node.description }}</td>
+                        <td>{{ edge.node.due_date }}</td>
+                        <td>{{ edge.node.status }}</td>
+                    </tr>
                 {% endfor %}
+                </tbody>
             </table>
     </section>
         {% endfor %}
