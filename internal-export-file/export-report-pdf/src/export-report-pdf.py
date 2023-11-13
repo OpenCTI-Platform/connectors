@@ -573,7 +573,7 @@ class ExportReportPdf:
             obj_id = case_obj["standard_id"]
             # Handle StixCyberObservables entities
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                    obj_entity_type
+                obj_entity_type
             ):
                 observable_dict = (
                     self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
@@ -690,7 +690,7 @@ class ExportReportPdf:
             obj_id = case_obj["standard_id"]
             # Handle StixCyberObservables entities
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                    obj_entity_type
+                obj_entity_type
             ):
                 observable_dict = (
                     self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
@@ -807,7 +807,7 @@ class ExportReportPdf:
             obj_id = case_obj["standard_id"]
             # Handle StixCyberObservables entities
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                    obj_entity_type
+                obj_entity_type
             ):
                 observable_dict = (
                     self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
