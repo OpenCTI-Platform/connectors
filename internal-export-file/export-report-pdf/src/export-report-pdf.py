@@ -879,7 +879,6 @@ class ExportReportPdf:
                     with open(os.path.join(root, file_name), "w") as f:
                         f.write(new_css)
 
-
     def _validate_country_code(self, country_code):
         """
         Returns a boolean indicating whether or not the country code is valid.
