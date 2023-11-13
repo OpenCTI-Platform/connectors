@@ -118,7 +118,7 @@
                         <td>{{ edge.node.name }}</td>
                         <td>{{ edge.node.description }}</td>
                         <td>{{ edge.node.due_date }}</td>
-                        <td>{{ edge.node.status }}</td>
+                        <td>{{ edge.node.status.template.name }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>

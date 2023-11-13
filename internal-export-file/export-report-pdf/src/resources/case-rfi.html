@@ -111,14 +111,14 @@
         <th>Name</th>
         <th>Description</th>
         <th>Due Date</th>
-        <th>Statut</th>
+        <th>Status</th>
       </tr>
       {% for edge in tasks.edges %}
       <tr>
         <td>{{ edge.node.name }}</td>
         <td>{{ edge.node.description }}</td>
         <td>{{ edge.node.due_date }}</td>
-        <td>{{ edge.node.status }}</td>
+        <td>{{ edge.node.status.template.name }}</td>
       </tr>
       {% endfor %}
       </tbody>
