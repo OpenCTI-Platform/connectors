@@ -73,7 +73,7 @@ class QradarReference:
         payload["_key"] = id
 
         r = requests.post(
-            f"{self.collection_url}/{self.qradar_reference_name}_{self.get_type(payload)}",
+            f"{self.collection_url}_{self.get_type(payload)}",
             {"value": payload.get("name")},
             headers=self.headers,
             verify=self.qradar_ssl_verify,
@@ -85,7 +85,7 @@ class QradarReference:
 
     def delete(self, id: str, payload):
         r = requests.delete(
-            f"{self.collection_url}/{self.qradar_reference_name}_{self.get_type(payload)}/{payload.get('name')}",
+            f"{self.collection_url}_{self.get_type(payload)}/{payload.get('name')}",
             headers=self.headers,
             verify=self.qradar_ssl_verify,
         )
