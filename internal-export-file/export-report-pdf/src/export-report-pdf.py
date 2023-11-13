@@ -864,6 +864,7 @@ class ExportReportPdf:
         self.helper.api.stix_domain_object.push_entity_export(
             entity_id, file_name, pdf_contents, "application/pdf"
         )
+
     def _set_colors(self):
         for root, dirs, files in os.walk(self.current_dir):
             for file_name in files:
