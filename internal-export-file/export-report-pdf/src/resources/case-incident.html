@@ -111,7 +111,7 @@
                         <th>Name</th>
                         <th>Description</th>
                         <th>Due Date</th>
-                        <th>Statut</th>
+                        <th>Status</th>
                     </tr>
                     {% for edge in tasks.edges %}
                     <tr>
@@ -136,7 +136,7 @@
     {% for entity_type in entities %}
     <h2 id="{{ entity_type }}-title">{{ entity_type }}</h2>
     <section id="{{ entity_type }}">
-        <div style="clear:both;"><div>
+        <div style="clear:both;"></div>
             <table>
                 <tbody>
                 {% for entity in entities[entity_type] %}
