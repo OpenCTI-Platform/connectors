@@ -519,7 +519,7 @@ class ExportReportPdf:
         """
         Process a Case Incident entity and upload as pdf.
         """
-        # Get the Report
+        # Get the Case
         case_dict = self.helper.api_impersonate.case_incident.read(id=entity_id)
         content_query = '{case (id:"' + entity_id + '") {content}}'
         case_dict["content"] = (
@@ -635,7 +635,7 @@ class ExportReportPdf:
         """
         Process a Case Rfi entity and upload as pdf.
         """
-        # Get the Report
+        # Get the Case
         case_dict = self.helper.api_impersonate.case_rfi.read(id=entity_id)
         content_query = '{case (id:"' + entity_id + '") {content}}'
         case_dict["content"] = (
@@ -752,7 +752,7 @@ class ExportReportPdf:
         """
         Process a Case Rft entity and upload as pdf.
         """
-        # Get the Report
+        # Get the Case
         case_dict = self.helper.api_impersonate.case_rft.read(id=entity_id)
         content_query = '{case (id:"' + entity_id + '") {content}}'
         case_dict["content"] = (
