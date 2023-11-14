@@ -543,6 +543,7 @@ class ExportReportPdf:
         case_type = case_dict["entity_type"]
         case_priority = case_dict["priority"]
         case_severity = case_dict["severity"]
+        case_tasks = case_dict["tasks"]
         # Store context for usage in html template
         context = {
             "case_name": case_name,
@@ -561,7 +562,7 @@ class ExportReportPdf:
             "company_phone_number": self.company_phone_number,
             "company_email": self.company_email,
             "company_website": self.company_website,
-            "tasks": case_dict["tasks"],
+            "tasks": case_tasks,
             "case_type": case_type,
             "case_priority": case_priority,
             "case_severity": case_severity,

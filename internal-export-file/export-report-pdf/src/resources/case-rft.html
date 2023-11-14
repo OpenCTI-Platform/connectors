@@ -34,7 +34,11 @@
     <li><a href="#description-title"></a></li>
     <li><a href="#confidence-title"></a></li>
     <li><a href="#content-title"></a></li>
+    {% if tasks.edges %}
+    {% if tasks.edges|length > 0 %}
     <li><a href="#task_type-title"></a></li>
+    {% endif %}
+    {% endif %}
   </ul>
 
   {% if entities %}
@@ -54,7 +58,7 @@
     {% endfor %}
   </ul>
   {% endif %}
-  {% if case_incident_external_refs %}
+  {% if case_external_refs %}
   <h3>External References</h3>
   <ul>
     <li><a href="#External-References-title"></a></li>
@@ -103,6 +107,8 @@
     </p>
   </section>
   <section>
+    {% if tasks.edges %}
+    {% if tasks.edges|length > 0 %}
     {% for edges in tasks %}
     <h3 id="task_type-title">Tasks list</h3>
     <table>
@@ -117,12 +123,14 @@
       <tr>
         <td>{{ edge.node.name }}</td>
         <td>{{ edge.node.description }}</td>
-        <td>{{ edge.node.due_date }}</td>
+        <td>{{ edge.node.due_date[:10] }}</td>
         <td>{{ edge.node.status.template.name }}</td>
       </tr>
       {% endfor %}
       </tbody>
     </table>
+    {% endif %}
+    {% endif %}
   </section>
   {% endfor %}
 </article>
@@ -219,7 +227,7 @@
   <h2 id="External-References-title">External References</h2>
   <section>
     <ul>
-      {% for external_ref in case_incident_external_refs %}
+      {% for case_external_refs %}
       <li><a href="{{ external_ref }}" target="_blank">{{ external_ref }}</a></li>
       {% endfor %}
     </ul>
