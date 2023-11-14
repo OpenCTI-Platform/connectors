@@ -522,9 +522,9 @@ class ExportReportPdf:
         # Get the Case
         case_dict = self.helper.api_impersonate.case_incident.read(id=entity_id)
         content_query = '{case (id:"' + entity_id + '") {content}}'
-        case_dict["content"] = (
-            self.helper.api_impersonate.query(query=content_query)
-        )["data"]["case"].get("content", "No content available.")
+        case_dict["content"] = (self.helper.api_impersonate.query(query=content_query))[
+            "data"
+        ]["case"].get("content", "No content available.")
 
         # Extract values for inclusion in output pdf
         case_name = case_dict["name"]
@@ -546,7 +546,9 @@ class ExportReportPdf:
         # Store context for usage in html template
         context = {
             "case_name": case_name,
-            "case_description": case_dict.get("description", "No description available."),
+            "case_description": case_dict.get(
+                "description", "No description available."
+            ),
             "case_content": case_content,
             "case_marking": case_marking,
             "case_confidence": case_confidence,
@@ -638,9 +640,9 @@ class ExportReportPdf:
         # Get the Case
         case_dict = self.helper.api_impersonate.case_rfi.read(id=entity_id)
         content_query = '{case (id:"' + entity_id + '") {content}}'
-        case_dict["content"] = (
-            self.helper.api_impersonate.query(query=content_query)
-        )["data"]["case"].get("content", "No content available.")
+        case_dict["content"] = (self.helper.api_impersonate.query(query=content_query))[
+            "data"
+        ]["case"].get("content", "No content available.")
 
         # Extract values for inclusion in output pdf
         case_name = case_dict["name"]
@@ -663,7 +665,9 @@ class ExportReportPdf:
 
         context = {
             "case_name": case_name,
-            "case_description": case_dict.get("description", "No description available."),
+            "case_description": case_dict.get(
+                "description", "No description available."
+            ),
             "case_content": case_content,
             "case_marking": case_marking,
             "case_confidence": case_confidence,
@@ -755,9 +759,9 @@ class ExportReportPdf:
         # Get the Case
         case_dict = self.helper.api_impersonate.case_rft.read(id=entity_id)
         content_query = '{case (id:"' + entity_id + '") {content}}'
-        case_dict["content"] = (
-            self.helper.api_impersonate.query(query=content_query)
-        )["data"]["case"].get("content", "No content available.")
+        case_dict["content"] = (self.helper.api_impersonate.query(query=content_query))[
+            "data"
+        ]["case"].get("content", "No content available.")
 
         # Extract values for inclusion in output pdf
         case_name = case_dict["name"]
@@ -780,7 +784,9 @@ class ExportReportPdf:
 
         context = {
             "case_name": case_name,
-            "case_description": case_dict.get("description", "No description available."),
+            "case_description": case_dict.get(
+                "description", "No description available."
+            ),
             "case_content": case_content,
             "case_marking": case_marking,
             "case_confidence": case_confidence,
