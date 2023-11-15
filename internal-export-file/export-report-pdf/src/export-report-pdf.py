@@ -102,11 +102,11 @@ class ExportReportPdf:
         if entity_type == "Report":
             self._process_report(entity_id, file_name)
         elif entity_type == "Case-Incident":
-            self._process_case_incident(entity_id, file_name)
+            self._process_case(entity_id, file_name, entity_type)
         elif entity_type == "Case-Rfi":
-            self._process_case_rfi(entity_id, file_name)
+            self._process_case(entity_id, file_name, entity_type)
         elif entity_type == "Case-Rft":
-            self._process_case_rft(entity_id, file_name)
+            self._process_case(entity_id, file_name, entity_type)
         elif entity_type == "Intrusion-Set":
             self._process_intrusion_set(entity_id, file_name)
         elif entity_type == "Threat-Actor-Group":
@@ -515,12 +515,20 @@ class ExportReportPdf:
             entity_id, file_name, pdf_contents, "application/pdf"
         )
 
-    def _process_case_incident(self, entity_id, file_name):
+    def _process_case(self, entity_id, file_name, entity_type):
         """
-        Process a Case Incident entity and upload as pdf.
+        Process a Case container and upload as pdf.
         """
-        # Get the Case
-        case_dict = self.helper.api_impersonate.case_incident.read(id=entity_id)
+        # Get the Case container
+        if entity_type == "Case-Incident":
+            case_dict = self.helper.api_impersonate.case_incident.read(id=entity_id)
+        elif entity_type == "Case-Rfi":
+            case_dict = self.helper.api_impersonate.case_rfi.read(id=entity_id)
+        elif entity_type == "Case-Rft":
+            case_dict = self.helper.api_impersonate.case_rft.read(id=entity_id)
+        else:
+            raise ValueError(f"Unrecognized entity_type: {entity_type}")
+
         content_query = '{case (id:"' + entity_id + '") {content}}'
         case_dict["content"] = (self.helper.api_impersonate.query(query=content_query))[
             "data"
@@ -620,245 +628,12 @@ class ExportReportPdf:
         env = Environment(
             loader=FileSystemLoader(self.current_dir), finalize=self._finalize
         )
-        template = env.get_template("resources/case-incident.html")
-        html_string = template.render(context)
-
-        # Generate pdf from html string
-        pdf_contents = HTML(
-            string=html_string, base_url=f"{self.current_dir}/resources"
-        ).write_pdf()
-
-        # Upload the output pdf
-        self.helper.log_info(f"Uploading: {file_name}")
-        self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
-        )
-
-    def _process_case_rfi(self, entity_id, file_name):
-        """
-        Process a Case Rfi entity and upload as pdf.
-        """
-        # Get the Case
-        case_dict = self.helper.api_impersonate.case_rfi.read(id=entity_id)
-        content_query = '{case (id:"' + entity_id + '") {content}}'
-        case_dict["content"] = (self.helper.api_impersonate.query(query=content_query))[
-            "data"
-        ]["case"].get("content", "No content available.")
-
-        # Extract values for inclusion in output pdf
-        case_name = case_dict["name"]
-        case_content = case_dict["content"]
-        case_marking = case_dict.get("objectMarking", None)
-        if case_marking:
-            case_marking = case_marking[-1]["definition"]
-        case_external_refs = [
-            external_ref_dict["url"]
-            for external_ref_dict in case_dict["externalReferences"]
-        ]
-        case_confidence = case_dict["confidence"]
-        case_id = case_dict["id"]
-        case_objs = case_dict["objects"]
-        case_date = datetime.datetime.now().strftime("%b %d %Y")
-        case_type = case_dict["entity_type"]
-        case_priority = case_dict["priority"]
-        case_severity = case_dict["severity"]
-        # Store context for usage in html template
-
-        context = {
-            "case_name": case_name,
-            "case_description": case_dict.get(
-                "description", "No description available."
-            ),
-            "case_content": case_content,
-            "case_marking": case_marking,
-            "case_confidence": case_confidence,
-            "case_id": case_id,
-            "case_external_refs": case_external_refs,
-            "case_date": case_date,
-            "company_address_line_1": self.company_address_line_1,
-            "company_address_line_2": self.company_address_line_2,
-            "company_address_line_3": self.company_address_line_3,
-            "company_phone_number": self.company_phone_number,
-            "company_email": self.company_email,
-            "company_website": self.company_website,
-            "tasks": case_dict["tasks"],
-            "case_type": case_type,
-            "case_priority": case_priority,
-            "case_severity": case_severity,
-            "entities": {},
-            "observables": {},
-        }
-
-        # Process each STIX Object
-        for case_obj in case_objs:
-            obj_entity_type = case_obj["entity_type"]
-            obj_id = case_obj["standard_id"]
-            # Handle StixCyberObservables entities
-            if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                obj_entity_type
-            ):
-                observable_dict = (
-                    self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
-                )
-
-                # If only include indicators and
-                # the observable doesn't have an indicator, skip it
-                if self.indicators_only and not observable_dict["indicators"]:
-                    self.helper.log_info(
-                        f"Skipping {obj_entity_type} observable with value {observable_dict['observable_value']} as it was not an Indicator."
-                    )
-                    continue
-
-                if obj_entity_type not in context["observables"]:
-                    context["observables"][obj_entity_type] = []
-
-                # Defang urls
-                if self.defang_urls and obj_entity_type == "Url":
-                    observable_dict["observable_value"] = observable_dict[
-                        "observable_value"
-                    ].replace("http", "hxxp", 1)
-
-                context["observables"][obj_entity_type].append(observable_dict)
-
-            # Handle all other entities
-            else:
-                reader_func = self._get_reader(obj_entity_type)
-                if reader_func is None:
-                    self.helper.log_error(
-                        f'Could not find a function to read entity with type "{obj_entity_type}"'
-                    )
-                    continue
-                entity_dict = reader_func(id=obj_id)
-
-                if obj_entity_type not in context["entities"]:
-                    context["entities"][obj_entity_type] = []
-
-                context["entities"][obj_entity_type].append(entity_dict)
-
-        # Render html with input variables
-        env = Environment(
-            loader=FileSystemLoader(self.current_dir), finalize=self._finalize
-        )
-        template = env.get_template("resources/case-rfi.html")
-        html_string = template.render(context)
-
-        # Generate pdf from html string
-        pdf_contents = HTML(
-            string=html_string, base_url=f"{self.current_dir}/resources"
-        ).write_pdf()
-
-        # Upload the output pdf
-        self.helper.log_info(f"Uploading: {file_name}")
-        self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
-        )
-
-    def _process_case_rft(self, entity_id, file_name):
-        """
-        Process a Case Rft entity and upload as pdf.
-        """
-        # Get the Case
-        case_dict = self.helper.api_impersonate.case_rft.read(id=entity_id)
-        content_query = '{case (id:"' + entity_id + '") {content}}'
-        case_dict["content"] = (self.helper.api_impersonate.query(query=content_query))[
-            "data"
-        ]["case"].get("content", "No content available.")
-
-        # Extract values for inclusion in output pdf
-        case_name = case_dict["name"]
-        case_content = case_dict["content"]
-        case_marking = case_dict.get("objectMarking", None)
-        if case_marking:
-            case_marking = case_marking[-1]["definition"]
-        case_external_refs = [
-            external_ref_dict["url"]
-            for external_ref_dict in case_dict["externalReferences"]
-        ]
-        case_confidence = case_dict["confidence"]
-        case_id = case_dict["id"]
-        case_objs = case_dict["objects"]
-        case_date = datetime.datetime.now().strftime("%b %d %Y")
-        case_type = case_dict["entity_type"]
-        case_priority = case_dict["priority"]
-        case_severity = case_dict["severity"]
-        # Store context for usage in html template
-
-        context = {
-            "case_name": case_name,
-            "case_description": case_dict.get(
-                "description", "No description available."
-            ),
-            "case_content": case_content,
-            "case_marking": case_marking,
-            "case_confidence": case_confidence,
-            "case_id": case_id,
-            "case_external_refs": case_external_refs,
-            "case_date": case_date,
-            "company_address_line_1": self.company_address_line_1,
-            "company_address_line_2": self.company_address_line_2,
-            "company_address_line_3": self.company_address_line_3,
-            "company_phone_number": self.company_phone_number,
-            "company_email": self.company_email,
-            "company_website": self.company_website,
-            "tasks": case_dict["tasks"],
-            "case_type": case_type,
-            "case_priority": case_priority,
-            "case_severity": case_severity,
-            "entities": {},
-            "observables": {},
-        }
-
-        # Process each STIX Object
-        for case_obj in case_objs:
-            obj_entity_type = case_obj["entity_type"]
-            obj_id = case_obj["standard_id"]
-            # Handle StixCyberObservables entities
-            if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                obj_entity_type
-            ):
-                observable_dict = (
-                    self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
-                )
-
-                # If only include indicators and
-                # the observable doesn't have an indicator, skip it
-                if self.indicators_only and not observable_dict["indicators"]:
-                    self.helper.log_info(
-                        f"Skipping {obj_entity_type} observable with value {observable_dict['observable_value']} as it was not an Indicator."
-                    )
-                    continue
-
-                if obj_entity_type not in context["observables"]:
-                    context["observables"][obj_entity_type] = []
-
-                # Defang urls
-                if self.defang_urls and obj_entity_type == "Url":
-                    observable_dict["observable_value"] = observable_dict[
-                        "observable_value"
-                    ].replace("http", "hxxp", 1)
-
-                context["observables"][obj_entity_type].append(observable_dict)
-
-            # Handle all other entities
-            else:
-                reader_func = self._get_reader(obj_entity_type)
-                if reader_func is None:
-                    self.helper.log_error(
-                        f'Could not find a function to read entity with type "{obj_entity_type}"'
-                    )
-                    continue
-                entity_dict = reader_func(id=obj_id)
-
-                if obj_entity_type not in context["entities"]:
-                    context["entities"][obj_entity_type] = []
-
-                context["entities"][obj_entity_type].append(entity_dict)
-
-        # Render html with input variables
-        env = Environment(
-            loader=FileSystemLoader(self.current_dir), finalize=self._finalize
-        )
-        template = env.get_template("resources/case-rft.html")
+        if case_type == "Case-Incident":
+            template = env.get_template("resources/case-incident.html")
+        elif case_type == "Case-Rfi":
+            template = env.get_template("resources/case-rfi.html")
+        elif case_type == "Case-Rft":
+            template = env.get_template("resources/case-rft.html")
         html_string = template.render(context)
 
         # Generate pdf from html string
