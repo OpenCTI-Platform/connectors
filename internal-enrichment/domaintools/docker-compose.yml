@@ -14,4 +14,5 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - DOMAINTOOLS_API_USERNAME=ChangeMe
       - DOMAINTOOLS_API_KEY=ChangeMe
+      - DOMAINTOOLS_MAX_TLP=TLP:AMBER
     restart: always
