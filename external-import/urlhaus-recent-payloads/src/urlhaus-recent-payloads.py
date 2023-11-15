@@ -213,7 +213,11 @@ class URLHausRecentPayloads:
                     """
                     entities = self.helper.api.stix_domain_object.list(
                         types=["Intrusion-Set", "Malware", "Campaign"],
-                        filters=[{"key": ["name"], "values": [signature]}],
+                        filters={
+                            "mode": "and",
+                            "filters": [{"key": ["name"], "values": [signature]}],
+                            "filterGroups": [],
+                        },
                         customAttributes=custom_attributes,
                     )
                     if len(entities) > 0:
@@ -277,7 +281,11 @@ class URLHausRecentPayloads:
         """
 
         response = self.helper.api.stix_cyber_observable.read(
-            filters=[{"key": "hashes.SHA-256", "values": [sha256]}]
+            filters={
+                "mode": "and",
+                "filters": [{"key": "hashes.SHA-256", "values": [sha256]}],
+                "filterGroups": [],
+            }
         )
 
         if response:

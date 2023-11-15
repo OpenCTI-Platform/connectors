@@ -287,15 +287,23 @@ class openCTIInterface:
         if mID:
             ATP = self.API.attack_pattern.read(
                 filters={
-                    "key": "x_mitre_id",
-                    "values": [mID],
+                    "mode": "and",
+                    "filters": [{
+                        "key": "x_mitre_id",
+                        "values": [mID],
+                    }],
+                    "filterGroups": [],
                 }
             )
         else:
             ATP = self.API.attack_pattern.read(
                 filters={
-                    "key": "name",
-                    "values": [attack_pattern.name],
+                    "mode": "and",
+                    "filters": [{
+                        "key": "name",
+                        "values": [attack_pattern.name],
+                    }],
+                    "filterGroups": [],
                 }
             )
         if ATP:

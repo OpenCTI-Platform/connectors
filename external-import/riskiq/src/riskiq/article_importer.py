@@ -580,7 +580,11 @@ class ArticleImporter:
                     "Country",
                     "Vulnerability",
                 ],
-                filters=[{"key": ["name", "x_mitre_id"], "values": [tag]}],
+                filters={
+                    "mode": "and",
+                    "filters": [{"key": ["name", "x_mitre_id"], "values": [tag]}],
+                    "filterGroups": [],
+                },
             )
             if len(entities) > 0:
                 entity = entities[0]

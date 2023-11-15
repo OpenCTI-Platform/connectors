@@ -14,15 +14,19 @@ webhook:
   graphql_polling_interval: 5 # In seconds. How often the connector polls the GraphQL API to look for changes.
   graphql_query: '
     {{ works(
-        filters:[
-          {{
-            key:completed_time,
-            operator:"gt",
-            values:[
-              "LAST_POLL_TIME"
-            ]
-          }}
-        ]
+        filters:{
+            mode:"and",
+            filters: [
+               {{
+                 key:completed_time,
+                 operator:"gt",
+                 values:[
+                   "LAST_POLL_TIME"
+                 ]
+               }}
+            ],
+            filterGroups:[],
+        }
       )
       {{
         edges

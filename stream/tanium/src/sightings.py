@@ -73,32 +73,44 @@ class Sightings(threading.Thread):
                     objects = []
                     # Check if the intel is in OpenCTI
                     external_reference = self.helper.api.external_reference.read(
-                        filters=[
-                            {"key": "source_name", "values": ["Tanium"]},
-                            {
-                                "key": "external_id",
-                                "values": [str(alert["intelDocId"])],
-                            },
-                        ]
+                        filters={
+                            "mode": "and",
+                            "filters": [
+                                {"key": "source_name", "values": ["Tanium"]},
+                                {
+                                    "key": "external_id",
+                                    "values": [str(alert["intelDocId"])],
+                                },
+                            ],
+                            "filterGroups": [],
+                        }
                     )
                     entity = None
                     if external_reference is not None:
                         entity = self.helper.api.stix_domain_object.read(
-                            filters=[
-                                {
-                                    "key": "externalReferences",
-                                    "values": [external_reference["id"]],
-                                }
-                            ]
-                        )
-                        if entity is None:
-                            entity = self.helper.api.stix_cyber_observable.read(
-                                filters=[
+                            filters={
+                                "mode": "and",
+                                "filters": [
                                     {
                                         "key": "externalReferences",
                                         "values": [external_reference["id"]],
                                     }
-                                ]
+                                ],
+                                "filterGroups": [],
+                            }
+                        )
+                        if entity is None:
+                            entity = self.helper.api.stix_cyber_observable.read(
+                                filters={
+                                    "mode": "and",
+                                    "filters": [
+                                        {
+                                            "key": "externalReferences",
+                                            "values": [external_reference["id"]],
+                                        }
+                                    ],
+                                    "filterGroups": [],
+                                }
                             )
                         if entity is not None:
                             stix_sighting = stix2.Sighting(

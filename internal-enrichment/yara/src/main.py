@@ -68,7 +68,11 @@ class YaraConnector:
             data = self.helper.api.indicator.list(
                 first=1000,
                 after=after,
-                filters=[{"key": "pattern_type", "values": ["yara"]}],
+                filters={
+                    "mode": "and",
+                    "filters": [{"key": "pattern_type", "values": ["yara"]}],
+                    "filterGroups": [],
+                },
                 orderBy="created_at",
                 orderMode="asc",
                 withPagination=True,

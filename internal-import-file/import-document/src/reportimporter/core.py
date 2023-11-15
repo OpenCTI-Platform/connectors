@@ -186,7 +186,11 @@ class ReportImporter:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
                 if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
                     entity = self.helper.api.vulnerability.read(
-                        filters={"key": "name", "values": [match[RESULT_FORMAT_MATCH]]}
+                        filters={
+                            "mode": "and",
+                            "filters": [{"key": "name", "values": [match[RESULT_FORMAT_MATCH]]}],
+                            "filterGroups": [],
+                        }
                     )
                     if entity is None:
                         self.helper.log_info(
@@ -209,8 +213,12 @@ class ReportImporter:
                 elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
                     entity = self.helper.api.attack_pattern.read(
                         filters={
-                            "key": "x_mitre_id",
-                            "values": [match[RESULT_FORMAT_MATCH]],
+                            "mode": "and",
+                            "filters": [{
+                                "key": "x_mitre_id",
+                                "values": [match[RESULT_FORMAT_MATCH]],
+                            }],
+                            "filterGroups": [],
                         }
                     )
                     if entity is None:

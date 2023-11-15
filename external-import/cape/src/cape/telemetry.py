@@ -407,8 +407,12 @@ class openCTIInterface:
         try:
             ATP = self.API.attack_pattern.read(
                 filters={
-                    "key": "x_mitre_id",
-                    "values": [TTP.ttp],
+                    "mode": "and",
+                    "filters": [{
+                        "key": "x_mitre_id",
+                        "values": [TTP.ttp],
+                    }],
+                    "filterGroups": [],
                 }
             )
         except:
@@ -430,8 +434,14 @@ class openCTIInterface:
         try:
             MalwareX = self.API.malware.read(
                 filters={
-                    "key": "name",
-                    "values": [Detection],
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "name",
+                            "values": [Detection],
+                        }
+                    ],
+                    "filterGroups": [],
                 }
             )
         except:

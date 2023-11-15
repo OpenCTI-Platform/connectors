@@ -157,18 +157,22 @@ class SignalsManager(Thread):
                                 "Signal for threatintel document doesn't have opencti reference. Searching for matched indicator"
                             )
                             # This probably isn't perfect, but should get us close-ish
-                            _filters = [
-                                {
-                                    "key": "pattern_type",
-                                    "operator": "match",
-                                    "values": ["STIX"],
-                                },
-                                {
-                                    "key": "pattern",
-                                    "operator": "match",
-                                    "values": [indicator["matched"]["atomic"]],
-                                },
-                            ]
+                            _filters = {
+                                "mode": "and",
+                                "filters": [
+                                    {
+                                        "key": "pattern_type",
+                                        "operator": "match",
+                                        "values": ["STIX"],
+                                    },
+                                    {
+                                        "key": "pattern",
+                                        "operator": "match",
+                                        "values": [indicator["matched"]["atomic"]],
+                                    },
+                                ],
+                                "filterGroups": [],
+                            }
 
                             _cti_indicator = self.helper.api.indicator.read(
                                 filters=_filters

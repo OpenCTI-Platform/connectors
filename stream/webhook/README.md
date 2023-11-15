@@ -6,39 +6,39 @@ This connector allows for GraphQL queries to OpenCTI to trigger webhook calls. T
 
 ### Make a webhook calls to localhost server with...
 #### a work process's connector name and associated messages when a work process completes
-| Key                                       | Value |
-| ----------------------------------------- | ----- |
-| WEBHOOK_GRAPHQL_QUERY                     | `{{works(filters:[{{key:completed_time,operator:"gt",values:["LAST_POLL_TIME"]}}]){{edges{{node{{connector{{name}}messages{{message}}}}}}}}}}` |
-| WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION    | `['data']['works']['edges']` |
-| WEBHOOK_URL                               | `http://localhost?connector_name={item['node']['connector']['name']}&messages={item['node']['messages']}` |
+| Key                                       | Value                                                                                                                                                                                 |
+| ----------------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| WEBHOOK_GRAPHQL_QUERY                     | `{{works(filters:{{mode:"and",filters:[{{key:completed_time,operator:"gt",values:["LAST_POLL_TIME"]}}],filterGroups:[]}}){{edges{{node{{connector{{name}}messages{{message}}}}}}}}}}` |
+| WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION    | `['data']['works']['edges']`                                                                                                                                                          |
+| WEBHOOK_URL                               | `http://localhost?connector_name={item['node']['connector']['name']}&messages={item['node']['messages']}`                                                                             |
 
 #### the OpenCTI event UUID when a work process that has been processing for over 3 minutes completes
 Successful completion:
 | Key                                       | Value |
 | ----------------------------------------- | ----- |
-| WEBHOOK_GRAPHQL_QUERY                     | `{{works(filters:[{{key:completed_time,operator:"gt",values:["LAST_POLL_TIME"]}},{{key:received_time,operator:"lt",values:["{LAST_POLL_TIME-60000*3}"]}}],filterMode:and){{edges{{node{{event_source_id}}}}}}}}` |
+| WEBHOOK_GRAPHQL_QUERY                     | `{{works(filters:{{mode:"and",filters:[{{key:completed_time,operator:"gt",values:["LAST_POLL_TIME"]}},{{key:received_time,operator:"lt",values:["{LAST_POLL_TIME-60000*3}"]}}],filterGroups:[]}}){{edges{{node{{event_source_id}}}}}}}}` |
 | WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION    | `['data']['works']['edges']` |
 | WEBHOOK_URL                               | `http://localhost?event_id={item['node']['event_source_id']}` |
 Completion (success or failure):
 | Key                                       | Value |
 | ----------------------------------------- | ----- |
-| WEBHOOK_GRAPHQL_QUERY                     | `{{works(filters:[{{key:processed_time,operator:"gt",values:["LAST_POLL_TIME"]}},{{key:received_time,operator:"lt",values:["{LAST_POLL_TIME-60000*3}"]}}],filterMode:and){{edges{{node{{event_source_id}}}}}}}}` |
+| WEBHOOK_GRAPHQL_QUERY                     | `{{works(filters:{{mode:"and",filters:[{{key:processed_time,operator:"gt",values:["LAST_POLL_TIME"]}},{{key:received_time,operator:"lt",values:["{LAST_POLL_TIME-60000*3}"]}}],filterGroups:[]}}){{edges{{node{{event_source_id}}}}}}}}` |
 | WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION    | `['data']['works']['edges']` |
 | WEBHOOK_URL                               | `http://localhost?event_id={item['node']['event_source_id']}` |
 
 #### a new user's email when the new user is added to the system
-| Key                                       | Value |
-| ----------------------------------------- | ----- |
-| WEBHOOK_GRAPHQL_QUERY                     | `{{users(filters:[{{key:created_at,operator:"gt",values:["LAST_POLL_TIME"]}}]){{edges{{node{{user_email}}}}}}}}` |
-| WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION    | `['data']['users']['edges']` |
-| WEBHOOK_URL                               | `http://localhost?email={item['node']['user_email']}` |
+| Key                                       | Value                                                                                                                                                   |
+| ----------------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| WEBHOOK_GRAPHQL_QUERY                     | `{{users(filters:{{mode:"and",filters:[{{key:created_at,operator:"gt",values:["LAST_POLL_TIME"]}}],filterGroups:[]}}){{edges{{node{{user_email}}}}}}}}` |
+| WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION    | `['data']['users']['edges']`                                                                                                                            |
+| WEBHOOK_URL                               | `http://localhost?email={item['node']['user_email']}`                                                                                                   |
 
 #### a specific threat actor's confidence level when the threat actor is updated
-| Key                                       | Value |
-| ----------------------------------------- | ----- |
-| WEBHOOK_GRAPHQL_QUERY                     | `{{threatActors(filters:[{{key:updated_at,operator:"gt",values:["LAST_POLL_TIME"]}}],search:"<unique threat actor identifier>"){{edges{{node{{confidence}}}}}}}}` |
-| WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION    | `['data']['threatActors']['edges']` |
-| WEBHOOK_URL                               | `http://localhost?confidence={item['node']['confidence']}` |
+| Key                                       | Value                                                                                                                                                                                                    |
+| ----------------------------------------- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| WEBHOOK_GRAPHQL_QUERY                     | `{{threatActors(filters:{{mode:"and",filters:[{{key:updated_at,operator:"gt",values:["LAST_POLL_TIME"]}}],filterGroups:[]}},search:"<unique threat actor identifier>"){{edges{{node{{confidence}}}}}}}}` |
+| WEBHOOK_GRAPHQL_RETURNED_DATA_LOCATION    | `['data']['threatActors']['edges']`                                                                                                                                                                      |
+| WEBHOOK_URL                               | `http://localhost?confidence={item['node']['confidence']}`                                                                                                                                               |
 
 <!--
 General description of the connector

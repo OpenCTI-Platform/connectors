@@ -157,7 +157,11 @@ class LivehuntBuilder:
         """
 
         response = self.helper.api.stix_cyber_observable.read(
-            filters=[{"key": "hashes.SHA-256", "values": [sha256]}]
+            filters={
+                "mode": "and",
+                "filters": [{"key": "hashes.SHA-256", "values": [sha256]}],
+                "filterGroups": [],
+            }
         )
 
         if response:
