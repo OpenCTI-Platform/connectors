@@ -214,10 +214,7 @@ class ReportImporter:
                     entity = self.helper.api.attack_pattern.read(
                         filters={
                             "mode": "and",
-                            "filters": [{
-                                "key": "x_mitre_id",
-                                "values": [match[RESULT_FORMAT_MATCH]],
-                            }],
+                            "filters": [{"key": "x_mitre_id", "values": [match[RESULT_FORMAT_MATCH]]}],
                             "filterGroups": [],
                         }
                     )

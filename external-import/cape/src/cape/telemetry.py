@@ -408,10 +408,7 @@ class openCTIInterface:
             ATP = self.API.attack_pattern.read(
                 filters={
                     "mode": "and",
-                    "filters": [{
-                        "key": "x_mitre_id",
-                        "values": [TTP.ttp],
-                    }],
+                    "filters": [{"key": "x_mitre_id", "values": [TTP.ttp]}],
                     "filterGroups": [],
                 }
             )
@@ -435,12 +432,7 @@ class openCTIInterface:
             MalwareX = self.API.malware.read(
                 filters={
                     "mode": "and",
-                    "filters": [
-                        {
-                            "key": "name",
-                            "values": [Detection],
-                        }
-                    ],
+                    "filters": [{"key": "name", "values": [Detection]}],
                     "filterGroups": [],
                 }
             )

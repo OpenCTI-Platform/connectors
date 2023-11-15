@@ -288,10 +288,7 @@ class openCTIInterface:
             ATP = self.API.attack_pattern.read(
                 filters={
                     "mode": "and",
-                    "filters": [{
-                        "key": "x_mitre_id",
-                        "values": [mID],
-                    }],
+                    "filters": [{"key": "x_mitre_id", "values": [mID]}],
                     "filterGroups": [],
                 }
             )
@@ -299,10 +296,7 @@ class openCTIInterface:
             ATP = self.API.attack_pattern.read(
                 filters={
                     "mode": "and",
-                    "filters": [{
-                        "key": "name",
-                        "values": [attack_pattern.name],
-                    }],
+                    "filters": [{"key": "name", "values": [attack_pattern.name]}],
                     "filterGroups": [],
                 }
             )
