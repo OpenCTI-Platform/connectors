@@ -628,12 +628,8 @@ class ExportReportPdf:
         env = Environment(
             loader=FileSystemLoader(self.current_dir), finalize=self._finalize
         )
-        if case_type == "Case-Incident":
-            template = env.get_template("resources/case-incident.html")
-        elif case_type == "Case-Rfi":
-            template = env.get_template("resources/case-rfi.html")
-        elif case_type == "Case-Rft":
-            template = env.get_template("resources/case-rft.html")
+
+        template = env.get_template("resources/case.html")
         html_string = template.render(context)
 
         # Generate pdf from html string
