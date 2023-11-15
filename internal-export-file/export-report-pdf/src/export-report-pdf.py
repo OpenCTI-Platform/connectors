@@ -547,7 +547,7 @@ class ExportReportPdf:
         case_confidence = case_dict["confidence"]
         case_id = case_dict["id"]
         case_objs = case_dict["objects"]
-        case_date = datetime.datetime.now().strftime("%b %d %Y")
+        case_report_date = datetime.datetime.now().strftime("%b %d %Y")
         case_type = case_dict["entity_type"]
         case_priority = case_dict["priority"]
         case_severity = case_dict["severity"]
@@ -563,7 +563,7 @@ class ExportReportPdf:
             "case_confidence": case_confidence,
             "case_id": case_id,
             "case_external_refs": case_external_refs,
-            "case_date": case_date,
+            "case_report_date": case_report_date,
             "company_address_line_1": self.company_address_line_1,
             "company_address_line_2": self.company_address_line_2,
             "company_address_line_3": self.company_address_line_3,
