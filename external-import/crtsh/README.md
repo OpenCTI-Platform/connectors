@@ -6,7 +6,7 @@ This connector integrates [Cert.SH](https://crt.sh/) data with the OpenCTI platf
 
 ### Requirements
 
-- OpenCTI Platform version 5.11.12 or higher.
+- OpenCTI Platform version 5.11.13 or higher.
 
 ### Configuration
 
