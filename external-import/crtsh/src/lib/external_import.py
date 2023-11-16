@@ -39,9 +39,17 @@ class ExternalImportConnector:
             raise ValueError(msg)
 
         update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
-        if isinstance(update_existing_data, str) and update_existing_data.lower() in ["true", "false"]:
-            self.update_existing_data = True if update_existing_data.lower() == "true" else False
-        elif isinstance(update_existing_data, bool) and update_existing_data.lower in [True, False]:
+        if isinstance(update_existing_data, str) and update_existing_data.lower() in [
+            "true",
+            "false",
+        ]:
+            self.update_existing_data = (
+                True if update_existing_data.lower() == "true" else False
+            )
+        elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
+            True,
+            False,
+        ]:
             self.update_existing_data = update_existing_data
         else:
             msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "

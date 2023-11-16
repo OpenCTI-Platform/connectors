@@ -28,7 +28,7 @@ def convert_to_datetime(date_str):
         LOGGER.error(f"Error converting date string: {date_str}:\n{e}")
         return None
     except TypeError as e:
-        LOGGER.error(f"Error converting date string: {date_str}:\n{e}") 
+        LOGGER.error(f"Error converting date string: {date_str}:\n{e}")
         return None
     except Exception as e:
         LOGGER.error(f"Error converting date string: {date_str}:\n{e}")

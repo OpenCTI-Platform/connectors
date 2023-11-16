@@ -193,7 +193,7 @@ class CrtSHClient:
             LOGGER.error(f"Email Validation Error: {email}\n{e}")
             raise ValueError(f"Email Validation Error: {email}")
         except Exception as e:
-            LOGGER.error(f"Error for process_name_value: {email}\n{e}") 
+            LOGGER.error(f"Error for process_name_value: {email}\n{e}")
             raise ValueError(f"Failed to process name_value ({email}): {e}")
 
     def process_common_name(self, item, stix_objects, certificate_id):
