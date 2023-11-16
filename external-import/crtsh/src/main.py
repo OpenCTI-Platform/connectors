@@ -36,7 +36,7 @@ class crtshConnector(ExternalImportConnector):
             self.helper.log_error(msg)
             raise ValueError(msg)
         self.marking_refs = environ.get("CRTSH_MARKING_REFS", None)
-        if self.marking_refs != None and self.marking_refs not in MARKING_REFS:
+        if self.marking_refs is not None and self.marking_refs not in MARKING_REFS:
             msg = f"Error when grabbing CRTSH_MARKING_REFS environment variable: '{self.marking_refs}'. It SHOULD be one of {MARKING_REFS}. "
             self.helper.log_error(msg)
             raise ValueError(msg)

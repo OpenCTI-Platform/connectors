@@ -159,7 +159,7 @@ class CrtSHClient:
                             if relationship:
                                 stix_objects.append(relationship)
                     except ValidationError as e:
-                        LOGGER.error(f"Validation error: {name}\m{e}")
+                        LOGGER.error(f"Validation error: {name}\n{e}")
                         raise ValueError(f"Validation error: {name}")
                     except Exception as e:
                         LOGGER.error(f"Error for process_name_value: {name}\n{e}")

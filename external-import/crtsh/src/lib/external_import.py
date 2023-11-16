@@ -68,18 +68,26 @@ class ExternalImportConnector:
         unit = self.interval[-1:]
         value = self.interval[:-1]
 
-        if unit == "d":
-            # In days:
-            return int(value) * 60 * 60 * 24
-        elif unit == "h":
-            # In hours:
-            return int(value) * 60 * 60
-        elif unit == "m":
-            # In minutes:
-            return int(value) * 60
-        elif unit == "s":
-            # In seconds:
-            return int(value)
+        try:
+            if unit == "d":
+                # In days:
+                return int(value) * 60 * 60 * 24
+            elif unit == "h":
+                # In hours:
+                return int(value) * 60 * 60
+            elif unit == "m":
+                # In minutes:
+                return int(value) * 60
+            elif unit == "s":
+                # In seconds:
+                return int(value)
+        except Exception as e:
+            self.helper.log_error(
+                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
+            )
+            raise ValueError(
+                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
+            )
 
     def run(self) -> None:
         # Main procedure

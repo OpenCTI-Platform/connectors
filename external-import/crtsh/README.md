@@ -24,7 +24,7 @@ Configuration parameters are set using environment variables. Some are set in th
 | `CONNECTOR_ID`                | Yes       | Unique `UUIDv4` for this connector.              |
 | `CONNECTOR_CONFIDENCE_LEVEL`  | Yes       | From 0 (Unknown) to 100 (Fully trusted).   |
 | `CONNECTOR_LOG_LEVEL`         | Yes       | Log level (`debug`, `info`, `warn`, `error`).    |
-| `CONNECTOR_RUN_EVERY`         | Yes       | Frequency of execution, e.g., `30s` is 30 seconds.     |
+| `CONNECTOR_RUN_EVERY`         | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., `30s` is 30 seconds. `1d` is 1 day.    |
 | `CONNECTOR_UPDATE_EXISTING_DATA` | Yes   | Whether to update existing data.                |
 
 #### User-Configurable Settings in `.env` File
