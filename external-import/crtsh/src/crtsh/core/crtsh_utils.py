@@ -27,18 +27,23 @@ def configure_logger(name):
 
 def convert_to_datetime(date_str):
     """Convert a date string to a datetime object."""
+    LOGGER = configure_logger(__name__)
     try:
         return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
     except ValueError as e:
+        LOGGER.debug(f"Error converting date string: {date_str}:\n{e}")
         return None
     except TypeError as e:
+        LOGGER.debug(f"Error converting date string: {date_str}:\n{e}")
         return None
     except Exception as e:
+        LOGGER.debug(f"Error converting date string: {date_str}:\n{e}")
         return None
 
 
 def is_valid_uuid(uuid_to_test: str):
     """Check to see if the given string is a valid UUID."""
+    LOGGER = configure_logger(__name__)
     supperted_versions = [1, 3, 4, 5]
     try:
         if isinstance(uuid_to_test, UUID) or isinstance(uuid_to_test, str):
@@ -49,10 +54,13 @@ def is_valid_uuid(uuid_to_test: str):
         else:
             return False
     except ValueError:
+        LOGGER.debug(f"Error validating UUID: {uuid_to_test}")
         return False
     except AttributeError:
+        LOGGER.debug(f"Error validating UUID: {uuid_to_test}")
         return False
     except Exception as e:
+        LOGGER.debug(f"Error validating UUID: {uuid_to_test}:\n{e}")
         return False
 
 

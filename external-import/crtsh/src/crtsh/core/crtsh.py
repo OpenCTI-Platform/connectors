@@ -50,8 +50,10 @@ class CrtSHClient:
             else:
                 raise ValueError(f"Domain provided failed validation: {domain}")
         except ValidationError as e:
+            LOGGER.error(f"Domain provided failed validation: {domain}:\n{e}")
             raise ValueError(f"Domain provided failed validation: {domain}")
         except Exception as e:
+            LOGGER.error(f"Domain provided failed validation: {domain}:\n{e}")
             raise ValueError(f"Invalid domain ({domain}): {e}")
 
     def _request_data(self):
@@ -130,8 +132,10 @@ class CrtSHClient:
             else:
                 return None
         except ValidationError as e:
+            LOGGER.error(f"Domain provided failed validation: {domain}:\n{e}")
             raise ValueError(f"Domain provided failed validation: {domain}")
         except Exception as e:
+            LOGGER.error(f"Domain provided failed validation: {domain}:\n{e}")
             raise ValueError(f"Invalid domain ({domain}): {e}")
 
     def process_name_value(self, item, stix_objects, certificate_id):
@@ -155,8 +159,10 @@ class CrtSHClient:
                             if relationship:
                                 stix_objects.append(relationship)
                     except ValidationError as e:
+                        LOGGER.error(f"Validation error: {name}\m{e}")
                         raise ValueError(f"Validation error: {name}")
                     except Exception as e:
+                        LOGGER.error(f"Error for process_name_value: {name}\n{e}")
                         raise ValueError(f"Failed to process name_value ({name}): {e}")
             else:
                 LOGGER.error(f"Error for process_name_value: {item}")
@@ -184,9 +190,11 @@ class CrtSHClient:
             else:
                 return None
         except ValidationError as e:
+            LOGGER.error(f"Email Validation Error: {email}\n{e}")
             raise ValueError(f"Email Validation Error: {email}")
         except Exception as e:
-            raise ValueError(f"Faile to process name_value ({email}): {e}")
+            LOGGER.error(f"Error for process_name_value: {email}\n{e}") 
+            raise ValueError(f"Failed to process name_value ({email}): {e}")
 
     def process_common_name(self, item, stix_objects, certificate_id):
         """Return a STIX DomainName object."""

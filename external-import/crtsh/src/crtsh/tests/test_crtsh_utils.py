@@ -21,19 +21,19 @@ def test_convert_to_datetime():
 
 
 def test_convert_to_datetime_exception():
-    assert crtsh.core.crtsh_utils.convert_to_datetime("invalid") == None
+    assert crtsh.core.crtsh_utils.convert_to_datetime("invalid") is None
 
 
 def test_convert_to_datetime_exception_2():
-    assert crtsh.core.crtsh_utils.convert_to_datetime("") == None
+    assert crtsh.core.crtsh_utils.convert_to_datetime("") is None
 
 
 def test_convert_to_datetime_exception_3():
-    assert crtsh.core.crtsh_utils.convert_to_datetime(None) == None
+    assert crtsh.core.crtsh_utils.convert_to_datetime(None) is None
 
 
 def test_convert_to_datetime_exception_4():
-    assert crtsh.core.crtsh_utils.convert_to_datetime(123) == None
+    assert crtsh.core.crtsh_utils.convert_to_datetime(123) is None
 
 
 def test_is_valid_uuid():

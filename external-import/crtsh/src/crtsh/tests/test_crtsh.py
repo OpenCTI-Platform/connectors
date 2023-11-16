@@ -6,8 +6,10 @@ import pytest
 
 # import crtsh core api to test
 from crtsh.core.crtsh import CrtSHClient
+from crtsh.core.crtsh_utils import configure_logger
 from stix2 import TLP_WHITE, DomainName, EmailAddress, Relationship, X509Certificate
 
+LOGGER = configure_logger(__name__)
 DEFAULT_LABEL = "crt_sh"
 DEFAULT_MARKING_DEFINITION = "TLP:WHITE"
 DEFAULT_DOMAIN = "example.com"
@@ -23,10 +25,13 @@ def convert_to_datetime(date_str):
     try:
         return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
     except ValueError as e:
+        LOGGER.error(f"Error converting date string: {date_str}:\n{e}")
         return None
     except TypeError as e:
+        LOGGER.error(f"Error converting date string: {date_str}:\n{e}") 
         return None
     except Exception as e:
+        LOGGER.error(f"Error converting date string: {date_str}:\n{e}")
         return None
 
 
