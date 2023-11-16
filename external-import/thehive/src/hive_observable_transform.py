@@ -11,7 +11,6 @@ from stix2 import (
     IPv6Address,
     Vulnerability,
     WindowsRegistryKey,
-    WindowsRegistryValueType,
 )
 
 from utils import check_hash_type, is_ipv4, is_ipv6  # isort: skip
@@ -92,7 +91,6 @@ class HiveObservableTransform:
             "regexp": self.create_custom_observable_text,
             "registry": self.create_registry,
             "registry_key": self.create_registry,
-            "registry_value": self.create_registry_value,
             "risk_object_asset": self.create_identity_system,
             "asset": self.create_identity_system,
             "system": self.create_identity_system,
@@ -250,12 +248,6 @@ class HiveObservableTransform:
         return WindowsRegistryKey(
             key=self.observable.get("data"),
             object_marking_refs=self.markings,
-            custom_properties=self.create_custom_properties(),
-        )
-
-    def create_registry_value(self):
-        return WindowsRegistryValueType(
-            data=str(self.observable.get("data")),
             custom_properties=self.create_custom_properties(),
         )
 
