@@ -5,9 +5,9 @@ services:
     container_name: ${CONTAINER_NAME}
     environment:
       # Connector's definition parameters:
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=ExternalImportConnectorTemplate
-      - CONNECTOR_SCOPE=Incident
+      - CONNECTOR_TYPE=${CONNECTOR_TYPE}
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
       # Connector's generic execution parameters:
       - OPENCTI_URL=${OPENCTI_URL}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
