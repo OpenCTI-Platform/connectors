@@ -39,8 +39,18 @@ class ExternalImportConnector:
             raise ValueError(msg)
 
         update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
-        if update_existing_data.lower() in ["true", "false"]:
-            self.update_existing_data = update_existing_data.lower()
+        if isinstance(update_existing_data, str) and update_existing_data.lower() in [
+            "true",
+            "false",
+        ]:
+            self.update_existing_data = (
+                True if update_existing_data.lower() == "true" else False
+            )
+        elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
+            True,
+            False,
+        ]:
+            self.update_existing_data = update_existing_data
         else:
             msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
             self.helper.log_warning(msg)
@@ -58,18 +68,26 @@ class ExternalImportConnector:
         unit = self.interval[-1:]
         value = self.interval[:-1]
 
-        if unit == "d":
-            # In days:
-            return int(value) * 60 * 60 * 24
-        elif unit == "h":
-            # In hours:
-            return int(value) * 60 * 60
-        elif unit == "m":
-            # In minutes:
-            return int(value) * 60
-        elif unit == "s":
-            # In seconds:
-            return int(value)
+        try:
+            if unit == "d":
+                # In days:
+                return int(value) * 60 * 60 * 24
+            elif unit == "h":
+                # In hours:
+                return int(value) * 60 * 60
+            elif unit == "m":
+                # In minutes:
+                return int(value) * 60
+            elif unit == "s":
+                # In seconds:
+                return int(value)
+        except Exception as e:
+            self.helper.log_error(
+                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
+            )
+            raise ValueError(
+                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
+            )
 
     def run(self) -> None:
         # Main procedure
