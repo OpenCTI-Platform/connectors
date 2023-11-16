@@ -63,3 +63,45 @@ CRTSH_IS_WILDCARD=false
 ```bash
 https://crt.sh/?q={search}&output=json
 ```
+
+#### STIX Objects Overview
+These objects represent structured information about cybersecurity threats and indicators. The following STIX objects are created with this integration:
+
+##### 1. X509Certificate
+- **Description**: Represents an X.509 Certificate.
+- **Properties**:
+  - `type`: "x509-certificate".
+  - `issuer`: The issuer name of the certificate.
+  - `validity_not_before`: Start date of certificate validity.
+  - `validity_not_after`: End date of certificate validity.
+  - `subject`: The subject name of the certificate.
+  - `serial_number`: The serial number of the certificate.
+  - `x509_v3_extensions`: Extensions for the X.509 v3 certificate.
+  - `object_marking_refs`: References to marking definitions.
+  - `labels`: Custom labels.
+
+##### 2. DomainName
+- **Description**: Represents a domain name.
+- **Properties**:
+  - `type`: "domain-name".
+  - `value`: The domain name value.
+  - `object_marking_refs`: References to marking definitions.
+  - `labels`: Custom labels.
+
+##### 3. EmailAddress
+- **Description**: Represents an email address.
+- **Properties**:
+  - `type`: "email-addr".
+  - `value`: The email address value.
+  - `object_marking_refs`: References to marking definitions.
+  - `labels`: Custom labels.
+
+##### 4. Relationship
+- **Description**: Represents a relationship between two STIX objects.
+- **Properties**:
+  - `type`: "relationship".
+  - `relationship_type`: Type of relationship, typically "related-to".
+  - `source_ref`: Reference to the source object.
+  - `target_ref`: Reference to the target object.
+  - `object_marking_refs`: References to marking definitions.
+  - `labels`: Custom labels.
