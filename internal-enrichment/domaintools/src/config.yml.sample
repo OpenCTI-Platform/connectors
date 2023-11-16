@@ -14,3 +14,4 @@ connector:
 domaintools:
   api_username: 'ChangeMe'
   api_key: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'

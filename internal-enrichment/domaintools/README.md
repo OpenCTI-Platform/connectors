@@ -8,7 +8,8 @@ The connector enrich the domain and ip with other domains, ips, email addresses 
 
 The connector can be configured with the following variables: 
 
-| Config Parameter          | Docker env var                        | Default    | Description                                                      |
-|---------------------------|---------------------------------------|------------|------------------------------------------------------------------|
-| `api_username`            | `DOMAINTOOLS_API_USERNAME`            | `ChangeMe` | The username required for the authentication on DomainTools API. |
-| `api_key`                 | `DOMAINTOOLS_API_KEY`                 | `ChangeMe` | The password required for the authentication on DomainTools API. |
+| Config Parameter | Docker env var             | Default     | Description                                                      |
+|------------------|----------------------------|-------------|------------------------------------------------------------------|
+| `api_username`   | `DOMAINTOOLS_API_USERNAME` | `ChangeMe`  | The username required for the authentication on DomainTools API. |
+| `api_key`        | `DOMAINTOOLS_API_KEY`      | `ChangeMe`  | The password required for the authentication on DomainTools API. |
+| `max_tlp`        | `DOMAINTOOLS_MAX_TLP`      | `TLP:AMBER` | The maximal TLP of the observable being enriched.                |

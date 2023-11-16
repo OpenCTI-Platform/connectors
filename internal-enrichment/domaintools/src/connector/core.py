@@ -43,6 +43,10 @@ class DomainToolsConnector:
         )
         self.api = domaintools.API(api_username, api_key)
 
+        self.max_tlp = get_config_variable(
+            "DOMAINTOOLS_MAX_TLP", ["domaintools", "max_tlp"], config
+        )
+
         self.author = stix2.Identity(
             id=Identity.generate_id(self._DEFAULT_AUTHOR, "organization"),
             name=self._DEFAULT_AUTHOR,
@@ -68,7 +72,7 @@ class DomainToolsConnector:
         ----------
         builder : DtBuilder
             Builder to enrich the observable and create the bundle.
-        observable : dict
+        opencti_entity: dict
             Observable received from OpenCTI.
 
         Returns
@@ -245,6 +249,18 @@ class DomainToolsConnector:
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
         result = self.helper.get_data_from_enrichment(data, opencti_entity)
+
+        # Extract TLP
+        tlp = "TLP:CLEAR"
+        for marking_definition in opencti_entity.get("objectMarking", []):
+            if marking_definition["definition_type"] == "TLP":
+                tlp = marking_definition["definition"]
+
+        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+            raise ValueError(
+                "Do not send any data, TLP of the observable is greater than MAX TLP"
+            )
+
         return self._process_file(result["stix_objects"], opencti_entity)
 
     def start(self):
