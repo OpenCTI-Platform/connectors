@@ -257,7 +257,9 @@ class ThreatFox:
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     created_by_ref=self.identity["standard_id"],
                                     external_references=indicator_external_reference,
-                                    x_opencti_main_observable_type=observable_type,
+                                    custom_properties={
+                                        "x_opencti_main_observable_type": observable_type
+                                    },
                                 )
 
                             else:
@@ -277,7 +279,9 @@ class ThreatFox:
                                     ],
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     created_by_ref=self.identity["standard_id"],
-                                    x_opencti_main_observable_type=observable_type,
+                                    custom_properties={
+                                        "x_opencti_main_observable_type": observable_type
+                                    },
                                 )
 
                             self.helper.log_info(
