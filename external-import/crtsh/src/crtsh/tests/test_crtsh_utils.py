@@ -1,7 +1,9 @@
 
 
-import crtsh.core.crtsh_utils
 import datetime
+
+import crtsh.core.crtsh_utils
+
 
 def test_configure_logger():
     assert crtsh.core.crtsh_utils.configure_logger('test')

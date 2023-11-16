@@ -1,11 +1,12 @@
 import json
 import os
+from datetime import datetime
 
 import pytest
-from datetime import datetime
+
 # import crtsh core api to test
 from crtsh.core.crtsh import CrtSHClient
-from stix2 import X509Certificate, DomainName, EmailAddress, Relationship, TLP_WHITE
+from stix2 import TLP_WHITE, DomainName, EmailAddress, Relationship, X509Certificate
 
 DEFAULT_LABEL = "crt_sh"
 DEFAULT_MARKING_DEFINITION = "TLP:WHITE"

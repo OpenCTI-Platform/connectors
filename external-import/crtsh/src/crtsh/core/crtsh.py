@@ -1,11 +1,23 @@
 # crt_sh/api.py
 import requests
-from validators import domain as domain_validator, ValidationError, email as email_validator
-from stix2 import X509Certificate, X509V3ExtensionsType, DomainName, EmailAddress, Relationship
-
+from stix2 import (
+    DomainName,
+    EmailAddress,
+    Relationship,
+    X509Certificate,
+    X509V3ExtensionsType,
+)
 from stix2.exceptions import AtLeastOnePropertyError
+from validators import ValidationError
+from validators import domain as domain_validator
+from validators import email as email_validator
 
-from .crtsh_utils import configure_logger, convert_to_datetime, TLP_MAP, is_valid_stix_id
+from .crtsh_utils import (
+    TLP_MAP,
+    configure_logger,
+    convert_to_datetime,
+    is_valid_stix_id,
+)
 
 LOGGER = configure_logger(__name__)
 DEFAULT_URL = 'https://crt.sh/?q={search}&output=json'

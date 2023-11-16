@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
-from stix2 import TLP_WHITE, TLP_RED, TLP_AMBER, TLP_GREEN
 from uuid import UUID
+
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 TLP_MAP = {
     "TLP:WHITE": TLP_WHITE,
