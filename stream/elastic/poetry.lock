@@ -423,13 +423,13 @@ twisted = ["twisted"]
 
 [[package]]
 name = "platformdirs"
-version = "3.11.0"
+version = "4.0.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "platformdirs-3.11.0-py3-none-any.whl", hash = "sha256:e9d171d00af68be50e9202731309c4e658fd8bc76f55c11c7dd760d023bda68e"},
-    {file = "platformdirs-3.11.0.tar.gz", hash = "sha256:cf8ee52a3afdb965072dcc652433e0c7e3e40cf5ea1477cd4b3b1d2eb75495b3"},
+    {file = "platformdirs-4.0.0-py3-none-any.whl", hash = "sha256:118c954d7e949b35437270383a3f2531e99dd93cf7ce4dc8340d3356d30f173b"},
+    {file = "platformdirs-4.0.0.tar.gz", hash = "sha256:cb633b2bcf10c51af60beb0ab06d2f1d69064b43abf4c185ca6b28865f3f9731"},
 ]
 
 [package.extras]
@@ -478,13 +478,13 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.11.13"
+version = "5.11.14"
 description = "Python API client for OpenCTI."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.11.13-py3-none-any.whl", hash = "sha256:7689757acdd40b275ee5dfbe6705d088f3ea42a27a3adfc04135fad30316c27b"},
-    {file = "pycti-5.11.13.tar.gz", hash = "sha256:91ab1f4c3a3126d4301f162ec2b1fd886350834b47ffde27a8f2ad3dd7d63bc7"},
+    {file = "pycti-5.11.14-py3-none-any.whl", hash = "sha256:50da4dfc965a03bc46631f0a94112201ab215ea5f5fff72fdf008b857552244d"},
+    {file = "pycti-5.11.14.tar.gz", hash = "sha256:4e885959c5f4cb33208d25d12273f07d1af7566d59a7d3e53acd5ef2e1808dac"},
 ]
 
 [package.dependencies]
@@ -1101,4 +1101,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "85d3460c35510a57db81dd8a3191cba04777c57186d54568ca46c3a7dd27f8d1"
+content-hash = "7cfa959fa10e85acee53ba83d55b76b06bdb04017f56f6835d70a9723fb0b787"
