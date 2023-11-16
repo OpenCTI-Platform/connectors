@@ -1,0 +1,4 @@
+pycti==5.11.13
+requests
+stix2
+validators
