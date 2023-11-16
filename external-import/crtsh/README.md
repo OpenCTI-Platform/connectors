@@ -58,6 +58,7 @@ CRTSH_LABELS=crtsh
 CRTSH_MARKING_REFS=TLP:WHITE
 CRTSH_IS_EXPIRED=false
 CRTSH_IS_WILDCARD=false
+```
 
 #### Cert.SH Request Format
 ```bash
