@@ -62,7 +62,7 @@ CRTSH_IS_WILDCARD=false
 
 #### Cert.SH Request Format
 ```bash
-https://crt.sh/?q={search}&output=json
+https://crt.sh/?q={domain}&output=json
 ```
 
 #### STIX Objects Overview

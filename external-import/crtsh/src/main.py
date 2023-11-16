@@ -7,12 +7,8 @@ from crtsh import CrtSHClient
 from lib.external_import import ExternalImportConnector
 from validators import domain as domain_validator
 
-MARKING_REFS =[
-    "TLP:WHITE",
-    "TLP:GREEN",
-    "TLP:AMBER",
-    "TLP:RED"
-]
+MARKING_REFS = ["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"]
+
 
 class crtshConnector(ExternalImportConnector):
     def __init__(self):
@@ -24,8 +20,8 @@ class crtshConnector(ExternalImportConnector):
             labels=self.labels,
             marking_refs=self.marking_refs,
             is_expired=self.is_expired,
-            is_wildcard=self.is_wildcard
-            )
+            is_wildcard=self.is_wildcard,
+        )
 
     def _get_config_variables(self):
         """Get config variables from the environment"""
@@ -77,6 +73,7 @@ class crtshConnector(ExternalImportConnector):
             f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
         )
         return stix_objects
+
 
 if __name__ == "__main__":
     try:

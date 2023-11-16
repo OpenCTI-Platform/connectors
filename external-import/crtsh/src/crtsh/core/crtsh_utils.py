@@ -13,28 +13,29 @@ TLP_MAP = {
 
 LOG_LEVEL = logging.INFO
 
+
 def configure_logger(name):
     """Configure and return a custom logger for the given name."""
     logger = logging.getLogger(name)
     logger.setLevel(LOG_LEVEL)
     logger_handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        "{message}", style="{"
-    )
+    formatter = logging.Formatter("{message}", style="{")
     logger_handler.setFormatter(formatter)
     logger.addHandler(logger_handler)
     return logger
 
+
 def convert_to_datetime(date_str):
     """Convert a date string to a datetime object."""
     try:
-        return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
+        return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
     except ValueError as e:
         return None
     except TypeError as e:
         return None
     except Exception as e:
         return None
+
 
 def is_valid_uuid(uuid_to_test: str):
     """Check to see if the given string is a valid UUID."""
@@ -45,7 +46,7 @@ def is_valid_uuid(uuid_to_test: str):
                 if str(UUID(uuid_to_test, version=version)) == uuid_to_test:
                     return True
             return False
-        else: 
+        else:
             return False
     except ValueError:
         return False
@@ -54,10 +55,11 @@ def is_valid_uuid(uuid_to_test: str):
     except Exception as e:
         return False
 
+
 def is_valid_stix_id(stix_id):
     """Check to see if the given string is a STIX ID."""
-    if isinstance(stix_id, str) and '--' in stix_id:
-        stix_id_list = stix_id.split('--')
+    if isinstance(stix_id, str) and "--" in stix_id:
+        stix_id_list = stix_id.split("--")
         if is_valid_uuid(stix_id_list[1]) and len(stix_id_list) == 2:
             return True
     return False
