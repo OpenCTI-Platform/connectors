@@ -15,6 +15,7 @@ import traceback
 from datetime import datetime
 
 import yaml
+import csv
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from rflib import APP_VERSION, RFClient, StixNote, IPAddress
 
@@ -113,13 +114,36 @@ class RFNotes:
                 published = self.rf_initial_lookback
 
             try:
-                self.get_risk_list()
+                self.get_risk_list_from_fusion_file()
+                # self.get_risk_list()
                 self.convert_and_send(published, tas)
             except Exception as e:
                 self.helper.log_error(str(e))
 
             self.helper.set_state({"last_run": timestamp})
             time.sleep(self.get_interval())
+
+    def get_risk_list_from_fusion_file(self):
+        with open("rflib/enriched_rl.csv", "r") as csv_file:
+            reader = csv.DictReader(csv_file)
+            for row in reader:
+                # Convert into stix object
+                stix_ip = IPAddress(row["Name"], "IpAddress", None)
+                stix_ip.map_data(row)
+                stix_ip.build_bundle(stix_ip)
+                # Create bundle
+                bundle = stix_ip.to_stix_bundle()
+                self.helper.log_info(
+                    "Sending Bundle to server with "
+                    + str(len(bundle.objects))
+                    + " objects"
+                )
+
+                self.helper.send_stix2_bundle(
+                    bundle.serialize(),
+                    update=self.update_existing_data,
+                )
+        print("End!")
 
     def convert_and_send(self, published, tas):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
@@ -166,31 +190,6 @@ class RFNotes:
                 bundle.serialize(),
                 update=self.update_existing_data,
             )
-
-    def get_risk_list(self):
-        """Pulls indicators with high risk score, converts to Stix2, sends to OpenCTI"""
-        self.risk_list_score_threshold = 65
-        self.helper.log_info(
-            f"Risk score threshold for risk list is {str(self.risk_list_score_threshold)}"
-        )
-
-        ip_addresses = self.rfapi.get_risk_ip_addresses()
-        self.helper.log_info(f"fetched {len(ip_addresses)} IP addresses from API")
-        for rf_ip_address in ip_addresses:
-            # name, author, risk_score):
-            # s'inspirer du code de mapping pour analyst note
-            stix_ip = IPAddress(rf_ip_address["entity"]["name"], "IpAddress", None)
-            stix_ip.map_data(rf_ip_address)
-            stix_ip.build_bundle()
-            bundle = stix_ip.to_stix_bundle()
-            self.helper.log_info(
-                "Sending Bundle to server with " + str(len(bundle.objects)) + " objects"
-            )
-            self.helper.send_stix2_bundle(
-                bundle.serialize(),
-                update=self.update_existing_data,
-            )
-        print("End!")
 
 
 if __name__ == "__main__":
