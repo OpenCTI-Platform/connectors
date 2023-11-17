@@ -330,7 +330,11 @@ class MWDB:
             if re.match("CVE-", taglabel.upper()):
                 # create a CVE and continue
                 cve = self.helper.api.vulnerability.read(
-                    filter={"key": "name", "values": [taglabel.upper()]}
+                    filters={
+                        "mode": "and",
+                        "filters": [{"key": "name", "values": [taglabel.upper()]}],
+                        "filterGroups": [],
+                    }
                 )
                 relationship = Relationship(
                     source_ref=sample["observable"]["id"],
@@ -342,7 +346,11 @@ class MWDB:
 
             ## first search in unstructured tag malware
             fullsearch = self.helper.api.malware.read(
-                filter={"key": "name", "values": [taglabel.lower().strip()]}
+                filters={
+                    "mode": "and",
+                    "filters": [{"key": "name", "values": [taglabel.lower().strip()]}],
+                    "filterGroups": [],
+                }
             )
             if fullsearch:
                 for malwsearc in fullsearch:
@@ -362,7 +370,11 @@ class MWDB:
 
             ## second search for intrusion set like APT
             fullsearch = self.helper.api.intrusion_set.read(
-                filter={"key": "name", "values": [taglabel.lower().strip()]}
+                filters={
+                    "mode": "and",
+                    "filters": [{"key": "name", "values": [taglabel.lower().strip()]}],
+                    "filterGroups": [],
+                }
             )
             if fullsearch:
                 for intrusion in fullsearch:
