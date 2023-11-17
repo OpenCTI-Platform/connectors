@@ -8,7 +8,7 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
-
+import json
 from datetime import datetime
 
 import pycti  # type: ignore
@@ -123,7 +123,7 @@ class Indicator(RFStixEntity):
 class IPAddress(Indicator):
     def __init__(self, name, _type, author):
         self.name = name
-        self.author = author or self._create_author()
+        self.author = self._create_author()
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
@@ -141,30 +141,33 @@ class IPAddress(Indicator):
         return stix2.IPv4Address(value=self.name)
 
     def map_data(self, rf_ip):
-        self.risk_score = rf_ip["risk"]["score"]
-        rf_related_entities = rf_ip["relatedEntities"]
-        self.related_entities2 = []
-        for element in rf_related_entities:
-            if element["type"] in ["RelatedIpAddress", "RelatedMalware"]:
-                # map related ip addresses and malware
-                for rf_related_element in element["entities"]:
-                    type_ = rf_related_element["entity"]["type"]
-                    name_ = rf_related_element["entity"]["name"]
-                    related_element = ENTITY_TYPE_MAPPER[type_](
-                        name_, type_, self.author
-                    )
-                    self.related_entities.extend(related_element.to_stix_objects())
+        self.risk_score = rf_ip["Risk"]
+        related_entities_exist = json.loads(rf_ip["Links"])["hits"]
+        if related_entities_exist:
+            rf_related_entities = related_entities_exist[0]["sections"][0]["lists"]
 
-    def build_bundle(self):
+            for element in rf_related_entities:
+                if element["type"]["name"] in ["Malware", "Hash"]:
+                    # map related ip addresses and malware
+                    for rf_related_element in element["entities"]:
+                        type_ = rf_related_element["type"]
+                        name_ = rf_related_element["name"]
+                        related_element = ENTITY_TYPE_MAPPER[type_](
+                            name_, type_, self.author
+                        )
+                        stix_objs = related_element.to_stix_objects()
+                        self.related_entities.extend(stix_objs)
+
+    def build_bundle(self, stix_ip):
         """Adds self and all related entities (indicators, observables, malware, threat-actors, relationships) to objects"""
         # Put the indicator and its observable and relationship first
-        self.objects.extend(self.to_stix_objects())
+        self.objects.extend(stix_ip.to_stix_objects())
         # Then related entities
         self.objects.extend(self.related_entities)
         relationships = []
         # Then add 'related-to' relationship with all related entities
         for entity in self.related_entities:
-            if entity.type in ["indicator", "malware", "threat-actor"]:
+            if entity["type"] in ["indicator", "malware", "threat-actor"]:
                 relationships.append(
                     stix2.Relationship(
                         id=pycti.StixCoreRelationship.generate_id(
