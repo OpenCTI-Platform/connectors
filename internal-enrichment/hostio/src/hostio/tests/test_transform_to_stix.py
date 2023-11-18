@@ -2,7 +2,7 @@ import pytest
 from stix2 import TLP_GREEN, TLP_WHITE, DomainName, IPv4Address
 from stix2.exceptions import InvalidValueError
 
-from hostio.transform_to_stix import HostioDomainStixTransform
+from hostio.transform_to_stix import HostIOIPtoDomainStixTransform
 
 VALID_DOMAIN = "example.com"
 VALID_IP = "8.8.8.8"
@@ -11,7 +11,7 @@ VALID_IP_STIX = IPv4Address(value=VALID_IP)
 
 def test_hostio_domain_stix_transform():
     """Test creation of STIX DomainName object."""
-    hostio_domain_stix_transform = HostioDomainStixTransform(
+    hostio_domain_stix_transform = HostIOIPtoDomainStixTransform(
         domain=VALID_DOMAIN, entity_id=VALID_IP_STIX.get("id")
     )
     assert hostio_domain_stix_transform.domain == VALID_DOMAIN
@@ -30,7 +30,7 @@ def test_hostio_domain_stix_transform():
 
 def test_hostio_domain_stix_transform_marking_refs():
     """Test creation of STIX DomainName object with different marking refs."""
-    hostio_domain_stix_transform = HostioDomainStixTransform(
+    hostio_domain_stix_transform = HostIOIPtoDomainStixTransform(
         domain=VALID_DOMAIN, marking_refs="TLP:GREEN", entity_id=VALID_IP_STIX.get("id")
     )
     assert hostio_domain_stix_transform.domain == VALID_DOMAIN
@@ -51,14 +51,14 @@ def test_hostio_domain_stix_transform_marking_refs():
 def test_hostio_domain_stix_transform_invalid_domain():
     """Test creation of STIX DomainName object with invalid domain."""
     with pytest.raises(ValueError):
-        HostioDomainStixTransform(domain="invalid", entity_id=VALID_IP_STIX.get("id"))
+        HostIOIPtoDomainStixTransform(domain="invalid", entity_id=VALID_IP_STIX.get("id"))
         assert False
 
 
 def test_hostio_domain_stix_transform_invalid_marking_refs():
     """Test creation of STIX DomainName object with invalid marking refs."""
     with pytest.raises(ValueError):
-        HostioDomainStixTransform(
+        HostIOIPtoDomainStixTransform(
             domain=VALID_DOMAIN,
             marking_refs="invalid",
             entity_id=VALID_IP_STIX.get("id"),
@@ -69,5 +69,5 @@ def test_hostio_domain_stix_transform_invalid_marking_refs():
 def test_hostio_domain_stix_transform_invalid_entity_id():
     """Test creation of STIX DomainName object with invalid entity id."""
     with pytest.raises(InvalidValueError):
-        HostioDomainStixTransform(domain=VALID_DOMAIN, entity_id="invalid")
+        HostIOIPtoDomainStixTransform(domain=VALID_DOMAIN, entity_id="invalid")
         assert False

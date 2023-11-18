@@ -4,7 +4,7 @@ from validators import domain as domain_validator
 from .hostio_utils import get_tlp_marking
 
 
-class HostioDomainStixTransform:
+class HostIOIPtoDomainStixTransform:
     """Class to transform a Domain into a STIX DomainName object."""
 
     def __init__(self, domain, marking_refs="TLP:WHITE", entity_id=None):

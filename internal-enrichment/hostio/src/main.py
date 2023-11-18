@@ -1,6 +1,6 @@
 from os import environ
 
-from hostio import HostioDomainStixTransform, HostIOIPtoDomain
+from hostio import HostIOIPtoDomainStixTransform, HostIOIPtoDomain
 from hostio.hostio_utils import (
     can_be_int,
     is_valid_token,
@@ -58,7 +58,7 @@ class HostIOConnector(InternalEnrichmentConnector):
             hostio.request_ip_to_domain()
             for domain in hostio.domains:
                 stix_objects.extend(
-                    HostioDomainStixTransform(
+                    HostIOIPtoDomainStixTransform(
                         domain=domain, entity_id=entity_id
                     ).get_stix_objects(),
                     marking_refs=self.hostio_marking_refs,
