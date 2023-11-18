@@ -1,0 +1,129 @@
+{
+    "domain": "google.com",
+    "web": {
+      "domain": "google.com",
+      "rank": 1,
+      "url": "https://www.google.com/?gws_rd=ssl",
+      "ip": "142.250.69.196",
+      "date": "2023-10-11T16:05:28.728Z",
+      "length": 178657,
+      "server": "gws",
+      "encoding": "utf8",
+      "title": "Google",
+      "links": [
+        "about.google",
+        "sustainability.google"
+      ]
+    },
+    "dns": {
+      "domain": "google.com",
+      "a": [
+        "142.251.214.142"
+      ],
+      "aaaa": [
+        "2607:f8b0:4005:814::200e"
+      ],
+      "mx": [
+        "10 smtp.google.com."
+      ],
+      "ns": [
+        "ns1.google.com.",
+        "ns2.google.com.",
+        "ns3.google.com.",
+        "ns4.google.com."
+      ]
+    },
+    "ipinfo": {
+      "142.250.69.196": {
+        "city": "Seattle",
+        "region": "Washington",
+        "country": "US",
+        "loc": "47.6062,-122.3321",
+        "postal": "98101",
+        "timezone": "America/Los_Angeles",
+        "asn": {
+          "asn": "AS15169",
+          "name": "Google LLC",
+          "domain": "google.com",
+          "route": "142.250.69.0/24",
+          "type": "hosting"
+        }
+      },
+      "142.251.214.142": {
+        "city": "San Jose",
+        "region": "California",
+        "country": "US",
+        "loc": "37.3394,-121.8950",
+        "postal": "95103",
+        "timezone": "America/Los_Angeles",
+        "asn": {
+          "asn": "AS15169",
+          "name": "Google LLC",
+          "domain": "google.com",
+          "route": "142.250.0.0/15",
+          "type": "hosting"
+        }
+      },
+      "2607:f8b0:4005:814::200e": {
+        "city": "San Jose",
+        "region": "California",
+        "country": "US",
+        "loc": "37.3394,-121.8950",
+        "postal": "95103",
+        "timezone": "America/Los_Angeles",
+        "asn": {
+          "asn": "AS15169",
+          "name": "Google LLC",
+          "domain": "google.com",
+          "route": "2607:f8b0:4005::/48",
+          "type": "hosting"
+        }
+      }
+    },
+    "related": {
+      "ip": [
+        {
+          "value": "142.250.69.196",
+          "count": 18516
+        },
+        {
+          "value": "142.251.214.142",
+          "count": 76
+        },
+        {
+          "value": "2607:f8b0:4005:814::200e",
+          "count": 95
+        }
+      ],
+      "asn": [
+        {
+          "value": "AS15169",
+          "count": 16976704
+        }
+      ],
+      "ns": [
+        {
+          "value": "google.com",
+          "count": 9514
+        }
+      ],
+      "mx": [
+        {
+          "value": "google.com",
+          "count": 16446858
+        }
+      ],
+      "backlinks": [
+        {
+          "value": "google.com",
+          "count": 8294609
+        }
+      ],
+      "redirects": [
+        {
+          "value": "google.com",
+          "count": 422420
+        }
+      ]
+    }
+  }
