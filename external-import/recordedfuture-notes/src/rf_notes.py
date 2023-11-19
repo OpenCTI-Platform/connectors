@@ -9,15 +9,15 @@
 ################################################################################
 """
 
+import csv
 import os
 import time
 import traceback
 from datetime import datetime
 
 import yaml
-import csv
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, RFClient, StixNote, IPAddress
+from rflib import APP_VERSION, IPAddress, RFClient, StixNote
 
 
 class RFNotes:
