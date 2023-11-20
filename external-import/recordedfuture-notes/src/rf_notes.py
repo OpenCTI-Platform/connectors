@@ -55,9 +55,10 @@ class RFNotes:
         self.rf_insikt_only = get_config_variable(
             "RECORDED_FUTURE_INSIKT_ONLY", ["rf-notes", "insikt_only"], config
         )
-        self.rf_topic = get_config_variable(
+        topics_value = get_config_variable(
             "RECORDED_FUTURE_TOPIC", ["rf-notes", "topic"], config
         )
+        self.rf_topics = topics_value.split(",") if topics_value else [None]
         self.rf_person_to_TA = get_config_variable(
             "RECORDED_FUTUTRE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
         )
@@ -65,6 +66,12 @@ class RFNotes:
             "RECORDED_FUTURE_TA_TO_INTRUSION_SET",
             ["rf-notes", "TA_to_intrusion_set"],
             config,
+        )
+        self.risk_as_score = get_config_variable(
+            "RECORDED_FUTURE_RISK_AS_SCORE", ["rf-notes", "risk_as_score"], config
+        )
+        self.risk_threshold = get_config_variable(
+            "RECORDED_FUTURE_RISK_THRESHOLD", ["rf-notes", "risk_threshold"], config
         )
 
         self.update_existing_data = get_config_variable(
@@ -123,22 +130,33 @@ class RFNotes:
             f"Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
         )
         self.helper.log_info(
-            f"Topic is {str(self.rf_topic)} of type {type(self.rf_topic)}"
+            f"Topics are {str(self.rf_topics)} of type {type(self.rf_topics)}"
         )
+        notes = []
+        notes_ids = []
+        for topic in self.rf_topics:
+            new_notes = self.rfapi.get_notes(
+                published, self.rf_pull_signatures, self.rf_insikt_only, topic
+            )
+            for new_note in new_notes:
+                if new_note["id"] not in notes_ids:
+                    notes.append(new_note)
+                    notes_ids.append(new_note["id"])
 
-        notes = self.rfapi.get_notes(
-            published, self.rf_pull_signatures, self.rf_insikt_only, self.rf_topic
-        )
         self.helper.log_info(f"fetched {len(notes)} Analyst notes from API")
         for note in notes:
             stixnote = StixNote(
                 self.helper,
                 tas,
+                self.rfapi,
                 self.tlp,
                 self.rf_person_to_TA,
                 self.rf_TA_to_intrusion_set,
+                self.risk_as_score,
+                self.risk_threshold,
             )
             stixnote.from_json(note)
+            stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
                 "Sending Bundle to server with " + str(len(bundle.objects)) + " objects"

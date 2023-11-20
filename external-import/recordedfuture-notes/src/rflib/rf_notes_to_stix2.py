@@ -11,7 +11,7 @@
 
 from datetime import datetime
 
-import pycti
+import pycti  # type: ignore
 import stix2
 
 TLP_MAP = {
@@ -66,6 +66,7 @@ class Indicator(RFStixEntity):
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
+        self.risk_score = None
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -92,6 +93,9 @@ class Indicator(RFStixEntity):
             valid_from=datetime.now(),
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
+            custom_properties={
+                "x_opencti_score": self.risk_score,
+            },
         )
         pass
 
@@ -210,6 +214,7 @@ class Identity(RFStixEntity):
         "Company": "organization",
         "Organization": "organization",
         "Person": "individual",
+        "Industry": "class",
     }
 
     def create_stix_objects(self):
@@ -287,17 +292,18 @@ class Vulnerability(RFStixEntity):
 
 
 class DetectionRule(RFStixEntity):
-    """Represents a Yara or SNORT rule"""
+    """Represents a Yara, Sigma or SNORT rule"""
 
-    def __init__(self, name, type_, content):
+    def __init__(self, name, type_, content, author):
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
 
         self.name = name.split(".")[0]
         self.type = type_
         self.content = content
         self.stix_obj = None
+        self.author = author
 
-        if self.type not in ("yara", "snort"):
+        if self.type not in ("yara", "snort", "sigma"):
             msg = f"Detection rule of type {self.type} is not supported"
             raise ConversionError(msg)
 
@@ -313,9 +319,68 @@ class DetectionRule(RFStixEntity):
         )
 
 
+class Software(RFStixEntity):
+    def __init__(self, name, type_, author):
+        self.name = name
+        self.software_object = None
+
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.software_object:
+            self.create_stix_objects()
+        return [self.software_object]
+
+    def create_stix_objects(self):
+        self.software_object = stix2.Software(
+            name=self.name,
+        )
+
+
+class Location(RFStixEntity):
+    rf_type_to_stix = {
+        "Country": "Country",
+        "City": "City",
+        "ProvinceOrState": "Administrative-Area",
+    }
+
+    def __init__(self, name, type_, author):
+        self.name = name
+        self.type = self.rf_type_to_stix[type_]
+        self.location_object = None
+
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.location_object:
+            self.create_stix_objects()
+        return [self.location_object]
+
+    def create_stix_objects(self):
+        self.location_object = stix2.Location(
+            name=self.name,
+            country=self.name,
+            custom_properties={"x_opencti_location_type": self.type},
+        )
+
+
+class Campaign(RFStixEntity):
+    def __init__(self, name, type_, author):
+        self.name = name
+        self.campaign_object = None
+
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.campaign_object:
+            self.create_stix_objects()
+        return [self.campaign_object]
+
+    def create_stix_objects(self):
+        self.campaign_object = stix2.Campaign(
+            name=self.name,
+        )
+
+
 # maps RF types to the corresponding python object
 ENTITY_TYPE_MAPPER = {
-    # TODO: add more supported types, starting with location
     "IpAddress": IPAddress,
     "InternetDomainName": Domain,
     "URL": URL,
@@ -326,6 +391,20 @@ ENTITY_TYPE_MAPPER = {
     "Organization": Identity,
     "Malware": Malware,
     "CyberVulnerability": Vulnerability,
+    "Product": Software,
+    "Country": Location,
+    "City": Location,
+    "ProvinceOrState": Location,
+    "Industry": Identity,
+    "Operation": Campaign,
+}
+
+# maps RF types to the corresponding url to get the risk score
+INDICATOR_TYPE_URL_MAPPER = {
+    "IpAddress": "ip",
+    "InternetDomainName": "domain",
+    "URL": "url",
+    "Hash": "hash",
 }
 
 
@@ -363,9 +442,12 @@ class StixNote:
         self,
         opencti_helper,
         tas,
+        rfapi,
         tlp="white",
         person_to_ta=False,
         ta_to_intrusion_set=False,
+        risk_as_score=False,
+        risk_threshold=None,
     ):
         self.author = self._create_author()
         self.name = None
@@ -379,7 +461,10 @@ class StixNote:
         self.tas = tas
         self.person_to_ta = person_to_ta
         self.ta_to_intrusion_set = ta_to_intrusion_set
+        self.risk_as_score = risk_as_score
+        self.risk_threshold = risk_threshold
         self.tlp = TLP_MAP.get(tlp.lower(), None)
+        self.rfapi = rfapi
 
     def _create_author(self):
         """Creates Recorded Future Author"""
@@ -420,20 +505,131 @@ class StixNote:
                     stix_objs = IntrusionSet(name, type_, self.author).to_stix_objects()
                 else:
                     stix_objs = ThreatActor(name, type_, self.author).to_stix_objects()
+            elif type_ == "Source":
+                external_reference = {"source_name": name, "url": name}
+                self.external_references.append(external_reference)
+                continue
             elif type_ not in ENTITY_TYPE_MAPPER:
                 msg = f"Cannot convert entity {name} to STIX2 because it is of type {type_}"
                 self.helper.log_warning(msg)
                 continue
             else:
-                stix_objs = ENTITY_TYPE_MAPPER[type_](
-                    name, type_, self.author
-                ).to_stix_objects()
+                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author)
+                if type_ in [
+                    "IpAddress",
+                    "InternetDomainName",
+                    "URL",
+                    "Hash",
+                ]:
+                    risk_score = None
+                    if self.risk_threshold:
+                        # If a min threshold was defined, we ignore the indicator if the score is lower than the defined threshold
+                        risk_score = self.rfapi.get_risk_score(
+                            INDICATOR_TYPE_URL_MAPPER[type_], name
+                        )
+                        if risk_score < self.risk_threshold:
+                            self.helper.log_info(
+                                f"Ignoring entity {name} as its risk score is lower than the defined risk threshold"
+                            )
+                            continue
+                    if self.risk_as_score:
+                        # We get the risk_score if it was already set. Otherwise, we get it from the API
+                        rf_object.risk_score = (
+                            risk_score
+                            if risk_score
+                            else self.rfapi.get_risk_score(
+                                INDICATOR_TYPE_URL_MAPPER[type_], name
+                            )
+                        )
+                stix_objs = rf_object.to_stix_objects()
             self.objects.extend(stix_objs)
         if "attachment_content" in attr:
             rule = DetectionRule(
-                attr["attachment"], attr["attachment_type"], attr["attachment_content"]
+                attr["attachment"],
+                attr["attachment_type"],
+                attr["attachment_content"],
+                self.author,
             )
             self.objects.extend(rule.to_stix_objects())
+
+    RELATIONSHIPS_MAPPER = [
+        {
+            "from": "threat-actor",
+            "to": [
+                {"entity": "malware", "relation": "uses"},
+                {"entity": "vulnerability", "relation": "targets"},
+                {"entity": "attack-pattern", "relation": "uses"},
+                {"entity": "location", "relation": "targets"},
+                {"entity": "identity", "relation": "targets"},
+            ],
+        },
+        {
+            "from": "intrusion-set",
+            "to": [
+                {"entity": "malware", "relation": "uses"},
+                {"entity": "vulnerability", "relation": "targets"},
+                {"entity": "attack-pattern", "relation": "uses"},
+                {"entity": "location", "relation": "targets"},
+                {"entity": "identity", "relation": "targets"},
+            ],
+        },
+        {
+            "from": "indicator",
+            "to": [
+                {"entity": "malware", "relation": "indicates"},
+                {"entity": "threat-actor", "relation": "indicates"},
+                {"entity": "intrusion-set", "relation": "indicates"},
+            ],
+        },
+        {
+            "from": "malware",
+            "to": [
+                {"entity": "attack-pattern", "relation": "uses"},
+                {"entity": "location", "relation": "targets"},
+                {"entity": "identity", "relation": "targets"},
+            ],
+        },
+    ]
+
+    def _create_rel(self, from_id, to_id, relation):
+        """Creates Relationship object"""
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(relation, from_id, to_id),
+            relationship_type=relation,
+            source_ref=from_id,
+            target_ref=to_id,
+            created_by_ref=self.author.id,
+        )
+
+    def create_relations(self):
+        relationships = []
+        for source_entity in self.objects:
+            entity_possible_relationships = list(
+                filter(
+                    lambda obj: obj["from"] == source_entity["type"],
+                    self.RELATIONSHIPS_MAPPER,
+                )
+            )
+            if len(entity_possible_relationships) != 0:
+                for to_entity in entity_possible_relationships[0]["to"]:
+                    target_entities = list(
+                        filter(
+                            lambda obj: obj["type"] == to_entity["entity"], self.objects
+                        )
+                    )
+                    for target_entity in target_entities:
+                        if (
+                            to_entity["entity"] != "identity"
+                            or target_entity["identity_class"] == "class"
+                        ):
+                            relationships.append(
+                                self._create_rel(
+                                    source_entity["id"],
+                                    target_entity["id"],
+                                    to_entity["relation"],
+                                )
+                            )
+        self.objects.extend(relationships)
 
     def _create_report_types(self, topics):
         """Converts Insikt Topics to STIX2 Report types"""
