@@ -17,7 +17,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, IPAddress, RFClient, StixNote
+from rflib import APP_VERSION, IPAddress, RFClient, StixNote, RiskList
 
 
 class RFNotes:
@@ -46,10 +46,12 @@ class RFNotes:
         self.rf_interval = get_config_variable(
             "RECORDED_FUTURE_INTERVAL", ["rf-notes", "interval"], config, True
         )
+        self.rf_risk_list_interval = get_config_variable(
+            "RECORDED_FUTURE_RISK_LIST_INTERVAL", ["rf-notes", "risk_list_interval"], config, True
+        )
         self.tlp = get_config_variable(
             "RECORDED_FUTURE_TLP", ["rf-notes", "TLP"], config
         )
-
         self.rf_pull_signatures = get_config_variable(
             "RECORDED_FUTURE_PULL_SIGNATURES", ["rf-notes", "pull_signatures"], config
         )
@@ -114,7 +116,8 @@ class RFNotes:
                 published = self.rf_initial_lookback
 
             try:
-                self.get_risk_list_from_fusion_file()
+                risk_list_runner = RiskList(self.helper, self.update_existing_data, self.rf_risk_list_interval)
+                risk_list_runner.start()
                 self.convert_and_send(published, tas)
             except Exception as e:
                 self.helper.log_error(str(e))
@@ -122,34 +125,10 @@ class RFNotes:
             self.helper.set_state({"last_run": timestamp})
             time.sleep(self.get_interval())
 
-    def get_risk_list_from_fusion_file(self):
-        with open("rflib/enriched_rl.csv", "r") as csv_file:
-            reader = csv.DictReader(csv_file)
-            """
-            TODO Handle other indicator cases
-            """
-            for row in reader:
-                # Convert into stix object
-                indicator = IPAddress(row["Name"], "IpAddress", None)
-                indicator.map_data(row)
-                indicator.build_bundle(indicator)
-                # Create bundle
-                bundle = indicator.to_stix_bundle()
-                self.helper.log_info(
-                    "Sending Bundle to server with "
-                    + str(len(bundle.objects))
-                    + " objects"
-                )
-
-                self.helper.send_stix2_bundle(
-                    bundle.serialize(),
-                    update=self.update_existing_data,
-                )
-
     def convert_and_send(self, published, tas):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
         self.helper.log_info(
-            f"Pull Signatures is is {str(self.rf_pull_signatures)} of type "
+            f"Pull Signatures is {str(self.rf_pull_signatures)} of type "
             f"{type(self.rf_pull_signatures)}"
         )
         self.helper.log_info(
