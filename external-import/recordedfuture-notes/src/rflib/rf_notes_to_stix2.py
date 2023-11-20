@@ -62,11 +62,13 @@ class Indicator(RFStixEntity):
 
     def __init__(self, name, type_, author):
         self.name = name
-        self.author = author
+        self.author = author or self._create_author()
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
         self.risk_score = None
+        self.related_entities = []
+        self.objects = []
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -119,36 +121,15 @@ class Indicator(RFStixEntity):
             created_by_ref=self.author.id,
         )
 
-
-class IPAddress(Indicator):
-    def __init__(self, name, _type, author):
-        self.name = name
-        self.author = self._create_author()
-        self.stix_indicator = None
-        self.stix_observable = None
-        self.stix_relationship = None
-        self.risk_score = None
-        self.related_entities = []
-        self.objects = []
-
-    """Converts IP address to IP indicator and observable"""
-
-    # TODO: add ipv6 compatibility
-    def _create_pattern(self):
-        return f"[ipv4-addr:value = '{self.name}']"
-
-    def _create_obs(self):
-        return stix2.IPv4Address(value=self.name)
-
-    def map_data(self, rf_ip):
-        self.risk_score = int(rf_ip["Risk"])
-        related_entities_exist = json.loads(rf_ip["Links"])["hits"]
+    def map_data(self, rf_indicator):
+        self.risk_score = int(rf_indicator["Risk"])
+        related_entities_exist = json.loads(rf_indicator["Links"])["hits"]
         if related_entities_exist:
             rf_related_entities = related_entities_exist[0]["sections"][0]["lists"]
 
             for element in rf_related_entities:
                 if element["type"]["name"] in ["Malware", "Hash"]:
-                    # map related ip addresses and malware
+                    # TODO which related entities to take into account
                     for rf_related_element in element["entities"]:
                         type_ = rf_related_element["type"]
                         name_ = rf_related_element["name"]
@@ -158,10 +139,12 @@ class IPAddress(Indicator):
                         stix_objs = related_element.to_stix_objects()
                         self.related_entities.extend(stix_objs)
 
-    def build_bundle(self, stix_ip):
-        """Adds self and all related entities (indicators, observables, malware, threat-actors, relationships) to objects"""
+    def build_bundle(self, stix_name):
+        """
+        Adds self and all related entities (indicators, observables, malware, threat-actors, relationships) to objects
+        """
         # Put the indicator and its observable and relationship first
-        self.objects.extend(stix_ip.to_stix_objects())
+        self.objects.extend(stix_name.to_stix_objects())
         # Then related entities
         self.objects.extend(self.related_entities)
         relationships = []
@@ -181,10 +164,6 @@ class IPAddress(Indicator):
                 )
         self.objects.extend(relationships)
 
-    def to_stix_bundle(self):
-        """Returns STIX objects as a Bundle"""
-        return stix2.Bundle(objects=self.objects, allow_custom=True)
-
     def _create_author(self):
         """Creates Recorded Future Author"""
         return stix2.Identity(
@@ -192,6 +171,31 @@ class IPAddress(Indicator):
             name="Recorded Future",
             identity_class="organization",
         )
+
+
+class IPAddress(Indicator):
+    def __init__(self, name, _type, author):
+        self.name = name
+        self.author = author
+        self.stix_indicator = None
+        self.stix_observable = None
+        self.stix_relationship = None
+        self.risk_score = None
+        self.related_entities = []
+        self.objects = []
+
+    """Converts IP address to IP indicator and observable"""
+
+    # TODO: add ipv6 compatibility
+    def _create_pattern(self):
+        return f"[ipv4-addr:value = '{self.name}']"
+
+    def _create_obs(self):
+        return stix2.IPv4Address(value=self.name)
+
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(objects=self.objects, allow_custom=True)
 
 
 class Domain(Indicator):

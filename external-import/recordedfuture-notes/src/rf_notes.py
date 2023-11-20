@@ -125,13 +125,16 @@ class RFNotes:
     def get_risk_list_from_fusion_file(self):
         with open("rflib/enriched_rl.csv", "r") as csv_file:
             reader = csv.DictReader(csv_file)
+            """
+            TODO Handle other indicator cases
+            """
             for row in reader:
                 # Convert into stix object
-                stix_ip = IPAddress(row["Name"], "IpAddress", None)
-                stix_ip.map_data(row)
-                stix_ip.build_bundle(stix_ip)
+                indicator = IPAddress(row["Name"], "IpAddress", None)
+                indicator.map_data(row)
+                indicator.build_bundle(indicator)
                 # Create bundle
-                bundle = stix_ip.to_stix_bundle()
+                bundle = indicator.to_stix_bundle()
                 self.helper.log_info(
                     "Sending Bundle to server with "
                     + str(len(bundle.objects))
