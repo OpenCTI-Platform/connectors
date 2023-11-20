@@ -115,7 +115,6 @@ class RFNotes:
 
             try:
                 self.get_risk_list_from_fusion_file()
-                # self.get_risk_list()
                 self.convert_and_send(published, tas)
             except Exception as e:
                 self.helper.log_error(str(e))
@@ -143,7 +142,6 @@ class RFNotes:
                     bundle.serialize(),
                     update=self.update_existing_data,
                 )
-        print("End!")
 
     def convert_and_send(self, published, tas):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""

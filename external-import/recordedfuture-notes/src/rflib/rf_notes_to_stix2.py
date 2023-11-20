@@ -141,7 +141,7 @@ class IPAddress(Indicator):
         return stix2.IPv4Address(value=self.name)
 
     def map_data(self, rf_ip):
-        self.risk_score = rf_ip["Risk"]
+        self.risk_score = int(rf_ip["Risk"])
         related_entities_exist = json.loads(rf_ip["Links"])["hits"]
         if related_entities_exist:
             rf_related_entities = related_entities_exist[0]["sections"][0]["lists"]
