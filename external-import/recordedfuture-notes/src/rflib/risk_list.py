@@ -1,5 +1,6 @@
 import csv
 import time
+import datetime
 from rflib import IPAddress
 import threading
 
@@ -12,9 +13,13 @@ class RiskList(threading.Thread):
         self.interval = interval
 
     def run(self):
-        # TODO call API
         while True:
+            # TODO call API
             timestamp = int(time.time())
+            now = datetime.utcfromtimestamp(timestamp)
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, "Recorded Future Risk List run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            )
             self.helper.log_info("Pulling risk lists")
             with open("rflib/enriched_rl.csv", "r") as csv_file:
                 reader = csv.DictReader(csv_file)
@@ -31,10 +36,11 @@ class RiskList(threading.Thread):
                         + str(len(bundle.objects))
                         + " objects"
                     )
-
                     self.helper.send_stix2_bundle(
                         bundle.serialize(),
                         update=self.update_existing_data,
+                        work_id=work_id
                     )
+                    # TODO test work list update after each bundle sent
             self.helper.set_state({"last_risk_list_run": timestamp})
-            time.sleep(10)
+            time.sleep(self.interval * 3600)

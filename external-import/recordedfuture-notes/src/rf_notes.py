@@ -55,6 +55,9 @@ class RFNotes:
         self.rf_pull_signatures = get_config_variable(
             "RECORDED_FUTURE_PULL_SIGNATURES", ["rf-notes", "pull_signatures"], config
         )
+        self.rf_pull_risk_list = get_config_variable(
+            "RECORDED_FUTURE_PULL_RISK_LIST", ["rf-notes", "pull_risk_list"], config
+        )
         self.rf_insikt_only = get_config_variable(
             "RECORDED_FUTURE_INSIKT_ONLY", ["rf-notes", "insikt_only"], config
         )
@@ -116,8 +119,11 @@ class RFNotes:
                 published = self.rf_initial_lookback
 
             try:
-                risk_list_runner = RiskList(self.helper, self.update_existing_data, self.rf_risk_list_interval)
-                risk_list_runner.start()
+                if self.rf_pull_risk_list:
+                    risk_list_runner = RiskList(self.helper, self.update_existing_data, self.rf_risk_list_interval)
+                    risk_list_runner.start()
+                else:
+                    self.helper.log_info("Risk list fetching disabled")
                 self.convert_and_send(published, tas)
             except Exception as e:
                 self.helper.log_error(str(e))
