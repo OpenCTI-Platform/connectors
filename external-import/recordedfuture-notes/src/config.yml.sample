@@ -17,6 +17,7 @@ rf-notes:
   interval: 24 # Required, in hours
   risk_list_interval: 6 # Required, in hours
   TLP: white
+  pull_risk_list: False
   pull_signatures: False #Pull Yara/Snort/Sigma rules into OpenCTI. optional
   insikt_only: True #optional
   topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' #optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
