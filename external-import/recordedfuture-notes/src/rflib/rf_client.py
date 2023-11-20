@@ -9,6 +9,7 @@
 ################################################################################
 """
 import json
+from urllib import parse
 
 import requests
 import requests.exceptions
@@ -118,3 +119,19 @@ class RFClient:
         for entity in json.loads(res):
             ret.add(entity["entity"])
         return ret
+
+    def get_risk_score(self, type: str, value: str) -> int:
+        """Gets risk score for an indicator
+        Args:
+            * type: indicator type
+            * value: indicator value
+        Returns:
+            The risk score as an int
+        """
+        indicator_params = {"fields": "risk"}
+        value_indicator = value if type != "url" else parse.quote(value, safe="")
+        res = self.session.get(
+            CONNECT_BASE + "/" + type + "/" + value_indicator, params=indicator_params
+        )
+        res.raise_for_status()
+        return res.json()["data"]["risk"]["score"]
