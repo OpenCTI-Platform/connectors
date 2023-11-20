@@ -22,3 +22,4 @@ from .rf_notes_to_stix2 import (
     Malware,
     StixNote,
 )
+from .risk_list import RiskList

@@ -163,7 +163,6 @@ class Indicator(RFStixEntity):
                     )
                 )
         self.objects.extend(relationships)
-
     def _create_author(self):
         """Creates Recorded Future Author"""
         return stix2.Identity(
@@ -174,9 +173,9 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type, author):
+    def __init__(self, name, _type):
         self.name = name
-        self.author = author
+        self.author = super()._create_author()
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
