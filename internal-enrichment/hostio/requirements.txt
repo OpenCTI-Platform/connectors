@@ -2,3 +2,4 @@ pycti==5.11.14
 pycountry==22.3.5
 requests
 validators
+ipinfo

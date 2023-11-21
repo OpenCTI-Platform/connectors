@@ -1,6 +1,6 @@
 from os import environ
 
-from hostio import HostIOIPtoDomainStixTransform, HostIOIPtoDomain, HostIODomain, HostIODomainStixTransformation
+from hostio import HostIOIPtoDomainStixTransform, HostIOIPtoDomain, HostIODomain, HostIODomainStixTransformation, IPInfoStixTransformation, IPInfo
 from hostio.hostio_utils import (
     can_be_int,
     is_valid_token,
@@ -64,6 +64,9 @@ class HostIOConnector(InternalEnrichmentConnector):
         ip = opencti_entity.get("value")
         if ip is None:
             raise ValueError("IPv4-Addr does not have a value attribute")
+        source_name='IPinfo'
+        url=f'https://ipinfo.io/{ip}'
+
         self.helper.log_info(f"IPv4-Addr value: {ip}")
         hostio = HostIOIPtoDomain(
             token=self.hostio_token, ip=ip, limit=self.hostio_limit
@@ -78,10 +81,64 @@ class HostIOConnector(InternalEnrichmentConnector):
                         marking_refs=self.hostio_marking_refs
                     ).get_stix_objects()
                 )
+        ipinfo = IPInfo(token=self.hostio_token, ip=ip)
+        if len(ipinfo.get_details()) > 0:
+            ipinfo_stix = IPInfoStixTransformation(
+                ipinfo_object=ipinfo.get_details(),
+                entity_id=entity_id,
+                marking_refs=self.hostio_marking_refs
+                )
+            stix_objects.extend(
+                ipinfo_stix.get_stix_objects()
+            )
+            # update labels for the IP
+            if hasattr(opencti_entity, "labels"):
+                existing_labels = opencti_entity.get("labels")
+            else:
+                existing_labels = []
+            existing_labels.extend(ipinfo_stix.labels)
+            existing_labels.extend(format_labels(self.hostio_labels))
+            self.helper.log_info(f"Updating labels for {entity_id}")
+            self.helper.api.stix_cyber_observable.update_field(
+                id=entity_id,
+                input={
+                    "key": "labels",
+                    "value": format_labels(existing_labels),
+                },
+            )
+            # Update Indicator Description with results from IPInfo.
+            note_description = ''
+            for key in ipinfo.get_details().keys():
+                if ipinfo.get_details().get(key) is not None:
+                    message = f"IPInfo `{key}`:"
+                    if isinstance(ipinfo.get_details().get(key), (dict, list)):
+                        message += f"\n\n```\n{object_to_pretty_json(ipinfo.get_details().get(key))}\n```"
+                    elif isinstance(ipinfo.get_details().get(key), (str, int, float, bool)):
+                        message += f"\t```{ipinfo.get_details().get(key)}```"
+                    note_description += f"\n\n{message}"
+            # Update Indicator Description with results from IPInfo.
+            if len(note_description) > 0:
+                stix_objects.append(
+                    Note(
+                        type="note",
+                        abstract=f"IPInfo enrichment content for {ip}",
+                        content=note_description,
+                        object_refs=[entity_id],
+                        labels=format_labels(self.hostio_labels),
+                        object_marking_refs=[get_tlp_marking(self.hostio_marking_refs)],
+                        external_references=[
+                            {
+                                "source_name": source_name,
+                                "url": url,
+                            }
+                        ],
+                    )
+                )
+                
         # Add External Reference for the IP
         self._add_external_reference(
-            source_name='IPinfo',
-            url=f'https://ipinfo.io/{ip}',
+            source_name=source_name,
+            url=url,
             entity_id=entity_id
             )
 
