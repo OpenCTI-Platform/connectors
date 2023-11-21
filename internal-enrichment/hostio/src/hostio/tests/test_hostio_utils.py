@@ -9,6 +9,7 @@ from hostio.hostio_utils import (
     is_ipv6,
     is_valid_token,
     validate_tlp_marking,
+    extract_asn_number,
 )
 
 VALID_IPV4 = "10.0.0.1"
@@ -157,3 +158,15 @@ def test_validate_labels_invalid():
         format_labels({})
     with pytest.raises(ValueError):
         format_labels(None)
+
+def test_extract_asn_number():
+    """Test extract_asn_number() function."""
+    VALID_ASN='AS15169'
+    assert extract_asn_number(VALID_ASN) == 15169
+    VALID_ASN_2 = 'ASN15169'
+    assert extract_asn_number(VALID_ASN_2) == 15169
+
+def test_extract_asn_number_invalid():
+    """Test extract_asn_number() function with invalid input."""
+    for invalid in INVALID_INPUT:
+        assert extract_asn_number(invalid) is None

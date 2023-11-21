@@ -1,13 +1,17 @@
 from os import environ
 
-from hostio import HostIOIPtoDomainStixTransform, HostIOIPtoDomain
+from hostio import HostIOIPtoDomainStixTransform, HostIOIPtoDomain, HostIODomain, HostIODomainStixTransformation
 from hostio.hostio_utils import (
     can_be_int,
     is_valid_token,
     validate_labels,
     validate_tlp_marking,
+    object_to_pretty_json,
+    format_labels,
+    get_tlp_marking,
 )
 from lib.internal_enrichment import InternalEnrichmentConnector
+from stix2 import Note
 
 
 class HostIOConnector(InternalEnrichmentConnector):
@@ -43,6 +47,16 @@ class HostIOConnector(InternalEnrichmentConnector):
             msg = "Error when grabbing HOSTIO_MARKING_REFS environment variable. It SHOULD be a valid TLP marking."
             self.helper.log_error(msg)
             raise ValueError(msg)
+        
+    def _add_external_reference(self, source_name, url, entity_id):
+        self.helper.log_info(f"Adding external reference to {entity_id} with source_name: {source_name} and url: {url}")
+        external_reference = self.helper.api.external_reference.create(
+                source_name=source_name,
+                url=url,
+            )
+        self.helper.api.stix_cyber_observable.add_external_reference(
+            id=entity_id, external_reference_id=external_reference.get("id")
+        )
 
     def _process_ipv4_addr(self, stix_objects, entity_id, opencti_entity):
         """Processing the enrichment request for an IPv4-Addr"""
@@ -59,10 +73,79 @@ class HostIOConnector(InternalEnrichmentConnector):
             for domain in hostio.domains:
                 stix_objects.extend(
                     HostIOIPtoDomainStixTransform(
-                        domain=domain, entity_id=entity_id
-                    ).get_stix_objects(),
-                    marking_refs=self.hostio_marking_refs,
+                        domain=domain,
+                        entity_id=entity_id,
+                        marking_refs=self.hostio_marking_refs
+                    ).get_stix_objects()
                 )
+        # Add External Reference for the IP
+        self._add_external_reference(
+            source_name='IPinfo',
+            url=f'https://ipinfo.io/{ip}',
+            entity_id=entity_id
+            )
+
+    def _process_domain_name(self, stix_objects, entity_id, opencti_entity):
+        """Processing the enrichment request for a Domain-Name"""
+        domain = opencti_entity.get("value")
+        if domain is None:
+            raise ValueError("Domain-Name does not have a value attribute")
+        self.helper.log_info(f"Domain-Name value: {domain}")
+
+        source_name = 'Host IO Domain'
+        url=f'https://host.io/{domain}'
+        
+        self.helper.log_info(f"Processing Domain-Name with ID: {entity_id}")        
+        # Get Host IO Domain
+        domain_object = HostIODomain(
+            token=self.hostio_token,
+            domain=domain
+        )
+        stix_objects.extend(
+            HostIODomainStixTransformation(
+                domain_object=domain_object,
+                entity_id=entity_id,
+                marking_refs=self.hostio_marking_refs
+            ).get_stix_objects()
+        )
+        # Add External Reference
+        self.helper.log_info(f"Adding external reference to {entity_id}")
+        self._add_external_reference(
+            source_name=source_name,
+            url=url,
+            entity_id=entity_id
+            )
+        # Update Indicator Description with results from Host IO.
+        self.helper.log_info(f"Updating Indicator Description for {entity_id}")
+        if hasattr(opencti_entity, "x_opencti_description") and isinstance(opencti_entity.get("x_opencti_description"), str):
+            x_opencti_description = f'{opencti_entity.get("x_opencti_description")}'
+        else:
+            x_opencti_description = ""
+        if domain_object.dns:
+            x_opencti_description += f"\n\nHost IO DNS:\n\n```\n\n{object_to_pretty_json(domain_object.dns)}\n\n```"
+        if domain_object.ipinfo:
+            x_opencti_description += f"\n\nHost IO IPInfo:\n\n```\n\n{object_to_pretty_json(domain_object.ipinfo)}\n\n```"
+        if domain_object.web:
+            x_opencti_description += f"\n\nHost IO Web:\n\n```\n\n{object_to_pretty_json(domain_object.web)}\n\n```"
+        if domain_object.related:
+            x_opencti_description += f"\n\nHost IO Related:\n\n```\n\n{object_to_pretty_json(domain_object.related)}\n\n```"
+        stix_objects.append(
+            Note(
+                type="note",
+                abstract=f"Host IO enrichment content for {domain}",
+                content=x_opencti_description,
+                object_refs=[entity_id],
+                labels=format_labels(self.hostio_labels),
+                object_marking_refs=[get_tlp_marking(self.hostio_marking_refs)],
+                external_references=[
+                    {
+                        "source_name": source_name,
+                        "url": url,
+                    }
+                ],
+            )
+        )
+
 
     def _process_message(self, data):
         """Processing the enrichment request."""
@@ -102,7 +185,9 @@ class HostIOConnector(InternalEnrichmentConnector):
             )
         elif entity_type == "Domain-Name":
             self.helper.log_info(f"Observable is a Domain-Name: {opencti_entity}")
-            # self._process_domain_name(entity_id, opencti_entity)
+            self._process_domain_name(
+                stix_objects=stix_objects, entity_id=entity_id, opencti_entity=opencti_entity
+            )
         else:
             self.helper.log_warn(
                 f"Observable is not a supported type ({entity_type}):\n{opencti_entity}"

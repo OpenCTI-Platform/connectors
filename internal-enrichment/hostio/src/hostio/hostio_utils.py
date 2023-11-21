@@ -5,7 +5,8 @@ from ipaddress import (
     IPv6Address,
     IPv6Network,
 )
-
+import re
+import json
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 TLP_MAP = {
@@ -119,3 +120,22 @@ def can_be_int(string):
     except Exception:
         return False
     return False
+
+def extract_asn_number(asn_string):
+    """
+    Extracts the ASN number from a string using regex.
+    For example, if the input is 'AS15169', it will return '15169'.
+    """
+    try:
+        if not isinstance(asn_string, str):
+            return None
+        match = re.search(r'(\d+)$', asn_string)
+        if match:
+            return int(match.group(1))  # Returns only the number part
+        return None  # Return None if no match is found
+    except:
+        return None
+    
+def object_to_pretty_json(obj):
+    """Return a pretty JSON string from a Python object."""
+    return json.dumps(obj, sort_keys=True, indent=4, separators=(",", ": "))

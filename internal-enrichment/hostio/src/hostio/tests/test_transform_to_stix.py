@@ -2,7 +2,7 @@ import pytest
 from stix2 import TLP_GREEN, TLP_WHITE, DomainName, IPv4Address
 from stix2.exceptions import InvalidValueError
 
-from hostio.transform_to_stix import HostIOIPtoDomainStixTransform
+from hostio.transform_to_stix import HostIOIPtoDomainStixTransform, HostIODomainStixTransformation
 
 VALID_DOMAIN = "example.com"
 VALID_IP = "8.8.8.8"
@@ -16,8 +16,8 @@ def test_hostio_domain_stix_transform():
     )
     assert hostio_domain_stix_transform.domain == VALID_DOMAIN
     assert hostio_domain_stix_transform.marking_refs == [TLP_WHITE]
-    assert hostio_domain_stix_transform.entity_id == [VALID_IP_STIX.get("id")]
-    assert len(hostio_domain_stix_transform.stix_objects) == 1
+    assert hostio_domain_stix_transform.entity_id == VALID_IP_STIX.get("id")
+    assert len(hostio_domain_stix_transform.stix_objects) == 2
     assert hostio_domain_stix_transform.stix_objects[0].type == "domain-name"
     assert hostio_domain_stix_transform.stix_objects[0].value == VALID_DOMAIN
     assert hostio_domain_stix_transform.stix_objects[0].resolves_to_refs == [
@@ -35,8 +35,8 @@ def test_hostio_domain_stix_transform_marking_refs():
     )
     assert hostio_domain_stix_transform.domain == VALID_DOMAIN
     assert hostio_domain_stix_transform.marking_refs == [TLP_GREEN]
-    assert hostio_domain_stix_transform.entity_id == [VALID_IP_STIX.get("id")]
-    assert len(hostio_domain_stix_transform.stix_objects) == 1
+    assert hostio_domain_stix_transform.entity_id == VALID_IP_STIX.get("id")
+    assert len(hostio_domain_stix_transform.stix_objects) == 2
     assert isinstance(hostio_domain_stix_transform.stix_objects[0], DomainName)
     assert hostio_domain_stix_transform.stix_objects[0].type == "domain-name"
     assert hostio_domain_stix_transform.stix_objects[0].value == VALID_DOMAIN
@@ -71,3 +71,4 @@ def test_hostio_domain_stix_transform_invalid_entity_id():
     with pytest.raises(InvalidValueError):
         HostIOIPtoDomainStixTransform(domain=VALID_DOMAIN, entity_id="invalid")
         assert False
+
