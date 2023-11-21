@@ -163,6 +163,7 @@ class Indicator(RFStixEntity):
                     )
                 )
         self.objects.extend(relationships)
+
     def _create_author(self):
         """Creates Recorded Future Author"""
         return stix2.Identity(
@@ -734,7 +735,9 @@ class StixNote:
             name = topic["name"]
             if name not in self.report_type_mapper:
                 self.helper.log_warning(
-                    "[ANALYST NOTES] Could not map a report type for type {}".format(name)
+                    "[ANALYST NOTES] Could not map a report type for type {}".format(
+                        name
+                    )
                 )
                 continue
             ret.add(self.report_type_mapper[name])

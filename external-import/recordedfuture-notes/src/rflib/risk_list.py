@@ -1,8 +1,9 @@
 import csv
+import threading
 import time
 from datetime import datetime
+
 from rflib import IPAddress
-import threading
 
 
 class RiskList(threading.Thread):
@@ -18,7 +19,8 @@ class RiskList(threading.Thread):
             timestamp = int(time.time())
             now = datetime.utcfromtimestamp(timestamp)
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "Recorded Future Risk List run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                self.helper.connect_id,
+                "Recorded Future Risk List run @ " + now.strftime("%Y-%m-%d %H:%M:%S"),
             )
             self.helper.log_info("[RISK LISTS] Pulling risk lists")
             with open("rflib/enriched_rl.csv", "r") as csv_file:
@@ -39,7 +41,7 @@ class RiskList(threading.Thread):
                     self.helper.send_stix2_bundle(
                         bundle.serialize(),
                         update=self.update_existing_data,
-                        work_id=work_id
+                        work_id=work_id,
                     )
                     # TODO test work list update after each bundle sent
             self.helper.set_state({"last_risk_list_run": timestamp})
