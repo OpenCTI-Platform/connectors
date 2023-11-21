@@ -130,15 +130,6 @@ class RFNotes:
                 published = self.rf_initial_lookback
 
             try:
-                if self.rf_pull_risk_list:
-                    risk_list_runner = RiskList(
-                        self.helper,
-                        self.update_existing_data,
-                        self.rf_risk_list_interval,
-                    )
-                    risk_list_runner.start()
-                else:
-                    self.helper.log_info("[RISK LISTS] Risk list fetching disabled")
                 self.convert_and_send(published, tas, work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
@@ -199,6 +190,11 @@ class RFNotes:
 if __name__ == "__main__":
     try:
         RF = RFNotes()
+        if RF.rf_pull_risk_list:
+            RiskList = RiskList(RF.helper, RF.update_existing_data, RF.rf_risk_list_interval)
+            RiskList.start()
+        else:
+            RF.helper.log_info("[RISK LISTS] Risk list fetching disabled")
         RF.run()
     except Exception:
         traceback.print_exc()

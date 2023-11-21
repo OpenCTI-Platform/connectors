@@ -43,6 +43,5 @@ class RiskList(threading.Thread):
                         update=self.update_existing_data,
                         work_id=work_id,
                     )
-                    # TODO test work list update after each bundle sent
             self.helper.set_state({"last_risk_list_run": timestamp})
             time.sleep(self.interval * 3600)
