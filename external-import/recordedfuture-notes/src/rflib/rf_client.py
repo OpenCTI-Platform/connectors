@@ -67,7 +67,7 @@ class RFClient:
         notes = []
         for note in res.json()["data"]["results"]:
             attributes = note["attributes"]
-            msg = f'Processing note "{attributes["title"]}"'
+            msg = f'[ANALYST NOTES] Processing note "{attributes["title"]}"'
             self.helper.log_info(msg)
             if pull_signatures and "attachment" in attributes:
                 try:
@@ -76,13 +76,13 @@ class RFClient:
                     attributes["attachment_type"] = result["type"]
                 except requests.exceptions.HTTPError as err:
                     if "403" in str(err):
-                        msg = "Your API token does not have permission to pull Detection Rules"
+                        msg = "[ANALYST NOTES] Your API token does not have permission to pull Detection Rules"
                         self.helper.log_error(msg)
                     else:
                         raise err
                 except (KeyError, IndexError):
                     self.helper.log_error(
-                        "Problem with API response for detection"
+                        "[ANALYST NOTES] Problem with API response for detection"
                         "rule for note {}. Rule will not be added".format(note["id"])
                     )
             notes.append(note)
