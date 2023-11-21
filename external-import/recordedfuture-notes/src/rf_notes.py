@@ -138,7 +138,7 @@ class RFNotes:
                     )
                     risk_list_runner.start()
                 else:
-                    self.helper.log_info("Risk list fetching disabled")
+                    self.helper.log_info("[RISK LISTS] Risk list fetching disabled")
                 self.convert_and_send(published, tas, work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
