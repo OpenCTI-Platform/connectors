@@ -17,7 +17,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, IPAddress, RFClient, StixNote, RiskList
+from rflib import APP_VERSION, IPAddress, RFClient, RiskList, StixNote
 
 
 class RFNotes:
@@ -47,7 +47,10 @@ class RFNotes:
             "RECORDED_FUTURE_INTERVAL", ["rf-notes", "interval"], config, True
         )
         self.rf_risk_list_interval = get_config_variable(
-            "RECORDED_FUTURE_RISK_LIST_INTERVAL", ["rf-notes", "risk_list_interval"], config, True
+            "RECORDED_FUTURE_RISK_LIST_INTERVAL",
+            ["rf-notes", "risk_list_interval"],
+            config,
+            True,
         )
         self.tlp = get_config_variable(
             "RECORDED_FUTURE_TLP", ["rf-notes", "TLP"], config
@@ -103,7 +106,9 @@ class RFNotes:
             timestamp = int(time.time())
             now = datetime.utcfromtimestamp(timestamp)
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "Recorded Future Analyst Notes run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                self.helper.connect_id,
+                "Recorded Future Analyst Notes run @ "
+                + now.strftime("%Y-%m-%d %H:%M:%S"),
             )
             self.helper.log_info("[ANALYST NOTES] Pulling analyst notes")
 
@@ -126,7 +131,11 @@ class RFNotes:
 
             try:
                 if self.rf_pull_risk_list:
-                    risk_list_runner = RiskList(self.helper, self.update_existing_data, self.rf_risk_list_interval)
+                    risk_list_runner = RiskList(
+                        self.helper,
+                        self.update_existing_data,
+                        self.rf_risk_list_interval,
+                    )
                     risk_list_runner.start()
                 else:
                     self.helper.log_info("Risk list fetching disabled")
@@ -160,7 +169,9 @@ class RFNotes:
                     notes.append(new_note)
                     notes_ids.append(new_note["id"])
 
-        self.helper.log_info(f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API")
+        self.helper.log_info(
+            f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API"
+        )
         for note in notes:
             stixnote = StixNote(
                 self.helper,
@@ -176,12 +187,12 @@ class RFNotes:
             stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
-                "[ANALYST NOTES] Sending Bundle to server with " + str(len(bundle.objects)) + " objects"
+                "[ANALYST NOTES] Sending Bundle to server with "
+                + str(len(bundle.objects))
+                + " objects"
             )
             self.helper.send_stix2_bundle(
-                bundle.serialize(),
-                update=self.update_existing_data,
-                work_id=work_id
+                bundle.serialize(), update=self.update_existing_data, work_id=work_id
             )
 
 
