@@ -1,6 +1,6 @@
 import csv
 import time
-import datetime
+from datetime import datetime
 from rflib import IPAddress
 import threading
 
@@ -20,7 +20,7 @@ class RiskList(threading.Thread):
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, "Recorded Future Risk List run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
             )
-            self.helper.log_info("Pulling risk lists")
+            self.helper.log_info("[RISK LISTS] Pulling risk lists")
             with open("rflib/enriched_rl.csv", "r") as csv_file:
                 reader = csv.DictReader(csv_file)
                 # TODO Handle other indicator cases
@@ -32,7 +32,7 @@ class RiskList(threading.Thread):
                     # Create bundle
                     bundle = ip_address.to_stix_bundle()
                     self.helper.log_info(
-                        "Sending Bundle to server with "
+                        "[RISK LISTS] Sending Bundle to server with "
                         + str(len(bundle.objects))
                         + " objects"
                     )

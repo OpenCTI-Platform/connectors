@@ -101,6 +101,12 @@ class RFNotes:
         """Run connector on a schedule"""
         while True:
             timestamp = int(time.time())
+            now = datetime.utcfromtimestamp(timestamp)
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, "Recorded Future Analyst Notes run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            )
+            self.helper.log_info("[ANALYST NOTES] Pulling analyst notes")
+
             current_state = self.helper.get_state()
             tas = self.rfapi.get_threat_actors()
             if current_state is not None and "last_run" in current_state:
@@ -124,24 +130,24 @@ class RFNotes:
                     risk_list_runner.start()
                 else:
                     self.helper.log_info("Risk list fetching disabled")
-                self.convert_and_send(published, tas)
+                self.convert_and_send(published, tas, work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
 
             self.helper.set_state({"last_run": timestamp})
             time.sleep(self.get_interval())
 
-    def convert_and_send(self, published, tas):
+    def convert_and_send(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
         self.helper.log_info(
-            f"Pull Signatures is {str(self.rf_pull_signatures)} of type "
+            f"[ANALYST NOTES] Pull Signatures is {str(self.rf_pull_signatures)} of type "
             f"{type(self.rf_pull_signatures)}"
         )
         self.helper.log_info(
-            f"Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
+            f"[ANALYST NOTES] Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
         )
         self.helper.log_info(
-            f"Topics are {str(self.rf_topics)} of type {type(self.rf_topics)}"
+            f"[ANALYST NOTES] Topics are {str(self.rf_topics)} of type {type(self.rf_topics)}"
         )
         notes = []
         notes_ids = []
@@ -154,7 +160,7 @@ class RFNotes:
                     notes.append(new_note)
                     notes_ids.append(new_note["id"])
 
-        self.helper.log_info(f"fetched {len(notes)} Analyst notes from API")
+        self.helper.log_info(f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API")
         for note in notes:
             stixnote = StixNote(
                 self.helper,
@@ -170,11 +176,12 @@ class RFNotes:
             stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
-                "Sending Bundle to server with " + str(len(bundle.objects)) + " objects"
+                "[ANALYST NOTES] Sending Bundle to server with " + str(len(bundle.objects)) + " objects"
             )
             self.helper.send_stix2_bundle(
                 bundle.serialize(),
                 update=self.update_existing_data,
+                work_id=work_id
             )
 
 

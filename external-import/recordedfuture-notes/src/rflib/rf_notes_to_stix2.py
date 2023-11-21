@@ -173,9 +173,9 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type):
+    def __init__(self, name, _type, author=None):
         self.name = name
-        self.author = super()._create_author()
+        self.author = author or super()._create_author()
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
@@ -235,7 +235,7 @@ class FileHash(Indicator):
         elif len(self.name) == 32:
             return "MD5"
         msg = (
-            f"Could not determine hash type for {self.name}. Only MD5, SHA1"
+            f"[ANALYST NOTES] Could not determine hash type for {self.name}. Only MD5, SHA1"
             " and SHA256 hashes are supported"
         )
         raise ConversionError(msg)
@@ -370,7 +370,7 @@ class DetectionRule(RFStixEntity):
         self.author = author
 
         if self.type not in ("yara", "snort", "sigma"):
-            msg = f"Detection rule of type {self.type} is not supported"
+            msg = f"[ANALYST NOTES] Detection rule of type {self.type} is not supported"
             raise ConversionError(msg)
 
     def create_stix_objects(self):
@@ -645,7 +645,7 @@ class StixNote:
                 self.external_references.append(external_reference)
                 continue
             elif type_ not in ENTITY_TYPE_MAPPER:
-                msg = f"Cannot convert entity {name} to STIX2 because it is of type {type_}"
+                msg = f"[ANALYST NOTES] Cannot convert entity {name} to STIX2 because it is of type {type_}"
                 self.helper.log_warning(msg)
                 continue
             else:
@@ -664,7 +664,7 @@ class StixNote:
                         )
                         if risk_score < self.risk_threshold:
                             self.helper.log_info(
-                                f"Ignoring entity {name} as its risk score is lower than the defined risk threshold"
+                                f"[ANALYST NOTES] Ignoring entity {name} as its risk score is lower than the defined risk threshold"
                             )
                             continue
                     if self.risk_as_score:
@@ -734,7 +734,7 @@ class StixNote:
             name = topic["name"]
             if name not in self.report_type_mapper:
                 self.helper.log_warning(
-                    "Could not map a report type for type {}".format(name)
+                    "[ANALYST NOTES] Could not map a report type for type {}".format(name)
                 )
                 continue
             ret.add(self.report_type_mapper[name])
