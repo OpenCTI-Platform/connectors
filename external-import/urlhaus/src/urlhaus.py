@@ -234,7 +234,12 @@ class URLhaus:
                                                 ],
                                                 filters={
                                                     "mode": "and",
-                                                    "filters": [{"key": "name", "values": [label]}],
+                                                    "filters": [
+                                                        {
+                                                            "key": "name",
+                                                            "values": [label],
+                                                        }
+                                                    ],
                                                     "filterGroups": [],
                                                 },
                                                 customAttributes=custom_attributes,
