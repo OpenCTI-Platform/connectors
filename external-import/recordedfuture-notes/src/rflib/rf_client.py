@@ -9,6 +9,7 @@
 ################################################################################
 """
 import json
+import io
 from urllib import parse
 
 import requests
@@ -141,6 +142,17 @@ class RFClient:
         for entity in json.loads(res):
             ret.add(entity["entity"])
         return ret
+
+    def get_risk_list_ip_addresses(self) -> set:
+        res = self.get_fusion_file("/public/opencti/default_ip.csv")
+        reader = io.StringIO(res)
+
+
+        # ret = set()
+        # for entity in json.loads(res):
+        #     ret.add(entity["entity"])
+        return reader
+
 
     def get_risk_score(self, type: str, value: str) -> int:
         """Gets risk score for an indicator
