@@ -191,9 +191,7 @@ if __name__ == "__main__":
     try:
         RF = RFNotes()
         if RF.rf_pull_risk_list:
-            RiskList = RiskList(
-                RF.helper, RF.update_existing_data, RF.rf_risk_list_interval
-            )
+            RiskList = RiskList(RF.helper, RF.update_existing_data, RF.rf_risk_list_interval)
             RiskList.start()
         else:
             RF.helper.log_info("[RISK LISTS] Risk list fetching disabled")
