@@ -76,8 +76,8 @@ class ThreatFox:
             type="Organization",
             name="Threat Fox | Abuse.ch",
             description="abuse.ch is operated by a random swiss guy fighting malware for non-profit, running a couple "
-                        "of projects helping internet service providers and network operators protecting their "
-                        "infrastructure from malware.",
+            "of projects helping internet service providers and network operators protecting their "
+            "infrastructure from malware.",
         )
 
     def get_interval(self, offset=0):
@@ -106,7 +106,7 @@ class ThreatFox:
                     self.helper.log_info("Connector has never run")
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
-                        (timestamp - last_run) > self.get_interval(offset=-1)
+                    (timestamp - last_run) > self.get_interval(offset=-1)
                 ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.datetime.utcfromtimestamp(timestamp)
@@ -129,15 +129,15 @@ class ThreatFox:
                             with zip_ref.open("full.csv") as full_file:
                                 csv_data = full_file.read()
                         with open(
-                                os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
-                                "wb",
+                            os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
+                            "wb",
                         ) as file:
                             file.write(csv_data)
                         fp = open(
                             os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
                             "r",
                             encoding="utf-8",
-                            )
+                        )
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
                         # the csv-file has the following columns:
@@ -145,8 +145,8 @@ class ThreatFox:
                         # malware_printable, last_seen_utc, reference, tags, anonymous, reporter
 
                         if (
-                                current_state is not None
-                                and "last_processed_entry" in current_state
+                            current_state is not None
+                            and "last_processed_entry" in current_state
                         ):
                             last_processed_entry = current_state[
                                 "last_processed_entry"
@@ -197,15 +197,15 @@ class ThreatFox:
 
                             if ioc_type == "ip:port":
                                 pattern_value = (
-                                        "[ipv4-addr:value = '"
-                                        + ioc_value.split(":")[0]
-                                        + "']"
+                                    "[ipv4-addr:value = '"
+                                    + ioc_value.split(":")[0]
+                                    + "']"
                                 )
                                 indicator_type = "ipv4"
                                 observable_type = "IPv4-Addr"
                             elif ioc_type == "domain":
                                 pattern_value = (
-                                        "[domain-name:value = '" + ioc_value + "']"
+                                    "[domain-name:value = '" + ioc_value + "']"
                                 )
                                 indicator_type = "domain"
                                 observable_type = "Domain-Name"
@@ -215,19 +215,19 @@ class ThreatFox:
                                 observable_type = "Url"
                             elif ioc_type == "md5_hash":
                                 pattern_value = (
-                                        "[file:hashes.MD5 = '" + ioc_value + "']"
+                                    "[file:hashes.MD5 = '" + ioc_value + "']"
                                 )
                                 indicator_type = "md5"
                                 observable_type = "StixFile"
                             elif ioc_type == "sha1_hash":
                                 pattern_value = (
-                                        "[file:hashes.SHA1 = '" + ioc_value + "']"
+                                    "[file:hashes.SHA1 = '" + ioc_value + "']"
                                 )
                                 indicator_type = "sha1"
                                 observable_type = "StixFile"
                             elif ioc_type == "sha256_hash":
                                 pattern_value = (
-                                        "[file:hashes.'SHA-256' = '" + ioc_value + "']"
+                                    "[file:hashes.'SHA-256' = '" + ioc_value + "']"
                                 )
                                 indicator_type = "sha256"
                                 observable_type = "StixFile"
@@ -316,9 +316,9 @@ class ThreatFox:
                                 created_by_ref=self.identity["standard_id"],
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 description="Threat: "
-                                            + row[5].replace('"', "")
-                                            + " - Reporter: "
-                                            + row[13].replace('"', ""),
+                                + row[5].replace('"', "")
+                                + " - Reporter: "
+                                + row[13].replace('"', ""),
                                 is_family="false",
                                 labels=[
                                     row[i].replace('"', "")
@@ -363,7 +363,7 @@ class ThreatFox:
                         )
                         print(bundle)
                         if os.path.exists(
-                                os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
+                            os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
                         ):
                             os.remove(
                                 os.path.dirname(os.path.abspath(__file__)) + "/data.csv"
