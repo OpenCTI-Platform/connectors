@@ -8,12 +8,13 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
-import json
 import io
+import json
 from urllib import parse
 
 import requests
 import requests.exceptions
+from constants import RiskListPath
 
 API_BASE = "https://api.recordedfuture.com"
 CONNECT_BASE = API_BASE + "/v2"
@@ -143,16 +144,12 @@ class RFClient:
             ret.add(entity["entity"])
         return ret
 
-    def get_risk_list_ip_addresses(self) -> set:
-        res = self.get_fusion_file("/public/opencti/default_ip.csv")
+    def get_risk_list_CSV(self, type: RiskListPath):
+        res = self.get_fusion_file(type)
         reader = io.StringIO(res)
 
-
-        # ret = set()
-        # for entity in json.loads(res):
-        #     ret.add(entity["entity"])
+        # TODO Maybe change the returned format
         return reader
-
 
     def get_risk_score(self, type: str, value: str) -> int:
         """Gets risk score for an indicator
