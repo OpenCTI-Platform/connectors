@@ -1,5 +1,6 @@
 import csv
 import datetime
+import io
 import os
 import ssl
 import sys
@@ -10,6 +11,7 @@ import urllib.request
 import stix2
 import validators
 import yaml
+import zipfile
 from pycti import (
     Indicator,
     Malware,
@@ -122,15 +124,19 @@ class ThreatFox:
                             self.threatfox_csv_url,
                             context=ssl.create_default_context(),
                         )
-                        image = response.read()
+                        zipped_file = io.BytesIO(response.read())
+                        with zipfile.ZipFile(zipped_file, "r") as zip_ref:
+                            with zip_ref.open("full.csv") as full_file:
+                                csv_data = full_file.read()
                         with open(
                             os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
                             "wb",
                         ) as file:
-                            file.write(image)
+                            file.write(csv_data)
                         fp = open(
                             os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
                             "r",
+                            encoding="utf-8",
                         )
                         rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
                         bundle_objects = []
@@ -195,35 +201,35 @@ class ThreatFox:
                                     + ioc_value.split(":")[0]
                                     + "']"
                                 )
-                                indicator_type = "malicious-activity"
+                                indicator_type = "ipv4"
                                 observable_type = "IPv4-Addr"
                             elif ioc_type == "domain":
                                 pattern_value = (
                                     "[domain-name:value = '" + ioc_value + "']"
                                 )
-                                indicator_type = "malicious-activity"
+                                indicator_type = "domain"
                                 observable_type = "Domain-Name"
                             elif ioc_type == "url":
                                 pattern_value = "[url:value = '" + ioc_value + "']"
-                                indicator_type = "malicious-activity"
+                                indicator_type = "url"
                                 observable_type = "Url"
                             elif ioc_type == "md5_hash":
                                 pattern_value = (
                                     "[file:hashes.MD5 = '" + ioc_value + "']"
                                 )
-                                indicator_type = "malicious-file"
+                                indicator_type = "md5"
                                 observable_type = "StixFile"
                             elif ioc_type == "sha1_hash":
                                 pattern_value = (
                                     "[file:hashes.SHA1 = '" + ioc_value + "']"
                                 )
-                                indicator_type = "malicious-file"
+                                indicator_type = "sha1"
                                 observable_type = "StixFile"
                             elif ioc_type == "sha256_hash":
                                 pattern_value = (
                                     "[file:hashes.'SHA-256' = '" + ioc_value + "']"
                                 )
-                                indicator_type = "malicious-file"
+                                indicator_type = "sha256"
                                 observable_type = "StixFile"
                             else:
                                 self.helper.log_warning(
