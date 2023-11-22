@@ -36,3 +36,5 @@ class IPInfo:
     def get_details(self):
         """Submit API request, iterate through response, update attributes."""
         return self.details
+
+    # TODO: Add def get_stix_objects(self):

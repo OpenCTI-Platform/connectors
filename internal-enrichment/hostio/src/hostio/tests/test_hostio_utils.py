@@ -10,6 +10,7 @@ from hostio.hostio_utils import (
     is_valid_token,
     validate_tlp_marking,
     extract_asn_number,
+    lookup_tlp_string
 )
 
 VALID_IPV4 = "10.0.0.1"
@@ -26,7 +27,7 @@ def test_is_ipv4():
 
 def test_is_ipv4_cidr():
     """Test is_ipv4() function with CIDR notation."""
-    assert is_ipv4(VALID_IPV4_CIDR)
+    assert not is_ipv4(VALID_IPV4_CIDR)
 
 
 def test_is_ipv4_false():
@@ -47,7 +48,7 @@ def test_is_ipv6():
 
 def test_is_ipv6_cidr():
     """Test is_ipv6() function with CIDR notation."""
-    assert is_ipv6(VALID_IPV6_CIDR)
+    assert not is_ipv6(VALID_IPV6_CIDR)
 
 
 def test_is_ipv6_false():
@@ -170,3 +171,18 @@ def test_extract_asn_number_invalid():
     """Test extract_asn_number() function with invalid input."""
     for invalid in INVALID_INPUT:
         assert extract_asn_number(invalid) is None
+
+def test_lookup_tlp_string():
+    """Test lookup_tlp_string() function."""
+    assert lookup_tlp_string(TLP_WHITE) == 'TLP:WHITE'
+    assert lookup_tlp_string(TLP_GREEN) == 'TLP:GREEN'
+    assert lookup_tlp_string(TLP_AMBER) == 'TLP:AMBER'
+    assert lookup_tlp_string(TLP_RED) == 'TLP:RED'
+
+def test_lookup_tlp_string_invalid():
+    """Test lookup_tlp_string() function with invalid input."""
+    assert lookup_tlp_string('') is None
+    assert lookup_tlp_string(True) is None
+    assert lookup_tlp_string(False) is None
+    assert lookup_tlp_string({}) is None
+    assert lookup_tlp_string([]) is None

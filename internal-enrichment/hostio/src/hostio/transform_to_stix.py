@@ -6,7 +6,7 @@ import logging
 from pycountry import countries
 
 from pycti import (
-    Location,
+    Location as pycti_location,
     StixCoreRelationship,
 )
 
@@ -16,6 +16,7 @@ class BaseStixTransformation:
     """Class to transform a Domain into a STIX DomainName object."""
     def __init__(self, marking_refs="TLP:WHITE", entity_id=None):
         """Initialize the class with the domain and entity id."""
+        LOGGER.info(f"Marking refs: {marking_refs}")
         self.marking_refs = [get_tlp_marking(marking_refs)]
         self.entity_id = entity_id
         self.stix_objects = []
@@ -113,7 +114,7 @@ class BaseStixTransformation:
             if isinstance(privacy[key], str) and privacy[key] is not "":
                 self.labels.append(privacy[key])
 
-    def _craete_company(self, company):
+    def _create_company(self, company):
         """Create the STIX Organization object."""
         company_sco = Identity(
             name=company.get('name'),
@@ -131,7 +132,7 @@ class BaseStixTransformation:
         """Create the STIX Location object."""
         # Create the STIX Country object.
         country_sco = Location(
-            id=Location.generate_id(country.name, "Country"),
+            id=pycti_location.generate_id(country.name, "Country"),
             name=country.name,
             country=country.official_name
             if hasattr(country, "official_name")
@@ -159,7 +160,7 @@ class BaseStixTransformation:
         
         # Create the STIX Location object.
         city_sco = Location(
-            id=Location.generate_id(city, "City"),
+            id=pycti_location.generate_id(city, "City"),
             name=city,
             country=country.official_name
             if hasattr(country, "official_name")
@@ -176,18 +177,23 @@ class BaseStixTransformation:
 
     def _transform_ipinfo_object(self, ipinfo_object):
         """Transform the IPInfo data from HostIO to STIX2"""
-        if hasattr(ipinfo_object, 'asn'):
-            self._create_autonomous_system(ipinfo_object.asn, self.entity_id)
-        if hasattr(ipinfo_object, 'privacy'):
-            self._create_labels(ipinfo_object.privacy)
-        if hasattr(ipinfo_object, 'company'):
-            self._create_company(ipinfo_object.company)
-        if hasattr(ipinfo_object, 'domains'):
-            for domain in ipinfo_object.domains:
+        if 'asn' in ipinfo_object:
+            LOGGER.info(f"ASN data: {ipinfo_object.get('asn')}")
+            self._create_autonomous_system(ipinfo_object.get('asn'), self.entity_id)
+        if 'privacy' in ipinfo_object:
+            LOGGER.info(f"Privacy data: {ipinfo_object.get('privacy')}")
+            self._create_labels(ipinfo_object.get('privacy'))
+        if 'company' in ipinfo_object:
+            LOGGER.info(f"Company data: {ipinfo_object.get('company')}")
+            self._create_company(ipinfo_object.get('company'))
+        if 'domains' in ipinfo_object:
+            LOGGER.info(f"Domains data: {ipinfo_object.get('domains')}")
+            for domain in ipinfo_object.get('domains'):
                 self._create_domain_observable(domain, self.entity_id)
-        if hasattr(ipinfo_object, 'country'):
-            country = countries.get(alpha_2=ipinfo_object.country)
-            self._create_location(country, ipinfo_object.city, ipinfo_object.loc)
+        if 'country' in ipinfo_object:
+            country = countries.get(alpha_2=ipinfo_object.get('country'))
+            LOGGER.info(f"Country data: {country}")
+            self._create_location(country, ipinfo_object.get('city'), ipinfo_object.get('loc'))
 
     def get_stix_objects(self):
         """Return the list of STIX objects."""
@@ -218,7 +224,7 @@ class HostIODomainStixTransformation(BaseStixTransformation):
         if hasattr(self.domain_object, "dns") and self.domain_object.dns is not {}:
             self._transform_dns(self.domain_object.dns)
         if hasattr(self.domain_object, "ipinfo") and self.domain_object.ipinfo is not {}:
-            self._transform_ipinfo(self.domain_object.ipinfo)    
+            self._transform_ipinfo(self.domain_object.ipinfo)
 
 
 class IPInfoStixTransformation(BaseStixTransformation):
@@ -228,5 +234,6 @@ class IPInfoStixTransformation(BaseStixTransformation):
         super().__init__(marking_refs, entity_id)    
         self.ipinfo_object = ipinfo_object
 
+        LOGGER.info(f"IPInfo data: {self.ipinfo_object}")
         # Create STIX objects for the Domain Name and External Reference and add them to the list of STIX objects.
         self._transform_ipinfo_object(self.ipinfo_object)

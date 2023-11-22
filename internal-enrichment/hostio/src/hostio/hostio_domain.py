@@ -3,6 +3,7 @@ import logging
 import requests
 
 from .hostio_utils import is_valid_token
+from .transform_to_stix import HostIODomainStixTransformation
 
 HOSTIO_ENDPOINT = "https://host.io/api/full/{}"
 SUPPORTED_RESPONSE_KEYS = {"dns", "ipinfo", "web", "related", "domain"}
@@ -17,19 +18,20 @@ class HostIODomain:
     The results are then added to the Class as attributes.
     """
 
-    def __init__(self, token, domain):
+    def __init__(self, token, domain, marking_refs="TLP:WHITE", entity_id=None):
         self.domain = domain
         if is_valid_token(token):
             self.headers = {"Authorization": f"Bearer {token}"}
         else:
             LOGGER.error(f"Invalid token provided: {token}")
             raise ValueError(f"Invalid token provided: {token}")
+        self.entity_id=entity_id
+        self.marking_refs=marking_refs
         self.dns = {}
         self.ipinfo = {}
         self.web = {}
         self.related = {}
         self.response = {}
-
         # Request for Domain Info, update Class attributes.
         self.request_full_domain_info()
 
@@ -71,3 +73,12 @@ class HostIODomain:
         else:
             LOGGER.warning("Response is empty.")
             return
+
+    def get_stix_objects(self):
+        """Return STIX objects for the Domain."""
+        hostio_domain = HostIODomainStixTransformation(
+                domain_object=self,
+                entity_id=self.entity_id,
+                marking_refs=self.marking_refs
+            )
+        return hostio_domain.get_stix_objects()

@@ -5,10 +5,19 @@ import random
 import pytest
 
 from hostio.hostio_domain import HostIODomain
+from stix2 import DomainName, Relationship, IPv4Address, IPv6Address, AutonomousSystem, Identity, Location
+
+from uuid import uuid4
+
+import logging 
+
+LOGGER = logging.getLogger(__name__)
 
 DEFAULT_DOMAIN = "google.com"
 DEFAULT_FIXTURE = "google.json"
-
+# Random Domain Name Stix ID
+DEFAULT_DOMAIN_ID = f"domain-name--{uuid4()}"
+DEFAULT_MARKING_REFS = "TLP:WHITE"
 
 def load_fixture(filename):
     """Load a fixture file and return its content."""
@@ -32,7 +41,12 @@ class TestHostioDomain:
     def domain(self):
         """Create a Host IO instance with a mock token."""
         # Use a mock token for testing
-        return HostIODomain(token=generate_random_token(), domain=DEFAULT_DOMAIN)
+        return HostIODomain(
+            token=generate_random_token(),
+            domain=DEFAULT_DOMAIN,
+            entity_id=DEFAULT_DOMAIN_ID,
+            marking_refs=DEFAULT_MARKING_REFS
+            )
 
     def test_request_full_domain_info_success(self, domain, mocker):
         """Test successful fetching of data for valid dataset keys."""
@@ -46,6 +60,28 @@ class TestHostioDomain:
         assert domain.dns is not {}
         assert domain.web is not {}
         assert domain.related is not {}
+
+    def test_request_full_domain_get_stix_objects(self, domain, mocker):
+        """Test successful fetching of data for valid dataset keys."""
+        # Patch the _request_data method to return mock data. The mock will be applied
+        mock_request = mocker.patch.object(domain, "_request_data")
+        mock_request.return_value = load_fixture(DEFAULT_FIXTURE)
+        domain.request_full_domain_info()
+        LOGGER.info(domain)
+        stix_objects = domain.get_stix_objects()
+        assert stix_objects is not None
+        assert len(stix_objects) == 10
+
+        # Tested types
+        type_list = [Relationship, IPv4Address, IPv6Address]
+        pop_list = [Relationship, IPv4Address, IPv6Address]
+
+        # Test that all objects are of the correct type
+        for stix_obj in stix_objects:
+            assert type(stix_obj) in type_list
+            if type(stix_obj) in pop_list:
+                pop_list.pop(pop_list.index(type(stix_obj)))
+        assert pop_list == []
 
     def test_request_full_domain_info_invalid_domain(self, domain, mocker):
         INVALID_DOMAIN = "INVALID_DOMAIN"

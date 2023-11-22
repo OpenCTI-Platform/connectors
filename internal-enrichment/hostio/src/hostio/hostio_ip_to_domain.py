@@ -90,3 +90,5 @@ class HostIOIPtoDomain:
             return None
         self.request_ip_to_domain()
         return self.domains
+
+    # TODO: Add def get_stix_objects(self):

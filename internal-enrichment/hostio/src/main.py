@@ -9,6 +9,8 @@ from hostio.hostio_utils import (
     object_to_pretty_json,
     format_labels,
     get_tlp_marking,
+    is_ipv4,
+    is_ipv6,
 )
 from lib.internal_enrichment import InternalEnrichmentConnector
 from stix2 import Note
@@ -58,16 +60,21 @@ class HostIOConnector(InternalEnrichmentConnector):
             id=entity_id, external_reference_id=external_reference.get("id")
         )
 
-    def _process_ipv4_addr(self, stix_objects, entity_id, opencti_entity):
+    def _process_addr(self, stix_objects, entity_id, opencti_entity):
         """Processing the enrichment request for an IPv4-Addr"""
         self.helper.log_info(f"Processing IPv4-Addr with ID: {entity_id}")
         ip = opencti_entity.get("value")
-        if ip is None:
-            raise ValueError("IPv4-Addr does not have a value attribute")
+
+        # Validate the IP address
+        if ip is None and (is_ipv4(ip) or is_ipv6(ip)):
+            raise ValueError(f"IPvX-Address does not have a value attribute: {ip}")
+        
+        # Add External Reference for the IP
         source_name='IPinfo'
         url=f'https://ipinfo.io/{ip}'
 
-        self.helper.log_info(f"IPv4-Addr value: {ip}")
+        # TODO: Consolidate into class.
+        self.helper.log_info(f"IPvX-Address value: {ip}")
         hostio = HostIOIPtoDomain(
             token=self.hostio_token, ip=ip, limit=self.hostio_limit
         )
@@ -156,14 +163,12 @@ class HostIOConnector(InternalEnrichmentConnector):
         # Get Host IO Domain
         domain_object = HostIODomain(
             token=self.hostio_token,
-            domain=domain
+            domain=domain,
+            entity_id=entity_id,
+            marking_refs=self.hostio_marking_refs
         )
         stix_objects.extend(
-            HostIODomainStixTransformation(
-                domain_object=domain_object,
-                entity_id=entity_id,
-                marking_refs=self.hostio_marking_refs
-            ).get_stix_objects()
+            domain_object.get_stix_objects()
         )
         # Add External Reference
         self.helper.log_info(f"Adding external reference to {entity_id}")
@@ -172,36 +177,6 @@ class HostIOConnector(InternalEnrichmentConnector):
             url=url,
             entity_id=entity_id
             )
-        # Update Indicator Description with results from Host IO.
-        self.helper.log_info(f"Updating Indicator Description for {entity_id}")
-        if hasattr(opencti_entity, "x_opencti_description") and isinstance(opencti_entity.get("x_opencti_description"), str):
-            x_opencti_description = f'{opencti_entity.get("x_opencti_description")}'
-        else:
-            x_opencti_description = ""
-        if domain_object.dns:
-            x_opencti_description += f"\n\nHost IO DNS:\n\n```\n\n{object_to_pretty_json(domain_object.dns)}\n\n```"
-        if domain_object.ipinfo:
-            x_opencti_description += f"\n\nHost IO IPInfo:\n\n```\n\n{object_to_pretty_json(domain_object.ipinfo)}\n\n```"
-        if domain_object.web:
-            x_opencti_description += f"\n\nHost IO Web:\n\n```\n\n{object_to_pretty_json(domain_object.web)}\n\n```"
-        if domain_object.related:
-            x_opencti_description += f"\n\nHost IO Related:\n\n```\n\n{object_to_pretty_json(domain_object.related)}\n\n```"
-        stix_objects.append(
-            Note(
-                type="note",
-                abstract=f"Host IO enrichment content for {domain}",
-                content=x_opencti_description,
-                object_refs=[entity_id],
-                labels=format_labels(self.hostio_labels),
-                object_marking_refs=[get_tlp_marking(self.hostio_marking_refs)],
-                external_references=[
-                    {
-                        "source_name": source_name,
-                        "url": url,
-                    }
-                ],
-            )
-        )
 
 
     def _process_message(self, data):
@@ -235,9 +210,9 @@ class HostIOConnector(InternalEnrichmentConnector):
                 f"Observable does not have an entity_type attribute: {opencti_entity}"
             )
             raise ValueError("Observable does not have an entity_type attribute")
-        if entity_type == "IPv4-Addr":
-            self.helper.log_info(f"Observable is an IPv4-Addr: {opencti_entity}")
-            self._process_ipv4_addr(
+        if entity_type in ["IPv4-Addr", "IPv6-Addr"]:
+            self.helper.log_info(f"Observable is an {entity_type}: {opencti_entity}")
+            self._process_addr(
                 stix_objects, entity_id=entity_id, opencti_entity=opencti_entity
             )
         elif entity_type == "Domain-Name":

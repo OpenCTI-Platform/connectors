@@ -5,18 +5,20 @@ from stix2.exceptions import InvalidValueError
 from hostio.transform_to_stix import HostIOIPtoDomainStixTransform, HostIODomainStixTransformation, BaseStixTransformation
 from hostio.hostio_domain import HostIODomain
 from hostio.tests.constants import load_fixture, generate_random_token
+from uuid import uuid4
 
 VALID_DOMAIN = "example.com"
 VALID_IP = "8.8.8.8"
 VALID_IP_STIX = IPv4Address(value=VALID_IP)
 DEFAULT_FIXTURE = 'google.json'
+DEFAULT_DOMAIN_ID = f"domain-name--{uuid4()}"
 
 class TestTransformToStix:
     @pytest.fixture
     def domain(self):
         """Create a Host IO instance with a mock token."""
         # Use a mock token for testing
-        return HostIODomain(token=generate_random_token(), domain=VALID_DOMAIN)
+        return HostIODomain(token=generate_random_token(), domain=VALID_DOMAIN, entity_id=DEFAULT_DOMAIN_ID, marking_refs="TLP:WHITE")
 
     def test_hostio_ip_to_domain_stix_transform(self):
         """Test creation of STIX DomainName object."""

@@ -7,7 +7,7 @@ from ipaddress import (
 )
 import re
 import json
-from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 
 TLP_MAP = {
     "TLP:WHITE": TLP_WHITE,
@@ -25,7 +25,7 @@ def is_ipv6(ip_str):
     except AddressValueError:
         try:
             IPv6Network(ip_str, strict=False)  # Check for CIDR notation
-            return True
+            return False
         except Exception:
             return False
     except Exception:
@@ -40,7 +40,7 @@ def is_ipv4(ip_str):
     except AddressValueError:
         try:
             IPv4Network(ip_str, strict=False)  # Check for CIDR notation
-            return True
+            return False
         except Exception:
             return False
     except Exception:
@@ -82,12 +82,21 @@ def validate_labels(labels):
 def get_tlp_marking(tlp):
     """Validate TLP marking and return STIX2 TLP marking."""
     if validate_tlp_marking(tlp):
-        return TLP_MAP[tlp.upper()]
+        return TLP_MAP.get(tlp.upper())
     else:
         raise ValueError(
             f"Invalid TLP marking: {tlp}, valid markings: {TLP_MAP.keys()}"
         )
 
+def lookup_tlp_string(tlp_value):
+    """
+    Lookup the string key for a given TLP value.
+    """
+    if isinstance(tlp_value, MarkingDefinition):  
+        for key, value in TLP_MAP.items():
+            if value == tlp_value:
+                return key
+    return None
 
 def format_labels(labels):
     """Validate labels and return list of labels."""
