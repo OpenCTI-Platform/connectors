@@ -7,11 +7,11 @@ import sys
 import time
 import traceback
 import urllib.request
+import zipfile
 
 import stix2
 import validators
 import yaml
-import zipfile
 from pycti import (
     Indicator,
     Malware,
