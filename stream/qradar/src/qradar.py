@@ -195,12 +195,16 @@ class QradarConnector:
                     self.helper.log_debug(f"reference_set item with id {id} created")
 
                 case "update":
-                    self.qradar_reference.update(id, payload)
-                    self.helper.log_debug(f"reference_set item with id {id} updated")
+                    if payload["revoked"]:
+                        self.qradar_reference.delete(id, payload) 
+                        self.helper.log_debug(f"reference_set item with id {id} deleted - (revoked)")
+                    else:                    
+                        self.qradar_reference.update(id, payload)
+                        self.helper.log_debug(f"reference_set item with id {id} updated")
 
                 case "delete":
-                    self.helper.log_debug(f"reference_set item with id {id} deleted")
                     self.qradar_reference.delete(id, payload)
+                    self.helper.log_debug(f"reference_set item with id {id} deleted")
 
             if self.metrics is not None:
                 self.metrics.msg(msg.event)
