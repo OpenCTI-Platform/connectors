@@ -3,9 +3,7 @@ import threading
 import time
 from datetime import datetime
 
-from constants import RiskListPath
-
-from rflib import IPAddress
+from .constants import  RISK_LIST_TYPE_MAPPER
 
 
 class RiskList(threading.Thread):
@@ -19,8 +17,10 @@ class RiskList(threading.Thread):
     def run(self):
         while True:
             # TODO call API
-            for risk_list_type in RiskListPath:
-                csv_file = self.rfapi.get_risk_list_CSV(risk_list_type)
+            for key, risk_list_type in RISK_LIST_TYPE_MAPPER.items():
+                self.helper.log_info(f"[RISK LISTS] Pulling {key} risk lists")
+
+                csv_file = self.rfapi.get_risk_list_CSV(risk_list_type["path"])
                 timestamp = int(time.time())
                 now = datetime.utcfromtimestamp(timestamp)
                 work_id = self.helper.api.work.initiate_work(
@@ -28,18 +28,16 @@ class RiskList(threading.Thread):
                     "Recorded Future Risk List run @ "
                     + now.strftime("%Y-%m-%d %H:%M:%S"),
                 )
-                self.helper.log_info("[RISK LISTS] Pulling risk lists")
                 # with open("rflib/enriched_rl.csv", "r") as csv_file:
                 reader = csv.DictReader(csv_file)
                 # TODO Handle other indicator cases
                 for row in reader:
                     # Convert into stix object
-                    # TODO map to right type
-                    ip_address = IPAddress(row["Name"], "IpAddress")
-                    ip_address.map_data(row)
-                    ip_address.build_bundle(ip_address)
+                    indicator = risk_list_type["class"](row["Name"], key)
+                    indicator.map_data(row)
+                    indicator.build_bundle(indicator)
                     # Create bundle
-                    bundle = ip_address.to_stix_bundle()
+                    bundle = indicator.to_stix_bundle()
                     self.helper.log_info(
                         "[RISK LISTS] Sending Bundle to server with "
                         + str(len(bundle.objects))

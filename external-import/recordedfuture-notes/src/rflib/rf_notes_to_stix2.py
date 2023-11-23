@@ -32,10 +32,10 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, type_, author):
+    def __init__(self, name, type_, author=None):
         self.name = name
         self.type = type_
-        self.author = author
+        self.author = author or self._create_author()
         self.stix_obj = None
 
     def to_stix_objects(self):
@@ -55,6 +55,13 @@ class RFStixEntity:
     def to_json_bundle(self):
         """Returns STIX Bundle as JSON"""
         return self.to_stix_bundle().serialize()
+    def _create_author(self):
+        """Creates Recorded Future Author"""
+        return stix2.Identity(
+            id=pycti.Identity.generate_id("Recorded Future", "organization"),
+            name="Recorded Future",
+            identity_class="organization",
+        )
 
 
 class Indicator(RFStixEntity):
@@ -62,7 +69,7 @@ class Indicator(RFStixEntity):
 
     def __init__(self, name, type_, author):
         self.name = name
-        self.author = author or self._create_author()
+        self.author = author or super()._create_author()
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
@@ -121,14 +128,27 @@ class Indicator(RFStixEntity):
             created_by_ref=self.author.id,
         )
 
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(objects=self.objects if self.objects else self.to_stix_objects(), allow_custom=True)
+
     def map_data(self, rf_indicator):
         self.risk_score = int(rf_indicator["Risk"])
         related_entities_exist = json.loads(rf_indicator["Links"])["hits"]
-        if related_entities_exist:
+        if related_entities_exist and len(related_entities_exist[0]["sections"]) > 0:
             rf_related_entities = related_entities_exist[0]["sections"][0]["lists"]
-
+            # TODO refacto this and related_entities_exist
             for element in rf_related_entities:
-                if element["type"]["name"] in ["Malware", "Hash"]:
+                if element["type"]["name"] == "Threat Actor":
+                    for rf_related_element in element["entities"]:
+                        type_ = rf_related_element["type"]
+                        name_ = rf_related_element["name"]
+                        related_element = ThreatActor(
+                            name_, type_, self.author
+                        )
+                        stix_objs = related_element.to_stix_objects()
+                        self.related_entities.extend(stix_objs)
+                elif element["type"]["name"] in ["Malware", "Hash"]:
                     # TODO which related entities to take into account
                     for rf_related_element in element["entities"]:
                         type_ = rf_related_element["type"]
@@ -164,13 +184,7 @@ class Indicator(RFStixEntity):
                 )
         self.objects.extend(relationships)
 
-    def _create_author(self):
-        """Creates Recorded Future Author"""
-        return stix2.Identity(
-            id=pycti.Identity.generate_id("Recorded Future", "organization"),
-            name="Recorded Future",
-            identity_class="organization",
-        )
+
 
 
 class IPAddress(Indicator):
@@ -195,6 +209,7 @@ class IPAddress(Indicator):
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
+        # TODO Maybe self.objects if not empty, otherwise, self.to_stix_objects
         return stix2.Bundle(objects=self.objects, allow_custom=True)
 
 
@@ -223,7 +238,7 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, type_, author):
+    def __init__(self, name, type_, author=None):
         super().__init__(name, type_, author)
         self.algorithm = self._determine_algorithm()
 

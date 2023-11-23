@@ -10,11 +10,11 @@
 """
 import io
 import json
+import string
 from urllib import parse
 
 import requests
 import requests.exceptions
-from constants import RiskListPath
 
 API_BASE = "https://api.recordedfuture.com"
 CONNECT_BASE = API_BASE + "/v2"
@@ -144,8 +144,8 @@ class RFClient:
             ret.add(entity["entity"])
         return ret
 
-    def get_risk_list_CSV(self, type: RiskListPath):
-        res = self.get_fusion_file(type)
+    def get_risk_list_CSV(self, path: string):
+        res = self.get_fusion_file(path)
         reader = io.StringIO(res)
 
         # TODO Maybe change the returned format
