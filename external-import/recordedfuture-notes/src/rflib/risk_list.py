@@ -3,7 +3,7 @@ import threading
 import time
 from datetime import datetime
 
-from .constants import  RISK_LIST_TYPE_MAPPER
+from .constants import RISK_LIST_TYPE_MAPPER
 
 
 class RiskList(threading.Thread):

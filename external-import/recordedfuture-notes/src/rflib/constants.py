@@ -23,8 +23,5 @@ RISK_LIST_TYPE_MAPPER = {
     #     "class": URL,
     #     "path": "/public/opencti/default_url.csv"
     # },
-    "Hash": {
-        "class": FileHash,
-        "path": "/public/opencti/default_hash.csv"
-    },
+    "Hash": {"class": FileHash, "path": "/public/opencti/default_hash.csv"},
 }

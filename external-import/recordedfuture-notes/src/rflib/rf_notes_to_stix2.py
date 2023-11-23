@@ -55,6 +55,7 @@ class RFStixEntity:
     def to_json_bundle(self):
         """Returns STIX Bundle as JSON"""
         return self.to_stix_bundle().serialize()
+
     def _create_author(self):
         """Creates Recorded Future Author"""
         return stix2.Identity(
@@ -130,7 +131,10 @@ class Indicator(RFStixEntity):
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
-        return stix2.Bundle(objects=self.objects if self.objects else self.to_stix_objects(), allow_custom=True)
+        return stix2.Bundle(
+            objects=self.objects if self.objects else self.to_stix_objects(),
+            allow_custom=True,
+        )
 
     def map_data(self, rf_indicator):
         self.risk_score = int(rf_indicator["Risk"])
@@ -143,9 +147,7 @@ class Indicator(RFStixEntity):
                     for rf_related_element in element["entities"]:
                         type_ = rf_related_element["type"]
                         name_ = rf_related_element["name"]
-                        related_element = ThreatActor(
-                            name_, type_, self.author
-                        )
+                        related_element = ThreatActor(name_, type_, self.author)
                         stix_objs = related_element.to_stix_objects()
                         self.related_entities.extend(stix_objs)
                 elif element["type"]["name"] in ["Malware", "Hash"]:
@@ -183,8 +185,6 @@ class Indicator(RFStixEntity):
                     )
                 )
         self.objects.extend(relationships)
-
-
 
 
 class IPAddress(Indicator):
