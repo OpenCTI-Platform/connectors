@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Livehunt builder module."""
-import re
 import datetime
 import io
 import json
 import logging
+import re
 from typing import List, Optional
 
 import magic
