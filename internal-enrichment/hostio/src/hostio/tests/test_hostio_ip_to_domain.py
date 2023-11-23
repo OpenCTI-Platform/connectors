@@ -3,7 +3,7 @@ import os
 import random
 
 import pytest
-from stix2 import DomainName, IPv4Address, IPv6Address, Relationship
+from stix2 import DomainName, IPv4Address, Relationship
 
 from hostio.hostio_ip_to_domain import HostIOIPtoDomain
 
