@@ -24,7 +24,6 @@ class BaseStixTransformation:
 
     def __init__(self, marking_refs="TLP:WHITE", entity_id=None):
         """Initialize the class with the domain and entity id."""
-        LOGGER.info(f"Marking refs: {marking_refs}")
         self.marking_refs = [get_tlp_marking(marking_refs)]
         self.entity_id = entity_id
         self.stix_objects = []

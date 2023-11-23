@@ -9,7 +9,7 @@ services:
       # Connector's definition parameters:
       - CONNECTOR_TYPE=${CONNECTOR_TYPE}  # Must be INTERNAL_ENRICHMENT.
       - CONNECTOR_NAME=${CONNECTOR_NAME}
-      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE} # Scope supported, e.g., `IPv4-Addr, Domain-Name`.
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE} # Scope supported, e.g., `IPv4-Addr, Domain-Name, IPv6-Addr`.
       - CONNECTOR_ID=${CONNECTOR_ID}
       - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL} # From 0 (Unknown) to 100 (Fully trusted).
       - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}

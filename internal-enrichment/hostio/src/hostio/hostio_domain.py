@@ -51,9 +51,8 @@ class HostIODomain:
             return response.json()
 
         except requests.RequestException as e:
-            LOGGER.error(
-                f"Error while fetching data from ({HOSTIO_ENDPOINT.format(self.domain)}):\n{e}."
-            )
+            error_message = f"Error while fetching data from ({HOSTIO_ENDPOINT.format(self.domain)}):\n{e}."
+            LOGGER.error(error_message)
             return None
 
     def request_full_domain_info(self):

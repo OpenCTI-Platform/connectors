@@ -55,8 +55,12 @@ class IPInfo:
         for key in self.get_details().keys():
             if self.get_details().get(key) is not None:
                 message = f"IPInfo `{key}`:"
-                if isinstance(self.get_details().get(key), (dict, list)):
-                    message += f"\n\n```\n{object_to_pretty_json(self.get_details().get(key))}\n```"
+                if self.get_details().get(key) in [None, [], {}, "None"]:
+                    # do nothing
+                    pass
+                elif isinstance(self.get_details().get(key), (dict, list)):
+                    pretty_message = object_to_pretty_json(self.get_details().get(key))
+                    message += f"\n\n```\n{pretty_message}\n```"
                 elif isinstance(self.get_details().get(key), (str, int, float, bool)):
                     message += f"\t```{self.get_details().get(key)}```"
                 note_content += f"\n\n{message}"

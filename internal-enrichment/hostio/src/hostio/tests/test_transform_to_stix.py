@@ -57,7 +57,6 @@ class TestTransformToStix:
     def test_hostio_ip_to_domain_stix_transform_marking_refs(self):
         """Test creation of STIX DomainName object with different marking refs."""
         hostio_domain_stix_transform = HostIOIPtoDomainStixTransform(
-            # TODO: Fix this test.
             domain=VALID_DOMAIN,
             marking_refs="TLP:GREEN",
             entity_id=VALID_IP_STIX.get("id"),

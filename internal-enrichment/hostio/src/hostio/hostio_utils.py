@@ -1,3 +1,4 @@
+import logging
 import re
 from ipaddress import (
     AddressValueError,
@@ -6,9 +7,11 @@ from ipaddress import (
     IPv6Address,
     IPv6Network,
 )
-from pprint import pprint
+from json import dumps
 
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
+
+LOGGER = logging.getLogger(__name__)
 
 TLP_MAP = {
     "TLP:WHITE": TLP_WHITE,
@@ -141,18 +144,22 @@ def extract_asn_number(asn_string):
     """
     try:
         if not isinstance(asn_string, str):
+            LOGGER.error(f"Error extracting ASN number from {asn_string}")
             return None
         match = re.search(r"(\d+)$", asn_string)
         if match:
             return int(match.group(1))  # Returns only the number part
+        LOGGER.error(f"Error extracting ASN number from {asn_string}")
         return None  # Return None if no match is found
     except Exception:
+        LOGGER.error(f"Error extracting ASN number from {asn_string}")
         return None
 
 
 def object_to_pretty_json(obj):
     """Return a pretty JSON string from a Python object."""
     if isinstance(obj, (dict, list)):
-        return pprint(obj)
+        return dumps(obj, indent=4, sort_keys=True)
     else:
+        LOGGER.error(f"Invalid object type: {type(obj)}")
         return None

@@ -75,7 +75,6 @@ class HostIOConnector(InternalEnrichmentConnector):
         source_name = "IPinfo"
         url = f"https://ipinfo.io/{ip}"
 
-        # TODO: Consolidate into class.
         self.helper.log_info(f"IPvX-Address value: {ip}")
         hostio = HostIOIPtoDomain(
             token=self.hostio_token,
@@ -148,7 +147,7 @@ class HostIOConnector(InternalEnrichmentConnector):
             stix_objects.append(
                 Note(
                     type="note",
-                    abstract=f"IPInfo enrichment content for {ipinfo_object.ip}",
+                    abstract=f"IPInfo enrichment content for `{ipinfo_object.ip}`",
                     content=note_content,
                     object_refs=[entity_id],
                     labels=format_labels(self.hostio_labels),
@@ -224,7 +223,7 @@ class HostIOConnector(InternalEnrichmentConnector):
             stix_objects.append(
                 Note(
                     type="note",
-                    abstract=f"Host IO enrichment content for {domain_object.domain}",
+                    abstract=f"Host IO enrichment content for `{domain_object.domain}`",
                     content=note_content,
                     object_refs=[entity_id],
                     labels=format_labels(self.hostio_labels),
@@ -249,9 +248,6 @@ class HostIOConnector(InternalEnrichmentConnector):
             f"{self.helper.connect_name} connector is starting the enrichment of entity ID {entity_id}: {data}"
         )
         opencti_entity = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        self.helper.log_info(
-            f"OpenCTI entity: {opencti_entity.keys()}"
-        )  # TODO: Remove this line
         if opencti_entity is None:
             raise ValueError(
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"

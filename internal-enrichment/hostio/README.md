@@ -19,7 +19,7 @@ Configuration parameters for the HostIO Connector are set using environment vari
 |---------------------|-----------|-----------------------------------------------|
 | `CONNECTOR_TYPE`    | Yes       | Set to `INTERNAL_ENRICHMENT`.                 |
 | `CONNECTOR_NAME`    | Yes       | Name displayed in OpenCTI, e.g., "HostIO".    |
-| `CONNECTOR_SCOPE`   | Yes       | Scope supported, e.g., `IPv4-Addr, Domain-Name`. |
+| `CONNECTOR_SCOPE`   | Yes       | Comma separated list of scope. Supported scope includes: `IPv4-Addr`, `Domain-Name`, and `IPv6-Addr`. |
 
 #### User-Specified Configuration (.env)
 
