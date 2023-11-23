@@ -2,6 +2,12 @@ import logging
 from unittest.mock import Mock, patch
 
 import pytest
+from hostio.hostio_utils import get_tlp_marking  # Updated import statement
+from hostio.ipinfo import IPInfo  # Updated import statement
+from hostio.tests.constants import (  # Updated import statement
+    generate_random_token,
+    load_fixture,
+)
 from stix2 import (  # Updated import statement
     AutonomousSystem,
     DomainName,
@@ -10,13 +16,6 @@ from stix2 import (  # Updated import statement
     IPv6Address,
     Location,
     Relationship,
-)
-
-from hostio.hostio_utils import get_tlp_marking  # Updated import statement
-from hostio.ipinfo import IPInfo  # Updated import statement
-from hostio.tests.constants import (  # Updated import statement
-    generate_random_token,
-    load_fixture,
 )
 
 LOGGER = logging.getLogger(__name__)
