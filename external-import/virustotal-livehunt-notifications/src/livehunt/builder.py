@@ -44,7 +44,7 @@ class LivehuntBuilder:
         yara_label_prefix: str,
         livehunt_label_prefix: str,
         livehunt_tag_prefix: str,
-        enable_label_enrichment: bool
+        enable_label_enrichment: bool,
     ) -> None:
         """Initialize Virustotal builder."""
         self.client = client
@@ -514,11 +514,7 @@ class LivehuntBuilder:
 
     def retrieve_labels(self, vtobj) -> List[str]:
         ctx_attributes = vtobj._context_attributes
-        labels = [
-            t
-            for t in ctx_attributes["tags"]
-            if t not in {vtobj.id, self.tag}
-        ]
+        labels = [t for t in ctx_attributes["tags"] if t not in {vtobj.id, self.tag}]
 
         if not self.enable_label_enrichment:
             return labels

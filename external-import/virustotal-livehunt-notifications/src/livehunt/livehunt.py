@@ -139,7 +139,7 @@ class VirustotalLivehuntNotifications:
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_ALERT_PREFIX",
             ["virustotal_livehunt_notifications", "alert_prefix"],
             config,
-            default="VT "
+            default="VT ",
         )
 
         av_list = get_config_variable(
@@ -155,14 +155,14 @@ class VirustotalLivehuntNotifications:
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_YARA_LABEL_PREFIX",
             ["virustotal_livehunt_notifications", "yara_label_prefix"],
             config,
-            default="vt:yara:"
+            default="vt:yara:",
         )
 
         livehunt_label_prefix = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIVEHUNT_LABEL_PREFIX",
             ["virustotal_livehunt_notifications", "livehunt_label_prefix"],
             config,
-            default="vt:lh:"
+            default="vt:lh:",
         )
 
         livehunt_tag_prefix = get_config_variable(
