@@ -1,19 +1,19 @@
 from os import environ
 
-from hostio import HostIOIPtoDomainStixTransform, HostIOIPtoDomain, HostIODomain, HostIODomainStixTransformation, IPInfoStixTransformation, IPInfo
+from stix2 import Note
+
+from hostio import HostIODomain, HostIOIPtoDomain, IPInfo
 from hostio.hostio_utils import (
     can_be_int,
-    is_valid_token,
-    validate_labels,
-    validate_tlp_marking,
-    object_to_pretty_json,
     format_labels,
     get_tlp_marking,
     is_ipv4,
     is_ipv6,
+    is_valid_token,
+    validate_labels,
+    validate_tlp_marking,
 )
 from lib.internal_enrichment import InternalEnrichmentConnector
-from stix2 import Note
 
 
 class HostIOConnector(InternalEnrichmentConnector):
@@ -49,13 +49,15 @@ class HostIOConnector(InternalEnrichmentConnector):
             msg = "Error when grabbing HOSTIO_MARKING_REFS environment variable. It SHOULD be a valid TLP marking."
             self.helper.log_error(msg)
             raise ValueError(msg)
-        
+
     def _add_external_reference(self, source_name, url, entity_id):
-        self.helper.log_info(f"Adding external reference to {entity_id} with source_name: {source_name} and url: {url}")
+        self.helper.log_info(
+            f"Adding external reference to {entity_id} with source_name: {source_name} and url: {url}"
+        )
         external_reference = self.helper.api.external_reference.create(
-                source_name=source_name,
-                url=url,
-            )
+            source_name=source_name,
+            url=url,
+        )
         self.helper.api.stix_cyber_observable.add_external_reference(
             id=entity_id, external_reference_id=external_reference.get("id")
         )
@@ -68,116 +70,173 @@ class HostIOConnector(InternalEnrichmentConnector):
         # Validate the IP address
         if ip is None and (is_ipv4(ip) or is_ipv6(ip)):
             raise ValueError(f"IPvX-Address does not have a value attribute: {ip}")
-        
+
         # Add External Reference for the IP
-        source_name='IPinfo'
-        url=f'https://ipinfo.io/{ip}'
+        source_name = "IPinfo"
+        url = f"https://ipinfo.io/{ip}"
 
         # TODO: Consolidate into class.
         self.helper.log_info(f"IPvX-Address value: {ip}")
         hostio = HostIOIPtoDomain(
-            token=self.hostio_token, ip=ip, limit=self.hostio_limit
+            token=self.hostio_token,
+            ip=ip,
+            limit=self.hostio_limit,
+            entity_id=entity_id,
+            marking_refs=self.hostio_marking_refs,
         )
         while hostio.has_next:
             hostio.request_ip_to_domain()
-            for domain in hostio.domains:
-                stix_objects.extend(
-                    HostIOIPtoDomainStixTransform(
-                        domain=domain,
-                        entity_id=entity_id,
-                        marking_refs=self.hostio_marking_refs
-                    ).get_stix_objects()
-                )
-        ipinfo = IPInfo(token=self.hostio_token, ip=ip)
-        if len(ipinfo.get_details()) > 0:
-            ipinfo_stix = IPInfoStixTransformation(
-                ipinfo_object=ipinfo.get_details(),
+            stix_objects.extend(hostio.get_stix_objects())
+        ipinfo_object = IPInfo(
+            token=self.hostio_token,
+            ip=ip,
+            entity_id=entity_id,
+            marking_refs=self.hostio_marking_refs,
+        )
+        if len(ipinfo_object.get_details()) > 0:
+            stix_objects.extend(ipinfo_object.get_stix_objects())
+            self._create_labels(
+                opencti_entity=opencti_entity,
+                ipinfo_object=ipinfo_object,
                 entity_id=entity_id,
-                marking_refs=self.hostio_marking_refs
-                )
-            stix_objects.extend(
-                ipinfo_stix.get_stix_objects()
             )
-            # update labels for the IP
-            if hasattr(opencti_entity, "labels"):
-                existing_labels = opencti_entity.get("labels")
-            else:
-                existing_labels = []
-            existing_labels.extend(ipinfo_stix.labels)
-            existing_labels.extend(format_labels(self.hostio_labels))
-            self.helper.log_info(f"Updating labels for {entity_id}")
-            self.helper.api.stix_cyber_observable.update_field(
-                id=entity_id,
-                input={
-                    "key": "labels",
-                    "value": format_labels(existing_labels),
-                },
-            )
-            # Update Indicator Description with results from IPInfo.
-            note_description = ''
-            for key in ipinfo.get_details().keys():
-                if ipinfo.get_details().get(key) is not None:
-                    message = f"IPInfo `{key}`:"
-                    if isinstance(ipinfo.get_details().get(key), (dict, list)):
-                        message += f"\n\n```\n{object_to_pretty_json(ipinfo.get_details().get(key))}\n```"
-                    elif isinstance(ipinfo.get_details().get(key), (str, int, float, bool)):
-                        message += f"\t```{ipinfo.get_details().get(key)}```"
-                    note_description += f"\n\n{message}"
-            # Update Indicator Description with results from IPInfo.
-            if len(note_description) > 0:
-                stix_objects.append(
-                    Note(
-                        type="note",
-                        abstract=f"IPInfo enrichment content for {ip}",
-                        content=note_description,
-                        object_refs=[entity_id],
-                        labels=format_labels(self.hostio_labels),
-                        object_marking_refs=[get_tlp_marking(self.hostio_marking_refs)],
-                        external_references=[
-                            {
-                                "source_name": source_name,
-                                "url": url,
-                            }
-                        ],
-                    )
-                )
-                
-        # Add External Reference for the IP
-        self._add_external_reference(
+
+        self._create_ipinfo_enrichment_notes(
+            stix_objects,
             source_name=source_name,
             url=url,
-            entity_id=entity_id
+            ipinfo_object=ipinfo_object,
+            entity_id=entity_id,
+        )
+
+        # Add External Reference for the IP
+        self._add_external_reference(
+            source_name=source_name, url=url, entity_id=entity_id
+        )
+
+    def _create_labels(self, opencti_entity=None, ipinfo_object=None, entity_id=None):
+        """Create labels for the IP."""
+        # update labels for the IP
+        if hasattr(opencti_entity, "labels"):
+            existing_labels = opencti_entity.get("labels")
+        else:
+            existing_labels = []
+        existing_labels.extend(ipinfo_object.get_labels())
+        existing_labels.extend(format_labels(self.hostio_labels))
+        self.helper.log_info(f"Updating labels for {entity_id}")
+        self.helper.api.stix_cyber_observable.update_field(
+            id=entity_id,
+            input={
+                "key": "labels",
+                "value": format_labels(existing_labels),
+            },
+        )
+
+    def _create_ipinfo_enrichment_notes(
+        self,
+        stix_objects,
+        source_name=None,
+        url=None,
+        ipinfo_object=None,
+        entity_id=None,
+    ):
+        """Create IPInfo enrichment notes."""
+        # Update Indicator Description with results from IPInfo.
+        note_content = ipinfo_object.get_note_content()
+        # Update Indicator Description with results from IPInfo.
+        if len(note_content) > 0:
+            stix_objects.append(
+                Note(
+                    type="note",
+                    abstract=f"IPInfo enrichment content for {ipinfo_object.ip}",
+                    content=note_content,
+                    object_refs=[entity_id],
+                    labels=format_labels(self.hostio_labels),
+                    object_marking_refs=[get_tlp_marking(self.hostio_marking_refs)],
+                    external_references=[
+                        {
+                            "source_name": source_name,
+                            "url": url,
+                        }
+                    ],
+                )
             )
 
     def _process_domain_name(self, stix_objects, entity_id, opencti_entity):
         """Processing the enrichment request for a Domain-Name"""
         domain = opencti_entity.get("value")
-        if domain is None:
+        if not isinstance(domain, str) or domain is None:
             raise ValueError("Domain-Name does not have a value attribute")
+
         self.helper.log_info(f"Domain-Name value: {domain}")
 
-        source_name = 'Host IO Domain'
-        url=f'https://host.io/{domain}'
-        
-        self.helper.log_info(f"Processing Domain-Name with ID: {entity_id}")        
+        source_name = "Host IO Domain"
+        url = f"https://host.io/{domain}"
+
+        self.helper.log_info(f"Processing Domain-Name with ID: {entity_id}")
+
         # Get Host IO Domain
         domain_object = HostIODomain(
             token=self.hostio_token,
             domain=domain,
             entity_id=entity_id,
-            marking_refs=self.hostio_marking_refs
+            marking_refs=self.hostio_marking_refs,
         )
-        stix_objects.extend(
-            domain_object.get_stix_objects()
-        )
+        stix_objects.extend(domain_object.get_stix_objects())
+
         # Add External Reference
         self.helper.log_info(f"Adding external reference to {entity_id}")
         self._add_external_reference(
+            source_name=source_name, url=url, entity_id=entity_id
+        )
+
+        # Create Host IO enrichment notes.
+        self._create_hostio_enrichment_notes(
+            stix_objects=stix_objects,
+            domain_object=domain_object,
+            entity_id=entity_id,
             source_name=source_name,
             url=url,
-            entity_id=entity_id
-            )
+        )
 
+    def _create_hostio_enrichment_notes(
+        self,
+        stix_objects,
+        source_name=None,
+        url=None,
+        domain_object=None,
+        entity_id=None,
+    ):
+        """Create Host IO enrichment notes."""
+        # Validate parameters
+        if domain_object is None:
+            raise ValueError("domain_object is None")
+        if entity_id is None:
+            raise ValueError("entity_id is None")
+        if not isinstance(source_name, str) or source_name is None:
+            raise ValueError("source_name is None")
+        if not isinstance(source_name, str) or url is None:
+            raise ValueError("url is None")
+
+        # Add Indicator Notes with results from Host IO.
+        note_content = domain_object.get_note_content()
+        if len(note_content) > 0:
+            stix_objects.append(
+                Note(
+                    type="note",
+                    abstract=f"Host IO enrichment content for {domain_object.domain}",
+                    content=note_content,
+                    object_refs=[entity_id],
+                    labels=format_labels(self.hostio_labels),
+                    object_marking_refs=[get_tlp_marking(self.hostio_marking_refs)],
+                    external_references=[
+                        {
+                            "source_name": source_name,
+                            "url": url,
+                        }
+                    ],
+                )
+            )
 
     def _process_message(self, data):
         """Processing the enrichment request."""
@@ -218,7 +277,9 @@ class HostIOConnector(InternalEnrichmentConnector):
         elif entity_type == "Domain-Name":
             self.helper.log_info(f"Observable is a Domain-Name: {opencti_entity}")
             self._process_domain_name(
-                stix_objects=stix_objects, entity_id=entity_id, opencti_entity=opencti_entity
+                stix_objects=stix_objects,
+                entity_id=entity_id,
+                opencti_entity=opencti_entity,
             )
         else:
             self.helper.log_warn(
@@ -235,34 +296,6 @@ class HostIOConnector(InternalEnrichmentConnector):
         self.helper.log_info(
             f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         )
-        # # Update a field
-        # self.helper.log_debug("Updating OpenCTI score...")
-        # self.helper.api.stix_cyber_observable.update_field(
-        #     id=entity_id,
-        #     input={
-        #         "key": "x_opencti_score",
-        #         "value": "100",
-        #     },
-        # )
-
-        # # Add labels
-        # self.helper.log_debug("Adding labels to the cyberobservable...")
-        # self.helper.api.stix_cyber_observable.add_label(id=entity_id, label_name="test")
-        # self.helper.api.stix_cyber_observable.add_label(
-        #     id=entity_id, label_name="tutorial"
-        # )
-
-        # # Add an external reference using OpenCTI API
-        # self.helper.log_debug("Adding external reference...")
-        # external_reference = self.helper.api.external_reference.create(
-        #     source_name="Félix Brezo (@febrezo)",
-        #     url="https://github.com/OpenCTI-Platform/connectors",
-        #     description="A sample external reference used by the connector.",
-        # )
-
-        # self.helper.api.stix_cyber_observable.add_external_reference(
-        #     id=entity_id, external_reference_id=external_reference["id"]
-        # )
         # ===========================
         # === Add your code above ===
         # ===========================

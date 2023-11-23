@@ -22,11 +22,12 @@
     },
     "privacy": {
       "vpn": false,
-      "proxy": false,
-      "tor": false,
-      "relay": false,
+      "proxy": true,
+      "tor": true,
+      "relay": true,
       "hosting": true,
-      "service": ""
+      "service": "asdfasdf",
+      "cached": ""
     },
     "abuse": {
       "address": "US, CA, Mountain View, 1600 Amphitheatre Parkway, 94043",

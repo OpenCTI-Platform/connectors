@@ -3,6 +3,7 @@ import os
 import random
 
 import pytest
+from stix2 import DomainName, IPv4Address, IPv6Address, Relationship
 
 from hostio.hostio_ip_to_domain import HostIOIPtoDomain
 
@@ -10,6 +11,7 @@ DEFAULT_IP = "8.8.8.8"
 DEFAULT_FIXTURE = "8.8.8.8.json"
 DEFAULT_LIMIT = 5
 DEFAULT_TOTAL = 14
+DEFAULT_IP_ENTITY = IPv4Address(value=DEFAULT_IP)
 
 
 def load_fixture(filename):
@@ -35,7 +37,11 @@ class TestHostIOIPToDomain:
         """Create a Host IO instance with a mock token."""
         # Use a mock token for testing
         return HostIOIPtoDomain(
-            token=generate_random_token(), ip=DEFAULT_IP, limit=DEFAULT_LIMIT
+            token=generate_random_token(),
+            ip=DEFAULT_IP,
+            limit=DEFAULT_LIMIT,
+            entity_id=DEFAULT_IP_ENTITY.get("id"),
+            marking_refs="TLP:WHITE",
         )
 
     def test_request_ip_success(self, hostio_ip, mocker):
@@ -51,6 +57,19 @@ class TestHostIOIPToDomain:
         assert hostio_ip.total == DEFAULT_TOTAL
         assert hostio_ip.has_next is True
         assert hostio_ip.limit == DEFAULT_LIMIT
+        stix_objects = hostio_ip.get_stix_objects()
+        assert stix_objects is not None
+        assert len(stix_objects) == 10
+        # Tested types
+        type_list = [Relationship, DomainName]
+        pop_list = [Relationship, DomainName]
+
+        # Test that all objects are of the correct type
+        for stix_obj in stix_objects:
+            assert type(stix_obj) in type_list
+            if type(stix_obj) in pop_list:
+                pop_list.pop(pop_list.index(type(stix_obj)))
+        assert pop_list == []
 
     def test_request_ip_info_invalid_ip(self, hostio_ip, mocker):
         INVALID_IP = "INVALID_IP"

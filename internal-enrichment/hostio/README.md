@@ -1,69 +1,64 @@
-# Internal Enrichment Template Connector
+# HostIO Connector for OpenCTI
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+The HostIO Connector is an internal enrichment connector for OpenCTI, designed to enhance cyber threat intelligence by enriching IP addresses and domain names using HostIO's domain data and IPinfo's IP data services. This connector fetches and integrates detailed information about IP addresses and domain names into OpenCTI, allowing analysts to gain deeper insights into cyber threats.
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform >= 5.11.14
+- Access to HostIO and IPinfo APIs
 
 ### Configuration
 
-Configuration parameters are provided using environment variables as described below.
-Some of them are placed directly in the `docker-compose.yml` since they are not expected to be modified by final users once that they have been defined by the developer of the connector.
+Configuration parameters for the HostIO Connector are set using environment variables. Some parameters are defined in the `docker-compose.yml` file, as they are not typically changed by end users.
 
-Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}`, i. e., `self.helper.connector_nane`.
+#### Connector Configuration (docker-compose.yml)
 
-Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself.
-Most of the times, these values are NOT expected to be changed.
+| Docker envvar       | Mandatory | Description                                   |
+|---------------------|-----------|-----------------------------------------------|
+| `CONNECTOR_TYPE`    | Yes       | Set to `INTERNAL_ENRICHMENT`.                 |
+| `CONNECTOR_NAME`    | Yes       | Name displayed in OpenCTI, e.g., "HostIO".    |
+| `CONNECTOR_SCOPE`   | Yes       | Scope supported, e.g., `IPv4-Addr, Domain-Name`. |
 
-| Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
-| ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `connector_type`                     | `CONNECTOR_TYPE`                    | Yes          | Must be `INTERNAL_ENRICHMENT` (this is the connector type).                                                                                                    |
-| `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | A connector name to be shown in OpenCTI.                                                                                                                   |
-| `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope. E. g., `text/html`.                                                                                                                       |
+#### User-Specified Configuration (.env)
 
-However, there are other values which are expected to be configured by end users.
-The following values are expected to be defined in the `.env` file.
-This file is included in the `.gitignore` to avoid leaking sensitive date). 
-Note tha the `.env.sample` file can be used as a reference.
+| Docker envvar          | Mandatory | Description                                       |
+|------------------------------|------------------------|-----------|---------------------------------------------------|
+| `OPENCTI_URL`          | Yes       | URL of OpenCTI instance.                          |
+| `OPENCTI_TOKEN`        | Yes       | Admin token for OpenCTI.                          |
+| `CONNECTOR_ID`         | Yes       | Unique UUIDv4 for the connector.                  |
+| `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (1-4).                  |
+| `CONNECTOR_LOG_LEVEL`  | Yes       | Log level (`debug`, `info`, `warn`, `error`).     |
+| `CONNECTOR_UPDATE_EXISTING_DATA` | Yes | Whether to update existing data or not. (e.g., true, false) |
 
-The ones that follow are connector's generic execution parameters expected to be added for export connectors.
+#### HostIO-Specific Parameters
 
-| Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
-| ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `opencti_url`                        | `OPENCTI_URL`                       | Yes          | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`                                               |
-| `opencti_token`                      | `OPENCTI_TOKEN`                     | Yes          | The default admin token configured in the OpenCTI platform parameters file.                                                                                |
-| `connector_id`                       | `CONNECTOR_ID`                      | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                         |
-| `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 4).                                                                             |
-| `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
+| Docker envvar          | Mandatory | Description                                       |
+|------------------------|-----------|---------------------------------------------------|
+| `HOSTIO_TOKEN`         | Yes       | Token for HostIO or IPInfo API.                             |
+| `HOSTIO_LIMIT`         | No        | Limit for returned results, update to match the page limit for your subscription (default 5).           |
+| `HOSTIO_LABELS`        | No        | Comma-separated list of labels to add to the entities. e.g., "hostio,osint" |
+| `HOSTIO_MARKING_REFS`  | No        | TLP marking references. e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED                           |
 
-Finally, the ones that follow are connector's specific execution parameters expected to be used by this connector.
+### Debugging
 
-| Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
-| ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `extra_parameter`                    | `EXTRA_PARAMETER`                   | Yes          | Any extra parameter.                                                                                                                                       |
+Set the appropriate log level using `CONNECTOR_LOG_LEVEL` to debug issues. Logs can be generated using `self.helper.log_{LOG_LEVEL}("message")`.
 
-### Debugging ###
+### Additional Information
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.log_{LOG_LEVEL}("Sample message")`, i. e., `self.helper.log_error("An error message")`.
+The HostIO Connector enriches IP and domain entities in OpenCTI by fetching data from HostIO and IPinfo. Users should be aware of API rate limits and ensure proper API keys are configured. This connector aids in providing contextual information about digital assets involved in cybersecurity incidents.
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
-### Additional information
+### STIX Objects Creation
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+The HostIO Connector creates and manages various STIX objects to represent and link cyber threat intelligence data within OpenCTI. The following STIX objects are handled:
+
+- **AutonomousSystem**: Represents network autonomous systems.
+- **DomainName**: Used for domain name entities enriched from HostIO.
+- **Identity**: Refers to the identities associated with domains or IP addresses.
+- **IPv4Address** and **IPv6Address**: Represents IPv4 and IPv6 addresses enriched from IPinfo or created by Host IO.
+- **Location**: Geographical location information related to IP addresses.
+- **Relationship**: Links between different STIX objects, indicating relationships like `resolves-to` or `located-at`.
+- **Note**: Contains additional information based on the Raw results from HostIO and IPInfo.
+

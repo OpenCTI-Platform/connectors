@@ -1,3 +1,4 @@
+import re
 from ipaddress import (
     AddressValueError,
     IPv4Address,
@@ -5,8 +6,8 @@ from ipaddress import (
     IPv6Address,
     IPv6Network,
 )
-import re
-import json
+from pprint import pprint
+
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 
 TLP_MAP = {
@@ -88,15 +89,17 @@ def get_tlp_marking(tlp):
             f"Invalid TLP marking: {tlp}, valid markings: {TLP_MAP.keys()}"
         )
 
+
 def lookup_tlp_string(tlp_value):
     """
     Lookup the string key for a given TLP value.
     """
-    if isinstance(tlp_value, MarkingDefinition):  
+    if isinstance(tlp_value, MarkingDefinition):
         for key, value in TLP_MAP.items():
             if value == tlp_value:
                 return key
     return None
+
 
 def format_labels(labels):
     """Validate labels and return list of labels."""
@@ -130,6 +133,7 @@ def can_be_int(string):
         return False
     return False
 
+
 def extract_asn_number(asn_string):
     """
     Extracts the ASN number from a string using regex.
@@ -138,13 +142,17 @@ def extract_asn_number(asn_string):
     try:
         if not isinstance(asn_string, str):
             return None
-        match = re.search(r'(\d+)$', asn_string)
+        match = re.search(r"(\d+)$", asn_string)
         if match:
             return int(match.group(1))  # Returns only the number part
         return None  # Return None if no match is found
-    except:
+    except Exception:
         return None
-    
+
+
 def object_to_pretty_json(obj):
     """Return a pretty JSON string from a Python object."""
-    return json.dumps(obj, sort_keys=True, indent=4, separators=(",", ": "))
+    if isinstance(obj, (dict, list)):
+        return pprint(obj)
+    else:
+        return None

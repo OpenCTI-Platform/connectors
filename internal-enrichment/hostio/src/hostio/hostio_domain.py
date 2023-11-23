@@ -2,11 +2,11 @@ import logging
 
 import requests
 
-from .hostio_utils import is_valid_token
+from .hostio_utils import is_valid_token, object_to_pretty_json
 from .transform_to_stix import HostIODomainStixTransformation
 
 HOSTIO_ENDPOINT = "https://host.io/api/full/{}"
-SUPPORTED_RESPONSE_KEYS = {"dns", "ipinfo", "web", "related", "domain"}
+SUPPORTED_RESPONSE_KEYS = ["dns", "ipinfo", "web", "related", "domain"]
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
@@ -25,8 +25,8 @@ class HostIODomain:
         else:
             LOGGER.error(f"Invalid token provided: {token}")
             raise ValueError(f"Invalid token provided: {token}")
-        self.entity_id=entity_id
-        self.marking_refs=marking_refs
+        self.entity_id = entity_id
+        self.marking_refs = marking_refs
         self.dns = {}
         self.ipinfo = {}
         self.web = {}
@@ -77,8 +77,14 @@ class HostIODomain:
     def get_stix_objects(self):
         """Return STIX objects for the Domain."""
         hostio_domain = HostIODomainStixTransformation(
-                domain_object=self,
-                entity_id=self.entity_id,
-                marking_refs=self.marking_refs
-            )
+            domain_object=self, entity_id=self.entity_id, marking_refs=self.marking_refs
+        )
         return hostio_domain.get_stix_objects()
+
+    def get_note_content(self):
+        """Return Host IO enrichment notes."""
+        note_content = str()
+        for key in SUPPORTED_RESPONSE_KEYS:
+            if hasattr(self, key) and not getattr(self, key) in [None, {}]:
+                note_content += f"\n\nHost IO `{key}`:\n\n```\n\n{object_to_pretty_json(getattr(self, key))}\n\n```"
+        return note_content

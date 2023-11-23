@@ -1,7 +1,7 @@
-
-import os
 import json
+import os
 import random
+
 
 def load_fixture(filename):
     """Load a fixture file and return its content."""
@@ -13,6 +13,7 @@ def load_fixture(filename):
         if not content.strip():
             raise ValueError(f"Fixture {filename} is empty.")
         return json.loads(content)
+
 
 def generate_random_token():
     """Generate a random token."""

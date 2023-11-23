@@ -3,6 +3,7 @@ import logging
 import requests
 
 from .hostio_utils import is_valid_token
+from .transform_to_stix import HostIOIPtoDomainStixTransform
 
 HOSTIO_ENDPOINT = "https://host.io/api/domains/ip/{}?limit={}&page={}"
 SUPPORTED_RESPONSE_KEYS = {"ip", "total", "domains", "page"}
@@ -17,7 +18,7 @@ class HostIOIPtoDomain:
     The results are then added to the Class as attributes.
     """
 
-    def __init__(self, token, ip, limit=5):
+    def __init__(self, token, ip, entity_id=None, marking_refs="TLP:WHITE", limit=5):
         self.ip = ip
         if is_valid_token(token):
             self.headers = {"Authorization": f"Bearer {token}"}
@@ -29,6 +30,8 @@ class HostIOIPtoDomain:
         self.total = 0
         self.has_next = True
         self.domains = []
+        self.entity_id = entity_id
+        self.marking_refs = marking_refs
 
     def _request_data(self):
         """Internal method to handle API requests."""
@@ -91,4 +94,15 @@ class HostIOIPtoDomain:
         self.request_ip_to_domain()
         return self.domains
 
-    # TODO: Add def get_stix_objects(self):
+    def get_stix_objects(self):
+        """Return STIX objects for the Domain."""
+        stix_objects = []
+        for domain in self.domains:
+            stix_objects.extend(
+                HostIOIPtoDomainStixTransform(
+                    domain=domain,
+                    entity_id=self.entity_id,
+                    marking_refs=self.marking_refs,
+                ).get_stix_objects()
+            )
+        return stix_objects

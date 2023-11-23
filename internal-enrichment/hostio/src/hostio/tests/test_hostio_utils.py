@@ -3,14 +3,14 @@ from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 from hostio.hostio_utils import (
     can_be_int,
+    extract_asn_number,
     format_labels,
     get_tlp_marking,
     is_ipv4,
     is_ipv6,
     is_valid_token,
+    lookup_tlp_string,
     validate_tlp_marking,
-    extract_asn_number,
-    lookup_tlp_string
 )
 
 VALID_IPV4 = "10.0.0.1"
@@ -160,28 +160,32 @@ def test_validate_labels_invalid():
     with pytest.raises(ValueError):
         format_labels(None)
 
+
 def test_extract_asn_number():
     """Test extract_asn_number() function."""
-    VALID_ASN='AS15169'
+    VALID_ASN = "AS15169"
     assert extract_asn_number(VALID_ASN) == 15169
-    VALID_ASN_2 = 'ASN15169'
+    VALID_ASN_2 = "ASN15169"
     assert extract_asn_number(VALID_ASN_2) == 15169
+
 
 def test_extract_asn_number_invalid():
     """Test extract_asn_number() function with invalid input."""
     for invalid in INVALID_INPUT:
         assert extract_asn_number(invalid) is None
 
+
 def test_lookup_tlp_string():
     """Test lookup_tlp_string() function."""
-    assert lookup_tlp_string(TLP_WHITE) == 'TLP:WHITE'
-    assert lookup_tlp_string(TLP_GREEN) == 'TLP:GREEN'
-    assert lookup_tlp_string(TLP_AMBER) == 'TLP:AMBER'
-    assert lookup_tlp_string(TLP_RED) == 'TLP:RED'
+    assert lookup_tlp_string(TLP_WHITE) == "TLP:WHITE"
+    assert lookup_tlp_string(TLP_GREEN) == "TLP:GREEN"
+    assert lookup_tlp_string(TLP_AMBER) == "TLP:AMBER"
+    assert lookup_tlp_string(TLP_RED) == "TLP:RED"
+
 
 def test_lookup_tlp_string_invalid():
     """Test lookup_tlp_string() function with invalid input."""
-    assert lookup_tlp_string('') is None
+    assert lookup_tlp_string("") is None
     assert lookup_tlp_string(True) is None
     assert lookup_tlp_string(False) is None
     assert lookup_tlp_string({}) is None

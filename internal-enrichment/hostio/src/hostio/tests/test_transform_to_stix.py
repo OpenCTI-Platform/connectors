@@ -1,24 +1,44 @@
 import pytest
-from stix2 import TLP_GREEN, TLP_WHITE, DomainName, IPv4Address, IPv6Address, Relationship, AutonomousSystem
+from stix2 import (
+    TLP_GREEN,
+    TLP_WHITE,
+    AutonomousSystem,
+    DomainName,
+    IPv4Address,
+    IPv6Address,
+    Relationship,
+)
 from stix2.exceptions import InvalidValueError
 
-from hostio.transform_to_stix import HostIOIPtoDomainStixTransform, HostIODomainStixTransformation, BaseStixTransformation
 from hostio.hostio_domain import HostIODomain
-from hostio.tests.constants import load_fixture, generate_random_token
-from uuid import uuid4
+from hostio.tests.constants import generate_random_token, load_fixture
+from hostio.transform_to_stix import (
+    BaseStixTransformation,
+    HostIODomainStixTransformation,
+    HostIOIPtoDomainStixTransform,
+)
 
 VALID_DOMAIN = "example.com"
 VALID_IP = "8.8.8.8"
 VALID_IP_STIX = IPv4Address(value=VALID_IP)
-DEFAULT_FIXTURE = 'google.json'
-DEFAULT_DOMAIN_ID = f"domain-name--{uuid4()}"
+DEFAULT_FIXTURE = "google.json"
+DEFAULT_DOMAIN_ENTITY = DomainName(
+    value=VALID_DOMAIN,
+    object_marking_refs=[TLP_GREEN],
+)
+
 
 class TestTransformToStix:
     @pytest.fixture
     def domain(self):
         """Create a Host IO instance with a mock token."""
         # Use a mock token for testing
-        return HostIODomain(token=generate_random_token(), domain=VALID_DOMAIN, entity_id=DEFAULT_DOMAIN_ID, marking_refs="TLP:WHITE")
+        return HostIODomain(
+            token=generate_random_token(),
+            domain=VALID_DOMAIN,
+            entity_id=DEFAULT_DOMAIN_ENTITY.get("id"),
+            marking_refs="TLP:WHITE",
+        )
 
     def test_hostio_ip_to_domain_stix_transform(self):
         """Test creation of STIX DomainName object."""
@@ -34,12 +54,13 @@ class TestTransformToStix:
             TLP_WHITE.get("id")
         ]
 
-
     def test_hostio_ip_to_domain_stix_transform_marking_refs(self):
         """Test creation of STIX DomainName object with different marking refs."""
         hostio_domain_stix_transform = HostIOIPtoDomainStixTransform(
             # TODO: Fix this test.
-            domain=VALID_DOMAIN, marking_refs="TLP:GREEN", entity_id=VALID_IP_STIX.get("id")
+            domain=VALID_DOMAIN,
+            marking_refs="TLP:GREEN",
+            entity_id=VALID_IP_STIX.get("id"),
         )
         assert hostio_domain_stix_transform.domain == VALID_DOMAIN
         assert hostio_domain_stix_transform.marking_refs == [TLP_GREEN]
@@ -51,13 +72,13 @@ class TestTransformToStix:
             TLP_GREEN.get("id")
         ]
 
-
     def test_hostio_ip_to_domain_stix_transform_invalid_domain(self):
         """Test creation of STIX DomainName object with invalid domain."""
         with pytest.raises(ValueError):
-            HostIOIPtoDomainStixTransform(domain="invalid", entity_id=VALID_IP_STIX.get("id"))
+            HostIOIPtoDomainStixTransform(
+                domain="invalid", entity_id=VALID_IP_STIX.get("id")
+            )
             assert False
-
 
     def test_hostio_ip_to_domain_stix_transform_invalid_marking_refs(self):
         """Test creation of STIX DomainName object with invalid marking refs."""
@@ -68,7 +89,6 @@ class TestTransformToStix:
                 entity_id=VALID_IP_STIX.get("id"),
             )
             assert False
-
 
     def test_hostio_ip_to_domain_stix_transform_invalid_entity_id(self):
         """Test creation of STIX DomainName object with invalid entity id."""
@@ -88,8 +108,10 @@ class TestTransformToStix:
         assert hostio_domain_stix_transform.entity_id == VALID_IP_STIX.get("id")
         assert len(hostio_domain_stix_transform.stix_objects) == 10
         for stix_obj in hostio_domain_stix_transform.get_stix_objects():
-            assert isinstance(stix_obj, (DomainName, IPv4Address, IPv6Address, Relationship, AutonomousSystem))
-
+            assert isinstance(
+                stix_obj,
+                (DomainName, IPv4Address, IPv6Address, Relationship, AutonomousSystem),
+            )
 
     def test_base_stix_trasformation(self):
         """Test creation of STIX DomainName object."""

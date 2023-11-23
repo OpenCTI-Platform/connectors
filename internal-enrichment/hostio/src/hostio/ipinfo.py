@@ -1,10 +1,9 @@
 import logging
 
-from .hostio_utils import is_valid_token, is_ipv4, is_ipv6
-
 from ipinfo import getHandler
 
-
+from .hostio_utils import is_ipv4, is_ipv6, is_valid_token, object_to_pretty_json
+from .transform_to_stix import IPInfoStixTransformation
 
 SUPPORTED_RESPONSE_KEYS = {"ip", "total", "domains", "page"}
 
@@ -18,8 +17,10 @@ class IPInfo:
     The results are then added to the Class as attributes.
     """
 
-    def __init__(self, token, ip, limit=5):
+    def __init__(self, token, ip, marking_refs="TLP:CLEAP", entity_id=None):
         self.ip = ip
+        self.marking_refs = marking_refs
+        self.entity_id = entity_id
         if is_valid_token(token):
             self.handler = getHandler(token=token)
         else:
@@ -30,11 +31,33 @@ class IPInfo:
         else:
             LOGGER.error(f"Invalid IP address: {ip}")
             raise ValueError(f"Invalid IP address: {ip}")
+        self.stix_transform = IPInfoStixTransformation(
+            self.details, self.marking_refs, self.entity_id
+        )
+        self.labels = self.stix_transform.get_labels()
         LOGGER.info(f"IPInfo API request for {ip} successful.")
-
 
     def get_details(self):
         """Submit API request, iterate through response, update attributes."""
         return self.details
 
-    # TODO: Add def get_stix_objects(self):
+    def get_labels(self):
+        return self.labels
+
+    def get_stix_objects(self):
+        """Return STIX objects for the Domain."""
+        return self.stix_transform.get_stix_objects()
+
+    def get_note_content(self):
+        """Return the note content for the Domain."""
+        # Update Indicator Description with results from IPInfo.
+        note_content = str()
+        for key in self.get_details().keys():
+            if self.get_details().get(key) is not None:
+                message = f"IPInfo `{key}`:"
+                if isinstance(self.get_details().get(key), (dict, list)):
+                    message += f"\n\n```\n{object_to_pretty_json(self.get_details().get(key))}\n```"
+                elif isinstance(self.get_details().get(key), (str, int, float, bool)):
+                    message += f"\t```{self.get_details().get(key)}```"
+                note_content += f"\n\n{message}"
+        return note_content

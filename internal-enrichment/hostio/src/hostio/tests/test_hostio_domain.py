@@ -1,23 +1,24 @@
 import json
+import logging
 import os
 import random
 
 import pytest
+from stix2 import TLP_GREEN, DomainName, IPv4Address, IPv6Address, Relationship
 
 from hostio.hostio_domain import HostIODomain
-from stix2 import DomainName, Relationship, IPv4Address, IPv6Address, AutonomousSystem, Identity, Location
-
-from uuid import uuid4
-
-import logging 
 
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_DOMAIN = "google.com"
 DEFAULT_FIXTURE = "google.json"
-# Random Domain Name Stix ID
-DEFAULT_DOMAIN_ID = f"domain-name--{uuid4()}"
 DEFAULT_MARKING_REFS = "TLP:WHITE"
+
+DEFAULT_DOMAIN_ENTITY = DomainName(
+    value=DEFAULT_DOMAIN,
+    object_marking_refs=[TLP_GREEN],
+)
+
 
 def load_fixture(filename):
     """Load a fixture file and return its content."""
@@ -44,9 +45,9 @@ class TestHostioDomain:
         return HostIODomain(
             token=generate_random_token(),
             domain=DEFAULT_DOMAIN,
-            entity_id=DEFAULT_DOMAIN_ID,
-            marking_refs=DEFAULT_MARKING_REFS
-            )
+            entity_id=DEFAULT_DOMAIN_ENTITY.get("id"),
+            marking_refs=DEFAULT_MARKING_REFS,
+        )
 
     def test_request_full_domain_info_success(self, domain, mocker):
         """Test successful fetching of data for valid dataset keys."""
@@ -82,6 +83,9 @@ class TestHostioDomain:
             if type(stix_obj) in pop_list:
                 pop_list.pop(pop_list.index(type(stix_obj)))
         assert pop_list == []
+
+        assert domain.get_note_content()
+        assert len(domain.get_note_content()) > 0
 
     def test_request_full_domain_info_invalid_domain(self, domain, mocker):
         INVALID_DOMAIN = "INVALID_DOMAIN"
