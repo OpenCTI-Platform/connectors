@@ -1,5 +1,6 @@
 from os import environ
 
+from hostio import HostIODomain, HostIOIPtoDomain, IPInfo
 from hostio.hostio_utils import (
     can_be_int,
     format_labels,
@@ -12,8 +13,6 @@ from hostio.hostio_utils import (
 )
 from lib.internal_enrichment import InternalEnrichmentConnector
 from stix2 import Note
-
-from hostio import HostIODomain, HostIOIPtoDomain, IPInfo
 
 
 class HostIOConnector(InternalEnrichmentConnector):
