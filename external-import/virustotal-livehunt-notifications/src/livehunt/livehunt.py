@@ -135,6 +135,50 @@ class VirustotalLivehuntNotifications:
             config,
         )
 
+        alert_prefix = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_ALERT_PREFIX",
+            ["virustotal_livehunt_notifications", "alert_prefix"],
+            config,
+            default="VT "
+        )
+
+        av_list = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_AV_LIST",
+            ["virustotal_livehunt_notifications", "av_list"],
+            config,
+            default=[],
+        )
+        if isinstance(av_list, str):
+            av_list = av_list.split(",")
+
+        yara_label_prefix = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_YARA_LABEL_PREFIX",
+            ["virustotal_livehunt_notifications", "yara_label_prefix"],
+            config,
+            default="vt:yara:"
+        )
+
+        livehunt_label_prefix = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIVEHUNT_LABEL_PREFIX",
+            ["virustotal_livehunt_notifications", "livehunt_label_prefix"],
+            config,
+            default="vt:lh:"
+        )
+
+        livehunt_tag_prefix = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIVEHUNT_TAG_PREFIX",
+            ["virustotal_livehunt_notifications", "livehunt_tag_prefix"],
+            config,
+            default="",
+        )
+
+        enable_label_enrichment = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_ENABLE_LABEL_ENRICHMENT",
+            ["virustotal_livehunt_notifications", "enable_label_enrichment"],
+            config,
+            default=True,
+        )
+
         self.builder = LivehuntBuilder(
             client,
             self.helper,
@@ -151,6 +195,12 @@ class VirustotalLivehuntNotifications:
             min_file_size,
             max_file_size,
             min_positives,
+            alert_prefix,
+            av_list,
+            yara_label_prefix,
+            livehunt_label_prefix,
+            livehunt_tag_prefix,
+            enable_label_enrichment,
         )
 
     @staticmethod
@@ -226,6 +276,7 @@ class VirustotalLivehuntNotifications:
                         )
                     ),
                 )
+
                 if self._is_scheduled(last_run, timestamp):
                     self.helper.log_info(
                         f"[Virustotal Livehunt Notifications] starting run at: {current_state}"

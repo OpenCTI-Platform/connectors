@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Livehunt builder module."""
+import re
 import datetime
 import io
 import json
 import logging
-from typing import Optional
+from typing import List, Optional
 
 import magic
 import plyara
@@ -38,6 +39,12 @@ class LivehuntBuilder:
         min_file_size: int,
         max_file_size: int,
         min_positives: int,
+        alert_prefix: str,
+        av_list: list[str],
+        yara_label_prefix: str,
+        livehunt_label_prefix: str,
+        livehunt_tag_prefix: str,
+        enable_label_enrichment: bool
     ) -> None:
         """Initialize Virustotal builder."""
         self.client = client
@@ -56,18 +63,29 @@ class LivehuntBuilder:
         self.min_file_size = min_file_size
         self.max_file_size = max_file_size
         self.min_positives = min_positives
+        self.alert_prefix = alert_prefix
+        self.av_list = av_list
+        self.yara_label_prefix = yara_label_prefix
+        self.livehunt_label_prefix = livehunt_label_prefix
+        self.livehunt_tag_prefix = livehunt_tag_prefix
+        self.enable_label_enrichment = enable_label_enrichment
 
     def process(self, start_date: str, timestamp: int):
         # Work id will only be set and instantiated if there are bundles to send.
         work_id = None
-        url = "/intelligence/hunting_notification_files"
-        params = f"date:{start_date}+"
+        url = "/ioc_stream"
+        filter = f"date:{start_date}+ source_type:hunting_ruleset"
         if self.tag is not None and self.tag != "":
             self.helper.log_debug(f"Setting up filter with tag {self.tag}")
-            params += f" tag:{self.tag}"
+            filter += f" notification_tag:{self.tag}"
 
+        params = {
+            "descriptors_only": "False",
+            "filter": filter,
+        }
         self.helper.log_info(f"Url for notifications: {url} / params: {params}")
-        files_iterator = self.client.iterator(url, params={"filter": params})
+
+        files_iterator = self.client.iterator(url, params=params)
 
         for vtobj in files_iterator:
             self.helper.log_debug(json.dumps(vtobj.__dict__, indent=2))
@@ -136,12 +154,13 @@ class LivehuntBuilder:
                 file_id = self.create_file(vtobj, incident_id)
 
             if self.with_yara_rule:
-                self.create_rule(
-                    vtobj._context_attributes["ruleset_id"],
-                    vtobj._context_attributes["rule_name"],
-                    incident_id,
-                    file_id,
-                )
+                for source in vtobj._context_attributes["sources"]:
+                    self.create_rule(
+                        source["id"],
+                        source["label"],
+                        incident_id,
+                        file_id,
+                    )
 
             if len(self.bundle) > 0:
                 if work_id is None:
@@ -181,13 +200,13 @@ class LivehuntBuilder:
             Id of the created incident.
         """
         # Create the alert
-        name = f"""Alert from ruleset {vtobj._context_attributes["ruleset_name"]} file={vtobj.sha256}"""
+        name = f"""{self.alert_prefix} {vtobj._context_attributes["hunting_info"]["rule_name"]} file={vtobj.sha256}"""
         incident_id = Incident.generate_id(
             name, vtobj._context_attributes["notification_date"]
         )
         alert = self.helper.api.incident.read(id=incident_id)
         if alert:
-            self.helper.log_info(f"Alert {alert} already exists, skipping")
+            self.helper.log_info(f"Alert {alert['id']} already exists, skipping")
             return None
         incident = stix2.Incident(
             id=incident_id,
@@ -197,11 +216,7 @@ class LivehuntBuilder:
             source=self._SOURCE,
             created_by_ref=self.author["standard_id"],
             confidence=self.helper.connect_confidence_level,
-            labels=[
-                t
-                for t in vtobj._context_attributes["notification_tags"]
-                if t not in {vtobj.id, self.tag}
-            ],
+            labels=self.retrieve_labels(vtobj),
             external_references=[external_reference],
             allow_custom=True,
         )
@@ -253,10 +268,10 @@ class LivehuntBuilder:
         str
             Id of the created file.
         """
-        score = None
+        vt_score = None
         try:
             if hasattr(vtobj, "last_analysis_stats"):
-                score = self._compute_score(vtobj.last_analysis_stats)
+                vt_score = self._compute_score(vtobj.last_analysis_stats)
         except ZeroDivisionError as e:
             self.helper.log_error(f"Unable to compute score of file, err = {e}")
 
@@ -265,9 +280,33 @@ class LivehuntBuilder:
             "Virustotal Analysis",
         )
 
+        ## Add the additional name
+        x_opencti_additional_names = []
+        for name in vtobj.names:
+            if name != vtobj.meaningful_name:
+                x_opencti_additional_names.append(name)
+
+        ## Build a description using the last analysis data from av
+        description = ""
+        for av in self.av_list:
+            av_result = vtobj.last_analysis_results.get(av, {}).get("result")
+            description += f"- **{av}**: {av_result}\n"
+
+        # Add the score to the description
+        # if score is not None:
+        description += f"\nVirusTotal's score: {vt_score}%.\n"
+
+        # add labels from common tags:
+        labels = []
+        for tag in vtobj.type_tags:
+            labels.append(f"{self.livehunt_tag_prefix}{self._normalize_label(tag)}")
+        for tag in vtobj.tags:
+            labels.append(f"{self.livehunt_tag_prefix}{self._normalize_label(tag)}")
+
         file = stix2.File(
             type="file",
             name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}',
+            description=description,
             hashes={
                 "MD5": vtobj.md5,
                 "SHA256": vtobj.sha256,
@@ -276,10 +315,12 @@ class LivehuntBuilder:
             size=vtobj.size,
             external_references=[external_reference],
             custom_properties={
-                "x_opencti_score": score,
+                "x_opencti_score": vt_score,
                 "created_by_ref": self.author["standard_id"],
+                "x_opencti_additional_names": x_opencti_additional_names,
             },
             allow_custom=True,
+            labels=labels,
         )
         self.bundle.append(file)
         # Link to the incident if any.
@@ -470,6 +511,40 @@ class LivehuntBuilder:
             "createdBy": self.author["standard_id"],
         }
         return self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
+
+    def retrieve_labels(self, vtobj) -> List[str]:
+        ctx_attributes = vtobj._context_attributes
+        labels = [
+            t
+            for t in ctx_attributes["tags"]
+            if t not in {vtobj.id, self.tag}
+        ]
+
+        if not self.enable_label_enrichment:
+            return labels
+
+        # retrieve the live-hunt related label
+        live_hunt_label = ctx_attributes["hunting_info"]["rule_name"]
+        if live_hunt_label is not None:
+            live_hunt_label = self._normalize_label(live_hunt_label)
+            labels = list(filter(lambda s: s != live_hunt_label, labels))
+            labels.append(f"{self.livehunt_label_prefix}{live_hunt_label}")
+
+        # retrieve the yara rule names that triggered for this sample
+        for source in ctx_attributes["sources"]:
+            if source.get("type") != "hunting_ruleset":
+                continue
+
+            source_label = self._normalize_label(source["label"])
+            labels = list(filter(lambda s: s != source_label, labels))
+            labels.append(f"{self.yara_label_prefix}{source_label}")
+
+        return labels
+
+    @staticmethod
+    def _normalize_label(label: str) -> str:
+        """Based on livehunt's label normalization"""
+        return re.sub("[^a-z0-9]", "_", label.lower())
 
     @staticmethod
     def _compute_score(stats: dict) -> int:
