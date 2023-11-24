@@ -113,7 +113,11 @@ class YaraRuleUpdater:
             id
             pattern
         """
-        filters = [{"key": "name", "values": [name], "operator": "eq"}]
+        filters = {
+            "mode": "and",
+            "filters": [{"key": "name", "values": [name], "operator": "eq"}],
+            "filterGroups": [],
+        }
 
         return self.helper.api.indicator.read(
             filters=filters, customAttributes=custom_attributes

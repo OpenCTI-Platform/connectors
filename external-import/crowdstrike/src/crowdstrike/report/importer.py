@@ -249,11 +249,11 @@ class ReportImporter(BaseImporter):
         return malwares
 
     def _fetch_malware_standard_id_by_name(self, name: str) -> Optional[str]:
-        filters = [
+        filtersList = [
             self._create_filter("name", name),
             self._create_filter("aliases", name),
         ]
-        for _filter in filters:
+        for _filter in filtersList:
             malwares = self.helper.api.malware.list(filters=_filter)
             if malwares:
                 if len(malwares) > 1:
@@ -264,4 +264,8 @@ class ReportImporter(BaseImporter):
 
     @staticmethod
     def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
-        return [{"key": key, "values": [value]}]
+        return {
+            "mode": "and",
+            "filters": [{"key": key, "values": [value]}],
+            "filterGroups": [],
+        }

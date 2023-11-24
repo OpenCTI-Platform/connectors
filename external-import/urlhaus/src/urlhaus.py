@@ -232,9 +232,16 @@ class URLhaus:
                                                     "Incident",
                                                     "Tool",
                                                 ],
-                                                filters=[
-                                                    {"key": ["name"], "values": [label]}
-                                                ],
+                                                filters={
+                                                    "mode": "and",
+                                                    "filters": [
+                                                        {
+                                                            "key": "name",
+                                                            "values": [label],
+                                                        }
+                                                    ],
+                                                    "filterGroups": [],
+                                                },
                                                 customAttributes=custom_attributes,
                                             )
                                         )

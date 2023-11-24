@@ -386,7 +386,11 @@ class TweetFeed:
             if taglabel is not None and taglabel != "":
                 if taglabel[0].isupper():
                     malwsearc = self.helper.api.malware.read(
-                        filters={"key": "name", "values": [taglabel.lower().strip()]}
+                        filters={
+                            "mode": "and",
+                            "filters": [{"key": "name", "values": [taglabel.lower().strip()]}],
+                            "filterGroups": [],
+                        }
                     )
                     if malwsearc:
                         if (
@@ -404,7 +408,11 @@ class TweetFeed:
 
                     # Second search for intrusion set like APT
                     intrusion = self.helper.api.intrusion_set.read(
-                        filters={"key": "name", "values": [taglabel.lower().strip()]}
+                        filters={
+                            "mode": "and",
+                            "filters": [{"key": "name", "values": [taglabel.lower().strip()]}],
+                            "filterGroups": [],
+                        }
                     )
                     if intrusion:
                         if intrusion[

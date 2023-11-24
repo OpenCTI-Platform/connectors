@@ -96,7 +96,7 @@ class DataExport:
         self,
         entity_type: str,
         search: Dict = None,
-        filters: List = None,
+        filters: object = None,
         order_by: str = "created_at",
         order_mode: str = "asc",
         max_marking_definition: Dict = None,
@@ -112,21 +112,33 @@ class DataExport:
             entity_type = "File"
         if IdentityTypes.has_value(entity_type):
             if filters is not None:
-                filters.append({"key": "entity_type", "values": [entity_type]})
+                filters.filters.append({"key": "entity_type", "values": [entity_type]})
             else:
-                filters = [{"key": "entity_type", "values": [entity_type]}]
+                filters = {
+                    "mode": "and",
+                    "filters": [{"key": "entity_type", "values": [entity_type]}],
+                    "filterGroups": [],
+                }
             entity_type = "Identity"
         if LocationTypes.has_value(entity_type):
             if filters is not None:
-                filters.append({"key": "entity_type", "values": [entity_type]})
+                filters.filters.append({"key": "entity_type", "values": [entity_type]})
             else:
-                filters = [{"key": "entity_type", "values": [entity_type]}]
+                filters = {
+                    "mode": "and",
+                    "filters": [{"key": "entity_type", "values": [entity_type]}],
+                    "filterGroups": [],
+                }
             entity_type = "Location"
         if StixCyberObservableTypes.has_value(entity_type):
             if filters is not None:
-                filters.append({"key": "entity_type", "values": [entity_type]})
+                filters.filters.append({"key": "entity_type", "values": [entity_type]})
             else:
-                filters = [{"key": "entity_type", "values": [entity_type]}]
+                filters = {
+                    "mode": "and",
+                    "filters": [{"key": "entity_type", "values": [entity_type]}],
+                    "filterGroups": [],
+                }
             entity_type = "Stix-Cyber-Observable"
         # List
         lister = {

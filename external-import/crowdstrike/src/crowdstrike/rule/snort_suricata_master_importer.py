@@ -312,7 +312,11 @@ class SnortMasterImporter(BaseImporter):
 
     def _fetch_indicator_by_name(self, name: str) -> Optional[Mapping[str, Any]]:
         values = [name]
-        filters = [{"key": "name", "values": values, "operator": "eq"}]
+        filters = {
+            "mode": "and",
+            "filters": [{"key": "name", "values": values, "operator": "eq"}],
+            "filterGroups": [],
+        }
         return self.helper.api.indicator.read(filters=filters)
 
     def _needs_updating(self, current_rule: SnortRule, new_rule: SnortRule) -> bool:
