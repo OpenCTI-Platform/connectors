@@ -1,0 +1,26 @@
+version: "3"
+services:
+  connector-rst-report-hub:
+    image: connector-rst-report-hub:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=aa817c8b-abae-460a-9ebc-97b1551e70ee
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=RST Report Hub
+      - CONNECTOR_SCOPE=application/json,application/pdf
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_LOG_LEVEL=info
+      - RST_REPORT_HUB_BASE_URL=https://api.rstcloud.net/v1
+      - RST_REPORT_HUB_API_KEY=${RST_REPORT_HUB_API_KEY}
+      - RST_REPORT_HUB_CONNECTION_TIMEOUT=30
+      - RST_REPORT_HUB_READ_TIMEOUT=30
+      - RST_REPORT_HUB_RETRY_DELAY=30
+      - RST_REPORT_HUB_RETRY_ATTEMPTS=5
+      - RST_REPORT_HUB_IMPORT_START_DAY=${RST_REPORT_HUB_STARTDATE}
+      - RST_REPORT_HUB_FETCH_INTERVAL=300
+      - RST_REPORT_HUB_LANGUAGE=eng
+    restart: always
+    depends_on:
+      - opencti
