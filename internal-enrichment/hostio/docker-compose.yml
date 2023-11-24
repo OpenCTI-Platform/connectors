@@ -1,8 +1,7 @@
 version: '3'
 services:
-  connector:
-    build: .
-    container_name: ${CONTAINER_NAME}
+  connector-hostio:
+    image: connector-hostio:5.11.14
     environment:
       - OPENCTI_URL=${OPENCTI_URL}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
@@ -20,7 +19,3 @@ services:
       - HOSTIO_LABELS=${HOSTIO_LABELS}  # Comma-separated list of labels to add to the entities. e.g., "hostio,osint"
       - HOSTIO_MARKING_REFS=${HOSTIO_MARKING_REFS}  # TLP Marking Reference e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED
     restart: always
-networks:
-  default:
-    external: true
-    name: docker_default

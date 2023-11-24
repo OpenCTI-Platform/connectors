@@ -277,6 +277,10 @@ jobs:
           name: Build Docker image opencti/connector-rst-threat-feed
           command: docker build -t opencti/connector-rst-threat-feed:latest . && docker tag opencti/connector-rst-threat-feed:latest opencti/connector-rst-threat-feed:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/hostio
+          name: Build Docker image opencti/connector-hostio
+          command: docker build -t opencti/connector-hostio:latest . && docker tag opencti/connector-hostio:latest opencti/connector-hostio:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -392,6 +396,8 @@ jobs:
             docker push opencti/connector-rst-report-hub:${CIRCLE_TAG}
             docker push opencti/connector-rst-threat-feed:latest
             docker push opencti/connector-rst-threat-feed:${CIRCLE_TAG}
+            docker push opencti/connector-hostio:latest
+            docker push opencti/connector-hostio:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -965,6 +971,10 @@ jobs:
           name: Build Docker image opencti/connector-rst-threat-feed
           command: docker build -t opencti/connector-rst-threat-feed:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/crtsh
+          name: Build Docker image opencti/connector-hostio
+          command: docker build -t opencti/connector-hostio:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1022,6 +1032,7 @@ jobs:
             docker push opencti/connector-crtsh:rolling
             docker push opencti/connector-rst-report-hub:rolling
             docker push opencti/connector-rst-threat-feed:rolling
+            docker push opencti/connector-hostio:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
