@@ -501,11 +501,11 @@ class KnowledgeImporter:
     def _fetch_malware_id_by_name(self, name: str) -> Optional[str]:
         if name == "":
             return None
-        filters = [
+        filtersList = [
             self._create_filter("name", name),
             self._create_filter("aliases", name),
         ]
-        for fil in filters:
+        for fil in filtersList:
             malwares = self.helper.api.malware.list(filters=fil)
             if malwares:
                 if len(malwares) > 1:
@@ -517,11 +517,11 @@ class KnowledgeImporter:
     def _fetch_intrusion_set_id_by_name(self, name: str) -> Optional[str]:
         if name == "":
             return None
-        filters = [
+        filtersList = [
             self._create_filter("name", name),
             self._create_filter("aliases", name),
         ]
-        for fil in filters:
+        for fil in filtersList:
             intrusion_sets = self.helper.api.intrusion_set.list(filters=fil)
             if intrusion_sets:
                 if len(intrusion_sets) > 1:
@@ -532,7 +532,11 @@ class KnowledgeImporter:
 
     @staticmethod
     def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
-        return [{"key": key, "values": [value]}]
+        return {
+            "mode": "and",
+            "filters": [{"key": key, "values": [value]}],
+            "filterGroups": [],
+        }
 
     def _load_opencti_tlp(self):
         self._TLP_MAPPING["tlp_white"] = self.helper.api.marking_definition.read(
