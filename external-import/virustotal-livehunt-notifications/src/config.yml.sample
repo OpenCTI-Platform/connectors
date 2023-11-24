@@ -26,3 +26,9 @@ virustotal_livehunt_notifications:
   create_yara_rule: True # If True, create a yara indicator and link it to the alert and the file
   delete_notification: False # If True, remove the notification on VT
   filter_with_tag: "" # (Optional) Tag to filter the notifications, empty = no filtering
+  alert_prefix: 'VT' # Prefix that is added in alert title
+  av_list: 'Avast,BitDefender,ClamAV,CrowdStrike,Cybereason,ESET-NOD32,FireEye,Fortinet,Kaspersky,Paloalto,Symantec,TrendMicro' # List of AVs to add in description
+  yara_label_prefix: 'vt:yara:' # Prefix that is added in yara label
+  livehunt_label_prefix: 'vt:lh:' # Prefix that is added in livehunt label
+  livehunt_tag_prefix: '' # Prefix used to state that the tag is imported from Livehunt
+  enable_label_enrichment: True # Add livehunt name and matched yara rules label to the alert
