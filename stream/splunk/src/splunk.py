@@ -213,10 +213,10 @@ class SplunkConnector:
                     except:
                         payload["mapped_values"] = []
 
-            # add creator's name
-            payload["values"] = sum(
-                [list(value.values()) for value in payload["mapped_values"]], []
-            )
+                # add values
+                payload["values"] = sum(
+                    [list(value.values()) for value in payload["mapped_values"]], []
+                )
             created_by = payload.get("created_by_ref", None)
             if created_by is not None:
                 org_name = self.get_org_name(created_by)
