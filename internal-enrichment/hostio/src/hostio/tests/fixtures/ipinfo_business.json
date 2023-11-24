@@ -1,0 +1,51 @@
+{
+    "ip": "8.8.8.8",
+    "hostname": "dns.google",
+    "anycast": true,
+    "city": "Mountain View",
+    "region": "California",
+    "country": "US",
+    "loc": "37.4056,-122.0775",
+    "postal": "94043",
+    "timezone": "America/Los_Angeles",
+    "asn": {
+      "asn": "AS15169",
+      "name": "Google LLC",
+      "domain": "google.com",
+      "route": "8.8.8.0/24",
+      "type": "hosting"
+    },
+    "company": {
+      "name": "Google LLC",
+      "domain": "google.com",
+      "type": "hosting"
+    },
+    "privacy": {
+      "vpn": false,
+      "proxy": true,
+      "tor": true,
+      "relay": true,
+      "hosting": true,
+      "service": "asdfasdf",
+      "cached": ""
+    },
+    "abuse": {
+      "address": "US, CA, Mountain View, 1600 Amphitheatre Parkway, 94043",
+      "country": "US",
+      "email": "network-abuse@google.com",
+      "name": "Abuse",
+      "network": "8.8.8.0/24",
+      "phone": "+1-650-253-0000"
+    },
+    "domains": {
+      "ip": "8.8.8.8",
+      "total": 9791,
+      "domains": [
+        "musicool.cn",
+        "kagou.vip",
+        "nmgk2.com",
+        "91xiazai.com",
+        "bits-hyderabad.ac.in"
+      ]
+    }
+  }
