@@ -53,7 +53,7 @@ class ReportHub:
     @staticmethod
     def get_config(name: str, config, default=None):
         env_name = "RST_REPORT_HUB_{}".format(name.upper())
-        result = get_config_variable(env_name, ["rst_report_hub", name], config)
+        result = get_config_variable(env_name, ["rst-report-hub", name], config)
         return result or default
 
     def _combine_report_and_send(self, stix_bundle, x_opencti_file, report_id):
