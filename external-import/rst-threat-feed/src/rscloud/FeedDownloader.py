@@ -140,7 +140,6 @@ class FeedDownloader:
         return True
 
     def download_feed(self):
-
         new_state = {}
         if not self._session:
             self.init_connection()

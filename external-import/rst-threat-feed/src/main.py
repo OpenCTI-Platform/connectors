@@ -82,7 +82,7 @@ class RSTThreatFeed:
     @staticmethod
     def get_config(name: str, config, default=None):
         env_name = "RST_THREAT_FEED_{}".format(name.upper())
-        result = get_config_variable(env_name, ["rst_threat_feed", name], config)
+        result = get_config_variable(env_name, ["rst-threat-feed", name], config)
         return result or default
 
     def get_interval(self) -> int:
