@@ -1,8 +1,7 @@
 version: '3'
 services:
-  connector:
-    build: .
-    container_name: ${CONTAINER_NAME}
+  connector-crtsh:
+    image: opencti/connector-crtsh:5.11.14
     environment:
       # Connector's definition parameters:
       - CONNECTOR_TYPE=${CONNECTOR_TYPE}
@@ -28,8 +27,3 @@ services:
       # Applies a wildcard expression for the Domain. One of the following: true, false
       - CRTSH_IS_WILDCARD=${CRTSH_IS_WILDCARD}
     restart: always
-
-networks:
-  default:
-    external: true
-    name: docker_default
