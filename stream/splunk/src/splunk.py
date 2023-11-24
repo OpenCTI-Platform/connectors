@@ -192,7 +192,7 @@ class SplunkConnector:
                     parsed = translation.translate(
                         "splunk", "parse", "{}", payload["pattern"]
                     )
-                    if "parsed_stix" in parsed:
+                    if "parsed_stix" in parsed and len(parsed["parsed_stix"]) > 0:
                         payload["mapped_values"] = []
                         for value in parsed["parsed_stix"]:
                             formatted_value = {}
@@ -200,6 +200,8 @@ class SplunkConnector:
                                 "value"
                             ]
                             payload["mapped_values"].append(formatted_value)
+                    else:
+                        raise ValueError("Not parsed")
                 except:
                     try:
                         splitted = payload["pattern"].split(" = ")
