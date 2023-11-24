@@ -49,7 +49,6 @@ class ShodanConnector:
             )
 
             if "opts" in service:
-                print(service["opts"])
                 if "heartbleed" in service["opts"]:
                     Services = (
                         Services + f'\nHEARTBLEED: {service["opts"]["heartbleed"]}'
