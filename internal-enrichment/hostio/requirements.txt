@@ -1,0 +1,5 @@
+pycti==5.11.14
+countryinfo
+requests
+validators
+ipinfo
