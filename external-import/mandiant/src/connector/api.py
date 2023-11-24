@@ -117,8 +117,12 @@ class MandiantAPI:
                 self._authenticate()
                 continue
 
-            logger.error(f"An unknown error occurred, code: {response.status_code}.")
-            raise ValueError(f"An unknown error occurred, code: {response.status_code}")
+            logger.error(
+                f"An unknown error occurred, code: {response.status_code}, response: {response.text}, url: {url}, headers: {str(headers)}."
+            )
+            raise ValueError(
+                f"An unknown error occurred, code: {response.status_code}, response: {response.text}, url: {url}, headers: {str(headers)}."
+            )
 
     def _process(
         self,
@@ -212,7 +216,12 @@ class MandiantAPI:
         )
 
     def vulnerabilities(
-        self, start_epoch: int = None, end_epoch: int = None, limit: int = 1000
+        self,
+        start_epoch: int = None,
+        end_epoch: int = None,
+        limit: int = 1000,
+        sort_by: str = "last_update",
+        sort_order: str = "asc",
     ) -> Iterable[Dict]:
         return self._process(
             name="vulnerabilities",
@@ -220,6 +229,8 @@ class MandiantAPI:
                 "start_epoch": start_epoch,
                 "end_epoch": end_epoch,
                 "limit": limit,
+                "sort_by": sort_by,
+                "sort_order": sort_order,
             },
             result="vulnerability",
         )

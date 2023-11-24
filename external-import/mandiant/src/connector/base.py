@@ -471,7 +471,6 @@ class Mandiant:
         if collection == "vulnerabilities":
             parameters[STATE_START] = start.unix_format
             parameters[STATE_END] = end.unix_format
-            parameters["sort_order"] = "asc"
 
         if collection == "indicators":
             end = now
@@ -481,6 +480,7 @@ class Mandiant:
             parameters[STATE_END] = end.unix_format
             parameters["gte_mscore"] = self.mandiant_indicator_minimum_score
 
+        item = None
         try:
             for item in collection_api(**parameters):
                 bundle = module.process(self, item)
@@ -499,7 +499,7 @@ class Mandiant:
             Save current state before exiting in order to provide
             the capability to start near the moment where it exited.
             """
-            if collection == "vulnerabilities":
+            if collection == "vulnerabilities" and item is not None:
                 state[collection][STATE_START] = item["publish_date"]
             elif collection == "indicators":
                 pass
