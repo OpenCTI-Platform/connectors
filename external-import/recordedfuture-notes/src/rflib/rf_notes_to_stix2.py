@@ -137,21 +137,13 @@ class Indicator(RFStixEntity):
         )
 
     def map_data(self, rf_indicator):
+        handled_related_entities_types = ["Malware", "Hash", "IpAddress", "URL", "Threat Actor"]
         self.risk_score = int(rf_indicator["Risk"])
-        related_entities_exist = json.loads(rf_indicator["Links"])["hits"]
-        if related_entities_exist and len(related_entities_exist[0]["sections"]) > 0:
-            rf_related_entities = related_entities_exist[0]["sections"][0]["lists"]
-            # TODO refacto this and related_entities_exist
+        related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
+        if related_entities_hits and len(related_entities_hits[0]["sections"]) > 0: # Sometimes, hits is not empty but sections is
+            rf_related_entities = related_entities_hits[0]["sections"][0]["lists"]
             for element in rf_related_entities:
-                if element["type"]["name"] == "Threat Actor":
-                    for rf_related_element in element["entities"]:
-                        type_ = rf_related_element["type"]
-                        name_ = rf_related_element["name"]
-                        related_element = ThreatActor(name_, type_, self.author)
-                        stix_objs = related_element.to_stix_objects()
-                        self.related_entities.extend(stix_objs)
-                elif element["type"]["name"] in ["Malware", "Hash", "IpAddress", "URL"]:
-                    # TODO which related entities to take into account
+                if element["type"]["name"] in handled_related_entities_types:
                     for rf_related_element in element["entities"]:
                         type_ = rf_related_element["type"]
                         name_ = rf_related_element["name"]
@@ -202,7 +194,6 @@ class IPAddress(Indicator):
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
-        # TODO Maybe self.objects if not empty, otherwise, self.to_stix_objects
         return stix2.Bundle(objects=self.objects, allow_custom=True)
 
 
@@ -501,6 +492,7 @@ ENTITY_TYPE_MAPPER = {
     "ProvinceOrState": Location,
     "Industry": Identity,
     "Operation": Campaign,
+    "Threat Actor": ThreatActor
 }
 
 # maps RF types to the corresponding url to get the risk score

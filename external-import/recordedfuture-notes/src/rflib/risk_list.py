@@ -16,7 +16,6 @@ class RiskList(threading.Thread):
 
     def run(self):
         while True:
-            # TODO call API
             for key, risk_list_type in RISK_LIST_TYPE_MAPPER.items():
                 self.helper.log_info(f"[RISK LISTS] Pulling {key} risk lists")
 
@@ -28,9 +27,7 @@ class RiskList(threading.Thread):
                     "Recorded Future Risk List run @ "
                     + now.strftime("%Y-%m-%d %H:%M:%S"),
                 )
-                # with open("rflib/enriched_rl.csv", "r") as csv_file:
                 reader = csv.DictReader(csv_file)
-                # TODO Handle other indicator cases
                 for row in reader:
                     # Convert into stix object
                     indicator = risk_list_type["class"](row["Name"], key)
