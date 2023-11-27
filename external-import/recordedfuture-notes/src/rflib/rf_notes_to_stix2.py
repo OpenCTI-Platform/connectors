@@ -208,6 +208,7 @@ class IPAddress(Indicator):
 
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
+
     def __init__(self, name, _type, author=None):
         super().__init__(name, _type, author)
 
@@ -220,6 +221,7 @@ class Domain(Indicator):
 
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
+
     def __init__(self, name, _type, author=None):
         super().__init__(name, _type, author)
 

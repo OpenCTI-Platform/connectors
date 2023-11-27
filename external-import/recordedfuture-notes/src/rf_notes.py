@@ -17,7 +17,6 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from rflib import APP_VERSION, IPAddress, RFClient, RiskList, StixNote
 
 
