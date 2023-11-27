@@ -22,3 +22,8 @@ harfanglab:
   source_list_name: 'from_OpenCTI'
   remove_indicator: true
   rule_maturity: 'ChangeMe' # stable, testing
+  import_security_events_as_incidents: true
+  import_threads_as_incidents: true # If true then "import_security_events_as_incidents" must be true
+  import_security_events_filters_by_status: 'ChangeMe' # Filters available : new, investigating, false_positive, closed
+  import_filters_by_alert_type: 'ChangeMe' # Filters available : yara, sigma, ioc
+  default_markings: 'ChangeMe' # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED
