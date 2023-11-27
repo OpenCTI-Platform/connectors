@@ -58,16 +58,24 @@ class HarfangLabConnector:
             "HARFANGLAB_RULE_MATURITY", ["harfanglab", "rule_maturity"], config
         )
         self.harfanglab_import_security_events_as_incidents = get_config_variable(
-            "HARFANGLAB_IMPORT_SECURITY_EVENTS_AS_INCIDENTS", ["harfanglab", "import_security_events_as_incidents"], config
+            "HARFANGLAB_IMPORT_SECURITY_EVENTS_AS_INCIDENTS",
+            ["harfanglab", "import_security_events_as_incidents"],
+            config,
         )
         self.harfanglab_import_threats_as_case_incidents = get_config_variable(
-            "HARFANGLAB_IMPORT_THREATS_AS_CASE_INCIDENTS", ["harfanglab", "import_threats_as_case_incidents"], config
+            "HARFANGLAB_IMPORT_THREATS_AS_CASE_INCIDENTS",
+            ["harfanglab", "import_threats_as_case_incidents"],
+            config,
         )
         self.harfanglab_import_security_events_filters_by_status = get_config_variable(
-            "HARFANGLAB_IMPORT_SECURITY_EVENTS_FILTERS_BY_STATUS", ["harfanglab", "import_security_events_filters_by_status"], config
+            "HARFANGLAB_IMPORT_SECURITY_EVENTS_FILTERS_BY_STATUS",
+            ["harfanglab", "import_security_events_filters_by_status"],
+            config,
         )
         self.harfanglab_import_filters_by_alert_type = get_config_variable(
-            "HARFANGLAB_IMPORT_FILTERS_BY_ALERT_TYPE", ["harfanglab", "import_filters_by_alert_type"], config
+            "HARFANGLAB_IMPORT_FILTERS_BY_ALERT_TYPE",
+            ["harfanglab", "import_filters_by_alert_type"],
+            config,
         )
         self.harfanglab_default_markings = get_config_variable(
             "HARFANGLAB_DEFAULT_MARKINGS", ["harfanglab", "default_markings"], config
@@ -104,17 +112,17 @@ class HarfangLabConnector:
                 "Missing or incorrect value in configuration parameter 'Live Stream ID'"
             )
         if (
-                self.harfanglab_import_security_events_as_incidents is None
-                or self.harfanglab_import_security_events_as_incidents
-                != bool(self.harfanglab_import_security_events_as_incidents)
+            self.harfanglab_import_security_events_as_incidents is None
+            or self.harfanglab_import_security_events_as_incidents
+            != bool(self.harfanglab_import_security_events_as_incidents)
         ):
             raise ValueError(
                 "Missing or incorrect value in configuration parameter 'Import security events as sightings'"
             )
         if (
-                self.harfanglab_import_threats_as_case_incidents is None
-                or self.harfanglab_import_threats_as_case_incidents
-                != bool(self.harfanglab_import_threats_as_case_incidents)
+            self.harfanglab_import_threats_as_case_incidents is None
+            or self.harfanglab_import_threats_as_case_incidents
+            != bool(self.harfanglab_import_threats_as_case_incidents)
         ):
             raise ValueError(
                 "Missing or incorrect value in configuration parameter 'Import threads as incidents'"
@@ -123,12 +131,10 @@ class HarfangLabConnector:
         self.check_config_filters(
             self.harfanglab_import_security_events_filters_by_status,
             ["new", "investigating", "false_positive", "closed"],
-            4
+            4,
         )
         self.check_config_filters(
-            self.harfanglab_import_filters_by_alert_type,
-            ["yara", "sigma", "ioc"],
-            3
+            self.harfanglab_import_filters_by_alert_type, ["yara", "sigma", "ioc"], 3
         )
 
         # Create or get existing list Yara Pattern
@@ -140,7 +146,6 @@ class HarfangLabConnector:
 
     @staticmethod
     def check_config_filters(check_filters, valid_filters, max_len_filters):
-
         result = check_filters.lower().replace(" ", "").split(",")
         if len(result) <= max_len_filters:
             for item in result:
@@ -934,9 +939,7 @@ class HarfangLabConnector:
                         "domain-name:value", "domain_name"
                     )
                 elif stix_attribute == "file:name":
-                    new_stix_attribute = stix_attribute.replace(
-                        "file:name", "filename"
-                    )
+                    new_stix_attribute = stix_attribute.replace("file:name", "filename")
                 elif stix_attribute == "hostname:value":
                     new_stix_attribute = stix_attribute.replace(
                         "hostname:value", "domain_name"
@@ -992,8 +995,16 @@ class HarfangLabConnector:
             else:
                 if "source_ref" in data:
                     data_id = data["source_ref"]
-                    data_source_value = OpenCTIConnectorHelper.get_attribute_in_extension("source_value", data)
-                    data_target_value = OpenCTIConnectorHelper.get_attribute_in_extension("target_value", data)
+                    data_source_value = (
+                        OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "source_value", data
+                        )
+                    )
+                    data_target_value = (
+                        OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "target_value", data
+                        )
+                    )
 
                     if data_source_value == data_target_value:
                         return
@@ -1123,6 +1134,7 @@ class HarfangLabConnector:
         )
         self.sightings.start()
         self.helper.listen_stream(self._process_message)
+
 
 if __name__ == "__main__":
     try:
