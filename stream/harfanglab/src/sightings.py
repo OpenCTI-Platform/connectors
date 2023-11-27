@@ -2,7 +2,6 @@
 # SIGHTINGS     #
 #################
 
-import json
 import re
 import threading
 import time
@@ -12,7 +11,6 @@ import requests
 import stix2
 from dateutil.parser import parse
 from pycti import (
-    AttackPattern,
     CaseIncident,
     CustomObjectCaseIncident,
     CustomObservableHostname,
