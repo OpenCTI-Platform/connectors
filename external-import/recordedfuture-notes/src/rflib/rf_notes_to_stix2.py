@@ -416,23 +416,6 @@ class Software(RFStixEntity):
         )
 
 
-class Software(RFStixEntity):
-    def __init__(self, name, type_, author):
-        self.name = name
-        self.software_object = None
-
-    def to_stix_objects(self):
-        """Returns a list of STIX objects"""
-        if not self.software_object:
-            self.create_stix_objects()
-        return [self.software_object]
-
-    def create_stix_objects(self):
-        self.software_object = stix2.Software(
-            name=self.name,
-        )
-
-
 class Location(RFStixEntity):
     rf_type_to_stix = {
         "Country": "Country",
