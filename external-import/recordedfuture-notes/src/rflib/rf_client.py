@@ -144,12 +144,11 @@ class RFClient:
             ret.add(entity["entity"])
         return ret
 
-    def get_risk_list_CSV(self, path: string):
+    def get_risk_list_CSV(self, path: string) -> io.StringIO:
         res = self.get_fusion_file(path)
-        reader = io.StringIO(res)
+        buffer = io.StringIO(res)
 
-        # TODO Maybe change the returned format
-        return reader
+        return buffer
 
     def get_risk_score(self, type: str, value: str) -> int:
         """Gets risk score for an indicator
