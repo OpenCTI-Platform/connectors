@@ -137,10 +137,18 @@ class Indicator(RFStixEntity):
         )
 
     def map_data(self, rf_indicator):
-        handled_related_entities_types = ["Malware", "Hash", "IpAddress", "URL", "Threat Actor"]
+        handled_related_entities_types = [
+            "Malware",
+            "Hash",
+            "IpAddress",
+            "URL",
+            "Threat Actor",
+        ]
         self.risk_score = int(rf_indicator["Risk"])
         related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
-        if related_entities_hits and len(related_entities_hits[0]["sections"]) > 0: # Sometimes, hits is not empty but sections is
+        if (
+            related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
+        ):  # Sometimes, hits is not empty but sections is
             rf_related_entities = related_entities_hits[0]["sections"][0]["lists"]
             for element in rf_related_entities:
                 if element["type"]["name"] in handled_related_entities_types:
@@ -492,7 +500,7 @@ ENTITY_TYPE_MAPPER = {
     "ProvinceOrState": Location,
     "Industry": Identity,
     "Operation": Campaign,
-    "Threat Actor": ThreatActor
+    "Threat Actor": ThreatActor,
 }
 
 # maps RF types to the corresponding url to get the risk score
