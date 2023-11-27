@@ -11,9 +11,17 @@ from datetime import datetime, timezone
 import requests
 import stix2
 from dateutil.parser import parse
-from pycti import (AttackPattern, CaseIncident, CustomObjectCaseIncident,
-                   CustomObservableHostname, Incident, Indicator, Note,
-                   StixCoreRelationship, StixSightingRelationship)
+from pycti import (
+    AttackPattern,
+    CaseIncident,
+    CustomObjectCaseIncident,
+    CustomObservableHostname,
+    Incident,
+    Indicator,
+    Note,
+    StixCoreRelationship,
+    StixSightingRelationship,
+)
 
 
 class Sightings(threading.Thread):
@@ -27,7 +35,7 @@ class Sightings(threading.Thread):
         harfanglab_import_security_events_as_incidents,
         harfanglab_import_security_events_filters_by_status,
         harfanglab_import_filters_by_alert_type,
-        harfanglab_import_threads_as_case_incidents,
+        harfanglab_import_threats_as_case_incidents,
         harfanglab_default_markings,
         harfanglab_rule_maturity,
     ):
@@ -45,8 +53,8 @@ class Sightings(threading.Thread):
             harfanglab_import_security_events_filters_by_status
         )
         self.import_filters_by_alert_type = harfanglab_import_filters_by_alert_type
-        self.import_threads_as_case_incidents = (
-            harfanglab_import_threads_as_case_incidents
+        self.import_threats_as_case_incidents = (
+            harfanglab_import_threats_as_case_incidents
         )
         self.default_markings = harfanglab_default_markings
         self.harfanglab_rule_maturity = harfanglab_rule_maturity
@@ -62,7 +70,7 @@ class Sightings(threading.Thread):
     def run(self):
         while True:
             if (
-                self.import_threads_as_case_incidents is False
+                self.import_threats_as_case_incidents is False
                 and self.import_security_events_as_incidents is True
             ):
                 self.helper.log_info("[INCIDENTS] Starting alerts gatherer")
@@ -71,7 +79,7 @@ class Sightings(threading.Thread):
                     "[INCIDENTS] Incidents creations completed successfully"
                 )
 
-            elif self.import_threads_as_case_incidents is True:
+            elif self.import_threats_as_case_incidents is True:
                 self.helper.log_info(
                     "[INCIDENTS/CASE-INCIDENTS] Starting alerts gatherer"
                 )

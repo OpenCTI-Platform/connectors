@@ -11,6 +11,7 @@ import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix_shifter.stix_translation import stix_translation
+
 from sightings import Sightings
 
 
@@ -59,8 +60,8 @@ class HarfangLabConnector:
         self.harfanglab_import_security_events_as_incidents = get_config_variable(
             "HARFANGLAB_IMPORT_SECURITY_EVENTS_AS_INCIDENTS", ["harfanglab", "import_security_events_as_incidents"], config
         )
-        self.harfanglab_import_threads_as_case_incidents = get_config_variable(
-            "HARFANGLAB_IMPORT_THREADS_AS_CASE_INCIDENTS", ["harfanglab", "import_threads_as_case_incidents"], config
+        self.harfanglab_import_threats_as_case_incidents = get_config_variable(
+            "HARFANGLAB_IMPORT_THREATS_AS_CASE_INCIDENTS", ["harfanglab", "import_threats_as_case_incidents"], config
         )
         self.harfanglab_import_security_events_filters_by_status = get_config_variable(
             "HARFANGLAB_IMPORT_SECURITY_EVENTS_FILTERS_BY_STATUS", ["harfanglab", "import_security_events_filters_by_status"], config
@@ -111,9 +112,9 @@ class HarfangLabConnector:
                 "Missing or incorrect value in configuration parameter 'Import security events as sightings'"
             )
         if (
-                self.harfanglab_import_threads_as_case_incidents is None
-                or self.harfanglab_import_threads_as_case_incidents
-                != bool(self.harfanglab_import_threads_as_case_incidents)
+                self.harfanglab_import_threats_as_case_incidents is None
+                or self.harfanglab_import_threats_as_case_incidents
+                != bool(self.harfanglab_import_threats_as_case_incidents)
         ):
             raise ValueError(
                 "Missing or incorrect value in configuration parameter 'Import threads as incidents'"
@@ -1116,7 +1117,7 @@ class HarfangLabConnector:
             self.harfanglab_import_security_events_as_incidents,
             self.harfanglab_import_security_events_filters_by_status,
             self.harfanglab_import_filters_by_alert_type,
-            self.harfanglab_import_threads_as_case_incidents,
+            self.harfanglab_import_threats_as_case_incidents,
             self.harfanglab_default_markings,
             self.harfanglab_rule_maturity,
         )
