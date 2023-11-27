@@ -150,7 +150,7 @@ class Indicator(RFStixEntity):
                         related_element = ThreatActor(name_, type_, self.author)
                         stix_objs = related_element.to_stix_objects()
                         self.related_entities.extend(stix_objs)
-                elif element["type"]["name"] in ["Malware", "Hash"]:
+                elif element["type"]["name"] in ["Malware", "Hash", "IpAddress", "URL"]:
                     # TODO which related entities to take into account
                     for rf_related_element in element["entities"]:
                         type_ = rf_related_element["type"]
@@ -189,14 +189,7 @@ class Indicator(RFStixEntity):
 
 class IPAddress(Indicator):
     def __init__(self, name, _type, author=None):
-        self.name = name
-        self.author = author or super()._create_author()
-        self.stix_indicator = None
-        self.stix_observable = None
-        self.stix_relationship = None
-        self.risk_score = None
-        self.related_entities = []
-        self.objects = []
+        super().__init__(name, _type, author)
 
     """Converts IP address to IP indicator and observable"""
 
@@ -215,6 +208,8 @@ class IPAddress(Indicator):
 
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
+    def __init__(self, name, _type, author=None):
+        super().__init__(name, _type, author)
 
     def _create_pattern(self):
         return f"[domain-name:value = '{self.name}']"
@@ -225,6 +220,8 @@ class Domain(Indicator):
 
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
+    def __init__(self, name, _type, author=None):
+        super().__init__(name, _type, author)
 
     def _create_pattern(self):
         ioc = self.name.replace("\\", "\\\\")
