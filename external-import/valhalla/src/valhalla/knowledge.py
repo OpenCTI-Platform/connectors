@@ -59,7 +59,6 @@ class KnowledgeImporter:
             bundle,
             work_id=work_id,
         )
-        self.bundle_objects = []
 
         state_timestamp = int(datetime.utcnow().timestamp())
         self.helper.log_info("knowledge importer completed")
