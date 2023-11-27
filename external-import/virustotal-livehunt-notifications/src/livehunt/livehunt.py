@@ -201,6 +201,7 @@ class VirustotalLivehuntNotifications:
     def run(self):
         """Run VirustotalLivehuntNotifications."""
         self.helper.log_info("Starting Virustotal Livehunt Notifications Connector...")
+        self.helper.metric.state("idle")
 
         while True:
             self.helper.log_info(
@@ -227,6 +228,8 @@ class VirustotalLivehuntNotifications:
                     ),
                 )
                 if self._is_scheduled(last_run, timestamp):
+                    self.helper.metric.inc("run_count")
+                    self.helper.metric.state("running")
                     self.helper.log_info(
                         f"[Virustotal Livehunt Notifications] starting run at: {current_state}"
                     )
@@ -244,6 +247,7 @@ class VirustotalLivehuntNotifications:
                     self.helper.set_state(new_state)
 
                     self.helper.log_info("No new Livehunt Notifications found...")
+                    self.helper.metric.state("idle")
                 else:
                     run_interval = self._get_next_interval(
                         run_interval, timestamp, last_run
@@ -257,10 +261,12 @@ class VirustotalLivehuntNotifications:
                 sys.exit(0)
 
             except Exception as e:
+                self.helper.metric.inc("error_count")
                 self.helper.log_error(str(e))
                 sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
+                self.helper.metric.state("stopped")
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 

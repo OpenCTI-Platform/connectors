@@ -258,6 +258,7 @@ class LivehuntBuilder:
             if hasattr(vtobj, "last_analysis_stats"):
                 score = self._compute_score(vtobj.last_analysis_stats)
         except ZeroDivisionError as e:
+            self.helper.metric.inc("error_count")
             self.helper.log_error(f"Unable to compute score of file, err = {e}")
 
         external_reference = self.create_external_reference(
@@ -440,6 +441,7 @@ class LivehuntBuilder:
         work_id : str
             Work id to use
         """
+        self.helper.metric.inc("record_send", len(self.bundle))
         bundle = stix2.Bundle(objects=self.bundle, allow_custom=True)
         self.helper.log_debug(f"Sending bundle: {bundle}")
         serialized_bundle = bundle.serialize()
