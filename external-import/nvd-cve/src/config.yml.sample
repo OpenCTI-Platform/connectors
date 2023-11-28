@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Common Vulnerabilities and Exposures'
+  scope: 'identity,vulnerability'
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  run_and_terminate: false
+  log_level: 'info'
+
+cve:
+  api_key: 'ChangeMe' # Required
+  base_url: 'https://services.nvd.nist.gov/rest/json/cves/2.0' # Required
+  interval: 1 # Required, in hours
