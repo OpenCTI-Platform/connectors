@@ -238,7 +238,9 @@ class DomainToolsConnector:
         builder = DtBuilder(self.helper, self.author, stix_objects)
 
         # Enrichment using DomainTools API.
-        return self._enrich_domaintools(builder, opencti_entity)
+        result = self._enrich_domaintools(builder, opencti_entity)
+        self.helper.metric.state("idle")
+        return result
 
     def _process_message(self, data):
         opencti_entity = self.helper.api.stix_cyber_observable.read(

@@ -93,6 +93,7 @@ class Cve:
             time.sleep(60)
 
     def process_data(self):
+        self.helper.metric.state("idle")
         try:
             # Get the current timestamp and check
             timestamp = int(time.time())
@@ -167,6 +168,7 @@ class Cve:
         if self.helper.get_run_and_terminate():
             self.process_data()
             self.helper.force_ping()
+            self.helper.metric.state("stopped")
         else:
             while True:
                 self.process_data()
