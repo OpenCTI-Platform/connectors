@@ -1,0 +1,1 @@
+from .vulnerability_to_stix2 import Converter

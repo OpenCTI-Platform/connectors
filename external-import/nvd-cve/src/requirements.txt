@@ -1,0 +1,4 @@
+pycti
+requests
+stix2
+urllib3
