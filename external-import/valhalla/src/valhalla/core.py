@@ -72,6 +72,7 @@ class Valhalla:
 
     def run(self) -> None:
         self.helper.log_info("starting valhalla connector...")
+        self.helper.metric.state("idle")
         while True:
             try:
                 status_data = self.valhalla_client.get_status()
@@ -93,6 +94,8 @@ class Valhalla:
                     last_valhalla_version, api_status.version
                 ):
                     self.helper.log_info("running valhalla importer")
+                    self.helper.metric.inc("run_count")
+                    self.helper.metric.state("running")
 
                     # Announce upcoming work to OpenCTI
                     friendly_name = (
@@ -122,6 +125,7 @@ class Valhalla:
                     self.helper.api.work.to_processed(
                         work_id, "Valhalla importer finished"
                     )
+                    self.helper.metric.state("idle")
                 else:
                     new_interval = self._get_interval() - (current_time - last_run)
                     self.helper.log_info(
@@ -130,13 +134,16 @@ class Valhalla:
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("connector stop")
+                self.helper.metric.state("stopped")
                 sys.exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
+                self.helper.metric.state("stopped")
                 sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
+                self.helper.metric.state("stopped")
                 sys.exit(0)
 
             # After a successful run pause at least 60sec

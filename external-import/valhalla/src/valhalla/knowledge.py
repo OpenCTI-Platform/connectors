@@ -53,6 +53,7 @@ class KnowledgeImporter:
         self.process_yara_rules()
 
         bundle = Bundle(objects=self.bundle_objects, allow_custom=True).serialize()
+        self.helper.metric.inc("record_send", len(self.bundle_objects))
 
         self.helper.send_stix2_bundle(
             bundle,
@@ -69,6 +70,7 @@ class KnowledgeImporter:
             response = ApiResponse.parse_obj(rules_json)
         except Exception as err:
             self.helper.log_error(f"error downloading rules: {err}")
+            self.helper.metric.inc("client_error_count")
             return None
 
         for yr in response.rules:
@@ -84,6 +86,7 @@ class KnowledgeImporter:
                     )
                     refs.append(ref)
                 except Exception:
+                    self.helper.metric.inc("error_count")
                     self.helper.log_error(f"error parsing ref url: {yr.reference}")
                     continue
 
@@ -155,6 +158,7 @@ class KnowledgeImporter:
             response = StixEnterpriseAttack.parse_obj(attack_data.json())
         except Exception as err:
             self.helper.log_error(f"error downloading attack data: {err}")
+            self.helper.metric.inc("client_error_count")
             return None
 
         for obj in response.objects:
