@@ -103,7 +103,7 @@ class CVEConnector:
                 }
 
                 # TODO can only get data max range 120 days, send an error if wanted history
-                self.converter.convert_and_send(cve_params)
+                self.converter.convert_and_send(cve_params, work_id)
 
                 msg = (
                     f"[CONNECTOR] Connector successfully run, storing last_run as "
