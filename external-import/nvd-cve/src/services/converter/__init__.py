@@ -1,1 +1,1 @@
-from .vulnerability_to_stix2 import Converter
+from .vulnerability_to_stix2 import CVEConverter
