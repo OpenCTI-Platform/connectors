@@ -13,6 +13,6 @@ connector:
   log_level: 'info'
 
 cve:
-  api_key: 'ChangeMe' # Required
   base_url: 'https://services.nvd.nist.gov/rest/json/cves/2.0' # Required
+  api_key: 'ChangeMe' # Required
   interval: 1 # Required, in hours

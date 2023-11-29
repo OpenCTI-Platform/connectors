@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
-from services import Converter  # type: ignore
+from services import CVEConverter  # type: ignore
 from services.utils.config_variables import ConfigCVE  # type: ignore
 
 from services.utils._version import __version__ as APP_VERSION  # type: ignore
@@ -18,7 +18,7 @@ class CVEConnector:
         # Load configuration file and connection helper
         self.config = ConfigCVE()
         self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.converter = Converter()
+        self.converter = CVEConverter()
 
     def run(self) -> None:
         """
@@ -96,7 +96,15 @@ class CVEConnector:
                 """
                 
                 """
-                self.converter.convert_vulberabilities()
+                cve_params = {
+                    "startIndex": 0,
+                    "resultsPerPage": 2000,
+                    "lastModStartDate": "2023-11-28T00:00:00",
+                    "lastModEndDate": "2023-12-31T23:59:59"
+                }
+
+                # TODO can only get data max range 120 days, send an error if wanted history
+                self.converter.convert_and_send(cve_params)
 
                 msg = (
                     f"[CONNECTOR] Connector successfully run, storing last_run as "

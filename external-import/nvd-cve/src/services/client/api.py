@@ -41,17 +41,12 @@ class CVEClient:
             self.helper.log_error(error_msg)
             return None
 
-    def get_complete_collection(self, start_index=None, results_per_page=None):
+    def get_complete_collection(self, cve_params=None):
         """
-        :return: A list of dicts of the complete collection of CVE
+        If params is None, retrieve all CVEs in National Vulnerability Database
+        :param cve_params: Params to filter what list to return
+        :return: A list of dicts of the complete collection of CVE from NVD
         """
-        cve_params = {
-            "startIndex": start_index,
-            "resultsPerPage": results_per_page,
-            "lastModStartDate": "2023-11-01T00:00:00",
-            "lastModEndDate": "2023-12-31T23:59:59"
-        }
-        #TODO can only get data max range 120 days, send an error if wanted history
 
         response = self._request_data(self, BASE_URL, params=cve_params)
 
