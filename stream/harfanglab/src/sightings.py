@@ -142,7 +142,7 @@ class Sightings(threading.Thread):
                     continue
                 else:
                     # Generate incident
-                    build_observable_hashes = []
+                    build_observable_hashes = {}
                     if indicators_ioc_info["results"] and indicator_matching[
                         "type"
                     ] in ["filename", "filepath"]:
@@ -175,61 +175,45 @@ class Sightings(threading.Thread):
                             for search_observable in search_observables:
                                 if "hashes" in search_observable:
                                     if "name" in search_observable:
-                                        build_observable_hashes.append(
-                                            {"name": search_observable["name"]}
-                                        )
+                                        build_observable_hashes["name"] = search_observable["name"]
                                     for observable_hash in search_observable["hashes"]:
                                         if (
                                             "SHA-256" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes.append(
-                                                {"SHA-256": observable_hash["hash"]}
-                                            )
+                                            build_observable_hashes["SHA-256"] = observable_hash["hash"]
                                         if (
                                             "SHA-1" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes.append(
-                                                {"SHA-1": observable_hash["hash"]}
-                                            )
+                                            build_observable_hashes["SHA-1"] = observable_hash["hash"]
                                         if (
                                             "MD5" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes.append(
-                                                {"MD5": observable_hash["hash"]}
-                                            )
+                                            build_observable_hashes["MD5"] = observable_hash["hash"]
 
                         elif search_observables and not observable_matching:
                             for search_observable in search_observables:
                                 if "hashes" in search_observable:
                                     if "name" in search_observable:
-                                        build_observable_hashes.append(
-                                            {"name": search_observable["name"]}
-                                        )
+                                        build_observable_hashes["name"] = search_observable["name"]
                                     for observable_hash in search_observable["hashes"]:
                                         if (
                                             "SHA-256" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes.append(
-                                                {"SHA-256": observable_hash["hash"]}
-                                            )
+                                            build_observable_hashes["SHA-256"] = observable_hash["hash"]
                                         if (
                                             "SHA-1" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes.append(
-                                                {"SHA-1": observable_hash["hash"]}
-                                            )
+                                            build_observable_hashes["SHA-1"] = observable_hash["hash"]
                                         if (
                                             "MD5" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes.append(
-                                                {"MD5": observable_hash["hash"]}
-                                            )
+                                            build_observable_hashes["MD5"] = observable_hash["hash"]
                                         if (
                                             observable_hash["hash"]
                                             == indicator_matching["value"]
@@ -289,10 +273,9 @@ class Sightings(threading.Thread):
 
                         hash_existing = False
                         if indicator_matching["type"] == "hash":
-                            for build_hash in build_observable_hashes:
-                                for key, value in build_hash.items():
-                                    if value == indicator_matching["value"]:
-                                        hash_existing = True
+                            for key, value in build_observable_hashes.items():
+                                if value == indicator_matching["value"]:
+                                    hash_existing = True
 
                         if indicator_matching["type"] in ["filename", "filepath"]:
                             if indicator_convert_type == "file:name":
@@ -971,11 +954,11 @@ class Sightings(threading.Thread):
             hashes = {}
             if build_observable_hashes:
                 return stix2.File(
-                    name=build_observable_hashes[0]["name"],
+                    name=build_observable_hashes["name"],
                     hashes={
-                        "SHA-256": build_observable_hashes[1]["SHA-256"],
-                        "SHA-1": build_observable_hashes[2]["SHA-1"],
-                        "MD5": build_observable_hashes[3]["MD5"],
+                        "SHA-256": build_observable_hashes["SHA-256"],
+                        "SHA-1": build_observable_hashes["SHA-1"],
+                        "MD5": build_observable_hashes["MD5"],
                     },
                     object_marking_refs=[marking],
                     custom_properties={
