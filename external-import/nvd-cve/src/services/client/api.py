@@ -53,4 +53,3 @@ class CVEClient:
         cve_collection = response.json()
 
         return cve_collection
-

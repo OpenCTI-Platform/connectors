@@ -4,9 +4,8 @@ from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from services import CVEConverter  # type: ignore
-from services.utils.config_variables import ConfigCVE  # type: ignore
-
 from services.utils._version import __version__ as APP_VERSION  # type: ignore
+from services.utils.config_variables import ConfigCVE  # type: ignore
 
 
 class CVEConnector:
@@ -81,7 +80,7 @@ class CVEConnector:
             If the last run is more than current interval
             """
             if last_run is None or (
-                    (current_time - last_run) >= int(self.config.interval)
+                (current_time - last_run) >= int(self.config.interval)
             ):
                 """
                 Initiate work_id to track the job
@@ -99,8 +98,8 @@ class CVEConnector:
                 cve_params = {
                     "startIndex": 0,
                     "resultsPerPage": 2000,
-                    "lastModStartDate": "2023-11-28T00:00:00",
-                    "lastModEndDate": "2023-12-31T23:59:59"
+                    "lastModStartDate": "2023-10-28T00:00:00",
+                    "lastModEndDate": "2023-12-31T23:59:59",
                 }
 
                 # TODO can only get data max range 120 days, send an error if wanted history
