@@ -23,23 +23,23 @@ Configuration parameters for the HostIO Connector are set using environment vari
 
 #### User-Specified Configuration (.env)
 
-| Docker envvar          | Mandatory | Description                                       |
-|------------------------------|------------------------|-----------|---------------------------------------------------|
-| `OPENCTI_URL`          | Yes       | URL of OpenCTI instance.                          |
-| `OPENCTI_TOKEN`        | Yes       | Admin token for OpenCTI.                          |
-| `CONNECTOR_ID`         | Yes       | Unique UUIDv4 for the connector.                  |
-| `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (1-4).                  |
-| `CONNECTOR_LOG_LEVEL`  | Yes       | Log level (`debug`, `info`, `warn`, `error`).     |
-| `CONNECTOR_UPDATE_EXISTING_DATA` | Yes | Whether to update existing data or not. (e.g., true, false) |
+| Docker envvar                    | Mandatory | Description                                                 |
+|----------------------------------|-----------|-------------------------------------------------------------|
+| `OPENCTI_URL`                    | Yes       | URL of OpenCTI instance.                                    |
+| `OPENCTI_TOKEN`                  | Yes       | Admin token for OpenCTI.                                    |
+| `CONNECTOR_ID`                   | Yes       | Unique UUIDv4 for the connector.                            |
+| `CONNECTOR_CONFIDENCE_LEVEL`     | Yes       | Default confidence level (1-4).                             |
+| `CONNECTOR_LOG_LEVEL`            | Yes       | Log level (`debug`, `info`, `warn`, `error`).               |
+| `CONNECTOR_UPDATE_EXISTING_DATA` | Yes       | Whether to update existing data or not. (e.g., true, false) |
 
 #### HostIO-Specific Parameters
 
-| Docker envvar          | Mandatory | Description                                       |
-|------------------------|-----------|---------------------------------------------------|
-| `HOSTIO_TOKEN`         | Yes       | Token for HostIO or IPInfo API.                             |
-| `HOSTIO_LIMIT`         | No        | Limit for returned results, update to match the page limit for your subscription (default 5).           |
-| `HOSTIO_LABELS`        | No        | Comma-separated list of labels to add to the entities. e.g., "hostio,osint" |
-| `HOSTIO_MARKING_REFS`  | No        | TLP marking references. e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED                           |
+| Docker envvar          | Mandatory | Description                                                                                   |
+|------------------------|-----------|-----------------------------------------------------------------------------------------------|
+| `HOSTIO_TOKEN`         | Yes       | Token for HostIO or IPInfo API.                                                               |
+| `HOSTIO_LIMIT`         | Yes       | Limit for returned results, update to match the page limit for your subscription (default 5). |
+| `HOSTIO_LABELS`        | Yes       | Comma-separated list of labels to add to the entities. e.g., "hostio,osint"                   |
+| `HOSTIO_MARKING_REFS`  | Yes       | TLP marking references. e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED                        |
 
 ### Debugging
 
