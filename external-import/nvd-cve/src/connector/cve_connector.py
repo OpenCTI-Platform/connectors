@@ -1,10 +1,10 @@
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from services import CVEConverter  # type: ignore
-from services.utils._version import __version__ as APP_VERSION  # type: ignore
+from services.utils.version import __version__ as APP_VERSION  # type: ignore
 from services.utils.config_variables import ConfigCVE  # type: ignore
 
 
@@ -61,7 +61,8 @@ class CVEConnector:
             """
             Get the current timestamp and check
             """
-            current_time = int(time.time())
+            now = datetime.now()
+            current_time = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
             if current_state is not None and "last_run" in current_state:
@@ -92,14 +93,16 @@ class CVEConnector:
                 Main process if connector successfully works
                 ======================================================
                 """
-                """
-                
-                """
+
+                # TODO HANDLE DATE RANGE if pull_history true, add config for when to import
+                # TODO If pull_history = false, import only recent
+
+                date_range = timedelta(days=self.config.max_date_range)
+                start_date = now - date_range
+
                 cve_params = {
-                    "startIndex": 0,
-                    "resultsPerPage": 2000,
-                    "lastModStartDate": "2023-10-28T00:00:00",
-                    "lastModEndDate": "2023-12-31T23:59:59",
+                    "lastModStartDate": start_date.isoformat(),
+                    "lastModEndDate": now.isoformat()
                 }
 
                 # TODO can only get data max range 120 days, send an error if wanted history
