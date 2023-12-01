@@ -53,33 +53,47 @@ class ReportHub:
     @staticmethod
     def get_config(name: str, config, default=None):
         env_name = "RST_REPORT_HUB_{}".format(name.upper())
-        result = get_config_variable(env_name, ["rst-report-hub", name], config)
+        result = get_config_variable(env_name, ["rst_report_hub", name], config)
         return result or default
 
     def _combine_report_and_send(self, stix_bundle, x_opencti_file, report_id):
         # Parse the STIX bundle
         parsed_bundle = json.loads(stix_bundle)
+        stix_bundle_main = []
         stix_bundle_base = []
         stix_bundle_relationships = []
 
-        # Find the STIX report entry in the bundle and split objects and relationships
+        # Find the STIX report entry in the bundle, orgs and then
+        # split main objects from other objects and relationships
         for entry in parsed_bundle.get("objects", []):
-            if entry.get("type") == "relationship":
+            t = entry.get("type")
+            if t == "relationship":
                 stix_bundle_relationships.append(entry)
-            elif entry.get("type") == "report":
+            elif t == "report" or t == "identity":
                 # Update the specified parameters
                 if x_opencti_file:
                     entry["x_opencti_files"] = [x_opencti_file]
-                stix_bundle_base.append(entry)
+                stix_bundle_main.append(entry)
             else:
                 stix_bundle_base.append(entry)
 
         message = "Importing " + report_id.replace("_", " ")
         work_id = self.helper.api.work.initiate_work(self.helper.connect_id, message)
 
-        self._send_stix_data(work_id, stix_bundle_base)
-        self._send_stix_data(work_id, stix_bundle_relationships)
-        message = f"Processed {len(stix_bundle_base)} base objects and {len(stix_bundle_relationships)} relationships from RST Report Hub"
+        # first push orgs and reports that reference the orgs
+        if len(stix_bundle_main) > 0:
+            self._send_stix_data(work_id, stix_bundle_main)
+            time.sleep(1)
+        # then push all other objects
+        if len(stix_bundle_base) > 0:
+            self._send_stix_data(work_id, stix_bundle_base)
+            time.sleep(1)
+        # the last task is to push relationships between all of these objects
+        # to minimise errors like "MissingReferenceError" in OpenCTI platform as
+        # messages arrive not in order via a message queue
+        if len(stix_bundle_relationships) > 0:
+            self._send_stix_data(work_id, stix_bundle_relationships)
+        message = f"Processed from RST Report Hub {len(stix_bundle_main)} main objects, {len(stix_bundle_base)} base objects, and {len(stix_bundle_relationships)} relationships"
         self.helper.api.work.to_processed(work_id, message)
         self.helper.log_info(message)
         return True
@@ -160,9 +174,11 @@ class ReportHub:
                         )
                         return True
                     else:
-                        # if it is a day in the past downloaded, then go to next day until today
+                        # if it is a day in the past downloaded,
+                        # then go to next day until today
                         if parse(start_date) < today:
-                            # next time start downloading the next day and reset the counter
+                            # next time start downloading the next day
+                            # and reset the counter
                             self.helper.set_state(
                                 {
                                     "import_date": nextday,
@@ -170,7 +186,9 @@ class ReportHub:
                                 }
                             )
                         else:
-                            # keep waiting for reports for a given day and keep the counter to skip fetching if no new reports appeared
+                            # keep waiting for reports for a given day and
+                            # keep the counter to skip fetching
+                            # if no new reports appeared
                             self.helper.set_state(
                                 {
                                     "import_date": current_state["import_date"],
@@ -185,9 +203,11 @@ class ReportHub:
 
             except requests.exceptions.RequestException:
                 if response.status_code == 404:
-                    # no reports for previous days found, iterate day by day until today
+                    # no reports for previous days found,
+                    # iterate day by day until today
                     if parse(start_date) < today:
-                        # next time start downloading the next day and reset the counter
+                        # next time start downloading the next day
+                        # and reset the counter
                         self.helper.set_state(
                             {
                                 "import_date": nextday,
