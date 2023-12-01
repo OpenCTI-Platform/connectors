@@ -1038,6 +1038,11 @@ class HarfangLabConnector:
         return self.find_data_name_match(get_indicator["results"], data_search)
 
     def pattern_payload(self, data, enabled=True):
+
+        if "entity_type" in data:
+            if data["entity_type"] == "hash":
+                data["pattern_type"] = "stix"
+
         if data["pattern_type"] == "yara":
             return {
                 "content": data["content"],
