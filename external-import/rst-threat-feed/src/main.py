@@ -1,8 +1,8 @@
-import datetime
 import os
 import sys
 import time
 import traceback
+from datetime import datetime, timedelta
 from typing import List
 
 import stix2
@@ -13,7 +13,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from rscloud import (
+from rstcloud import (
     FeedDownloader,
     FeedType,
     ThreatTypes,
@@ -97,9 +97,9 @@ class RSTThreatFeed:
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
-                    last_run_str = datetime.datetime.utcfromtimestamp(
-                        last_run
-                    ).strftime("%Y-%m-%d %H:%M:%S")
+                    last_run_str = datetime.utcfromtimestamp(last_run).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                     self.helper.log_info(
                         "Connector's last run: {}".format(last_run_str)
                     )
@@ -135,14 +135,15 @@ class RSTThreatFeed:
 
     def _process_feed(self, feed_type):
         state = read_state(self._state_dir, feed_type)
-
         downloader = FeedDownloader(self._downloader_config, state, feed_type)
         downloader.set_current_day()
         downloader.init_connection()
         new_state = downloader.download_feed()
 
-        stix_bundle = self._create_stix_bundle(new_state, feed_type)
+        if downloader.already_processed:
+            return
 
+        stix_bundle = self._create_stix_bundle(new_state, feed_type)
         self._batch_send(stix_bundle, feed_type)
 
         write_state(self._state_dir, feed_type, new_state)
@@ -338,7 +339,7 @@ class RSTThreatFeed:
                 target_ref=threat_id,
                 relationship_type=relationshipType,
                 start_time=fseen,
-                stop_time=collect + datetime.timedelta(0, 3),
+                stop_time=collect + timedelta(0, 3),
                 description="IOC associated with: {}".format(
                     threats[threat_id]["name"]
                 ),
@@ -357,7 +358,7 @@ class RSTThreatFeed:
 
     def _batch_send(self, stix_bundle: List, feed_type: str):
         timestamp = int(time.time())
-        now = datetime.datetime.utcfromtimestamp(timestamp)
+        now = datetime.utcfromtimestamp(timestamp)
         friendly_name = "Run for {} @ {}".format(
             feed_type, now.strftime("%Y-%m-%d %H:%M:%S")
         )
