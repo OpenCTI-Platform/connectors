@@ -21,8 +21,10 @@ from pycti import (
     StixCoreRelationship,
     StixSightingRelationship,
     Task,
+    ExternalReference,
     get_config_variable,
 )
+from urllib.parse import urljoin
 from thehive4py.api import TheHiveApi
 from thehive4py.query import Child, Gt, Or
 
@@ -219,6 +221,13 @@ class TheHive:
                 bundle_objects.append(stix_observable)
                 bundle_objects.append(stix_relation)
 
+        # Create Case URL for External Reference ID.
+        external_reference, stix_relation = self.process_alert_external_reference(
+            self, alert, stix_incident, markings
+        )
+        bundle_objects.append(external_reference)
+        bundle_objects.append(stix_relation)
+
         # Create STIX bundle
         try:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
@@ -249,6 +258,17 @@ class TheHive:
             case, markings
         )
         bundle_objects.extend(processed_observables)
+        
+        # Create Case URL for External Reference ID.
+        case_url = urljoin(self.thehive_url, f"/cases/{case.get('id')}/details")
+        external_reference = ExternalReference(
+            source_name = 'TheHive Case',
+            description = case.get('title'),
+            url         = case_url,
+            external_id = case.get('id')
+        )
+        case_object_refs.append(external_reference.id)
+        bundle_objects.append(external_reference)
 
         # Process main case and create CustomObjectCaseIncident.
         stix_case = self.process_main_case(case, markings, case_object_refs)
@@ -469,6 +489,29 @@ class TheHive:
                 f"Error processing observables for case: {case.get('title')} - {str(e)}"
             )
             return [], []
+        
+    def process_alert_external_reference(self, alert, stix_incident, markings):
+        """Create external reference and relationship for TheHive Alert."""
+        alert_url = urljoin(self.thehive_url, f"/alert/{alert.get('id')}/details")
+        external_reference = ExternalReference(
+            source_name = 'TheHive Alert',
+            description = alert.get('title'),
+            url         = alert_url,
+            external_id = alert.get('id')
+        )
+        stix_relation = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "related-to", external_reference.id, stix_incident.id
+            ),
+            relationship_type="related-to",
+            created_by_ref=self.identity.get("standard_id", ""),
+            source_ref=external_reference.id,
+            target_ref=stix_incident.id,
+            confidence=int(self.helper.connect_confidence_level),
+            object_marking_refs=markings,
+            allow_custom=True,
+        )
+        return external_reference, stix_relation
 
     def process_observables_and_relations(self, observable, markings, stix_incident):
         """Function to process observables and create related STIX relations."""
