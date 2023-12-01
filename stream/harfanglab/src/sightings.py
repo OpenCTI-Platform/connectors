@@ -11,6 +11,7 @@ import requests
 import stix2
 from dateutil.parser import parse
 from pycti import (
+    AttackPattern,
     CaseIncident,
     CustomObjectCaseIncident,
     CustomObservableHostname,
@@ -109,6 +110,8 @@ class Sightings(threading.Thread):
         all_hostnames_objects = []
         all_users_objects = []
         all_observables_directories = []
+        all_attacks_pattern = []
+        all_relationships = []
 
         for alert in alerts_filtered["results"]:
             new_alert_built = self.build_alert_object(alert)
@@ -121,17 +124,8 @@ class Sightings(threading.Thread):
                     )
                     continue
 
-                alert_create_date = new_alert_built["created_at"]
-                if "updated_at" in new_alert_built:
-                    alert_update_date = new_alert_built["updated_at"]
-                else:
-                    alert_update_date = new_alert_built["created_at"]
-
                 indicators_ioc_info = self._query(
                     f"/threat_intelligence/IOCRule/?value={msg_parsed}"
-                )
-                indicator_matching = self.get_match(
-                    indicators_ioc_info["results"], "value", msg_parsed
                 )
 
                 # If the indicator does not exist or no longer exists at HarfangLab
@@ -141,6 +135,10 @@ class Sightings(threading.Thread):
                     )
                     continue
                 else:
+                    indicator_matching = self.get_match(
+                        indicators_ioc_info["results"], "value", msg_parsed
+                    )
+
                     # Generate incident
                     build_observable_hashes = {}
                     if indicators_ioc_info["results"] and indicator_matching[
@@ -175,45 +173,61 @@ class Sightings(threading.Thread):
                             for search_observable in search_observables:
                                 if "hashes" in search_observable:
                                     if "name" in search_observable:
-                                        build_observable_hashes["name"] = search_observable["name"]
+                                        build_observable_hashes[
+                                            "name"
+                                        ] = search_observable["name"]
                                     for observable_hash in search_observable["hashes"]:
                                         if (
                                             "SHA-256" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes["SHA-256"] = observable_hash["hash"]
+                                            build_observable_hashes[
+                                                "SHA-256"
+                                            ] = observable_hash["hash"]
                                         if (
                                             "SHA-1" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes["SHA-1"] = observable_hash["hash"]
+                                            build_observable_hashes[
+                                                "SHA-1"
+                                            ] = observable_hash["hash"]
                                         if (
                                             "MD5" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes["MD5"] = observable_hash["hash"]
+                                            build_observable_hashes[
+                                                "MD5"
+                                            ] = observable_hash["hash"]
 
                         elif search_observables and not observable_matching:
                             for search_observable in search_observables:
                                 if "hashes" in search_observable:
                                     if "name" in search_observable:
-                                        build_observable_hashes["name"] = search_observable["name"]
+                                        build_observable_hashes[
+                                            "name"
+                                        ] = search_observable["name"]
                                     for observable_hash in search_observable["hashes"]:
                                         if (
                                             "SHA-256" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes["SHA-256"] = observable_hash["hash"]
+                                            build_observable_hashes[
+                                                "SHA-256"
+                                            ] = observable_hash["hash"]
                                         if (
                                             "SHA-1" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes["SHA-1"] = observable_hash["hash"]
+                                            build_observable_hashes[
+                                                "SHA-1"
+                                            ] = observable_hash["hash"]
                                         if (
                                             "MD5" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes["MD5"] = observable_hash["hash"]
+                                            build_observable_hashes[
+                                                "MD5"
+                                            ] = observable_hash["hash"]
                                         if (
                                             observable_hash["hash"]
                                             == indicator_matching["value"]
@@ -227,6 +241,12 @@ class Sightings(threading.Thread):
                         incident_name = (
                             msg_parsed + " on " + new_alert_built["agent"]["hostname"]
                         )
+
+                    alert_create_date = new_alert_built["created_at"]
+                    if "updated_at" in new_alert_built:
+                        alert_update_date = new_alert_built["updated_at"]
+                    else:
+                        alert_update_date = new_alert_built["created_at"]
 
                     stix_incident = stix2.Incident(
                         id=Incident.generate_id(incident_name, alert_create_date),
@@ -367,7 +387,12 @@ class Sightings(threading.Thread):
                             full_observable_hashes,
                             build_observable_hashes,
                         )
-                        all_observable_objects.append(stix_observable)
+                        all_observable_objects.append(
+                            {
+                                "incident_id": stix_incident["id"],
+                                "stix_observable": stix_observable,
+                            }
+                        )
 
                     else:
                         self.helper.log_error(
@@ -382,7 +407,12 @@ class Sightings(threading.Thread):
                             "created_by_ref": self.identity["standard_id"],
                         },
                     )
-                    all_hostnames_objects.append(stix_hostname)
+                    all_hostnames_objects.append(
+                        {
+                            "incident_id": stix_incident["id"],
+                            "stix_hostname": stix_hostname,
+                        }
+                    )
 
                     # Create Observable User Account
                     stix_user = stix2.UserAccount(
@@ -392,54 +422,151 @@ class Sightings(threading.Thread):
                             "created_by_ref": self.identity["standard_id"],
                         },
                     )
-                    all_users_objects.append(stix_user)
+                    all_users_objects.append(
+                        {
+                            "incident_id": stix_incident["id"],
+                            "stix_user": stix_user,
+                        }
+                    )
+
             if new_alert_built["alert_type"] == "sigma":
-                #     prepare_rule_name_for_search = new_alert_built["rule_name"].replace(" ", "%20")
-                #     indicators_sigma_info = self._query(f"/threat_intelligence/SigmaRule/?search={prepare_rule_name_for_search}")
-                #
-                #     sigma_rule = []
-                #
-                #     for indicator in indicators_sigma_info["results"]:
-                #         if new_alert_built["rule_name"] == indicator["rule_name"] and new_alert_built["msg"] == indicator["rule_description"]:
-                #             sigma_rule.append(indicator)
-                continue
+                indicators_sigma_info = self._query(
+                    f"/threat_intelligence/SigmaRule/?search={new_alert_built['rule_name']}"
+                )
+
+                # If the indicator does not exist or no longer exists at HarfangLab
+                if not indicators_sigma_info["results"]:
+                    self.helper.log_error(
+                        "[ERROR] The rule that was triggered does not exist or no longer exists at HarfangLab."
+                    )
+                    continue
+                else:
+                    bundle = self.process_create_bundle(
+                        indicators_sigma_info,
+                        new_alert_built,
+                        convert_marking_for_stix2,
+                        "sigma",
+                    )
+                    if not bundle:
+                        continue
+                    else:
+                        for key, value in bundle.items():
+                            if key == "all_incidents_objects":
+                                all_incidents_objects.append(value)
+                            elif key == "all_indicators_objects":
+                                all_indicators_objects.append(value)
+                            elif key == "all_sightings_objects":
+                                all_sightings_objects.append(value)
+                            elif key == "all_hostnames_objects":
+                                all_hostnames_objects.append(value)
+                            elif key == "all_users_objects":
+                                all_users_objects.append(value)
+                            elif key == "all_observable_objects":
+                                all_observable_objects.append(value)
+                            elif key == "all_relationships":
+                                for relationship in value:
+                                    all_relationships.append(relationship)
+                            elif key == "all_observables_directories":
+                                all_observables_directories.append(value)
+                            elif key == "all_attacks_pattern":
+                                for attack_pattern in value:
+                                    all_attacks_pattern.append(attack_pattern)
+                            else:
+                                continue
 
             if new_alert_built["alert_type"] == "yara":
-                continue
+                msg_splited = new_alert_built["rule_name"].replace(" ", "").split(":")
+                if len(msg_splited) == 2:
+                    indicator_name = msg_splited[1]
+                else:
+                    self.helper.log_error(
+                        "[ERROR] An error occurred while parsing msg."
+                    )
+                    continue
+
+                indicators_yara_info = self._query(
+                    f"/threat_intelligence/YaraFile/?search={indicator_name}"
+                )
+
+                # If the indicator does not exist or no longer exists at HarfangLab
+                if not indicators_yara_info["results"]:
+                    self.helper.log_error(
+                        "[ERROR] The rule that was triggered does not exist or no longer exists at HarfangLab."
+                    )
+                    continue
+                else:
+                    bundle = self.process_create_bundle(
+                        indicators_yara_info,
+                        new_alert_built,
+                        convert_marking_for_stix2,
+                        "yara",
+                        indicator_name,
+                    )
+                    if not bundle:
+                        continue
+                    else:
+                        for key, value in bundle.items():
+                            if key == "all_incidents_objects":
+                                all_incidents_objects.append(value)
+                            elif key == "all_indicators_objects":
+                                all_indicators_objects.append(value)
+                            elif key == "all_sightings_objects":
+                                all_sightings_objects.append(value)
+                            elif key == "all_hostnames_objects":
+                                all_hostnames_objects.append(value)
+                            elif key == "all_users_objects":
+                                all_users_objects.append(value)
+                            elif key == "all_observable_objects":
+                                all_observable_objects.append(value)
+                            elif key == "bundle_objects":
+                                for relationship in value:
+                                    bundle_objects.append(relationship)
+                            elif key == "all_observables_directories":
+                                all_observables_directories.append(value)
+                            elif key == "all_attacks_pattern":
+                                for attack_pattern in value:
+                                    all_attacks_pattern.append(attack_pattern)
+                            else:
+                                continue
 
         list_of_directories = all_observables_directories.copy()
         for observable_directory in list_of_directories:
             bundle_objects.append(observable_directory["stix_directory"])
 
-        list_of_sightings_unique = self.sort_object_unique(all_sightings_objects, "id")
-        # list_of_incidents_unique = self.sort_object_unique(all_incidents_objects, "id")
+        list_of_attacks_pattern = all_attacks_pattern.copy()
+        for attack_pattern in list_of_attacks_pattern:
+            bundle_objects.append(attack_pattern["stix_attack_pattern"])
 
-        list_of_observables_unique = self.sort_object_unique(
-            all_observable_objects, "id"
-        )
+        stix_observables = []
+        for observable in all_observable_objects:
+            stix_observables.append(observable["stix_observable"])
+
+        list_of_observables_unique = self.sort_object_unique(stix_observables, "id")
         for observable in list_of_observables_unique:
             bundle_objects.append(observable)
 
-        list_of_indicators_unique = self.sort_object_unique(
-            all_indicators_objects, "id"
-        )
+        list_of_indicators_unique = all_indicators_objects.copy()
         for indicator in list_of_indicators_unique:
             bundle_objects.append(indicator)
 
-        list_of_hostnames_unique = self.sort_object_unique(
-            all_hostnames_objects, "value"
-        )
-        for observable_hostname in list_of_hostnames_unique:
-            bundle_objects.append(observable_hostname)
-
-        list_of_users_unique = self.sort_object_unique(
-            all_users_objects, "account_login"
-        )
-        for observable_user in list_of_users_unique:
-            bundle_objects.append(observable_user)
-
         for indicator_unique in list_of_indicators_unique:
+            for relationship in all_relationships:
+                if indicator_unique["id"] == relationship["source_ref"]:
+                    bundle_objects.append(relationship)
+
+                elif indicator_unique["id"] == relationship["target_ref"]:
+                    bundle_objects.append(relationship)
+
             for observable_unique in list_of_observables_unique:
+                list_of_id = []
+                for relationship in all_relationships:
+                    if observable_unique["id"] == relationship["source_ref"]:
+                        list_of_id.append(relationship["target_ref"])
+
+                    elif indicator_unique["id"] == relationship["target_ref"]:
+                        bundle_objects.append(relationship)
+                        list_of_id.append(relationship["source_ref"])
+
                 if observable_unique["type"] == "file":
                     if "SHA-256" in observable_unique["hashes"]:
                         if (
@@ -507,6 +634,28 @@ class Sightings(threading.Thread):
             bundle_objects.append(global_item)
 
             if global_item["type"] == "incident":
+                for attack_pattern_object in list_of_attacks_pattern:
+                    if global_item["id"] == attack_pattern_object["incident_id"]:
+                        # Generate relationship : incident -> type "uses" -> attack pattern
+                        stix_relation_new_indicator = self.process_stix_relationship(
+                            "uses",
+                            global_item["id"],
+                            attack_pattern_object["stix_attack_pattern"]["id"],
+                            convert_marking_for_stix2,
+                        )
+                        bundle_objects.append(stix_relation_new_indicator)
+
+                list_of_id_linked_to_incident = []
+
+                for relationship in all_relationships:
+                    if global_item["id"] == relationship["source_ref"]:
+                        bundle_objects.append(relationship)
+                        list_of_id_linked_to_incident.append(relationship["target_ref"])
+
+                    elif global_item["id"] == relationship["target_ref"]:
+                        bundle_objects.append(relationship)
+                        list_of_id_linked_to_incident.append(relationship["source_ref"])
+
                 for indicator_unique in list_of_indicators_unique:
                     indicator_name = str(indicator_unique["name"])
                     incident_name = str(global_item["name"])
@@ -521,6 +670,7 @@ class Sightings(threading.Thread):
                             convert_marking_for_stix2,
                         )
                         bundle_objects.append(stix_relation_new_indicator)
+
                 for observable_directory in all_observables_directories:
                     if observable_directory["incident_id"] == global_item["id"]:
                         bundle_objects.append(observable_directory["stix_directory"])
@@ -535,6 +685,20 @@ class Sightings(threading.Thread):
                             )
                         )
                         bundle_objects.append(stix_relation_observable_directory)
+
+                for observable in all_observable_objects:
+                    if observable["incident_id"] == global_item["id"]:
+                        bundle_objects.append(observable["stix_observable"])
+
+                        # Generate relationship : observable -> type "related-to" -> incident
+                        stix_relation_new_observable = self.process_stix_relationship(
+                            "related-to",
+                            observable["stix_observable"]["id"],
+                            global_item["id"],
+                            convert_marking_for_stix2,
+                        )
+                        bundle_objects.append(stix_relation_new_observable)
+
                 for observable_unique in list_of_observables_unique:
                     if observable_unique["type"] == "file":
                         check = False
@@ -567,43 +731,47 @@ class Sightings(threading.Thread):
                         )
                         bundle_objects.append(stix_relation_new_observable)
 
-                # Generate relationship : Hostname -> type "related-to" -> incident
-                stix_relation_hostname = self.process_stix_relationship(
-                    "related-to",
-                    list_of_hostnames_unique[0]["id"],
-                    global_item["id"],
-                    convert_marking_for_stix2,
-                )
-                bundle_objects.append(stix_relation_hostname)
+                for hostname in all_hostnames_objects:
+                    if hostname["incident_id"] == global_item["id"]:
+                        bundle_objects.append(hostname["stix_hostname"])
 
-                # Generate relationship : User -> type "related-to" -> incident
-                stix_relation_user = self.process_stix_relationship(
-                    "related-to",
-                    list_of_users_unique[0]["id"],
-                    global_item["id"],
-                    convert_marking_for_stix2,
-                )
-                bundle_objects.append(stix_relation_user)
+                        # Generate relationship : Hostname -> type "related-to" -> incident
+                        stix_relation_hostname = self.process_stix_relationship(
+                            "related-to",
+                            hostname["stix_hostname"]["id"],
+                            global_item["id"],
+                            convert_marking_for_stix2,
+                        )
+                        bundle_objects.append(stix_relation_hostname)
+
+                for user in all_users_objects:
+                    if user["incident_id"] == global_item["id"]:
+                        bundle_objects.append(user["stix_user"])
+
+                        # Generate relationship : Hostname -> type "related-to" -> incident
+                        stix_relation_user = self.process_stix_relationship(
+                            "related-to",
+                            user["stix_user"]["id"],
+                            global_item["id"],
+                            convert_marking_for_stix2,
+                        )
+                        bundle_objects.append(stix_relation_user)
 
         global_sightings = self.handling_of_sightings_and_external_references(
-            list_of_sightings_unique
+            all_sightings_objects
         )
         for global_sighting in global_sightings:
             bundle_objects.append(global_sighting)
 
-        # Sort final Bundle objects
-        # list_bundle_unique = self.sort_object_unique(bundle_objects, "id")
-
         self.generate_stix_bundle(bundle_objects)
         self.list_info = {
             "bundle_objects": bundle_objects,
-            "list_of_users": list_of_users_unique,
             "list_of_sightings": all_sightings_objects,
             "list_of_incidents": all_incidents_objects,
             "list_of_indicators": list_of_indicators_unique,
-            "list_of_observables": list_of_observables_unique,
-            "list_of_hostnames": list_of_hostnames_unique,
+            "list_of_observables": all_observable_objects,
             "list_of_directories": list_of_directories,
+            "list_of_attacks_pattern": list_of_attacks_pattern,
         }
         return
 
@@ -627,6 +795,7 @@ class Sightings(threading.Thread):
         bundle_relationships = []
         bundle_agents = []
         bundle_observables = []
+        bundle_attacks_pattern = []
 
         for bundle in list_info["bundle_objects"]:
             if bundle["type"] == "incident":
@@ -639,6 +808,8 @@ class Sightings(threading.Thread):
                 bundle_relationships.append(bundle)
             elif bundle["type"] == "hostname" or bundle["type"] == "user-account":
                 bundle_agents.append(bundle)
+            elif bundle["type"] == "attack-pattern":
+                bundle_attacks_pattern.append(bundle)
             else:
                 bundle_observables.append(bundle)
 
@@ -648,7 +819,10 @@ class Sightings(threading.Thread):
             )
 
             list_of_references_alerts = self.alerts_in_case_incident(
-                bundle_observables, threat["id"]
+                bundle_relationships,
+                bundle_observables,
+                bundle_indicators,
+                threat["id"],
             )
 
             if list_of_references_alerts is None or not list_of_references_alerts:
@@ -660,39 +834,55 @@ class Sightings(threading.Thread):
                 list_of_references_alerts_unique = self.sort_object_unique(
                     list_of_references_alerts, "id"
                 )
-                for reference_observable in list_of_references_alerts_unique:
-                    merge_all_references.append(reference_observable)
+                for reference in list_of_references_alerts_unique:
+                    merge_all_references.append(reference)
 
                     # Add incidents linked to the threat (case incident) in the merge_all_references
                     for bundle_incident in bundle_incidents:
-                        if reference_observable["type"] == "file":
-                            if "SHA-256" in reference_observable["hashes"]:
+                        incident_hostname = bundle_incident["name"].split(" on ", 1)
+
+                        # Add observables linked to the threat (case incident) in the merge_all_references
+                        if reference["type"] == "file":
+                            if "SHA-256" in reference["hashes"]:
                                 if bundle_incident["name"].startswith(
-                                    reference_observable["hashes"]["SHA-256"]
+                                    reference["hashes"]["SHA-256"]
                                 ):
                                     merge_all_references.append(bundle_incident)
 
-                            if "SHA-1" in reference_observable["hashes"]:
+                            if "SHA-1" in reference["hashes"]:
                                 if bundle_incident["name"].startswith(
-                                    reference_observable["hashes"]["SHA-1"]
+                                    reference["hashes"]["SHA-1"]
                                 ):
                                     merge_all_references.append(bundle_incident)
 
-                            if "MD5" in reference_observable["hashes"]:
+                            if "MD5" in reference["hashes"]:
                                 if bundle_incident["name"].startswith(
-                                    reference_observable["hashes"]["MD5"]
+                                    reference["hashes"]["MD5"]
                                 ):
                                     merge_all_references.append(bundle_incident)
 
-                        elif reference_observable["type"] == "directory":
-                            if bundle_incident["name"].startswith(
-                                reference_observable["linked_to"]
-                            ):
+                            if "name" in reference:
+                                name_splited = reference["name"].split(".")
+                                if bundle_incident["name"].startswith(name_splited[0]):
+                                    merge_all_references.append(bundle_incident)
+
+                            if "linked_to" in reference:
+                                if (
+                                    bundle_incident["description"]
+                                    == reference["linked_to"]
+                                ):
+                                    if reference["hostname"] == incident_hostname[1]:
+                                        merge_all_references.append(bundle_incident)
+
+                        elif reference["type"] == "directory":
+                            if bundle_incident["name"].startswith(reference["hash256"]):
                                 merge_all_references.append(bundle_incident)
 
-                        elif bundle_incident["name"].startswith(
-                            reference_observable["value"]
-                        ):
+                        elif reference["type"] == "indicator":
+                            if bundle_incident["name"].startswith(reference["name"]):
+                                merge_all_references.append(bundle_incident)
+
+                        elif bundle_incident["name"].startswith(reference["value"]):
                             merge_all_references.append(bundle_incident)
 
                 # Add agent (hostname and user) linked to the threat (case incident) in the merge_all_references
@@ -713,32 +903,35 @@ class Sightings(threading.Thread):
                     else:
                         continue
 
-                # Add relationships (incident and observable) linked to the threat (case incident) in the merge_all_references
+                # Add relationships (incident, attack pattern, observable) linked to the threat (case incident) in the merge_all_references
                 for reference in merge_all_references:
                     if reference["type"] == "incident":
                         for bundle_relationship in bundle_relationships:
                             if reference["id"] == bundle_relationship["target_ref"]:
                                 merge_all_references.append(bundle_relationship)
+
+                            if reference["id"] == bundle_relationship["source_ref"]:
+                                merge_all_references.append(bundle_relationship)
+
+                        for global_info in list_info["list_of_attacks_pattern"]:
+                            if global_info["incident_id"] == reference["id"]:
+                                merge_all_references.append(
+                                    global_info["stix_attack_pattern"]
+                                )
+
                     else:
                         continue
 
-                all_mitre_tactics = []
-
-                for mitre_tactic_name, mitre_tactic_value in threat[
-                    "mitre_tactics"
-                ].items():
-                    all_mitre_tactics.append(mitre_tactic_name)
-
-                if not all_mitre_tactics:
-                    description = ""
-                else:
-                    str_mitre_tactics = ", ".join(map(str, all_mitre_tactics))
-                    description = "Mitre Tactics : " + str_mitre_tactics
+                relationship_sorted = self.sort_object_unique(
+                    bundle_relationships, "id"
+                )
+                for bundle_relationship in relationship_sorted:
+                    merge_all_references.append(bundle_relationship)
 
                 stix_case_incident = CustomObjectCaseIncident(
                     id=CaseIncident.generate_id(threat["slug"], case_incident_date),
                     name=f"{threat['slug']} on {threat['top_agents'][0]['agent_hostname']}",
-                    description=description,
+                    # description=description,
                     severity=threat["level"],
                     priority=priorities[threat["level"]],
                     created=case_incident_date,
@@ -794,9 +987,9 @@ class Sightings(threading.Thread):
                 ],
             )
 
-    def handling_of_sightings_and_external_references(self, list_of_sightings_unique):
+    def handling_of_sightings_and_external_references(self, all_sightings_objects):
         new_object = {}
-        for sighting_sorted_by_ref in list_of_sightings_unique:
+        for sighting_sorted_by_ref in all_sightings_objects:
             if sighting_sorted_by_ref["sighting_of_ref"] not in new_object:
                 new_object[sighting_sorted_by_ref["sighting_of_ref"]] = []
             new_object[sighting_sorted_by_ref["sighting_of_ref"]].append(
@@ -1052,7 +1245,11 @@ class Sightings(threading.Thread):
             created_by_ref=self.identity["standard_id"],
         )
 
-    def alerts_in_case_incident(self, bundle_observables, threat_id):
+    def alerts_in_case_incident(
+        self, list_of_relationships, list_of_observables, bundle_indicators, threat_id
+    ):
+        bundle_observables = self.sort_object_unique(list_of_observables, "id")
+
         # Handle Alerts and relationship Case Incidents
         alerts_filtered_by_threat = self.get_alerts_filtered(1, int(threat_id))
         if int(alerts_filtered_by_threat["count"]) > 0:
@@ -1075,6 +1272,11 @@ class Sightings(threading.Thread):
                         return self.helper.log_error(
                             "[ERROR] An error occurred while parsing msg."
                         )
+
+                    for bundle_indicator in bundle_indicators:
+                        if bundle_indicator["pattern_type"] == "stix":
+                            if bundle_indicator["name"] == msg_parsed:
+                                bundle_references.append(bundle_indicator)
 
                     for bundle_observable in bundle_observables:
                         if bundle_observable["type"] == "file":
@@ -1108,6 +1310,9 @@ class Sightings(threading.Thread):
                                 == new_alert_built["process"]["current_directory"]
                             ):
                                 bundle_observable["linked_to"] = new_alert_built[
+                                    "rule_name"
+                                ]
+                                bundle_observable["hash256"] = new_alert_built[
                                     "process"
                                 ]["hashes"]["sha256"]
                                 bundle_references.append(bundle_observable)
@@ -1119,7 +1324,332 @@ class Sightings(threading.Thread):
                             else:
                                 continue
 
+                elif (
+                    new_alert_built["alert_type"] == "sigma"
+                    or new_alert_built["alert_type"] == "yara"
+                ):
+                    # Add indicator linked to the threat (case incident) in the merge_all_references
+                    if new_alert_built["alert_type"] == "sigma":
+                        for bundle_indicator in bundle_indicators:
+                            if bundle_indicator["pattern_type"] == "sigma":
+                                if bundle_indicator["pattern"].startswith(
+                                    "title: " + new_alert_built["rule_name"]
+                                ):
+                                    bundle_references.append(bundle_indicator)
+                    else:
+                        for bundle_indicator in bundle_indicators:
+                            if bundle_indicator["pattern_type"] == "yara":
+                                if new_alert_built["process"][
+                                    "process_name"
+                                ].startswith(bundle_indicator["name"]):
+                                    bundle_references.append(bundle_indicator)
+
+                    # check observable exist in alert
+                    for bundle_observable in bundle_observables:
+                        if bundle_observable["type"] == "file":
+                            if (
+                                "SHA-256" in bundle_observable["hashes"]
+                                and bundle_observable["hashes"]["SHA-256"]
+                            ):
+                                if (
+                                    bundle_observable["hashes"]["SHA-256"]
+                                    == new_alert_built["process"]["hashes"]["sha256"]
+                                ):
+                                    bundle_observable["linked_to"] = new_alert_built[
+                                        "msg"
+                                    ]
+                                    bundle_observable["hostname"] = new_alert_built[
+                                        "agent"
+                                    ]["hostname"]
+                                    bundle_references.append(bundle_observable)
+
+                            elif (
+                                "SHA-1" in bundle_observable["hashes"]
+                                and bundle_observable["hashes"]["SHA-1"]
+                            ):
+                                if (
+                                    bundle_observable["hashes"]["SHA-1"]
+                                    == new_alert_built["process"]["hashes"]["sha1"]
+                                ):
+                                    bundle_observable["linked_to"] = new_alert_built[
+                                        "msg"
+                                    ]
+                                    bundle_observable["hostname"] = new_alert_built[
+                                        "agent"
+                                    ]["hostname"]
+                                    bundle_references.append(bundle_observable)
+
+                            elif (
+                                "MD5" in bundle_observable["hashes"]
+                                and bundle_observable["hashes"]["MD5"]
+                            ):
+                                if (
+                                    bundle_observable["hashes"]["MD5"]
+                                    == new_alert_built["process"]["hashes"]["md5"]
+                                ):
+                                    bundle_observable["linked_to"] = new_alert_built[
+                                        "msg"
+                                    ]
+                                    bundle_observable["hostname"] = new_alert_built[
+                                        "agent"
+                                    ]["hostname"]
+                                    bundle_references.append(bundle_observable)
+
+                            elif (
+                                "name" in bundle_observable
+                                and bundle_observable["name"]
+                            ):
+                                if (
+                                    bundle_observable["name"]
+                                    == new_alert_built["process"]["process_name"]
+                                ):
+                                    bundle_observable["linked_to"] = new_alert_built[
+                                        "rule_name"
+                                    ]
+                                    bundle_observable["hostname"] = new_alert_built[
+                                        "agent"
+                                    ]["hostname"]
+                                    bundle_references.append(bundle_observable)
+
+                        elif bundle_observable["type"] == "directory":
+                            if (
+                                bundle_observable["path"]
+                                == new_alert_built["process"]["current_directory"]
+                            ):
+                                bundle_observable["linked_to"] = new_alert_built[
+                                    "rule_name"
+                                ]
+                                bundle_observable["hash256"] = new_alert_built[
+                                    "process"
+                                ]["hashes"]["sha256"]
+                                bundle_references.append(bundle_observable)
+
             return bundle_references
+
+    def process_create_bundle(
+        self,
+        indicators_info,
+        new_alert_built,
+        marking,
+        pattern_type,
+        indicator_name=None,
+    ):
+        global_bundle = {}
+
+        if pattern_type == "yara":
+            indicator_matching = {}
+
+            for indicator in indicators_info["results"]:
+                for indicator_rule_name in indicator["rule_names"]:
+                    if indicator_rule_name == indicator_name:
+                        indicator_matching = indicator
+
+        elif pattern_type == "sigma":
+            indicator_matching = self.get_match(
+                indicators_info["results"], "rule_name", new_alert_built["rule_name"]
+            )
+
+        elif pattern_type == "ioc":
+            return
+
+        else:
+            indicator_matching = None
+
+        if indicator_matching is not None:
+            incident_name = (
+                indicator_matching["name"]
+                + " on "
+                + new_alert_built["agent"]["hostname"]
+            )
+
+            alert_create_date = new_alert_built["created_at"]
+            if "updated_at" in new_alert_built:
+                alert_update_date = new_alert_built["updated_at"]
+            else:
+                alert_update_date = new_alert_built["created_at"]
+
+            # Generate new incident
+            stix_incident = stix2.Incident(
+                id=Incident.generate_id(incident_name, alert_create_date),
+                created=alert_create_date,
+                name=incident_name,
+                description=f"{new_alert_built['msg']}",
+                object_marking_refs=[marking],
+                created_by_ref=self.identity["standard_id"],
+                confidence=self.helper.connect_confidence_level,
+                external_references=[
+                    {
+                        "source_name": "HarfangLab - Security Events",
+                        "url": f"{self.harfanglab_url}/security-event/{new_alert_built['url_id']}/summary",
+                        "external_id": new_alert_built["url_id"],
+                    }
+                ],
+                allow_custom=True,
+                custom_properties={
+                    "source": "HarfangLab",
+                    "severity": new_alert_built["level"],
+                    "incident_type": "alert",
+                    "first_seen": alert_create_date,
+                    "last_seen": alert_update_date,
+                },
+            )
+            global_bundle["all_incidents_objects"] = stix_incident
+
+            # Generate new indicator
+            stix_indicator = stix2.Indicator(
+                id=Indicator.generate_id(indicator_matching["name"]),
+                created_by_ref=self.identity["standard_id"],
+                created=indicator_matching["creation_date"],
+                modified=indicator_matching["last_update"],
+                name=indicator_matching["name"],
+                description=indicator_matching["description"]
+                if "description" in indicator_matching
+                else "",
+                pattern=indicator_matching["content"],
+                object_marking_refs=[marking],
+                custom_properties={
+                    "pattern_type": pattern_type,
+                    "x_opencti_score": self.helper.connect_confidence_level,
+                    "detection": True,
+                },
+            )
+            global_bundle["all_indicators_objects"] = stix_indicator
+
+            # Generate sighting : indicator -> type "sigthed in/at" -> system
+            stix_sighting = self.process_create_sighting_relationship(
+                new_alert_built,
+                stix_indicator["id"],
+                marking,
+            )
+            global_bundle["all_sightings_objects"] = stix_sighting
+
+            # Create Observable Hostname
+            stix_hostname = CustomObservableHostname(
+                value=new_alert_built["agent"]["hostname"],
+                object_marking_refs=[marking],
+                custom_properties={
+                    "created_by_ref": self.identity["standard_id"],
+                },
+            )
+            global_bundle["all_hostnames_objects"] = {
+                "incident_id": stix_incident["id"],
+                "stix_hostname": stix_hostname,
+            }
+
+            # Create Observable User Account
+            stix_user = stix2.UserAccount(
+                account_login=new_alert_built["process"]["username"],
+                object_marking_refs=[marking],
+                custom_properties={
+                    "created_by_ref": self.identity["standard_id"],
+                },
+            )
+            global_bundle["all_users_objects"] = {
+                "incident_id": stix_incident["id"],
+                "stix_user": stix_user,
+            }
+
+            # Create observable File
+            observable_name = new_alert_built["process"]["process_name"]
+            stix_observable = stix2.File(
+                name=observable_name,
+                hashes={
+                    "SHA-256": new_alert_built["process"]["hashes"]["sha256"],
+                    "SHA-1": new_alert_built["process"]["hashes"]["sha1"],
+                    "MD5": new_alert_built["process"]["hashes"]["md5"],
+                },
+                object_marking_refs=[marking],
+                custom_properties={
+                    "created_by_ref": self.identity["standard_id"],
+                },
+            )
+            global_bundle["all_observable_objects"] = {
+                "incident_id": stix_incident["id"],
+                "stix_observable": stix_observable,
+            }
+
+            # Generate relationship : indicator -> type "based-on" -> observable
+            stix_relation_new_indicator = self.process_stix_relationship(
+                "based-on",
+                stix_indicator["id"],
+                stix_observable["id"],
+                marking,
+            )
+            global_bundle["all_relationships"] = [stix_relation_new_indicator]
+
+            # Generate relationship : observable -> type "related-to" -> incident
+            stix_relation_new_observable = self.process_stix_relationship(
+                "related-to",
+                stix_observable["id"],
+                stix_incident["id"],
+                marking,
+            )
+            global_bundle["all_relationships"].append(stix_relation_new_observable)
+
+            # Create observable directory
+            observable_directory = new_alert_built["process"]["current_directory"]
+
+            stix_observable_directory = stix2.Directory(
+                path=observable_directory,
+                object_marking_refs=[marking],
+                custom_properties={
+                    "created_by_ref": self.identity["standard_id"],
+                },
+            )
+            global_bundle["all_observables_directories"] = {
+                "incident_id": stix_incident["id"],
+                "stix_directory": stix_observable_directory,
+            }
+
+            first_iteration = True
+            for technique in indicator_matching["rule_technique_tags"]:
+                # regex for tXXXX.XXX
+                technique_number_complex = re.findall(r"t\d+\.\d+", technique)
+                # regex for tXXXX
+                technique_number_simple = re.findall(r"t\d+", technique)
+
+                if technique_number_complex:
+                    technique_matched = technique_number_complex[0].upper()
+                elif technique_number_simple:
+                    technique_matched = technique_number_simple[0].upper()
+                else:
+                    continue
+
+                stix_attack_pattern = stix2.AttackPattern(
+                    id=AttackPattern.generate_id(technique_matched, technique_matched),
+                    name=technique_matched,
+                    allow_custom=True,
+                    custom_properties={"x_mitre_id": technique_matched},
+                )
+
+                if first_iteration is True:
+                    global_bundle["all_attacks_pattern"] = [
+                        {
+                            "incident_id": stix_incident["id"],
+                            "stix_attack_pattern": stix_attack_pattern,
+                        }
+                    ]
+                    first_iteration = False
+                else:
+                    global_bundle["all_attacks_pattern"].append(
+                        {
+                            "incident_id": stix_incident["id"],
+                            "stix_attack_pattern": stix_attack_pattern,
+                        }
+                    )
+
+                # Generate relationship : incident -> type "use" -> attack_pattern
+                stix_relation_attack_pattern = self.process_stix_relationship(
+                    "uses",
+                    stix_incident["id"],
+                    stix_attack_pattern["id"],
+                    marking,
+                )
+                global_bundle["all_relationships"].append(stix_relation_attack_pattern)
+
+            return global_bundle
+        else:
+            return
 
     @staticmethod
     def sort_object_unique(stix_objects, sort_by):

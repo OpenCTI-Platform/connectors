@@ -126,6 +126,13 @@ class HarfangLabConnector:
             raise ValueError(
                 "Missing or incorrect value in configuration parameter 'Import threads as incidents'"
             )
+        if (
+            self.harfanglab_import_threats_as_case_incidents is True
+            and self.harfanglab_import_security_events_as_incidents is False
+        ):
+            raise ValueError(
+                "If 'import_threats_as_case_incidents' is True then 'import_security_events_as_incidents' must be True"
+            )
 
         self.check_config_filters(
             self.harfanglab_import_security_events_filters_by_status,
