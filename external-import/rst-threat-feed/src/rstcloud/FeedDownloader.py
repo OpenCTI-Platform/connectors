@@ -10,43 +10,32 @@ import pytz
 import requests
 from requests import RequestException
 
-# from requests.packages.urllib3.exceptions import InsecureRequestWarning
-# requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
 log = logging.getLogger("rstdownloader")
 
 
 class FeedDownloader:
-    _feed_type = ""
-    _proxy_config = None
-    _rstcloud_config = None
-    _dirs_config = None
-    _downloaded_res = {}
-    _state = {}  # format {20191021: {'ip': 'file_name1'}}
-    _session = None
-    _is_connected = False
-    _CON_TIMEOUT = (5, 20)
-    _CON_RETRY = 2
-    _current_day = 0  # day to download in format %Y%m%d
-    _yesterday = str(
-        datetime.fromtimestamp(
-            int((datetime.now().date() - date(1970, 1, 1)).total_seconds() - 86400),
-            tz=pytz.timezone("UTC"),
-        )
-        .date()
-        .strftime("%Y%m%d")
-    )
-
     def __init__(self, conf, state, ftype):
+        self._session = None
+        self._is_connected = False
+        self.already_processed = False
+        self._downloaded_res = {}
+
         self._feed_type = ftype
-        if conf.get("proxy"):
-            self._proxy_config = conf["proxy"]
+        self._state = state  # format {20191021: {'ip': 'file_name1'}}
+        self._proxy_config = conf.get("proxy")
         self._rstcloud_config = conf
         self._dirs_config = conf["dirs"]
-        self._state = state
 
-        self._CON_TIMEOUT = (conf["contimeout"], conf["readtimeout"])
-        self._CON_RETRY = conf["retry"]
+        self._CON_TIMEOUT = (conf.get("contimeout", 10), conf.get("readtimeout", 20))
+        self._CON_RETRY = conf.get("retry", 2)
+
+        self._time_formatter = "%Y%m%d"
+        self._lastmodified = None
+        self._current_day = datetime.now(tz=pytz.timezone("UTC"))
+        self._yesterday = datetime.fromtimestamp(
+            int((self._current_day.date() - date(1970, 1, 1)).total_seconds() - 86400),
+            tz=pytz.timezone("UTC"),
+        )
 
     def _get_resources(self):
         """
@@ -55,12 +44,12 @@ class FeedDownloader:
         """
         self._downloaded_res.clear()
         downloadtype = self._rstcloud_config["feeds"]["filetype"]
-        current_day = self._current_day
-        if int(current_day) <= int(self._lastmodified):
+        current_day_formatted = self._current_day.strftime(self._time_formatter)
+        if int(self._current_day.timestamp()) <= int(self._lastmodified.timestamp()):
             self._downloaded_res[self._feed_type] = {
-                "current_day": int(current_day),
+                "current_day": current_day_formatted,
                 "downloadtype": downloadtype,
-                "file_name_current": current_day
+                "file_name_current": current_day_formatted
                 + "-"
                 + self._feed_type
                 + "."
@@ -128,12 +117,13 @@ class FeedDownloader:
                         r.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z"
                     )
                 )
-                self._lastmodified = (
-                    datetime.fromtimestamp(timestamp, tz=pytz.timezone("UTC"))
-                    .date()
-                    .strftime("%Y%m%d")
+                self._lastmodified = datetime.fromtimestamp(
+                    timestamp, tz=pytz.timezone("UTC")
                 )
-                log.info("Last available feed: " + str(self._lastmodified))
+                log.info(
+                    "Last available feed: "
+                    + self._lastmodified.strftime(self._time_formatter)
+                )
         except RequestException as e:
             log.error("Error: " + str(e))
             return False
@@ -144,20 +134,16 @@ class FeedDownloader:
         if not self._session:
             self.init_connection()
         self._get_resources()
-        v = self._downloaded_res[self._feed_type]
 
-        is_processed = False
-        file_name = ""
+        v = self._downloaded_res[self._feed_type]
         if self._try_to_download(
             v["current_day"], v["file_name_current"], v["downloadtype"]
         ):
-            is_processed = True
-            file_name = v["file_name_current"]
-        if not is_processed:
-            log.error("Feed download failed")
+            key = self._yesterday.strftime(self._time_formatter)
+            new_state[key] = {}
+            new_state[key][self._feed_type] = v["file_name_current"]
         else:
-            new_state[self._yesterday] = {}
-            new_state[self._yesterday][self._feed_type] = file_name
+            log.error("Feed download failed")
 
         return new_state
 
@@ -166,9 +152,12 @@ class FeedDownloader:
             "Trying to download file for the date {0!s}: {1!s}".format(day, file_name)
         )
 
-        in_state = self._is_feed_in_state(self._yesterday, file_name)
+        in_state = self._is_feed_in_state(
+            self._yesterday.strftime(self._time_formatter), file_name
+        )
         if in_state:
             log.debug("Found {0!s} in the state file".format(file_name))
+            self.already_processed = True
             return True
 
         file_url = (
@@ -230,25 +219,25 @@ class FeedDownloader:
                 file_name, uncompressed_size, self._dirs_config["tmp"]
             )
         )
-        return True
+        return True, None
 
-    def set_current_day(self, day=0):
+    def set_current_day(self, day=None):
         if day:
-            self._current_day = str(
-                datetime.fromtimestamp(day, tz=pytz.timezone("UTC"))
-                .date()
-                .strftime("%Y%m%d")
+            self._current_day = datetime.fromtimestamp(day, tz=pytz.timezone("UTC"))
+            log.info(
+                "cday was set to {0!s}".format(
+                    self._current_day.strftime(self._time_formatter)
+                )
             )
-            log.info("cday was set to {0!s}".format(self._current_day))
         else:
             self._current_day = self._yesterday
             log.info(
                 "cday was not specifed. Using yesterday: {0!s}".format(
-                    self._current_day
+                    self._current_day.strftime(self._time_formatter)
                 )
             )
 
-    def _is_feed_in_state(self, day, file_name):
+    def _is_feed_in_state(self, day: str, file_name):
         """
         Try to found feed file in .state
         :param day: Day in str('%Y%m%d') - key in .state

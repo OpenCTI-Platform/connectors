@@ -86,27 +86,37 @@ def write_state(state_dir: str, feed_type: str, state) -> None:
 
 
 def custom_mapping_industry_sector(input_name):
-    industies = {
+    industries = {
+        "aerospace": "Aerospace",
+        "biotechnology": "Biomedical",
+        "bp_outsourcing": "Professinal Services",
         "chemical": "Chemical",
+        "critical_infrastructure": "ICS",
         "e-commerce": "e-commerce",
-        "energy": "Energy",
-        "transport": "Transport",
-        "foodtech": "Food Production",
-        "logistic": "Logistics",
-        "military": "Military",
         "education": "Education",
-        "retail": "Retail",
-        "healthcare": "Healthcare",
-        "government": "Government",
-        "petroleum": "Fuel",
-        "media": "Media",
+        "energy": "Energy",
         "entertainment": "Entertainment",
         "financial": "Financial",
-        "telco": "Telecommunications",
+        "foodtech": "Food Production",
+        "government": "Government",
+        "healthcare": "Healthcare",
         "iot": "Electronics",
         "isc": "ICS",
+        "logistic": "Logistics",
+        "maritime": "Maritime transport",
+        "media": "Media",
+        "military": "Military",
+        "ngo": "NGO",
+        "nuclear_power": "Nuclear",
+        "petroleum": "Fuel",
+        "religion": "Religion",
+        "retail": "Retail",
+        "semiconductor_industry": "Electronics",
+        "software_development": "Software Development",
+        "telco": "Telecommunications",
+        "transport": "Transport",
     }
-    return industies.get(input_name)
+    return industries.get(input_name)
 
 
 def feed_converter(
@@ -118,8 +128,6 @@ def feed_converter(
 
     for dt, v in state.items():
         feed_file = os.path.join(tmp_dir, v[feed_type])
-        if not os.path.exists(feed_file):
-            raise Exception("File in state, but not in dir: " + feed_file)
         with open(feed_file, "r", encoding="utf-8") as raw_file:
             for line in raw_file:
                 ioc_raw = json.loads(line, object_hook=OrderedDict)
@@ -222,19 +230,20 @@ def feed_converter(
                 sector_keys = list()
                 for i in industries:
                     sector_name = custom_mapping_industry_sector(i)
-                    sector_key = opencti_generate_id("identity", sector_name)
-                    if sector_key:
-                        ret_threats[sector_key] = {
-                            "name": sector_name,
-                            "type": "sector",
-                        }
-                        sector_keys.append(sector_key)
-                        if ret_threats[sector_key].get("src") is None:
-                            ret_threats[sector_key]["src"] = dict()
-                        for s in ioc["src"]:
-                            source_name = s["name"]
-                            source_url = s["url"]
-                            ret_threats[sector_key]["src"][source_name] = source_url
+                    if sector_name:
+                        sector_key = opencti_generate_id("identity", sector_name)
+                        if sector_key:
+                            ret_threats[sector_key] = {
+                                "name": sector_name,
+                                "type": "sector",
+                            }
+                            sector_keys.append(sector_key)
+                            if ret_threats[sector_key].get("src") is None:
+                                ret_threats[sector_key]["src"] = dict()
+                            for s in ioc["src"]:
+                                source_name = s["name"]
+                                source_url = s["url"]
+                                ret_threats[sector_key]["src"][source_name] = source_url
                 for k in sector_keys:
                     mapping = (ioc_key, k, ioc["fseen"], ioc["collect"], ioc["src"])
                     ret_mapping.append(mapping)
