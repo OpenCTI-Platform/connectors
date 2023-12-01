@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Correct working directory
-cd /opt/opencti-connector-cve
+cd /opt/opencti-connector-nvd-cve
 
 # Start the connector
 python3 main.py

@@ -105,8 +105,6 @@ class CVEConnector:
             from the last max_date_range (can be configured) to now
             """
             if last_run is None:
-                # TODO HANDLE DATE RANGE if pull_history true, add config for when to import
-                # TODO If pull_history = false, import only recent
 
                 if self.config.max_date_range > MAX_AUTHORIZED:
                     error_msg = "The max_date_range cannot exceed {} days".format(

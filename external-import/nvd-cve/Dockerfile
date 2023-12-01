@@ -1,12 +1,12 @@
 FROM python:3.11-alpine
 
 # Copy the connector
-COPY src /opt/opencti-connector-cve
+COPY src /opt/opencti-connector-nvd-cve
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-connector-cve && \
+    cd /opt/opencti-connector-nvd-cve && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
