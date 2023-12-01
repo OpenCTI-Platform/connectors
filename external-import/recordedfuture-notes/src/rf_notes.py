@@ -68,7 +68,7 @@ class RFNotes:
         )
         self.rf_topics = topics_value.split(",") if topics_value else [None]
         self.rf_person_to_TA = get_config_variable(
-            "RECORDED_FUTUTRE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
+            "RECORDED_FUTURE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
         )
         self.rf_TA_to_intrusion_set = get_config_variable(
             "RECORDED_FUTURE_TA_TO_INTRUSION_SET",
