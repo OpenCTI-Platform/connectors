@@ -8,7 +8,9 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
+import io
 import json
+import string
 from urllib import parse
 
 import requests
@@ -17,6 +19,9 @@ import requests.exceptions
 API_BASE = "https://api.recordedfuture.com"
 CONNECT_BASE = API_BASE + "/v2"
 DETECTION_SEARCH = API_BASE + "/detection-rule/search"
+CONNECT_IP_SEARCH = CONNECT_BASE + "/ip/search"
+CONNECT_DOMAIN_SEARCH = CONNECT_BASE + "/domain/search"
+CONNECT_URL_SEARCH = CONNECT_BASE + "/url/search"
 NOTES_BASE = CONNECT_BASE + "/analystnote"
 NOTES_SEARCH = NOTES_BASE + "/search"
 FUSION_FILE_BASE = CONNECT_BASE + "/fusion/files"
@@ -64,7 +69,7 @@ class RFClient:
         notes = []
         for note in res.json()["data"]["results"]:
             attributes = note["attributes"]
-            msg = f'Processing note "{attributes["title"]}"'
+            msg = f'[ANALYST NOTES] Processing note "{attributes["title"]}"'
             self.helper.log_info(msg)
             if pull_signatures and "attachment" in attributes:
                 try:
@@ -73,17 +78,36 @@ class RFClient:
                     attributes["attachment_type"] = result["type"]
                 except requests.exceptions.HTTPError as err:
                     if "403" in str(err):
-                        msg = "Your API token does not have permission to pull Detection Rules"
+                        msg = "[ANALYST NOTES] Your API token does not have permission to pull Detection Rules"
                         self.helper.log_error(msg)
                     else:
                         raise err
                 except (KeyError, IndexError):
                     self.helper.log_error(
-                        "Problem with API response for detection"
+                        "[ANALYST NOTES] Problem with API response for detection"
                         "rule for note {}. Rule will not be added".format(note["id"])
                     )
             notes.append(note)
         return notes
+
+    def get_risk_ip_addresses(self, limit: int = 1000, risk_threshold=65):
+        """
+
+        :param limit:
+        :param risk_threshold:
+        :return:
+        """
+        note_params = {
+            "fields": "entity,risk,relatedEntities",
+            "limit": limit,
+            "riskScore": f"[{risk_threshold},)",  # for example [65,) which means riskScore >= 65
+        }
+        res = self.session.get(CONNECT_IP_SEARCH, params=note_params)
+        res.raise_for_status()
+        ip_addresses = []
+        for ip_address in res.json()["data"]["results"]:
+            ip_addresses.append(ip_address)
+        return ip_addresses
 
     def get_attachment(self, doc_id: str) -> str:
         """Pulls a hunting package from the detection rules API
@@ -119,6 +143,12 @@ class RFClient:
         for entity in json.loads(res):
             ret.add(entity["entity"])
         return ret
+
+    def get_risk_list_CSV(self, path: string) -> io.StringIO:
+        res = self.get_fusion_file(path)
+        buffer = io.StringIO(res)
+
+        return buffer
 
     def get_risk_score(self, type: str, value: str) -> int:
         """Gets risk score for an indicator
