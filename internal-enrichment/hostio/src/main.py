@@ -116,8 +116,7 @@ class HostIOConnector(InternalEnrichmentConnector):
         self.helper.log_info(f"Updating labels for {entity_id}")
         for label in format_labels(ipinfo_object.get_labels()):
             self.helper.api.stix_cyber_observable.add_label(
-                id=entity_id,
-                label_name=label
+                id=entity_id, label_name=label
             )
 
     def _create_ipinfo_enrichment_notes(

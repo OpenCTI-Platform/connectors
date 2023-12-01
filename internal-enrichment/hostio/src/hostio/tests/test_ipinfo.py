@@ -30,7 +30,7 @@ class TestIPInfo:
     fixture = "ipinfo_{}.json"
     license_dict = {
         "free": {
-            "count": 7,
+            "count": 9,
             "keys": [
                 "ip",
                 "hostname",
@@ -43,7 +43,7 @@ class TestIPInfo:
                 "postal",
                 "timezone",
             ],  # Updated keys
-            "stix_objects": [Location, Relationship, DomainName],
+            "stix_objects": [Location, Relationship, DomainName, AutonomousSystem],
         },
         "base": {
             "count": 9,

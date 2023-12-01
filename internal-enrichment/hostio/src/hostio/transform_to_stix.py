@@ -1,7 +1,7 @@
 import logging
+from re import search
 
 from countryinfo import CountryInfo
-from re import search
 from pycti import Location as pycti_location
 from pycti import StixCoreRelationship
 from stix2 import (
@@ -40,7 +40,7 @@ class BaseStixTransformation:
             # Extracted AS number
             as_number = as_number.group() if as_number else None
             if as_number:
-                asn_id = extract_asn_number(as_number) 
+                asn_id = extract_asn_number(as_number)
         elif isinstance(asn_data, dict):
             # Return only the number for the asn_data.get('asn') value (e.g., AS15169 should be 15169) using regex.
             asn_id = extract_asn_number(asn_data.get("asn"))
@@ -230,9 +230,13 @@ class BaseStixTransformation:
         if "asn" in ipinfo_object:
             LOGGER.info(f"ASN data: {ipinfo_object.get('asn')}")
             self._create_autonomous_system(ipinfo_object.get("asn"), self.entity_id)
-        elif "org" in ipinfo_object and isinstance(ipinfo_object.get('org'), str) and ipinfo_object.get('org').startswith('AS'):
+        elif (
+            "org" in ipinfo_object
+            and isinstance(ipinfo_object.get("org"), str)
+            and ipinfo_object.get("org").startswith("AS")
+        ):
             LOGGER.info(f"ASN data: {ipinfo_object.get('org')}")
-            self._create_autonomous_system(ipinfo_object.get('org'), self.entity_id)
+            self._create_autonomous_system(ipinfo_object.get("org"), self.entity_id)
         if "privacy" in ipinfo_object:
             LOGGER.info(f"Privacy data: {ipinfo_object.get('privacy')}")
             self._create_labels(ipinfo_object.get("privacy"))
