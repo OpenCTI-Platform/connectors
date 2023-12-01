@@ -94,7 +94,6 @@ class HostIOConnector(InternalEnrichmentConnector):
         if len(ipinfo_object.get_details()) > 0:
             stix_objects.extend(ipinfo_object.get_stix_objects())
             self._create_labels(
-                opencti_entity=opencti_entity,
                 ipinfo_object=ipinfo_object,
                 entity_id=entity_id,
             )
@@ -112,23 +111,14 @@ class HostIOConnector(InternalEnrichmentConnector):
             source_name=source_name, url=url, entity_id=entity_id
         )
 
-    def _create_labels(self, opencti_entity=None, ipinfo_object=None, entity_id=None):
+    def _create_labels(self, ipinfo_object=None, entity_id=None):
         """Create labels for the IP."""
-        # update labels for the IP
-        if hasattr(opencti_entity, "labels"):
-            existing_labels = opencti_entity.get("labels")
-        else:
-            existing_labels = []
-        existing_labels.extend(ipinfo_object.get_labels())
-        existing_labels.extend(format_labels(self.hostio_labels))
         self.helper.log_info(f"Updating labels for {entity_id}")
-        self.helper.api.stix_cyber_observable.update_field(
-            id=entity_id,
-            input={
-                "key": "labels",
-                "value": format_labels(existing_labels),
-            },
-        )
+        for label in format_labels(ipinfo_object.get_labels()):
+            self.helper.api.stix_cyber_observable.add_label(
+                id=entity_id,
+                label_name=label
+            )
 
     def _create_ipinfo_enrichment_notes(
         self,

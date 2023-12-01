@@ -151,8 +151,8 @@ def extract_asn_number(asn_string):
             return int(match.group(1))  # Returns only the number part
         LOGGER.error(f"Error extracting ASN number from {asn_string}")
         return None  # Return None if no match is found
-    except Exception:
-        LOGGER.error(f"Error extracting ASN number from {asn_string}")
+    except Exception as e:
+        LOGGER.error(f"Error extracting ASN number from {asn_string}, error: {e}")
         return None
 
 

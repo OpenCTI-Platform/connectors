@@ -1,6 +1,7 @@
 import logging
 
 from countryinfo import CountryInfo
+from re import search
 from pycti import Location as pycti_location
 from pycti import StixCoreRelationship
 from stix2 import (
@@ -32,13 +33,21 @@ class BaseStixTransformation:
         self.labels = []
 
     def _create_autonomous_system(self, asn_data, relationship_id):
-        """"""
-        # Return only the number for the asn_data.get('asn') value (e.g., AS15169 should be 15169) using regex.
-        asn_id = extract_asn_number(asn_data.get("asn"))
-        if asn_id is not None:
+        """Transform ASN Data"""
+        asn_id = None
+        if isinstance(asn_data, str):
+            as_number = search(r"AS\d+", asn_data)
+            # Extracted AS number
+            as_number = as_number.group() if as_number else None
+            if as_number:
+                asn_id = extract_asn_number(as_number) 
+        elif isinstance(asn_data, dict):
+            # Return only the number for the asn_data.get('asn') value (e.g., AS15169 should be 15169) using regex.
+            asn_id = extract_asn_number(asn_data.get("asn"))
+        if asn_id:
             asn_sco = AutonomousSystem(
                 number=asn_id,
-                name=asn_data.get("name") if "name" in asn_data else None,
+                name=asn_id,
                 object_marking_refs=self.marking_refs,
             )
             self.stix_objects.append(asn_sco)
@@ -221,6 +230,9 @@ class BaseStixTransformation:
         if "asn" in ipinfo_object:
             LOGGER.info(f"ASN data: {ipinfo_object.get('asn')}")
             self._create_autonomous_system(ipinfo_object.get("asn"), self.entity_id)
+        elif "org" in ipinfo_object and isinstance(ipinfo_object.get('org'), str) and ipinfo_object.get('org').startswith('AS'):
+            LOGGER.info(f"ASN data: {ipinfo_object.get('org')}")
+            self._create_autonomous_system(ipinfo_object.get('org'), self.entity_id)
         if "privacy" in ipinfo_object:
             LOGGER.info(f"Privacy data: {ipinfo_object.get('privacy')}")
             self._create_labels(ipinfo_object.get("privacy"))
