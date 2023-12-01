@@ -61,8 +61,9 @@ class ConfigCVE:
         self.interval = convert_hours_to_seconds(self.config_interval)
 
         self.max_date_range = get_config_variable(
-            "CVE_MAX_DATE_RANGE",
-            ["cve", "max_date_range"],
-            self.load,
-            isNumber=True
+            "CVE_MAX_DATE_RANGE", ["cve", "max_date_range"], self.load, isNumber=True
+        )
+
+        self.pull_history = get_config_variable(
+            "CVE_PULL_HISTORY", ["cve", "pull_history"], self.load
         )

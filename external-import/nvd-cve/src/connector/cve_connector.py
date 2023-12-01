@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from services import CVEConverter  # type: ignore
-from services.utils.version import __version__ as APP_VERSION  # type: ignore
-from services.utils.config_variables import ConfigCVE  # type: ignore
+from services.utils import APP_VERSION, MAX_AUTHORIZED, ConfigCVE  # type: ignore
 
 
 class CVEConnector:
@@ -56,10 +55,26 @@ class CVEConnector:
 
         return work_id
 
+    def update_connector_state(self, current_time, work_id):
+        msg = (
+            f"[CONNECTOR] Connector successfully run, storing last_run as "
+            f"{datetime.utcfromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        self.helper.log_info(msg)
+        self.helper.api.work.to_processed(work_id, msg)
+        self.helper.set_state({"last_run": current_time})
+
+        interval_in_hours = round(self.config.interval / 60 / 60, 2)
+        self.helper.log_info(
+            "[CONNECTOR] Last_run stored, next run in: "
+            + str(interval_in_hours)
+            + " hours"
+        )
+
     def process_data(self):
         try:
             """
-            Get the current timestamp and check
+            Get the current state and check
             """
             now = datetime.now()
             current_time = int(datetime.timestamp(now))
@@ -78,50 +93,62 @@ class CVEConnector:
                 self.helper.log_info(msg)
 
             """
-            If the last run is more than current interval
+            ======================================================
+            Main process if connector successfully works
+            ======================================================
             """
-            if last_run is None or (
-                (current_time - last_run) >= int(self.config.interval)
-            ):
-                """
-                Initiate work_id to track the job
-                """
-                work_id = self._initiate_work(current_time)
+            # Initiate work_id to track the job
+            work_id = self._initiate_work(current_time)
 
-                """
-                ======================================================
-                Main process if connector successfully works
-                ======================================================
-                """
-
+            """
+            If the connector never runs, import the most recent CVEs
+            from the last max_date_range (can be configured) to now
+            """
+            if last_run is None:
                 # TODO HANDLE DATE RANGE if pull_history true, add config for when to import
                 # TODO If pull_history = false, import only recent
+
+                if self.config.max_date_range > MAX_AUTHORIZED:
+                    error_msg = "The max_date_range cannot exceed {} days".format(
+                        MAX_AUTHORIZED
+                    )
+                    raise Exception(error_msg)
 
                 date_range = timedelta(days=self.config.max_date_range)
                 start_date = now - date_range
 
                 cve_params = {
                     "lastModStartDate": start_date.isoformat(),
-                    "lastModEndDate": now.isoformat()
+                    "lastModEndDate": now.isoformat(),
                 }
 
-                # TODO can only get data max range 120 days, send an error if wanted history
                 self.converter.convert_and_send(cve_params, work_id)
+                self.update_connector_state(current_time, work_id)
 
-                msg = (
-                    f"[CONNECTOR] Connector successfully run, storing last_run as "
-                    f"{datetime.utcfromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')}"
-                )
-                self.helper.log_info(msg)
-                self.helper.api.work.to_processed(work_id, msg)
-                self.helper.set_state({"last_run": current_time})
+                if last_run is None and self.config.pull_history:
+                    # TODO
+                    print("TODO")
 
-                interval_in_hours = round(self.config.interval / 60 / 60, 2)
+                """
+                If the connector runs, and the last run is more than current interval
+                Import CVEs from the last run to now (maintain data)
+                """
+            elif last_run is not None and (current_time - last_run) >= int(
+                self.config.interval
+            ):
                 self.helper.log_info(
-                    "[CONNECTOR] Last_run stored, next run in: "
-                    + str(interval_in_hours)
-                    + " hours"
+                    "[CONNECTOR] Getting the last CVEs since the last run..."
                 )
+
+                last_run_ts = datetime.utcfromtimestamp(last_run)
+                # Update date range
+                cve_params = {
+                    "lastModStartDate": last_run_ts.isoformat(),
+                    "lastModEndDate": now.isoformat(),
+                }
+                self.converter.convert_and_send(cve_params, work_id)
+                self.update_connector_state(current_time, work_id)
+
             else:
                 new_interval = self.config.interval - (current_time - last_run)
                 new_interval_in_hours = round(new_interval / 60 / 60, 2)
