@@ -74,6 +74,11 @@ class Taxii2Connector:
                 verify=self.verify_ssl,
                 cert=cert_path,
             )
+        self.available_collections = []
+        if hasattr(self.server, 'api_roots') and self.server.api_roots:
+            for api_root in self.server.api_roots:
+                if hasattr(api_root, 'collections'):
+                    self.available_collections.extend([c.id for c in api_root.collections])
         self.collections = get_config_variable(
             "TAXII2_COLLECTIONS", ["taxii2", "collections"], config
         ).split(",")
@@ -349,7 +354,8 @@ class Taxii2Connector:
                     # Check if "more" exists in response and its value is True
                     if "more" in response and response["more"] == True:
                         filters["next"] = response["next"]
-                        response = collection.get_objects(**filters)
+                        if response["next"] in self.available_collections and len(self.available_collections) > 0:
+                            response = collection.get_objects(**filters)
                     else:
                         # "more" doesn't exist or is not True, exit the loop
                         break
