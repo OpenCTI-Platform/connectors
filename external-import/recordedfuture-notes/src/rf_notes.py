@@ -16,7 +16,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, RFClient, StixNote
+from rflib import APP_VERSION, RFClient, RiskList, StixNote
 
 
 class RFNotes:
@@ -45,12 +45,20 @@ class RFNotes:
         self.rf_interval = get_config_variable(
             "RECORDED_FUTURE_INTERVAL", ["rf-notes", "interval"], config, True
         )
+        self.rf_risk_list_interval = get_config_variable(
+            "RECORDED_FUTURE_RISK_LIST_INTERVAL",
+            ["rf-notes", "risk_list_interval"],
+            config,
+            True,
+        )
         self.tlp = get_config_variable(
             "RECORDED_FUTURE_TLP", ["rf-notes", "TLP"], config
         )
-
         self.rf_pull_signatures = get_config_variable(
             "RECORDED_FUTURE_PULL_SIGNATURES", ["rf-notes", "pull_signatures"], config
+        )
+        self.rf_pull_risk_list = get_config_variable(
+            "RECORDED_FUTURE_PULL_RISK_LIST", ["rf-notes", "pull_risk_list"], config
         )
         self.rf_insikt_only = get_config_variable(
             "RECORDED_FUTURE_INSIKT_ONLY", ["rf-notes", "insikt_only"], config
@@ -60,7 +68,7 @@ class RFNotes:
         )
         self.rf_topics = topics_value.split(",") if topics_value else [None]
         self.rf_person_to_TA = get_config_variable(
-            "RECORDED_FUTUTRE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
+            "RECORDED_FUTURE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
         )
         self.rf_TA_to_intrusion_set = get_config_variable(
             "RECORDED_FUTURE_TA_TO_INTRUSION_SET",
@@ -95,6 +103,14 @@ class RFNotes:
         """Run connector on a schedule"""
         while True:
             timestamp = int(time.time())
+            now = datetime.utcfromtimestamp(timestamp)
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id,
+                "Recorded Future Analyst Notes run @ "
+                + now.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+            self.helper.log_info("[ANALYST NOTES] Pulling analyst notes")
+
             current_state = self.helper.get_state()
             tas = self.rfapi.get_threat_actors()
             if current_state is not None and "last_run" in current_state:
@@ -113,24 +129,24 @@ class RFNotes:
                 published = self.rf_initial_lookback
 
             try:
-                self.convert_and_send(published, tas)
+                self.convert_and_send(published, tas, work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
 
             self.helper.set_state({"last_run": timestamp})
             time.sleep(self.get_interval())
 
-    def convert_and_send(self, published, tas):
+    def convert_and_send(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
         self.helper.log_info(
-            f"Pull Signatures is is {str(self.rf_pull_signatures)} of type "
+            f"[ANALYST NOTES] Pull Signatures is {str(self.rf_pull_signatures)} of type "
             f"{type(self.rf_pull_signatures)}"
         )
         self.helper.log_info(
-            f"Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
+            f"[ANALYST NOTES] Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
         )
         self.helper.log_info(
-            f"Topics are {str(self.rf_topics)} of type {type(self.rf_topics)}"
+            f"[ANALYST NOTES] Topics are {str(self.rf_topics)} of type {type(self.rf_topics)}"
         )
         notes = []
         notes_ids = []
@@ -143,7 +159,9 @@ class RFNotes:
                     notes.append(new_note)
                     notes_ids.append(new_note["id"])
 
-        self.helper.log_info(f"fetched {len(notes)} Analyst notes from API")
+        self.helper.log_info(
+            f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API"
+        )
         for note in notes:
             stixnote = StixNote(
                 self.helper,
@@ -159,17 +177,25 @@ class RFNotes:
             stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
-                "Sending Bundle to server with " + str(len(bundle.objects)) + " objects"
+                "[ANALYST NOTES] Sending Bundle to server with "
+                + str(len(bundle.objects))
+                + " objects"
             )
             self.helper.send_stix2_bundle(
-                bundle.serialize(),
-                update=self.update_existing_data,
+                bundle.serialize(), update=self.update_existing_data, work_id=work_id
             )
 
 
 if __name__ == "__main__":
     try:
         RF = RFNotes()
+        if RF.rf_pull_risk_list:
+            RiskList = RiskList(
+                RF.helper, RF.update_existing_data, RF.rf_risk_list_interval, RF.rfapi
+            )
+            RiskList.start()
+        else:
+            RF.helper.log_info("[RISK LISTS] Risk list fetching disabled")
         RF.run()
     except Exception:
         traceback.print_exc()

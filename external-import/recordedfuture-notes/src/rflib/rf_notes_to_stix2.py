@@ -8,7 +8,7 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
-
+import json
 from datetime import datetime
 
 import pycti  # type: ignore
@@ -32,10 +32,10 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, type_, author):
+    def __init__(self, name, type_, author=None):
         self.name = name
         self.type = type_
-        self.author = author
+        self.author = author or self._create_author()
         self.stix_obj = None
 
     def to_stix_objects(self):
@@ -56,17 +56,27 @@ class RFStixEntity:
         """Returns STIX Bundle as JSON"""
         return self.to_stix_bundle().serialize()
 
+    def _create_author(self):
+        """Creates Recorded Future Author"""
+        return stix2.Identity(
+            id=pycti.Identity.generate_id("Recorded Future", "organization"),
+            name="Recorded Future",
+            identity_class="organization",
+        )
+
 
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
     def __init__(self, name, type_, author):
         self.name = name
-        self.author = author
+        self.author = author or super()._create_author()
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
         self.risk_score = None
+        self.related_entities = []
+        self.objects = []
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -94,7 +104,7 @@ class Indicator(RFStixEntity):
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
             custom_properties={
-                "x_opencti_score": self.risk_score,
+                "x_opencti_score": self.risk_score or None,
             },
         )
         pass
@@ -119,8 +129,68 @@ class Indicator(RFStixEntity):
             created_by_ref=self.author.id,
         )
 
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(
+            objects=self.objects if self.objects else self.to_stix_objects(),
+            allow_custom=True,
+        )
+
+    def map_data(self, rf_indicator):
+        handled_related_entities_types = [
+            "Malware",
+            "Hash",
+            "IpAddress",
+            "URL",
+            "Threat Actor",
+        ]
+        self.risk_score = int(rf_indicator["Risk"])
+        related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
+        if (
+            related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
+        ):  # Sometimes, hits is not empty but sections is
+            rf_related_entities = related_entities_hits[0]["sections"][0]["lists"]
+            for element in rf_related_entities:
+                if element["type"]["name"] in handled_related_entities_types:
+                    for rf_related_element in element["entities"]:
+                        type_ = rf_related_element["type"]
+                        name_ = rf_related_element["name"]
+                        related_element = ENTITY_TYPE_MAPPER[type_](
+                            name_, type_, self.author
+                        )
+                        stix_objs = related_element.to_stix_objects()
+                        self.related_entities.extend(stix_objs)
+
+    def build_bundle(self, stix_name):
+        """
+        Adds self and all related entities (indicators, observables, malware, threat-actors, relationships) to objects
+        """
+        # Put the indicator and its observable and relationship first
+        self.objects.extend(stix_name.to_stix_objects())
+        # Then related entities
+        self.objects.extend(self.related_entities)
+        relationships = []
+        # Then add 'related-to' relationship with all related entities
+        for entity in self.related_entities:
+            if entity["type"] in ["indicator", "malware", "threat-actor"]:
+                relationships.append(
+                    stix2.Relationship(
+                        id=pycti.StixCoreRelationship.generate_id(
+                            "related-to", self.stix_indicator.id, entity.id
+                        ),
+                        relationship_type="related-to",
+                        source_ref=self.stix_indicator.id,
+                        target_ref=entity.id,
+                        created_by_ref=self.author.id,
+                    )
+                )
+        self.objects.extend(relationships)
+
 
 class IPAddress(Indicator):
+    def __init__(self, name, _type, author=None):
+        super().__init__(name, _type, author)
+
     """Converts IP address to IP indicator and observable"""
 
     # TODO: add ipv6 compatibility
@@ -130,9 +200,16 @@ class IPAddress(Indicator):
     def _create_obs(self):
         return stix2.IPv4Address(value=self.name)
 
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(objects=self.objects, allow_custom=True)
+
 
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
+
+    def __init__(self, name, _type, author=None):
+        super().__init__(name, _type, author)
 
     def _create_pattern(self):
         return f"[domain-name:value = '{self.name}']"
@@ -143,6 +220,9 @@ class Domain(Indicator):
 
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
+
+    def __init__(self, name, _type, author=None):
+        super().__init__(name, _type, author)
 
     def _create_pattern(self):
         ioc = self.name.replace("\\", "\\\\")
@@ -156,7 +236,7 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, type_, author):
+    def __init__(self, name, type_, author=None):
         super().__init__(name, type_, author)
         self.algorithm = self._determine_algorithm()
 
@@ -169,7 +249,7 @@ class FileHash(Indicator):
         elif len(self.name) == 32:
             return "MD5"
         msg = (
-            f"Could not determine hash type for {self.name}. Only MD5, SHA1"
+            f"[ANALYST NOTES] Could not determine hash type for {self.name}. Only MD5, SHA1"
             " and SHA256 hashes are supported"
         )
         raise ConversionError(msg)
@@ -304,7 +384,7 @@ class DetectionRule(RFStixEntity):
         self.author = author
 
         if self.type not in ("yara", "snort", "sigma"):
-            msg = f"Detection rule of type {self.type} is not supported"
+            msg = f"[ANALYST NOTES] Detection rule of type {self.type} is not supported"
             raise ConversionError(msg)
 
     def create_stix_objects(self):
@@ -337,6 +417,12 @@ class Software(RFStixEntity):
 
 
 class Location(RFStixEntity):
+    rf_type_to_stix = {
+        "Country": "Country",
+        "City": "City",
+        "ProvinceOrState": "Administrative-Area",
+    }
+
     rf_type_to_stix = {
         "Country": "Country",
         "City": "City",
@@ -397,7 +483,54 @@ ENTITY_TYPE_MAPPER = {
     "ProvinceOrState": Location,
     "Industry": Identity,
     "Operation": Campaign,
+    "Threat Actor": ThreatActor,
 }
+
+# maps RF types to the corresponding url to get the risk score
+INDICATOR_TYPE_URL_MAPPER = {
+    "IpAddress": "ip",
+    "InternetDomainName": "domain",
+    "URL": "url",
+    "Hash": "hash",
+}
+RELATIONSHIPS_MAPPER = [
+    {
+        "from": "threat-actor",
+        "to": [
+            {"entity": "malware", "relation": "uses"},
+            {"entity": "vulnerability", "relation": "targets"},
+            {"entity": "attack-pattern", "relation": "uses"},
+            {"entity": "location", "relation": "targets"},
+            {"entity": "identity", "relation": "targets"},
+        ],
+    },
+    {
+        "from": "intrusion-set",
+        "to": [
+            {"entity": "malware", "relation": "uses"},
+            {"entity": "vulnerability", "relation": "targets"},
+            {"entity": "attack-pattern", "relation": "uses"},
+            {"entity": "location", "relation": "targets"},
+            {"entity": "identity", "relation": "targets"},
+        ],
+    },
+    {
+        "from": "indicator",
+        "to": [
+            {"entity": "malware", "relation": "indicates"},
+            {"entity": "threat-actor", "relation": "indicates"},
+            {"entity": "intrusion-set", "relation": "indicates"},
+        ],
+    },
+    {
+        "from": "malware",
+        "to": [
+            {"entity": "attack-pattern", "relation": "uses"},
+            {"entity": "location", "relation": "targets"},
+            {"entity": "identity", "relation": "targets"},
+        ],
+    },
+]
 
 # maps RF types to the corresponding url to get the risk score
 INDICATOR_TYPE_URL_MAPPER = {
@@ -510,7 +643,7 @@ class StixNote:
                 self.external_references.append(external_reference)
                 continue
             elif type_ not in ENTITY_TYPE_MAPPER:
-                msg = f"Cannot convert entity {name} to STIX2 because it is of type {type_}"
+                msg = f"[ANALYST NOTES] Cannot convert entity {name} to STIX2 because it is of type {type_}"
                 self.helper.log_warning(msg)
                 continue
             else:
@@ -529,7 +662,7 @@ class StixNote:
                         )
                         if risk_score < self.risk_threshold:
                             self.helper.log_info(
-                                f"Ignoring entity {name} as its risk score is lower than the defined risk threshold"
+                                f"[ANALYST NOTES] Ignoring entity {name} as its risk score is lower than the defined risk threshold"
                             )
                             continue
                     if self.risk_as_score:
@@ -552,45 +685,6 @@ class StixNote:
             )
             self.objects.extend(rule.to_stix_objects())
 
-    RELATIONSHIPS_MAPPER = [
-        {
-            "from": "threat-actor",
-            "to": [
-                {"entity": "malware", "relation": "uses"},
-                {"entity": "vulnerability", "relation": "targets"},
-                {"entity": "attack-pattern", "relation": "uses"},
-                {"entity": "location", "relation": "targets"},
-                {"entity": "identity", "relation": "targets"},
-            ],
-        },
-        {
-            "from": "intrusion-set",
-            "to": [
-                {"entity": "malware", "relation": "uses"},
-                {"entity": "vulnerability", "relation": "targets"},
-                {"entity": "attack-pattern", "relation": "uses"},
-                {"entity": "location", "relation": "targets"},
-                {"entity": "identity", "relation": "targets"},
-            ],
-        },
-        {
-            "from": "indicator",
-            "to": [
-                {"entity": "malware", "relation": "indicates"},
-                {"entity": "threat-actor", "relation": "indicates"},
-                {"entity": "intrusion-set", "relation": "indicates"},
-            ],
-        },
-        {
-            "from": "malware",
-            "to": [
-                {"entity": "attack-pattern", "relation": "uses"},
-                {"entity": "location", "relation": "targets"},
-                {"entity": "identity", "relation": "targets"},
-            ],
-        },
-    ]
-
     def _create_rel(self, from_id, to_id, relation):
         """Creates Relationship object"""
         return stix2.Relationship(
@@ -607,7 +701,7 @@ class StixNote:
             entity_possible_relationships = list(
                 filter(
                     lambda obj: obj["from"] == source_entity["type"],
-                    self.RELATIONSHIPS_MAPPER,
+                    RELATIONSHIPS_MAPPER,
                 )
             )
             if len(entity_possible_relationships) != 0:
@@ -638,7 +732,9 @@ class StixNote:
             name = topic["name"]
             if name not in self.report_type_mapper:
                 self.helper.log_warning(
-                    "Could not map a report type for type {}".format(name)
+                    "[ANALYST NOTES] Could not map a report type for type {}".format(
+                        name
+                    )
                 )
                 continue
             ret.add(self.report_type_mapper[name])
