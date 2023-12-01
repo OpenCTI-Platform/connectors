@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-hostio:
-    image: hostio
+    image: connector-hostio:5.11.14
     environment:
       - OPENCTI_URL=${OPENCTI_URL}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
