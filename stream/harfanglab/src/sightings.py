@@ -131,7 +131,7 @@ class Sightings(threading.Thread):
                 # If the indicator does not exist or no longer exists at HarfangLab
                 if not indicators_ioc_info["results"]:
                     self.helper.log_error(
-                        "[ERROR] The rule that was triggered does not exist or no longer exists at HarfangLab."
+                        f"[ERROR] The IOC rule '{msg_parsed}' that was triggered does not exist or no longer exists at HarfangLab."
                     )
                     continue
                 else:
@@ -437,7 +437,7 @@ class Sightings(threading.Thread):
                 # If the indicator does not exist or no longer exists at HarfangLab
                 if not indicators_sigma_info["results"]:
                     self.helper.log_error(
-                        "[ERROR] The rule that was triggered does not exist or no longer exists at HarfangLab."
+                        f"[ERROR] The Sigma rule '{new_alert_built['rule_name']}' that was triggered does not exist or no longer exists at HarfangLab."
                     )
                     continue
                 else:
@@ -491,7 +491,7 @@ class Sightings(threading.Thread):
                 # If the indicator does not exist or no longer exists at HarfangLab
                 if not indicators_yara_info["results"]:
                     self.helper.log_error(
-                        "[ERROR] The rule that was triggered does not exist or no longer exists at HarfangLab."
+                        f"[ERROR] The Yara rule '{indicator_name}' that was triggered does not exist or no longer exists at HarfangLab."
                     )
                     continue
                 else:
