@@ -1,3 +1,7 @@
+################################################
+# HarfangLab Connector for OpenCTI             #
+################################################
+
 import json
 import os.path
 import sys
@@ -6,6 +10,7 @@ import time
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from sightings import Sightings
 from stix_shifter.stix_translation import stix_translation
 
 
@@ -51,9 +56,32 @@ class HarfangLabConnector:
         self.harfanglab_rule_maturity = get_config_variable(
             "HARFANGLAB_RULE_MATURITY", ["harfanglab", "rule_maturity"], config
         )
+        self.harfanglab_import_security_events_as_incidents = get_config_variable(
+            "HARFANGLAB_IMPORT_SECURITY_EVENTS_AS_INCIDENTS",
+            ["harfanglab", "import_security_events_as_incidents"],
+            config,
+        )
+        self.harfanglab_import_threats_as_case_incidents = get_config_variable(
+            "HARFANGLAB_IMPORT_THREATS_AS_CASE_INCIDENTS",
+            ["harfanglab", "import_threats_as_case_incidents"],
+            config,
+        )
+        self.harfanglab_import_security_events_filters_by_status = get_config_variable(
+            "HARFANGLAB_IMPORT_SECURITY_EVENTS_FILTERS_BY_STATUS",
+            ["harfanglab", "import_security_events_filters_by_status"],
+            config,
+        )
+        self.harfanglab_import_filters_by_alert_type = get_config_variable(
+            "HARFANGLAB_IMPORT_FILTERS_BY_ALERT_TYPE",
+            ["harfanglab", "import_filters_by_alert_type"],
+            config,
+        )
+        self.harfanglab_default_markings = get_config_variable(
+            "HARFANGLAB_DEFAULT_MARKINGS", ["harfanglab", "default_markings"], config
+        )
         self.source_list = {
             "name": self.harfanglab_source_list_name,
-            "description": "Cyber Threat Intelligence knowledge imported from OpenCTI.",
+            "description": "Cyber Threat Intelligence knowledge imported from OpenCTI, and any changes must be made only to it.",
             "enabled": True,
         }
 
@@ -82,6 +110,38 @@ class HarfangLabConnector:
             raise ValueError(
                 "Missing or incorrect value in configuration parameter 'Live Stream ID'"
             )
+        if (
+            self.harfanglab_import_security_events_as_incidents is None
+            or self.harfanglab_import_security_events_as_incidents
+            != bool(self.harfanglab_import_security_events_as_incidents)
+        ):
+            raise ValueError(
+                "Missing or incorrect value in configuration parameter 'Import security events as sightings'"
+            )
+        if (
+            self.harfanglab_import_threats_as_case_incidents is None
+            or self.harfanglab_import_threats_as_case_incidents
+            != bool(self.harfanglab_import_threats_as_case_incidents)
+        ):
+            raise ValueError(
+                "Missing or incorrect value in configuration parameter 'Import threads as incidents'"
+            )
+        if (
+            self.harfanglab_import_threats_as_case_incidents is True
+            and self.harfanglab_import_security_events_as_incidents is False
+        ):
+            raise ValueError(
+                "If 'import_threats_as_case_incidents' is True then 'import_security_events_as_incidents' must be True"
+            )
+
+        self.check_config_filters(
+            self.harfanglab_import_security_events_filters_by_status,
+            ["new", "investigating", "false_positive", "closed"],
+            4,
+        )
+        self.check_config_filters(
+            self.harfanglab_import_filters_by_alert_type, ["yara", "sigma", "ioc"], 3
+        )
 
         # Create or get existing list Yara Pattern
         self.create_or_get_entity_source("YaraSource", "yara")
@@ -89,6 +149,20 @@ class HarfangLabConnector:
         self.create_or_get_entity_source("SigmaSource", "sigma")
         # Create or get existing list Stix Pattern
         self.create_or_get_entity_source("IOCSource", "stix")
+
+    @staticmethod
+    def check_config_filters(check_filters, valid_filters, max_len_filters):
+        result = check_filters.lower().replace(" ", "").split(",")
+        if len(result) <= max_len_filters:
+            for item in result:
+                if not item in valid_filters:
+                    raise ValueError(
+                        f"Missing or incorrect value in configuration parameter, for import sightings with filters, valid filters : {valid_filters}"
+                    )
+        else:
+            raise ValueError(
+                "The length of the list allowed in the configuration parameter is exceeded 'Import sightings with status or alert type filters'"
+            )
 
     def create_or_get_entity_source(self, uri, pattern_type):
         response = self._query(
@@ -870,6 +944,8 @@ class HarfangLabConnector:
                     new_stix_attribute = stix_attribute.replace(
                         "domain-name:value", "domain_name"
                     )
+                elif stix_attribute == "file:name":
+                    new_stix_attribute = stix_attribute.replace("file:name", "filename")
                 elif stix_attribute == "hostname:value":
                     new_stix_attribute = stix_attribute.replace(
                         "hostname:value", "domain_name"
@@ -923,14 +999,33 @@ class HarfangLabConnector:
             if get_indicator is None or get_indicator["count"] == 0:
                 return
             else:
-                data_id = data["id"]
+                if "source_ref" in data:
+                    data_id = data["source_ref"]
+                    data_source_value = (
+                        OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "source_value", data
+                        )
+                    )
+                    data_target_value = (
+                        OpenCTIConnectorHelper.get_attribute_in_extension(
+                            "target_value", data
+                        )
+                    )
+
+                    if data_source_value == data_target_value:
+                        return
+                else:
+                    data_id = data["id"]
                 harfanglab_ioc_id = json.loads(get_indicator["results"][0]["comment"])[
                     "indicator_id"
                 ]
 
                 if reverse_patch is not None:
                     if len(reverse_patch) > 3:
-                        data_previous_id = reverse_patch[3]["value"]
+                        if "value" in reverse_patch[3]:
+                            data_previous_id = reverse_patch[3]["value"]
+                        else:
+                            return
                         if harfanglab_ioc_id != data_previous_id:
                             return
                     else:
@@ -943,6 +1038,10 @@ class HarfangLabConnector:
         return self.find_data_name_match(get_indicator["results"], data_search)
 
     def pattern_payload(self, data, enabled=True):
+        if "entity_type" in data:
+            if data["entity_type"] == "hash":
+                data["pattern_type"] = "stix"
+
         if data["pattern_type"] == "yara":
             return {
                 "content": data["content"],
@@ -1030,6 +1129,20 @@ class HarfangLabConnector:
             self.helper.log_info(f"{response.text}")
 
     def start(self):
+        self.sightings = Sightings(
+            self.helper,
+            self.harfanglab_ssl_verify,
+            self.harfanglab_url,
+            self.headers,
+            self.harfanglab_source_list_name,
+            self.harfanglab_import_security_events_as_incidents,
+            self.harfanglab_import_security_events_filters_by_status,
+            self.harfanglab_import_filters_by_alert_type,
+            self.harfanglab_import_threats_as_case_incidents,
+            self.harfanglab_default_markings,
+            self.harfanglab_rule_maturity,
+        )
+        self.sightings.start()
         self.helper.listen_stream(self._process_message)
 
 
