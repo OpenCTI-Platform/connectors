@@ -1,4 +1,4 @@
-pycti==5.12.1
+pycti==5.12.2
 urllib3==2.1.0
 pymisp
 python-dateutil==2.8.2
