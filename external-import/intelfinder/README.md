@@ -36,6 +36,7 @@ Configuration parameters are provided using environment variables. Some of them 
 | `INTELFINDER_TOKEN`                 | Yes       | Token for Intelfinder access.                                           |
 | `INTELFINDER_LABELS`                | Yes       | Labels for Intelfinder data. (e.g., `intelfinder,osint`)                |
 | `INTELFINDER_MARKING_REFS`          | Yes       | TLP Marking Refs e.g., `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED` |
+| `INTELFINDER_SEED_ALERT_ID`         | No        | Intelfinder Seed Alert ID, Provide initial Alert ID to start import from (e.g., `64d02b1e8592e8209a077bf2`)            |
 
 ### Supported Stix2 Objects
 

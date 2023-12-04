@@ -41,6 +41,7 @@ class IntelfinderConnector(ExternalImportConnector):
             msg = "Error when grabbing INTELFINDER_MARKING_REFS environment variable. It SHOULD be a valid TLP marking."
             self.helper.log_error(msg)
             raise ValueError(msg)
+        self.seed_alert_id = environ.get("INTELFINDER_SEED_ALERT_ID", None)
 
         self.current_state = self.helper.get_state() if self.helper.get_state() else {}
         self.cursor = self._get_cursor()
@@ -52,6 +53,8 @@ class IntelfinderConnector(ExternalImportConnector):
                 f"Getting state cursor: {self.current_state.get('cursor', None)}"
             )
             return self.current_state.get("cursor", None)
+        elif self.seed_alert_id:
+            return self.seed_alert_id
         else:
             self.helper.log_warning("No state cursor found")
             return None
