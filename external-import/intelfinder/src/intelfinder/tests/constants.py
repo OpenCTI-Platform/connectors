@@ -4,8 +4,6 @@ import os
 import random
 import string
 
-from intelfinder.utils import get_tlp_marking
-
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TLP = "TLP:WHITE"
 

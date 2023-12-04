@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from markdownify import markdownify
 from pycti import CaseIncident, CustomObjectCaseIncident, CustomObjectTask
