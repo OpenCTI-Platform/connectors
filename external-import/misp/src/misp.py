@@ -739,7 +739,9 @@ class Misp:
                         if (
                             indicator["indicator"] is not None
                             and object["meta-category"] == "file"
-                            and indicator["indicator"]["x_opencti_main_observable_type"]
+                            and indicator["indicator"].get(
+                                "x_opencti_main_observable_type", "Unknown"
+                            )
                             in FILETYPES
                         ):
                             object_attributes.append(indicator)
@@ -1129,6 +1131,7 @@ class Misp:
                             "x_opencti_detection": to_ids,
                             "x_opencti_score": score,
                         },
+                        allow_custom=True,
                     )
                 except Exception as e:
                     self.helper.log_error(f"Error processing indicator {name}: {e}")
