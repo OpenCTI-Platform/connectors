@@ -79,7 +79,10 @@ class RFNotes:
             "RECORDED_FUTURE_RISK_AS_SCORE", ["rf-notes", "risk_as_score"], config
         )
         self.risk_threshold = get_config_variable(
-            "RECORDED_FUTURE_RISK_THRESHOLD", ["rf-notes", "risk_threshold"], config, True
+            "RECORDED_FUTURE_RISK_THRESHOLD",
+            ["rf-notes", "risk_threshold"],
+            config,
+            True,
         )
 
         self.update_existing_data = get_config_variable(
