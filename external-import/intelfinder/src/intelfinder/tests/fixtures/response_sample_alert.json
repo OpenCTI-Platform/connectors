@@ -284,6 +284,10 @@
                 {
                   "label": "Record 10",
                   "value": "URL: https://www.stillgoogle.com/\nTitle: Random Forum\nE-mails: test@company.com, ir@company.com, wikimedia@company.com\ntest@company.com, wikimedia@company.com have been observed in at least one other URL."
+                },
+                {
+                  "label": "Record 10",
+                  "value": "URL: https://www.stillgoogle.com/\nTitle: Random Forum\nuser: test@company.com"
                 }
             ]
           }

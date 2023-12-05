@@ -30,7 +30,7 @@ Configuration parameters are provided using environment variables. Some of them 
 | `CONNECTOR_SCOPE`                   | Yes       | Supported scope. E.g., `stix2`.                                         |
 | `CONNECTOR_ID`                      | Yes       | A unique `UUIDv4` for this connector.                                   |
 | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes       | Default confidence level for created sightings (0 to 100).              |
-| `CONNECTOR_LOG_LEVEL`               | Yes       | Log level (`debug`, `info`, `warn`, `error`).                           |
+| `CONNECTOR_LOG_LEVEL`               | Yes       | Log level (`debug`, `info`, `warning`, `error`).                           |
 | `CONNECTOR_RUN_EVERY`               | Yes       | Frequency of connector execution. The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., `30s` is 30 seconds. `1d` is 1 day.         |
 | `CONNECTOR_UPDATE_EXISTING_DATA`    | Yes       | Whether to update existing data (e.g., `true` or `false`).              |
 | `INTELFINDER_TOKEN`                 | Yes       | Token for Intelfinder access.                                           |

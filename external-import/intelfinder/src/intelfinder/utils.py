@@ -30,12 +30,12 @@ def create_markdown_table(data):
         for element in data:
             label, value = element["label"], element["value"]
             if label.startswith("Paste"):
-                pastebin_data += f"\n\nPastebin Data:\n\n```\n\n{value}\n\n```"
+                pastebin_data += f"\n\nPastebin Data:\n\n```\n{value}\n```"
             else:
                 table_data.append(element)
 
         markdown_table_str = DataFrame(data=table_data).to_markdown(index=False)
-        return f"\n\n{markdown_table_str}{pastebin_data}"
+        return f"\n\n{markdown_table_str}\n\n{pastebin_data}"
     except Exception as e:
         return f"\n\nError creating markdown table: {e}"
 

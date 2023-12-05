@@ -113,7 +113,7 @@ class TransformIntelFinder2Stix:
             stix_object = Note(
                 id=pyctiNote.generate_id(content=self.name, created=self.created),
                 abstract=self.name,
-                content=f"{self.name}\n{content}",
+                content=f"{self.name}\n\n{content}",
                 created=self.created,
                 object_refs=[self.case_id],
                 object_marking_refs=self.object_marking_refs,
@@ -229,7 +229,7 @@ class TransformIntelFinder2Stix:
                     if key.lower() in ["email", "e-mail"]:
                         if validators_email(value):
                             user_id = value
-                    if key.lower() in ["username", "name"]:
+                    if key.lower() in ["username", "name", "user"]:
                         account_login = value
                     if key.lower() == "password":
                         password = value
