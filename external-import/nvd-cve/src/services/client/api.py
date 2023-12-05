@@ -47,9 +47,15 @@ class CVEClient:
         :param cve_params: Params to filter what list to return
         :return: A list of dicts of the complete collection of CVE from NVD
         """
+        try:
+            response = self._request_data(self, BASE_URL, params=cve_params)
 
-        response = self._request_data(self, BASE_URL, params=cve_params)
+            if response is None:
+                raise Exception("[API] Cannot get any data from API...")
 
-        cve_collection = response.json()
+            cve_collection = response.json()
+            return cve_collection
 
-        return cve_collection
+        except Exception as err:
+            self.helper.log_error(err)
+            return None

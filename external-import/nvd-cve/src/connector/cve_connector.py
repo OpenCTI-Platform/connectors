@@ -71,6 +71,13 @@ class CVEConnector:
             + " hours"
         )
 
+    @staticmethod
+    def _update_cve_params(start_date: datetime, end_date: datetime) -> dict:
+        return {
+            "lastModStartDate": start_date.isoformat(),
+            "lastModEndDate": end_date.isoformat(),
+        }
+
     def process_data(self):
         try:
             """
@@ -105,7 +112,6 @@ class CVEConnector:
             from the last max_date_range (can be configured) to now
             """
             if last_run is None:
-
                 if self.config.max_date_range > MAX_AUTHORIZED:
                     error_msg = "The max_date_range cannot exceed {} days".format(
                         MAX_AUTHORIZED
@@ -115,35 +121,106 @@ class CVEConnector:
                 date_range = timedelta(days=self.config.max_date_range)
                 start_date = now - date_range
 
-                cve_params = {
-                    "lastModStartDate": start_date.isoformat(),
-                    "lastModEndDate": now.isoformat(),
-                }
+                cve_params = self._update_cve_params(start_date, now)
 
                 self.converter.convert_and_send(cve_params, work_id)
-                self.update_connector_state(current_time, work_id)
 
+                """
+                If the connector never runs and user wants to pull CVE history
+                """
                 if last_run is None and self.config.pull_history:
-                    # TODO
-                    print("TODO")
+                    start_date = datetime(self.config.history_start_year, 1, 1)
+                    end_date = now
+                    years = range(start_date.year, end_date.year + 1)
+                    start, end = start_date, end_date + timedelta(1)
+
+                    for year in years:
+                        year_start = datetime(year, 1, 1, 0, 0)
+                        year_end = datetime(year + 1, 1, 1, 0, 0)
+
+                        date_range = min(end, year_end) - max(start, year_start)
+                        days_in_year = date_range.days
+
+                        # If the year is the current year, get all days from start year to now
+                        if year == end_date.year:
+                            date_range = now - year_start
+                            days_in_year = date_range.days
+
+                        start_date_current_year = year_start
+                        end_date_current_year = start_date_current_year + timedelta(
+                            days=MAX_AUTHORIZED
+                        )
+
+                        while days_in_year > 0:
+                            info_msg = (
+                                f"[CONNECTOR] Connector retrieve CVE history for year {year}, "
+                                f"{days_in_year} days left"
+                            )
+                            self.helper.log_info(info_msg)
+
+                            """
+                            If retrieve history for this year and days_in_year left are less than 120 days
+                            Retrieve CVEs from the rest of days                         
+                            """
+                            if year == end_date.year and days_in_year < MAX_AUTHORIZED:
+                                end_date_current_year = (
+                                    start_date_current_year
+                                    + timedelta(days=days_in_year)
+                                )
+                                # Update date range
+                                cve_params = self._update_cve_params(
+                                    start_date_current_year, end_date_current_year
+                                )
+
+                                self.converter.convert_and_send(cve_params, work_id)
+                                days_in_year = 0
+
+                            """
+                            Retrieving for each year MAX_AUTHORIZED = 120 days
+                            1 year % 120 days => 5 or 6 (depends if it is a leap year or not)
+                            """
+                            if days_in_year > 6:
+                                # Update date range
+                                cve_params = self._update_cve_params(
+                                    start_date_current_year, end_date_current_year
+                                )
+
+                                self.converter.convert_and_send(cve_params, work_id)
+                                start_date_current_year += timedelta(
+                                    days=MAX_AUTHORIZED
+                                )
+                                days_in_year -= MAX_AUTHORIZED
+                            else:
+                                end_date_current_year = (
+                                    start_date_current_year
+                                    + timedelta(days=days_in_year)
+                                )
+                                # Update date range
+                                cve_params = self._update_cve_params(
+                                    start_date_current_year, end_date_current_year
+                                )
+                                self.converter.convert_and_send(cve_params, work_id)
+                                days_in_year = 0
+
+                self.update_connector_state(current_time, work_id)
 
                 """
                 If the connector runs, and the last run is more than current interval
-                Import CVEs from the last run to now (maintain data)
+                Import CVEs from the last run to now if maintain data is True
                 """
-            elif last_run is not None and (current_time - last_run) >= int(
-                self.config.interval
+            elif (
+                last_run is not None
+                and self.config.maintain_data
+                and (current_time - last_run) >= int(self.config.interval)
             ):
                 self.helper.log_info(
                     "[CONNECTOR] Getting the last CVEs since the last run..."
                 )
 
                 last_run_ts = datetime.utcfromtimestamp(last_run)
+
                 # Update date range
-                cve_params = {
-                    "lastModStartDate": last_run_ts.isoformat(),
-                    "lastModEndDate": now.isoformat(),
-                }
+                cve_params = self._update_cve_params(last_run_ts, now)
                 self.converter.convert_and_send(cve_params, work_id)
                 self.update_connector_state(current_time, work_id)
 
@@ -155,6 +232,7 @@ class CVEConnector:
                     + str(new_interval_in_hours)
                     + " hours"
                 )
+
             time.sleep(5)
 
         except (KeyboardInterrupt, SystemExit):

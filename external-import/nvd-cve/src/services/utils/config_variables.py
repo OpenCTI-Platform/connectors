@@ -64,6 +64,14 @@ class ConfigCVE:
             "CVE_MAX_DATE_RANGE", ["cve", "max_date_range"], self.load, isNumber=True
         )
 
+        self.maintain_data = get_config_variable(
+            "CVE_MAINTAIN_DATA", ["cve", "maintain_data"], self.load
+        )
+
         self.pull_history = get_config_variable(
             "CVE_PULL_HISTORY", ["cve", "pull_history"], self.load
+        )
+
+        self.history_start_year = get_config_variable(
+            "CVE_HISTORY_START_YEAR", ["cve", "history_start_year"], self.load
         )
