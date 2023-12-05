@@ -17,6 +17,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TransformIntelFinder2Stix:
+    """Transforms Intelfinder data into STIX objects"""
+
     def __init__(self, intelfinder, labels=None, object_marking_refs="TLP:WHITE"):
         self.intelfinder = intelfinder
         self.id = get_cursor_id(intelfinder)
@@ -173,6 +175,7 @@ class TransformIntelFinder2Stix:
         credential=None,
         silent_warning=False,
     ):
+        """Transforms Intelfinder User Accounts into STIX objects"""
         try:
             if user_id is None and account_login is None and credential is None:
                 if not silent_warning:
@@ -196,8 +199,7 @@ class TransformIntelFinder2Stix:
             )
 
     def _create_record(self, records, label):
-        """Transforms Intelfinder data into STIX objects"""
-
+        """Transforms Intelfinder Records into STIX objects"""
         # Initialize variables
         user_id = None
         account_login = None
@@ -255,7 +257,7 @@ class TransformIntelFinder2Stix:
         )
 
     def _create_url(self, url, label):
-        """Transforms Intelfinder data into STIX objects"""
+        """Transforms Intelfinder URLs into STIX objects"""
         if validators_url(url):
             self.stix_objects.append(
                 URL(
@@ -270,6 +272,7 @@ class TransformIntelFinder2Stix:
             )
 
     def _create_ip(self, ip, label):
+        """Transforms Intelfinder IP Addresses into STIX objects"""
         # Check IPv6
         if ipv6(ip):
             self.stix_objects.append(
@@ -294,6 +297,7 @@ class TransformIntelFinder2Stix:
             )
 
     def _create_domain(self, domain, label):
+        """Transforms Intelfinder Domains into STIX objects"""
         if validators_domain(domain):
             self.stix_objects.append(
                 DomainName(

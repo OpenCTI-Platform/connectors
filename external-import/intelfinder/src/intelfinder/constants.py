@@ -1,6 +1,8 @@
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 INTELFINDER_URL = "https://dash.intelfinder.io/api.php"
+EXTERNAL_REFERENCE_URL = "https://dash.intelfinder.io/alert.php?id={}"
+
 INTELFINDER_ALERT_DATA = {
     "key": None,  # API Key for the request.
     # To retrieve up to 20 alerts that have yet to be provided through the API,
@@ -36,7 +38,6 @@ INTELFINDER_SEVERITY_MAP = {
     4: "high",
     5: "critical",
 }
-EXTERNAL_REFERENCE_URL = "https://dash.intelfinder.io/alert.php?id={}"
 
 TLP_MAPPINGS = {
     "TLP:WHITE": TLP_WHITE,
