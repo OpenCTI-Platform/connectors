@@ -22,7 +22,7 @@ class CVEClient:
         self.session.headers.update(headers)
 
     @staticmethod
-    def _request_data(self, api_url, params=None):
+    def _request_data(self, api_url: str, params=None):
         """
         Internal method to handle API requests
         :return: Response in JSON format
