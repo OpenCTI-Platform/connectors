@@ -1,13 +1,8 @@
 from datetime import datetime
 
-from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+from pandas import DataFrame
 
-TLP_MAP = {
-    "TLP:WHITE": TLP_WHITE,
-    "TLP:GREEN": TLP_GREEN,
-    "TLP:AMBER": TLP_AMBER,
-    "TLP:RED": TLP_RED,
-}
+from .constants import TLP_MAPPINGS
 
 
 def validate_api_key(api_key):
@@ -29,33 +24,39 @@ def format_datetime(timestamp):
 
 def create_markdown_table(data):
     """Creates a markdown table from a list of dictionaries, ensuring multiline values are handled correctly."""
-    markdown_table = "\n| Label                   | Value                                               |\n"
-    markdown_table += "|-------------------------|----------------------------------------------------|\n"
-    for item in data:
-        # Replace newline characters in the value with spaces
-        value = str(item["value"]).replace("\n", "; ")
-        markdown_table += f"| {item['label']}{' ' * (25 - len(item['label']))}| {value}{' ' * (50 - len(value))}|\n"
-    markdown_table += "\n\n"
-    return markdown_table
+    table_data = []
+    pastebin_data = ""
+    try:
+        for element in data:
+            label, value = element["label"], element["value"]
+            if label.startswith("Paste"):
+                pastebin_data += f"\n\nPastebin Data:\n\n```\n{value}\n```"
+            else:
+                table_data.append(element)
+
+        markdown_table_str = DataFrame(data=table_data).to_markdown(index=False)
+        return f"\n\n{markdown_table_str}\n\n{pastebin_data}"
+    except Exception as e:
+        return f"\n\nError creating markdown table: {e}"
 
 
 def validate_tlp_marking(tlp):
     """Determine whether the provided string is a valid TLP marking."""
-    if isinstance(tlp, str) and tlp.upper() in TLP_MAP.keys():
+    if isinstance(tlp, str) and tlp.upper() in TLP_MAPPINGS.keys():
         return True
     else:
         raise ValueError(
-            f"Invalid TLP marking: {tlp}, valid markings: {TLP_MAP.keys()}"
+            f"Invalid TLP marking: {tlp}, valid markings: {TLP_MAPPINGS.keys()}"
         )
 
 
 def get_tlp_marking(tlp):
     """Validate TLP marking and return STIX2 TLP marking."""
     if validate_tlp_marking(tlp):
-        return TLP_MAP.get(tlp.upper())
+        return TLP_MAPPINGS.get(tlp.upper())
     else:
         raise ValueError(
-            f"Invalid TLP marking: {tlp}, valid markings: {TLP_MAP.keys()}"
+            f"Invalid TLP marking: {tlp}, valid markings: {TLP_MAPPINGS.keys()}"
         )
 
 

@@ -246,7 +246,7 @@ class TestTransformIntelFinder2Stix:
 
     def test_get_stix_objects_record(self, transform_record: TransformIntelFinder2Stix):
         stix_objects = transform_record.get_stix_objects()
-        assert len(stix_objects) == 36
+        assert len(stix_objects) == 38
         validate_stix_objects(
             stix_objects,
             [CustomObjectCaseIncident, CustomObjectTask, UserAccount, URL, Note],
