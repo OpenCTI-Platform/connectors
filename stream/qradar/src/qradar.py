@@ -6,12 +6,12 @@ import json
 import logging
 import os
 import re
+import urllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
 
 import requests
-from urllib.parse import quote
 import yaml
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -85,7 +85,7 @@ class QradarReference:
             r.raise_for_status()
 
     def delete(self, id: str, payload):
-        name = urllib.parse.quote(payload.get('name'), safe='.?#=&')
+        name = urllib.parse.quote(payload.get("name"), safe=".?#=&")
         r = requests.delete(
             f"{self.collection_url}_{self.get_type(payload)}/{name}",
             headers=self.headers,
@@ -200,7 +200,7 @@ class QradarConnector:
                     self.qradar_reference.update(id, payload)
                     self.helper.log_debug(f"reference_set item with id {id} updated")
 
-                case "delete":    
+                case "delete":
                     self.qradar_reference.delete(id, payload)
                     self.helper.log_debug(f"reference_set item with id {id} deleted")
 
