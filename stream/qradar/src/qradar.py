@@ -11,6 +11,7 @@ from pathlib import Path
 from queue import Queue
 
 import requests
+from urllib.parse import quote
 import yaml
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -84,8 +85,9 @@ class QradarReference:
             r.raise_for_status()
 
     def delete(self, id: str, payload):
+        name = urllib.parse.quote(payload.get('name'), safe='.?#=&')
         r = requests.delete(
-            f"{self.collection_url}_{self.get_type(payload)}/{payload.get('name')}",
+            f"{self.collection_url}_{self.get_type(payload)}/{name}",
             headers=self.headers,
             verify=self.qradar_ssl_verify,
         )
@@ -198,9 +200,9 @@ class QradarConnector:
                     self.qradar_reference.update(id, payload)
                     self.helper.log_debug(f"reference_set item with id {id} updated")
 
-                case "delete":
-                    self.helper.log_debug(f"reference_set item with id {id} deleted")
+                case "delete":    
                     self.qradar_reference.delete(id, payload)
+                    self.helper.log_debug(f"reference_set item with id {id} deleted")
 
             if self.metrics is not None:
                 self.metrics.msg(msg.event)
