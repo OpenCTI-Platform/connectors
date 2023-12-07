@@ -215,7 +215,7 @@ class Report:
             if not section.startswith("x_mandiant"):
                 continue
 
-            if type(report[section]) == str:
+            if isinstance(report[section], str):
                 title = " ".join(
                     section.replace("x_mandiant_com_", "").split("_")
                 ).title()
@@ -224,7 +224,7 @@ class Report:
 
             for key, values in report[section].items():
                 title = " ".join(key.split("_")).title()
-                if type(values) == str:
+                if isinstance(values, str):
                     data[title] = [values]
                 else:
                     data[title] = values
@@ -232,7 +232,7 @@ class Report:
         # Collect tags data too and merge them in previous sections collection
         for key, values in self.details.get("tags", {}).items():
             name = " ".join(key.split("_")).title()
-            if type(values[0]) == dict:
+            if isinstance(values[0], dict):
                 continue
 
             if name in data:
