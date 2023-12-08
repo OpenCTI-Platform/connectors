@@ -102,3 +102,14 @@ def retrieve_all(bundle, key, value):
     for item in bundle.get("objects"):
         if item.get(key) == value:
             yield item
+
+
+ATTRIBUTION_SCOPES = {
+    "confirmed": 100,
+    "suspected": 75,
+    "possible": 50,
+}
+
+
+def get_confidence(attribution_scope):
+    return ATTRIBUTION_SCOPES.get(attribution_scope, 25)
