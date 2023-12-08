@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
 import stix2
 from dateutil.parser import parse
 from pycti import StixCoreRelationship
+from zoneinfo import ZoneInfo
 
 from . import utils
 
@@ -13,8 +13,9 @@ def process(connector, actor):
 
     connector.helper.log_debug(f"Processing actor {actor_id} ...")
 
-    stix_intrusionset = create_stix_intrusionset(connector, actor)
     actor_details = connector.api.actor(actor_id)
+
+    stix_intrusionset = create_stix_intrusionset(connector, actor_details)
 
     items = [stix_intrusionset]
 
@@ -45,11 +46,45 @@ def process(connector, actor):
     return bundle
 
 
+def create_stix_intrusionset(connector, actor_details):
+    primary_motivation, secondary_motivations = _get_actor_motivations(actor_details)
+
+    return stix2.IntrusionSet(
+        id=actor_details.get("id").replace("threat-actor", "intrusion-set"),
+        name=utils.sanitizer("name", actor_details),
+        description=utils.sanitizer("description", actor_details),
+        last_seen=utils.sanitizer("last_updated", actor_details),
+        aliases=utils.clean_intrusionset_aliases(actor_details),
+        confidence=connector.helper.connect_confidence_level,
+        created_by_ref=connector.identity.get("standard_id"),
+        object_marking_refs=[stix2.TLP_AMBER.get("id")],
+        primary_motivation=primary_motivation,
+        secondary_motivations=secondary_motivations,
+        allow_custom=True,
+    )
+
+
+def _get_actor_motivations(actor_details):
+    primary_motivation = None
+    secondary_motivations = []
+
+    for motivation in actor_details["motivations"]:
+        if primary_motivation is None:
+            primary_motivation = motivation["name"]
+        else:
+            secondary_motivations.append(motivation)
+
+    return primary_motivation, secondary_motivations
+
+
 def create_stix_relationship(
     connector, rel_type, source, target, start_time, stop_time=None
 ):
     start_time = parse(start_time) if start_time else datetime.now(ZoneInfo("UTC"))
     stop_time = parse(stop_time) if stop_time else start_time + timedelta(seconds=+1)
+
+    if start_time > stop_time:
+        stop_time = start_time + timedelta(seconds=+1)
 
     if start_time == stop_time:
         stop_time += timedelta(seconds=+1)
@@ -65,20 +100,6 @@ def create_stix_relationship(
         stop_time=stop_time,
         allow_custom=True,
         created_by_ref=connector.identity["standard_id"],
-    )
-
-
-def create_stix_intrusionset(connector, actor):
-    return stix2.IntrusionSet(
-        id=actor.get("id").replace("threat-actor", "intrusion-set"),
-        name=utils.sanitizer("name", actor),
-        description=utils.sanitizer("description", actor),
-        modified=utils.sanitizer("last_updated", actor),
-        aliases=utils.clean_intrusionset_aliases(actor),
-        confidence=connector.helper.connect_confidence_level,
-        created_by_ref=connector.identity.get("standard_id"),
-        object_marking_refs=[stix2.TLP_AMBER.get("id")],
-        allow_custom=True,
     )
 
 
