@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import stix2
 from dateutil.parser import parse
 from pycti import StixCoreRelationship
-from zoneinfo import ZoneInfo
 
 from . import utils
 
