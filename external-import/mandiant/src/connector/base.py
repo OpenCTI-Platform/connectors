@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import traceback
+from datetime import timedelta
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -13,6 +14,7 @@ from .utils import Timestamp
 STATE_START = "start_epoch"
 STATE_OFFSET = "offset"
 STATE_END = "end_epoch"
+STATE_LAST_RUN = "last_run"
 
 
 class Mandiant:
@@ -35,13 +37,6 @@ class Mandiant:
         )
         self.mandiant_api_v4_key_secret = get_config_variable(
             "MANDIANT_API_V4_KEY_SECRET", ["mandiant", "api_v4_key_secret"], config
-        )
-        self.mandiant_interval = get_config_variable(
-            "MANDIANT_INTERVAL",
-            ["mandiant", "interval"],
-            config,
-            isNumber=True,
-            default=120,
         )
         self.mandiant_import_start_date = get_config_variable(
             "MANDIANT_IMPORT_START_DATE",
@@ -66,6 +61,15 @@ class Mandiant:
         ):
             self.mandiant_collections.append("actors")
 
+        mandiant_actors_interval = get_config_variable(
+            "MANDIANT_IMPORT_ACTORS_INTERVAL",
+            ["mandiant", "import_actors_interval"],
+            config,
+            isNumber=True,
+            default=96,
+        )
+        self.mandiant_actors_interval = timedelta(hours=mandiant_actors_interval)
+
         if get_config_variable(
             "MANDIANT_IMPORT_REPORTS",
             ["mandiant", "import_reports"],
@@ -73,6 +77,15 @@ class Mandiant:
             default=True,
         ):
             self.mandiant_collections.append("reports")
+
+        mandiant_reports_interval = get_config_variable(
+            "MANDIANT_IMPORT_REPORTS_INTERVAL",
+            ["mandiant", "import_reports_interval"],
+            config,
+            isNumber=True,
+            default=1,
+        )
+        self.mandiant_reports_interval = timedelta(hours=mandiant_reports_interval)
 
         if get_config_variable(
             "MANDIANT_IMPORT_MALWARES",
@@ -82,6 +95,15 @@ class Mandiant:
         ):
             self.mandiant_collections.append("malwares")
 
+        mandiant_malwares_interval = get_config_variable(
+            "MANDIANT_IMPORT_MALWARES_INTERVAL",
+            ["mandiant", "import_malwares_interval"],
+            config,
+            isNumber=True,
+            default=96,
+        )
+        self.mandiant_malwares_interval = timedelta(hours=mandiant_malwares_interval)
+
         if get_config_variable(
             "MANDIANT_IMPORT_CAMPAIGNS",
             ["mandiant", "import_campaigns"],
@@ -90,21 +112,52 @@ class Mandiant:
         ):
             self.mandiant_collections.append("campaigns")
 
+        mandiant_campaigns_interval = get_config_variable(
+            "MANDIANT_IMPORT_CAMPAIGNS_INTERVAL",
+            ["mandiant", "import_campaigns_interval"],
+            config,
+            isNumber=True,
+            default=96,
+        )
+        self.mandiant_campaigns_interval = timedelta(hours=mandiant_campaigns_interval)
+
         if get_config_variable(
             "MANDIANT_IMPORT_INDICATORS",
             ["mandiant", "import_indicators"],
             config,
-            default=True,
+            default=False,
         ):
             self.mandiant_collections.append("indicators")
+
+        mandiant_indicators_interval = get_config_variable(
+            "MANDIANT_IMPORT_INDICATORS_INTERVAL",
+            ["mandiant", "import_indicators_interval"],
+            config,
+            isNumber=True,
+            default=1,
+        )
+        self.mandiant_indicators_interval = timedelta(
+            hours=mandiant_indicators_interval
+        )
 
         if get_config_variable(
             "MANDIANT_IMPORT_VULNERABILITIES",
             ["mandiant", "import_vulnerabilities"],
             config,
-            default=True,
+            default=False,
         ):
             self.mandiant_collections.append("vulnerabilities")
+
+        mandiant_vulnerabilities_interval = get_config_variable(
+            "MANDIANT_IMPORT_VULNERABILITIES_INTERVAL",
+            ["mandiant", "import_vulnerabilities_interval"],
+            config,
+            isNumber=True,
+            default=1,
+        )
+        self.mandiant_vulnerabilities_interval = timedelta(
+            hours=mandiant_vulnerabilities_interval
+        )
 
         self.mandiant_report_types = {}
 
@@ -369,7 +422,7 @@ class Mandiant:
             default=80,
         )
 
-        self.mandiant_interval = int(self.mandiant_interval) * 60
+        self.mandiant_interval = int(timedelta(minutes=5).total_seconds())
 
         self.identity = self.helper.api.identity.create(
             name="Mandiant",
@@ -389,6 +442,7 @@ class Mandiant:
                 ).iso_format,
                 STATE_OFFSET: 0,
                 STATE_END: now.iso_format,
+                STATE_LAST_RUN: Timestamp(now.value - timedelta(days=30)).iso_format,
             }
             self.helper.set_state(
                 {
@@ -405,8 +459,20 @@ class Mandiant:
         for collection in self.mandiant_collections:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id,
-                f"{collection.title()} {Timestamp.now().iso_format} - {Timestamp.now().iso_format}",
+                f"{collection.title()} {Timestamp.now().iso_format}",
             )
+
+            now = Timestamp.now().value
+
+            _last_run = self.helper.get_state()[collection][STATE_LAST_RUN]
+            last_run = Timestamp.from_iso(_last_run).value
+
+            interval = getattr(self, f"mandiant_{collection}_interval")
+
+            if now - interval < last_run:
+                self.helper.log_debug(
+                    f"Skipping collecting {collection} due interval configuration..."
+                )
 
             try:
                 self.helper.log_info(f"Start collecting {collection} ...")
@@ -515,24 +581,30 @@ class Mandiant:
             state[collection][STATE_START] = end.iso_format
             state[collection][STATE_END] = None
             state[collection][STATE_OFFSET] = 0
+            state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "campaigns":
             state[collection][STATE_START] = end.iso_format
             state[collection][STATE_END] = None
             state[collection][STATE_OFFSET] = 0
+            state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "malwares":
             state[collection][STATE_OFFSET] = offset
+            state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "actors":
             state[collection][STATE_OFFSET] = offset
+            state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "vulnerabilities":
             state[collection][STATE_START] = end.iso_format
             state[collection][STATE_END] = None
+            state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "indicators":
             state[collection][STATE_START] = end.iso_format
             state[collection][STATE_END] = None
+            state[collection][STATE_LAST_RUN] = now.iso_format
 
         self.helper.set_state(state)
