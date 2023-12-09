@@ -19,12 +19,12 @@ services:
       - HARFANGLAB_TOKEN=ChangeMe
       - HARFANGLAB_LOGIN=ChangeMe
       - HARFANGLAB_PASSWORD=ChangeMe
-      - HARFLANGLAB_SOURCE_LIST_NAME=from_OpenCTI
-      - HARFLANGLAB_REMOVE_INDICATOR=true # Removed or disabled rule in HarfangLab
-      - HARFLANGLAB_RULE_MATURITY=stable # Available : stable or testing
+      - HARFANGLAB_SOURCE_LIST_NAME=from_OpenCTI
+      - HARFANGLAB_REMOVE_INDICATOR=true # Removed or disabled rule in HarfangLab
+      - HARFANGLAB_RULE_MATURITY=stable # Available : stable or testing
       - HARFANGLAB_IMPORT_SECURITY_EVENTS_AS_INCIDENTS=true
       - HARFANGLAB_IMPORT_THREATS_AS_CASE_INCIDENTS=true # If true then "import_security_events_as_incidents" must be true
-      - HARFANGLAB_SECURITY_EVENTS_FILTERS_BY_STATUS=ChangeMe # Filters available : new, investigating, false_positive, closed
-      - HARFANGLAB_FILTERS_BY_ALERTS_TYPE=ChangMe # Filters available : yara, sigma, ioc
-      - HARFANGLAB_DEFAULT_MARKINGS=ChangMe # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED
+      - HARFANGLAB_IMPORT_SECURITY_EVENTS_FILTERS_BY_STATUS=ChangeMe # Filters available : new, investigating, false_positive, closed
+      - HARFANGLAB_IMPORT_FILTERS_BY_ALERT_TYPE=ChangeMe # Filters available : yara, sigma, ioc
+      - HARFANGLAB_DEFAULT_MARKINGS=ChangeMe # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED
     restart: always
