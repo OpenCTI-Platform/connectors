@@ -9,8 +9,10 @@ from . import utils
 
 def process(connector, report):
     report_id = report.get("report_id", report.get("reportId", None))
+
     report_type = report.get("report_type", report.get("reportType", None))
     report_title = report.get("title", report.get("reportTitle", None))
+
     if report_type not in connector.mandiant_report_types:
         connector.helper.log_debug(
             f"Ignoring report based on type [{report_id}][{report_type}] {report_title} ..."
@@ -78,7 +80,6 @@ class Report:
         self.update_identities()
         self.update_country()
         self.update_report()
-        self.update_intrusionset()
         self.update_vulnerability()
         self.create_relationships()
         if self.create_notes:
@@ -138,26 +139,6 @@ class Report:
         #         }
         #     )
 
-    def update_intrusionset(self):
-        report = utils.retrieve(self.bundle, "type", "report")
-        for intrusion_set in utils.retrieve_all(self.bundle, "type", "intrusion-set"):
-            # Goals
-            # FIXME: the goals are being inserted in double (tags?)
-            intrusion_set["goals"] = report["x_mandiant_com_metadata"].get(
-                "intended_effects", []
-            )
-
-            # Motivations
-            # FIXME: requires a mapping
-            motivations = report["x_mandiant_com_metadata"].get("motivations", [])
-            num_items = len(motivations)
-
-            if num_items > 0:
-                intrusion_set["primary_motivation"] = motivations[0]
-
-            if num_items > 1:
-                intrusion_set["secondary_motivations"] = motivations[1:]
-
     def update_vulnerability(self):
         report = utils.retrieve(self.bundle, "type", "report")
 
@@ -215,7 +196,7 @@ class Report:
             if not section.startswith("x_mandiant"):
                 continue
 
-            if type(report[section]) == str:
+            if isinstance(report[section], str):
                 title = " ".join(
                     section.replace("x_mandiant_com_", "").split("_")
                 ).title()
@@ -224,7 +205,7 @@ class Report:
 
             for key, values in report[section].items():
                 title = " ".join(key.split("_")).title()
-                if type(values) == str:
+                if isinstance(values, str):
                     data[title] = [values]
                 else:
                     data[title] = values
@@ -232,7 +213,7 @@ class Report:
         # Collect tags data too and merge them in previous sections collection
         for key, values in self.details.get("tags", {}).items():
             name = " ".join(key.split("_")).title()
-            if type(values[0]) == dict:
+            if isinstance(values[0], dict):
                 continue
 
             if name in data:
@@ -248,7 +229,7 @@ class Report:
         if "Affected Systems" in data and "Affected It Systems" in data:
             del data["Affected It Systems"]
 
-        text = ""
+        text = f"Report ID: {self.report_id}\n"
         for key, values in data.items():
             text += f"\n\n### {key}\n"
             text += "* " + "\n* ".join(set(values))
