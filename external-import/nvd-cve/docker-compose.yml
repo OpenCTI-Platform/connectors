@@ -14,6 +14,6 @@ services:
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=error
       - CVE_BASE_URL=https://services.nvd.nist.gov/rest/json/cves
-      - CVE_TOKEN=ChangeMe # Required
+      - CVE_API_KEY=ChangeMe # Required
       - CVE_INTERVAL=7 # In days, must be strictly greater than 1
     restart: always

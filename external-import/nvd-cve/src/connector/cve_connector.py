@@ -120,11 +120,11 @@ class CVEConnector:
                 days_in_year = date_range.days
 
             start_date_current_year = year_start
-            end_date_current_year = start_date_current_year + timedelta(
-                days=MAX_AUTHORIZED
-            )
 
             while days_in_year > 0:
+                end_date_current_year = start_date_current_year + timedelta(
+                    days=MAX_AUTHORIZED
+                )
                 info_msg = (
                     f"[CONNECTOR] Connector retrieve CVE history for year {year}, "
                     f"{days_in_year} days left"
