@@ -192,7 +192,9 @@ class SignalsManager(Thread):
                             _timestamp = hit["_source"]["signal"]["original_time"]
                         else:
                             if hit["_source"].get("kibana.alert.original_time"):
-                                _timestamp = hit["_source"]["kibana.alert.original_time"]
+                                _timestamp = hit["_source"][
+                                    "kibana.alert.original_time"
+                                ]
                             else:
                                 _timestamp = hit["_source"]["@timestamp"]
 
