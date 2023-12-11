@@ -23,7 +23,7 @@ defaults: dict = {
         "signals": {
             "query_interval": "5m",
             "lookback_interval": "5m",
-            "signal_index": ".siem-signals-*",
+            "signal_index": ".internal.alerts-security.alerts-*",
             "query": '{"query":{"bool":{"must":{"match":{"signal.rule.type":"threat_match"}}}}}',
         },
         "sightings_tlp": None,

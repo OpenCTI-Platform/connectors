@@ -191,7 +191,10 @@ class SignalsManager(Thread):
                         if kbn_version_lt8:
                             _timestamp = hit["_source"]["signal"]["original_time"]
                         else:
-                            _timestamp = hit["_source"]["kibana.alert.original_time"]
+                            if hit["_source"].get("kibana.alert.original_time"):
+                                _timestamp = hit["_source"]["kibana.alert.original_time"]
+                            else:
+                                _timestamp = hit["_source"]["@timestamp"]
 
                         if _opencti_id not in ids_dict:
                             ids_dict[_opencti_id] = {
