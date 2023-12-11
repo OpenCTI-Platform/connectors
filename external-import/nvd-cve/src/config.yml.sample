@@ -13,11 +13,11 @@ connector:
   log_level: 'info'
 
 cve:
-  base_url: 'https://services.nvd.nist.gov/rest/json/cves/2.0' # Required
+  base_url: 'https://services.nvd.nist.gov/rest/json/cves' # Required
   api_key: 'ChangeMe' # Required
   interval: 6 # Required, in hours
-  max_date_range: 1 # In days, max 120
-  maintain_data: True # Optional, keep data updated
+  max_date_range: 120 # In days, max 120
+  maintain_data: True # Optional, retrieve only updated data
   pull_history: False # If True, history_start_year is required
   history_start_year: 2023 # Required if pull_history is True
 

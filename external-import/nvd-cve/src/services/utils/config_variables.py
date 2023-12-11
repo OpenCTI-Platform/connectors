@@ -46,7 +46,7 @@ class ConfigCVE:
         )
 
         self.api_key = get_config_variable(
-            "CVE_TOKEN",
+            "CVE_API_KEY",
             ["cve", "api_key"],
             self.load,
         )

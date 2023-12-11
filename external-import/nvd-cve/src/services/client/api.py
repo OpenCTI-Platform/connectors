@@ -52,10 +52,10 @@ class CVEClient:
 
             if response is None:
                 raise Exception("[API] Cannot get any data from API...")
-
-            cve_collection = response.json()
-            return cve_collection
+            else:
+                cve_collection = response.json()
+                return cve_collection
 
         except Exception as err:
             self.helper.log_error(err)
-            return None
+            return
