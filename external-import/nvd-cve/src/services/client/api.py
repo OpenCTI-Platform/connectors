@@ -1,3 +1,5 @@
+import time
+
 import requests
 
 from .endpoints import BASE_URL
@@ -58,4 +60,3 @@ class CVEClient:
 
         except Exception as err:
             self.helper.log_error(err)
-            return
