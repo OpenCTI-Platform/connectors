@@ -278,5 +278,5 @@ class CVEConnector:
             self.helper.log_info(msg)
             sys.exit(0)
         except Exception as e:
-            error_msg = f"[CONNECTOR] Error while processing data: {str(e)}"
+            error_msg = f"[CONNECTOR] {str(e)}"
             self.helper.log_error(error_msg)
