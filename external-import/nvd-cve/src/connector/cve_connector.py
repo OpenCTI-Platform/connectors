@@ -171,7 +171,7 @@ class CVEConnector:
                     self.converter.send_bundle(cve_params, work_id)
                     days_in_year = 0
 
-            info_msg = f"[CONNECTOR] Importing CVE history finished"
+            info_msg = f"[CONNECTOR] Importing CVE history for year {year} finished"
             self.helper.log_info(info_msg)
 
     def _maintain_data(self, now: datetime, last_run: float, work_id: str) -> None:
