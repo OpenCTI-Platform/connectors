@@ -1,5 +1,3 @@
-import time
-
 import requests
 
 from .endpoints import BASE_URL

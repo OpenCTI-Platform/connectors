@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from services import CVEConverter  # type: ignore
-from services.utils import APP_VERSION, MAX_AUTHORIZED, ConfigCVE  # type: ignore
+from services.utils import MAX_AUTHORIZED, ConfigCVE  # type: ignore
 
 
 class CVEConnector:
