@@ -5,7 +5,21 @@ The NVD-CVE connector is a standalone Python process that collect data from the 
 ## Summary
 
 - [Introduction](#introduction)
+- [CVE and CVSS base score V3.1](#cve-and-cvss-base-score-v31)
+- [Requirements](#requirements)
+- [Configuration variables](#configuration-variables)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Behavior](#behavior)
+  - [Initial population](#initial-population)
+  - [Pull CVEs history](#pull-cves-history)
+  - [Maintaining data](#maintaining-data)
+  - [Errors](#errors)
+- [Usage](#usage)
 - [Sources](#sources)
+
+---
 
 ### Introduction
 
