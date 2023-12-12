@@ -19,8 +19,9 @@ from stix2 import (
     Indicator,
     Malware,
     Relationship,
-    ThreatActor,
+    IntrusionSet,
     Tool,
+    Vulnerability,
 )
 
 
@@ -50,6 +51,11 @@ class SocprimeConnector:
         )
         self.tdm_api_client = ApiClient(api_key=tdm_api_key)
         self.mitre_attack = MitreAttack()
+        self.update_existing_data = get_config_variable(
+            "CONNECTOR_UPDATE_EXISTING_DATA",
+            ["connector", "update_existing_data"],
+            config,
+        )
 
     @staticmethod
     def _read_configuration() -> Dict[str, str]:
@@ -131,7 +137,13 @@ class SocprimeConnector:
             )
         )
         stix_objects.extend(
-            self._get_actors_and_relations_from_indicator(
+            self._get_intrusion_sets_and_relations_from_indicator(
+                indicator=indicator, rule=rule
+            )
+        )
+
+        stix_objects.extend(
+            self._get_vulnerabilities_and_relations_from_indicator(
                 indicator=indicator, rule=rule
             )
         )
@@ -199,19 +211,19 @@ class SocprimeConnector:
                 res.extend(rule["tags"]["actor"])
         return res
 
-    def _get_actors_and_relations_from_indicator(
+    def _get_intrusion_sets_and_relations_from_indicator(
         self, indicator: Indicator, rule: dict
-    ) -> List[Union[ThreatActor, Relationship]]:
+    ) -> List[Union[IntrusionSet, Relationship]]:
         res = []
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for actor_name in self._get_actors_from_rule(rule):
-            actor = self.mitre_attack.get_threat_actor_by_name(actor_name)
-            if actor:
-                res.append(actor)
+            intusion_set = self.mitre_attack.get_intrusion_set_by_name(actor_name)
+            if intusion_set:
+                res.append(intusion_set)
                 rel = Relationship(
                     relationship_type="indicates",
                     source_ref=indicator_id,
-                    target_ref=actor.id,
+                    target_ref=intusion_set.id,
                 )
                 res.append(rel)
         return res
@@ -363,7 +375,9 @@ class SocprimeConnector:
         ]
         if objects:
             bundle = Bundle(objects=objects).serialize()
-            self.helper.send_stix2_bundle(bundle, update=False, work_id=work_id)
+            self.helper.send_stix2_bundle(
+                bundle, update=self.update_existing_data, work_id=work_id
+            )
 
         objects = [
             x for x in objects_list if isinstance(x, self._stix_object_types_to_udate)
@@ -425,3 +439,42 @@ class SocprimeConnector:
                 sys.exit(0)
 
             self._sleep(delay_sec=run_interval)
+
+    def _get_vulnerabilities_and_relations_from_indicator(
+        self, indicator: Indicator, rule: dict
+    ) -> List[Union[Vulnerability, Relationship]]:
+        res = []
+        indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
+        for cve in self._get_cves_from_rule(rule):
+            vuln = self._get_vuln_by_cve_id(cve_id=cve)
+            if vuln:
+                res.append(vuln)
+                rel = Relationship(
+                    relationship_type="indicates",
+                    source_ref=indicator_id,
+                    target_ref=vuln.id,
+                )
+                res.append(rel)
+        return res
+
+    @staticmethod
+    def _get_cves_from_rule(rule: dict) -> List[str]:
+        res = []
+        if "tags" in rule and isinstance(rule["tags"], dict):
+            if "cve_id" in rule["tags"] and isinstance(rule["tags"]["cve_id"], list):
+                res.extend(rule["tags"]["cve_id"])
+        return res
+
+    @staticmethod
+    def _get_vuln_by_cve_id(cve_id: str) -> Vulnerability:
+        return Vulnerability(
+            type="vulnerability",
+            id=pycti.Vulnerability.generate_id(name=cve_id),
+            name=cve_id,
+            external_references=[
+                {
+                    "source_name": "cve",
+                    "external_id": cve_id,
+                }
+            ],
+        )
