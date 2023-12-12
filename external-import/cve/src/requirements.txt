@@ -1,2 +1,4 @@
-pycti==5.12.5
-urllib3==2.1.0
+pycti
+requests
+stix2
+urllib3

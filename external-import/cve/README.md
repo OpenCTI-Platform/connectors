@@ -1,6 +1,6 @@
-# OpenCTI NVD - CVE connector
+# OpenCTI CVE connector
 
-The NVD-CVE connector is a standalone Python process that collect data from the NVD (National Vulnerability Database).
+The CVE connector is a standalone Python process that collect data from the NVD (National Vulnerability Database).
 
 ## Summary
 
@@ -89,7 +89,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Run and Terminate    | run_and_terminate    | `CONNECTOR_RUN_AND_TERMINATE`    | False                                | No        | Launch the connector once if set to True. Takes 2 available values: `True` or `False`                                                       |
 | Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info                                 | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                      |
 
-Below are the parameters you'll need to set for NVD-CVE:
+Below are the parameters you'll need to set for CVE connector:
 
 | Parameter              | config.yml         | Docker environment variable | Default                                      | Mandatory | Description                                                                                                                                                         |
 |------------------------|--------------------|-----------------------------|----------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -114,7 +114,7 @@ Build a Docker Image using the provided `Dockerfile`.
 Example:
 
 ```shell
-docker build . -t opencti-nvd-cve-import:latest
+docker build . -t opencti-cve-import:latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
@@ -138,14 +138,14 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Or if you have Make installed, in nvd-cve/src:
+Or if you have Make installed, in cve/src:
 
 ```shell
 # Will install the requirements
 make init
 ```
 
-Then, start the connector from nvd-cve/src:
+Then, start the connector from cve/src:
 
 ```shell
 python3 main.py
@@ -211,7 +211,7 @@ The connector will retry to fetch data from CVE API after few minutes.
 After Installation, the connector should require minimal interaction to use, and should update automatically at the
 hourly interval specified in your `docker-compose.yml` or `config.yml`.
 
-However, if you would like to force an immediate poll of the NVD-CVE instance, navigate to _Data_ -> _Connectors_ in the
+However, if you would like to force an immediate poll of the CVE instance, navigate to _Data_ -> _Connectors_ in the
 OpenCTI platform.
 Find the "Common Vulnerabilities and Exposures" connector, and click on the refresh button to reset the connector's
 state and force a new poll of the CVEs.
