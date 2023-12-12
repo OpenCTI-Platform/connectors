@@ -124,10 +124,16 @@ class ThreatFox:
                             self.threatfox_csv_url,
                             context=ssl.create_default_context(),
                         )
-                        zipped_file = io.BytesIO(response.read())
-                        with zipfile.ZipFile(zipped_file, "r") as zip_ref:
-                            with zip_ref.open("full.csv") as full_file:
-                                csv_data = full_file.read()
+                        data = response.read()
+                        try:
+                            zipped_file = io.BytesIO(data)
+                            with zipfile.ZipFile(zipped_file, "r") as zip_ref:
+                                with zip_ref.open("full.csv") as full_file:
+                                    csv_data = full_file.read()
+                        except zipfile.BadZipFile:
+                            # Treat as an unzipped CSV from /recent/
+                            csv_data = data
+
                         with open(
                             os.path.dirname(os.path.abspath(__file__)) + "/data.csv",
                             "wb",
