@@ -17,6 +17,7 @@ def process(connector, campaign):
     connector.helper.log_debug(f"Processing campaign {campaign_id} ...")
 
     campaign_details = connector.api.campaign(campaign_id)
+    campaign_attack_patterns = connector.api.campaign_attack_patterns(campaign_id)
 
     stix_campaign = create_stix_campaign(connector, campaign_details)
 
@@ -37,9 +38,8 @@ def process(connector, campaign):
     for tool in campaign_details.get("tools", []):
         items += create_stix_tool(connector, stix_campaign, tool, "uses")
 
-    for timeline_item in utils.sanitizer("timeline", campaign_details, []):
-        if timeline_item.get("event_type", "") == "technique_observed":
-            items += create_attack_pattern(connector, stix_campaign, timeline_item)
+    for attack_pattern in campaign_attack_patterns.get("attack-patterns", {}).values():
+        items += create_attack_pattern(connector, stix_campaign, attack_pattern, "uses")
 
     target_locations = campaign_details.get("target_locations", {})
     for location in target_locations.get("countries", []):
@@ -67,29 +67,27 @@ def create_stix_campaign(connector, campaign_details):
     )
 
 
-def create_attack_pattern(connector, stix_campaign, technique):
-    stix_objects = []
-
-    for attack_pattern in technique.get("mitre_techniques", []):
-        stix_attack_pattern = stix2.AttackPattern(
-            id=attack_pattern.get("id"),
-            name=attack_pattern.get("name"),
-            external_references=[
-                {
-                    "source_name": "mitre-attack",
-                    "external_id": attack_pattern.get("mitre_id"),
-                }
-            ],
-        )
-        stix_relationship = create_stix_relationship(
-            connector,
-            "uses",
-            stix_campaign.get("id"),
-            stix_attack_pattern.get("id"),
-            attack_pattern.get("attribution_scope", ""),
-        )
-        stix_objects += [stix_attack_pattern, stix_relationship]
-    return stix_objects
+def create_attack_pattern(
+    connector, stix_base_object, attack_pattern, relationship_type="uses"
+):
+    stix_attack_pattern = stix2.AttackPattern(
+        id=attack_pattern.get("id"),
+        name=attack_pattern.get("name"),
+        external_references=[
+            {
+                "source_name": "mitre-attack",
+                "external_id": attack_pattern.get("attack_pattern_identifier"),
+            }
+        ],
+    )
+    stix_relationship = create_stix_relationship(
+        connector,
+        relationship_type,
+        stix_base_object.get("id"),
+        stix_attack_pattern.get("id"),
+        attack_pattern.get("attribution_scope", ""),
+    )
+    return [stix_attack_pattern, stix_relationship]
 
 
 def create_stix_location(connector, stix_campaign, location):
