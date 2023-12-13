@@ -29,12 +29,8 @@ class CVEConnector:
             self.helper.force_ping()
         else:
             while True:
-                try:
-                    self.process_data()
-                    time.sleep(60)
-                except Exception as e:
-                    error_msg = f"[CONNECTOR] Error while processing data: {str(e)}"
-                    self.helper.log_error(error_msg)
+                self.process_data()
+                time.sleep(60)
 
     def _initiate_work(self, timestamp: int) -> str:
         """
@@ -238,17 +234,17 @@ class CVEConnector:
             ================================================================
             """
             if last_run is None:
-                self._import_recent(now, work_id)
-
                 """
                 =================================================================
                 If the connector never runs and user wants to pull CVE history
                 =================================================================
                 """
-                if last_run is None and self.config.pull_history:
+                if self.config.pull_history:
                     start_date = datetime(self.config.history_start_year, 1, 1)
                     end_date = now
                     self._import_history(start_date, end_date, work_id)
+                else:
+                    self._import_recent(now, work_id)
 
                 self.update_connector_state(current_time, work_id)
 
@@ -282,5 +278,5 @@ class CVEConnector:
             self.helper.log_info(msg)
             sys.exit(0)
         except Exception as e:
-            error_msg = f"[CONNECTOR] {str(e)}"
+            error_msg = f"[CONNECTOR] Error while processing data: {str(e)}"
             self.helper.log_error(error_msg)
