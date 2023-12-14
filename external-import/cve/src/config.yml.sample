@@ -13,8 +13,11 @@ connector:
   log_level: 'info'
 
 cve:
-  nvd_data_feed: 'https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz'
-  history_start_year: 2002
-  history_data_feed: 'https://nvd.nist.gov/feeds/json/cve/1.1/'
-  import_history: True # Import history at the first run (after only recent), reset the connector state if you want to re-import
-  interval: 7 # In days, must be strictly greater than 1
+  base_url: 'https://services.nvd.nist.gov/rest/json/cves' # Required
+  api_key: 'ChangeMe' # Required
+  interval: 6 # Required, in hours advice min 2
+  max_date_range: 120 # In days, max 120
+  maintain_data: True # Required, retrieve only updated data
+  pull_history: False # If True, history_start_year is required
+  history_start_year: 2019 # Required if pull_history is True
+
