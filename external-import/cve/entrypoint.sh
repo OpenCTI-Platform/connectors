@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-cve
 
 # Start the connector
-python3 cve.py
+python3 main.py
