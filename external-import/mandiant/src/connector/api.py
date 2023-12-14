@@ -20,6 +20,7 @@ class MandiantAPI:
         "token": "/token",
         "reports": "v4/reports",
         "report": "v4/report/{id}",
+        "report_indicators": "v4/report/{id}/indicators",
         "actors": "v4/actor",
         "actor": "v4/actor/{id}",
         "malwares": "v4/malware",
@@ -262,6 +263,9 @@ class MandiantAPI:
 
     def report(self, report_id: str, mode: str = "json") -> Union[Dict, bytes]:
         return next(self._process(name="report", item_id=report_id, mode=mode))
+
+    def report_indicators(self, report_id: str) -> Dict:
+        return next(self._process(name="report_indicators", item_id=report_id))
 
     def actor(self, actor_id: str, mode: str = "json") -> Dict:
         return next(self._process(name="actor", item_id=actor_id, mode=mode))
