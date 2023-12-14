@@ -30,7 +30,7 @@ class CVEClient:
         :return: Response in JSON format
         """
         try:
-            response = self.retry_request(api_url, params)
+            response = self.request(api_url, params)
 
             info_msg = f"[API] HTTP Get Request to endpoint for path ({api_url})"
             self.helper.log_info(info_msg)
@@ -43,7 +43,7 @@ class CVEClient:
             self.helper.log_error(error_msg)
             return None
 
-    def retry_request(self, api_url, params):
+    def request(self, api_url, params):
         # Define the retry strategy
         retry_strategy = Retry(
             total=4,  # Maximum number of retries
