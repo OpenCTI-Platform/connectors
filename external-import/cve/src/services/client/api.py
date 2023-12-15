@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 from .endpoints import BASE_URL
 
@@ -28,7 +30,7 @@ class CVEClient:
         :return: Response in JSON format
         """
         try:
-            response = self.session.get(api_url, params=params)
+            response = self.request(api_url, params)
 
             info_msg = f"[API] HTTP Get Request to endpoint for path ({api_url})"
             self.helper.log_info(info_msg)
@@ -41,6 +43,28 @@ class CVEClient:
             self.helper.log_error(error_msg)
             return None
 
+    def request(self, api_url, params):
+        # Define the retry strategy
+        retry_strategy = Retry(
+            total=4,  # Maximum number of retries
+            backoff_factor=2,  # Exponential backoff factor (e.g., 2 means 1, 2, 4, 8 seconds, ...)
+            status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+        )
+        # Create an HTTP adapter with the retry strategy and mount it to session
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+
+        response = self.session.get(api_url, params=params)
+
+        if response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "[API] Attempting to retrieve data failed. Wait for connector to re-run..."
+            )
+
     def get_complete_collection(self, cve_params=None):
         """
         If params is None, retrieve all CVEs in National Vulnerability Database
@@ -50,11 +74,8 @@ class CVEClient:
         try:
             response = self._request_data(self, BASE_URL, params=cve_params)
 
-            if response is None:
-                raise Exception("[API] Cannot get any data from API...")
-            else:
-                cve_collection = response.json()
-                return cve_collection
+            cve_collection = response.json()
+            return cve_collection
 
         except Exception as err:
             self.helper.log_error(err)
