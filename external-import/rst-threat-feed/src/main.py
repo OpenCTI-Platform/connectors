@@ -83,7 +83,10 @@ class RSTThreatFeed:
     def get_config(name: str, config, default=None):
         env_name = "RST_THREAT_FEED_{}".format(name.upper())
         result = get_config_variable(env_name, ["rst-threat-feed", name], config)
-        return result or default
+        if result is not None:
+            return result
+        else:
+            return default
 
     def get_interval(self) -> int:
         return int(self.interval)
@@ -227,8 +230,8 @@ class RSTThreatFeed:
                 )
 
             malicious_object = None
+            isfamily = True if "/" not in threat["name"] else False
             if threat["type"] == ThreatTypes.MALWARE:
-                isfamily = True if "/" not in threat["name"] else False
                 malicious_object = stix2.v21.Malware(
                     id=threat_key,
                     is_family=isfamily,
@@ -241,7 +244,7 @@ class RSTThreatFeed:
             elif threat["type"] == ThreatTypes.RANSOMWARE:
                 malicious_object = stix2.v21.Malware(
                     id=threat_key,
-                    is_family=True,
+                    is_family=isfamily,
                     name=threat["name"],
                     description="{} ransomware".format(threat["name"]),
                     created_by_ref=organization.id,
@@ -252,7 +255,7 @@ class RSTThreatFeed:
             elif threat["type"] == ThreatTypes.BACKDOOR:
                 malicious_object = stix2.v21.Malware(
                     id=threat_key,
-                    is_family=True,
+                    is_family=isfamily,
                     name=threat["name"],
                     description="{} backdoor".format(threat["name"]),
                     created_by_ref=organization.id,
@@ -263,7 +266,7 @@ class RSTThreatFeed:
             elif threat["type"] == ThreatTypes.RAT:
                 malicious_object = stix2.v21.Malware(
                     id=threat_key,
-                    is_family=True,
+                    is_family=isfamily,
                     name=threat["name"],
                     description="{} remote access trojan".format(threat["name"]),
                     created_by_ref=organization.id,
@@ -274,12 +277,23 @@ class RSTThreatFeed:
             elif threat["type"] == ThreatTypes.EXPLOIT:
                 malicious_object = stix2.v21.Malware(
                     id=threat_key,
-                    is_family=False,
+                    is_family=isfamily,
                     name=threat["name"],
                     description="{} exploit".format(threat["name"]),
                     created_by_ref=organization.id,
                     confidence=self._confidence_level,
                     malware_types=["exploit-kit"],
+                    external_references=external_references,
+                )
+            elif threat["type"] == ThreatTypes.CRYPTOMINER:
+                malicious_object = stix2.v21.Malware(
+                    id=threat_key,
+                    is_family=isfamily,
+                    name=threat["name"],
+                    description="{} cryptominer".format(threat["name"]),
+                    created_by_ref=organization.id,
+                    confidence=self._confidence_level,
+                    malware_types=["resource-exploitation"],
                     external_references=external_references,
                 )
             elif threat["type"] == ThreatTypes.GROUP:
@@ -330,7 +344,11 @@ class RSTThreatFeed:
             relationshipType = "indicates"
             if threats[threat_id]["type"] == "sector":
                 relationshipType = "related-to"
-
+            if fseen > collect + timedelta(0, 3):
+                self.helper.log_error(
+                    f"stop_time {collect} must be later than start_time {fseen}. Fixing"
+                )
+                fseen = collect
             relation = stix2.v21.Relationship(
                 id=StixCoreRelationship.generate_id(
                     relationshipType, indicator_id, threat_id, collect, collect

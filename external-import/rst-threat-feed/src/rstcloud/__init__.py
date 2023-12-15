@@ -47,6 +47,7 @@ class ThreatTypes:
     RAT = "malware_rat"
     BACKDOOR = "malware_backdoor"
     EXPLOIT = "malware_exploit"
+    CRYPTOMINER = "malware_miner"
 
 
 # to map sectors into the correct IDs in OpenCTI
@@ -188,7 +189,7 @@ def feed_converter(
                         names.append(ioc_raw["sha1"])
                     if ioc_raw["sha256"] is not None and ioc_raw["sha256"] != "":
                         hashes.append(
-                            "file:hashes.'sha256' = '{}'".format(ioc_raw["sha256"])
+                            "file:hashes.'SHA-256' = '{}'".format(ioc_raw["sha256"])
                         )
                         names.append(ioc_raw["sha256"])
                     main_observable_type = "StixFile"
@@ -282,6 +283,10 @@ def feed_converter(
                     elif t.endswith("_exploit"):
                         threat_name = t[:-8]
                         threat_type = ThreatTypes.EXPLOIT
+                        threat_key = Malware.generate_id(threat_name)
+                    elif t.endswith("_miner"):
+                        threat_name = t[:-6]
+                        threat_type = ThreatTypes.CRYPTOMINER
                         threat_key = Malware.generate_id(threat_name)
                     else:
                         threat_name = t
