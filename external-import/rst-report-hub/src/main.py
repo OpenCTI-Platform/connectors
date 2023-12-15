@@ -142,18 +142,24 @@ class ReportHub:
                     self._combine_report_and_send(stix_report, "")
         return True
 
-    def _fetch_stix_reports(self, start_date, current_state):
+    def _fetch_stix_reports(self, current_state):
+        # to use as string
+        import_date = current_state["import_date"]
+        # to compare dates
+        import_date_parsed = parse(import_date)
         headers = {
             "Content-Type": "application/json",
             "x-api-key": self._downloader_config["api_key"],
         }
-        params = {"date": start_date, "lang": self._downloader_config["language"]}
+        params = {
+            "date": import_date,
+            "lang": self._downloader_config["language"],
+        }
         retry_attempts = self._downloader_config["retry_attempts"]
         retry_delay = self._downloader_config["retry_delay"]
+        # import_date is not always today
         today = parse(datetime.now().strftime("%Y%m%d"))
-        nextday = (parse(current_state["import_date"]) + timedelta(days=1)).strftime(
-            "%Y%m%d"
-        )
+        nextday = (import_date_parsed + timedelta(days=1)).strftime("%Y%m%d")
 
         for attempt in range(retry_attempts):
             try:
@@ -166,17 +172,19 @@ class ReportHub:
 
                 if response.status_code == 200:
                     reports = response.json()
-                    if current_state["import_date"] == start_date and current_state[
+                    # if the number of reports available changed,
+                    # keep downloading "today"
+                    if import_date_parsed == today and current_state[
                         "report_count"
                     ] >= len(reports):
                         self.helper.log_info(
-                            "Skipping as all reports for the current day have been downloaded"
+                            f"Skipping as all reports for the current day {today} have been downloaded"
                         )
                         return True
                     else:
                         # if it is a day in the past downloaded,
                         # then go to next day until today
-                        if parse(start_date) < today:
+                        if import_date_parsed < today:
                             # next time start downloading the next day
                             # and reset the counter
                             self.helper.set_state(
@@ -187,11 +195,11 @@ class ReportHub:
                             )
                         else:
                             # keep waiting for reports for a given day and
-                            # keep the counter to skip fetching
-                            # if no new reports appeared
+                            # keep the counter to skip re-fetching the same
+                            # reports if no new reports appeared
                             self.helper.set_state(
                                 {
-                                    "import_date": current_state["import_date"],
+                                    "import_date": import_date,
                                     "report_count": len(reports),
                                 }
                             )
@@ -203,9 +211,9 @@ class ReportHub:
 
             except requests.exceptions.RequestException:
                 if response.status_code == 404:
-                    # no reports for previous days found,
+                    # no reports for a given day found,
                     # iterate day by day until today
-                    if parse(start_date) < today:
+                    if import_date_parsed < today:
                         # next time start downloading the next day
                         # and reset the counter
                         self.helper.set_state(
@@ -215,25 +223,26 @@ class ReportHub:
                             }
                         )
                     else:
-                        # keep waiting for reports for a given day
+                        # keep waiting for reports
+                        # for a given day until tomorrow
                         self.helper.set_state(
                             {
-                                "import_date": current_state["import_date"],
+                                "import_date": import_date,
                                 "report_count": 0,
                             }
                         )
                     self.helper.log_info(
-                        f"No reports found for a given date: {start_date}"
+                        f"No reports found for a given date: {import_date}"
                     )
                     return False
                 else:
-                    self.helper.log_info(f"Failed to fetch reports: {start_date}")
+                    self.helper.log_info(f"Failed to fetch reports: {import_date}")
                 if attempt < retry_attempts - 1:
                     self.helper.log_info(f"Retrying in {retry_delay} seconds...")
                     time.sleep(retry_delay)
                 else:
                     self.helper.log_info(
-                        f"Failed to fetch reports {start_date} after {retry_attempts} attempts"
+                        f"Failed to fetch reports {import_date} after {retry_attempts} attempts"
                     )
                     return False
 
@@ -241,15 +250,28 @@ class ReportHub:
         return True
 
     def _fetch_and_process_data(self):
-        current_date = ""
+        # get the state and check if it is not set
         current_state = self.helper.get_state()
         if current_state is None:
-            current_date = self._downloader_config["import_start_date"]
-            self.helper.set_state({"import_date": current_date, "report_count": 0})
+            # first run or state was reset
+            self.helper.set_state(
+                {
+                    "import_date": self._downloader_config["import_start_date"],
+                    "report_count": 0,
+                }
+            )
             current_state = self.helper.get_state()
         else:
-            current_date = current_state["import_date"]
-        self._fetch_stix_reports(current_date, current_state)
+            # if a part of the state is not present,
+            # the values should fail back to defaults
+            if "report_count" not in current_state:
+                current_state["report_count"] = 0
+            if "import_date" not in current_state:
+                current_state["import_date"] = self._downloader_config[
+                    "import_start_date"
+                ]
+        # fetch reports for the import date specified in the state
+        self._fetch_stix_reports(current_state)
 
     def _send_stix_data(self, work_id, report_bundle):
         try:
