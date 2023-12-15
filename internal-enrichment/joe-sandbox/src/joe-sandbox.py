@@ -297,10 +297,20 @@ class JoeSandboxConnector:
             "amsi-unpacking": self._amsi_unpacking,  # Perform generic unpacking using the Microsoft Antimalware Scan Interface (AMSI).
             "live-interaction": self._live_interaction,  # Use Live Interaction. Requires user interaction via the web UI. If enabled, disables VBA instrumentation (on Windows).
             "encrypt-with-password": self._encrypt_with_password,  # Encryption password for analyses
-            # JOE SANDBOX CLOUD EXCLUSIVE PARAMETERS
-            "url-reputation": self._url_reputation,  # Lookup the reputation of URLs and domains to improve the analysis. This option will send URLs and domains to third party services and WHOIS servers!.
-            "export-to-jbxview": self._export_to_jbxview,  # Export the report(s) from this analysis to Joe Sandbox View.
-            "delete-after-days": self._delete_after_days,  # Delete the analysis after X days. If not set, the default value is used
+            # JOE SANDBOX CLOUD EXCLUSIVE PARAMETERS - Only include these if they are defined
+            **(
+                {"url-reputation": self._url_reputation} if self._url_reputation else {}
+            ),  # Lookup the reputation of URLs and domains to improve the analysis. This option will send URLs and domains to third party services and WHOIS servers!.
+            **(
+                {"export-to-jbxview": self._export_to_jbxview}
+                if self._export_to_jbxview
+                else {}
+            ),  # Export the report(s) from this analysis to Joe Sandbox View.
+            **(
+                {"delete-after-days": self._delete_after_days}
+                if self._delete_after_days
+                else {}
+            ),  # Delete the analysis after X days. If not set, the default value is used
             ## ON PREMISE EXCLUSIVE PARAMETERS
             "priority": self._priority,  # Integer value between 1 and 10, higher value means higher priority.
         }
