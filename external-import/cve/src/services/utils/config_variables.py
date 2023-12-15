@@ -23,9 +23,13 @@ class ConfigCVE:
         Load the configuration from the YAML file
         :return: Configuration dictionary
         """
-        config = yaml.load(
-            open(CONFIG_FILE_PATH),
-            Loader=yaml.FullLoader if os.path.isfile(CONFIG_FILE_PATH) else {},
+        config = (
+            yaml.load(
+                open(CONFIG_FILE_PATH),
+                Loader=yaml.FullLoader,
+            )
+            if os.path.isfile(CONFIG_FILE_PATH)
+            else {}
         )
         return config
 
