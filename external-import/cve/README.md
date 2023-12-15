@@ -206,6 +206,11 @@ You may encounter some errors from the server:
 
 The connector will retry to fetch data from CVE API after few minutes.
 
+It retries for a total of 4 times the request before fail.
+
+![logs retry](./_docs_/media/retry-logs.png)
+
+
 ### Usage
 
 After Installation, the connector should require minimal interaction to use, and should update automatically at the
