@@ -212,13 +212,13 @@ twisted = ["twisted"]
 
 [[package]]
 name = "pycti"
-version = "5.12.5"
+version = "5.12.6"
 description = "Python API client for OpenCTI."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.12.5-py3-none-any.whl", hash = "sha256:9d15fe7df1afcdb0f0a48ee83a8ce58a8c43904d35f1af075c7a0707833cfd35"},
-    {file = "pycti-5.12.5.tar.gz", hash = "sha256:3e10809ecdcecb11c559a89830485e8689e096aff877c08b7001d8418d95485d"},
+    {file = "pycti-5.12.6-py3-none-any.whl", hash = "sha256:0c824b907ec5b9c2a958ad02160094927523c5a62c12597122169142b49f59b3"},
+    {file = "pycti-5.12.6.tar.gz", hash = "sha256:0bc9e83e347ee8b185b66a5b5e0600f509fc0e4fbf3958599a89d1f7d27a94a7"},
 ]
 
 [package.dependencies]
@@ -236,7 +236,7 @@ setuptools = ">=69.0.2,<69.1.0"
 stix2 = ">=3.0.1,<3.1.0"
 
 [package.extras]
-dev = ["black (>=23.11.0,<23.12.0)", "build (>=1.0.3,<1.1.0)", "isort (>=5.13.0,<5.14.0)", "pre-commit (>=3.6.0,<3.7.0)", "pytest (>=7.4.0,<7.5.0)", "pytest-cases (>=3.8.0,<3.9.0)", "pytest-cov (>=4.1.0,<4.2.0)", "pytest-randomly (>=3.15.0,<3.16.0)", "types-python-dateutil (>=2.8.19,<2.9.0)", "types-pytz (>=2023.3.1.0,<2023.4.0.0)", "wheel (>=0.42.0,<0.43.0)"]
+dev = ["black (>=23.12.0,<23.13.0)", "build (>=1.0.3,<1.1.0)", "isort (>=5.13.0,<5.14.0)", "pre-commit (>=3.6.0,<3.7.0)", "pytest (>=7.4.0,<7.5.0)", "pytest-cases (>=3.8.0,<3.9.0)", "pytest-cov (>=4.1.0,<4.2.0)", "pytest-randomly (>=3.15.0,<3.16.0)", "types-python-dateutil (>=2.8.19,<2.9.0)", "types-pytz (>=2023.3.1.0,<2023.4.0.0)", "wheel (>=0.42.0,<0.43.0)"]
 doc = ["autoapi (>=2.0.1,<2.1.0)", "sphinx-autodoc-typehints (>=1.25.2,<1.26.0)", "sphinx-rtd-theme (>=2.0.0,<2.1.0)"]
 
 [[package]]
@@ -754,4 +754,4 @@ tooling-extras = ["pyaml (>=23.7.0)", "pypandoc-binary (>=1.11)", "pytest (>=7.4
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "f01f079f4f5e0cdc6eb7331530e5e7bb2be6f2c893cea90279435c50645bc49b"
+content-hash = "5abca1d38624af6f294db7beabce2991bbdd4c70d91be4280adec3786b0d7065"
