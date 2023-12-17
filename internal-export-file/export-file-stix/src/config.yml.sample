@@ -6,6 +6,6 @@ connector:
   id: 'ChangeMe'
   type: 'INTERNAL_EXPORT_FILE'
   name: 'ExportFileStix'
-  scope: 'application/json'
+  scope: 'application/vnd.oasis.stix+json'
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
