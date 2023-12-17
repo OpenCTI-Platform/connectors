@@ -1,4 +1,4 @@
-pycti==5.12.8
+git+https://github.com/OpenCTI-Platform/client-python@master
 maec==4.1.0.17
 numpy==1.26.2
 stix2-elevator==4.1.7
