@@ -47,6 +47,3 @@ misp:
   import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
   import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value
   interval: 5 # Required, in minutes
-  source_type: 'misp' # misp or s3
-  bucket_name: '' # Required if source_type = s3
-  bucket_prefix: # Optional, filter objects based on prefix

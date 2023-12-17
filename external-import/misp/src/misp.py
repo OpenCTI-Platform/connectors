@@ -4,7 +4,6 @@ import re
 import sys
 import time
 from datetime import datetime
-import boto3
 
 import pytz
 import stix2
@@ -265,29 +264,10 @@ class Misp:
             config,
         )
 
-        self.source_type = get_config_variable("MISP_SOURCE_TYPE",
-                                               ["misp", "source_type"],
-                                               config,
-                                               False,
-                                               default="misp")
-
-        self.bucket_prefix = get_config_variable("MISP_BUCKET_PREFIX",
-                                                 ["misp", "bucket_prefix"],
-                                                 config,
-                                                 False)
-
         # Initialize MISP
-        if self.source_type == "misp":
-            self.misp = ExpandedPyMISP(
-                url=self.misp_url, key=self.misp_key, ssl=self.misp_ssl_verify, debug=False
-            )
-
-        if self.source_type == "s3":
-            bucket_name = get_config_variable("MISP_BUCKET_NAME",
-                                              ["misp", "bucket_name"],
-                                              config,
-                                              False)
-            self.s3 = boto3.resource('s3').Bucket(bucket_name)
+        self.misp = ExpandedPyMISP(
+            url=self.misp_url, key=self.misp_key, ssl=self.misp_ssl_verify, debug=False
+        )
 
     def get_interval(self):
         return int(self.misp_interval) * 60
@@ -302,212 +282,173 @@ class Misp:
                 self.helper.connect_id, friendly_name
             )
             current_state = self.helper.get_state()
-
-            if self.source_type == "s3":
-                if self.bucket_prefix is not None:
-                    objects = self.s3.objects.filter(Prefix=self.bucket_prefix)
+            if (
+                current_state is not None
+                and "last_run" in current_state
+                and "last_event_timestamp" in current_state
+                and "last_event" in current_state
+            ):
+                last_run = parse(current_state["last_run"])
+                last_event = parse(current_state["last_event"])
+                last_event_timestamp = current_state["last_event_timestamp"]
+                self.helper.log_info(
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                )
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
+                )
+            elif current_state is not None and "last_run" in current_state:
+                last_run = parse(current_state["last_run"])
+                last_event = last_run
+                last_event_timestamp = int(last_event.timestamp())
+                self.helper.log_info(
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                )
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
+                )
+            else:
+                if self.misp_import_from_date is not None:
+                    last_event = parse(self.misp_import_from_date)
+                    last_event_timestamp = int(last_event.timestamp())
                 else:
-                    objects = self.s3.objects.all()
+                    last_event = now
+                    last_event_timestamp = int(now.timestamp())
+                self.helper.log_info("Connector has never run")
 
-                for obj in objects:
-                    try:
-                        self.s3.download_file(obj)
-                        file_name = obj.split("/")[-1]
-                        events = json.load(open(file_name, 'r'))
-                        if type(event) != list:
-                            events = [events]
-                        self.process_events(work_id, events)
-                        self.s3.Object(obj).delete()
-                        os.remove(file_name)
-                        self.helper.set_state(
-                            {
-                                "last_run": now.astimezone(pytz.utc).isoformat()
-                            }
-                        )
-                    except Exception as e:
-                        self.helper.log_error(f"Error fetching misp event from s3: {e}")
-                        self.helper.metric.inc("client_error_count")
-                        break
+            # If import with tags
+            complex_query_tag = None
+            if (self.misp_import_tags is not None) or (
+                self.misp_import_tags_not is not None
+            ):
+                or_parameters = []
+                not_parameters = []
 
-                message = (
-                        "Connector successfully run ("
-                        + str(number_files)
-                        + " events have been processed)"
+                if self.misp_import_tags:
+                    for tag in self.misp_import_tags.split(","):
+                        or_parameters.append(tag.strip())
+                if self.misp_import_tags_not:
+                    for ntag in self.misp_import_tags_not.split(","):
+                        not_parameters.append(ntag.strip())
+
+                complex_query_tag = self.misp.build_complex_query(
+                    or_parameters=or_parameters if len(or_parameters) > 0 else None,
+                    not_parameters=not_parameters if len(not_parameters) > 0 else None,
                 )
 
-                self.helper.api.work.to_processed(work_id, message)
-                self.helper.log_info(message)
+            # Prepare the query
+            kwargs = dict()
 
-            if self.source_type == "misp":
-                if (
-                        current_state is not None
-                        and "last_run" in current_state
-                        and "last_event_timestamp" in current_state
-                        and "last_event" in current_state
-                ):
-                    last_run = parse(current_state["last_run"])
-                    last_event = parse(current_state["last_event"])
-                    last_event_timestamp = current_state["last_event_timestamp"]
-                    self.helper.log_info(
-                        "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + last_event.astimezone(pytz.UTC).isoformat()
-                    )
-                elif current_state is not None and "last_run" in current_state:
-                    last_run = parse(current_state["last_run"])
-                    last_event = last_run
-                    last_event_timestamp = int(last_event.timestamp())
-                    self.helper.log_info(
-                        "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + last_event.astimezone(pytz.UTC).isoformat()
-                    )
-                else:
-                    if self.misp_import_from_date is not None:
-                        last_event = parse(self.misp_import_from_date)
-                        last_event_timestamp = int(last_event.timestamp())
-                    else:
-                        last_event = now
-                        last_event_timestamp = int(now.timestamp())
-                    self.helper.log_info("Connector has never run")
+            # Put the date
+            next_event_timestamp = last_event_timestamp + 1
+            kwargs[self.misp_datetime_attribute] = next_event_timestamp
 
-                # If import with tags
-                complex_query_tag = None
-                if (self.misp_import_tags is not None) or (
-                        self.misp_import_tags_not is not None
-                ):
-                    or_parameters = []
-                    not_parameters = []
+            # Complex query date
+            if complex_query_tag is not None:
+                kwargs["tags"] = complex_query_tag
 
-                    if self.misp_import_tags:
-                        for tag in self.misp_import_tags.split(","):
-                            or_parameters.append(tag.strip())
-                    if self.misp_import_tags_not:
-                        for ntag in self.misp_import_tags_not.split(","):
-                            not_parameters.append(ntag.strip())
+            # With attachments
+            if self.import_with_attachments:
+                kwargs["with_attachments"] = self.import_with_attachments
 
-                    complex_query_tag = self.misp.build_complex_query(
-                        or_parameters=or_parameters if len(or_parameters) > 0 else None,
-                        not_parameters=not_parameters if len(not_parameters) > 0 else None,
-                    )
-
-                # Prepare the query
-                kwargs = dict()
-
-                # Put the date
-                next_event_timestamp = last_event_timestamp + 1
-                kwargs[self.misp_datetime_attribute] = next_event_timestamp
-
-                # Complex query date
-                if complex_query_tag is not None:
-                    kwargs["tags"] = complex_query_tag
-
-                # With attachments
-                if self.import_with_attachments:
-                    kwargs["with_attachments"] = self.import_with_attachments
-
-                # Query with pagination of 50
-                current_state = self.helper.get_state()
-                if current_state is not None and "current_page" in current_state:
-                    current_page = current_state["current_page"]
-                else:
-                    current_page = 1
-                number_events = 0
-
-                while True:
-                    kwargs["limit"] = 10
-                    kwargs["page"] = current_page
-                    if self.misp_import_keyword is not None:
-                        kwargs["value"] = self.misp_import_keyword
-                        kwargs["searchall"] = True
-                    if self.misp_enforce_warning_list is not None:
-                        kwargs["enforce_warninglist"] = self.misp_enforce_warning_list
-                    self.helper.log_info(
-                        "Fetching MISP events with args: " + json.dumps(kwargs)
-                    )
-                    kwargs = json.loads(json.dumps(kwargs))
-                    events = []
+            # Query with pagination of 50
+            current_state = self.helper.get_state()
+            if current_state is not None and "current_page" in current_state:
+                current_page = current_state["current_page"]
+            else:
+                current_page = 1
+            number_events = 0
+            while True:
+                kwargs["limit"] = 10
+                kwargs["page"] = current_page
+                if self.misp_import_keyword is not None:
+                    kwargs["value"] = self.misp_import_keyword
+                    kwargs["searchall"] = True
+                if self.misp_enforce_warning_list is not None:
+                    kwargs["enforce_warninglist"] = self.misp_enforce_warning_list
+                self.helper.log_info(
+                    "Fetching MISP events with args: " + json.dumps(kwargs)
+                )
+                kwargs = json.loads(json.dumps(kwargs))
+                events = []
+                try:
+                    events = self.misp.search("events", **kwargs)
+                    if isinstance(events, dict):
+                        if "errors" in events:
+                            raise ValueError(events["message"])
+                except Exception as e:
+                    self.helper.log_error(f"Error fetching misp event: {e}")
+                    self.helper.metric.inc("client_error_count")
                     try:
-
                         events = self.misp.search("events", **kwargs)
                         if isinstance(events, dict):
                             if "errors" in events:
                                 raise ValueError(events["message"])
                     except Exception as e:
-                        self.helper.log_error(f"Error fetching misp event: {e}")
+                        self.helper.log_error(f"Error fetching misp event again: {e}")
                         self.helper.metric.inc("client_error_count")
-                        try:
-                            events = self.misp.search("events", **kwargs)
-                            if isinstance(events, dict):
-                                if "errors" in events:
-                                    raise ValueError(events["message"])
-                        except Exception as e:
-                            self.helper.log_error(f"Error fetching misp event again: {e}")
-                            self.helper.metric.inc("client_error_count")
-                            break
-
-                    self.helper.log_info("MISP returned " + str(len(events)) + " events.")
-                    number_events = number_events + len(events)
-
-                    # Break if no more result
-                    if len(events) == 0:
                         break
 
-                    # Process the event
-                    processed_events_last_timestamp = self.process_events(work_id, events)
-                    if (
-                            processed_events_last_timestamp is not None
-                            and processed_events_last_timestamp > last_event_timestamp
-                    ):
-                        last_event_timestamp = processed_events_last_timestamp
+                self.helper.log_info("MISP returned " + str(len(events)) + " events.")
+                number_events = number_events + len(events)
 
-                    # Next page
-                    current_page += 1
-                    if current_state is not None:
-                        current_state["current_page"] = current_page
-                    else:
-                        current_state = {"current_page": current_page}
-                    self.helper.set_state(current_state)
-                # Loop is over, storing the state
-                # We cannot store the state before, because MISP events are NOT ordered properly
-                # and there is NO WAY to order them using their library
-                message = (
-                        "Connector successfully run ("
-                        + str(number_events)
-                        + " events have been processed), storing state (last_run="
-                        + now.astimezone(pytz.utc).isoformat()
-                        + ", last_event="
-                        + datetime.utcfromtimestamp(last_event_timestamp)
-                        .astimezone(pytz.UTC)
-                        .isoformat()
-                        + ", last_event_timestamp="
-                        + str(last_event_timestamp)
-                        + ", current_page=1)"
-                )
-                self.helper.set_state(
-                    {
-                        "last_run": now.astimezone(pytz.utc).isoformat(),
-                        "last_event": datetime.utcfromtimestamp(last_event_timestamp)
-                        .astimezone(pytz.UTC)
-                        .isoformat(),
-                        "last_event_timestamp": last_event_timestamp,
-                        "current_page": 1,
-                    }
-                )
-                self.helper.log_info(message)
-                self.helper.api.work.to_processed(work_id, message)
+                # Break if no more result
+                if len(events) == 0:
+                    break
 
-                if self.helper.connect_run_and_terminate:
-                    self.helper.log_info("Connector stop")
-                    self.helper.metric.state("stopped")
-                    sys.exit(0)
+                # Process the event
+                processed_events_last_timestamp = self.process_events(work_id, events)
+                if (
+                    processed_events_last_timestamp is not None
+                    and processed_events_last_timestamp > last_event_timestamp
+                ):
+                    last_event_timestamp = processed_events_last_timestamp
 
-                self.helper.metric.state("idle")
-                time.sleep(self.get_interval())
+                # Next page
+                current_page += 1
+                if current_state is not None:
+                    current_state["current_page"] = current_page
+                else:
+                    current_state = {"current_page": current_page}
+                self.helper.set_state(current_state)
+            # Loop is over, storing the state
+            # We cannot store the state before, because MISP events are NOT ordered properly
+            # and there is NO WAY to order them using their library
+            message = (
+                "Connector successfully run ("
+                + str(number_events)
+                + " events have been processed), storing state (last_run="
+                + now.astimezone(pytz.utc).isoformat()
+                + ", last_event="
+                + datetime.utcfromtimestamp(last_event_timestamp)
+                .astimezone(pytz.UTC)
+                .isoformat()
+                + ", last_event_timestamp="
+                + str(last_event_timestamp)
+                + ", current_page=1)"
+            )
+            self.helper.set_state(
+                {
+                    "last_run": now.astimezone(pytz.utc).isoformat(),
+                    "last_event": datetime.utcfromtimestamp(last_event_timestamp)
+                    .astimezone(pytz.UTC)
+                    .isoformat(),
+                    "last_event_timestamp": last_event_timestamp,
+                    "current_page": 1,
+                }
+            )
+            self.helper.log_info(message)
+            self.helper.api.work.to_processed(work_id, message)
+
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                self.helper.metric.state("stopped")
+                sys.exit(0)
+
+            self.helper.metric.state("idle")
+            time.sleep(self.get_interval())
 
     def process_events(self, work_id, events):
         # Prepare filters
@@ -540,8 +481,8 @@ class Misp:
                 last_event_timestamp = event_timestamp
             # Check against filter
             if (
-                    import_creator_orgs is not None
-                    and event["Event"]["Orgc"]["name"] not in import_creator_orgs
+                import_creator_orgs is not None
+                and event["Event"]["Orgc"]["name"] not in import_creator_orgs
             ):
                 self.helper.log_info(
                     "Event creator organization "
@@ -550,8 +491,8 @@ class Misp:
                 )
                 continue
             if (
-                    import_creator_orgs_not is not None
-                    and event["Event"]["Orgc"]["name"] in import_creator_orgs_not
+                import_creator_orgs_not is not None
+                and event["Event"]["Orgc"]["name"] in import_creator_orgs_not
             ):
                 self.helper.log_info(
                     "Event creator organization "
@@ -560,8 +501,8 @@ class Misp:
                 )
                 continue
             if (
-                    import_owner_orgs is not None
-                    and event["Event"]["Org"]["name"] not in import_owner_orgs
+                import_owner_orgs is not None
+                and event["Event"]["Org"]["name"] not in import_owner_orgs
             ):
                 self.helper.log_info(
                     "Event owner organization "
@@ -570,8 +511,8 @@ class Misp:
                 )
                 continue
             if (
-                    import_owner_orgs_not is not None
-                    and event["Event"]["Org"]["name"] in import_owner_orgs_not
+                import_owner_orgs_not is not None
+                and event["Event"]["Org"]["name"] in import_owner_orgs_not
             ):
                 self.helper.log_info(
                     "Event owner organization "
@@ -580,8 +521,8 @@ class Misp:
                 )
                 continue
             if (
-                    import_distribution_levels is not None
-                    and event["Event"]["distribution"] not in import_distribution_levels
+                import_distribution_levels is not None
+                and event["Event"]["distribution"] not in import_distribution_levels
             ):
                 self.helper.log_info(
                     "Event distribution level "
@@ -590,8 +531,8 @@ class Misp:
                 )
                 continue
             if (
-                    import_threat_levels is not None
-                    and event["Event"]["threat_level_id"] not in import_threat_levels
+                import_threat_levels is not None
+                and event["Event"]["threat_level_id"] not in import_threat_levels
             ):
                 self.helper.log_info(
                     "Event threat level "
@@ -600,9 +541,9 @@ class Misp:
                 )
                 continue
             if (
-                    self.import_only_published is not None
-                    and self.import_only_published
-                    and not event["Event"]["published"]
+                self.import_only_published is not None
+                and self.import_only_published
+                and not event["Event"]["published"]
             ):
                 self.helper.log_info(
                     "Event is not published and import_only_published is set, do not import"
@@ -695,8 +636,8 @@ class Misp:
                     create_relationships,
                 )
                 if (
-                        attribute["type"] == "link"
-                        and attribute["category"] == "External analysis"
+                    attribute["type"] == "link"
+                    and attribute["category"] == "External analysis"
                 ):
                     event_external_references.append(
                         stix2.ExternalReference(
@@ -721,8 +662,8 @@ class Misp:
                 attribute_external_references = []
                 for attribute in object["Attribute"]:
                     if (
-                            attribute["type"] == "link"
-                            and attribute["category"] == "External analysis"
+                        attribute["type"] == "link"
+                        and attribute["category"] == "External analysis"
                     ):
                         attribute_external_references.append(
                             stix2.ExternalReference(
@@ -759,11 +700,11 @@ class Misp:
                         unique_key = ""
                         if len(object["Attribute"]) > 0:
                             unique_key = (
-                                    " ("
-                                    + object["Attribute"][0]["type"]
-                                    + "="
-                                    + object["Attribute"][0]["value"]
-                                    + ")"
+                                " ("
+                                + object["Attribute"][0]["type"]
+                                + "="
+                                + object["Attribute"][0]["value"]
+                                + ")"
                             )
                         object_observable = CustomObservableText(
                             value=object["name"] + unique_key,
@@ -796,12 +737,12 @@ class Misp:
                     if indicator is not None:
                         indicators.append(indicator)
                         if (
-                                indicator["indicator"] is not None
-                                and object["meta-category"] == "file"
-                                and indicator["indicator"].get(
-                            "x_opencti_main_observable_type", "Unknown"
-                        )
-                                in FILETYPES
+                            indicator["indicator"] is not None
+                            and object["meta-category"] == "file"
+                            and indicator["indicator"].get(
+                                "x_opencti_main_observable_type", "Unknown"
+                            )
+                            in FILETYPES
                         ):
                             object_attributes.append(indicator)
                 # TODO Extend observable
@@ -816,13 +757,13 @@ class Misp:
                     added_markings.append(event_marking["id"])
             # Add event elements
             all_event_elements = (
-                    event_elements["intrusion_sets"]
-                    + event_elements["malwares"]
-                    + event_elements["tools"]
-                    + event_elements["attack_patterns"]
-                    + event_elements["sectors"]
-                    + event_elements["countries"]
-                    + event_elements["regions"]
+                event_elements["intrusion_sets"]
+                + event_elements["malwares"]
+                + event_elements["tools"]
+                + event_elements["attack_patterns"]
+                + event_elements["sectors"]
+                + event_elements["countries"]
+                + event_elements["regions"]
             )
             for event_element in all_event_elements:
                 if event_element["id"] not in added_object_refs:
@@ -865,13 +806,13 @@ class Misp:
                         added_sightings.append(attribute_sighting["id"])
                 # Add attribute elements
                 all_attribute_elements = (
-                        indicator["attribute_elements"]["intrusion_sets"]
-                        + indicator["attribute_elements"]["malwares"]
-                        + indicator["attribute_elements"]["tools"]
-                        + indicator["attribute_elements"]["attack_patterns"]
-                        + indicator["attribute_elements"]["sectors"]
-                        + indicator["attribute_elements"]["countries"]
-                        + indicator["attribute_elements"]["regions"]
+                    indicator["attribute_elements"]["intrusion_sets"]
+                    + indicator["attribute_elements"]["malwares"]
+                    + indicator["attribute_elements"]["tools"]
+                    + indicator["attribute_elements"]["attack_patterns"]
+                    + indicator["attribute_elements"]["sectors"]
+                    + indicator["attribute_elements"]["countries"]
+                    + indicator["attribute_elements"]["regions"]
                 )
                 for attribute_element in all_attribute_elements:
                     if attribute_element["id"] not in added_object_refs:
@@ -917,9 +858,9 @@ class Misp:
                                     relationship_type="related-to",
                                     created_by_ref=author["id"],
                                     description="Original Relationship: "
-                                                + ref["relationship_type"]
-                                                + "  \nComment: "
-                                                + ref["comment"],
+                                    + ref["relationship_type"]
+                                    + "  \nComment: "
+                                    + ref["comment"],
                                     source_ref=src_result["entity"]["id"],
                                     target_ref=target_result["entity"]["id"],
                                     allow_custom=True,
@@ -928,9 +869,9 @@ class Misp:
             # Add object_relationships
             for object_relationship in objects_relationships:
                 if (
-                        object_relationship["source_ref"]
-                        + object_relationship["target_ref"]
-                        not in added_object_refs
+                    object_relationship["source_ref"]
+                    + object_relationship["target_ref"]
+                    not in added_object_refs
                 ):
                     object_refs.append(object_relationship)
                     added_object_refs.append(
@@ -938,9 +879,9 @@ class Misp:
                         + object_relationship["target_ref"]
                     )
                 if (
-                        object_relationship["source_ref"]
-                        + object_relationship["target_ref"]
-                        not in added_relationships
+                    object_relationship["source_ref"]
+                    + object_relationship["target_ref"]
+                    not in added_relationships
                 ):
                     bundle_objects.append(object_relationship)
                     added_relationships.append(
@@ -1071,16 +1012,16 @@ class Misp:
         }
 
     def process_attribute(
-            self,
-            author: stix2.Identity,
-            event_elements,
-            event_markings,
-            event_labels,
-            object_observable,
-            attribute_external_references,
-            attribute,
-            event_threat_level,
-            create_relationships,
+        self,
+        author: stix2.Identity,
+        event_elements,
+        event_markings,
+        event_labels,
+        object_observable,
+        attribute_external_references,
+        attribute,
+        event_threat_level,
+        create_relationships,
     ):
         if attribute["type"] == "link" and attribute["category"] == "External analysis":
             return None
@@ -1138,8 +1079,8 @@ class Misp:
             else:
                 if "transform" in OPENCTISTIX2[observable_resolver]:
                     if (
-                            OPENCTISTIX2[observable_resolver]["transform"]["operation"]
-                            == "remove_string"
+                        OPENCTISTIX2[observable_resolver]["transform"]["operation"]
+                        == "remove_string"
                     ):
                         observable_value = observable_value.replace(
                             OPENCTISTIX2[observable_resolver]["transform"]["value"],
@@ -1311,8 +1252,8 @@ class Misp:
                                 custom_properties=custom_properties,
                             )
                         elif (
-                                OPENCTISTIX2[observable_resolver]["path"][1]
-                                == "serial_number"
+                            OPENCTISTIX2[observable_resolver]["path"][1]
+                            == "serial_number"
                         ):
                             observable = stix2.File(
                                 serial_number=observable_value,
@@ -1335,8 +1276,8 @@ class Misp:
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
                     if (
-                            "Organisation" in misp_sighting
-                            and misp_sighting["Organisation"]["name"] != author.name
+                        "Organisation" in misp_sighting
+                        and misp_sighting["Organisation"]["name"] != author.name
                     ):
                         sighted_by = stix2.Identity(
                             id=Identity.generate_id(
@@ -1416,7 +1357,7 @@ class Misp:
                 )
             ### Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
             if object_observable is not None and (
-                    indicator is not None or observable is not None
+                indicator is not None or observable is not None
             ):
                 relationships.append(
                     stix2.Relationship(
@@ -1437,9 +1378,9 @@ class Misp:
             # Event threats
             threat_names = {}
             for threat in (
-                    event_elements["intrusion_sets"]
-                    + event_elements["malwares"]
-                    + event_elements["tools"]
+                event_elements["intrusion_sets"]
+                + event_elements["malwares"]
+                + event_elements["tools"]
             ):
                 threat_names[threat.name] = threat.id
                 if indicator is not None:
@@ -1477,9 +1418,9 @@ class Misp:
 
             # Attribute threats
             for threat in (
-                    attribute_elements["intrusion_sets"]
-                    + attribute_elements["malwares"]
-                    + attribute_elements["tools"]
+                attribute_elements["intrusion_sets"]
+                + attribute_elements["malwares"]
+                + attribute_elements["tools"]
             ):
                 if threat.name in threat_names:
                     threat_id = threat_names[threat.name]
@@ -1719,15 +1660,15 @@ class Misp:
         for galaxy in galaxies:
             # Get the linked intrusion sets
             if (
-                    (
-                            galaxy["namespace"] == "mitre-attack"
-                            and galaxy["name"] == "Intrusion Set"
-                    )
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Threat Actor")
-                    or (
+                (
+                    galaxy["namespace"] == "mitre-attack"
+                    and galaxy["name"] == "Intrusion Set"
+                )
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Threat Actor")
+                or (
                     galaxy["namespace"] == "misp"
                     and galaxy["name"] == "Microsoft Activity Group actor"
-            )
+                )
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     if " - G" in galaxy_entity["value"]:
@@ -1781,11 +1722,11 @@ class Misp:
                         added_names.append(name)
             # Get the linked malwares
             if (
-                    (galaxy["namespace"] == "mitre-attack" and galaxy["name"] == "Malware")
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Tool")
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Ransomware")
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Android")
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Malpedia")
+                (galaxy["namespace"] == "mitre-attack" and galaxy["name"] == "Malware")
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Tool")
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Ransomware")
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Android")
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Malpedia")
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     if " - S" in galaxy_entity["value"]:
@@ -1814,8 +1755,8 @@ class Misp:
                         added_names.append(name)
             # Get the linked attack_patterns
             if (
-                    galaxy["namespace"] == "mitre-attack"
-                    and galaxy["name"] == "Attack Pattern"
+                galaxy["namespace"] == "mitre-attack"
+                and galaxy["name"] == "Attack Pattern"
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     if " - T" in galaxy_entity["value"]:
@@ -1884,9 +1825,9 @@ class Misp:
 
             # Get the linked regions
             if (
-                    galaxy["namespace"] == "misp"
-                    and galaxy["type"] == "region"
-                    and galaxy["name"] == "Regions UN M49"
+                galaxy["namespace"] == "misp"
+                and galaxy["type"] == "region"
+                and galaxy["name"] == "Regions UN M49"
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     name = galaxy_entity["value"].split(" - ")[1]
@@ -1973,19 +1914,19 @@ class Misp:
                                 added_names.append(threat["name"])
             # Get the linked intrusion sets
             if (
-                    tag["name"].startswith("misp-galaxy:threat-actor")
-                    or tag["name"].startswith(
-                "misp-galaxy:mitre-mobile-attack-intrusion-set"
-            )
-                    or tag["name"].startswith("misp-galaxy:microsoft-activity-group")
-                    or tag["name"].startswith("misp-galaxy:mitre-threat-actor")
-                    or tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-threat-actor"
-            )
-                    or tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
-                    or tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-intrusion-set"
-            )
+                tag["name"].startswith("misp-galaxy:threat-actor")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-mobile-attack-intrusion-set"
+                )
+                or tag["name"].startswith("misp-galaxy:microsoft-activity-group")
+                or tag["name"].startswith("misp-galaxy:mitre-threat-actor")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-threat-actor"
+                )
+                or tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-intrusion-set"
+                )
             ):
                 tag_value_split = tag["name"].split('="')
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
@@ -2033,12 +1974,12 @@ class Misp:
                         added_names.append(name)
             # Get the linked malwares
             if (
-                    tag["name"].startswith("misp-galaxy:mitre-malware")
-                    or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-malware")
-                    or tag["name"].startswith("misp-galaxy:misp-ransomware")
-                    or tag["name"].startswith("misp-galaxy:misp-tool")
-                    or tag["name"].startswith("misp-galaxy:misp-android")
-                    or tag["name"].startswith("misp-galaxy:misp-malpedia")
+                tag["name"].startswith("misp-galaxy:mitre-malware")
+                or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-malware")
+                or tag["name"].startswith("misp-galaxy:misp-ransomware")
+                or tag["name"].startswith("misp-galaxy:misp-tool")
+                or tag["name"].startswith("misp-galaxy:misp-android")
+                or tag["name"].startswith("misp-galaxy:misp-malpedia")
             ):
                 tag_value_split = tag["name"].split('="')
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
@@ -2222,9 +2163,9 @@ class Misp:
             tag_name_lower = tag["name"].lower()
             if self.misp_markings_from_tags:
                 if (
-                        ":" in tag_name
-                        and "=" in tag_name
-                        and tag_name_lower.startswith("marking")
+                    ":" in tag_name
+                    and "=" in tag_name
+                    and tag_name_lower.startswith("marking")
                 ):
                     marking_definition_split = tag_name.split(":")
                     # Check if second part also contains ":"
@@ -2232,9 +2173,9 @@ class Misp:
                         # Example: marking:PAP=PAP:RED
                         # "PAP=PAP" + "RED"
                         marking_definition = (
-                                marking_definition_split[1]
-                                + ":"
-                                + marking_definition_split[2]
+                            marking_definition_split[1]
+                            + ":"
+                            + marking_definition_split[2]
                         )
                     else:
                         # Example: marking:CLASSIFICATION=DIFFUSION RESTREINTE
@@ -2295,50 +2236,50 @@ class Misp:
             self.helper.log_info(f"found tag: {tag}")
             # we take the tag as-is if it starts by a prefix stored in the keep_original_tags_as_label configuration
             if any(
-                    map(
-                        lambda s: tag["name"].startswith(s),
-                        self.keep_original_tags_as_label,
-                    )
+                map(
+                    lambda s: tag["name"].startswith(s),
+                    self.keep_original_tags_as_label,
+                )
             ):
                 self.helper.log_info(f"keeping raw tag: {tag}")
                 opencti_tags.append(tag["name"])
 
             elif (
-                    tag["name"] != "tlp:white"
-                    and tag["name"] != "tlp:green"
-                    and tag["name"] != "tlp:amber"
-                    and tag["name"] != "tlp:amber+strict"
-                    and tag["name"] != "tlp:red"
-                    and not tag["name"].startswith("misp-galaxy:threat-actor")
-                    and not tag["name"].startswith("misp-galaxy:mitre-threat-actor")
-                    and not tag["name"].startswith("misp-galaxy:microsoft-activity-group")
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-threat-actor"
-            )
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-mobile-attack-intrusion-set"
-            )
-                    and not tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-intrusion-set"
-            )
-                    and not tag["name"].startswith("misp-galaxy:mitre-malware")
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-malware"
-            )
-                    and not tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-attack-pattern"
-            )
-                    and not tag["name"].startswith("misp-galaxy:mitre-tool")
-                    and not tag["name"].startswith("misp-galaxy:tool")
-                    and not tag["name"].startswith("misp-galaxy:ransomware")
-                    and not tag["name"].startswith("misp-galaxy:malpedia")
-                    and not tag["name"].startswith("misp-galaxy:sector")
-                    and not tag["name"].startswith("misp-galaxy:country")
-                    and not tag["name"].startswith("misp-galaxy:region")
-                    and not tag["name"].startswith("marking")
-                    and not tag["name"].startswith("creator")
+                tag["name"] != "tlp:white"
+                and tag["name"] != "tlp:green"
+                and tag["name"] != "tlp:amber"
+                and tag["name"] != "tlp:amber+strict"
+                and tag["name"] != "tlp:red"
+                and not tag["name"].startswith("misp-galaxy:threat-actor")
+                and not tag["name"].startswith("misp-galaxy:mitre-threat-actor")
+                and not tag["name"].startswith("misp-galaxy:microsoft-activity-group")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-threat-actor"
+                )
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-mobile-attack-intrusion-set"
+                )
+                and not tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-intrusion-set"
+                )
+                and not tag["name"].startswith("misp-galaxy:mitre-malware")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-malware"
+                )
+                and not tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-attack-pattern"
+                )
+                and not tag["name"].startswith("misp-galaxy:mitre-tool")
+                and not tag["name"].startswith("misp-galaxy:tool")
+                and not tag["name"].startswith("misp-galaxy:ransomware")
+                and not tag["name"].startswith("misp-galaxy:malpedia")
+                and not tag["name"].startswith("misp-galaxy:sector")
+                and not tag["name"].startswith("misp-galaxy:country")
+                and not tag["name"].startswith("misp-galaxy:region")
+                and not tag["name"].startswith("marking")
+                and not tag["name"].startswith("creator")
             ):
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
