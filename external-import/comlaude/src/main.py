@@ -267,6 +267,7 @@ class ComlaudeConnector:
             self.helper.log_info(
                 "Connector stop: ({})".format(_format_time(datetime.datetime.utcnow()))
             )
+            self.helper.force_ping()
             sys.exit(0)
         # Sleep for interval specified in Hours.
         time.sleep(self._get_interval())

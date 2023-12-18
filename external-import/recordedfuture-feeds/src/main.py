@@ -186,6 +186,7 @@ class RecordedFutureConnector:
             self.helper.log_info(
                 "Connector stop: ({})".format(_format_time(datetime.datetime.utcnow()))
             )
+            self.helper.force_ping()
             sys.exit(0)
         # Sleep for interval specified in Hours.
         self.helper.log_info(

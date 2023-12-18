@@ -319,6 +319,7 @@ class VirustotalLivehuntNotifications:
             if self.helper.connect_run_and_terminate:
                 self.helper.metric.state("stopped")
                 self.helper.log_info("Connector stop")
+                self.helper.force_ping()
                 sys.exit(0)
 
             self._sleep(delay_sec=run_interval)
