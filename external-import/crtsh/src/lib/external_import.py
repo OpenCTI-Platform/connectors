@@ -179,6 +179,7 @@ class ExternalImportConnector:
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info(f"{self.helper.connect_name} connector ended")
+                self.helper.force_ping()
                 sys.exit(0)
 
             time.sleep(60)

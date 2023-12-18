@@ -79,6 +79,7 @@ class LastInfoSec:
                 time.sleep(time_to_sleep)
         else:
             self.process_data()
+            self.helper.force_ping()
 
     def process_data(self):
         time_to_sleep = 0
