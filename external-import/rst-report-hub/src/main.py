@@ -289,6 +289,7 @@ class ReportHub:
         get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
         if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
             self._fetch_and_process_data()
+            self.helper.force_ping()
         else:
             while True:
                 self._fetch_and_process_data()

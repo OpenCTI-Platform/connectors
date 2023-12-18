@@ -423,6 +423,7 @@ class KasperskyConnector:
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
                     self.helper.metric.state("stopped")
+                    self.helper.force_ping()
                     sys.exit(0)
 
                 self.helper.metric.state("idle")
