@@ -8,6 +8,7 @@ from pycti import OpenCTIConnectorHelper
 
 
 class ExportTTPsFileNavigator:
+    
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -21,59 +22,52 @@ class ExportTTPsFileNavigator:
 
     def _process_message(self, data):
 
-        supported_entity_types = ['Malware', 'Tool', 'Intrusion-Set', 'Threat-Actor-Group', 'Threat-Actor-Individual',
-                                  'Report']
-        if data['export_type'] != 'simple':
+        if "entity_type" not in data or "entity_id" not in data:
             raise ValueError(
-                'This connector currently only handles direct export (single entity and no list)'
+                f'This Connector currently only handles direct export (single entity and not list)'
             )
-        if data['entity_type'] not in supported_entity_types:
-            raise ValueError(
-                f'This connector only export in MITRE Navigator format techniques '
-                f'associated to the following entity types: {supported_entity_types})'
-            )
-
-        self.helper.log_info("je suis la")
-        self.helper.log_info(data)
-
-        # Get entity data
-        entity_id = data["entity_id"]
+        file_name = data["file_name"]
+        export_scope = data["export_scope"]  # query or selection or single
+        export_type = data["export_type"]  # Simple or Full
+        max_marking = data["max_marking"]
         entity_name = data["entity_name"]
-        entity_type = data['entity_type']
+        entity_type = data["entity_type"]
 
-        # file_name = data['file_name']
-        file_name = "export-techniques-layer-" + entity_type + "-" + entity_name + ".json"
-        self._process_entity_export(entity_id, entity_name, file_name)
-        return "Export done"
+        # handle single export
+        if export_scope == "single":
+            entity_id = data["entity_id"]
+            self.helper.log_info(
+                "Exporting: " + entity_id + "(" + export_type + ") to " + file_name
+            )
+            layer = self._process_entity_export(entity_id, entity_name, file_name)
+            json_bundle = json.dumps(layer, indent=4)
+            self.helper.log_info(
+                "Uploading: " + entity_id + "(" + export_type + ") to " + file_name
+            )
+            self.helper.api.stix_domain_object.push_entity_export(
+                entity_id, file_name, json_bundle
+            )
+            self.helper.log_info(
+                "Export done: "
+                + entity_type
+                + "/"
+                + export_type
+                + "("
+                + entity_id
+                + ") to "
+                + file_name
+            )
 
-    def _process_entity_export(self, entity_id, entity_name, file_name):
-        self.helper.log_info("je suis dans _process_entity_export")
-        self.helper.log_info(entity_id)
-
-        associated_ttps = []
+    def _process_entity_export(self, entity_id, entity_name):
+        related_ttps = []
         # Get the relations from the main entity to attack pattern
         stix_relations = self.helper.api_impersonate.stix_core_relationship.list(
             fromId=entity_id, toTypes=["Attack-Pattern"]
         )
-        self.helper.log_info(stix_relations)
         for relation in stix_relations:
             attack_pattern = self.helper.api_impersonate.attack_pattern.read(id=relation['to']['id'])
-            self.helper.log_info(attack_pattern['x_mitre_id'])
-            associated_ttps.append(attack_pattern)
-
-        # self.helper.log_info(associated_ttps)
-        # Upload the output pdf
-        # self.helper.log_info(f"Uploading: {file_name}")
-        # self.helper.api.stix_domain_object.push_entity_export(
-        #    report_id, file_name, pdf_contents, "application/pdf"
-        # )
-        layer = self.build_layer(entity_name, associated_ttps)
-        self.helper.api.stix_domain_object.push_entity_export(
-            entity_id=entity_id,
-            file_name=file_name,
-            data=json.dumps(layer).encode('utf-8'),
-            mime_type="application/json"
-        )
+            related_ttps.append(attack_pattern)
+        return self.build_layer(entity_name, related_ttps)
 
     @staticmethod
     def build_layer(entity_name, ttps):
@@ -90,20 +84,18 @@ class ExportTTPsFileNavigator:
             "techniques": []
         }
         for ttp in ttps:
-            for kill_chain in ttp['killChainPhases']:
-                technique = {
-                    "techniqueID": ttp['x_mitre_id'],
-                    "tactic": kill_chain['phase_name'].lower().replace(" ", "-"),
-                    "color": "#e60d0d",
-                    "comment": "",
-                    "enabled": True,
-                    "metadata":
-                        [],
-                    "links":
-                        [],
-                    "showSubtechniques": False
-                }
-                layer['techniques'].append(technique)
+            technique = {
+                "techniqueID": ttp['x_mitre_id'],
+                "color": "#e60d0d",
+                "comment": "",
+                "enabled": True,
+                "metadata":
+                    [],
+                "links":
+                    [],
+                "showSubtechniques": False
+            }
+            layer['techniques'].append(technique)
         return layer
 
     # Start the main loop
