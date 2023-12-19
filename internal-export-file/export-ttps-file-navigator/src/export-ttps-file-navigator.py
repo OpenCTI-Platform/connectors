@@ -8,7 +8,6 @@ from pycti import OpenCTIConnectorHelper
 
 
 class ExportTTPsFileNavigator:
-    
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -21,10 +20,9 @@ class ExportTTPsFileNavigator:
         self.helper = OpenCTIConnectorHelper(config)
 
     def _process_message(self, data):
-
         if "entity_type" not in data or "entity_id" not in data:
             raise ValueError(
-                f'This Connector currently only handles direct export (single entity and not list)'
+                f"This Connector currently only handles direct export (single entity and not list)"
             )
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
@@ -65,7 +63,9 @@ class ExportTTPsFileNavigator:
             fromId=entity_id, toTypes=["Attack-Pattern"]
         )
         for relation in stix_relations:
-            attack_pattern = self.helper.api_impersonate.attack_pattern.read(id=relation['to']['id'])
+            attack_pattern = self.helper.api_impersonate.attack_pattern.read(
+                id=relation["to"]["id"]
+            )
             related_ttps.append(attack_pattern)
         return self.build_layer(entity_name, related_ttps)
 
@@ -73,29 +73,23 @@ class ExportTTPsFileNavigator:
     def build_layer(entity_name, ttps):
         layer = {
             "name": entity_name,
-            "versions": {
-                "attack": "14",
-                "navigator": "4.9.1",
-                "layer": "4.5"
-            },
+            "versions": {"attack": "14", "navigator": "4.9.1", "layer": "4.5"},
             "domain": "enterprise-attack",
             "description": "",
             "sorting": 0,
-            "techniques": []
+            "techniques": [],
         }
         for ttp in ttps:
             technique = {
-                "techniqueID": ttp['x_mitre_id'],
+                "techniqueID": ttp["x_mitre_id"],
                 "color": "#e60d0d",
                 "comment": "",
                 "enabled": True,
-                "metadata":
-                    [],
-                "links":
-                    [],
-                "showSubtechniques": False
+                "metadata": [],
+                "links": [],
+                "showSubtechniques": False,
             }
-            layer['techniques'].append(technique)
+            layer["techniques"].append(technique)
         return layer
 
     # Start the main loop
