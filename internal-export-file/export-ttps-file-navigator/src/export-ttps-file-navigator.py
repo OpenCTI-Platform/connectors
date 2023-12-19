@@ -22,7 +22,7 @@ class ExportTTPsFileNavigator:
     def _process_message(self, data):
         if "entity_type" not in data or "entity_id" not in data:
             raise ValueError(
-                f"This Connector currently only handles direct export (single entity and not list)"
+                "This Connector currently only handles direct export (single entity and not list)"
             )
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
