@@ -36,7 +36,7 @@ class ExportTTPsFileNavigator:
             self.helper.log_info(
                 "Exporting: " + entity_id + "(" + export_type + ") to " + file_name
             )
-            layer = self._process_entity_export(entity_id, entity_name, file_name)
+            layer = self._process_entity_export(entity_id, entity_name)
             json_bundle = json.dumps(layer, indent=4)
             self.helper.log_info(
                 "Uploading: " + entity_id + "(" + export_type + ") to " + file_name
