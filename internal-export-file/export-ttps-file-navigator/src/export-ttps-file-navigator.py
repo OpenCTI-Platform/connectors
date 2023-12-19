@@ -27,7 +27,6 @@ class ExportTTPsFileNavigator:
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
-        max_marking = data["max_marking"]
         entity_name = data["entity_name"]
         entity_type = data["entity_type"]
 
