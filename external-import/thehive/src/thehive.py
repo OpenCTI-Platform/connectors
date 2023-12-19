@@ -575,6 +575,7 @@ class TheHive:
             # Check run_and_terminate flag, exit if true.
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
+                self.helper.force_ping()
                 sys.exit(0)
 
             # pause connector until next scheduled interval.

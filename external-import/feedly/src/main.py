@@ -29,5 +29,6 @@ if __name__ == "__main__":
     _runner = FeedlyRunner(_helper)
     if _helper.connect_run_and_terminate:
         _runner.run_once()
+        _helper.force_ping()
     else:
         _runner.run()

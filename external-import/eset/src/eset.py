@@ -261,6 +261,7 @@ class Eset:
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
+                    self.helper.force_ping()
                     sys.exit(0)
 
                 time.sleep(self.get_interval())

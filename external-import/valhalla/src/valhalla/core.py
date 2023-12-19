@@ -144,6 +144,7 @@ class Valhalla:
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
                 self.helper.metric.state("stopped")
+                self.helper.force_ping()
                 sys.exit(0)
 
             # After a successful run pause at least 60sec

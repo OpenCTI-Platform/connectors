@@ -17,7 +17,7 @@ from pycti import Malware, OpenCTIConnectorHelper, get_config_variable
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "5.12.7"
+__version__ = "5.12.9"
 BANNER = f"""
 
  ██████   ██████ █████   ███   █████ ██████████   ███████████
@@ -604,6 +604,7 @@ class MWDB:
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
+                self.helper.force_ping()
                 sys.exit(0)
             time.sleep(60)
 
