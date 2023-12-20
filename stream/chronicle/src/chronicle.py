@@ -29,14 +29,9 @@ class ChronicleReference:
             credential_file: str,
             url="https://backstory.googleapis.com",
     ) -> None:
-        self.url = url
-        self.region = region,
         self.credential_file = credential_file
         self.list_name = list_name
-
-    @property
-    def chronicle_url(self) -> str:
-        return str(regions.url(self.url, self.region))
+        self.chronicle_url = regions.url(self.url, region)
 
     @property
     def session(self) -> requests.AuthorizedSession:
