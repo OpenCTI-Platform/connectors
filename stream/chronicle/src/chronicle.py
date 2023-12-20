@@ -189,15 +189,15 @@ class ChronicleConnector:
 
             match msg.event:
                 case "create":
-                    self.chronicle_reference.create_in_list(payload)
+                    self.chronicle_reference.create_in_list(payload.get("name")))
                     self.helper.log_debug(f"reference_set item with id {id} created")
 
                 case "update":
-                    self.chronicle_reference.update_in_list(payload)
+                    self.chronicle_reference.update_in_list(payload.get("name"))
                     self.helper.log_debug(f"reference_set item with id {id} updated")
 
                 case "delete":
-                    self.chronicle_reference.delete_in_list(payload)
+                    self.chronicle_reference.delete_in_list(paypayload.get("name"))
                     self.helper.log_debug(f"reference_set item with id {id} deleted")
 
             if self.metrics is not None:
