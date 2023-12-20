@@ -1,6 +1,6 @@
-################################
+###################################
 # Chronicle Connector for OpenCTI #
-################################
+###################################
 
 import json
 import logging
@@ -82,7 +82,7 @@ class ChronicleReference:
     def delete_in_list(self, payload):
         lines = self.get_list()
         if payload in lines:
-            lines.pop(str(payload))
+            lines.remove(str(payload))
             self.update_list(lines)
 
     def update_list(self, payload):
@@ -197,7 +197,7 @@ class ChronicleConnector:
                     self.helper.log_debug(f"reference_set item with id {id} updated")
 
                 case "delete":
-                    self.chronicle_reference.delete_in_list(paypayload.get("name"))
+                    self.chronicle_reference.delete_in_list(payload.get("name"))
                     self.helper.log_debug(f"reference_set item with id {id} deleted")
 
             if self.metrics is not None:
