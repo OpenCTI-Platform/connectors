@@ -32,7 +32,6 @@ class Crowdstrike:
         )
 
     def _handle_error(self, res: dict):
-        print(res)
         if status_code := res.get("status_code", 0) >= 400:  # type: ignore
             errors = ", ".join([f'{e.get("code", "")} - {e.get("message", "")}' for e in res.get("body", {}).get("errors", [])])  # type: ignore
             raise CrowdstrikeError(
