@@ -140,7 +140,6 @@ class Indicator(RFStixEntity):
         handled_related_entities_types = [
             "Malware",
             "Hash",
-            "IpAddress",
             "URL",
             "Threat Actor",
         ]
