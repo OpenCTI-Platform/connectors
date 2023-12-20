@@ -10,7 +10,7 @@ connector:
   live_stream_no_dependencies: false # Necessary to detect observables in the stream
   name: 'HarfangLab'
   scope: 'harfanglab' # Reserved
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 harfanglab:
