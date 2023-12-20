@@ -11,9 +11,17 @@ import pytz
 import requests
 import stix2
 from dateutil.parser import parse
-from pycti import (AttackPattern, CaseIncident, CustomObjectCaseIncident,
-                   CustomObservableHostname, Incident, Indicator, Note,
-                   StixCoreRelationship, StixSightingRelationship)
+from pycti import (
+    AttackPattern,
+    CaseIncident,
+    CustomObjectCaseIncident,
+    CustomObservableHostname,
+    Incident,
+    Indicator,
+    Note,
+    StixCoreRelationship,
+    StixSightingRelationship,
+)
 
 
 class Sightings(threading.Thread):
