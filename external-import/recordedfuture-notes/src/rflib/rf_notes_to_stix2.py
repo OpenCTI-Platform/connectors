@@ -92,7 +92,7 @@ class Indicator(RFStixEntity):
         self.stix_observable = (
             self._create_obs()
         )  # pylint: disable=assignment-from-no-return
-        self.stix_relationship = self._create_rel()
+        self.stix_relationship = self._create_rel("based-on", self.stix_observable.id)
 
     def _create_indicator(self):
         """Creates and returns STIX2 indicator object"""
@@ -117,15 +117,15 @@ class Indicator(RFStixEntity):
         """Creates and returns STIX2 Observable"""
         pass
 
-    def _create_rel(self):
+    def _create_rel(self, relationship_type, target_id):
         """Creates Relationship object linking indicator and observable"""
         return stix2.Relationship(
             id=pycti.StixCoreRelationship.generate_id(
-                "based-on", self.stix_indicator.id, self.stix_observable.id
+                relationship_type, self.stix_indicator.id, target_id
             ),
-            relationship_type="based-on",
+            relationship_type=relationship_type,
             source_ref=self.stix_indicator.id,
-            target_ref=self.stix_observable.id,
+            target_ref=target_id,
             created_by_ref=self.author.id,
         )
 
@@ -142,23 +142,31 @@ class Indicator(RFStixEntity):
             "Hash",
             "URL",
             "Threat Actor",
+            "MitreAttackIdentifier",
         ]
         self.risk_score = int(rf_indicator["Risk"])
         related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
         if (
             related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
         ):  # Sometimes, hits is not empty but sections is
-            rf_related_entities = related_entities_hits[0]["sections"][0]["lists"]
-            for element in rf_related_entities:
-                if element["type"]["name"] in handled_related_entities_types:
-                    for rf_related_element in element["entities"]:
-                        type_ = rf_related_element["type"]
-                        name_ = rf_related_element["name"]
-                        related_element = ENTITY_TYPE_MAPPER[type_](
-                            name_, type_, self.author
-                        )
-                        stix_objs = related_element.to_stix_objects()
-                        self.related_entities.extend(stix_objs)
+            rf_related_entities = []
+            rf_related_entities_sections = related_entities_hits[0]["sections"]
+
+            for section in rf_related_entities_sections:
+                # Handle indicators and TTP & Tools
+                if "Indicators" or "TTP" in section["section_id"]["name"]:
+                    rf_related_entities += section["lists"]
+
+                for element in rf_related_entities:
+                    if element["type"]["name"] in handled_related_entities_types:
+                        for rf_related_element in element["entities"]:
+                            type_ = rf_related_element["type"]
+                            name_ = rf_related_element["name"]
+                            related_element = ENTITY_TYPE_MAPPER[type_](
+                                name_, type_, self.author
+                            )
+                            stix_objs = related_element.to_stix_objects()
+                            self.related_entities.extend(stix_objs)
 
     def build_bundle(self, stix_name):
         """
@@ -172,17 +180,9 @@ class Indicator(RFStixEntity):
         # Then add 'related-to' relationship with all related entities
         for entity in self.related_entities:
             if entity["type"] in ["indicator", "malware", "threat-actor"]:
-                relationships.append(
-                    stix2.Relationship(
-                        id=pycti.StixCoreRelationship.generate_id(
-                            "related-to", self.stix_indicator.id, entity.id
-                        ),
-                        relationship_type="related-to",
-                        source_ref=self.stix_indicator.id,
-                        target_ref=entity.id,
-                        created_by_ref=self.author.id,
-                    )
-                )
+                relationships.append(self._create_rel("related-to", entity.id))
+            if entity["type"] in ["attack-pattern"]:
+                relationships.append(self._create_rel("indicates", entity.id))
         self.objects.extend(relationships)
 
 
