@@ -7,20 +7,13 @@ import threading
 import time
 from datetime import datetime, timezone
 
+import pytz
 import requests
 import stix2
 from dateutil.parser import parse
-from pycti import (
-    AttackPattern,
-    CaseIncident,
-    CustomObjectCaseIncident,
-    CustomObservableHostname,
-    Incident,
-    Indicator,
-    Note,
-    StixCoreRelationship,
-    StixSightingRelationship,
-)
+from pycti import (AttackPattern, CaseIncident, CustomObjectCaseIncident,
+                   CustomObservableHostname, Incident, Indicator, Note,
+                   StixCoreRelationship, StixSightingRelationship)
 
 
 class Sightings(threading.Thread):
@@ -68,35 +61,98 @@ class Sightings(threading.Thread):
 
     def run(self):
         while True:
-            if (
-                self.import_threats_as_case_incidents is False
-                and self.import_security_events_as_incidents is True
-            ):
-                self.helper.log_info("[INCIDENTS] Starting alerts gatherer")
-                self.create_incident()
-                self.helper.log_info(
-                    "[INCIDENTS] Incidents creations completed successfully"
-                )
+            try:
+                # Get the current state and check if connector already runs
+                now = datetime.now().astimezone(pytz.UTC)
+                date_now_convert = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+                current_state = self.helper.get_state()
 
-            elif self.import_threats_as_case_incidents is True:
-                self.helper.log_info(
-                    "[INCIDENTS/CASE-INCIDENTS] Starting alerts gatherer"
-                )
-                self.create_incident()
-                self.helper.log_info(
-                    "[INCIDENTS] Incidents creations completed successfully"
-                )
-                self.create_case_incident()
-                self.helper.log_info(
-                    "[CASE-INCIDENTS] Case-Incidents creations completed successfully"
-                )
+                if (
+                    "recover_until" in current_state
+                    and current_state["recover_until"] < date_now_convert
+                ):
+                    last_run = current_state["recover_until"]
 
-            time.sleep(60)
+                    msg = (
+                        "[CONNECTOR] Connector last run: "
+                        + current_state["recover_until"]
+                    )
+                    self.helper.log_info(msg)
+                else:
+                    last_run = None
+                    msg = "[CONNECTOR] Connector has never run..."
+                    self.helper.log_info(msg)
 
-    def create_incident(self):
+                if (
+                    self.import_threats_as_case_incidents is False
+                    and self.import_security_events_as_incidents is True
+                ):
+                    self.helper.log_info("[INCIDENTS] Starting alerts gatherer")
+                    self.create_incident(last_run)
+                    self.helper.log_info(
+                        "[INCIDENTS] Incidents creations completed successfully"
+                    )
+
+                elif self.import_threats_as_case_incidents is True:
+                    self.helper.log_info(
+                        "[INCIDENTS/CASE-INCIDENTS] Starting alerts gatherer"
+                    )
+                    self.create_incident(last_run)
+                    self.helper.log_info(
+                        "[INCIDENTS] Incidents creations completed successfully"
+                    )
+                    self.create_case_incident(last_run)
+                    self.helper.log_info(
+                        "[CASE-INCIDENTS] Case-Incidents creations completed successfully"
+                    )
+
+                time.sleep(60)
+
+            except Exception as e:
+                error_msg = f"[CONNECTOR] Error while processing data: {str(e)}"
+                self.helper.log_error(error_msg)
+
+    def filtered_by_date(self, filtered_data, key_date, last_run):
+        last_date_data = filtered_data[0].get(key_date, "")
+
+        if last_date_data:
+            if last_run is None:
+                now = datetime.now().astimezone(pytz.UTC)
+                date_convert = datetime.strftime(now, "%Y-%m-%dT%H:%M:%SZ")
+                self.helper.set_state({"recover_until": date_convert})
+                return filtered_data
+            else:
+                if key_date == "@event_create_date":
+                    # Format date Alert
+                    last_date_data_convert = datetime.strptime(
+                        last_date_data, "%Y-%m-%dT%H:%M:%S.%fZ"
+                    )
+                else:
+                    # Format date Threat
+                    last_date_data_convert = datetime.strptime(
+                        last_date_data, "%Y-%m-%dT%H:%M:%SZ"
+                    )
+
+                last_run_convert = datetime.strptime(last_run, "%Y-%m-%dT%H:%M:%SZ")
+
+                if last_date_data_convert >= last_run_convert:
+                    now = datetime.now().astimezone(pytz.UTC)
+                    date_convert = datetime.strftime(now, "%Y-%m-%dT%H:%M:%SZ")
+                    self.helper.set_state({"recover_until": date_convert})
+                    return [
+                        data for data in filtered_data if data[key_date] >= last_run
+                    ]
+
+    def create_incident(self, last_run=None):
         alert_filtered = self.get_alerts_filtered()
         alerts_filtered_total_count = int(alert_filtered["count"])
         alerts_filtered = self.get_alerts_filtered(alerts_filtered_total_count)
+        alerts_filtered_by_date = self.filtered_by_date(
+            alerts_filtered["results"], "@event_create_date", last_run
+        )
+
+        if alerts_filtered_by_date is None:
+            return self.helper.log_info("[INCIDENTS] No new alerts have been detection")
 
         convert_marking_for_stix2 = self.handle_marking()
 
@@ -113,7 +169,7 @@ class Sightings(threading.Thread):
         all_attacks_pattern = []
         all_relationships = []
 
-        for alert in alerts_filtered["results"]:
+        for alert in alerts_filtered_by_date:
             new_alert_built = self.build_alert_object(alert)
 
             if new_alert_built["alert_type"] == "ioc":
@@ -441,6 +497,7 @@ class Sightings(threading.Thread):
                     )
                     continue
                 else:
+                    self.helper.log_info("[CREATE] Creating Sigma indicator")
                     bundle = self.process_create_bundle(
                         indicators_sigma_info,
                         new_alert_built,
@@ -495,6 +552,7 @@ class Sightings(threading.Thread):
                     )
                     continue
                 else:
+                    self.helper.log_info("[CREATE] Creating Yara indicator")
                     bundle = self.process_create_bundle(
                         indicators_yara_info,
                         new_alert_built,
@@ -775,9 +833,17 @@ class Sightings(threading.Thread):
         }
         return
 
-    def create_case_incident(self):
+    def create_case_incident(self, last_run):
         list_info = self.list_info
         threats = self._query("/alert/alert/Threat")
+        threats_filtered_by_date = self.filtered_by_date(
+            threats["results"], "last_seen", last_run
+        )
+
+        if threats_filtered_by_date is None:
+            return self.helper.log_info(
+                "[CASE-INCIDENTS] No new threats or updates detected"
+            )
 
         convert_marking_for_stix2 = self.handle_marking()
 
@@ -813,7 +879,7 @@ class Sightings(threading.Thread):
             else:
                 bundle_observables.append(bundle)
 
-        for threat in threats["results"]:
+        for threat in threats_filtered_by_date:
             case_incident_date = parse(threat["first_seen"]).strftime(
                 "%Y-%m-%dT%H:%M:%SZ"
             )
@@ -1146,13 +1212,27 @@ class Sightings(threading.Thread):
         ]:
             hashes = {}
             if build_observable_hashes:
+                if (
+                    "SHA-256" in build_observable_hashes
+                    and build_observable_hashes["SHA-256"] is not None
+                ):
+                    hashes["SHA-256"] = build_observable_hashes["SHA-256"]
+
+                if (
+                    "SHA-1" in build_observable_hashes
+                    and build_observable_hashes["SHA-1"] is not None
+                ):
+                    hashes["SHA-1"] = build_observable_hashes["SHA-1"]
+
+                if (
+                    "MD5" in build_observable_hashes
+                    and build_observable_hashes["MD5"] is not None
+                ):
+                    hashes["MD5"] = build_observable_hashes["MD5"]
+
                 return stix2.File(
                     name=build_observable_hashes["name"],
-                    hashes={
-                        "SHA-256": build_observable_hashes["SHA-256"],
-                        "SHA-1": build_observable_hashes["SHA-1"],
-                        "MD5": build_observable_hashes["MD5"],
-                    },
+                    hashes=hashes,
                     object_marking_refs=[marking],
                     custom_properties={
                         "created_by_ref": self.identity["standard_id"],
@@ -1461,6 +1541,7 @@ class Sightings(threading.Thread):
                 + " on "
                 + new_alert_built["agent"]["hostname"]
             )
+            indicator_name = indicator_matching["name"]
 
             alert_create_date = new_alert_built["created_at"]
             if "updated_at" in new_alert_built:
@@ -1497,11 +1578,11 @@ class Sightings(threading.Thread):
 
             # Generate new indicator
             stix_indicator = stix2.Indicator(
-                id=Indicator.generate_id(indicator_matching["name"]),
+                id=Indicator.generate_id(indicator_name),
                 created_by_ref=self.identity["standard_id"],
                 created=indicator_matching["creation_date"],
                 modified=indicator_matching["last_update"],
-                name=indicator_matching["name"],
+                name=indicator_name,
                 description=indicator_matching["description"]
                 if "description" in indicator_matching
                 else "",
