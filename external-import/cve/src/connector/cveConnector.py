@@ -224,8 +224,6 @@ class CVEConnector:
             Main process if connector successfully works
             ======================================================
             """
-            # Initiate work_id to track the job
-            work_id = self._initiate_work(current_time)
 
             """
             ================================================================
@@ -234,6 +232,8 @@ class CVEConnector:
             ================================================================
             """
             if last_run is None:
+                # Initiate work_id to track the job
+                work_id = self._initiate_work(current_time)
                 """
                 =================================================================
                 If the connector never runs and user wants to pull CVE history
@@ -259,6 +259,8 @@ class CVEConnector:
                 and self.config.maintain_data
                 and (current_time - last_run) >= int(self.config.interval)
             ):
+                # Initiate work_id to track the job
+                work_id = self._initiate_work(current_time)
                 self._maintain_data(now, last_run, work_id)
                 self.update_connector_state(current_time, work_id)
 
