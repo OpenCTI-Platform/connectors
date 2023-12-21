@@ -11,26 +11,25 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
 
-
 import yaml
-from prometheus_client import Counter, Gauge, start_http_server
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from common import chronicle_auth, regions
+from google.auth.transport import requests
 from google.oauth2 import service_account
 from googleapiclient import _auth
-from common import chronicle_auth
-from common import regions
-from google.auth.transport import requests
+from prometheus_client import Counter, Gauge, start_http_server
+from pycti import OpenCTIConnectorHelper, get_config_variable
+
 
 class ChronicleReference:
     def __init__(
-            self,
-            region: str,
-            list_name: str,
-            credential_file: str,
-            url="https://backstory.googleapis.com",
+        self,
+        region: str,
+        list_name: str,
+        credential_file: str,
+        url="https://backstory.googleapis.com",
     ) -> None:
         self.url = url
-        self.region = region,
+        self.region = (region,)
         self.credential_file = credential_file
         self.list_name = list_name
 
@@ -127,13 +126,13 @@ class Metrics:
 
 class ChronicleConnector:
     def __init__(
-            self,
-            helper: OpenCTIConnectorHelper,
-            chronicle_reference: ChronicleReference,
-            queue: Queue,
-            ignore_types: list[str],
-            consumer_count: int,
-            metrics: Metrics | None = None,
+        self,
+        helper: OpenCTIConnectorHelper,
+        chronicle_reference: ChronicleReference,
+        queue: Queue,
+        ignore_types: list[str],
+        consumer_count: int,
+        metrics: Metrics | None = None,
     ) -> None:
         self.chronicle_reference = chronicle_reference
         self.queue = queue
@@ -225,15 +224,14 @@ def load_config_file() -> dict:
 
 def check_helper(helper: OpenCTIConnectorHelper) -> None:
     if (
-            helper.connect_live_stream_id is None
-            or helper.connect_live_stream_id == "ChangeMe"
+        helper.connect_live_stream_id is None
+        or helper.connect_live_stream_id == "ChangeMe"
     ):
         helper.log_error("missing Live Stream ID")
         exit(1)
 
 
 if __name__ == "__main__":
-
     # load and check config
     config = load_config_file()
     # create opencti helper
@@ -243,12 +241,15 @@ if __name__ == "__main__":
 
     # read config
     ignore_types = get_config_variable(
-        "CHRONICLE_IGNORE_TYPES", ["chronicle", "ignore_types"], config).split(",")
+        "CHRONICLE_IGNORE_TYPES", ["chronicle", "ignore_types"], config
+    ).split(",")
     region = get_config_variable("CHRONICLE_REGION", ["chronicle", "region"], config)
     list_name = get_config_variable(
         "CHRONICLE_LIST_NAME", ["chronicle", "list_name"], config
     )
-    credential_file = get_config_variable("CHRONICLE_CREDENTIAL_FILE", ["chronicle", "credential_file"], config)
+    credential_file = get_config_variable(
+        "CHRONICLE_CREDENTIAL_FILE", ["chronicle", "credential_file"], config
+    )
 
     # additional connector conf
     consumer_count: int = get_config_variable(

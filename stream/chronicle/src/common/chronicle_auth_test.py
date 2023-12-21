@@ -16,25 +16,24 @@
 
 import os
 import tempfile
-
 import unittest
 from unittest import mock
+
 from google.oauth2 import service_account
 
 from . import chronicle_auth
 
 
 class ChronicleAuthTest(unittest.TestCase):
-
-  def setUp(self):
-    super().setUp()
-    fd, self.path = tempfile.mkstemp(suffix=".json", text=True)
-    fake_json_credentials = b"""{
+    def setUp(self):
+        super().setUp()
+        fd, self.path = tempfile.mkstemp(suffix=".json", text=True)
+        fake_json_credentials = b"""{
         "client_email": "fake-username@fake-project.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token",
         "private_key": "
     """
-    fake_private_key = b"""-----BEGIN PRIVATE KEY-----
+        fake_private_key = b"""-----BEGIN PRIVATE KEY-----
         MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDemycWcEiVMMKm
         /S3f8oRkgxVvbi14D0TWFBUPZq9w1nc7L4Udz7NZ8BKC49DuKi1EgwxF8z0Bve5i
         k6UMfb4JeXLkSSQN4Zy5IbZUr9Mm3w0sjIzTeA1JmIqY+r3EbUxeqFjpqc02HW4h
@@ -63,37 +62,40 @@ class ChronicleAuthTest(unittest.TestCase):
         1njcNc79W7qohKZshYNUq/0=
         -----END PRIVATE KEY-----
     """
-    fake_private_key = fake_private_key.replace(b" " * 4, b"")
-    fake_private_key = fake_private_key.replace(b"\n", b"\\n")
-    os.write(fd, fake_json_credentials.strip() + fake_private_key + b'"\n}\n')
-    os.close(fd)
+        fake_private_key = fake_private_key.replace(b" " * 4, b"")
+        fake_private_key = fake_private_key.replace(b"\n", b"\\n")
+        os.write(fd, fake_json_credentials.strip() + fake_private_key + b'"\n}\n')
+        os.close(fd)
 
-  @mock.patch.object(service_account.Credentials, "from_service_account_file")
-  def test_initialize_http_session(self, mock_from_service_account_file):
-    chronicle_auth.initialize_http_session("")
-    mock_from_service_account_file.assert_called_once_with(
-        str(chronicle_auth.DEFAULT_CREDENTIALS_FILE),
-        scopes=chronicle_auth.AUTHORIZATION_SCOPES)
+    @mock.patch.object(service_account.Credentials, "from_service_account_file")
+    def test_initialize_http_session(self, mock_from_service_account_file):
+        chronicle_auth.initialize_http_session("")
+        mock_from_service_account_file.assert_called_once_with(
+            str(chronicle_auth.DEFAULT_CREDENTIALS_FILE),
+            scopes=chronicle_auth.AUTHORIZATION_SCOPES,
+        )
 
-  @mock.patch.object(service_account.Credentials, "from_service_account_file")
-  def test_initialize_http_session_with_custom_json_credentials(
-      self, mock_from_service_account_file):
-    chronicle_auth.initialize_http_session(self.path)
-    mock_from_service_account_file.assert_called_once_with(
-        self.path, scopes=chronicle_auth.AUTHORIZATION_SCOPES)
+    @mock.patch.object(service_account.Credentials, "from_service_account_file")
+    def test_initialize_http_session_with_custom_json_credentials(
+        self, mock_from_service_account_file
+    ):
+        chronicle_auth.initialize_http_session(self.path)
+        mock_from_service_account_file.assert_called_once_with(
+            self.path, scopes=chronicle_auth.AUTHORIZATION_SCOPES
+        )
 
-  @mock.patch.object(service_account.Credentials, "from_service_account_file")
-  def test_initialize_http_session_with_custom_creds_and_scopes(
-      self, mock_from_service_account_file):
-    scopes = ["https://www.googleapis.com/auth/malachite-ingestion"]
-    chronicle_auth.initialize_http_session(self.path, scopes=scopes)
-    mock_from_service_account_file.assert_called_once_with(
-        self.path, scopes=scopes)
+    @mock.patch.object(service_account.Credentials, "from_service_account_file")
+    def test_initialize_http_session_with_custom_creds_and_scopes(
+        self, mock_from_service_account_file
+    ):
+        scopes = ["https://www.googleapis.com/auth/malachite-ingestion"]
+        chronicle_auth.initialize_http_session(self.path, scopes=scopes)
+        mock_from_service_account_file.assert_called_once_with(self.path, scopes=scopes)
 
-  def tearDown(self):
-    os.remove(self.path)
-    super().tearDown()
+    def tearDown(self):
+        os.remove(self.path)
+        super().tearDown()
 
 
 if __name__ == "__main__":
-  unittest.main()
+    unittest.main()
