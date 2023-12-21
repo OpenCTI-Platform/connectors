@@ -20,19 +20,18 @@ from . import regions
 
 
 class RegionsTest(unittest.TestCase):
+    def test_url_asia_southeast1(self):
+        self.assertEqual(
+            regions.url("https://test", "asia-southeast1"),
+            "https://asia-southeast1-test",
+        )
 
-  def test_url_asia_southeast1(self):
-    self.assertEqual(
-        regions.url("https://test", "asia-southeast1"),
-        "https://asia-southeast1-test")
+    def test_url_europe(self):
+        self.assertEqual(regions.url("https://test", "europe"), "https://europe-test")
 
-  def test_url_europe(self):
-    self.assertEqual(
-        regions.url("https://test", "europe"), "https://europe-test")
-
-  def test_url_us(self):
-    self.assertEqual(regions.url("https://test", "us"), "https://test")
+    def test_url_us(self):
+        self.assertEqual(regions.url("https://test", "us"), "https://test")
 
 
 if __name__ == "__main__":
-  unittest.main()
+    unittest.main()
