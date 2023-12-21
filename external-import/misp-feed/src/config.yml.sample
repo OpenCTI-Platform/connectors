@@ -29,5 +29,6 @@ misp_feed:
   import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value
   import_with_attachments: false # Optional, try to import a PDF file from the attachment attribute
   interval: 5 # Required, in minutes
+  source_type: 'url' # Optional, url or s3
   bucket_name: '' # Required, if source_type = s3
   bucket_prefix: '' # Optional, filter objects on bucket

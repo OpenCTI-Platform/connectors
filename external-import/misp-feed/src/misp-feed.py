@@ -80,8 +80,8 @@ class MispFeed:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
 
-        self.source_type = get_config_variable("MISP_SOURCE_TYPE",
-                                               ["misp", "source_type"],
+        self.source_type = get_config_variable("MISP_FEED_SOURCE_TYPE",
+                                               ["misp_feed", "source_type"],
                                                config,
                                                False,
                                                default="url")
