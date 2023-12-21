@@ -3,10 +3,7 @@
 ###################################
 
 import json
-import logging
 import os
-import re
-import urllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
@@ -14,8 +11,6 @@ from queue import Queue
 import yaml
 from common import chronicle_auth, regions
 from google.auth.transport import requests
-from google.oauth2 import service_account
-from googleapiclient import _auth
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
