@@ -1582,7 +1582,7 @@ class MispFeed:
             if len(event) == 1:
                 event = event[0]
             else:
-                raise ValueError(f"The list of is too long.")
+                raise ValueError("The list of is too long.")
 
         ### Default variables
         added_markings = []
