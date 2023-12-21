@@ -117,26 +117,29 @@ class RFEnrichmentConnector:
             "enriching observable {} with ID {}".format(observable_value, observable_id)
         )
         rf_client = RFClient(self.token, self.helper, APP_VERSION)
-        data = rf_client.full_enrichment(observable_value, rf_type)
+        reason, data = rf_client.full_enrichment(observable_value, rf_type)
 
-        create_indicator = data["risk"]["score"] >= self.create_indicator_threshold
-        indicator = EnrichedIndicator(
-            type_=data["entity"]["type"],
-            observable_id=observable_id,
-            opencti_helper=self.helper,
-            create_indicator=create_indicator,
-        )
-        indicator.from_json(
-            name=data["entity"]["name"],
-            risk=data["risk"]["score"],
-            evidenceDetails=data["risk"]["evidenceDetails"],
-            links=data["links"],
-        )
-        self.helper.log_info("Sending bundle...")
-        bundles_sent = self.helper.send_stix2_bundle(
-            indicator.to_json_bundle(), update=self.update_existing_data
-        )
-        return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+        if data:
+            create_indicator = data["risk"]["score"] >= self.create_indicator_threshold
+            indicator = EnrichedIndicator(
+                type_=data["entity"]["type"],
+                observable_id=observable_id,
+                opencti_helper=self.helper,
+                create_indicator=create_indicator,
+            )
+            indicator.from_json(
+                name=data["entity"]["name"],
+                risk=data["risk"]["score"],
+                evidenceDetails=data["risk"]["evidenceDetails"],
+                links=data["links"],
+            )
+            self.helper.log_info("Sending bundle...")
+            bundles_sent = self.helper.send_stix2_bundle(
+                indicator.to_json_bundle(), update=self.update_existing_data
+            )
+            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+        else:
+            return f"No Stix bundle(s) imported, request message returned ({reason})."
 
     def start(self):
         """Start the main loop"""
