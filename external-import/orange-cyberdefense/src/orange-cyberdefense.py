@@ -3,9 +3,9 @@ import datetime
 import json
 import logging
 import os
+import re
 import sys
 import time
-import re
 import zipfile
 from html.parser import HTMLParser
 from io import StringIO
@@ -1072,7 +1072,6 @@ class OrangeCyberDefense:
 
         # Create a bundle of the processed objects
         if len(objects):
-
             self._log_and_initiate_work("Datalake")
             # Send the created bundle
             self.helper.send_stix2_bundle(
@@ -1097,27 +1096,29 @@ class OrangeCyberDefense:
         dtl = Datalake(
             username=self.ocd_datalake_login, password=self.ocd_datalake_password
         )
-        tag_subcategory_list = dtl.FilteredTagSubcategory.get_filtered_and_sorted_list(category_name="Vulnerability", limit=50, ordering="-updated_at")
+        tag_subcategory_list = dtl.FilteredTagSubcategory.get_filtered_and_sorted_list(
+            category_name="Vulnerability", limit=50, ordering="-updated_at"
+        )
         objects = []
         pattern = r"CVSS Score: (\d+\.\d+)"
         if tag_subcategory_list is not None:
-            for vuln in tag_subcategory_list['results']:
-                match = re.search(pattern, vuln['description'])
+            for vuln in tag_subcategory_list["results"]:
+                match = re.search(pattern, vuln["description"])
                 cvss_score = match.group(1) if match else None
                 external_references = []
-                if 'external_references' in vuln:
-                    for ref in vuln['external_references']:
-                        source_name = ref.get('source_name', 'Orange Cyberdefense')
-                        description = ref.get('description', 'No description provided')
+                if "external_references" in vuln:
+                    for ref in vuln["external_references"]:
+                        source_name = ref.get("source_name", "Orange Cyberdefense")
+                        description = ref.get("description", "No description provided")
                         external_reference = stix2.ExternalReference(
                             source_name=source_name,
                             description=description,
-                            url=ref['url']
+                            url=ref["url"],
                         )
                         external_references.append(external_reference)
                 objects.append(
                     stix2.Vulnerability(
-                        id=Vulnerability.generate_id(vuln['stix_uuid'].split("--")[1]),
+                        id=Vulnerability.generate_id(vuln["stix_uuid"].split("--")[1]),
                         name=vuln["name"],
                         description=vuln["description"],
                         created=parse(vuln["created_at"]),
@@ -1131,12 +1132,14 @@ class OrangeCyberDefense:
                         ],
                         custom_properties={
                             "x_opencti_aliases": vuln["tags"]
-                            if vuln["tags"] is not None else None,
-                            "x_opencti_base_score": float(cvss_score) if cvss_score is not None else None
+                            if vuln["tags"] is not None
+                            else None,
+                            "x_opencti_base_score": float(cvss_score)
+                            if cvss_score is not None
+                            else None,
                         },
                         external_references=external_references,
-                        labels=vuln['tags']
-
+                        labels=vuln["tags"],
                     )
                 )
                 if "updated_at" in vuln:
@@ -1159,6 +1162,7 @@ class OrangeCyberDefense:
             )
         self.helper.set_state(current_state)
         return current_state
+
     def _set_initial_state(self):
         initial_state = {
             "worldwatch": _parse_date(
