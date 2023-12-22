@@ -7,21 +7,21 @@ This connector connects to the Mandiant Advantage API V4 and gather all data fro
 The connector can be configured with the following variables:
 
 | Env var | Default | Description |
-| - | - | - |
+| - |---| - |
 | `MANDIANT_API_URL` | https://api.intelligence.mandiant.com | URL for the Mandiant API |
-| `MANDIANT_API_V4_KEY_ID` | | Mandiant API Key ID |
-| `MANDIANT_API_V4_KEY_SECRET` | | Mandiant API Key Secret |
+| `MANDIANT_API_V4_KEY_ID` |   | Mandiant API Key ID |
+| `MANDIANT_API_V4_KEY_SECRET` |   | Mandiant API Key Secret |
 | `MANDIANT_IMPORT_START_DATE` | 2023-01-01 | Date to start collect data |
 | `MANDIANT_INDICATOR_MINIMUM_SCORE` | 80 | Minimum score (based on mscore) that an indicator must have to be processed |
 | `MANDIANT_CREATE_NOTES` | False | Create notes |
 | `MANDIANT_IMPORT_ACTORS` | True | Enable to collect actors |
-| `MANDIANT_IMPORT_ACTORS_INTERVAL` | 96 | Interval in hours to check and collect new actors |
+| `MANDIANT_IMPORT_ACTORS_INTERVAL` | 2 | Interval in hours to check and collect new actors |
 | `MANDIANT_IMPORT_REPORTS` | True | Enable to collect reports |
 | `MANDIANT_IMPORT_REPORTS_INTERVAL` | 1 | Interval in hours to check and collect new reports |
 | `MANDIANT_IMPORT_MALWARES` | True | Enable to collect malwares |
 | `MANDIANT_IMPORT_MALWARES_INTERVAL` | 96 | Interval in hours to check and collect new malwares |
 | `MANDIANT_IMPORT_CAMPAIGNS` | True | Enable to collect campaigns |
-| `MANDIANT_IMPORT_CAMPAIGNS_INTERVAL` | 96 | Interval in hours to check and collect new campaigns |
+| `MANDIANT_IMPORT_CAMPAIGNS_INTERVAL` | 2 | Interval in hours to check and collect new campaigns |
 | `MANDIANT_IMPORT_INDICATORS` | False | Enable to collect indicators |
 | `MANDIANT_IMPORT_INDICATORS_INTERVAL` | 1 | Interval in hours to check and collect new indicators |
 | `MANDIANT_IMPORT_VULNERABILITIES` | False | Enable to collect vulnerabilities |

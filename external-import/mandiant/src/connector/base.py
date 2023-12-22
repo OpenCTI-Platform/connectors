@@ -3,7 +3,7 @@ import os
 import sys
 import time
 import traceback
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -66,7 +66,7 @@ class Mandiant:
             ["mandiant", "import_actors_interval"],
             config,
             isNumber=True,
-            default=96,
+            default=2,
         )
         self.mandiant_actors_interval = timedelta(hours=mandiant_actors_interval)
 
@@ -117,7 +117,7 @@ class Mandiant:
             ["mandiant", "import_campaigns_interval"],
             config,
             isNumber=True,
-            default=96,
+            default=2,
         )
         self.mandiant_campaigns_interval = timedelta(hours=mandiant_campaigns_interval)
 
@@ -511,7 +511,9 @@ class Mandiant:
         """
         now = Timestamp.now()
         start = Timestamp.from_iso(state[collection][STATE_START])
-        end = Timestamp.now()
+        end = (
+            Timestamp.now_minus_5_seconds()
+        )  # Looks like Mandiant clock can be misaligned
         offset = state[collection][STATE_OFFSET]
 
         if STATE_END in state[collection] and state[collection][STATE_END] is not None:
@@ -519,73 +521,92 @@ class Mandiant:
 
         parameters = {}
 
+        # API types related to start_epoch
         if collection == "reports":
             parameters[STATE_START] = start.unix_format
             parameters[STATE_END] = end.unix_format
             parameters[STATE_OFFSET] = offset
-
         if collection == "campaigns":
             parameters[STATE_START] = start.unix_format
             parameters[STATE_END] = end.unix_format
             parameters[STATE_OFFSET] = offset
-
-        if collection == "malwares":
-            parameters[STATE_OFFSET] = offset
-
-        if collection == "actors":
-            parameters[STATE_OFFSET] = offset
-
         if collection == "vulnerabilities":
             parameters[STATE_START] = start.unix_format
             parameters[STATE_END] = end.unix_format
-
         if collection == "indicators":
-            end = now
+            # Set 90 days maximum protection for indicator range
             if start.value < now.delta(days=-90).value:
                 start = now.delta(days=-90)
             parameters[STATE_START] = start.unix_format
             parameters[STATE_END] = end.unix_format
             parameters["gte_mscore"] = self.mandiant_indicator_minimum_score
 
-        item = None
-        try:
-            for item in collection_api(**parameters):
-                bundle = module.process(self, item)
+        # API types related to simple offset
+        if collection == "malwares":
+            parameters[STATE_OFFSET] = offset
+        if collection == "actors":
+            parameters[STATE_OFFSET] = offset
 
-                if bundle:
-                    self.helper.send_stix2_bundle(
-                        bundle.serialize(),
-                        update=self.update_existing_data,
-                        work_id=work_id,
-                    )
+        computed_publish_date = None
+        for item in collection_api(**parameters):
+            if item is None:
+                raise ValueError("[Error] Invalid Collection API")
 
-                offset += 1
-
-        except (KeyboardInterrupt, SystemExit, BaseException) as error:
-            """
-            Save current state before exiting in order to provide
-            the capability to start near the moment where it exited.
-            """
-            if collection == "vulnerabilities" and item is not None:
-                state[collection][STATE_START] = item["publish_date"]
+            # Compute the last publish_date if the data
+            if collection == "reports":
+                publish_date = datetime.fromisoformat(item["publish_date"])
+                computed_publish_date = (
+                    max(computed_publish_date, publish_date)
+                    if computed_publish_date is not None
+                    else publish_date
+                )
+            elif collection == "vulnerabilities":
+                publish_date = datetime.fromisoformat(item["publish_date"])
+                computed_publish_date = (
+                    max(computed_publish_date, publish_date)
+                    if computed_publish_date is not None
+                    else publish_date
+                )
             elif collection == "indicators":
-                pass
-            else:
-                state[collection][STATE_OFFSET] = offset
+                last_updated = datetime.fromisoformat(item["last_updated"])
+                computed_publish_date = (
+                    max(computed_publish_date, last_updated)
+                    if computed_publish_date is not None
+                    else last_updated
+                )
+            elif collection == "campaigns":
+                profile_updated = datetime.fromisoformat(item["profile_updated"])
+                computed_publish_date = (
+                    max(computed_publish_date, profile_updated)
+                    if computed_publish_date is not None
+                    else profile_updated
+                )
 
-            self.helper.set_state(state)
-            self.helper.log_info("Saving state ...")
-            time.sleep(2)
-            raise error
+            # Build and send the STIX bundle
+            bundle = module.process(self, item)
+            if bundle:
+                self.helper.send_stix2_bundle(
+                    bundle.serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+
+            # Simple count / Increment the offset
+            offset += 1
+
+        if computed_publish_date is None:
+            last_publish_date = now.iso_format
+        else:
+            last_publish_date = computed_publish_date.isoformat()
 
         if collection == "reports":
-            state[collection][STATE_START] = end.iso_format
+            state[collection][STATE_START] = last_publish_date
             state[collection][STATE_END] = None
             state[collection][STATE_OFFSET] = 0
             state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "campaigns":
-            state[collection][STATE_START] = end.iso_format
+            state[collection][STATE_START] = last_publish_date
             state[collection][STATE_END] = None
             state[collection][STATE_OFFSET] = 0
             state[collection][STATE_LAST_RUN] = now.iso_format
@@ -599,7 +620,7 @@ class Mandiant:
             state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "vulnerabilities":
-            state[collection][STATE_START] = end.iso_format
+            state[collection][STATE_START] = last_publish_date
             state[collection][STATE_END] = None
             state[collection][STATE_LAST_RUN] = now.iso_format
 
