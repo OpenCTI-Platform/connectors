@@ -148,7 +148,7 @@ class IPAddress(Indicator):
     def __init__(
         self, name, author, opencti_helper, risk_score=None, obs_id=None, **kwargs
     ):
-        super.__init__(name=name, author=author, opencti_helper=opencti_helper, risk_score=risk_score, obs_id=obs_id, **kwargs)
+        super().__init__(name=name, author=author, opencti_helper=opencti_helper, risk_score=risk_score, obs_id=obs_id)
         self.ipaddress_type = validate_ip_or_cidr(name)
         if self.ipaddress_type == 'Invalid':
             self.helper.log_error(f'Not a valid IP Format ({name})')
