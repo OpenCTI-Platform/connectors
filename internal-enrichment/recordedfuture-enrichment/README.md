@@ -13,15 +13,15 @@ Each enrichment pulls down an Indicator's Recorded Future Risk Score, any trigge
 - Indicator -> Indicator
 - Risk Score -> Note attached to Indicator
 - Risk Rule:
-    Attack Pattern, the relationship defined as Indicator "indicates" Attack Pattern
-    Risk Rules are added as notes and attached to Observable
+    - Attack Pattern, the relationship defined as Indicator "indicates" Attack Pattern
+    - Risk Rules are added as notes and attached to Observable
 - Evidence String -> Note Attached to Indicator
 - Links:
-    Mitre T codes-> Attack Patterns
-    Indicators -> Indicators and Observables
-    Malware -> Malware
-    Threat Actors -> Threat Actors
-    Organization-> Organization
+    - Mitre T codes-> Attack Patterns
+    - Indicators -> Indicators and Observables
+    - Malware -> Malware
+    - Threat Actors -> Threat Actors
+    - Organization-> Organization
 
 Please note that not every link type from Recorded Future is supported at this time
 
