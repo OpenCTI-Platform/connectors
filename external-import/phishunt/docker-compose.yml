@@ -10,7 +10,6 @@ services :
       - CONNECTOR_NAME=Phishunt
       - CONNECTOR_SCOPE=phishunt
       - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=error
       - PHISHUNT_API_KEY= # Optional, if not provided, consume only https://phishunt.io/feed.txt
       - PHISHUNT_CREATE_INDICATORS=true
