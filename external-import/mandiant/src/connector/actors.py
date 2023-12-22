@@ -6,7 +6,7 @@ from .common import (
     create_stix_location,
     create_stix_malware,
     create_stix_tool,
-    create_stix_vulnerability
+    create_stix_vulnerability,
 )
 
 
