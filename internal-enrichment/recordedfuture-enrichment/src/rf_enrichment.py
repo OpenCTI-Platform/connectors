@@ -18,6 +18,7 @@ class RFEnrichmentConnector:
             else {}
         )
 
+        self.work_id = None
         self.helper = OpenCTIConnectorHelper(config)
 
         self.token = get_config_variable(
@@ -95,6 +96,11 @@ class RFEnrichmentConnector:
         observable_value = observable["observable_value"]
         observable_id = observable["standard_id"]
         entity_type = observable["entity_type"]
+        
+        friendly_name = f"Enrich: {observable_value}"
+        self.work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
 
         tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
