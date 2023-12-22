@@ -679,7 +679,7 @@ class Misp:
                         added_files.append(pdf_file)
 
                 object_observable = None
-                if self.misp_create_object_observables is not None:
+                if self.misp_create_object_observables:
                     if self.import_unsupported_observables_as_text_transparent:
                         if len(object["Attribute"]) > 0:
                             value = object["Attribute"][0]["value"]
