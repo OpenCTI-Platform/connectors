@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=Recorded Future Enrichment
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain-name,url,stixfile
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=5      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_CONFIDENCE_LEVEL=20
       - CONNECTOR_LOG_LEVEL=error
       - RECORDED_FUTURE_TOKEN=CHANGEME #required
       - RECORDED_FUTURE_INFO_MAX_TLP=TLP:AMBER
