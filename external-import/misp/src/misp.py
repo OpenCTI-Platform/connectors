@@ -2148,14 +2148,17 @@ class Misp:
             return None
 
     def detect_ip_version(self, value, type=False):
-        if len(value) > 16:
-            if type:
-                return "IPv6-Addr"
-            return "ipv6-addr"
-        else:
+        if re.match(
+            r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
+            value,
+        ):
             if type:
                 return "IPv4-Addr"
             return "ipv4-addr"
+        else:
+            if type:
+                return "IPv6-Addr"
+            return "ipv6-addr"
 
     def resolve_markings(self, tags, with_default=True):
         markings = []

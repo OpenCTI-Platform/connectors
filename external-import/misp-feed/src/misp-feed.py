@@ -851,15 +851,18 @@ class MispFeed:
         else:
             return None
 
-    def _detect_ip_version(self, value, type=False):
-        if len(value) > 16:
-            if type:
-                return "IPv6-Addr"
-            return "ipv6-addr"
-        else:
+    def detect_ip_version(self, value, type=False):
+        if re.match(
+            r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
+            value,
+        ):
             if type:
                 return "IPv4-Addr"
             return "ipv4-addr"
+        else:
+            if type:
+                return "IPv6-Addr"
+            return "ipv6-addr"
 
     def _get_pdf_file(self, attribute):
         if not self.misp_feed_import_with_attachments:
