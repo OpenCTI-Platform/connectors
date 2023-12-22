@@ -17,9 +17,9 @@ from stix2 import (
     Bundle,
     Identity,
     Indicator,
+    IntrusionSet,
     Malware,
     Relationship,
-    IntrusionSet,
     Tool,
     Vulnerability,
 )
