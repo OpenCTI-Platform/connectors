@@ -66,7 +66,7 @@ class Mandiant:
             ["mandiant", "import_actors_interval"],
             config,
             isNumber=True,
-            default=96,
+            default=2,
         )
         self.mandiant_actors_interval = timedelta(hours=mandiant_actors_interval)
 
@@ -117,7 +117,7 @@ class Mandiant:
             ["mandiant", "import_campaigns_interval"],
             config,
             isNumber=True,
-            default=96,
+            default=2,
         )
         self.mandiant_campaigns_interval = timedelta(hours=mandiant_campaigns_interval)
 
