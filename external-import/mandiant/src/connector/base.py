@@ -546,45 +546,37 @@ class Mandiant:
             parameters[STATE_END] = end.unix_format
             parameters["gte_mscore"] = self.mandiant_indicator_minimum_score
 
-        item = None
-        try:
-            for item in collection_api(**parameters):
-                bundle = module.process(self, item)
+        last_publish_date = now.iso_format
+        for item in collection_api(**parameters):
+            if item is None:
+                raise ValueError("[Error] Invalid Collection API")
 
-                if bundle:
-                    self.helper.send_stix2_bundle(
-                        bundle.serialize(),
-                        update=self.update_existing_data,
-                        work_id=work_id,
-                    )
+            if collection == "reports":
+                last_publish_date = min(last_publish_date, item["publish_date"])
+            elif collection == "vulnerabilities":
+                last_publish_date = min(last_publish_date, item["publish_date"])
+            elif collection == "campaigns":
+                last_publish_date = min(last_publish_date, item["profile_updated"])
 
-                offset += 1
+            bundle = module.process(self, item)
 
-        except (KeyboardInterrupt, SystemExit, BaseException) as error:
-            """
-            Save current state before exiting in order to provide
-            the capability to start near the moment where it exited.
-            """
-            if collection == "vulnerabilities" and item is not None:
-                state[collection][STATE_START] = item["publish_date"]
-            elif collection == "indicators":
-                pass
-            else:
-                state[collection][STATE_OFFSET] = offset
+            if bundle:
+                self.helper.send_stix2_bundle(
+                    bundle.serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
 
-            self.helper.set_state(state)
-            self.helper.log_info("Saving state ...")
-            time.sleep(2)
-            raise error
+            offset += 1
 
         if collection == "reports":
-            state[collection][STATE_START] = end.iso_format
+            state[collection][STATE_START] = last_publish_date
             state[collection][STATE_END] = None
             state[collection][STATE_OFFSET] = 0
             state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "campaigns":
-            state[collection][STATE_START] = end.iso_format
+            state[collection][STATE_START] = last_publish_date
             state[collection][STATE_END] = None
             state[collection][STATE_OFFSET] = 0
             state[collection][STATE_LAST_RUN] = now.iso_format
@@ -598,7 +590,7 @@ class Mandiant:
             state[collection][STATE_LAST_RUN] = now.iso_format
 
         if collection == "vulnerabilities":
-            state[collection][STATE_START] = end.iso_format
+            state[collection][STATE_START] = last_publish_date
             state[collection][STATE_END] = None
             state[collection][STATE_LAST_RUN] = now.iso_format
 

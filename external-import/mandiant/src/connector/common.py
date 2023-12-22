@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
 import stix2
 from dateutil.parser import parse
@@ -19,8 +18,10 @@ def create_stix_relationship(
     start_time=None,
     stop_time=None,
 ):
-    start_time = parse(start_time) if start_time else datetime.now(ZoneInfo("UTC"))
-    stop_time = parse(stop_time) if stop_time else start_time + timedelta(seconds=+1)
+    start_time = (
+        parse(start_time) if start_time else datetime.fromisocalendar(1971, 1, 1)
+    )
+    stop_time = parse(stop_time) if stop_time else datetime.fromisocalendar(5138, 1, 1)
 
     if start_time > stop_time:
         stop_time = start_time + timedelta(seconds=+1)
