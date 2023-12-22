@@ -102,7 +102,7 @@ class RFEnrichmentConnector:
                 tlp = marking_definition["definition"]
 
         if not self.helper.check_max_tlp(tlp, self.max_tlp):
-            msg = "Do not send any data, TLP of the observable is greater than MAX TLP"
+            msg = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.max_tlp})"
             self.helper.log_warning(msg)
             return msg
 

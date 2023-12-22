@@ -1,4 +1,5 @@
 import re
+import ipaddress
 
 
 def validate_mitre_attack_pattern(pattern):
@@ -42,3 +43,32 @@ def extract_and_combine_links(dict_list):
         combined_links.extend(links)
 
     return combined_links
+
+def validate_ip_or_cidr(input_str):
+    """
+    Validate whether a string is a valid IPv4 or IPv6 address, or a CIDR notation.
+
+    Args:
+        input_str (str): The IP address or CIDR to validate.
+
+    Returns:
+        str: 'IPv4 Address', 'IPv6 Address', 'IPv4 CIDR', 'IPv6 CIDR' if valid,
+             'Invalid' if it's neither.
+    """
+    try:
+        # Attempt to parse as an IP address
+        ip_addr = ipaddress.ip_address(input_str)
+        if isinstance(ip_addr, ipaddress.IPv4Address):
+            return "IPv4 Address"
+        elif isinstance(ip_addr, ipaddress.IPv6Address):
+            return "IPv6 Address"
+    except ValueError:
+        try:
+            # If the above fails, attempt to parse as a network (CIDR)
+            network = ipaddress.ip_network(input_str, strict=False)
+            if isinstance(network, ipaddress.IPv4Network):
+                return "IPv4 CIDR"
+            elif isinstance(network, ipaddress.IPv6Network):
+                return "IPv6 CIDR"
+        except ValueError:
+            return "Invalid"
