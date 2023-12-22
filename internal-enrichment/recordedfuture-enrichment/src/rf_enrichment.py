@@ -141,7 +141,7 @@ class RFEnrichmentConnector:
                 )
                 return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
             else:
-                return f"No Stix bundle(s) imported."
+                return "No Stix bundle(s) imported."
         else:
             return f"No Stix bundle(s) imported, request message returned ({reason})."
 

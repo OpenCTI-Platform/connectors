@@ -8,9 +8,10 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
-import urllib.parse
-import requests
 import logging
+import urllib.parse
+
+import requests
 
 from .rf_utils import extract_and_combine_links
 
@@ -18,7 +19,8 @@ API_BASE = "https://api.recordedfuture.com"
 CONNECT_BASE = urllib.parse.urljoin(API_BASE, "/v2")
 LINK_SEARCH = urllib.parse.urljoin(API_BASE, "/links/search")
 
-LOGGER = logging.getLogger('name')
+LOGGER = logging.getLogger("name")
+
 
 class RFClient:
     """class for talking to the RF API, specifically for enriching indicators"""
@@ -55,9 +57,8 @@ class RFClient:
             res = self.session.get(url, params={"fields": fields})
             return self._handle_response(res)
         except requests.exceptions.RequestException as e:
-            LOGGER.error(f'Error making request: {e}')
+            LOGGER.error(f"Error making request: {e}")
             return None, None
-
 
     def _get_links(self, rfid):
         """Retrieve links for a given entity ID."""
@@ -67,25 +68,27 @@ class RFClient:
         }
         try:
             res = self.session.post(LINK_SEARCH, json=query)
-            LOGGER.debug(f'Response: {res.json()}')
+            LOGGER.debug(f"Response: {res.json()}")
             return self._handle_response(res, expected_key="links")
         except requests.exceptions.RequestException as e:
-            LOGGER.error(f'Error making request: {e}')
+            LOGGER.error(f"Error making request: {e}")
             return "Error making Request", None
 
     def _handle_response(self, response, expected_key=None):
         """Handle API response, returning the relevant part if successful."""
         if response.status_code == 200:
-            json_data = response.json().get('data', None)
+            json_data = response.json().get("data", None)
             if json_data:
-                if expected_key is 'links':
+                if expected_key == "links":
                     joined_lists = extract_and_combine_links(json_data)
                     return response.reason, joined_lists
                 else:
                     return response.reason, json_data
             else:
-                LOGGER.warning(f'Response does not include the key: "data".')
+                LOGGER.warning('Response does not include the key: "data".')
                 return response.reason, None
         else:
-            LOGGER.warning(f'Status Code: {response.status_code}, Response: {response.reason}')
+            LOGGER.warning(
+                f"Status Code: {response.status_code}, Response: {response.reason}"
+            )
             return response.reason, None
