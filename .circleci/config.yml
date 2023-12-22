@@ -281,6 +281,10 @@ jobs:
           name: Build Docker image opencti/connector-intelfinder
           command: docker build -t opencti/connector-intelfinder:latest . && docker tag opencti/connector-intelfinder:latest opencti/connector-intelfinder:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-export-file/export-ttps-file-navigator
+          name: Build Docker image opencti/connector-export-ttps-file-navigator
+          command: docker build -t opencti/connector-export-ttps-file-navigator:latest . && docker tag opencti/connector-export-ttps-file-navigator:latest opencti/connector-export-ttps-file-navigator:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -398,6 +402,8 @@ jobs:
             docker push opencti/connector-hostio:${CIRCLE_TAG}
             docker push opencti/connector-intelfinder:latest
             docker push opencti/connector-intelfinder:${CIRCLE_TAG}
+            docker push opencti/connector-export-ttps-file-navigator:latest
+            docker push opencti/connector-export-ttps-file-navigator:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -980,6 +986,10 @@ jobs:
           working_directory: ~/opencti/external-import/intelfinder
           name: Build Docker image opencti/connector-intelfinder
           command: docker build -t opencti/connector-intelfinder:rolling .
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-ttps-file-navigator
+          name: Build Docker image opencti/connector-export-ttps-file-navigator
+          command: docker build -t opencti/connector-export-ttps-file-navigator:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
