@@ -12,10 +12,11 @@ import urllib.parse
 import requests
 import logging
 
+from .rf_utils import extract_and_combine_links
+
 API_BASE = "https://api.recordedfuture.com"
 CONNECT_BASE = urllib.parse.urljoin(API_BASE, "/v2")
-LINKS_BASE = urllib.parse.urljoin(API_BASE, "/links")
-LINK_SEARCH = urllib.parse.urljoin(LINKS_BASE, "/search")
+LINK_SEARCH = urllib.parse.urljoin(API_BASE, "/links/search")
 
 LOGGER = logging.getLogger('name')
 
@@ -67,22 +68,23 @@ class RFClient:
         try:
             res = self.session.post(LINK_SEARCH, json=query)
             LOGGER.debug(f'Response: {res.json()}')
-            return self._handle_response(res, expected_key="links", is_array=True)
+            return self._handle_response(res, expected_key="links")
         except requests.exceptions.RequestException as e:
             LOGGER.error(f'Error making request: {e}')
             return "Error making Request", None
 
-    def _handle_response(self, response, expected_key='data', is_array=False):
+    def _handle_response(self, response, expected_key=None):
         """Handle API response, returning the relevant part if successful."""
         if response.status_code == 200:
-            json_data = response.json()
-            if expected_key in json_data:
-                if is_array:
-                    return response.reason, json_data[expected_key][0] if json_data[expected_key] else []
+            json_data = response.json().get('data', None)
+            if json_data:
+                if expected_key is 'links':
+                    joined_lists = extract_and_combine_links(json_data)
+                    return response.reason, joined_lists
                 else:
-                    return response.reason, json_data[expected_key]
+                    return response.reason, json_data
             else:
-                LOGGER.warning(f'Expected key "{expected_key}" not in response.')
+                LOGGER.warning(f'Response does not include the key: "data".')
                 return response.reason, None
         else:
             LOGGER.warning(f'Status Code: {response.status_code}, Response: {response.reason}')

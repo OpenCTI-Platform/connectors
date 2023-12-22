@@ -14,9 +14,8 @@ from datetime import datetime
 import pycti
 import stix2
 
-import logging
+from .rf_utils import validate_mitre_attack_pattern
 
-LOGGER = logging.getLogger('name')
 
 SUPPORTED_RF_TYPES = ("IpAddress", "InternetDomainName", "Hash", "URL")
 INDICATES_RELATIONSHIP = [
@@ -39,11 +38,12 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, author, type_=None):
+    def __init__(self, name, author, opencti_helper, type_=None):
         self.name = name
         self.type = type_
         self.author = author
         self.stix_obj = None
+        self.helper = opencti_helper
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -67,14 +67,15 @@ class RFStixEntity:
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
-    def __init__(self, name, author, risk_score=None, obs_id=None, **kwargs):
+    def __init__(self, name, author, opencti_helper, risk_score=None, obs_id=None, **kwargs):
         """
         Name (str): Indicator value
         author (stix2.Identity): Author of bundle
         risk_score (int): Risk score of indicator
         obs_id (str): OpenCTI STIX2 ID of observable that's being enriched
         """
-        LOGGER.debug('Init Indicator.')
+        self.helper = opencti_helper
+        self.helper.log_debug('Init Indicator.')
         self.name = name
         self.author = author
         self.obs_id = obs_id
@@ -85,17 +86,17 @@ class Indicator(RFStixEntity):
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
-        LOGGER.debug('Transform to Stix Object.')
+        self.helper.log_debug('Transform to Stix Object.')
         if not (self.stix_indicator and self.stix_relationship):
             self.create_stix_objects()
         objs = [self.stix_indicator, self.stix_relationship]
-        if not self.obs_id:
+        if not self.obs_id and self.stix_observable:
             objs.append(self.stix_observable)
         return objs
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        LOGGER.debug('Create Stix Objects.')
+        self.helper.log_debug('Create Stix Objects.')
         if not self.obs_id:
             self.stix_observable = (
                 self._create_obs()
@@ -105,7 +106,7 @@ class Indicator(RFStixEntity):
 
     def _create_indicator(self):
         """Creates and returns STIX2 indicator object"""
-        LOGGER.debug('Create Indicator.')
+        self.helper.log_debug('Create Indicator.')
         return stix2.Indicator(
             id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
@@ -125,7 +126,7 @@ class Indicator(RFStixEntity):
         pass
 
     def _create_rel(self):
-        LOGGER.debug('Create Relationship.')
+        self.helper.log_debug('Create Relationship.')
         """Creates Relationship object linking indicator and observable"""
         return stix2.Relationship(
             id=pycti.StixCoreRelationship.generate_id(
@@ -177,8 +178,8 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, author, risk_score=None, **kwargs):
-        super().__init__(name, author)
+    def __init__(self, name, author, opencti_helper, risk_score=None, **kwargs):
+        super().__init__(name, author, opencti_helper=opencti_helper)
         self.algorithm = self._determine_algorithm()
 
     def _determine_algorithm(self):
@@ -193,6 +194,7 @@ class FileHash(Indicator):
             f"Could not determine hash type for {self.name}. Only MD5, SHA1"
             " and SHA256 hashes are supported"
         )
+        self.helper.log_error(f'msg')
         raise ConversionError(msg)
 
     def _create_pattern(self):
@@ -201,18 +203,18 @@ class FileHash(Indicator):
     def _create_obs(self):
         return stix2.File(hashes={self.algorithm: self.name})
 
+# # TODO: Delete? This code looks unused?
+# class TLPMarking(RFStixEntity):
+#     """Creates TLP marking for report"""
 
-class TLPMarking(RFStixEntity):
-    """Creates TLP marking for report"""
-
-    def create_stix_objects(self):
-        """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.AttackPattern(
-            id=pycti.AttackPattern.generate_id(self.name, self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-            custom_properties={"x_mitre_id": self.name},
-        )
+#     def create_stix_objects(self):
+#         """Creates STIX objects from object attributes"""
+#         self.stix_obj = stix2.AttackPattern(
+#             id=pycti.AttackPattern.generate_id(self.name, self.name),
+#             name=self.name,
+#             created_by_ref=self.author.id,
+#             custom_properties={"x_mitre_id": self.name},
+#         )
 
 
 class TTP(RFStixEntity):
@@ -220,13 +222,35 @@ class TTP(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        LOGGER.debug("Add Attack Pattern.")
-        self.stix_obj = stix2.AttackPattern(
-            id=pycti.AttackPattern.generate_id(self.name, self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-            custom_properties={"x_mitre_id": self.name},
-        )
+        self.helper.log_debug(f"Add Attack Pattern: {self.name}")
+        if validate_mitre_attack_pattern(self.name):
+            attack_pattern = self.name.upper()
+            attack_pattern_filter = {
+                    "mode": "and",
+                    "filters": [{"key": "x_mitre_id", "values": [f"{attack_pattern}"]}],
+                    "filterGroups": [],
+                }
+            opencti_attack_pattern = self.helper.api.attack_pattern.read(
+                filters=attack_pattern_filter
+            )
+            if opencti_attack_pattern and 'id' in opencti_attack_pattern:
+                opencti_stix_object = self.helper.api.stix2.export_entity(
+                    'Attack-Pattern',
+                    opencti_attack_pattern.get('id'),
+                    'simple',
+                    only_entity=True
+                    )
+                keys_list = ['id', 'name', 'x_mitre_id']
+                if opencti_stix_object and isinstance(opencti_stix_object, dict) and all(key in opencti_stix_object for key in keys_list):
+                    self.helper.log_info(f'Appending Attack Pattern: {opencti_stix_object}')
+                    self.stix_obj = stix2.AttackPattern(
+                        id=opencti_stix_object.get('id'),
+                        name=opencti_stix_object.get('name'),
+                        created_by_ref=self.author.id,
+                        custom_properties = {
+                            'x_mitre_id': opencti_stix_object.get('x_mitre_id')
+                        }
+                    )
 
 
 class Identity(RFStixEntity):
@@ -240,7 +264,7 @@ class Identity(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        LOGGER.debug("Add Identity.")
+        self.helper.log_debug("Add Identity.")
         self.stix_obj = stix2.Identity(
             id=pycti.Identity.generate_id(self.name, self.create_id_class()),
             name=self.name,
@@ -264,7 +288,7 @@ class ThreatActor(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        LOGGER.debug("Add Threat Actor.")
+        self.helper.log_debug("Add Threat Actor.")
         self.stix_obj = stix2.ThreatActor(
             id=pycti.ThreatActor.generate_id(self.name),
             name=self.name,
@@ -281,7 +305,7 @@ class IntrusionSet(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        LOGGER.debug("Add Intrusion Set.")
+        self.helper.log_debug("Add Intrusion Set.")
         self.stix_obj = stix2.IntrusionSet(
             id=pycti.IntrusionSet.generate_id(self.name),
             name=self.name,
@@ -294,7 +318,7 @@ class Malware(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        LOGGER.debug("Add Malware.")
+        self.helper.log_debug("Add Malware.")
         self.stix_obj = stix2.Malware(
             id=pycti.Malware.generate_id(self.name),
             name=self.name,
@@ -309,7 +333,7 @@ class Vulnerability(RFStixEntity):
     # TODO: add vuln descriptions
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        LOGGER.debug("Add Vulnerability.")
+        self.helper.log_debug("Add Vulnerability.")
         self.stix_obj = stix2.Vulnerability(
             id=pycti.Vulnerability.generate_id(self.name),
             name=self.name,
@@ -320,21 +344,19 @@ class Vulnerability(RFStixEntity):
 class DetectionRule(RFStixEntity):
     """Represents a Yara or SNORT rule"""
 
-    def __init__(self, name, type_, content):
+    def __init__(self, name, opencti_helper, type_, content):
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
-
-        self.name = name.split(".")[0]
-        self.type = type_
+        super().__init__(name = name.split(".")[0], type=type_, opencti_helper=opencti_helper)
         self.content = content
-        self.stix_obj = None
 
         if self.type not in ("yara", "snort"):
             msg = f"Detection rule of type {self.type} is not supported"
+            self.helper.log_error(f'msg')
             raise ConversionError(msg)
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        LOGGER.debug("Add Indicator.")
+        self.helper.log_debug("Add Indicator.")
         self.stix_obj = stix2.Indicator(
             id=pycti.Indicator.generate_id(self.content),
             name=self.name,
@@ -369,14 +391,15 @@ class EnrichedIndicator:
         create_indicator (bool): Should we create indicator out of enriched observable
         """
         if type_ not in SUPPORTED_RF_TYPES:
+            self.helper.log_error(f'msg')
             raise ConversionError(
                 "Enriched Indicator must be of a supported type. {} is not supported".format(
                     type_
                 )
             )
         self.type = type_
-        self.author = self._create_author()
         self.helper = opencti_helper
+        self.author = self._create_author()
         self.create_indicator = create_indicator
         self.obs_id = observable_id
         self.linked_sdos = []
@@ -388,7 +411,7 @@ class EnrichedIndicator:
 
     def _create_author(self):
         """Creates Recorded Future Author"""
-        LOGGER.debug("Add Identity Author.")
+        self.helper.log_debug("Add Identity Author.")
         return stix2.Identity(
             id=pycti.Identity.generate_id("Recorded Future", "organization"),
             name="Recorded Future",
@@ -400,48 +423,56 @@ class EnrichedIndicator:
         object_refs = [self.obs_id]
         if self.create_indicator:
             indicator = self.entity_mapper[self.type](
-                name, self.author, risk_score=risk, obs_id=self.obs_id
+                name, self.author, risk_score=risk, obs_id=self.obs_id, opencti_helper=self.helper
             )
             indicator.create_stix_objects()
             self.indicator = indicator.stix_indicator
-            object_refs.append(self.indicator.id)
-            self.chained_objects.append(indicator.stix_relationship)
+            if self.indicator:
+                object_refs.append(self.indicator.id)
+            if indicator.stix_relationship:
+                self.chained_objects.append(indicator.stix_relationship)
 
-        self.notes.append(
-            stix2.Note(
-                abstract="Recorded Future Risk Score",
-                content="{}/99".format(risk),
-                created_by_ref=self.author.id,
-                object_refs=object_refs,
-            )
-        )
-        for rule in evidenceDetails:
+        if risk:
             self.notes.append(
                 stix2.Note(
-                    abstract=f"{rule['rule']}",
-                    content=f"{rule['evidenceString']}",
+                    abstract="Recorded Future Risk Score",
+                    content="{}/99".format(risk),
                     created_by_ref=self.author.id,
                     object_refs=object_refs,
                 )
             )
-            LOGGER.debug(f"Append SDOs: {rule}")
-            self.linked_sdos.append(
-                stix2.AttackPattern(
-                    id=pycti.AttackPattern.generate_id(rule["rule"], rule["rule"]),
-                    name=rule["rule"],
-                    created_by_ref=self.author.id,
-                    custom_properties={
-                        "x_rf_criticality": rule["criticality"],
-                        "x_rf_critcality_label": rule["criticalityLabel"],
-                        "x_mitre_id": rule["rule"],
-                    },
+        for rule in evidenceDetails:
+            if rule.get('rule'):
+                self.notes.append(
+                    stix2.Note(
+                        abstract=f"{rule['rule']}",
+                        content=f"{rule['evidenceString']}",
+                        created_by_ref=self.author.id,
+                        object_refs=object_refs,
+                    )
                 )
-            )
+            # TODO: is a rule ever an Attack Pattern?
+            # self.helper.log_debug(f"Rule Content: {rule}")
+            # self.helper.log_debug(f"Append SDOs: Rule: {rule.get('rule', 'Not provided')}, Criticality: {rule.get('criticality', 'Not provided')}, Label: {rule.get('name', 'criticalityLabel')}")
+            # if validate_mitre_attack_pattern(rule.get('rule')):
+            #     attack_pattern = rule.get('rule')
+            #     self.linked_sdos.append(
+            #         stix2.AttackPattern(
+            #             id=pycti.AttackPattern.generate_id(attack_pattern, attack_pattern),
+            #             name=attack_pattern,
+            #             created_by_ref=self.author.id,
+            #             custom_properties={
+            #                 "x_rf_criticality": rule["criticality"],
+            #                 "x_rf_critcality_label": rule["criticalityLabel"],
+            #                 "x_mitre_id": attack_pattern,
+            #             },
+            #         )
+            #     )
         
         if isinstance(links, list):
             for link in links:
                 try:
-                    LOGGER.debug(f"Iterate through links: {link} in {links}")
+                    self.helper.log_debug(f"Iterate through links: {link}.")
                     type_ = link["type"].split("type:")[1]
 
                     if type_ not in self.entity_mapper:
@@ -451,19 +482,24 @@ class EnrichedIndicator:
                         self.helper.log_warning(msg)
                         continue
                     if any(attr.get("id") == "threat_actor" for attr in link["attributes"]):
-                        link_object = ThreatActor(link["name"], self.author, type_=type_)
+                        link_object = ThreatActor(link["name"], self.author, type_=type_, opencti_helper=self.helper)
 
                     else:
                         link_object = self.entity_mapper[type_](
-                            link["name"], self.author, type_=type_
+                            link["name"], self.author, type_=type_, opencti_helper=self.helper
                         )
                     link_object.create_stix_objects()
                     if isinstance(link_object, Indicator):
-                        self.linked_sdos.append(link_object.stix_indicator)
-                        self.chained_objects.append(link_object.stix_observable)
-                        self.chained_objects.append(link_object.stix_relationship)
+                        if link_object.stix_indicator:
+                            self.linked_sdos.append(link_object.stix_indicator)
+                        if link_object.stix_observable:
+                            self.chained_objects.append(link_object.stix_observable)
+                        if link_object.stix_relationship:
+                            self.chained_objects.append(link_object.stix_relationship)
                     else:
-                        self.linked_sdos.extend(link_object.to_stix_objects())
+                        stix_objects = link_object.to_stix_objects()
+                        if stix_objects:
+                            self.linked_sdos.extend(stix_objects)
                 except Exception as err:
                     self.helper.log_error(err)
                     continue
@@ -475,8 +511,8 @@ class EnrichedIndicator:
         if any(isinstance(sdo, stixtype) for stixtype in INDICATES_RELATIONSHIP):
             rel_type = "indicates"
         try:
-            if self.create_indicator:
-                LOGGER.debug("Append Relationship with Indicator.")
+            if self.create_indicator and self.indicator:
+                self.helper.log_debug("Append Relationship with Indicator.")
                 ret_val.append(
                     stix2.Relationship(
                         id=pycti.StixCoreRelationship.generate_id(
@@ -488,61 +524,78 @@ class EnrichedIndicator:
                         created_by_ref=self.author.id,
                     )
                 )
-            LOGGER.debug("Append Relationship.")
-            ret_val.append(
-                stix2.Relationship(
-                    id=pycti.StixCoreRelationship.generate_id(
-                        "related-to", self.obs_id, sdo.id
-                    ),
-                    relationship_type="related-to",
-                    source_ref=self.obs_id,
-                    target_ref=sdo.id,
-                    created_by_ref=self.author.id,
+            if self.obs_id and sdo:
+                self.helper.log_debug("Append Relationship.")
+                ret_val.append(
+                    stix2.Relationship(
+                        id=pycti.StixCoreRelationship.generate_id(
+                            "related-to", self.obs_id, sdo.id
+                        ),
+                        relationship_type="related-to",
+                        source_ref=self.obs_id,
+                        target_ref=sdo.id,
+                        created_by_ref=self.author.id,
+                    )
                 )
-            )
             return ret_val
         except Exception as err:
-            self.helper.log_error(
-                "Could not create relationship when source is {} and target_ref is {}".format(
-                    str(self.indicator), sdo.id
+            if sdo:
+                self.helper.log_error(
+                    f"Could not create relationship when source is {self.indicator} and target_ref is {sdo.id}, Error: {err}."
                 )
-            )
-            raise err
+            else:
+                self.helper.log_error(
+                    f"Could not create relationship when source is {self.indicator}, Error: {err}."
+                )
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
+        self.helper.log_info(f'Return Stix Object(s).')
         objects = [self.author]
         # self.helper.log_debug("linked_sdos: {}".format(str(self.linked_sdos)))
         for sdo in self.linked_sdos:
             self.helper.log_debug("Creating relationship for {}".format(sdo))
-            objects.extend(self._create_relationships(sdo))
-        objects.extend(self.linked_sdos)
-        objects.extend(self.notes)
-        objects.extend(self.chained_objects)
+            if sdo:
+                objects.extend(self._create_relationships(sdo))
+        if self.linked_sdos:
+            objects.extend(self.linked_sdos)
+        if self.notes:
+            objects.extend(self.notes)
+        if self.chained_objects:
+            objects.extend(self.chained_objects)
         if self.create_indicator:
             objects.append(self.indicator)
         return objects
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
-        return stix2.Bundle(objects=self.to_stix_objects(), allow_custom=True)
+        self.helper.log_info(f'Return STIX objects as a Bundle.')
+        stix_objects = self.to_stix_objects()
+        if isinstance(stix_objects, list) and len(stix_objects) > 0:
+            # Remove all None type from the list.
+            # Check for None and remove them, log a warning if None exists
+            filtered_list = []
+            none_found = False
+            for item in stix_objects:
+                if item is None:
+                    none_found = True
+                else:
+                    filtered_list.append(item)
+            if none_found:
+                self.helper.log_warning("NoneType values found in the list and removed.")
+            
+            # If filtered list contains objects return a bundle. 
+            if filtered_list:
+                return stix2.Bundle(objects=filtered_list, allow_custom=True)
+        self.helper.log_warn(f'No Object(s) Returned.')
+        return None
 
     def to_json_bundle(self):
         """Returns STIX Bundle as JSON"""
-        return self.to_stix_bundle().serialize()
-
-
-# maps RF types to the corresponding python object
-ENTITY_TYPE_MAPPER = {
-    # TODO: add more supported types, starting with location
-    "IpAddress": IPAddress,
-    "InternetDomainName": Domain,
-    "URL": URL,
-    "Hash": FileHash,
-    "MitreAttackIdentifier": TTP,
-    "Company": Identity,
-    "Person": Identity,
-    "Organization": Identity,
-    "Malware": Malware,
-    "CyberVulnerability": Vulnerability,
-}
+        stix_bundle = self.to_stix_bundle()
+        self.helper.log_info(f'Convert to Stix Bundle and Serialize.')
+        if stix_bundle and isinstance(stix_bundle, stix2.Bundle):
+            return self.to_stix_bundle().serialize()
+        else:
+            self.helper.log_warn(f'No Bundle(s) Returned.')
+            return None

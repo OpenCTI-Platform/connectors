@@ -134,10 +134,14 @@ class RFEnrichmentConnector:
                 links=data["links"],
             )
             self.helper.log_info("Sending bundle...")
-            bundles_sent = self.helper.send_stix2_bundle(
-                indicator.to_json_bundle(), update=self.update_existing_data
-            )
-            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+            indicator_bundle = indicator.to_json_bundle()
+            if indicator_bundle:
+                bundles_sent = self.helper.send_stix2_bundle(
+                    indicator_bundle, update=self.update_existing_data
+                )
+                return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+            else:
+                return f"No Stix bundle(s) imported."
         else:
             return f"No Stix bundle(s) imported, request message returned ({reason})."
 
