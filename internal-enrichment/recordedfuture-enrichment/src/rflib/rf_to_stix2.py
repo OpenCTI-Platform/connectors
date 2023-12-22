@@ -195,7 +195,7 @@ class FileHash(Indicator):
             f"Could not determine hash type for {self.name}. Only MD5, SHA1"
             " and SHA256 hashes are supported"
         )
-        self.helper.log_error(f"{msg}")
+        self.helper.log_error(msg)
         raise ConversionError(msg)
 
     def _create_pattern(self):
@@ -361,7 +361,7 @@ class DetectionRule(RFStixEntity):
 
         if self.type not in ("yara", "snort"):
             msg = f"Detection rule of type {self.type} is not supported"
-            self.helper.log_error(f"{msg}")
+            self.helper.log_error(msg)
             raise ConversionError(msg)
 
     def create_stix_objects(self):
@@ -402,7 +402,7 @@ class EnrichedIndicator:
         """
         if type_ not in SUPPORTED_RF_TYPES:
             msg = f"Enriched Indicator must be of a supported type. {type_} is not supported."
-            self.helper.log_error(f"{msg}")
+            self.helper.log_error(msg)
             raise ConversionError(msg)
         self.type = type_
         self.helper = opencti_helper

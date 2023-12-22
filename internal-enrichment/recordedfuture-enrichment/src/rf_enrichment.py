@@ -102,9 +102,9 @@ class RFEnrichmentConnector:
                 tlp = marking_definition["definition"]
 
         if not self.helper.check_max_tlp(tlp, self.max_tlp):
-            raise ValueError(
-                "Do not send any data, TLP of the observable is greater than MAX TLP"
-            )
+            msg = "Do not send any data, TLP of the observable is greater than MAX TLP"
+            self.helper.log_warning(msg)
+            return msg
 
         # Convert to RF types
         rf_type = self.map_stix2_type_to_rf(entity_type)
