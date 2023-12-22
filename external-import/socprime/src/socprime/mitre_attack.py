@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 
 import pycti
 import requests
-from stix2 import AttackPattern, Filter, Malware, MemoryStore, ThreatActor, Tool
+from stix2 import AttackPattern, Filter, Malware, MemoryStore, Tool, IntrusionSet
 
 
 class MitreAttack:
@@ -69,7 +69,7 @@ class MitreAttack:
             )
         )
 
-    def get_threat_actor_by_name(self, name: str) -> Optional[ThreatActor]:
+    def get_intrusion_set_by_name(self, name: str) -> Optional[IntrusionSet]:
         filt = [
             Filter("type", "=", "intrusion-set"),
             Filter("name", "=", name),
@@ -77,9 +77,9 @@ class MitreAttack:
         res = self._src.query(filt)
         if res:
             props = res[0]._inner
-            return ThreatActor(
-                type="threat-actor",
-                id=pycti.ThreatActor.generate_id(name=props["name"]),
+            return IntrusionSet(
+                type="intrusion-set",
+                id=props["id"],
                 name=props["name"],
                 description=props["description"],
                 external_references=props["external_references"],
