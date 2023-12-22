@@ -71,7 +71,13 @@ def _get_actor_motivations(actor_details):
     primary_motivation = None
     secondary_motivations = []
 
-    for motivation in actor_details["motivations"]:
+    motivations = (
+        []
+        if "motivations" in actor_details and actor_details["motivations"] == "redacted"
+        else actor_details["motivations"]
+    )
+
+    for motivation in motivations:
         if primary_motivation is None:
             primary_motivation = motivation["name"]
         else:

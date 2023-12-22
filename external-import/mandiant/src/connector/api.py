@@ -209,7 +209,7 @@ class MandiantAPI:
             result="objects",
         )
 
-    def actors(self, limit: int = 1000, offset: int = 0) -> Iterable[Dict]:
+    def actors(self, limit: int = 100, offset: int = 0) -> Iterable[Dict]:
         return self._process(
             name="actors",
             parameters={"limit": limit, "offset": offset},
@@ -254,7 +254,7 @@ class MandiantAPI:
             result="campaigns",
         )
 
-    def malwares(self, limit: int = 5000, offset: int = 0) -> Iterable[Dict]:
+    def malwares(self, limit: int = 100, offset: int = 0) -> Iterable[Dict]:
         return self._process(
             name="malwares",
             parameters={"offset": offset, "limit": limit},
