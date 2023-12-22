@@ -96,7 +96,7 @@ class RFEnrichmentConnector:
         observable_value = observable["observable_value"]
         observable_id = observable["standard_id"]
         entity_type = observable["entity_type"]
-        
+
         friendly_name = f"Enrich: {observable_value}"
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name

@@ -14,7 +14,7 @@ from datetime import datetime
 import pycti
 import stix2
 
-from .rf_utils import validate_mitre_attack_pattern, validate_ip_or_cidr
+from .rf_utils import validate_ip_or_cidr, validate_mitre_attack_pattern
 
 SUPPORTED_RF_TYPES = ("IpAddress", "InternetDomainName", "Hash", "URL")
 INDICATES_RELATIONSHIP = [
@@ -145,26 +145,33 @@ class Indicator(RFStixEntity):
 
 class IPAddress(Indicator):
     """Converts IP address to IP indicator and observable"""
+
     def __init__(
         self, name, author, opencti_helper, risk_score=None, obs_id=None, **kwargs
     ):
-        super().__init__(name=name, author=author, opencti_helper=opencti_helper, risk_score=risk_score, obs_id=obs_id)
+        super().__init__(
+            name=name,
+            author=author,
+            opencti_helper=opencti_helper,
+            risk_score=risk_score,
+            obs_id=obs_id,
+        )
         self.ipaddress_type = validate_ip_or_cidr(name)
-        if self.ipaddress_type == 'Invalid':
-            self.helper.log_error(f'Not a valid IP Format ({name})')
+        if self.ipaddress_type == "Invalid":
+            self.helper.log_error(f"Not a valid IP Format ({name})")
 
     def _create_pattern(self):
-        if self.ipaddress_type.startswith('IPv4'):
+        if self.ipaddress_type.startswith("IPv4"):
             return f"[ipv4-addr:value = '{self.name}']"
-        elif self.ipaddress_type.startswith('IPv6'):
+        elif self.ipaddress_type.startswith("IPv6"):
             return f"[ipv6-addr:value = '{self.name}']"
         else:
             return None
 
     def _create_obs(self):
-        if self.ipaddress_type.startswith('IPv4'):
+        if self.ipaddress_type.startswith("IPv4"):
             return stix2.IPv4Address(value=self.name)
-        elif self.ipaddress_type.startswith('IPv6'):
+        elif self.ipaddress_type.startswith("IPv6"):
             return stix2.IPv6Address(value=self.name)
         else:
             return None

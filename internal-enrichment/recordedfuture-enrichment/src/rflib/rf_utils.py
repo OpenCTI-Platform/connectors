@@ -1,5 +1,5 @@
-import re
 import ipaddress
+import re
 
 
 def validate_mitre_attack_pattern(pattern):
@@ -43,6 +43,7 @@ def extract_and_combine_links(dict_list):
         combined_links.extend(links)
 
     return combined_links
+
 
 def validate_ip_or_cidr(input_str):
     """
