@@ -16,7 +16,7 @@ class CVEConnector:
         # Load configuration file and connection helper
         self.config = ConfigCVE()
         self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.converter = CVEConverter()
+        self.converter = CVEConverter(self.helper)
 
     def run(self) -> None:
         """
