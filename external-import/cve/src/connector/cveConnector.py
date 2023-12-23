@@ -3,6 +3,7 @@ import time
 from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
+
 from services import CVEConverter  # type: ignore
 from services.utils import MAX_AUTHORIZED, ConfigCVE  # type: ignore
 
@@ -16,7 +17,7 @@ class CVEConnector:
         # Load configuration file and connection helper
         self.config = ConfigCVE()
         self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.converter = CVEConverter()
+        self.converter = CVEConverter(self.helper)
 
     def run(self) -> None:
         """
