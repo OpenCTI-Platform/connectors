@@ -4,19 +4,24 @@
 
 This connector enriches individual OpenCTI Observables with Recorded Future Information. Currently enrichment of IP Address (ipv4 and ipv6), URLs, Domains, and Hashes (MD5, SHA1, and SHA256) is supported.
 
+## Dependency
+- `external-import/mitre` - Maps TTPs to Existing Mitre Att&ck IDs. If the ID does not exist the relationship does not occur. 
+
 ## Data Model
 Each enrichment pulls down an Indicator's Recorded Future Risk Score, any triggered Risk Rules, and Strings of Evidence to justify a rule being triggered. Their equivalents in OpenCTI's STIX2 model is
 
 - Indicator -> Indicator
 - Risk Score -> Note attached to Indicator
-- Risk Rule -> Attack Pattern, the relationship defined as Indicator "indicates" Attack Pattern
+- Risk Rule:
+    - Attack Pattern, the relationship defined as Indicator "indicates" Attack Pattern
+    - Risk Rules are added as notes and attached to Observable
 - Evidence String -> Note Attached to Indicator
 - Links:
-    Mitre T codes-> Attack Patterns
-    Indicators -> Indicators and Observables
-    Malware -> Malware
-    Threat Actors -> Threat Actors
-    Organization-> Organization
+    - Mitre T codes-> Attack Patterns
+    - Indicators -> Indicators and Observables
+    - Malware -> Malware
+    - Threat Actors -> Threat Actors
+    - Organization-> Organization
 
 Please note that not every link type from Recorded Future is supported at this time
 

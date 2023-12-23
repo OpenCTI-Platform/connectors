@@ -18,6 +18,7 @@ class RFEnrichmentConnector:
             else {}
         )
 
+        self.work_id = None
         self.helper = OpenCTIConnectorHelper(config)
 
         self.token = get_config_variable(
@@ -96,15 +97,20 @@ class RFEnrichmentConnector:
         observable_id = observable["standard_id"]
         entity_type = observable["entity_type"]
 
+        friendly_name = f"Enrich: {observable_value}"
+        self.work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+
         tlp = "TLP:CLEAR"
         for marking_definition in observable["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
         if not self.helper.check_max_tlp(tlp, self.max_tlp):
-            raise ValueError(
-                "Do not send any data, TLP of the observable is greater than MAX TLP"
-            )
+            msg = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.max_tlp})"
+            self.helper.log_warning(msg)
+            return msg
 
         # Convert to RF types
         rf_type = self.map_stix2_type_to_rf(entity_type)
@@ -117,26 +123,33 @@ class RFEnrichmentConnector:
             "enriching observable {} with ID {}".format(observable_value, observable_id)
         )
         rf_client = RFClient(self.token, self.helper, APP_VERSION)
-        data = rf_client.full_enrichment(observable_value, rf_type)
+        reason, data = rf_client.full_enrichment(observable_value, rf_type)
 
-        create_indicator = data["risk"]["score"] >= self.create_indicator_threshold
-        indicator = EnrichedIndicator(
-            type_=data["entity"]["type"],
-            observable_id=observable_id,
-            opencti_helper=self.helper,
-            create_indicator=create_indicator,
-        )
-        indicator.from_json(
-            name=data["entity"]["name"],
-            risk=data["risk"]["score"],
-            evidenceDetails=data["risk"]["evidenceDetails"],
-            links=data["links"],
-        )
-        self.helper.log_info("Sending bundle...")
-        bundles_sent = self.helper.send_stix2_bundle(
-            indicator.to_json_bundle(), update=self.update_existing_data
-        )
-        return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+        if data:
+            create_indicator = data["risk"]["score"] >= self.create_indicator_threshold
+            indicator = EnrichedIndicator(
+                type_=data["entity"]["type"],
+                observable_id=observable_id,
+                opencti_helper=self.helper,
+                create_indicator=create_indicator,
+            )
+            indicator.from_json(
+                name=data["entity"]["name"],
+                risk=data["risk"]["score"],
+                evidenceDetails=data["risk"]["evidenceDetails"],
+                links=data["links"],
+            )
+            self.helper.log_info("Sending bundle...")
+            indicator_bundle = indicator.to_json_bundle()
+            if indicator_bundle:
+                bundles_sent = self.helper.send_stix2_bundle(
+                    indicator_bundle, update=self.update_existing_data
+                )
+                return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+            else:
+                return "No Stix bundle(s) imported."
+        else:
+            return f"No Stix bundle(s) imported, request message returned ({reason})."
 
     def start(self):
         """Start the main loop"""
