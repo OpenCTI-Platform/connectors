@@ -475,13 +475,13 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.12.11"
+version = "5.12.12"
 description = "Python API client for OpenCTI."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.12.11-py3-none-any.whl", hash = "sha256:2c8f8977fe9f3f51e2141da83e0e8fe2ab23edc373092f011591b300e6fd0c14"},
-    {file = "pycti-5.12.11.tar.gz", hash = "sha256:f78bfd5404e63a83eb599dc2c707aa26583f35ad67d8c16416ea92edff50cfb5"},
+    {file = "pycti-5.12.12-py3-none-any.whl", hash = "sha256:c73db60bb882d6956a633a24f19ee8d439b0103bc48847ab31097254bf8b8579"},
+    {file = "pycti-5.12.12.tar.gz", hash = "sha256:ee12fadf4b9552e8f5d38f55a134c5074c228a51f602b1d8e327f953de6f4b80"},
 ]
 
 [package.dependencies]
@@ -862,13 +862,13 @@ files = [
 
 [[package]]
 name = "setuptools"
-version = "69.0.2"
+version = "69.0.3"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "setuptools-69.0.2-py3-none-any.whl", hash = "sha256:1e8fdff6797d3865f37397be788a4e3cba233608e9b509382a2777d25ebde7f2"},
-    {file = "setuptools-69.0.2.tar.gz", hash = "sha256:735896e78a4742605974de002ac60562d286fa8051a7e2299445e8e8fbb01aa6"},
+    {file = "setuptools-69.0.3-py3-none-any.whl", hash = "sha256:385eb4edd9c9d5c17540511303e39a147ce2fc04bc55289c322b9e5904fe2c05"},
+    {file = "setuptools-69.0.3.tar.gz", hash = "sha256:be1af57fc409f93647f2e8e4573a142ed38724b8cdd389706a867bb4efcf1e78"},
 ]
 
 [package.extras]
@@ -1098,4 +1098,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "104182d717934c9279c16c85f11bdf44572d5894111b2632e441723344fc71fc"
+content-hash = "593d6e8b0b5921082b21e25463ac570501ca3a794af1a6f0fc9bdb62b5fa99aa"
