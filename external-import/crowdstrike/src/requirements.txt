@@ -1,4 +1,4 @@
 -e git+https://github.com/certeu/crowdstrike-client#egg=crowdstrike-client
-pycti==5.12.12
+pycti==5.12.13
 lxml==4.9.4
 pydantic==1.10.13

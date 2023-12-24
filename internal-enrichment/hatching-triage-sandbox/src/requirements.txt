@@ -1,2 +1,2 @@
-pycti==5.12.12
+pycti==5.12.13
 git+https://github.com/hatching/triage.git#subdirectory=python
