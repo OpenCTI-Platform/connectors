@@ -77,5 +77,8 @@ class ConfigCVE:
         )
 
         self.history_start_year = get_config_variable(
-            "CVE_HISTORY_START_YEAR", ["cve", "history_start_year"], self.load
+            "CVE_HISTORY_START_YEAR",
+            ["cve", "history_start_year"],
+            self.load,
+            isNumber=True,
         )
