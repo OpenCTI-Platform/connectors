@@ -11,7 +11,7 @@ The **Recorded Future Feed Connector** integrates Recorded Future threat intelli
 By leveraging the detailed threat intelligence provided by Recorded Future, this connector provides users with a richer and more comprehensive view of the threat landscape.
 
 ## Requirements:
-- OpenCTI Platform version 5.12.12 or higher.
+- OpenCTI Platform version 5.12.13 or higher.
 - An API Key for accessing Recorded Future.
 
 ## Configuration:
