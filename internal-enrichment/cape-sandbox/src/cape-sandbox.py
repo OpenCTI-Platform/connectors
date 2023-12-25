@@ -46,7 +46,7 @@ class CapeSandboxConnector:
         self.cape_url = get_config_variable(
             "CAPE_SANDBOX_URL", ["cape_sandbox", "url"], config
         )
-        self.cape_api_url = f"{self.cape_url}/apiv2"
+        self.cape_api_url = f"{self.cape_url}"
         self.token = get_config_variable(
             "CAPE_SANDBOX_TOKEN", ["cape_sandbox", "token"], config
         )
