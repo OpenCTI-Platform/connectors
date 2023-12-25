@@ -6,10 +6,9 @@ from . import utils
 def process(connector, vulnerability):
     vulnerability_id = vulnerability.get("id")
 
-    connector.helper.log_debug(f"Processing vulnerability {vulnerability_id} ...")
-
-    # stix_vulnerability = create_stix_vulnerability(connector, vulnerability)
-    # vulnerability_details = connector.api.vulnerability(vulnerability_id)
+    connector.helper.log_debug(
+        f"Processing vulnerability", {"vulnerability_id": vulnerability_id}
+    )
 
     custom_properties = {}
     key = "common_vulnerability_scores"
@@ -44,7 +43,7 @@ def process(connector, vulnerability):
 
     if bundle is None:
         connector.helper.log_error(
-            f"Could not process vulnerability {vulnerability_id}. Skipping ..."
+            f"Could not process vulnerability", {"vulnerability_id": vulnerability_id}
         )
 
     return bundle

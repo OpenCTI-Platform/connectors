@@ -10,6 +10,8 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 logger = logging.getLogger("mandiant-api")
 
+OFFSET_PAGINATION = 100
+
 
 class MandiantAPI:
     api_url: str = "https://api.intelligence.mandiant.com"
@@ -104,7 +106,7 @@ class MandiantAPI:
 
             self._set_last_query_time()
 
-            if response.status_code == 200:
+            if 200 <= response.status_code < 300:
                 return response
 
             if response.status_code == 429:
@@ -128,37 +130,35 @@ class MandiantAPI:
     def _process(
         self,
         name: str,
-        parameters: Dict[str, str] = {},
+        parameters: Dict[str, Union[str, int]] = {},
         item_id: Union[str, int] = None,
         required: List[str] = [],
         result: str = "objects",
         mode: str = "json",
-    ) -> Iterable[object]:
+    ) -> Union[Dict, bytes, List[Dict]]:
         url = self._get_endpoint(name=name, item_id=item_id, **parameters)
         required_parameters = {param: parameters[param] for param in required}
-
+        mandiant_data = []
         while True:
+            logger.info(url)
             response = self._query(url, self.modes.get(mode))
             if response is None:
-                yield response
-                return
+                return mandiant_data
 
             if item_id:
                 if mode == "pdf":
-                    yield response.content
+                    return response.content
                 else:
-                    yield response.json()
-                return
+                    return response.json()
 
             data = response.json()
-
-            for item in data.get(result):
-                yield item
-
+            data_response = data.get(result)
             next_parameter = data.get("next", None)
+            for item in data_response:
+                mandiant_data.append(item)
 
             if next_parameter is None:
-                return
+                return mandiant_data
 
             url = self._get_endpoint(
                 name=name,
@@ -175,7 +175,7 @@ class MandiantAPI:
         exclude_osint: bool = True,
         include_reports: bool = False,
         include_campaigns: bool = False,
-    ) -> Iterable[Dict]:
+    ) -> [Dict]:
         return self._process(
             name="indicators",
             parameters={
@@ -197,7 +197,7 @@ class MandiantAPI:
         end_epoch: int = None,
         limit: int = 1000,
         offset: int = 0,
-    ) -> Iterable[Dict]:
+    ) -> [Dict]:
         return self._process(
             name="reports",
             parameters={
@@ -209,13 +209,6 @@ class MandiantAPI:
             result="objects",
         )
 
-    def actors(self, limit: int = 100, offset: int = 0) -> Iterable[Dict]:
-        return self._process(
-            name="actors",
-            parameters={"limit": limit, "offset": offset},
-            result="threat-actors",
-        )
-
     def vulnerabilities(
         self,
         start_epoch: int = None,
@@ -223,7 +216,7 @@ class MandiantAPI:
         limit: int = 1000,
         sort_by: str = "last_update",
         sort_order: str = "asc",
-    ) -> Iterable[Dict]:
+    ) -> [Dict]:
         return self._process(
             name="vulnerabilities",
             parameters={
@@ -236,25 +229,21 @@ class MandiantAPI:
             result="vulnerability",
         )
 
-    def campaigns(
-        self,
-        start_epoch: int = None,
-        end_epoch: int = None,
-        limit: int = 1000,
-        offset: int = 0,
-    ) -> Iterable[Dict]:
+    def actors(self, limit: int = OFFSET_PAGINATION, offset: int = 0) -> Iterable[Dict]:
+        return self._process(
+            name="actors",
+            parameters={"limit": limit, "offset": offset},
+            result="threat-actors",
+        )
+
+    def campaigns(self, limit: int = OFFSET_PAGINATION, offset: int = 0) -> [Dict]:
         return self._process(
             name="campaigns",
-            parameters={
-                "start_epoch": start_epoch,
-                "end_epoch": end_epoch,
-                "limit": limit,
-                "offset": offset,
-            },
+            parameters={"limit": limit, "offset": offset},
             result="campaigns",
         )
 
-    def malwares(self, limit: int = 100, offset: int = 0) -> Iterable[Dict]:
+    def malwares(self, limit: int = OFFSET_PAGINATION, offset: int = 0) -> [Dict]:
         return self._process(
             name="malwares",
             parameters={"offset": offset, "limit": limit},
@@ -262,28 +251,28 @@ class MandiantAPI:
         )
 
     def report(self, report_id: str, mode: str = "json") -> Union[Dict, bytes]:
-        return next(self._process(name="report", item_id=report_id, mode=mode))
+        return self._process(name="report", item_id=report_id, mode=mode)
 
     def report_indicators(self, report_id: str) -> Dict:
-        return next(self._process(name="report_indicators", item_id=report_id))
+        return self._process(name="report_indicators", item_id=report_id)
 
     def actor(self, actor_id: str, mode: str = "json") -> Dict:
-        return next(self._process(name="actor", item_id=actor_id, mode=mode))
+        return self._process(name="actor", item_id=actor_id, mode=mode)
 
     def malware(self, malware_id: str) -> Dict:
-        return next(self._process(name="malware", item_id=malware_id))
+        return self._process(name="malware", item_id=malware_id)
 
     def campaign(self, campaign_id: str) -> Dict:
-        return next(self._process(name="campaign", item_id=campaign_id))
+        return self._process(name="campaign", item_id=campaign_id)
 
     def campaign_timeline(self, campaign_id: str) -> Dict:
-        return next(self._process(name="campaign_timeline", item_id=campaign_id))
+        return self._process(name="campaign_timeline", item_id=campaign_id)
 
     def campaign_indicators(self, campaign_id: str) -> Dict:
-        return next(self._process(name="campaign_indicators", item_id=campaign_id))
+        return self._process(name="campaign_indicators", item_id=campaign_id)
 
     def campaign_attack_patterns(self, campaign_id: str) -> Dict:
-        return next(self._process(name="campaign_attack_patterns", item_id=campaign_id))
+        return self._process(name="campaign_attack_patterns", item_id=campaign_id)
 
     def campaign_reports(self, campaign_id: str) -> Dict:
-        return next(self._process(name="campaign_reports", item_id=campaign_id))
+        return self._process(name="campaign_reports", item_id=campaign_id)

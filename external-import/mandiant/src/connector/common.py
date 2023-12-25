@@ -18,16 +18,15 @@ def create_stix_relationship(
     start_time=None,
     stop_time=None,
 ):
-    start_time = (
-        parse(start_time) if start_time else datetime.fromisocalendar(1971, 1, 1)
-    )
-    stop_time = parse(stop_time) if stop_time else datetime.fromisocalendar(5138, 1, 1)
+    start_time = parse(start_time) if start_time else None
+    stop_time = parse(stop_time) if stop_time else None
 
-    if start_time > stop_time:
-        stop_time = start_time + timedelta(seconds=+1)
+    if start_time is not None and stop_time is not None:
+        if start_time > stop_time:
+            stop_time = start_time + timedelta(seconds=+1)
 
-    if start_time == stop_time:
-        stop_time += timedelta(seconds=+1)
+        if start_time == stop_time:
+            stop_time += timedelta(seconds=+1)
 
     return stix2.Relationship(
         id=StixCoreRelationship.generate_id(
