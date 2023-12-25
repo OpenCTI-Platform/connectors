@@ -505,14 +505,14 @@ class Mandiant:
 
             if now - interval < last_run:
                 self.helper.log_debug(
-                    f"Skipping collecting due interval configuration...",
+                    "Skipping collecting due interval configuration",
                     {"collection": collection},
                 )
 
             try:
-                self.helper.log_info(f"Start collecting", {"collection": collection})
+                self.helper.log_info("Start collecting", {"collection": collection})
                 self._run(collection, work_id)
-                self.helper.log_info(f"Collection", {"collection": collection})
+                self.helper.log_info("Collection", {"collection": collection})
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")

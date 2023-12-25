@@ -120,12 +120,14 @@ class MandiantAPI:
                 self._authenticate()
                 continue
 
-            logger.error(
-                f"An unknown error occurred, code: {response.status_code}, response: {response.text}, url: {url}, headers: {str(headers)}."
-            )
-            raise ValueError(
-                f"An unknown error occurred, code: {response.status_code}, response: {response.text}, url: {url}, headers: {str(headers)}."
-            )
+            meta = {
+                "status_code": response.status_code,
+                "response": response.text,
+                "url": url,
+                "headers": str(headers),
+            }
+            logger.error("An unknown error occurred", meta)
+            raise ValueError("An unknown error occurred")
 
     def _process(
         self,

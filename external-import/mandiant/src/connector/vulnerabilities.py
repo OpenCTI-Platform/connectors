@@ -7,7 +7,7 @@ def process(connector, vulnerability):
     vulnerability_id = vulnerability.get("id")
 
     connector.helper.log_debug(
-        f"Processing vulnerability", {"vulnerability_id": vulnerability_id}
+        "Processing vulnerability", {"vulnerability_id": vulnerability_id}
     )
 
     custom_properties = {}
@@ -43,7 +43,7 @@ def process(connector, vulnerability):
 
     if bundle is None:
         connector.helper.log_error(
-            f"Could not process vulnerability", {"vulnerability_id": vulnerability_id}
+            "Could not process vulnerability", {"vulnerability_id": vulnerability_id}
         )
 
     return bundle

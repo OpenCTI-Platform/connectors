@@ -100,7 +100,7 @@ def create_indicator(connector, indicator):
 def process(connector, indicator):
     indicator_id = indicator.get("id")
 
-    connector.helper.log_debug(f"Processing indicator", {"indicator_id": indicator_id})
+    connector.helper.log_debug("Processing indicator", {"indicator_id": indicator_id})
 
     stix_indicator = create_indicator(connector, indicator)
     items = [stix_indicator]
@@ -116,7 +116,7 @@ def process(connector, indicator):
 
     if bundle is None:
         connector.helper.log_error(
-            f"Could not process indicator", {"indicator_id": indicator_id}
+            "Could not process indicator", {"indicator_id": indicator_id}
         )
 
     return bundle

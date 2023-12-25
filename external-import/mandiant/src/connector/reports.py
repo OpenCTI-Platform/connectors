@@ -16,7 +16,7 @@ def process(connector, report):
 
     if report_type not in connector.mandiant_report_types:
         connector.helper.log_debug(
-            f"Ignoring report",
+            "Ignoring report",
             {
                 "report_id": report_id,
                 "report_type": report_type,
@@ -26,7 +26,7 @@ def process(connector, report):
         return
 
     connector.helper.log_info(
-        f"Processing report",
+        "Processing report",
         {
             "report_id": report_id,
             "report_type": report_type,
