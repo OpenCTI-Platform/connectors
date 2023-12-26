@@ -102,7 +102,7 @@ def create_stix_vulnerability(
         stix_base_object.get("id"),
         stix_vulnerability.get("id"),
         cve.get("attribution_scope", ""),
-        cve.get("first_seen"),
+        cve.get("first_seen", None),
         cve.get("last_seen", None),
     )
     return [stix_vulnerability, stix_relationship]
@@ -130,7 +130,7 @@ def create_stix_location(
         stix_base_object.get("id"),
         stix_location.get("id"),
         location.get("attribution_scope", ""),
-        location.get("first_seen"),
+        location.get("first_seen", None),
         location.get("last_seen", None),
     )
     return [stix_location, stix_relationship]
@@ -150,7 +150,7 @@ def create_stix_malware(connector, stix_base_object, malware, relationship_type=
         stix_base_object.get("id"),
         stix_malware.get("id"),
         malware.get("attribution_scope", ""),
-        malware.get("first_seen"),
+        malware.get("first_seen", None),
         malware.get("last_seen", None),
     )
     return [stix_malware, stix_relationship]
@@ -169,7 +169,7 @@ def create_stix_tool(connector, stix_base_object, tool, relationship_type="targe
         stix_base_object.get("id"),
         stix_tool.get("id"),
         tool.get("attribution_scope", ""),
-        tool.get("first_seen"),
+        tool.get("first_seen", None),
         tool.get("last_seen", None),
     )
     return [stix_tool, stix_relationship]
