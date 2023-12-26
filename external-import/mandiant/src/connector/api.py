@@ -175,8 +175,8 @@ class MandiantAPI:
         limit: int = 1000,
         gte_mscore: int = None,
         exclude_osint: bool = True,
-        include_reports: bool = False,
-        include_campaigns: bool = False,
+        include_reports: bool = True,
+        include_campaigns: bool = True,
     ) -> [Dict]:
         return self._process(
             name="indicators",

@@ -1,7 +1,7 @@
 import logging
 
 import stix2
-from pycti import Indicator
+from pycti import Indicator, Report
 
 from . import utils
 from .common import create_stix_relationship
@@ -106,11 +106,79 @@ def process(connector, indicator):
     items = [stix_indicator]
 
     for attribution in indicator.get("attributed_associations", []):
-        items += [
-            indicator_create_stix_relationship(
-                connector, stix_indicator, indicator, attribution
+        # attributed_associations > 'threat-actor' | 'malware'
+        if attribution["type"] == "malware":
+            # Add the malware
+            stix_malware = stix2.Malware(
+                id=attribution["id"],
+                name=attribution["name"],
+                is_family=True,
+                created_by_ref=connector.identity.get("standard_id"),
+                allow_custom=True,
             )
-        ]
+            items.append(stix_malware)
+            items.append(
+                indicator_create_stix_relationship(
+                    connector, stix_indicator, indicator, attribution
+                )
+            )
+        elif attribution["type"] == "threat-actor":
+            # Add the intrusion set
+            stix_intrusion_set = stix2.IntrusionSet(
+                id=attribution["id"].replace("threat-actor", "intrusion-set"),
+                name=attribution["name"],
+                created_by_ref=connector.identity.get("standard_id"),
+                allow_custom=True,
+            )
+            items.append(stix_intrusion_set)
+            items.append(
+                indicator_create_stix_relationship(
+                    connector, stix_indicator, indicator, attribution
+                )
+            )
+        else:
+            connector.helper.log_error(
+                "Unsupported attribute association type", {"type": attribution["type"]}
+            )
+        # Add the relation
+
+    for campaign in indicator.get("campaigns", []):
+        # {
+        # "id": "campaign--3e5d5dbc-bfbc-51a2-bfd5-016ea73b533b",
+        # "name": "CAMP.22.049",
+        # "title": "EMOTET Operations Resume in November 2022 Following Hiatus"
+        # }
+        # Add the campaign
+        stix_campaign = stix2.Campaign(
+            id=campaign["id"],
+            name=campaign["title"],
+            aliases=[campaign["name"]],
+            created_by_ref=connector.identity.get("standard_id"),
+            allow_custom=True,
+        )
+        items.append(stix_campaign)
+        items.append(
+            indicator_create_stix_relationship(
+                connector, stix_indicator, indicator, stix_campaign
+            )
+        )
+
+    for report in indicator.get("reports", []):
+        # {
+        # "report_id": "20-00015687",
+        # "type": "Vulnerability Report",
+        # "title": "Title - 1afddaa7 3bf50d632cd9fa2e-1605910297",
+        # "published_date": "2020-11-20T22:11:45.213Z"
+        # }
+        stix_report = stix2.Report(
+            id=Report.generate_id(report["title"], report["published_date"]),
+            name=report["title"],
+            published=report["published_date"],
+            object_refs=list(map(lambda item: item["id"], items)),
+            created_by_ref=connector.identity.get("standard_id"),
+            allow_custom=True,
+        )
+        items.append(stix_report)
 
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 

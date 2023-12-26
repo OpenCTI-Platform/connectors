@@ -160,9 +160,10 @@ class Report:
         for vulnerability in utils.retrieve_all(self.bundle, "type", "vulnerability"):
             for score_item in vulnerability["x_mandiant_com_vulnerability_score"]:
                 if "cvss_version" in score_item.keys():
-                    vulnerability["x_opencti_base_score"] = score_item["base_metrics"][
-                        "base_score"
-                    ]
+                    base_score = score_item["base_metrics"]["base_score"]
+                    vulnerability["x_opencti_base_score"] = (
+                        int(base_score) if base_score is not None else base_score
+                    )
             if risk_rating:
                 vulnerability["x_opencti_base_severity"] = risk_rating
 
@@ -171,6 +172,9 @@ class Report:
         report["confidence"] = self.confidence
         report["created_by_ref"] = self.identity["standard_id"]
         report["report_types"] = [self.report_type]
+        report["object_refs"] = list(
+            filter(lambda ref: not ref.startswith("x-"), report["object_refs"])
+        )
         mandiant_ref = [{"source_name": "Mandiant", "url": self.report_link}]
         if report["external_references"] is None:
             report["external_references"] = mandiant_ref
