@@ -59,6 +59,7 @@ def create_stix_campaign(connector, campaign_details):
     return stix2.Campaign(
         id=campaign_details.get("id"),
         name=utils.sanitizer("name", campaign_details),
+        aliases=[campaign_details["short_name"]],
         description=utils.sanitizer("description", campaign_details),
         last_seen=utils.sanitizer("last_activity_time", campaign_details),
         confidence=connector.helper.connect_confidence_level,
