@@ -5,6 +5,7 @@ import stix2
 from pycti import Note
 
 from . import utils
+from .common import create_stix_relationship
 
 
 def process(connector, report):
@@ -15,39 +16,47 @@ def process(connector, report):
 
     if report_type not in connector.mandiant_report_types:
         connector.helper.log_debug(
-            f"Ignoring report based on type [{report_id}][{report_type}] {report_title} ..."
+            "Ignoring report",
+            {
+                "report_id": report_id,
+                "report_type": report_type,
+                "report_title": report_title,
+            },
         )
         return
 
     connector.helper.log_info(
-        f"Processing report [{report_id}][{report_type}] {report_title} ..."
+        "Processing report",
+        {
+            "report_id": report_id,
+            "report_type": report_type,
+            "report_title": report_title,
+        },
     )
 
     report_details = connector.api.report(report_id, "json")
     report_bundle = connector.api.report(report_id, mode="stix")
     report_pdf = connector.api.report(report_id, mode="pdf")
 
+    bundle_objects = report_bundle["objects"]
     report_bundle["objects"] = list(
-        filter(lambda item: not item["id"].startswith("x-"), report_bundle["objects"])
+        filter(lambda item: not item["id"].startswith("x-"), bundle_objects)
     )
 
     report = Report(
         bundle=report_bundle,
         details=report_details,
         pdf=report_pdf,
-        confidence=connector.helper.connect_confidence_level,
-        identity=connector.identity,
-        report_type=connector.mandiant_report_types[report_type],
+        connector=connector,
+        report_type=report_type,
         report_link=report["report_link"],
-        create_notes=connector.mandiant_create_notes,
     )
 
-    bundle = report.generate()
-
-    if bundle is None:
-        connector.helper.log_error(
-            f"Could not process report {report_id}. Skipping ..."
-        )
+    try:
+        bundle = report.generate()
+    except Exception:
+        connector.helper.log_error("Could not process Report", {"report_id": report_id})
+        return None
 
     return bundle
 
@@ -58,21 +67,20 @@ class Report:
         bundle,
         details,
         pdf,
-        confidence,
-        identity,
+        connector,
         report_type,
         report_link,
-        create_notes,
     ):
         self.bundle = bundle
+        self.connector = connector
         self.details = details
         self.pdf = pdf
-        self.confidence = confidence
-        self.identity = identity
+        self.confidence = connector.helper.connect_confidence_level
+        self.identity = connector.identity
         self.report_id = details.get("report_id", details.get("reportId", None))
-        self.report_type = report_type
+        self.report_type = connector.mandiant_report_types[report_type]
         self.report_link = report_link
-        self.create_notes = create_notes
+        self.create_notes = connector.mandiant_create_notes
 
     def generate(self):
         self.save_files()
@@ -163,9 +171,11 @@ class Report:
         report["confidence"] = self.confidence
         report["created_by_ref"] = self.identity["standard_id"]
         report["report_types"] = [self.report_type]
-        report["external_references"] = [
-            {"source_name": "Mandiant", "url": self.report_link}
-        ]
+        mandiant_ref = [{"source_name": "Mandiant", "url": self.report_link}]
+        if report["external_references"] is None:
+            report["external_references"] = mandiant_ref
+        else:
+            report["external_references"] = report["external_references"] + mandiant_ref
 
     def create_note(self):
         # Report Analysis Note
@@ -448,10 +458,12 @@ class Report:
             destinations = definition["destinations"]
 
             for item in itertools.product(sources, destinations):
-                relationship = stix2.Relationship(
-                    source_ref=item[0]["id"],
-                    target_ref=item[1]["id"],
-                    relationship_type=definition["type"],
+                relationship = create_stix_relationship(
+                    self.connector,
+                    definition["type"],
+                    item[0]["id"],
+                    item[1]["id"],
+                    "",
                 )
 
                 relationships.append(relationship)

@@ -14,7 +14,7 @@ from .common import (
 def process(connector, campaign):
     campaign_id = campaign.get("id")
 
-    connector.helper.log_debug(f"Processing campaign {campaign_id} ...")
+    connector.helper.log_debug("Processing campaign", {"campaign_id": campaign_id})
 
     campaign_details = connector.api.campaign(campaign_id)
     campaign_attack_patterns = connector.api.campaign_attack_patterns(campaign_id)
@@ -49,7 +49,7 @@ def process(connector, campaign):
 
     if bundle is None:
         connector.helper.log_error(
-            f"Could not process campaign {campaign_id}. Skipping ..."
+            "Could not process campaign", {"campaign_id": campaign_id}
         )
 
     return bundle

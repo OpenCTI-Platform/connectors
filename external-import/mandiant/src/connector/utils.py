@@ -30,9 +30,9 @@ class Timestamp:
     def now(cls):
         return cls(datetime.now(timezone.utc))
 
-    @classmethod
-    def now_minus_5_seconds(cls):
-        return cls(datetime.now(timezone.utc) - timedelta(0, 5))
+    @property
+    def short_format(self):
+        return self._value.astimezone(timezone.utc).strftime("%Y-%m-%d")
 
     @property
     def iso_format(self):
