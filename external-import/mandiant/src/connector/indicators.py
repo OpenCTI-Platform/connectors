@@ -1,9 +1,10 @@
 import logging
 
 import stix2
-from pycti import Indicator, StixCoreRelationship
+from pycti import Indicator
 
 from . import utils
+from .common import create_stix_relationship
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -31,32 +32,21 @@ MAPPING = {
 }
 
 
-def create_stix_relationship(connector, stix_indicator, indicator, attribution):
+def indicator_create_stix_relationship(
+    connector, stix_indicator, indicator, attribution
+):
     attribution_id = attribution["id"]
 
     if "threat-actor" in attribution["id"]:
         attribution_id = attribution["id"].replace("threat-actor", "intrusion-set")
 
-    start_time = indicator.get("first_seen", None)
-    stop_time = indicator.get("last_seen", None)
-
-    relationship_id = StixCoreRelationship.generate_id(
+    return create_stix_relationship(
+        connector,
         "indicates",
         stix_indicator.get("id"),
         attribution_id,
-        start_time,
-        stop_time,
-    )
-
-    return stix2.Relationship(
-        id=relationship_id,
-        relationship_type="indicates",
-        source_ref=stix_indicator.get("id"),
-        target_ref=attribution_id,
-        start_time=start_time,
-        stop_time=stop_time,
-        allow_custom=True,
-        created_by_ref=connector.identity["standard_id"],
+        indicator.get("first_seen", None),
+        indicator.get("last_seen", None),
     )
 
 
@@ -110,21 +100,23 @@ def create_indicator(connector, indicator):
 def process(connector, indicator):
     indicator_id = indicator.get("id")
 
-    connector.helper.log_debug(f"Processing indicator {indicator_id} ...")
+    connector.helper.log_debug("Processing indicator", {"indicator_id": indicator_id})
 
     stix_indicator = create_indicator(connector, indicator)
     items = [stix_indicator]
 
     for attribution in indicator.get("attributed_associations", []):
         items += [
-            create_stix_relationship(connector, stix_indicator, indicator, attribution)
+            indicator_create_stix_relationship(
+                connector, stix_indicator, indicator, attribution
+            )
         ]
 
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
     if bundle is None:
         connector.helper.log_error(
-            f"Could not process indicator {indicator_id}. Skipping ..."
+            "Could not process indicator", {"indicator_id": indicator_id}
         )
 
     return bundle
