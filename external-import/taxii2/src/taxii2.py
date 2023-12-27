@@ -283,7 +283,7 @@ class Taxii2Connector:
                         elif match[1] == "ipv6-addr":
                             object["x_opencti_main_observable_type"] = "IPv6-Addr"
                         elif match[1] == "file":
-                            object["x_opencti_main_observable_type"] = "File"
+                            object["x_opencti_main_observable_type"] = "StixFile"
                         elif match[1] == "domain-name":
                             object["x_opencti_main_observable_type"] = "Domain-Name"
                         elif match[1] == "url":
