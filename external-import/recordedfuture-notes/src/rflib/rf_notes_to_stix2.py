@@ -8,8 +8,8 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
-import json
 import ipaddress
+import json
 from datetime import datetime
 
 import pycti  # type: ignore
