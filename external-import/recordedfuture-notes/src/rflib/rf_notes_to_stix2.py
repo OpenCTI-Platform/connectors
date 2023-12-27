@@ -223,12 +223,15 @@ class IPAddress(Indicator):
 
     def _create_obs(self):
         if self.is_ipv6() is True:
-            return stix2.IPv6Address(value=self.name)
+            return stix2.IPv6Address(
+                value=self.name,
+                object_marking_refs=self.tlp,
+            )
         elif self.is_ipv4() is True:
             return stix2.IPv4Address(
-            value=self.name,
-            object_marking_refs=self.tlp,
-        )
+                value=self.name,
+                object_marking_refs=self.tlp,
+            )
         else:
             raise ValueError(
                 f"This observable value '{self.name}' is not have a valid IPv4 or IPv6 address."
@@ -307,24 +310,18 @@ class FileHash(Indicator):
 class TLPMarking(RFStixEntity):
     """Creates TLP marking for report"""
 
-    def __init__(self, name, _type, author, tlp):
-        super().__init__(name, _type, author, tlp)
-
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.AttackPattern(
             id=pycti.AttackPattern.generate_id(self.name, self.name),
             name=self.name,
             created_by_ref=self.author.id,
-            object_marking_refs=self.tlp,
             custom_properties={"x_mitre_id": self.name},
         )
 
 
 class TTP(RFStixEntity):
     """Converts MITRE T codes to AttackPattern"""
-    def __init__(self, name, _type, author, tlp):
-        super().__init__(name, _type, author, tlp)
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -339,8 +336,6 @@ class TTP(RFStixEntity):
 
 class Identity(RFStixEntity):
     """Converts various RF entity types to a STIX2 Identity"""
-    # def __init__(self, name, _type, author, tlp):
-    #     super().__init__(name, _type, author, tlp)
 
     type_to_class = {
         "Company": "organization",
@@ -356,7 +351,7 @@ class Identity(RFStixEntity):
             name=self.name,
             identity_class=self.create_id_class(),
             created_by_ref=self.author.id,
-            # object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp,
         )
 
     def create_id_class(self):
@@ -366,8 +361,6 @@ class Identity(RFStixEntity):
 
 class ThreatActor(RFStixEntity):
     """Converts various RF Threat Actor Organization to a STIX2 Threat Actor"""
-    # def __init__(self, name, _type, author, tlp):
-    #     super().__init__(name, _type, author, tlp)
 
     type_to_class = {
         "Company": "organization",
@@ -381,7 +374,7 @@ class ThreatActor(RFStixEntity):
             id=pycti.ThreatActor.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
-            # object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp,
         )
 
     def create_id_class(self):
@@ -391,8 +384,6 @@ class ThreatActor(RFStixEntity):
 
 class IntrusionSet(RFStixEntity):
     """Converts Threat Actor to Intrusion Set SDO"""
-    # def __init__(self, name, _type, author, tlp):
-    #     super().__init__(name, _type, author, tlp)
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -400,14 +391,12 @@ class IntrusionSet(RFStixEntity):
             id=pycti.IntrusionSet.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
-            # object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp,
         )
 
 
 class Malware(RFStixEntity):
     """Converts Malware to a Malware SDO"""
-    # def __init__(self, name, _type, author, tlp):
-    #     super().__init__(name, _type, author, tlp)
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -416,15 +405,12 @@ class Malware(RFStixEntity):
             name=self.name,
             is_family=False,
             created_by_ref=self.author.id,
-            # object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp,
         )
 
 
 class Vulnerability(RFStixEntity):
     """Converts a CyberVulnerability to a Vulnerability SDO"""
-    #
-    # def __init__(self, name, _type, author, tlp):
-    #     super().__init__(name, _type, author, tlp)
 
     # TODO: add vuln descriptions
     def create_stix_objects(self):
@@ -433,7 +419,7 @@ class Vulnerability(RFStixEntity):
             id=pycti.Vulnerability.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
-            # object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp,
         )
 
 
@@ -480,7 +466,7 @@ class Software(RFStixEntity):
     def create_stix_objects(self):
         self.software_object = stix2.Software(
             name=self.name,
-            # object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp,
         )
 
 
@@ -513,7 +499,7 @@ class Location(RFStixEntity):
             name=self.name,
             country=self.name,
             custom_properties={"x_opencti_location_type": self.type},
-            # object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp,
         )
 
 
@@ -531,7 +517,7 @@ class Campaign(RFStixEntity):
     def create_stix_objects(self):
         self.campaign_object = stix2.Campaign(
             name=self.name,
-            # object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp,
         )
 
 
