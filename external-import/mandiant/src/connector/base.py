@@ -109,7 +109,7 @@ class Mandiant:
             "MANDIANT_IMPORT_CAMPAIGNS",
             ["mandiant", "import_campaigns"],
             config,
-            default=False,
+            default=True,
         ):
             self.mandiant_collections.append("campaigns")
 
