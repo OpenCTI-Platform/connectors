@@ -9,6 +9,7 @@
 ################################################################################
 """
 import json
+import ipaddress
 from datetime import datetime
 
 import pycti  # type: ignore
@@ -192,12 +193,41 @@ class IPAddress(Indicator):
 
     """Converts IP address to IP indicator and observable"""
 
-    # TODO: add ipv6 compatibility
+    def is_ipv6(self):
+        """Determine whether the provided IP string is IPv6."""
+        try:
+            ipaddress.IPv6Address(self.name)
+            return True
+        except ipaddress.AddressValueError:
+            return False
+
+    def is_ipv4(self):
+        """Determine whether the provided IP string is IPv6."""
+        try:
+            ipaddress.IPv4Address(self.name)
+            return True
+        except ipaddress.AddressValueError:
+            return False
+
     def _create_pattern(self):
-        return f"[ipv4-addr:value = '{self.name}']"
+        if self.is_ipv6() is True:
+            return f"[ipv6-addr:value = '{self.name}']"
+        elif self.is_ipv4() is True:
+            return f"[ipv4-addr:value = '{self.name}']"
+        else:
+            raise ValueError(
+                f"'This pattern value {self.name}' is not have a valid IPv4 or IPv6 address."
+            )
 
     def _create_obs(self):
-        return stix2.IPv4Address(value=self.name)
+        if self.is_ipv6() is True:
+            return stix2.IPv6Address(value=self.name)
+        elif self.is_ipv4() is True:
+            return stix2.IPv4Address(value=self.name)
+        else:
+            raise ValueError(
+                f"This observable value '{self.name}' is not have a valid IPv4 or IPv6 address."
+            )
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
