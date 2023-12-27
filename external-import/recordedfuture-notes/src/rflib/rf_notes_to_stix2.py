@@ -307,17 +307,17 @@ class FileHash(Indicator):
         )
 
 
-class TLPMarking(RFStixEntity):
-    """Creates TLP marking for report"""
-
-    def create_stix_objects(self):
-        """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.AttackPattern(
-            id=pycti.AttackPattern.generate_id(self.name, self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-            custom_properties={"x_mitre_id": self.name},
-        )
+# class TLPMarking(RFStixEntity):
+#     """Creates TLP marking for report"""
+#
+#     def create_stix_objects(self):
+#         """Creates STIX objects from object attributes"""
+#         self.stix_obj = stix2.AttackPattern(
+#             id=pycti.AttackPattern.generate_id(self.name, self.name),
+#             name=self.name,
+#             created_by_ref=self.author.id,
+#             custom_properties={"x_mitre_id": self.name},
+#         )
 
 
 class TTP(RFStixEntity):
@@ -426,11 +426,12 @@ class Vulnerability(RFStixEntity):
 class DetectionRule(RFStixEntity):
     """Represents a Yara, Sigma or SNORT rule"""
 
-    def __init__(self, name, type_, content, author):
+    def __init__(self, name, _type, content, author, tlp=None):
+        super().__init__(name, _type, author, tlp)
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
 
         self.name = name.split(".")[0]
-        self.type = type_
+        self.type = _type
         self.content = content
         self.stix_obj = None
         self.author = author
@@ -672,7 +673,7 @@ class StixNote:
             refs.append({"source_name": source_name, "url": external_url})
         return refs
 
-    def from_json(self, note):
+    def from_json(self, note, tlp):
         """Converts to STIX Bundle from JSON objects"""
         # TODO: catch errors in for loop here
         attr = note["attributes"]
@@ -688,12 +689,12 @@ class StixNote:
             type_ = entity["type"]
             name = entity["name"]
             if self.person_to_ta and type_ == "Person":
-                stix_objs = ThreatActor(name, type_, self.author, self.tlp).to_stix_objects()
+                stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
             elif entity["id"] in self.tas:
                 if self.ta_to_intrusion_set and type_ != "Person":
-                    stix_objs = IntrusionSet(name, type_, self.author, self.tlp).to_stix_objects()
+                    stix_objs = IntrusionSet(name, type_, self.author, tlp).to_stix_objects()
                 else:
-                    stix_objs = ThreatActor(name, type_, self.author, self.tlp).to_stix_objects()
+                    stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
             elif type_ == "Source":
                 external_reference = {"source_name": name, "url": name}
                 self.external_references.append(external_reference)
@@ -703,7 +704,7 @@ class StixNote:
                 self.helper.log_warning(msg)
                 continue
             else:
-                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, self.tlp)
+                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",

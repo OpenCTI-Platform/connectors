@@ -176,7 +176,7 @@ class RFNotes:
                 self.risk_as_score,
                 self.risk_threshold,
             )
-            stixnote.from_json(note)
+            stixnote.from_json(note, self.tlp)
             stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
