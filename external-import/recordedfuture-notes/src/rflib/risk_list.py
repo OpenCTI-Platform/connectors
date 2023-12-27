@@ -7,12 +7,13 @@ from .constants import RISK_LIST_TYPE_MAPPER
 
 
 class RiskList(threading.Thread):
-    def __init__(self, helper, update_existing_data, interval, rfapi):
+    def __init__(self, helper, update_existing_data, interval, rfapi, tlp):
         threading.Thread.__init__(self)
         self.helper = helper
         self.update_existing_data = update_existing_data
         self.interval = interval
         self.rfapi = rfapi
+        self.tlp = tlp
 
     def run(self):
         while True:
@@ -30,8 +31,8 @@ class RiskList(threading.Thread):
                 reader = csv.DictReader(csv_file)
                 for row in reader:
                     # Convert into stix object
-                    indicator = risk_list_type["class"](row["Name"], key)
-                    indicator.map_data(row)
+                    indicator = risk_list_type["class"](row["Name"], key, tlp=self.tlp)
+                    indicator.map_data(row, self.tlp)
                     indicator.build_bundle(indicator)
                     # Create bundle
                     bundle = indicator.to_stix_bundle()
