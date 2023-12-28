@@ -32,7 +32,7 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp='white'):
+    def __init__(self, name, _type, author=None, tlp="white"):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
@@ -252,10 +252,7 @@ class Domain(Indicator):
         return f"[domain-name:value = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.DomainName(
-            value=self.name,
-            object_marking_refs=self.tlp
-        )
+        return stix2.DomainName(value=self.name, object_marking_refs=self.tlp)
 
 
 class URL(Indicator):
@@ -270,10 +267,7 @@ class URL(Indicator):
         return f"[url:value = '{ioc}']"
 
     def _create_obs(self):
-        return stix2.URL(
-            value=self.name,
-            object_marking_refs=self.tlp
-        )
+        return stix2.URL(value=self.name, object_marking_refs=self.tlp)
 
 
 class FileHash(Indicator):
@@ -302,22 +296,8 @@ class FileHash(Indicator):
 
     def _create_obs(self):
         return stix2.File(
-            hashes={self.algorithm: self.name},
-            object_marking_refs=self.tlp
+            hashes={self.algorithm: self.name}, object_marking_refs=self.tlp
         )
-
-
-# class TLPMarking(RFStixEntity):
-#     """Creates TLP marking for report"""
-#
-#     def create_stix_objects(self):
-#         """Creates STIX objects from object attributes"""
-#         self.stix_obj = stix2.AttackPattern(
-#             id=pycti.AttackPattern.generate_id(self.name, self.name),
-#             name=self.name,
-#             created_by_ref=self.author.id,
-#             custom_properties={"x_mitre_id": self.name},
-#         )
 
 
 class TTP(RFStixEntity):
@@ -692,9 +672,13 @@ class StixNote:
                 stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
             elif entity["id"] in self.tas:
                 if self.ta_to_intrusion_set and type_ != "Person":
-                    stix_objs = IntrusionSet(name, type_, self.author, tlp).to_stix_objects()
+                    stix_objs = IntrusionSet(
+                        name, type_, self.author, tlp
+                    ).to_stix_objects()
                 else:
-                    stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
+                    stix_objs = ThreatActor(
+                        name, type_, self.author, tlp
+                    ).to_stix_objects()
             elif type_ == "Source":
                 external_reference = {"source_name": name, "url": name}
                 self.external_references.append(external_reference)

@@ -194,7 +194,11 @@ if __name__ == "__main__":
         RF = RFNotes()
         if RF.rf_pull_risk_list:
             RiskList = RiskList(
-                RF.helper, RF.update_existing_data, RF.rf_risk_list_interval, RF.rfapi, RF.tlp
+                RF.helper,
+                RF.update_existing_data,
+                RF.rf_risk_list_interval,
+                RF.rfapi,
+                RF.tlp,
             )
             RiskList.start()
         else:
