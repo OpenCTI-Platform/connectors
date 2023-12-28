@@ -9,7 +9,8 @@ from ipaddress import (
 )
 from json import dumps
 
-from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
+from pycti import Identity as pycti_identity
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition, Identity
 
 LOGGER = logging.getLogger(__name__)
 
@@ -163,3 +164,12 @@ def object_to_pretty_json(obj):
     else:
         LOGGER.error(f"Invalid object type: {type(obj)}")
         return None
+
+def create_author():
+    """Creates HostIO Author"""
+    LOGGER.debug("Add Identity Author.")
+    return Identity(
+        id=pycti_identity.generate_id("HostIO", "organization"),
+        name="HostIO Connector",
+        identity_class="organization",
+    )

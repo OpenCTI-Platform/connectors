@@ -23,14 +23,17 @@ LOGGER = logging.getLogger(__name__)
 class BaseStixTransformation:
     """Class to transform a Domain into a STIX DomainName object."""
 
-    def __init__(self, marking_refs="TLP:WHITE", entity_id=None):
+    def __init__(self, author, marking_refs="TLP:WHITE", entity_id=None):
         """Initialize the class with the domain and entity id."""
         self.marking_refs = [get_tlp_marking(marking_refs)]
         self.entity_id = entity_id
+        self.author = author
         self.stix_objects = []
         self.domain = None
         self.ip = None
+        self.hostio_id = None
         self.labels = []
+
 
     def _create_autonomous_system(self, asn_data, relationship_id):
         """Transform ASN Data"""
@@ -84,6 +87,7 @@ class BaseStixTransformation:
             source_ref=source_id,
             target_ref=target_id,
             object_marking_refs=self.marking_refs,
+            created_by_ref=self.author.id,
         )
         self.stix_objects.append(relationship)
 
@@ -149,6 +153,7 @@ class BaseStixTransformation:
             name=company.get("name"),
             identity_class="organization",
             object_marking_refs=self.marking_refs,
+            created_by_ref=self.author.id,
         )
         self.stix_objects.append(company_sco)
         self._create_relationships(
@@ -174,6 +179,7 @@ class BaseStixTransformation:
             if country.get("latlng")[1]
             else None,
             region=country.get("subregion"),
+            created_by_ref=self.hostio_id,
             custom_properties={
                 "x_opencti_location_type": "Country",
                 "x_opencti_aliases": [
@@ -274,9 +280,9 @@ class BaseStixTransformation:
 class HostIOIPtoDomainStixTransform(BaseStixTransformation):
     """Class to transform a Domain into a STIX DomainName object."""
 
-    def __init__(self, domain, marking_refs="TLP:WHITE", entity_id=None):
+    def __init__(self, domain, author, marking_refs="TLP:WHITE", entity_id=None):
         """Initialize the class with the domain and entity id."""
-        super().__init__(marking_refs, entity_id)
+        super().__init__(marking_refs=marking_refs, author=author, entity_id=entity_id)
         if domain_validator(domain):
             self.domain = domain
         else:
@@ -289,9 +295,9 @@ class HostIOIPtoDomainStixTransform(BaseStixTransformation):
 class HostIODomainStixTransformation(BaseStixTransformation):
     """Class to transform a Domain into a STIX DomainName object."""
 
-    def __init__(self, domain_object, marking_refs="TLP:WHITE", entity_id=None):
+    def __init__(self, domain_object, author, marking_refs="TLP:WHITE", entity_id=None):
         """Initialize the class with the domain and entity id."""
-        super().__init__(marking_refs, entity_id)
+        super().__init__(marking_refs=marking_refs, author=author, entity_id=entity_id)
         self.domain_object = domain_object
         if hasattr(self.domain_object, "dns") and self.domain_object.dns is not {}:
             self._transform_dns(self.domain_object.dns)
@@ -305,9 +311,9 @@ class HostIODomainStixTransformation(BaseStixTransformation):
 class IPInfoStixTransformation(BaseStixTransformation):
     """Class to transform a Domain into a STIX DomainName object."""
 
-    def __init__(self, ipinfo_object, marking_refs="TLP:WHITE", entity_id=None):
+    def __init__(self, ipinfo_object, author, marking_refs="TLP:WHITE", entity_id=None):
         """Initialize the class with the domain and entity id."""
-        super().__init__(marking_refs, entity_id)
+        super().__init__(marking_refs=marking_refs, author=author, entity_id=entity_id)
         self.ipinfo_object = ipinfo_object
 
         LOGGER.info(f"IPInfo data: {self.ipinfo_object}")

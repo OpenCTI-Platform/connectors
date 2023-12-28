@@ -17,10 +17,11 @@ class IPInfo:
     The results are then added to the Class as attributes.
     """
 
-    def __init__(self, token, ip, marking_refs="TLP:CLEAP", entity_id=None):
+    def __init__(self, token, ip, author, marking_refs="TLP:CLEAP", entity_id=None):
         self.ip = ip
         self.marking_refs = marking_refs
         self.entity_id = entity_id
+        self.author = author
         if is_valid_token(token):
             self.handler = getHandler(token=token)
         else:
@@ -32,7 +33,7 @@ class IPInfo:
             LOGGER.error(f"Invalid IP address: {ip}")
             raise ValueError(f"Invalid IP address: {ip}")
         self.stix_transform = IPInfoStixTransformation(
-            self.details, self.marking_refs, self.entity_id
+            ipinfo_object=self.details, author=self.author,marking_refs=self.marking_refs, entity_id=self.entity_id
         )
         self.labels = self.stix_transform.get_labels()
         LOGGER.info(f"IPInfo API request for {ip} successful.")

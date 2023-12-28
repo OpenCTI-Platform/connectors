@@ -10,6 +10,7 @@ from hostio.hostio_utils import (
     is_valid_token,
     validate_labels,
     validate_tlp_marking,
+    create_author,
 )
 from lib.internal_enrichment import InternalEnrichmentConnector
 from stix2 import Note
@@ -20,6 +21,7 @@ class HostIOConnector(InternalEnrichmentConnector):
         """Initialization of the connector"""
         super().__init__()
         self._get_config_variables()
+        self.author = create_author()
 
     def _get_config_variables(self):
         """Get config variables from the environment"""
@@ -79,6 +81,7 @@ class HostIOConnector(InternalEnrichmentConnector):
             token=self.hostio_token,
             ip=ip,
             limit=self.hostio_limit,
+            author=self.author,
             entity_id=entity_id,
             marking_refs=self.hostio_marking_refs,
         )
@@ -88,6 +91,7 @@ class HostIOConnector(InternalEnrichmentConnector):
         ipinfo_object = IPInfo(
             token=self.hostio_token,
             ip=ip,
+            author=self.author,
             entity_id=entity_id,
             marking_refs=self.hostio_marking_refs,
         )
@@ -140,6 +144,7 @@ class HostIOConnector(InternalEnrichmentConnector):
                     object_refs=[entity_id],
                     labels=format_labels(self.hostio_labels),
                     object_marking_refs=[get_tlp_marking(self.hostio_marking_refs)],
+                    created_by_ref=self.author.id,
                     external_references=[
                         {
                             "source_name": source_name,
@@ -167,6 +172,7 @@ class HostIOConnector(InternalEnrichmentConnector):
             token=self.hostio_token,
             domain=domain,
             entity_id=entity_id,
+            author=self.author,
             marking_refs=self.hostio_marking_refs,
         )
         stix_objects.extend(domain_object.get_stix_objects())
@@ -216,6 +222,7 @@ class HostIOConnector(InternalEnrichmentConnector):
                     object_refs=[entity_id],
                     labels=format_labels(self.hostio_labels),
                     object_marking_refs=[get_tlp_marking(self.hostio_marking_refs)],
+                    created_by_ref=self.author.id,
                     external_references=[
                         {
                             "source_name": source_name,
@@ -247,7 +254,9 @@ class HostIOConnector(InternalEnrichmentConnector):
                 f"Observable is a {opencti_entity.get('entity_type')}: {opencti_entity}"
             )
             entity_type = opencti_entity.get("entity_type")
+            # Create stix object and append author.
             stix_objects = []
+            stix_objects.append(self.author)
         else:
             self.helper.log_error(
                 f"Observable does not have an entity_type attribute: {opencti_entity}"

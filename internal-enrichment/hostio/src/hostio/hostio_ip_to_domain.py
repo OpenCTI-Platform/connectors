@@ -18,7 +18,7 @@ class HostIOIPtoDomain:
     The results are then added to the Class as attributes.
     """
 
-    def __init__(self, token, ip, entity_id=None, marking_refs="TLP:WHITE", limit=5):
+    def __init__(self, token, ip, author, entity_id=None, marking_refs="TLP:WHITE", limit=5):
         self.ip = ip
         if is_valid_token(token):
             self.headers = {"Authorization": f"Bearer {token}"}
@@ -32,6 +32,7 @@ class HostIOIPtoDomain:
         self.domains = []
         self.entity_id = entity_id
         self.marking_refs = marking_refs
+        self.author = author
 
     def _request_data(self):
         """Internal method to handle API requests."""
@@ -102,6 +103,7 @@ class HostIOIPtoDomain:
                 HostIOIPtoDomainStixTransform(
                     domain=domain,
                     entity_id=self.entity_id,
+                    author=self.author,
                     marking_refs=self.marking_refs,
                 ).get_stix_objects()
             )
