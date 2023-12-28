@@ -204,7 +204,7 @@ class IPAddress(Indicator):
             return False
 
     def is_ipv4(self):
-        """Determine whether the provided IP string is IPv6."""
+        """Determine whether the provided IP string is IPv4."""
         try:
             ipaddress.IPv4Address(self.name)
             return True
