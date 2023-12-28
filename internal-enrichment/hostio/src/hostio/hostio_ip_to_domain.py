@@ -18,7 +18,9 @@ class HostIOIPtoDomain:
     The results are then added to the Class as attributes.
     """
 
-    def __init__(self, token, ip, author, entity_id=None, marking_refs="TLP:WHITE", limit=5):
+    def __init__(
+        self, token, ip, author, entity_id=None, marking_refs="TLP:WHITE", limit=5
+    ):
         self.ip = ip
         if is_valid_token(token):
             self.headers = {"Authorization": f"Bearer {token}"}

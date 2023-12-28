@@ -3,6 +3,7 @@ from os import environ
 from hostio import HostIODomain, HostIOIPtoDomain, IPInfo
 from hostio.hostio_utils import (
     can_be_int,
+    create_author,
     format_labels,
     get_tlp_marking,
     is_ipv4,
@@ -10,7 +11,6 @@ from hostio.hostio_utils import (
     is_valid_token,
     validate_labels,
     validate_tlp_marking,
-    create_author,
 )
 from lib.internal_enrichment import InternalEnrichmentConnector
 from stix2 import Note

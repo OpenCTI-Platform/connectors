@@ -1,12 +1,12 @@
 import pytest
 from hostio.hostio_domain import HostIODomain
+from hostio.hostio_utils import create_author
 from hostio.tests.constants import generate_random_token, load_fixture
 from hostio.transform_to_stix import (
     BaseStixTransformation,
     HostIODomainStixTransformation,
     HostIOIPtoDomainStixTransform,
 )
-from hostio.hostio_utils import create_author
 from stix2 import (
     TLP_GREEN,
     TLP_WHITE,
@@ -27,6 +27,7 @@ DEFAULT_DOMAIN_ENTITY = DomainName(
     object_marking_refs=[TLP_GREEN],
 )
 AUTHOR = create_author()
+
 
 class TestTransformToStix:
     @pytest.fixture
@@ -95,7 +96,9 @@ class TestTransformToStix:
     def test_hostio_ip_to_domain_stix_transform_invalid_entity_id(self):
         """Test creation of STIX DomainName object with invalid entity id."""
         with pytest.raises(InvalidValueError):
-            HostIOIPtoDomainStixTransform(author=AUTHOR, domain=VALID_DOMAIN, entity_id="invalid")
+            HostIOIPtoDomainStixTransform(
+                author=AUTHOR, domain=VALID_DOMAIN, entity_id="invalid"
+            )
             assert False
 
     def test_hostio_domain_stix_transformation(self, domain, mocker):

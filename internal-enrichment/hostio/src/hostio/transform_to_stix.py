@@ -34,7 +34,6 @@ class BaseStixTransformation:
         self.hostio_id = None
         self.labels = []
 
-
     def _create_autonomous_system(self, asn_data, relationship_id):
         """Transform ASN Data"""
         asn_id = None
@@ -255,7 +254,7 @@ class BaseStixTransformation:
                 self._create_domain_observable(domain=domain, entity_id=self.entity_id)
         if "country" in ipinfo_object:
             country = CountryInfo(ipinfo_object.get("country")).info()
-            LOGGER.info(f"Country data: {country}")
+            LOGGER.debug(f"Country data: {country}")
             if country:
                 self._create_location(
                     country, ipinfo_object.get("city"), ipinfo_object.get("loc")
@@ -316,6 +315,6 @@ class IPInfoStixTransformation(BaseStixTransformation):
         super().__init__(marking_refs=marking_refs, author=author, entity_id=entity_id)
         self.ipinfo_object = ipinfo_object
 
-        LOGGER.info(f"IPInfo data: {self.ipinfo_object}")
+        LOGGER.debug(f"IPInfo data: {self.ipinfo_object}")
         # Create STIX objects for the Domain Name and External Reference and add them to the list of STIX objects.
         self._transform_ipinfo_object(self.ipinfo_object)

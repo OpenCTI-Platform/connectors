@@ -33,7 +33,10 @@ class IPInfo:
             LOGGER.error(f"Invalid IP address: {ip}")
             raise ValueError(f"Invalid IP address: {ip}")
         self.stix_transform = IPInfoStixTransformation(
-            ipinfo_object=self.details, author=self.author,marking_refs=self.marking_refs, entity_id=self.entity_id
+            ipinfo_object=self.details,
+            author=self.author,
+            marking_refs=self.marking_refs,
+            entity_id=self.entity_id,
         )
         self.labels = self.stix_transform.get_labels()
         LOGGER.info(f"IPInfo API request for {ip} successful.")
@@ -55,14 +58,22 @@ class IPInfo:
         note_content = str()
         for key in self.get_details().keys():
             if self.get_details().get(key) is not None:
-                message = f"IPInfo `{key}`:"
+                message = str()
+                LOGGER.debug(f"Parsing key: {key}")
                 if self.get_details().get(key) in [None, [], {}, "None"]:
-                    # do nothing
-                    pass
+                    LOGGER.debug(
+                        f"Note key ({key}) with ({self.get_details().get(key)}) content."
+                    )
                 elif isinstance(self.get_details().get(key), (dict, list)):
                     pretty_message = object_to_pretty_json(self.get_details().get(key))
-                    message += f"\n\n```\n{pretty_message}\n```"
+                    message += f"**{key}**:\n\n```\n{pretty_message}\n```"
                 elif isinstance(self.get_details().get(key), (str, int, float, bool)):
-                    message += f"\t```{self.get_details().get(key)}```"
-                note_content += f"\n\n{message}"
+                    message += f"**{key}**:\t```{self.get_details().get(key)}```"
+
+                # Append to note_content, add new line if note_content is not empty.
+                if message and not note_content:
+                    note_content += f"{message}"
+                elif message:
+                    note_content += f"\n\n{message}"
+
         return note_content
