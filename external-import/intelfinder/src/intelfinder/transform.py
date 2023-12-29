@@ -10,11 +10,7 @@ from validators import email as validators_email
 from validators import ipv4, ipv6
 from validators import url as validators_url
 
-from .constants import (
-    EXTERNAL_REFERENCE_URL,
-    INTELFINDER_SEVERITY_MAP,
-    TLP_MAPPINGS,
-)
+from .constants import EXTERNAL_REFERENCE_URL, INTELFINDER_SEVERITY_MAP, TLP_MAPPINGS
 from .utils import (
     create_markdown_table,
     format_datetime,
