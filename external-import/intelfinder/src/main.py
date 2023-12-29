@@ -13,6 +13,7 @@ from intelfinder.utils import (
 from lib.external_import import ExternalImportConnector
 from stix2 import Bundle
 
+
 class IntelfinderConnector(ExternalImportConnector):
     def __init__(self):
         """Initialization of the connector"""
@@ -20,29 +21,6 @@ class IntelfinderConnector(ExternalImportConnector):
         self.helper.log_info("Initializing Intelfinder connector")
         self._get_config_variables()
         self.author = create_author()
-    
-    # def _send_bundle(self, bundle_objects, work_id):
-    #     """Send Stix Bundle"""
-    #     try:
-    #         if bundle_objects:
-    #             # Performing the collection of intelligence
-    #             bundle = Bundle(
-    #                 objects=bundle_objects, allow_custom=True
-    #             ).serialize()
-    #             self.helper.log_info(
-    #                 f"Sending {len(bundle_objects)} STIX objects to OpenCTI worker id ({work_id})."
-    #             )
-    #             self.helper.send_stix2_bundle(
-    #                 bundle,
-    #                 update=self.update_existing_data,
-    #                 work_id=work_id,
-    #             )
-    #             return []
-    #         else: 
-    #             return bundle_objects
-    #     except Exception as e:
-    #         self.helper.log_error(f'Failed to create bundle: {e}')
-    #         return bundle_objects
 
     def _get_config_variables(self):
         """Get config variables from the environment"""
@@ -70,32 +48,6 @@ class IntelfinderConnector(ExternalImportConnector):
 
         self.current_state = self.helper.get_state() if self.helper.get_state() else {}
         self.cursor = self._get_cursor()
-
-    def _get_cursor(self):
-        """Get the cursor from the state"""
-        if isinstance(self.current_state, dict) and self.current_state.get('cursor'):
-            self.helper.log_info(
-                f"Getting state cursor: {self.current_state.get('cursor', None)}"
-            )
-            return self.current_state.get("cursor", None)
-        elif self.seed_alert_id:
-            return self.seed_alert_id
-        else:
-            self.helper.log_warning("No state cursor found")
-            return None
-
-    def _set_cursor_state(self):
-        """Set the state of the connector"""
-
-        if self.current_state:
-            self.current_state["cursor"] = self.cursor
-        else:
-            self.current_state = {"cursor": self.cursor}
-        self.helper.log_info(
-            f"Setting state cursor to {self.cursor}, {self.current_state}"
-        )
-        self.helper.set_state(self.current_state)
-        self.helper.log_debug(f"Updated State: {self.helper.get_state()}")
 
     def _collect_intelligence(self, work_id) -> []:
         """Collects intelligence from channels
@@ -136,17 +88,13 @@ class IntelfinderConnector(ExternalImportConnector):
                     f"Retrieved {len(intelfinder_stix_objects)} STIX objects from Intelfinder"
                 )
                 stix_objects.extend(intelfinder_stix_objects)
-                # Send bundle and and set stix_objects to empty.
-                # stix_objects = self._send_bundle(bundle_objects=intelfinder_stix_objects, work_id=work_id)
-                # # Set cursor state on successful update. 
-                # if stix_objects == []:
-                #     self._set_cursor_state()
             else:
                 self.helper.log_info("No STIX objects retrieved from Intelfinder")
 
+        # Add author to the list of objects
         if stix_objects:
             stix_objects.append(self.author)
-            self._set_cursor_state()
+
         # ===========================
         # === Add your code above ===
         # ===========================

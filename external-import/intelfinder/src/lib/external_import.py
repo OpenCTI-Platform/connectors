@@ -43,7 +43,9 @@ class ExternalImportConnector:
             "true",
             "false",
         ]:
-            self.update_existing_data = True if update_existing_data.lower() == "true" else False
+            self.update_existing_data = (
+                True if update_existing_data.lower() == "true" else False
+            )
         elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
             True,
             False,
@@ -53,7 +55,7 @@ class ExternalImportConnector:
             msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
-        self.helper.log_info(f'Update existing data: {self.update_existing_data}')
+        self.helper.log_info(f"Update existing data: {self.update_existing_data}")
 
     def _collect_intelligence(self, work_id) -> list:
         """Collect intelligence from the source"""
@@ -87,6 +89,32 @@ class ExternalImportConnector:
             raise ValueError(
                 f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
             )
+
+    def _get_cursor(self):
+        """Get the cursor from the state"""
+        if isinstance(self.current_state, dict) and self.current_state.get("cursor"):
+            self.helper.log_info(
+                f"Getting state cursor: {self.current_state.get('cursor', None)}"
+            )
+            return self.current_state.get("cursor", None)
+        elif self.seed_alert_id:
+            return self.seed_alert_id
+        else:
+            self.helper.log_warning("No state cursor found")
+            return None
+
+    def _set_cursor_state(self):
+        """Set the state of the connector"""
+
+        if self.current_state:
+            self.current_state["cursor"] = self.cursor
+        else:
+            self.current_state = {"cursor": self.cursor}
+        self.helper.log_info(
+            f"Setting state cursor to {self.cursor}, {self.current_state}"
+        )
+        self.helper.set_state(self.current_state)
+        self.helper.log_debug(f"Updated State: {self.helper.get_state()}")
 
     def run(self) -> None:
         # Main procedure
@@ -137,8 +165,11 @@ class ExternalImportConnector:
                                 update=self.update_existing_data,
                                 work_id=work_id,
                             )
+                            self._set_cursor_state()
                         else:
-                            self.helper.log_info('Empty Stix Object, not sending bundle.')
+                            self.helper.log_info(
+                                "Empty Stix Object, not sending bundle."
+                            )
                     except Exception as e:
                         self.helper.log_error(str(e))
 

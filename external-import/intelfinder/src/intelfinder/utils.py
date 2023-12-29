@@ -1,13 +1,12 @@
+import logging
 from datetime import datetime
 
+from markdownify import markdownify
 from pandas import DataFrame
 from pycti import Identity as pycti_identity
 from stix2 import Identity
-from markdownify import markdownify
 
-import logging
-
-from .constants import TLP_MAPPINGS, RABBITMQ_MAX_DEFAULT, TRUNCATE_MESSAGE
+from .constants import RABBITMQ_MAX_DEFAULT, TLP_MAPPINGS, TRUNCATE_MESSAGE
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ def create_markdown_table(name, data):
     """Creates a markdown table from a list of dictionaries, ensuring multiline values are handled correctly."""
     table_data = []
     append_data = str()
-    markdown_table_str = '\n---\n'
+    markdown_table_str = "\n---\n"
     try:
         modified_data = truncate_data(name, data)
         for element in modified_data:
@@ -43,47 +42,51 @@ def create_markdown_table(name, data):
                 LOGGER.debug(f"Appending multiline data to ({name}) markdown table.")
                 append_data += f"\n---\n**{label}**:\n\n```\n{value}\n```"
             else:
-                table_data.append({
-                    "Label": f'**{label}**',
-                    "Value": f'{value}'
-                })
+                table_data.append({"Label": f"**{label}**", "Value": f"{value}"})
         markdown_table_str += str(DataFrame(data=table_data).to_markdown(index=False))
         if append_data:
             LOGGER.debug(f"Appending data to ({name}) markdown table.")
-            markdown_table_str += f'{append_data}\n---\n'
+            markdown_table_str += f"{append_data}\n---\n"
         return markdown_table_str
     except Exception as e:
         return f"\n\nError creating markdown table: {e}"
-    
+
+
 def truncate_data(name, content):
     """Markdownify content and truncate to RABBITMQ_MAX_DEFAULT"""
     if content and isinstance(content, dict):
         content_max = int(RABBITMQ_MAX_DEFAULT * 0.8)
         while len(str(content)) > content_max:
             largest_key = max(content, key=lambda k: len(str(content[k])))
-            LOGGER.warning(f"Truncating ({largest_key}) from ({name}) due to size limit.")
+            LOGGER.warning(
+                f"Truncating ({largest_key}) from ({name}) due to size limit."
+            )
             content[largest_key] = TRUNCATE_MESSAGE
         return content
     else:
         return content
 
+
 def truncate_content(name, content):
     """Markdownify content and truncate to RABBITMQ_MAX_DEFAULT"""
     if content and isinstance(content, str):
         content_max = int(RABBITMQ_MAX_DEFAULT * 0.8)
-        LOGGER.warning(f"Processing truncation for ({name}) content length ({len(content)}) max is set ({content_max}).")
+        LOGGER.warning(
+            f"Processing truncation for ({name}) content length ({len(content)}) max is set ({content_max})."
+        )
         truncated = False
         while len(content) > content_max:
             LOGGER.debug(f"Truncating loop for ({name}) due to size limit.")
             truncated = True
             # Remove the last line
-            content = content[:content.rfind("\n", 0, content_max)]
+            content = content[: content.rfind("\n", 0, content_max)]
         if truncated:
             LOGGER.warning(f"Truncating ({name}) due to size limit.")
             content += f"\n\n{TRUNCATE_MESSAGE}"
         return content
     else:
         return content
+
 
 def validate_tlp_marking(tlp):
     """Determine whether the provided string is a valid TLP marking."""
@@ -146,6 +149,7 @@ def get_cursor_id(alert):
     else:
         raise ValueError(f"Alert does not contain a cursor id, {alert}")
 
+
 def create_author():
     """Creates Intelfinder Author"""
     return Identity(
@@ -153,4 +157,3 @@ def create_author():
         name="Intelfinder Connector",
         identity_class="organization",
     )
-
