@@ -15,6 +15,8 @@ from hostio.hostio_utils import (
 from lib.internal_enrichment import InternalEnrichmentConnector
 from stix2 import Note
 
+DEFAULT_TLP = "TLP:WHITE"
+
 
 class HostIOConnector(InternalEnrichmentConnector):
     def __init__(self):
@@ -45,9 +47,15 @@ class HostIOConnector(InternalEnrichmentConnector):
             msg = "Error when grabbing HOSTIO_LABELS environment variable."
             self.helper.log_error(msg)
             raise ValueError(msg)
-        self.hostio_marking_refs = environ.get("HOSTIO_MARKING_REFS", None)
+        # Get HOSTIO_MARKING_REFS environment variable and validate it is valid. Defaults to TLP:WHITE if not set.
+        self.hostio_marking_refs = environ.get("HOSTIO_MARKING_REFS", "TLP:WHITE")
         if not validate_tlp_marking(self.hostio_marking_refs):
             msg = "Error when grabbing HOSTIO_MARKING_REFS environment variable. It SHOULD be a valid TLP marking."
+            self.helper.log_error(msg)
+            raise ValueError(msg)
+        self.hostio_tlp_max = environ.get("HOSTIO_TLP_MAX", "TLP:WHITE")
+        if not validate_tlp_marking(self.hostio_tlp_max):
+            msg = "Error when grabbing HOSTIO_TLP_MAX environment variable. It SHOULD be a valid TLP marking."
             self.helper.log_error(msg)
             raise ValueError(msg)
 
@@ -248,6 +256,16 @@ class HostIOConnector(InternalEnrichmentConnector):
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
 
+        # Check the TLP of the observable, if the TLP is greater than the max TLP, do not send any data.
+        tlp = DEFAULT_TLP
+        for marking_definition in opencti_entity.get("objectMarking"):
+            if marking_definition.get("definition_type") == "TLP":
+                tlp = marking_definition.get("definition")
+                if not self.helper.check_max_tlp(tlp, self.hostio_tlp_max):
+                    msg = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.hostio_tlp_max})"
+                    self.helper.log_warning(msg)
+                    return msg
+
         # Get entity_type from the opencti_entity, and initialize stix_objects.
         if "entity_type" in opencti_entity:
             self.helper.log_info(
@@ -280,9 +298,10 @@ class HostIOConnector(InternalEnrichmentConnector):
             )
 
         # If there are not objects to process, return.
-        if len(stix_objects) == 0:
-            self.helper.log_info("No stix objects generated for worker import")
-            return
+        if not stix_objects:
+            msg = "No stix objects generated for worker import"
+            self.helper.log_info(msg)
+            return msg
         # Create the bundle and send it to OpenCTI.
         bundle = self.helper.stix2_create_bundle(stix_objects)
         bundles_sent = self.helper.send_stix2_bundle(bundle)

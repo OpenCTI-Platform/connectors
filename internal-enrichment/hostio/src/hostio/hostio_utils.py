@@ -7,8 +7,9 @@ from ipaddress import (
     IPv6Address,
     IPv6Network,
 )
-from json import dumps
+from json import loads
 
+from pandas import DataFrame
 from pycti import Identity as pycti_identity
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, Identity, MarkingDefinition
 
@@ -20,6 +21,16 @@ TLP_MAP = {
     "TLP:AMBER": TLP_AMBER,
     "TLP:RED": TLP_RED,
 }
+UNSUPPORTED_VALUES = ["", "None", None, [], {}]
+
+
+def is_json_string(json_string: str):
+    """Determine whether the provided string is a valid JSON string."""
+    try:
+        loads(json_string)
+        return True
+    except Exception:
+        return False
 
 
 def is_ipv6(ip_str):
@@ -157,13 +168,78 @@ def extract_asn_number(asn_string):
         return None
 
 
-def object_to_pretty_json(obj):
-    """Return a pretty JSON string from a Python object."""
-    if isinstance(obj, (dict, list)):
-        return dumps(obj, indent=4, sort_keys=True)
+def format_list(value: list) -> str:
+    """
+    Formats a list as a Markdown string.
+    """
+    return "\n".join(str(item) for item in value)
+
+
+def format_dict(header: str, value: dict) -> list:
+    """
+    Formats a dictionary as a pretty Markdown string.
+    """
+    return dict_to_pretty_markdown(header=header, obj=value)
+
+
+def format_value(key: str, value) -> list:
+    """
+    Formats a single value based on its type.
+    """
+    LOGGER.debug(f"Formatting value for key: {key}, value: {value}")
+    if isinstance(value, dict):
+        return format_dict(header=key, value=value)
+    elif isinstance(value, list):
+        formatted_list = format_list(value)
+        return [f"**{key}**:\n\n```\n{formatted_list}\n```"]
+    elif isinstance(value, str) and is_json_string(value):
+        return format_dict(header=key, value=loads(value))
+    elif isinstance(value, str) and "\n" in value:
+        return [f"**{key}**:\n\n```\n{value}\n```"]
     else:
-        LOGGER.error(f"Invalid object type: {type(obj)}")
-        return None
+        return [f"**{key}**:\n\n```{value}```"]
+
+
+def dict_to_pretty_markdown(header: str, obj: dict) -> list:
+    """
+    Converts a dictionary to a pretty Markdown-formatted list.
+    Handles nested dictionaries, lists, and basic data types.
+
+    Parameters:
+    header (str): The header for the Markdown content.
+    obj (dict): The dictionary to convert.
+
+    Returns:
+    list: A list of Markdown-formatted strings.
+    """
+    if not isinstance(obj, dict):
+        raise ValueError("Input must be a dictionary.")
+
+    note_content = []
+    table_content = []
+
+    for key, value in obj.items():
+        if value in UNSUPPORTED_VALUES:
+            LOGGER.debug(f"Skipping unsupported value for key: {key}")
+            continue
+        try:
+            if isinstance(value, (str, int, float, bool)):
+                table_content.append({"key": key, "value": value})
+            else:
+                formatted_value = format_value(key, value)
+                note_content.extend(formatted_value)
+        except Exception as e:
+            LOGGER.error(f"Error formatting key {key} with value {value}: {e}")
+
+    markdown_output = []
+    if table_content:
+        df = DataFrame(data=table_content)
+        markdown_output.append(
+            f"**{header.capitalize()}**:\n\n{df.to_markdown(index=False)}"
+        )
+
+    markdown_output.extend(note_content)
+    return list(filter(None, markdown_output))
 
 
 def create_author():

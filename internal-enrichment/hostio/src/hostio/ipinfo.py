@@ -2,7 +2,7 @@ import logging
 
 from ipinfo import getHandler
 
-from .hostio_utils import is_ipv4, is_ipv6, is_valid_token, object_to_pretty_json
+from .hostio_utils import dict_to_pretty_markdown, is_ipv4, is_ipv6, is_valid_token
 from .transform_to_stix import IPInfoStixTransformation
 
 SUPPORTED_RESPONSE_KEYS = {"ip", "total", "domains", "page"}
@@ -55,25 +55,7 @@ class IPInfo:
     def get_note_content(self):
         """Return the note content for the Domain."""
         # Update Indicator Description with results from IPInfo.
-        note_content = str()
-        for key in self.get_details().keys():
-            if self.get_details().get(key) is not None:
-                message = str()
-                LOGGER.debug(f"Parsing key: {key}")
-                if self.get_details().get(key) in [None, [], {}, "None"]:
-                    LOGGER.debug(
-                        f"Note key ({key}) with ({self.get_details().get(key)}) content."
-                    )
-                elif isinstance(self.get_details().get(key), (dict, list)):
-                    pretty_message = object_to_pretty_json(self.get_details().get(key))
-                    message += f"**{key}**:\n\n```\n{pretty_message}\n```"
-                elif isinstance(self.get_details().get(key), (str, int, float, bool)):
-                    message += f"**{key}**:\t```{self.get_details().get(key)}```"
-
-                # Append to note_content, add new line if note_content is not empty.
-                if message and not note_content:
-                    note_content += f"{message}"
-                elif message:
-                    note_content += f"\n\n{message}"
-
-        return note_content
+        if isinstance(self.get_details(), dict):
+            return "\n---\n".join(
+                dict_to_pretty_markdown(header="IPInfo", obj=self.get_details())
+            )
