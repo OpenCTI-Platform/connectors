@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 
-from markdownify import markdownify
 from pandas import DataFrame
 from pycti import Identity as pycti_identity
 from stix2 import Identity

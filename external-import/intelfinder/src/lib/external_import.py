@@ -57,7 +57,7 @@ class ExternalImportConnector:
             self.update_existing_data = "false"
         self.helper.log_info(f"Update existing data: {self.update_existing_data}")
 
-    def _collect_intelligence(self, work_id) -> list:
+    def _collect_intelligence(self) -> list:
         """Collect intelligence from the source"""
         raise NotImplementedError
 
@@ -151,7 +151,7 @@ class ExternalImportConnector:
 
                     try:
                         # Performing the collection of intelligence
-                        bundle_objects = self._collect_intelligence(work_id)
+                        bundle_objects = self._collect_intelligence()
                         if bundle_objects:
                             bundle = stix2.Bundle(
                                 objects=bundle_objects, allow_custom=True

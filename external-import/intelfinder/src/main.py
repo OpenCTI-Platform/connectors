@@ -11,7 +11,6 @@ from intelfinder.utils import (
     validate_tlp_marking,
 )
 from lib.external_import import ExternalImportConnector
-from stix2 import Bundle
 
 
 class IntelfinderConnector(ExternalImportConnector):
@@ -49,7 +48,7 @@ class IntelfinderConnector(ExternalImportConnector):
         self.current_state = self.helper.get_state() if self.helper.get_state() else {}
         self.cursor = self._get_cursor()
 
-    def _collect_intelligence(self, work_id) -> []:
+    def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
 
         Aadd your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
