@@ -13,7 +13,6 @@ from validators import url as validators_url
 from .constants import (
     EXTERNAL_REFERENCE_URL,
     INTELFINDER_SEVERITY_MAP,
-    RABBITMQ_MAX_DEFAULT,
     TLP_MAPPINGS,
 )
 from .utils import (
