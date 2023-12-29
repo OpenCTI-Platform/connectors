@@ -43,9 +43,7 @@ class ExternalImportConnector:
             "true",
             "false",
         ]:
-            self.update_existing_data = (
-                True if update_existing_data.lower() == "true" else False
-            )
+            self.update_existing_data = True if update_existing_data.lower() == "true" else False
         elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
             True,
             False,
@@ -55,8 +53,9 @@ class ExternalImportConnector:
             msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
+        self.helper.log_info(f'Update existing data: {self.update_existing_data}')
 
-    def _collect_intelligence(self) -> list:
+    def _collect_intelligence(self, work_id) -> list:
         """Collect intelligence from the source"""
         raise NotImplementedError
 
@@ -124,19 +123,22 @@ class ExternalImportConnector:
 
                     try:
                         # Performing the collection of intelligence
-                        bundle_objects = self._collect_intelligence()
-                        bundle = stix2.Bundle(
-                            objects=bundle_objects, allow_custom=True
-                        ).serialize()
+                        bundle_objects = self._collect_intelligence(work_id)
+                        if bundle_objects:
+                            bundle = stix2.Bundle(
+                                objects=bundle_objects, allow_custom=True
+                            ).serialize()
 
-                        self.helper.log_info(
-                            f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
-                        )
-                        self.helper.send_stix2_bundle(
-                            bundle,
-                            update=self.update_existing_data,
-                            work_id=work_id,
-                        )
+                            self.helper.log_info(
+                                f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                            )
+                            self.helper.send_stix2_bundle(
+                                bundle,
+                                update=self.update_existing_data,
+                                work_id=work_id,
+                            )
+                        else:
+                            self.helper.log_info('Empty Stix Object, not sending bundle.')
                     except Exception as e:
                         self.helper.log_error(str(e))
 

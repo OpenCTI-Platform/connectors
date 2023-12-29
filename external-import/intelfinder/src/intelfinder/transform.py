@@ -10,8 +10,8 @@ from validators import email as validators_email
 from validators import ipv4, ipv6
 from validators import url as validators_url
 
-from .constants import EXTERNAL_REFERENCE_URL, INTELFINDER_SEVERITY_MAP, TLP_MAPPINGS
-from .utils import create_markdown_table, format_datetime, format_labels, get_cursor_id
+from .constants import EXTERNAL_REFERENCE_URL, INTELFINDER_SEVERITY_MAP, TLP_MAPPINGS, RABBITMQ_MAX_DEFAULT
+from .utils import create_markdown_table, format_datetime, format_labels, get_cursor_id, truncate_content
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,8 +19,11 @@ LOGGER = logging.getLogger(__name__)
 class TransformIntelFinder2Stix:
     """Transforms Intelfinder data into STIX objects"""
 
-    def __init__(self, intelfinder, labels=None, object_marking_refs="TLP:WHITE"):
+    def __init__(
+        self, intelfinder, author, labels=None, object_marking_refs="TLP:WHITE"
+    ):
         self.intelfinder = intelfinder
+        self.author = author
         self.id = get_cursor_id(intelfinder)
         self.name = f'Intelfinder - {self.intelfinder.get("title")} - {self.id}'
         LOGGER.debug(f"Transforming: {self.name}")
@@ -108,13 +111,15 @@ class TransformIntelFinder2Stix:
         if hasattr(self.intelfinder, "get") and self.intelfinder.get("details"):
             content = markdownify(self.intelfinder.get("details"))
             if hasattr(self.intelfinder, "get") and self.intelfinder.get("elements"):
-                markdown_table = create_markdown_table(self.intelfinder.get("elements"))
+                markdown_table = create_markdown_table(name=self.name, data=self.intelfinder.get("elements"))
                 content = content.replace("%elements%", markdown_table)
+            note_content = f'{self.name}\n\n{truncate_content(content=content, name=self.name)}'
             stix_object = Note(
                 id=pyctiNote.generate_id(content=self.name, created=self.created),
                 abstract=self.name,
-                content=f"{self.name}\n\n{content}",
+                content=note_content,
                 created=self.created,
+                created_by_ref=self.author.id,
                 object_refs=[self.case_id],
                 object_marking_refs=self.object_marking_refs,
                 labels=self.labels,

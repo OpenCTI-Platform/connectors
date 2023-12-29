@@ -1,8 +1,15 @@
 from datetime import datetime
 
 from pandas import DataFrame
+from pycti import Identity as pycti_identity
+from stix2 import Identity
+from markdownify import markdownify
 
-from .constants import TLP_MAPPINGS
+import logging
+
+from .constants import TLP_MAPPINGS, RABBITMQ_MAX_DEFAULT, TRUNCATE_MESSAGE
+
+LOGGER = logging.getLogger(__name__)
 
 
 def validate_api_key(api_key):
@@ -22,23 +29,61 @@ def format_datetime(timestamp):
     return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
 
 
-def create_markdown_table(data):
+def create_markdown_table(name, data):
     """Creates a markdown table from a list of dictionaries, ensuring multiline values are handled correctly."""
     table_data = []
-    pastebin_data = ""
+    append_data = str()
+    markdown_table_str = '\n---\n'
     try:
-        for element in data:
+        modified_data = truncate_data(name, data)
+        for element in modified_data:
             label, value = element["label"], element["value"]
-            if label.startswith("Paste"):
-                pastebin_data += f"\n\nPastebin Data:\n\n```\n{value}\n```"
+            # If value is multiline, append to the end of the table
+            if "\n" in value:
+                LOGGER.debug(f"Appending multiline data to ({name}) markdown table.")
+                append_data += f"\n---\n**{label}**:\n\n```\n{value}\n```"
             else:
-                table_data.append(element)
-
-        markdown_table_str = DataFrame(data=table_data).to_markdown(index=False)
-        return f"\n\n{markdown_table_str}\n\n{pastebin_data}"
+                table_data.append({
+                    "Label": f'**{label}**',
+                    "Value": f'{value}'
+                })
+        markdown_table_str += str(DataFrame(data=table_data).to_markdown(index=False))
+        if append_data:
+            LOGGER.debug(f"Appending data to ({name}) markdown table.")
+            markdown_table_str += f'{append_data}\n---\n'
+        return markdown_table_str
     except Exception as e:
         return f"\n\nError creating markdown table: {e}"
+    
+def truncate_data(name, content):
+    """Markdownify content and truncate to RABBITMQ_MAX_DEFAULT"""
+    if content and isinstance(content, dict):
+        content_max = int(RABBITMQ_MAX_DEFAULT * 0.8)
+        while len(str(content)) > content_max:
+            largest_key = max(content, key=lambda k: len(str(content[k])))
+            LOGGER.warning(f"Truncating ({largest_key}) from ({name}) due to size limit.")
+            content[largest_key] = TRUNCATE_MESSAGE
+        return content
+    else:
+        return content
 
+def truncate_content(name, content):
+    """Markdownify content and truncate to RABBITMQ_MAX_DEFAULT"""
+    if content and isinstance(content, str):
+        content_max = int(RABBITMQ_MAX_DEFAULT * 0.8)
+        LOGGER.warning(f"Processing truncation for ({name}) content length ({len(content)}) max is set ({content_max}).")
+        truncated = False
+        while len(content) > content_max:
+            LOGGER.debug(f"Truncating loop for ({name}) due to size limit.")
+            truncated = True
+            # Remove the last line
+            content = content[:content.rfind("\n", 0, content_max)]
+        if truncated:
+            LOGGER.warning(f"Truncating ({name}) due to size limit.")
+            content += f"\n\n{TRUNCATE_MESSAGE}"
+        return content
+    else:
+        return content
 
 def validate_tlp_marking(tlp):
     """Determine whether the provided string is a valid TLP marking."""
@@ -100,3 +145,12 @@ def get_cursor_id(alert):
         return alert.get("_id")
     else:
         raise ValueError(f"Alert does not contain a cursor id, {alert}")
+
+def create_author():
+    """Creates Intelfinder Author"""
+    return Identity(
+        id=pycti_identity.generate_id("Intelfinder", "organization"),
+        name="Intelfinder Connector",
+        identity_class="organization",
+    )
+
