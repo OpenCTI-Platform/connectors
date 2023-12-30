@@ -5,7 +5,12 @@ import pytest
 from intelfinder.api import Intelfinder
 from intelfinder.tests.constants import generate_random_key, load_fixture
 from intelfinder.transform import TransformIntelFinder2Stix
-from intelfinder.utils import format_labels, get_cursor_id, get_tlp_marking
+from intelfinder.utils import (
+    create_author,
+    format_labels,
+    get_cursor_id,
+    get_tlp_marking,
+)
 from pycti import CustomObjectCaseIncident, CustomObjectTask
 from stix2 import URL, DomainName, IPv4Address, IPv6Address, Note, UserAccount
 
@@ -13,6 +18,7 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_TLP = "TLP:WHITE"
 DEFAULT_LABELS = ["intelfinder", "osint"]
 SAMPLE_FIXTURE = "response_sample_alert.json"
+AUTHOR = create_author()
 
 
 def validate_stix_objects(stix_objects, stix_object_type_list):
@@ -41,7 +47,7 @@ def validate_stix_objects(stix_objects, stix_object_type_list):
 def client():
     """Create a RecordedFutureClient instance with a mock token."""
     # Use a mock token for testing
-    return Intelfinder(api_key=generate_random_key())
+    return Intelfinder(author=AUTHOR, api_key=generate_random_key())
 
 
 @pytest.fixture
@@ -70,6 +76,7 @@ def sample_alert_record(mocker, client: Intelfinder, alerts):
 def transformer(sample_alert):
     """Create a transformer instance."""
     return TransformIntelFinder2Stix(
+        author=AUTHOR,
         intelfinder=sample_alert,
         labels=DEFAULT_LABELS,
         object_marking_refs=DEFAULT_TLP,
@@ -80,6 +87,7 @@ def transformer(sample_alert):
 def transform_record(sample_alert_record):
     """Create a transformer instance."""
     return TransformIntelFinder2Stix(
+        author=AUTHOR,
         intelfinder=sample_alert_record,
         labels=DEFAULT_LABELS,
         object_marking_refs=DEFAULT_TLP,

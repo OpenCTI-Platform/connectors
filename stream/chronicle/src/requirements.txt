@@ -1,4 +1,4 @@
-pycti==5.12.14
+pycti==5.12.15
 google-auth==2.25.2
 google-api-python-client==2.111.0
 requests~=2.31.0

@@ -1,5 +1,5 @@
-pycti==5.12.14
+pycti==5.12.15
 html2text==2020.1.16
 beautifulsoup4==4.12.2
-lxml==4.9.4
+lxml==5.0.0
 html5lib==1.1

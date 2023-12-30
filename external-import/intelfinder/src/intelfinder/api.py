@@ -23,6 +23,7 @@ class Intelfinder:
     def __init__(
         self,
         api_key,
+        author,
         cursor=None,
         labels=None,
         object_marking_refs="TLP:WHITE",
@@ -38,6 +39,7 @@ class Intelfinder:
         self.index = 0
         self.rate_limit = rate_limit
         self.object_marking_refs = object_marking_refs
+        self.author = author
         # Validate API key
         if validate_api_key(api_key):
             self.alerts_post_data["key"] = api_key
@@ -124,6 +126,7 @@ class Intelfinder:
         for alert in alerts:
             # Transform alert into STIX objects
             transform = TransformIntelFinder2Stix(
+                author=self.author,
                 intelfinder=alert,
                 labels=self.labels,
                 object_marking_refs=self.object_marking_refs,

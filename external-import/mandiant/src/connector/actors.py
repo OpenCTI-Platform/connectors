@@ -13,7 +13,7 @@ from .common import (
 def process(connector, actor):
     actor_id = actor.get("id")
 
-    connector.helper.log_debug("Processing actor", {"actor_id": actor_id})
+    connector.helper.connector_logger.debug("Processing actor", {"actor_id": actor_id})
 
     actor_details = connector.api.actor(actor_id)
 
@@ -44,7 +44,9 @@ def process(connector, actor):
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
     if bundle is None:
-        connector.helper.log_error("Could not process actor", {"actor_id": actor_id})
+        connector.helper.connector_logger.error(
+            "Could not process actor", {"actor_id": actor_id}
+        )
 
     return bundle
 

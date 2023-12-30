@@ -3,13 +3,14 @@ import logging
 import pytest
 from intelfinder.api import Intelfinder
 from intelfinder.tests.constants import generate_random_key, load_fixture
-from intelfinder.utils import get_cursor_id, get_tlp_marking
+from intelfinder.utils import create_author, get_cursor_id, get_tlp_marking
 from pycti import CustomObjectCaseIncident, CustomObjectTask
 from stix2 import URL, DomainName, IPv4Address, IPv6Address, Note
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TLP = "TLP:WHITE"
 DEFAULT_LABELS = ["intelfinder", "osint"]
+AUTHOR = create_author()
 
 
 def validate_stix_objects(stix_objects, stix_object_type_list):
@@ -39,6 +40,7 @@ def client():
     """Create a RecordedFutureClient instance with a mock token."""
     # Use a mock token for testing
     return Intelfinder(
+        author=AUTHOR,
         api_key=generate_random_key(),
         labels=DEFAULT_LABELS,
         object_marking_refs=DEFAULT_TLP,
@@ -80,7 +82,7 @@ class TestIntelfinder:
     def test_invalid_token(self):
         """Test that an invalid token raises an error."""
         with pytest.raises(ValueError):
-            Intelfinder(api_key="invalid")
+            Intelfinder(author=AUTHOR, api_key="invalid")
 
     def test_get_alerts(self, client: Intelfinder, alert, mocker):
         """Test that a valid alert is returned."""

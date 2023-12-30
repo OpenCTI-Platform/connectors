@@ -43,10 +43,9 @@ class CapeSandboxConnector:
         self.octi_api_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config
         )
-        self.cape_url = get_config_variable(
-            "CAPE_SANDBOX_URL", ["cape_sandbox", "url"], config
+        self.cape_api_url = get_config_variable(
+            "CAPE_SANDBOX_URL", ["cape_sandbox", "api_url"], config
         )
-        self.cape_api_url = f"{self.cape_url}/apiv2"
         self.token = get_config_variable(
             "CAPE_SANDBOX_TOKEN", ["cape_sandbox", "token"], config
         )
@@ -130,7 +129,7 @@ class CapeSandboxConnector:
         # Analysis URL
         external_reference = self.helper.api.external_reference.create(
             source_name="CAPEv2 Sandbox Analysis",
-            url=f"{self.cape_url}/analysis/{task_id}/",
+            url=f"{self.cape_api_url}/analysis/{task_id}/",
             description="CAPEv2 Sandbox Analysis",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
@@ -140,7 +139,7 @@ class CapeSandboxConnector:
         # JSON report
         external_reference = self.helper.api.external_reference.create(
             source_name="CAPEv2 Sandbox JSON Report",
-            url=f"{self.cape_url}/filereport/{task_id}/json/",
+            url=f"{self.cape_api_url}/filereport/{task_id}/json/",
             description="CAPEv2 Sandbox JSON Report",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
@@ -150,7 +149,7 @@ class CapeSandboxConnector:
         # HTML Report
         external_reference = self.helper.api.external_reference.create(
             source_name="CAPEv2 Sandbox HTML Report",
-            url=f"{self.cape_url}/filereport/{task_id}/html/",
+            url=f"{self.cape_api_url}/filereport/{task_id}/html/",
             description="CAPEv2 Sandbox HTML Report",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(
