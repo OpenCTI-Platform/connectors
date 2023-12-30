@@ -21,9 +21,8 @@ class DataExport:
         pass
 
     def unknown_type(self, stix_object: Dict) -> None:
-        self.opencti.log(
-            "error",
-            'Unknown object type "' + stix_object["type"] + '", doing nothing...',
+        self.opencti.app_logger.error(
+            "Unknown object type, doing nothing...", {"type": stix_object["type"]}
         )
 
     def export_entity(
@@ -79,7 +78,9 @@ class DataExport:
         )
         entity = do_read(id=entity_id, withFiles=True)
         if entity is None:
-            self.opencti.log("error", "Cannot export entity (not found)")
+            self.opencti.app_logger.error(
+                "Cannot export entity (not found)", {"id": entity_id}
+            )
             return bundle
         stix_objects = self.prepare_export(
             self.generate_export(entity),
@@ -408,11 +409,9 @@ class DataExport:
             )
             is False
         ):
-            self.opencti.log(
-                "info",
-                "Marking definitions of "
-                + entity["type"]
-                + " are less than max definition, not exporting.",
+            self.opencti.app_logger.info(
+                "Marking definitions are less than max definition, not exporting",
+                {"type": entity["type"]},
             )
             return []
         result = []
@@ -597,13 +596,12 @@ class DataExport:
                     uuids = uuids + [x["id"] for x in relation_object_bundle]
                     result = result + relation_object_bundle
                 else:
-                    self.opencti.log(
-                        "info",
-                        "Marking definitions of "
-                        + stix_core_relationship["entity_type"]
-                        + ' "'
-                        + stix_core_relationship["id"]
-                        + '" are less than max definition, not exporting the relation AND the target entity.',
+                    self.opencti.app_logger.info(
+                        "Marking definitions are less than max definition, not exporting the relation AND the target entity",
+                        {
+                            "type": stix_core_relationship["entity_type"],
+                            "id": stix_core_relationship["id"],
+                        },
                     )
             # Get sighting
             stix_sighting_relationships = self.opencti.stix_sighting_relationship.list(
@@ -633,13 +631,12 @@ class DataExport:
                     uuids = uuids + [x["id"] for x in relation_object_bundle]
                     result = result + relation_object_bundle
                 else:
-                    self.opencti.log(
-                        "info",
-                        "Marking definitions of "
-                        + stix_sighting_relationship["entity_type"]
-                        + ' "'
-                        + stix_sighting_relationship["id"]
-                        + '" are less than max definition, not exporting the relation AND the target entity.',
+                    self.opencti.app_logger.info(
+                        "Marking definitions are less than max definition, not exporting the relation AND the target entity",
+                        {
+                            "type": stix_sighting_relationship["entity_type"],
+                            "id": stix_sighting_relationship["id"],
+                        },
                     )
             # Export
             reader = {
