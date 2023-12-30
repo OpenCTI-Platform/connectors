@@ -27,28 +27,37 @@ class ExportFileStix:
 
         if export_scope == "single":
             entity_id = data["entity_id"]
-            self.helper.log_info(
-                "Exporting: " + entity_id + "(" + export_type + ") to " + file_name
+            self.helper.connector_logger.info(
+                "Exporting",
+                {
+                    "entity_id": entity_id,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
             )
             bundle = self.helper.api_impersonate.stix2.export_entity(
                 entity_type, entity_id, export_type, max_marking
             )
             json_bundle = json.dumps(bundle, indent=4)
-            self.helper.log_info(
-                "Uploading: " + entity_id + "(" + export_type + ") to " + file_name
+            self.helper.connector_logger.info(
+                "Uploading",
+                {
+                    "entity_id": entity_id,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
             )
             self.helper.api.stix_domain_object.push_entity_export(
                 entity_id, file_name, json_bundle
             )
-            self.helper.log_info(
-                "Export done: "
-                + entity_type
-                + "/"
-                + export_type
-                + "("
-                + entity_id
-                + ") to "
-                + file_name
+            self.helper.connector_logger.info(
+                "Export done",
+                {
+                    "entity_type": entity_type,
+                    "entity_id": entity_id,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
             )
 
         else:  # export_scope = 'query' or 'selection'
@@ -87,13 +96,13 @@ class ExportFileStix:
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
-                self.helper.log_info(
-                    "Exporting list: "
-                    + entity_type
-                    + "/"
-                    + export_type
-                    + " to "
-                    + file_name
+                self.helper.connector_logger.info(
+                    "Exporting list: ",
+                    {
+                        "entity_type": entity_type,
+                        "export_type": export_type,
+                        "file_name": file_name,
+                    },
                 )
                 bundle = self.helper.api_impersonate.stix2.export_list(
                     entity_type,
@@ -115,8 +124,13 @@ class ExportFileStix:
                 list_filters = json.dumps(list_params)
 
             json_bundle = json.dumps(bundle, indent=4)
-            self.helper.log_info(
-                "Uploading: " + entity_type + "/" + export_type + " to " + file_name
+            self.helper.connector_logger.info(
+                "Uploading",
+                {
+                    "entity_type": entity_type,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
             )
             if entity_type == "Stix-Cyber-Observable":
                 self.helper.api.stix_cyber_observable.push_list_export(
@@ -130,8 +144,13 @@ class ExportFileStix:
                 self.helper.api.stix_domain_object.push_list_export(
                     entity_type, file_name, json_bundle, list_filters
                 )
-            self.helper.log_info(
-                "Export done: " + entity_type + "/" + export_type + " to " + file_name
+            self.helper.connector_logger.info(
+                "Export done",
+                {
+                    "entity_type": entity_type,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
             )
 
         return "Export done"
