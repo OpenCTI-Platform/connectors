@@ -12,7 +12,7 @@ services:
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
-      - CAPE_SANDBOX_URL=ChangeMe # Base URL
+      - CAPE_SANDBOX_API_URL=ChangeMe # https://Base_URL/apiv2
       - CAPE_SANDBOX_TOKEN=ChangeMe # Change if using auth
       - CAPE_SANDBOX_ROUTE=tor # Network routing, other examples include: none, internet, vpn0
       - CAPE_SANDBOX_TIMEOUT=300 # Maximum amount of seconds to run the analysis for
