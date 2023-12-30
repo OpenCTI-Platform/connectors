@@ -18,7 +18,7 @@ class HostIODomain:
     The results are then added to the Class as attributes.
     """
 
-    def __init__(self, token, domain, marking_refs="TLP:WHITE", entity_id=None):
+    def __init__(self, token, domain, author, marking_refs="TLP:WHITE", entity_id=None):
         self.domain = domain
         if is_valid_token(token):
             self.headers = {"Authorization": f"Bearer {token}"}
@@ -27,6 +27,7 @@ class HostIODomain:
             raise ValueError(f"Invalid token provided: {token}")
         self.entity_id = entity_id
         self.marking_refs = marking_refs
+        self.author = author
         self.dns = {}
         self.ipinfo = {}
         self.web = {}
@@ -76,7 +77,10 @@ class HostIODomain:
     def get_stix_objects(self):
         """Return STIX objects for the Domain."""
         hostio_domain = HostIODomainStixTransformation(
-            domain_object=self, entity_id=self.entity_id, marking_refs=self.marking_refs
+            domain_object=self,
+            entity_id=self.entity_id,
+            author=self.author,
+            marking_refs=self.marking_refs,
         )
         return hostio_domain.get_stix_objects()
 
@@ -84,6 +88,22 @@ class HostIODomain:
         """Return Host IO enrichment notes."""
         note_content = str()
         for key in SUPPORTED_RESPONSE_KEYS:
-            if hasattr(self, key) and not getattr(self, key) in [None, {}]:
-                note_content += f"\n\nHost IO `{key}`:\n\n```\n\n{object_to_pretty_json(getattr(self, key))}\n\n```"
+            if hasattr(self, key) and not getattr(self, key) in [
+                None,
+                {},
+                [],
+                "",
+                "None",
+            ]:
+                LOGGER.debug(f"Parsing key: {key}:{getattr(self, key)}")
+                message = str()
+                if isinstance(getattr(self, key), (dict, list)):
+                    message = object_to_pretty_json(getattr(self, key))
+                elif isinstance(getattr(self, key), str):
+                    message = getattr(self, key)
+
+                if message and not note_content:
+                    note_content += f"**{key}**:\n\n```\n\n{message}\n\n```"
+                elif message and note_content:
+                    note_content += f"\n\n**{key}**:\n\n```\n\n{message}\n\n```"
         return note_content

@@ -1,5 +1,6 @@
 import pytest
 from hostio.hostio_domain import HostIODomain
+from hostio.hostio_utils import create_author
 from hostio.tests.constants import generate_random_token, load_fixture
 from hostio.transform_to_stix import (
     BaseStixTransformation,
@@ -25,6 +26,7 @@ DEFAULT_DOMAIN_ENTITY = DomainName(
     value=VALID_DOMAIN,
     object_marking_refs=[TLP_GREEN],
 )
+AUTHOR = create_author()
 
 
 class TestTransformToStix:
@@ -34,6 +36,7 @@ class TestTransformToStix:
         # Use a mock token for testing
         return HostIODomain(
             token=generate_random_token(),
+            author=AUTHOR,
             domain=VALID_DOMAIN,
             entity_id=DEFAULT_DOMAIN_ENTITY.get("id"),
             marking_refs="TLP:WHITE",
@@ -42,7 +45,7 @@ class TestTransformToStix:
     def test_hostio_ip_to_domain_stix_transform(self):
         """Test creation of STIX DomainName object."""
         hostio_domain_stix_transform = HostIOIPtoDomainStixTransform(
-            domain=VALID_DOMAIN, entity_id=VALID_IP_STIX.get("id")
+            author=AUTHOR, domain=VALID_DOMAIN, entity_id=VALID_IP_STIX.get("id")
         )
         assert hostio_domain_stix_transform.domain == VALID_DOMAIN
         assert hostio_domain_stix_transform.marking_refs == [TLP_WHITE]
@@ -56,6 +59,7 @@ class TestTransformToStix:
     def test_hostio_ip_to_domain_stix_transform_marking_refs(self):
         """Test creation of STIX DomainName object with different marking refs."""
         hostio_domain_stix_transform = HostIOIPtoDomainStixTransform(
+            author=AUTHOR,
             domain=VALID_DOMAIN,
             marking_refs="TLP:GREEN",
             entity_id=VALID_IP_STIX.get("id"),
@@ -74,7 +78,7 @@ class TestTransformToStix:
         """Test creation of STIX DomainName object with invalid domain."""
         with pytest.raises(ValueError):
             HostIOIPtoDomainStixTransform(
-                domain="invalid", entity_id=VALID_IP_STIX.get("id")
+                author=AUTHOR, domain="invalid", entity_id=VALID_IP_STIX.get("id")
             )
             assert False
 
@@ -82,6 +86,7 @@ class TestTransformToStix:
         """Test creation of STIX DomainName object with invalid marking refs."""
         with pytest.raises(ValueError):
             HostIOIPtoDomainStixTransform(
+                author=AUTHOR,
                 domain=VALID_DOMAIN,
                 marking_refs="invalid",
                 entity_id=VALID_IP_STIX.get("id"),
@@ -91,7 +96,9 @@ class TestTransformToStix:
     def test_hostio_ip_to_domain_stix_transform_invalid_entity_id(self):
         """Test creation of STIX DomainName object with invalid entity id."""
         with pytest.raises(InvalidValueError):
-            HostIOIPtoDomainStixTransform(domain=VALID_DOMAIN, entity_id="invalid")
+            HostIOIPtoDomainStixTransform(
+                author=AUTHOR, domain=VALID_DOMAIN, entity_id="invalid"
+            )
             assert False
 
     def test_hostio_domain_stix_transformation(self, domain, mocker):
@@ -100,7 +107,7 @@ class TestTransformToStix:
         mock_request.return_value = load_fixture(DEFAULT_FIXTURE)
         domain.request_full_domain_info()
         hostio_domain_stix_transform = HostIODomainStixTransformation(
-            domain_object=domain, entity_id=VALID_IP_STIX.get("id")
+            author=AUTHOR, domain_object=domain, entity_id=VALID_IP_STIX.get("id")
         )
         assert hostio_domain_stix_transform.marking_refs == [TLP_WHITE]
         assert hostio_domain_stix_transform.entity_id == VALID_IP_STIX.get("id")
@@ -114,7 +121,7 @@ class TestTransformToStix:
     def test_base_stix_trasformation(self):
         """Test creation of STIX DomainName object."""
         base_stix_transform = BaseStixTransformation(
-            marking_refs="TLP:WHITE", entity_id=VALID_IP_STIX.get("id")
+            author=AUTHOR, marking_refs="TLP:WHITE", entity_id=VALID_IP_STIX.get("id")
         )
         assert base_stix_transform.marking_refs == [TLP_WHITE]
         assert base_stix_transform.entity_id == VALID_IP_STIX.get("id")

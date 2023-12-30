@@ -5,6 +5,7 @@ import random
 
 import pytest
 from hostio.hostio_domain import HostIODomain
+from hostio.hostio_utils import create_author
 from stix2 import TLP_GREEN, DomainName, IPv4Address, IPv6Address, Relationship
 
 LOGGER = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_DOMAIN = "google.com"
 DEFAULT_FIXTURE = "google.json"
 DEFAULT_MARKING_REFS = "TLP:WHITE"
+AUTHOR = create_author()
 
 DEFAULT_DOMAIN_ENTITY = DomainName(
     value=DEFAULT_DOMAIN,
@@ -44,6 +46,7 @@ class TestHostioDomain:
         return HostIODomain(
             token=generate_random_token(),
             domain=DEFAULT_DOMAIN,
+            author=AUTHOR,
             entity_id=DEFAULT_DOMAIN_ENTITY.get("id"),
             marking_refs=DEFAULT_MARKING_REFS,
         )
