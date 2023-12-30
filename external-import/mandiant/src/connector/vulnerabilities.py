@@ -6,7 +6,7 @@ from . import utils
 def process(connector, vulnerability):
     vulnerability_id = vulnerability.get("id")
 
-    connector.helper.log_debug(
+    connector.helper.connector_logger.debug(
         "Processing vulnerability", {"vulnerability_id": vulnerability_id}
     )
 
@@ -42,7 +42,7 @@ def process(connector, vulnerability):
     bundle = stix2.Bundle(objects=[stix_vulnerability], allow_custom=True)
 
     if bundle is None:
-        connector.helper.log_error(
+        connector.helper.connector_logger.error(
             "Could not process vulnerability", {"vulnerability_id": vulnerability_id}
         )
 

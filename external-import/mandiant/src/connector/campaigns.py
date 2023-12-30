@@ -14,7 +14,9 @@ from .common import (
 def process(connector, campaign):
     campaign_id = campaign.get("id")
 
-    connector.helper.log_debug("Processing campaign", {"campaign_id": campaign_id})
+    connector.helper.connector_logger.debug(
+        "Processing campaign", {"campaign_id": campaign_id}
+    )
 
     campaign_details = connector.api.campaign(campaign_id)
     campaign_attack_patterns = connector.api.campaign_attack_patterns(campaign_id)
@@ -48,7 +50,7 @@ def process(connector, campaign):
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
     if bundle is None:
-        connector.helper.log_error(
+        connector.helper.connector_logger.error(
             "Could not process campaign", {"campaign_id": campaign_id}
         )
 

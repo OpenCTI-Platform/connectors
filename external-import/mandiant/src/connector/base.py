@@ -15,7 +15,6 @@ STATE_START = "start_epoch"
 STATE_OFFSET = "offset"
 STATE_END = "end_epoch"
 STATE_LAST_RUN = "last_run"
-DAYS_PERIOD = 1  # Base interval to fetch
 
 
 class Mandiant:
@@ -44,6 +43,19 @@ class Mandiant:
             ["mandiant", "import_start_date"],
             config,
             default="2023-01-01",
+        )
+        self.mandiant_indicator_import_start_date = get_config_variable(
+            "MANDIANT_INDICATOR_IMPORT_START_DATE",
+            ["mandiant", "indicator_import_start_date"],
+            config,
+            default="2023-01-01",
+        )
+        self.mandiant_import_period = get_config_variable(
+            "MANDIANT_IMPORT_PERIOD",
+            ["mandiant", "import_period"],
+            config,
+            isNumber=True,
+            default=7,
         )
         self.mandiant_create_notes = get_config_variable(
             "MANDIANT_CREATE_NOTES",
@@ -413,8 +425,8 @@ class Mandiant:
                     description=description,
                     category="report_types_ov",
                 )
-        except Exception:
-            self.helper.log_warning("Could not create report types.")
+        except Exception as err:
+            self.helper.connector_logger.warning(str(err))
 
         self.mandiant_indicator_minimum_score = get_config_variable(
             "MANDIANT_INDICATOR_MINIMUM_SCORE",
@@ -431,6 +443,7 @@ class Mandiant:
         )
 
         self.api = MandiantAPI(
+            self.helper,
             self.mandiant_api_v4_key_id,
             self.mandiant_api_v4_key_secret,
         )
@@ -438,41 +451,35 @@ class Mandiant:
         if not self.helper.get_state():
             # Create period of 1 day starting from the configuration
             # Mandiant API only paginate in reverse time ordering
-            now = Timestamp.now()
-            start = Timestamp.from_iso(self.mandiant_import_start_date)
-            end = start.delta(days=DAYS_PERIOD)
-            if end.value > now.value:
-                end = None
-            structure = {
-                STATE_START: start.iso_format,
-                STATE_END: end.iso_format if end is not None else None,
-                STATE_LAST_RUN: now.iso_format,
-                STATE_OFFSET: 0,
-            }
-
-            # Set 90 days maximum protection for indicator range
-            if start.value < now.delta(days=-90).value:
-                start = now.delta(days=-90)
-                end = start.delta(days=DAYS_PERIOD)
-                if end.value > now.value:
-                    end = None
-            structure_indicator = {
-                STATE_START: start.iso_format,
-                STATE_END: end.iso_format if end is not None else None,
-                STATE_LAST_RUN: now.iso_format,
-                STATE_OFFSET: 0,
-            }
-
+            base_structure = self.compute_start_structure(
+                self.mandiant_import_start_date
+            )
+            indicator_structure = self.compute_start_structure(
+                self.mandiant_indicator_import_start_date
+            )
             self.helper.set_state(
                 {
-                    "vulnerabilities": structure,
-                    "indicators": structure_indicator,
-                    "campaigns": structure,
-                    "malwares": structure,
-                    "reports": structure,
-                    "actors": structure,
+                    "vulnerabilities": base_structure,
+                    "indicators": indicator_structure,
+                    "campaigns": base_structure,
+                    "malwares": base_structure,
+                    "reports": base_structure,
+                    "actors": base_structure,
                 }
             )
+
+    def compute_start_structure(self, start_date):
+        now = Timestamp.now()
+        start = Timestamp.from_iso(start_date)
+        end = start.delta(days=self.mandiant_import_period)
+        if end.value > now.value:
+            end = None
+        return {
+            STATE_START: start.iso_format,
+            STATE_END: end.iso_format if end is not None else None,
+            STATE_LAST_RUN: now.iso_format,
+            STATE_OFFSET: 0,
+        }
 
     def run(self):
         mandiant_state = self.helper.get_state()
@@ -504,22 +511,26 @@ class Mandiant:
             interval = getattr(self, f"mandiant_{collection}_interval")
 
             if now - interval < last_run:
-                self.helper.log_debug(
+                self.helper.connector_logger.debug(
                     "Skipping collecting due interval configuration",
                     {"collection": collection},
                 )
 
             try:
-                self.helper.log_info("Start collecting", {"collection": collection})
+                self.helper.connector_logger.info(
+                    "Start collecting", {"collection": collection}
+                )
                 self._run(collection, work_id)
-                self.helper.log_info("Collection", {"collection": collection})
+                self.helper.connector_logger.info(
+                    "Collection", {"collection": collection}
+                )
 
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
+                self.helper.connector_logger.info("Connector stop")
                 sys.exit(0)
 
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.connector_logger.error(str(e))
                 time.sleep(360)
                 continue
 
@@ -527,7 +538,7 @@ class Mandiant:
                 self.helper.api.work.to_processed(work_id, "Finished")
 
         if self.helper.connect_run_and_terminate:
-            self.helper.log_info("Connector stop")
+            self.helper.connector_logger.info("Connector stop")
             self.helper.force_ping()
             sys.exit(0)
 
@@ -600,7 +611,7 @@ class Mandiant:
         next_start = (
             end if end is not None else before_process_now
         )  # next start is the previous end
-        next_end = next_start.delta(days=DAYS_PERIOD)
+        next_end = next_start.delta(days=self.mandiant_import_period)
         if next_end.value > after_process_now.value:
             next_end = None
 
