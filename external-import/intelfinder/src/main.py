@@ -4,6 +4,7 @@ from os import environ
 
 from intelfinder import Intelfinder
 from intelfinder.utils import (
+    create_author,
     format_labels,
     validate_api_key,
     validate_labels,
@@ -18,6 +19,7 @@ class IntelfinderConnector(ExternalImportConnector):
         super().__init__()
         self.helper.log_info("Initializing Intelfinder connector")
         self._get_config_variables()
+        self.author = create_author()
 
     def _get_config_variables(self):
         """Get config variables from the environment"""
@@ -46,32 +48,6 @@ class IntelfinderConnector(ExternalImportConnector):
         self.current_state = self.helper.get_state() if self.helper.get_state() else {}
         self.cursor = self._get_cursor()
 
-    def _get_cursor(self):
-        """Get the cursor from the state"""
-        if isinstance(self.current_state, dict) and self.current_state:
-            self.helper.log_info(
-                f"Getting state cursor: {self.current_state.get('cursor', None)}"
-            )
-            return self.current_state.get("cursor", None)
-        elif self.seed_alert_id:
-            return self.seed_alert_id
-        else:
-            self.helper.log_warning("No state cursor found")
-            return None
-
-    def _set_cursor_state(self):
-        """Set the state of the connector"""
-
-        if self.current_state:
-            self.current_state["cursor"] = self.cursor
-        else:
-            self.current_state = {"cursor": self.cursor}
-        self.helper.log_info(
-            f"Setting state cursor to {self.cursor}, {self.current_state}"
-        )
-        self.helper.set_state(self.current_state)
-        self.helper.log_debug(f"Updated State: {self.helper.get_state()}")
-
     def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
 
@@ -90,14 +66,14 @@ class IntelfinderConnector(ExternalImportConnector):
         # === Add your code below ===
         # ===========================
         """Processing the enrichment request"""
-        self.helper.log_info("Processing enrichment request")
+        self.helper.log_info(f"Processing enrichment request, cursor: {self.cursor}")
         intelfinder = Intelfinder(
+            author=self.author,
             api_key=self.intelfinder_token,
             cursor=self.cursor,
             labels=self.intelfinder_labels,
             object_marking_refs=self.intelfinder_marking_refs,
         )
-        stix_objects = []
         while intelfinder.has_next:
             self.helper.log_info(
                 f"Retrieving alerts from Intelfinder, cursor: {self.cursor}"
@@ -106,22 +82,24 @@ class IntelfinderConnector(ExternalImportConnector):
                 cursor=intelfinder.cursor
             )
             self.cursor = intelfinder.get_cursor()
-            if len(intelfinder_stix_objects) > 0:
+            if intelfinder_stix_objects:
                 self.helper.log_info(
                     f"Retrieved {len(intelfinder_stix_objects)} STIX objects from Intelfinder"
                 )
                 stix_objects.extend(intelfinder_stix_objects)
             else:
                 self.helper.log_info("No STIX objects retrieved from Intelfinder")
-                break
+
+        # Add author to the list of objects
+        if stix_objects:
+            stix_objects.append(self.author)
+
         # ===========================
         # === Add your code above ===
         # ===========================
-        self._set_cursor_state()
         self.helper.log_info(
-            f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
+            f"{intelfinder.get_index()} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
         )
-        self.helper.log_warning(f"Total processed alerts: {intelfinder.get_index()}")
         return stix_objects
 
 

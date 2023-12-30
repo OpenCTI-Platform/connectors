@@ -2,13 +2,10 @@ import logging
 from unittest.mock import Mock, patch
 
 import pytest
-from hostio.hostio_utils import get_tlp_marking  # Updated import statement
-from hostio.ipinfo import IPInfo  # Updated import statement
-from hostio.tests.constants import (  # Updated import statement
-    generate_random_token,
-    load_fixture,
-)
-from stix2 import (  # Updated import statement
+from hostio.hostio_utils import create_author, get_tlp_marking
+from hostio.ipinfo import IPInfo
+from hostio.tests.constants import generate_random_token, load_fixture
+from stix2 import (
     AutonomousSystem,
     DomainName,
     Identity,
@@ -19,6 +16,7 @@ from stix2 import (  # Updated import statement
 )
 
 LOGGER = logging.getLogger(__name__)
+AUTHOR = create_author()
 
 
 class TestIPInfo:
@@ -127,8 +125,9 @@ class TestIPInfo:
         )
         mock_get_handler.return_value = mock_handler
         ip_info = IPInfo(
-            self.valid_token,
-            self.valid_ipv6,
+            token=self.valid_token,
+            ip=self.valid_ipv6,
+            author=AUTHOR,
             marking_refs=self.marking_refs,
             entity_id=self.ipinfo_entity_ipv6.get("id"),
         )
@@ -149,8 +148,9 @@ class TestIPInfo:
             )
             mock_get_handler.return_value = mock_handler
             ip_info = IPInfo(
-                self.valid_token,
-                self.valid_ip,
+                token=self.valid_token,
+                ip=self.valid_ip,
+                author=AUTHOR,
                 marking_refs=self.marking_refs,
                 entity_id=self.ipinfo_entity.get("id"),
             )
@@ -200,8 +200,9 @@ class TestIPInfo:
         """Test initialization with invalid token."""
         with pytest.raises(ValueError) as exc_info:
             IPInfo(
-                self.invalid_token,
-                self.valid_ip,
+                token=self.invalid_token,
+                ip=self.valid_ip,
+                author=AUTHOR,
                 marking_refs=self.marking_refs,
                 entity_id=self.ipinfo_entity.get("id"),
             )
@@ -212,8 +213,9 @@ class TestIPInfo:
         """Test initialization with invalid IP."""
         with pytest.raises(ValueError) as exc_info:
             IPInfo(
-                self.valid_token,
-                self.invalid_ip,
+                token=self.valid_token,
+                ip=self.invalid_ip,
+                author=AUTHOR,
                 marking_refs=self.marking_refs,
                 entity_id=self.ipinfo_entity.get("id"),
             )

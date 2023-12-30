@@ -4,6 +4,7 @@ import random
 
 import pytest
 from hostio.hostio_ip_to_domain import HostIOIPtoDomain
+from hostio.hostio_utils import create_author
 from stix2 import DomainName, IPv4Address, Relationship
 
 DEFAULT_IP = "8.8.8.8"
@@ -11,6 +12,7 @@ DEFAULT_FIXTURE = "8.8.8.8.json"
 DEFAULT_LIMIT = 5
 DEFAULT_TOTAL = 14
 DEFAULT_IP_ENTITY = IPv4Address(value=DEFAULT_IP)
+AUTHOR = create_author()
 
 
 def load_fixture(filename):
@@ -39,6 +41,7 @@ class TestHostIOIPToDomain:
             token=generate_random_token(),
             ip=DEFAULT_IP,
             limit=DEFAULT_LIMIT,
+            author=AUTHOR,
             entity_id=DEFAULT_IP_ENTITY.get("id"),
             marking_refs="TLP:WHITE",
         )

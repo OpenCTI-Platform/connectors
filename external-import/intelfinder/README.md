@@ -45,3 +45,6 @@ Configuration parameters are provided using environment variables. Some of them 
 ### Supported OpenCTI Custom Objects
 
 - `CustomObjectCaseIncident`, `CustomObjectTask`
+
+## Additional Details
+Intelfinder occassionaly will create a large content payload. The code supports logic to TRUNCATE the payload in the event it is larger than 80% of the RabbitMQ Default maximum. The following message will be in place where content is TRUNCATED: `TRUNCATED DUE TO SIZE LIMIT, CHECK INTELFINDER FOR FULL CONTENT.`. While the RabbitMQ maximum can be adjusted, there are other dependencies for OpenCTI and STIX objects that have a maximum content size, therefore, this connector is set to the lowest ceiling to limit complications. 
