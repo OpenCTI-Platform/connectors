@@ -15,7 +15,7 @@ def process(connector, report):
     report_title = report.get("title", report.get("reportTitle", None))
 
     if report_type not in connector.mandiant_report_types:
-        connector.helper.log_debug(
+        connector.helper.connector_logger.debug(
             "Ignoring report",
             {
                 "report_id": report_id,
@@ -25,7 +25,7 @@ def process(connector, report):
         )
         return
 
-    connector.helper.log_info(
+    connector.helper.connector_logger.info(
         "Processing report",
         {
             "report_id": report_id,
@@ -55,7 +55,9 @@ def process(connector, report):
     try:
         bundle = report.generate()
     except Exception:
-        connector.helper.log_error("Could not process Report", {"report_id": report_id})
+        connector.helper.connector_logger.error(
+            "Could not process Report", {"report_id": report_id}
+        )
         return None
 
     return bundle
@@ -176,10 +178,13 @@ class Report:
             filter(lambda ref: not ref.startswith("x-"), report["object_refs"])
         )
         mandiant_ref = [{"source_name": "Mandiant", "url": self.report_link}]
-        if report["external_references"] is None:
-            report["external_references"] = mandiant_ref
-        else:
+        if (
+            "external_references" in report
+            and report["external_references"] is not None
+        ):
             report["external_references"] = report["external_references"] + mandiant_ref
+        else:
+            report["external_references"] = mandiant_ref
 
     def create_note(self):
         # Report Analysis Note

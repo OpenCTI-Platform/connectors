@@ -1,13 +1,8 @@
-import logging
-
 import stix2
 from pycti import Indicator, Report
 
 from . import utils
 from .common import create_stix_relationship
-
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-
 
 MAPPING = {
     "ipv4": {
@@ -100,7 +95,9 @@ def create_indicator(connector, indicator):
 def process(connector, indicator):
     indicator_id = indicator.get("id")
 
-    connector.helper.log_debug("Processing indicator", {"indicator_id": indicator_id})
+    connector.helper.connector_logger.debug(
+        "Processing indicator", {"indicator_id": indicator_id}
+    )
 
     stix_indicator = create_indicator(connector, indicator)
     items = [stix_indicator]
@@ -137,7 +134,7 @@ def process(connector, indicator):
                 )
             )
         else:
-            connector.helper.log_error(
+            connector.helper.connector_logger.error(
                 "Unsupported attribute association type", {"type": attribution["type"]}
             )
         # Add the relation
@@ -183,7 +180,7 @@ def process(connector, indicator):
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
     if bundle is None:
-        connector.helper.log_error(
+        connector.helper.connector_logger.error(
             "Could not process indicator", {"indicator_id": indicator_id}
         )
 

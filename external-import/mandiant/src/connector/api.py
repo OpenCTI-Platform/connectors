@@ -1,14 +1,10 @@
-import logging
 import time
 from datetime import datetime, timedelta
 from typing import Dict, Iterable, List, Union
 from urllib.parse import urljoin
 
 import requests
-
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-logger = logging.getLogger("mandiant-api")
+from pycti import OpenCTIConnectorHelper
 
 OFFSET_PAGINATION = 100
 
@@ -42,7 +38,8 @@ class MandiantAPI:
         "stix": "application/stix+json;version=2.1",
     }
 
-    def __init__(self, key_id: str, key_secret: str):
+    def __init__(self, helper: OpenCTIConnectorHelper, key_id: str, key_secret: str):
+        self.helper = helper
         self.auth = requests.auth.HTTPBasicAuth(key_id, key_secret)
         self._authenticate()
 
@@ -82,7 +79,7 @@ class MandiantAPI:
         )
 
         if response.status_code != 200:
-            logger.error("Authentication failed")
+            self.helper.connector_logger.error("Authentication failed")
             raise ValueError("Mandiant Authentication failed")
 
         self.token = response.json().get("access_token")
@@ -110,12 +107,14 @@ class MandiantAPI:
                 return response
 
             if response.status_code == 429:
-                logger.warning("Rate limit exceeded. Waiting 30 seconds ...")
+                self.helper.connector_logger.warning(
+                    "Rate limit exceeded. Waiting 30 seconds ..."
+                )
                 time.sleep(30)
                 continue
 
             if response.status_code in [401, 403]:
-                logger.debug("Refreshing token ...")
+                self.helper.connector_logger.debug("Refreshing token ...")
                 retries += 1
                 self._authenticate()
                 continue
@@ -126,7 +125,7 @@ class MandiantAPI:
                 "url": url,
                 "headers": str(headers),
             }
-            logger.error("An unknown error occurred", meta)
+            self.helper.connector_logger.error("An unknown error occurred", meta)
             raise ValueError("An unknown error occurred")
 
     def _process(
@@ -142,7 +141,7 @@ class MandiantAPI:
         required_parameters = {param: parameters[param] for param in required}
         mandiant_data = []
         while True:
-            logger.info(url)
+            self.helper.connector_logger.info(url)
             response = self._query(url, self.modes.get(mode))
             if response is None:
                 return mandiant_data
