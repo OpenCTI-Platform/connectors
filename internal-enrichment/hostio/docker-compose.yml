@@ -1,7 +1,8 @@
 version: '3'
 services:
   connector-hostio:
-    image: connector-hostio:5.12.15
+    build: .
+    container_name: ${CONTAINER_NAME}
     environment:
       - OPENCTI_URL=${OPENCTI_URL}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
@@ -17,4 +18,9 @@ services:
       - HOSTIO_LIMIT=${HOSTIO_LIMIT}  # Limit for returned results, update to match the page limit for your subscription (default 5 for Free subscription).
       - HOSTIO_LABELS=${HOSTIO_LABELS}  # Comma-separated list of labels to add to the entities. e.g., "hostio,osint"
       - HOSTIO_MARKING_REFS=${HOSTIO_MARKING_REFS}  # TLP Marking Reference e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED
+      - HOSTIO_TLP_MAX=${HOSTIO_TLP_MAX}  # Maximum TLP level to process, e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED
     restart: always
+networks:
+  default:
+    external: true
+    name: docker_default
