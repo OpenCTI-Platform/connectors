@@ -2,7 +2,7 @@ import logging
 
 import requests
 
-from .hostio_utils import is_valid_token, object_to_pretty_json
+from .hostio_utils import dict_to_pretty_markdown, format_value, is_valid_token
 from .transform_to_stix import HostIODomainStixTransformation
 
 HOSTIO_ENDPOINT = "https://host.io/api/full/{}"
@@ -86,24 +86,18 @@ class HostIODomain:
 
     def get_note_content(self):
         """Return Host IO enrichment notes."""
-        note_content = str()
+        note_content = []
+        unsupported_values = ["", "None", None, [], {}]
         for key in SUPPORTED_RESPONSE_KEYS:
-            if hasattr(self, key) and not getattr(self, key) in [
-                None,
-                {},
-                [],
-                "",
-                "None",
-            ]:
+            if hasattr(self, key) and not getattr(self, key) in unsupported_values:
                 LOGGER.debug(f"Parsing key: {key}:{getattr(self, key)}")
                 message = str()
-                if isinstance(getattr(self, key), (dict, list)):
-                    message = object_to_pretty_json(getattr(self, key))
-                elif isinstance(getattr(self, key), str):
-                    message = getattr(self, key)
-
-                if message and not note_content:
-                    note_content += f"**{key}**:\n\n```\n\n{message}\n\n```"
-                elif message and note_content:
-                    note_content += f"\n\n**{key}**:\n\n```\n\n{message}\n\n```"
-        return note_content
+                if isinstance(getattr(self, key), (dict)):
+                    message = dict_to_pretty_markdown(
+                        header=key, obj=getattr(self, key)
+                    )
+                else:
+                    message = format_value(key, getattr(self, key))
+                if message:
+                    note_content.extend(message)
+        return "\n---\n".join(note_content)
