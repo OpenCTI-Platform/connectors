@@ -19,5 +19,5 @@ cve:
   max_date_range: 120 # In days, max 120
   maintain_data: True # Required, retrieve only updated data
   pull_history: False # If True, history_start_year is required
-  history_start_year: 2019 # Required if pull_history is True
+  history_start_year: 2019 # Required if pull_history is True, min 2019 (see documentation CVE and CVSS base score V3.1)
 

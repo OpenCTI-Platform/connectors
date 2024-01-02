@@ -99,7 +99,7 @@ Below are the parameters you'll need to set for CVE connector:
 | CVE Max Date Range     | max_date_range     | `CVE_MAX_DATE_RANGE`        | 120                                          | Yes       | Determines how many days to collect CVE. Maximum of 120 days.                                                                                                       |
 | CVE Maintain Data      | maintain_data      | `CVE_MAINTAIN_DATA`         | True                                         | Yes       | If set to `True`, import CVEs from the last run of the connector to the current time. Takes 2 values: `True` or `False`.                                            |
 | CVE Pull History       | pull_history       | `CVE_PULL_HISTORY`          | False                                        | No        | If set to `True`, import all CVEs from start year define in history start year configuration and history start year is required. Takes 2 values: `True` or `False`. |
-| CVE History Start Year | history_start_year | `CVE_HISTORY_START_YEAR`    | 2019                                         | No        | Year in number. Required when pull_history is set to `True`.                                                                                                        |
+| CVE History Start Year | history_start_year | `CVE_HISTORY_START_YEAR`    | 2019                                         | No        | Year in number. Required when pull_history is set to `True`.  Minimum 2019 as CVSS V3.1 was released in June 2019, thus most CVE published before 2019 do not include the cvssMetricV31 object.                                                                                      |
 
 For more details about the CVE API, see the documentation at the link below:
 
