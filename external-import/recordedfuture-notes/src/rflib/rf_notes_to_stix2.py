@@ -107,9 +107,32 @@ class Indicator(RFStixEntity):
             object_marking_refs=self.tlp,
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
+                "x_opencti_main_observable_type": self._add_main_observable_type_to_indicators()
             },
         )
         pass
+
+    def _add_main_observable_type_to_indicators(self):
+        """Handle x_opencti_main_observable_type for filtering"""
+        stix_main_observable_mapping = {
+            "domain-name:value": "Domain-Name",
+            "file:hashes": "StixFile",
+            "ipv4-addr:value": "IPv4-Addr",
+            "ipv6-addr:value": "IPv6-Addr",
+            "url:value": "Url",
+        }
+
+        pattern = self._create_pattern()
+        pattern_splited = pattern.split("=")
+        observable_type = pattern_splited[0].strip("[").strip()
+
+        if observable_type.startswith("file:hashes"):
+            observable_type = "file:hashes"
+
+        if observable_type in stix_main_observable_mapping:
+            return stix_main_observable_mapping[observable_type]
+        else:
+            return "Unknown"
 
     def _create_pattern(self):
         """Creates STIX2 pattern for indicator"""
@@ -218,7 +241,7 @@ class IPAddress(Indicator):
             return f"[ipv4-addr:value = '{self.name}']"
         else:
             raise ValueError(
-                f"'This pattern value {self.name}' is not have a valid IPv4 or IPv6 address."
+                f"'This pattern value {self.name}' is not a valid IPv4 or IPv6 address."
             )
 
     def _create_obs(self):
@@ -234,7 +257,7 @@ class IPAddress(Indicator):
             )
         else:
             raise ValueError(
-                f"This observable value '{self.name}' is not have a valid IPv4 or IPv6 address."
+                f"This observable value '{self.name}' is not a valid IPv4 or IPv6 address."
             )
 
     def to_stix_bundle(self):
