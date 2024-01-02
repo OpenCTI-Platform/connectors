@@ -107,7 +107,7 @@ class Indicator(RFStixEntity):
             object_marking_refs=self.tlp,
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
-                "x_opencti_main_observable_type": self._add_main_observable_type_to_indicators()
+                "x_opencti_main_observable_type": self._add_main_observable_type_to_indicators(),
             },
         )
         pass
