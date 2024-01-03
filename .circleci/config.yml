@@ -57,7 +57,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/recordedfuture-feeds/src
           name: Run recordedfuture-feeds test
-          command: pytest
+          command: pytest --verbose
   build_1:
     working_directory: ~/opencti
     docker:
