@@ -44,6 +44,20 @@ jobs:
       - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
+  test:
+    working_directory: ~/opencti
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - checkout
+      - run:
+          working_directory: ~/opencti/external-import/recordedfuture-feeds/src
+          name: Install recordedfuture-feeds for test
+          command: pip install -r requirements.txt
+      - run:
+          working_directory: ~/opencti/external-import/recordedfuture-feeds/src
+          name: Run recordedfuture-feeds test
+          command: pytest
   build_1:
     working_directory: ~/opencti
     docker:
@@ -1550,6 +1564,7 @@ workflows:
     jobs:
       - ensure_formatting
       - linter
+      - test
       - build_1:
           filters:
             tags:
