@@ -45,6 +45,7 @@ jobs:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   test:
+    working_directory: ~/opencti
     docker:
       - image: cimg/python:3.11
     steps:
