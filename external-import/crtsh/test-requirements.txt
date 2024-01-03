@@ -1,0 +1,6 @@
+pycti==5.12.15
+requests
+stix2
+validators
+pytest
+pytest-mock

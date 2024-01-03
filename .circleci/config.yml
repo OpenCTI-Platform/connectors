@@ -52,12 +52,12 @@ jobs:
       - checkout
       - run:
           working_directory: ~/opencti/external-import/recordedfuture-feeds/src
-          name: Install recordedfuture-feeds for test
-          command: pip install -r test-requirements.txt
-      - run:
-          working_directory: ~/opencti/external-import/recordedfuture-feeds/src
           name: Run recordedfuture-feeds test
-          command: pytest --verbose
+          command: pip install -r test-requirements.txt && pytest --verbose
+      - run:
+          working_directory: ~/opencti/external-import/crtsh
+          name: Run crtsh test
+          command: pip install -r test-requirements.txt && pytest --verbose src/crtsh/tests/test_crtsh_utils.py
   build_1:
     working_directory: ~/opencti
     docker:
