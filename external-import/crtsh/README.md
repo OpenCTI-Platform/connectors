@@ -104,3 +104,7 @@ These objects represent structured information about cybersecurity threats and i
   - `target_ref`: Reference to the target object.
   - `object_marking_refs`: References to marking definitions.
   - `labels`: Custom labels.
+
+##### TODO
+
+Update tests

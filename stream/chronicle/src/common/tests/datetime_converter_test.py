@@ -17,7 +17,7 @@
 import datetime
 import unittest
 
-from . import datetime_converter
+from common import datetime_converter
 
 
 class DatetimeConverterTest(unittest.TestCase):
