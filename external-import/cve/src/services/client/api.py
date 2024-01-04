@@ -1,3 +1,5 @@
+import time
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -47,7 +49,7 @@ class CVEClient:
         # Define the retry strategy
         retry_strategy = Retry(
             total=4,  # Maximum number of retries
-            backoff_factor=2,  # Exponential backoff factor (e.g., 2 means 1, 2, 4, 8 seconds, ...)
+            backoff_factor=6,  # Exponential backoff factor (e.g., 2 means 1, 2, 4, 8 seconds, ...)
             status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
         )
         # Create an HTTP adapter with the retry strategy and mount it to session
@@ -59,6 +61,8 @@ class CVEClient:
         response = self.session.get(api_url, params=params)
 
         if response.status_code == 200:
+            # It is recommended that users "sleep" their scripts for six seconds between requests (NIST)
+            time.sleep(6)
             return response
         else:
             raise Exception(
