@@ -16,6 +16,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
 from rflib import APP_VERSION, RFClient, RiskList, StixNote
 
 
@@ -81,6 +82,12 @@ class RFNotes:
         self.risk_threshold = get_config_variable(
             "RECORDED_FUTURE_RISK_THRESHOLD",
             ["rf-notes", "risk_threshold"],
+            config,
+            True,
+        )
+        self.risk_list_threshold = get_config_variable(
+            "RECORDED_FUTURE_RISK_LIST_THRESHOLD",
+            ["rf-notes", "risk_list_threshold"],
             config,
             True,
         )
@@ -199,6 +206,7 @@ if __name__ == "__main__":
                 RF.rf_risk_list_interval,
                 RF.rfapi,
                 RF.tlp,
+                RF.risk_list_threshold,
             )
             RiskList.start()
         else:
