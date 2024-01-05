@@ -91,7 +91,6 @@ class RFNotes:
             config,
             True,
         )
-
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
