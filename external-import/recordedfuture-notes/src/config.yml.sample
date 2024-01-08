@@ -13,15 +13,16 @@ connector:
 
 rf-notes:
   token: 'ChangeMe' # Required
-  initial_lookback: 240 #Required, in hours
+  initial_lookback: 240 # Required, in hours
   interval: 24 # Required, in hours
   risk_list_interval: 6 # Required, in hours
   TLP: white
   pull_risk_list: False
-  pull_signatures: False #Pull Yara/Snort/Sigma rules into OpenCTI. optional
-  insikt_only: True #optional
-  topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' #optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
-  person_to_TA: False #optional
-  TA_to_intrusion_set: False #optional
-  risk_as_score: False #optional
+  risk_list_threshold: 70 # optional
+  pull_signatures: False # Pull Yara/Snort/Sigma rules into OpenCTI. optional
+  insikt_only: True # optional
+  topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' # optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
+  person_to_TA: False # optional
+  TA_to_intrusion_set: False # optional
+  risk_as_score: False # optional
   risk_threshold: 60 # optional

@@ -7,12 +7,16 @@ from .constants import RISK_LIST_TYPE_MAPPER
 
 
 class RiskList(threading.Thread):
-    def __init__(self, helper, update_existing_data, interval, rfapi):
+    def __init__(
+        self, helper, update_existing_data, interval, rfapi, tlp, risk_list_threshold
+    ):
         threading.Thread.__init__(self)
         self.helper = helper
         self.update_existing_data = update_existing_data
         self.interval = interval
         self.rfapi = rfapi
+        self.tlp = tlp
+        self.risk_list_threshold = risk_list_threshold
 
     def run(self):
         while True:
@@ -29,9 +33,18 @@ class RiskList(threading.Thread):
                 )
                 reader = csv.DictReader(csv_file)
                 for row in reader:
+                    # Filtered by score with a threshold
+                    if self.risk_list_threshold is not None:
+                        row_risk_score = int(row["Risk"])
+                        row_name = row["Name"]
+                        if row_risk_score < self.risk_list_threshold:
+                            self.helper.log_info(
+                                f"[RISK LIST] Ignoring indicator '{row_name}' as its risk score ({row_risk_score}) is lower than the defined risk list threshold ({self.risk_list_threshold})"
+                            )
+                            continue
                     # Convert into stix object
-                    indicator = risk_list_type["class"](row["Name"], key)
-                    indicator.map_data(row)
+                    indicator = risk_list_type["class"](row["Name"], key, tlp=self.tlp)
+                    indicator.map_data(row, self.tlp)
                     indicator.build_bundle(indicator)
                     # Create bundle
                     bundle = indicator.to_stix_bundle()

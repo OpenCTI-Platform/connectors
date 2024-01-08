@@ -8,6 +8,7 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
+import ipaddress
 import json
 from datetime import datetime
 
@@ -20,7 +21,6 @@ TLP_MAP = {
     "amber": stix2.TLP_AMBER,
     "red": stix2.TLP_RED,
 }
-{}
 
 
 class ConversionError(Exception):
@@ -32,10 +32,11 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, type_, author=None):
+    def __init__(self, name, _type, author=None, tlp="white"):
         self.name = name
-        self.type = type_
+        self.type = _type
         self.author = author or self._create_author()
+        self.tlp = TLP_MAP.get(tlp, None)
         self.stix_obj = None
 
     def to_stix_objects(self):
@@ -68,15 +69,15 @@ class RFStixEntity:
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
-    def __init__(self, name, type_, author):
-        self.name = name
-        self.author = author or super()._create_author()
+    def __init__(self, name, _type, author, tlp):
+        super().__init__(name, _type, author, tlp)
         self.stix_indicator = None
         self.stix_observable = None
         self.stix_relationship = None
         self.risk_score = None
         self.related_entities = []
         self.objects = []
+        self.tlp = TLP_MAP.get(tlp, None)
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -92,7 +93,7 @@ class Indicator(RFStixEntity):
         self.stix_observable = (
             self._create_obs()
         )  # pylint: disable=assignment-from-no-return
-        self.stix_relationship = self._create_rel()
+        self.stix_relationship = self._create_rel("based-on", self.stix_observable.id)
 
     def _create_indicator(self):
         """Creates and returns STIX2 indicator object"""
@@ -103,11 +104,35 @@ class Indicator(RFStixEntity):
             valid_from=datetime.now(),
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
+                "x_opencti_main_observable_type": self._add_main_observable_type_to_indicators(),
             },
         )
         pass
+
+    def _add_main_observable_type_to_indicators(self):
+        """Handle x_opencti_main_observable_type for filtering"""
+        stix_main_observable_mapping = {
+            "domain-name:value": "Domain-Name",
+            "file:hashes": "StixFile",
+            "ipv4-addr:value": "IPv4-Addr",
+            "ipv6-addr:value": "IPv6-Addr",
+            "url:value": "Url",
+        }
+
+        pattern = self._create_pattern()
+        pattern_splited = pattern.split("=")
+        observable_type = pattern_splited[0].strip("[").strip()
+
+        if observable_type.startswith("file:hashes"):
+            observable_type = "file:hashes"
+
+        if observable_type in stix_main_observable_mapping:
+            return stix_main_observable_mapping[observable_type]
+        else:
+            return "Unknown"
 
     def _create_pattern(self):
         """Creates STIX2 pattern for indicator"""
@@ -117,16 +142,17 @@ class Indicator(RFStixEntity):
         """Creates and returns STIX2 Observable"""
         pass
 
-    def _create_rel(self):
+    def _create_rel(self, relationship_type, target_id):
         """Creates Relationship object linking indicator and observable"""
         return stix2.Relationship(
             id=pycti.StixCoreRelationship.generate_id(
-                "based-on", self.stix_indicator.id, self.stix_observable.id
+                relationship_type, self.stix_indicator.id, target_id
             ),
-            relationship_type="based-on",
+            relationship_type=relationship_type,
             source_ref=self.stix_indicator.id,
-            target_ref=self.stix_observable.id,
+            target_ref=target_id,
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
         )
 
     def to_stix_bundle(self):
@@ -136,30 +162,37 @@ class Indicator(RFStixEntity):
             allow_custom=True,
         )
 
-    def map_data(self, rf_indicator):
+    def map_data(self, rf_indicator, tlp):
         handled_related_entities_types = [
             "Malware",
             "Hash",
-            "IpAddress",
             "URL",
             "Threat Actor",
+            "MitreAttackIdentifier",
         ]
         self.risk_score = int(rf_indicator["Risk"])
         related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
         if (
             related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
         ):  # Sometimes, hits is not empty but sections is
-            rf_related_entities = related_entities_hits[0]["sections"][0]["lists"]
-            for element in rf_related_entities:
-                if element["type"]["name"] in handled_related_entities_types:
-                    for rf_related_element in element["entities"]:
-                        type_ = rf_related_element["type"]
-                        name_ = rf_related_element["name"]
-                        related_element = ENTITY_TYPE_MAPPER[type_](
-                            name_, type_, self.author
-                        )
-                        stix_objs = related_element.to_stix_objects()
-                        self.related_entities.extend(stix_objs)
+            rf_related_entities = []
+            rf_related_entities_sections = related_entities_hits[0]["sections"]
+
+            for section in rf_related_entities_sections:
+                # Handle indicators and TTP & Tools
+                if "Indicators" or "TTP" in section["section_id"]["name"]:
+                    rf_related_entities += section["lists"]
+
+                for element in rf_related_entities:
+                    if element["type"]["name"] in handled_related_entities_types:
+                        for rf_related_element in element["entities"]:
+                            type_ = rf_related_element["type"]
+                            name_ = rf_related_element["name"]
+                            related_element = ENTITY_TYPE_MAPPER[type_](
+                                name_, type_, self.author, tlp
+                            )
+                            stix_objs = related_element.to_stix_objects()
+                            self.related_entities.extend(stix_objs)
 
     def build_bundle(self, stix_name):
         """
@@ -173,32 +206,59 @@ class Indicator(RFStixEntity):
         # Then add 'related-to' relationship with all related entities
         for entity in self.related_entities:
             if entity["type"] in ["indicator", "malware", "threat-actor"]:
-                relationships.append(
-                    stix2.Relationship(
-                        id=pycti.StixCoreRelationship.generate_id(
-                            "related-to", self.stix_indicator.id, entity.id
-                        ),
-                        relationship_type="related-to",
-                        source_ref=self.stix_indicator.id,
-                        target_ref=entity.id,
-                        created_by_ref=self.author.id,
-                    )
-                )
+                relationships.append(self._create_rel("related-to", entity.id))
+            if entity["type"] in ["attack-pattern"]:
+                relationships.append(self._create_rel("indicates", entity.id))
         self.objects.extend(relationships)
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type, author=None):
-        super().__init__(name, _type, author)
+    def __init__(self, name, _type, author=None, tlp=None):
+        super().__init__(name, _type, author, tlp)
 
     """Converts IP address to IP indicator and observable"""
 
-    # TODO: add ipv6 compatibility
+    def is_ipv6(self):
+        """Determine whether the provided IP string is IPv6."""
+        try:
+            ipaddress.IPv6Address(self.name)
+            return True
+        except ipaddress.AddressValueError:
+            return False
+
+    def is_ipv4(self):
+        """Determine whether the provided IP string is IPv4."""
+        try:
+            ipaddress.IPv4Address(self.name)
+            return True
+        except ipaddress.AddressValueError:
+            return False
+
     def _create_pattern(self):
-        return f"[ipv4-addr:value = '{self.name}']"
+        if self.is_ipv6() is True:
+            return f"[ipv6-addr:value = '{self.name}']"
+        elif self.is_ipv4() is True:
+            return f"[ipv4-addr:value = '{self.name}']"
+        else:
+            raise ValueError(
+                f"'This pattern value {self.name}' is not a valid IPv4 or IPv6 address."
+            )
 
     def _create_obs(self):
-        return stix2.IPv4Address(value=self.name)
+        if self.is_ipv6() is True:
+            return stix2.IPv6Address(
+                value=self.name,
+                object_marking_refs=self.tlp,
+            )
+        elif self.is_ipv4() is True:
+            return stix2.IPv4Address(
+                value=self.name,
+                object_marking_refs=self.tlp,
+            )
+        else:
+            raise ValueError(
+                f"This observable value '{self.name}' is not a valid IPv4 or IPv6 address."
+            )
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
@@ -208,21 +268,21 @@ class IPAddress(Indicator):
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
-    def __init__(self, name, _type, author=None):
-        super().__init__(name, _type, author)
+    def __init__(self, name, _type, author, tlp):
+        super().__init__(name, _type, author, tlp)
 
     def _create_pattern(self):
         return f"[domain-name:value = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.DomainName(value=self.name)
+        return stix2.DomainName(value=self.name, object_marking_refs=self.tlp)
 
 
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
-    def __init__(self, name, _type, author=None):
-        super().__init__(name, _type, author)
+    def __init__(self, name, _type, author, tlp):
+        super().__init__(name, _type, author, tlp)
 
     def _create_pattern(self):
         ioc = self.name.replace("\\", "\\\\")
@@ -230,14 +290,14 @@ class URL(Indicator):
         return f"[url:value = '{ioc}']"
 
     def _create_obs(self):
-        return stix2.URL(value=self.name)
+        return stix2.URL(value=self.name, object_marking_refs=self.tlp)
 
 
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, type_, author=None):
-        super().__init__(name, type_, author)
+    def __init__(self, name, _type, author, tlp):
+        super().__init__(name, _type, author, tlp)
         self.algorithm = self._determine_algorithm()
 
     def _determine_algorithm(self):
@@ -258,19 +318,8 @@ class FileHash(Indicator):
         return f"[file:hashes.'{self.algorithm}' = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.File(hashes={self.algorithm: self.name})
-
-
-class TLPMarking(RFStixEntity):
-    """Creates TLP marking for report"""
-
-    def create_stix_objects(self):
-        """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.AttackPattern(
-            id=pycti.AttackPattern.generate_id(self.name, self.name),
-            name=self.name,
-            created_by_ref=self.author.id,
-            custom_properties={"x_mitre_id": self.name},
+        return stix2.File(
+            hashes={self.algorithm: self.name}, object_marking_refs=self.tlp
         )
 
 
@@ -283,6 +332,7 @@ class TTP(RFStixEntity):
             id=pycti.AttackPattern.generate_id(self.name, self.name),
             name=self.name,
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
             custom_properties={"x_mitre_id": self.name},
         )
 
@@ -304,6 +354,7 @@ class Identity(RFStixEntity):
             name=self.name,
             identity_class=self.create_id_class(),
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
         )
 
     def create_id_class(self):
@@ -326,6 +377,7 @@ class ThreatActor(RFStixEntity):
             id=pycti.ThreatActor.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
         )
 
     def create_id_class(self):
@@ -342,6 +394,7 @@ class IntrusionSet(RFStixEntity):
             id=pycti.IntrusionSet.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
         )
 
 
@@ -355,6 +408,7 @@ class Malware(RFStixEntity):
             name=self.name,
             is_family=False,
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
         )
 
 
@@ -368,17 +422,19 @@ class Vulnerability(RFStixEntity):
             id=pycti.Vulnerability.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
         )
 
 
 class DetectionRule(RFStixEntity):
     """Represents a Yara, Sigma or SNORT rule"""
 
-    def __init__(self, name, type_, content, author):
+    def __init__(self, name, _type, content, author, tlp=None):
+        super().__init__(name, _type, author, tlp)
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
 
         self.name = name.split(".")[0]
-        self.type = type_
+        self.type = _type
         self.content = content
         self.stix_obj = None
         self.author = author
@@ -396,12 +452,13 @@ class DetectionRule(RFStixEntity):
             pattern=self.content,
             valid_from=datetime.now(),
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
         )
 
 
 class Software(RFStixEntity):
-    def __init__(self, name, type_, author):
-        self.name = name
+    def __init__(self, name, _type, author, tlp):
+        super().__init__(name, _type, author, tlp)
         self.software_object = None
 
     def to_stix_objects(self):
@@ -413,6 +470,7 @@ class Software(RFStixEntity):
     def create_stix_objects(self):
         self.software_object = stix2.Software(
             name=self.name,
+            object_marking_refs=self.tlp,
         )
 
 
@@ -429,9 +487,9 @@ class Location(RFStixEntity):
         "ProvinceOrState": "Administrative-Area",
     }
 
-    def __init__(self, name, type_, author):
-        self.name = name
-        self.type = self.rf_type_to_stix[type_]
+    def __init__(self, name, _type, author, tlp):
+        super().__init__(name, _type, author, tlp)
+        self.type = self.rf_type_to_stix[_type]
         self.location_object = None
 
     def to_stix_objects(self):
@@ -445,12 +503,13 @@ class Location(RFStixEntity):
             name=self.name,
             country=self.name,
             custom_properties={"x_opencti_location_type": self.type},
+            object_marking_refs=self.tlp,
         )
 
 
 class Campaign(RFStixEntity):
-    def __init__(self, name, type_, author):
-        self.name = name
+    def __init__(self, name, _type, author, tlp):
+        super().__init__(name, _type, author, tlp)
         self.campaign_object = None
 
     def to_stix_objects(self):
@@ -462,6 +521,7 @@ class Campaign(RFStixEntity):
     def create_stix_objects(self):
         self.campaign_object = stix2.Campaign(
             name=self.name,
+            object_marking_refs=self.tlp,
         )
 
 
@@ -616,7 +676,7 @@ class StixNote:
             refs.append({"source_name": source_name, "url": external_url})
         return refs
 
-    def from_json(self, note):
+    def from_json(self, note, tlp):
         """Converts to STIX Bundle from JSON objects"""
         # TODO: catch errors in for loop here
         attr = note["attributes"]
@@ -632,12 +692,16 @@ class StixNote:
             type_ = entity["type"]
             name = entity["name"]
             if self.person_to_ta and type_ == "Person":
-                stix_objs = ThreatActor(name, type_, self.author).to_stix_objects()
+                stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
             elif entity["id"] in self.tas:
                 if self.ta_to_intrusion_set and type_ != "Person":
-                    stix_objs = IntrusionSet(name, type_, self.author).to_stix_objects()
+                    stix_objs = IntrusionSet(
+                        name, type_, self.author, tlp
+                    ).to_stix_objects()
                 else:
-                    stix_objs = ThreatActor(name, type_, self.author).to_stix_objects()
+                    stix_objs = ThreatActor(
+                        name, type_, self.author, tlp
+                    ).to_stix_objects()
             elif type_ == "Source":
                 external_reference = {"source_name": name, "url": name}
                 self.external_references.append(external_reference)
@@ -647,7 +711,7 @@ class StixNote:
                 self.helper.log_warning(msg)
                 continue
             else:
-                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author)
+                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",
@@ -693,6 +757,7 @@ class StixNote:
             source_ref=from_id,
             target_ref=to_id,
             created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
         )
 
     def create_relations(self):
