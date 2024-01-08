@@ -84,7 +84,12 @@ class RFNotes:
             config,
             True,
         )
-
+        self.risk_list_threshold = get_config_variable(
+            "RECORDED_FUTURE_RISK_LIST_THRESHOLD",
+            ["rf-notes", "risk_list_threshold"],
+            config,
+            True,
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -176,7 +181,7 @@ class RFNotes:
                 self.risk_as_score,
                 self.risk_threshold,
             )
-            stixnote.from_json(note)
+            stixnote.from_json(note, self.tlp)
             stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
@@ -194,7 +199,12 @@ if __name__ == "__main__":
         RF = RFNotes()
         if RF.rf_pull_risk_list:
             RiskList = RiskList(
-                RF.helper, RF.update_existing_data, RF.rf_risk_list_interval, RF.rfapi
+                RF.helper,
+                RF.update_existing_data,
+                RF.rf_risk_list_interval,
+                RF.rfapi,
+                RF.tlp,
+                RF.risk_list_threshold,
             )
             RiskList.start()
         else:

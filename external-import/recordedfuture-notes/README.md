@@ -54,6 +54,7 @@ Please note that if you don't want to use an optional variable, best practice is
 | RECORDED_FUTURE_RISK_LIST_INTERVAL  | risk_list_interval  | The numeric interval (in hours) between scheduled executions of the risk list fetch. Required
 | RECORDED_FUTURE_TLP                 | TLP                 | TLP marking of the report. One of White, Green, Amber, Red
 | RECORDED_FUTURE_PULL_RISK_LIST      | pull_risk_list      | A boolean flag of whether to pull risk lists into OpenCTI. Defaults to False
+| RECORDED_FUTURE_RISK_LIST_THRESHOLD | risk_list_threshold | A threshold value below which the related indicators are not taken into account in the risk list.
 | RECORDED_FUTURE_PULL_SIGNATURES     | pull_signatures     | A boolean flag of whether to pull YARA, SIGMA, and SNORT rules from hunting packages into OpenCTI. Defaults to False
 | RECORDED_FUTURE_INSIKT_ONLY         | insikt_only         | A boolean flag of whether to pull analyst notes only from the Insikt research team, or whether to include notes written by Users. Defaults to True
 | RECORDED_FUTURE_TOPIC               | topic               | Filter Analyst Notes on a specific topic. Topics can be found [here](https://support.recordedfuture.com/hc/en-us/articles/360006361774-Analyst-Note-API). You **must** use the topic RFID, for example aUyI9M. Multiple topics are allowed (separated by ','). Optional
@@ -61,7 +62,6 @@ Please note that if you don't want to use an optional variable, best practice is
 | RECORDED_FUTURE_TA_TO_INTRUSION_SET | TA_to_intrusion_set | Converts all Recorded Future Threat Actors to STIX Object "Intrusion Set" instead of "Threat Actor". DO NOT USE unless you **really** know what you're doing
 | RECORDED_FUTURE_RISK_AS_SCORE       | risk_as_score       | Use Recorded Future "risk" as a score for Stix Indicators
 | RECORDED_FUTURE_RISK_THRESHOLD      | risk_threshold      | A threshold under which related indicators are not taken into account
-            "RECORDED_FUTURE_PULL_RISK_LIST", ["rf-notes", "pull_risk_list"], config
 
 ## Usage
 After Installation, the connector should require minimal interaction to use, and should update automatically at the hourly interval specified in your `docker-compose.yml` or `config.yml`. However, if you would like to force an immediate download of a new batch of Analyst notes, navigate to Data management -> Connectors and Workers in the OpenCTI platform. Find the "Recorded Future Notes" connector, and click on the refresh button to reset the connector's state and force a new download of Analyst Notes.
