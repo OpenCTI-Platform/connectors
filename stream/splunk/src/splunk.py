@@ -3,6 +3,7 @@
 ################################
 
 import json
+import logging
 import os
 import traceback
 from concurrent.futures import ThreadPoolExecutor
@@ -305,6 +306,18 @@ class SplunkConnector:
         self.start_consumers()
 
 
+def fix_loggers() -> None:
+    logging.getLogger(
+        "stix_shifter_modules.splunk.stix_translation.query_translator"
+    ).setLevel(logging.CRITICAL)
+    logging.getLogger("stix_shifter.stix_translation.stix_translation").setLevel(
+        logging.CRITICAL
+    )
+    logging.getLogger(
+        "stix_shifter_utils.stix_translation.stix_translation_error_mapper"
+    ).setLevel(logging.CRITICAL)
+
+
 def load_config_file() -> dict:
     config_file = Path(__file__).parent / "config.yml"
 
@@ -326,6 +339,9 @@ def check_helper(helper: OpenCTIConnectorHelper) -> None:
 
 
 if __name__ == "__main__":
+    # fix loggers
+    fix_loggers()
+
     # load and check config
     config = load_config_file()
     # create opencti helper
