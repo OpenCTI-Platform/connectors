@@ -7,15 +7,22 @@ import urllib.parse
 
 
 class Client:
+
+    def _parse_url(self, url: str) -> str:
+        if not url.lower().startswith("https://") and url.lower() != "":
+            url = "https://" + url
+        parsed = urllib.parse.urlparse(url)
+        path = parsed.path.lstrip('/')
+        return urllib.parse.urlunparse(parsed._replace(path=path))
+
     def __init__(
-            self, connection_service_base_url, api_base_url, language="en"
+            self, customer_sub_domain_url, language="en"
     ):
         #TODO this should be replaced by specific client ID for OpenCTI
         self.client_id = "0RcQ2BmuJRRsZKvY1Xf1gdjiwYRZhQKBNOxY9KOI"
-        self.connection_service_base_url = connection_service_base_url
-        # self.connection_service_base_url = f"{customer_instance_url}/auth"
-        self.api_base_url = api_base_url
-        # self.api_base_url = f"{customer_instance_url}/facade/risk-intelligence-center/api/v1'
+        self.customer_sub_domain_url = self._parse_url(customer_sub_domain_url)
+        self.connection_service_base_url = f"{customer_sub_domain_url}/auth"
+        self.api_base_url = f"{customer_sub_domain_url}/facade/risk-intelligence-center/api/v1"
         self.headers = {}
         self.set_language(language)
 
@@ -44,7 +51,7 @@ class Client:
     def get_last_version(self):
         return self.call("GET", "stix-bundles/versions/latest")
 
-    def get_bundle(self):
+    def get_latest_bundle(self):
         return self.call("GET", "stix-bundles/versions/latest/download")
 
     @staticmethod
