@@ -7,8 +7,8 @@ import urllib.parse
 
 
 class Client:
-
-    def _parse_url(self, url: str) -> str:
+    @staticmethod
+    def _parse_url(url: str) -> str:
         if not url.lower().startswith("https://") and url.lower() != "":
             url = "https://" + url
         parsed = urllib.parse.urlparse(url)
@@ -18,7 +18,6 @@ class Client:
     def __init__(
             self, customer_sub_domain_url, language="en"
     ):
-        #TODO this should be replaced by specific client ID for OpenCTI
         self.client_id = "0RcQ2BmuJRRsZKvY1Xf1gdjiwYRZhQKBNOxY9KOI"
         self.customer_sub_domain_url = self._parse_url(customer_sub_domain_url)
         self.connection_service_base_url = f"{customer_sub_domain_url}/auth"
