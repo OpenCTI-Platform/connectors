@@ -187,10 +187,11 @@ class Citalid:
 
 
 if __name__ == "__main__":
-    try:
-        citalidConnector = Citalid()
-        citalidConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    pass
+    # try:
+    #     citalidConnector = Citalid()
+    #     citalidConnector.run()
+    # except Exception as e:
+    #     print(e)
+    #     time.sleep(10)
+    #     sys.exit(0)
