@@ -23,10 +23,11 @@ class ExportFileStix:
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
         max_marking = data["max_marking"]
+
+        entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
 
         if export_scope == "single":
-            entity_id = data["entity_id"]
             self.helper.connector_logger.info(
                 "Exporting",
                 {
@@ -66,26 +67,26 @@ class ExportFileStix:
                 list_filters = "selected_ids"
                 entities_list = []
 
-                for entity_id in selected_ids:
+                for selected_id in selected_ids:
                     entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                        id=entity_id, withFiles=True
+                        id=selected_id, withFiles=True
                     )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=entity_id, withFiles=True
+                                id=selected_id, withFiles=True
                             )
                         )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_core_relationship.read(
-                                id=entity_id
+                                id=selected_id
                             )
                         )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_sighting_relationship.read(
-                                id=entity_id
+                                id=selected_id
                             )
                         )
                     entities_list.append(entity_data)
@@ -126,15 +127,15 @@ class ExportFileStix:
             )
             if entity_type == "Stix-Cyber-Observable":
                 self.helper.api.stix_cyber_observable.push_list_export(
-                    file_name, json_bundle, list_filters
+                    entity_id, entity_type, file_name, json_bundle, list_filters
                 )
             elif entity_type == "Stix-Core-Object":
                 self.helper.api.stix_core_object.push_list_export(
-                    entity_type, file_name, json_bundle, list_filters
+                    entity_id, entity_type, file_name, json_bundle, list_filters
                 )
             else:
                 self.helper.api.stix_domain_object.push_list_export(
-                    entity_type, file_name, json_bundle, list_filters
+                    entity_id, entity_type, file_name, json_bundle, list_filters
                 )
             self.helper.connector_logger.info(
                 "Export done",

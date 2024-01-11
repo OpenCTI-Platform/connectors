@@ -21,6 +21,7 @@ class ExportFileTxt:
     def _process_message(self, data):
         file_name = data["file_name"]
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
         export_scope = data["export_scope"]
 
@@ -44,20 +45,20 @@ class ExportFileTxt:
                 entities_list = []
                 list_filters = "selected_ids"
 
-                for entity_id in selected_ids:
+                for selected_id in selected_ids:
                     entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                        id=entity_id
+                        id=selected_id
                     )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=entity_id
+                                id=selected_id
                             )
                         )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_core_relationship.read(
-                                id=entity_id
+                                id=selected_id
                             )
                         )
                     entities_list.append(entity_data)
@@ -84,12 +85,17 @@ class ExportFileTxt:
                     ]
                     observable_values_bytes = "\n".join(observable_values)
                     self.helper.api.stix_cyber_observable.push_list_export(
-                        file_name, observable_values_bytes, list_filters
+                        entity_id,
+                        entity_type,
+                        file_name,
+                        observable_values_bytes,
+                        list_filters,
                     )
                 elif entity_type == "Stix-Core-Object":
                     entities_values = [f["name"] for f in entities_list if "name" in f]
                     entities_values_bytes = "\n".join(entities_values)
                     self.helper.api.stix_core_object.push_list_export(
+                        entity_id,
                         entity_type,
                         file_name,
                         entities_values_bytes,
@@ -102,6 +108,7 @@ class ExportFileTxt:
                     entities_values = [f["name"] for f in entities_list if "name" in f]
                     entities_values_bytes = "\n".join(entities_values)
                     self.helper.api.stix_domain_object.push_list_export(
+                        entity_id,
                         entity_type,
                         file_name,
                         entities_values_bytes,
