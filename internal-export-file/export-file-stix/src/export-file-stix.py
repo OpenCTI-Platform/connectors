@@ -112,14 +112,6 @@ class ExportFileStix:
                     list_params["orderMode"],
                     export_type,
                     max_marking,
-                    list_params.get("types"),
-                    list_params.get("elementId"),  # data["element_id"] ?
-                    list_params.get("fromId"),
-                    list_params.get("toId"),
-                    list_params.get("elementWithTargetTypes"),
-                    list_params.get("fromTypes"),
-                    list_params.get("toTypes"),
-                    list_params.get("relationship_type"),
                 )
                 list_filters = json.dumps(list_params)
 
