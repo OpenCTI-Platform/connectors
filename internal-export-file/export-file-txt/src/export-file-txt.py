@@ -5,7 +5,6 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper
-from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 
 class ExportFileTxt:
