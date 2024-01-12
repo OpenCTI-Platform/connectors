@@ -101,7 +101,6 @@ class DataExport:
         order_by: str = "created_at",
         order_mode: str = "asc",
         max_marking_definition: Dict = None,
-        types: List = None,
         n_threads=4,
     ) -> list:
         max_marking_definition_entity = (
@@ -177,7 +176,6 @@ class DataExport:
             filters=filters,
             orderBy=order_by,
             orderMode=order_mode,
-            types=types,
             getAll=True,
         )
 
