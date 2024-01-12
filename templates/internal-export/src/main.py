@@ -40,7 +40,7 @@ class CustomConnector(InternalExportConnector):
             }
         """
         file_name = data["file_name"]
-        entity_id = data["entity_id"]
+        entity_id = data.get("entity_id")
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting the export for Entity ID '{entity_id}'..."
         )
