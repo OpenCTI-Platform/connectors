@@ -1,4 +1,5 @@
 import csv
+import re
 import threading
 import time
 from datetime import datetime
@@ -44,6 +45,21 @@ class RiskList(threading.Thread):
                             continue
                     # Convert into stix object
                     indicator = risk_list_type["class"](row["Name"], key, tlp=self.tlp)
+
+                    MALICOUS_SCORE = 3
+                    rule_criticality_list = (
+                        row["RuleCriticality"].strip("][").split(",")
+                    )
+                    risk_rules_list_str = row["RiskRules"].strip("][")
+                    risk_rules_list = re.sub(r"\"", "", risk_rules_list_str).split(",")
+                    description = ""
+
+                    for index, criticality in enumerate(rule_criticality_list):
+                        criticality_score = int(criticality)
+                        if criticality_score >= MALICOUS_SCORE:
+                            description += "- " + risk_rules_list[index] + "\n\n"
+
+                    indicator.add_description(description)
                     indicator.map_data(row, self.tlp)
                     indicator.build_bundle(indicator)
                     # Create bundle
