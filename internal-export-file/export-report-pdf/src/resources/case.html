@@ -115,7 +115,7 @@
                         <tr>
                             <td>{{ edge.node.name }}</td>
                             <td>{{ edge.node.description }}</td>
-                            <td>{{ edge.node.due_date[:10] }}</td>
+                            <td>{{ edge.node.due_date }}</td>
                             <td>
                                 {% if edge.node.status is not none %}
                                     {{ edge.node.status.template.name }}
