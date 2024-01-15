@@ -4,8 +4,8 @@ import time
 from datetime import datetime
 import api
 import yaml
+import json
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
 
 class Citalid:
     def __init__(self):
@@ -35,7 +35,6 @@ class Citalid:
             ["connector", "update_existing_data"],
             config,
         )
-
         # Create the Citalid identity
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -50,7 +49,8 @@ class Citalid:
         try:
             # Get the current timestamp and check
             current_state = self.helper.get_state()
-            if current_state is None or "last_loaded_bundle_timestamp" not in current_state:
+            # Load last_bundle timestamp
+            if current_state is None or not current_state.get("last_loaded_bundle_timestamp"):
                 last_loaded_bundle_timestamp = None
             else:
                 last_loaded_bundle_timestamp = current_state["last_loaded_bundle_timestamp"]
@@ -62,26 +62,35 @@ class Citalid:
             )
 
             self.helper.log_info('Connecting to customer sub domain ...')
-            api_client = api.Client(self.citalid_customer_sub_domain_url)
+            api_client = api.Client(
+                self.citalid_customer_sub_domain_url,
+            )
             api_client.login(self.citalid_user, self.citalid_password)
 
             self.helper.log_info('Fetching last bundle version info ...')
             last_version_metadata = api_client.get_last_version()
-            file_timestamp = last_version_metadata["timestamp"]
             raw_file_date = last_version_metadata["date"]
+            date = datetime.strptime(raw_file_date, "%Y-%m-%d")
+            file_timestamp = date.timestamp()
             file_date = datetime.strptime(raw_file_date, '%Y-%m-%d').strftime('%Y-%m-%d %H:%M:%S')
 
             if last_loaded_bundle_timestamp is None or file_timestamp > last_loaded_bundle_timestamp:
                 self.helper.log_info('Processing file "' + file_date + '"')
-                bundle = api_client.get_latest_bundle()
-                self.send_bundle(work_id, bundle)
-                last_loaded_bundle_timestamp = file_timestamp
-                # Store the current timestamp as a last run
-                message = "Bundle successfully loaded, storing last_loaded_bundle_timestamp as " + str(
-                    last_loaded_bundle_timestamp
-                )
-                self.helper.log_info(message)
-                self.helper.set_state({"last_loaded_bundle_timestamp": last_loaded_bundle_timestamp})
+                bundle_dict = api_client.get_latest_bundle()
+                bundle = json.dumps(bundle_dict)
+                sent_bundle = self.send_bundle(work_id, bundle)
+                if sent_bundle is None:
+                    self.helper.log_error('Error while sending bundle')
+                else:
+                    last_loaded_bundle_timestamp = file_timestamp
+                    # Store the current timestamp as a last loaded bundle
+                    message = "Bundle successfully loaded, storing last_loaded_bundle_timestamp as " + str(
+                        last_loaded_bundle_timestamp
+                    )
+                    self.helper.log_info(message)
+                    self.helper.set_state({"last_loaded_bundle_timestamp": last_loaded_bundle_timestamp})
+            else:
+                self.helper.log_info("Last version of Citalid dataset already loaded.")
 
             message = "Connector successfully run"
             self.helper.log_info(message)
@@ -92,13 +101,14 @@ class Citalid:
         except Exception as e:
             self.helper.log_error(str(e))
 
-    def send_bundle(self, work_id: str, serialized_bundle: str) -> None:
+    def send_bundle(self, work_id: str, serialized_bundle: str) -> list:
         try:
-            self.helper.send_stix2_bundle(
+            sent_bundle = self.helper.send_stix2_bundle(
                 serialized_bundle,
                 update=self.update_existing_data,
                 work_id=work_id,
             )
+            return sent_bundle
         except Exception as e:
             self.helper.log_error(f"Error while sending bundle: {e}")
 
