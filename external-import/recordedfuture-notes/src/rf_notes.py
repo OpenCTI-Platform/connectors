@@ -137,6 +137,7 @@ class RFNotes:
                 published = self.rf_initial_lookback
 
             try:
+                # Import, convert and send to OpenCTI platform Analyst Notes
                 self.convert_and_send(published, tas, work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
@@ -193,10 +194,18 @@ class RFNotes:
                 bundle.serialize(), update=self.update_existing_data, work_id=work_id
             )
 
+    def import_ta_from_rf_watchlists(self):
+        print()
+
+    def import_malware_from_rf_watchlists(self):
+        print()
+
 
 if __name__ == "__main__":
     try:
         RF = RFNotes()
+
+        # Pull RF risk lists
         if RF.rf_pull_risk_list:
             RiskList = RiskList(
                 RF.helper,
@@ -209,6 +218,10 @@ if __name__ == "__main__":
             RiskList.start()
         else:
             RF.helper.log_info("[RISK LISTS] Risk list fetching disabled")
+
+        # Pull RF Threat actors and Malware from Threat map
+
+
         RF.run()
     except Exception:
         traceback.print_exc()

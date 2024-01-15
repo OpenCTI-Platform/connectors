@@ -26,3 +26,4 @@ rf-notes:
   TA_to_intrusion_set: False # optional
   risk_as_score: False # optional
   risk_threshold: 60 # optional
+  pull_threat_map: False # optional - Pull Threat Actors and Malware
