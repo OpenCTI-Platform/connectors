@@ -122,7 +122,12 @@ def custom_mapping_industry_sector(input_name):
 
 
 def feed_converter(
-    tmp_dir: str, state: dict, feed_type: str, min_score=0, only_new=True, attributed_only=True
+    tmp_dir: str,
+    state: dict,
+    feed_type: str,
+    min_score=0,
+    only_new=True,
+    attributed_only=True,
 ):
     ret_iocs: Dict = dict()
     ret_threats: Dict = dict()
@@ -136,7 +141,7 @@ def feed_converter(
 
                 if only_new and (ioc_raw["lseen"] != ioc_raw["collect"]):
                     continue
-                
+
                 # Skip IOCs w/o attribution
                 threats: List = ioc_raw.get("threat", [])
                 if attributed_only:
@@ -161,7 +166,6 @@ def feed_converter(
                 ioc["collect"] = datetime.datetime.fromtimestamp(
                     ioc_raw["collect"], tz=datetime.timezone.utc
                 )
-
 
                 indicator_pattern = None
                 indicator_name = None

@@ -13,6 +13,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
+
 from rstcloud import (
     FeedDownloader,
     FeedType,
@@ -167,7 +168,7 @@ class RSTThreatFeed:
             feed_type,
             self._min_score_import,
             self._only_new,
-            self._only_attributed
+            self._only_attributed,
         )
 
         self.helper.log_info(
@@ -337,9 +338,12 @@ class RSTThreatFeed:
                     name=threat["name"],
                     created_by_ref=organization.id,
                     confidence=self._confidence_level,
-                    external_references=[stix2.v21.ExternalReference(
-                        source_name=threat["name"], url="https://www.cve.org/CVERecord?id="+threat["name"])
-                                         ],
+                    external_references=[
+                        stix2.v21.ExternalReference(
+                            source_name=threat["name"],
+                            url="https://www.cve.org/CVERecord?id=" + threat["name"],
+                        )
+                    ],
                 )
             if malicious_object:
                 stix_bundle.append(malicious_object)
