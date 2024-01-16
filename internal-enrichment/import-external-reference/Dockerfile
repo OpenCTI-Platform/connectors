@@ -1,4 +1,4 @@
-FROM python:3.11-buster
+FROM python:3.11-bookworm
 
 # Copy the connector
 COPY src /opt/opencti-connector-import-external-reference
