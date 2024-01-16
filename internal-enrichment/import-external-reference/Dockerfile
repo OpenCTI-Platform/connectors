@@ -8,7 +8,7 @@ COPY src /opt/opencti-connector-import-external-reference
 RUN apt-get update && \
     apt-get install -y git build-essential libmagic-dev libffi-dev libxml2-dev libxslt-dev libssl-dev cargo libjpeg-dev zlib1g-dev && \
     wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.buster_amd64.deb && \
-    apt install -y ./wkhtmltox_0.12.6-1.buster_amd64.deb && \
+    apt-get install -y ./wkhtmltox_0.12.6-1.buster_amd64.deb && \
     rm wkhtmltox_0.12.6-1.buster_amd64.deb && \
     cd /opt/opencti-connector-import-external-reference && \
     pip3 install --no-cache-dir -r requirements.txt
