@@ -22,7 +22,7 @@ class Client:
         self.customer_sub_domain_url = self._parse_url(customer_sub_domain_url)
         self.connection_service_base_url = f"{customer_sub_domain_url}/auth"
         self.api_base_url = f"{customer_sub_domain_url}/facade/risk-intelligence-center/api/v1"
-        self.headers = {"accept": "application/json", "trailing": "/"}
+        self.headers = {}
         self.set_language(language)
 
     def set_language(self, language):
