@@ -1,5 +1,6 @@
 import base64
 import os
+import re
 import time
 from datetime import datetime
 from typing import Callable, Dict, List
@@ -132,9 +133,9 @@ class ReportImporter:
         """
         os_system = os.name
 
-        # If windows detection, replacement of problematic characters
+        # If windows detection, replacement of invalid characters
         if os_system == "nt":
-            file_name = file_name.replace(":", "_")
+            file_name = re.sub(r'[\\/:*?"<>|]', "_", file_name)
 
         with open(file_name, "wb") as f:
             f.write(file_content)
