@@ -1,2 +1,2 @@
-pycti==5.12.17
+pycti==5.12.18
 pycountry==23.12.11
