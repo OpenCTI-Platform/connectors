@@ -1,2 +1,2 @@
-pycti==5.12.17
+pycti==5.12.18
 python-dateutil==2.8.2
