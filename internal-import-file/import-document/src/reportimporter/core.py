@@ -126,6 +126,16 @@ class ReportImporter:
         file_name = os.path.basename(file_fetch)
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
 
+        """
+        On Windows, the invalid characters are different, so the behavior is not the same as Linux
+        It only happens with free text on local setup running on windows. Never on prod.
+        """
+        os_system = os.name
+
+        # If windows detection, replacement of problematic characters
+        if os_system == "nt":
+            file_name = file_name.replace(":", "_")
+
         with open(file_name, "wb") as f:
             f.write(file_content)
 
