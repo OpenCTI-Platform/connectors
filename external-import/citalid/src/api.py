@@ -22,7 +22,7 @@ class Client:
         self.customer_sub_domain_url = self._parse_url(customer_sub_domain_url)
         self.connection_service_base_url = f"{customer_sub_domain_url}/auth"
         self.api_base_url = f"{customer_sub_domain_url}/facade/risk-intelligence-center/api/v1"
-        self.headers = {}
+        self.headers = {"accept": "application/json", "trailing": "/"}
         self.set_language(language)
 
     def set_language(self, language):
@@ -48,10 +48,10 @@ class Client:
         return res.json() if res.content else None
 
     def get_last_version(self):
-        return self.call("GET", "stix-bundles/versions/latest")
+        return self.call("GET", "stix-bundles/versions/latest/")
 
     def get_latest_bundle(self):
-        return self.call("GET", "stix-bundles/versions/latest/download")
+        return self.call("GET", "stix-bundles/versions/latest/download/")
 
     @staticmethod
     def check_response(res):
