@@ -851,7 +851,7 @@ class MispFeed:
         else:
             return None
 
-    def detect_ip_version(self, value, type=False):
+    def _detect_ip_version(self, value, type=False):
         if re.match(
             r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
             value,
