@@ -13,6 +13,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
+
 from rstcloud import (
     FeedDownloader,
     FeedType,
@@ -54,6 +55,11 @@ class RSTThreatFeed:
             config,
             isNumber=True,
         )
+        self.update_existing_data = get_config_variable(
+            "CONNECTOR_UPDATE_EXISTING_DATA",
+            ["connector", "update_existing_data"],
+            config,
+        )
         self._min_score_import = int(self.get_config("min_score_import", config, 20))
         self._min_score_detection = {
             "IPv4-Addr": self.get_config(
@@ -78,6 +84,7 @@ class RSTThreatFeed:
             ),
         }
         self._only_new = bool(self.get_config("only_new", config, True))
+        self._only_attributed = bool(self.get_config("only_attributed", config, True))
 
     @staticmethod
     def get_config(name: str, config, default=None):
@@ -161,6 +168,7 @@ class RSTThreatFeed:
             feed_type,
             self._min_score_import,
             self._only_new,
+            self._only_attributed,
         )
 
         self.helper.log_info(
@@ -210,7 +218,7 @@ class RSTThreatFeed:
                 modified=ioc["collect"],
                 created_by_ref=organization.id,
                 object_marking_refs=[stix2.TLP_WHITE],
-                confidence=self._confidence_level,
+                confidence=int(ioc["score"]),
                 external_references=external_references,
                 custom_properties={
                     "x_opencti_score": ioc["score"],
@@ -324,6 +332,19 @@ class RSTThreatFeed:
                     confidence=self._confidence_level,
                     external_references=external_references,
                 )
+            elif threat["type"] == ThreatTypes.VULNERABILITY:
+                malicious_object = stix2.v21.Vulnerability(
+                    id=threat_key,
+                    name=threat["name"],
+                    created_by_ref=organization.id,
+                    confidence=self._confidence_level,
+                    external_references=[
+                        stix2.v21.ExternalReference(
+                            source_name=threat["name"],
+                            url="https://www.cve.org/CVERecord?id=" + threat["name"],
+                        )
+                    ],
+                )
             if malicious_object:
                 stix_bundle.append(malicious_object)
 
@@ -392,7 +413,7 @@ class RSTThreatFeed:
         bundle = stix2.v21.Bundle(objects=stix_bundle, allow_custom=True)
         self.helper.send_stix2_bundle(
             bundle=bundle.serialize(),
-            update=True,
+            update=self.update_existing_data,
             work_id=work_id,
         )
         # Finish the work
