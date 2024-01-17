@@ -12,7 +12,7 @@ connector:
   run_and_terminate: true
   log_level: 'info'
 
-reporthub:
+rst-report-hub:
   base_url: 'https://api.rstcloud.net/v1'
   api_key: 'ChangeMe'
   connection_timeout: 10
