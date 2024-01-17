@@ -11,7 +11,7 @@ connector:
   update_existing_data: true
   log_level: "info"
 
-rstcloud:
+rst-threat-feed:
   baseurl: "https://api.rstcloud.net/v1/"
   apikey: "ChangeMe"
   contimeout: 10
@@ -24,6 +24,7 @@ rstcloud:
   min_score_detection_domain: 45
   min_score_detection_url: 30
   min_score_detection_hash: 25
-  only_new: True
+  only_new: true
+  only_attributed: true
   dirs_tmp: "./"
   dirs_state: "./"
