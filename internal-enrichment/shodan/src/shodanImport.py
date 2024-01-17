@@ -110,8 +110,8 @@ class ShodanConnector:
                         ),
                         # "version": str(sslObject["cert"]["version"]),
                         "hashes": {
-                            "sha256": sslObject["cert"]["fingerprint"]["sha256"],
-                            "sha1": sslObject["cert"]["fingerprint"]["sha1"],
+                            "SHA-256": sslObject["cert"]["fingerprint"]["sha256"],
+                            "SHA-1": sslObject["cert"]["fingerprint"]["sha1"],
                         },
                         "signature_algorithm": sslObject["cert"]["sig_alg"],
                         "subject_public_key_algorithm": sslObject["cert"]["pubkey"][
