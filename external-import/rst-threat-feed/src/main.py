@@ -13,7 +13,6 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-
 from rstcloud import (
     FeedDownloader,
     FeedType,
