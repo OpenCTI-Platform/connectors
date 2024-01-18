@@ -1059,7 +1059,7 @@ jobs:
             docker push opencti/connector-rst-threat-feed:rolling
             docker push opencti/connector-hostio:rolling
             docker push opencti/connector-intelfinder:rolling
-            docker push opencti/connector-export-ttps-file-navigator
+            docker push opencti/connector-export-ttps-file-navigator:rolling
             docker push opencti/connector-google-drive:rolling
       - slack/notify:
           event: fail
