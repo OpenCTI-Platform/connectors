@@ -83,7 +83,7 @@ You may encounter this kind of error:
 AttributeError: 'str' object has no attribute 'get'
 ```
 
-The connector try to make API call but the type given is not the one expected (`case` or `alert`) so the given exception will be raised and it will end the loop:
+The connector tries to make an API call but the type given is not the one expected (`case` or `alert`) so the given exception will be raised and it will end the loop:
 
 ![Exception on type](./docs/media/exception.png)
 
