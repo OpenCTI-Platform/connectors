@@ -285,6 +285,10 @@ jobs:
           name: Build Docker image opencti/connector-export-ttps-file-navigator
           command: docker build -t opencti/connector-export-ttps-file-navigator:latest . && docker tag opencti/connector-export-ttps-file-navigator:latest opencti/connector-export-ttps-file-navigator:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/google-drive
+          name: Build Docker image opencti/connector-google-drive
+          command: docker build -t opencti/connector-google-drive:latest . && docker tag opencti/connector-google-drive:latest opencti/connector-google-drive:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -404,6 +408,8 @@ jobs:
             docker push opencti/connector-intelfinder:${CIRCLE_TAG}
             docker push opencti/connector-export-ttps-file-navigator:latest
             docker push opencti/connector-export-ttps-file-navigator:${CIRCLE_TAG}
+            docker push opencti/connector-google-drive:latest
+            docker push opencti/connector-google-drive:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -991,6 +997,10 @@ jobs:
           name: Build Docker image opencti/connector-export-ttps-file-navigator
           command: docker build -t opencti/connector-export-ttps-file-navigator:rolling .
       - run:
+          working_directory: ~/opencti/external-import/google-drive
+          name: Build Docker image opencti/connector-google-drive
+          command: docker build -t opencti/connector-google-drive:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1049,6 +1059,8 @@ jobs:
             docker push opencti/connector-rst-threat-feed:rolling
             docker push opencti/connector-hostio:rolling
             docker push opencti/connector-intelfinder:rolling
+            docker push opencti/connector-export-ttps-file-navigator
+            docker push opencti/connector-google-drive:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
