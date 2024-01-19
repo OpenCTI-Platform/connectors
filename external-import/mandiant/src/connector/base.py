@@ -8,7 +8,7 @@ import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
-from .api import OFFSET_PAGINATION, MandiantAPI
+from .api import MandiantAPI
 from .utils import Timestamp
 
 STATE_START = "start_epoch"
