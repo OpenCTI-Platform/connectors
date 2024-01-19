@@ -1,2 +1,2 @@
 pycti==5.12.20
-pydantic==1.10.13
+pydantic==1.10.14
