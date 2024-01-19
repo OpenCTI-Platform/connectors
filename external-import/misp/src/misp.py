@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import time
+import uuid
 from datetime import datetime
 
 import pytz
@@ -65,6 +66,14 @@ OPENCTISTIX2 = {
     "phone-number": {"type": "phone-number", "path": ["value"]},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
+
+
+def is_uuid(val):
+    try:
+        uuid.UUID(str(val))
+        return True
+    except ValueError:
+        return False
 
 
 def filter_event_attributes(event, **filters):
@@ -1682,7 +1691,7 @@ class Misp:
                         aliases = galaxy_entity["meta"]["synonyms"]
                     else:
                         aliases = [name]
-                    if name not in added_names:
+                    if name not in added_names and not is_uuid(name):
                         elements["intrusion_sets"].append(
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
@@ -1863,7 +1872,9 @@ class Misp:
                     )
                     if len(threats) > 0:
                         threat = threats[0]
-                        if threat["name"] not in added_names:
+                        if threat["name"] not in added_names and not is_uuid(
+                            threat["name"]
+                        ):
                             if threat["entity_type"] == "Intrusion-Set":
                                 elements["intrusion_sets"].append(
                                     stix2.IntrusionSet(
@@ -1938,7 +1949,7 @@ class Misp:
                         name = tag_value.replace("APT ", "APT")
                     else:
                         name = tag_value
-                    if name not in added_names:
+                    if name not in added_names and not is_uuid(name):
                         elements["intrusion_sets"].append(
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
