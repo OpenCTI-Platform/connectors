@@ -380,7 +380,7 @@ class TheHive:
                 query=query, sort="+updatedAt", range="0-10000"
             ).json()
 
-            if len(items) == 0 or items["type"] != type:
+            if items.__class__ != list:
                 self.not_found_items(items, type)
 
         elif type == "alert":
@@ -388,7 +388,7 @@ class TheHive:
                 query=query, sort="+updatedAt", range="0-10000"
             ).json()
 
-            if len(items) == 0 or items["type"] != type:
+            if items.__class__ != list:
                 self.not_found_items(items, type)
         else:
             raise ValueError(f"Unsupported type in process_logic: {type}")
