@@ -489,7 +489,22 @@ class Mandiant:
             collection_interval = getattr(self, f"mandiant_{collection}_interval")
             last_run_value = Timestamp.from_iso(state[collection][STATE_LAST_RUN]).value
 
-            if date_now_value - collection_interval < last_run_value:
+            import_start_date = (
+                self.mandiant_indicator_import_start_date
+                if collection == "indicators"
+                else self.mandiant_import_start_date
+            )
+            first_run = (
+                True
+                if state[collection][STATE_START]
+                == Timestamp.from_iso(import_start_date).iso_format
+                else False
+            )
+
+            if (
+                first_run is False
+                and date_now_value - collection_interval < last_run_value
+            ):
                 diff_time = round(
                     ((date_now_value - last_run_value).total_seconds()) / 60
                 )
@@ -504,7 +519,7 @@ class Mandiant:
                     )
                 )
                 self.helper.connector_logger.info(
-                    f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time for the next call : {remaining_time} min"
+                    f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time for the next run : {remaining_time} min"
                 )
                 continue
 
