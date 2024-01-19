@@ -73,3 +73,18 @@ The following is a list of indicator Field Names supported by this integration a
 | user_agent             | Custom Observable User Agent               |
 | supplier               | Identity (organization)                           |
 | vendor                 | Identity (organization)                           |
+
+
+## Errors you may encounter
+
+You may encounter this kind of error:
+
+```shell
+AttributeError: 'str' object has no attribute 'get'
+```
+
+The connector tries to make an API call but the type given is not the one expected (`case` or `alert`) so the given exception will be raised and it will end the loop:
+
+![Exception on type](./docs/media/exception.png)
+
+To handle it, you can check the TheHive URL in the configuration file and re-run the connector.

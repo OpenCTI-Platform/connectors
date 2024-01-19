@@ -326,6 +326,19 @@ class TheHive:
             )
         return max(last_date, new_date)
 
+    def not_found_items(self, items, type):
+        api_error_msg = (
+            "There is an error with your The Hive URL: "
+            + self.thehive_url
+            + items["message"]
+            + " as the type <"
+            + type
+            + "> is not found and the API message error is: "
+            + items["type"]
+        )
+
+        raise Exception({"message": api_error_msg})
+
     def process_items(self, type, items, process_func, last_date_key):
         """Process items, execute process_func, and send_stix2_bundle."""
         friendly_name = f"TheHive processing ({type}) @ {datetime.now().isoformat()}"
@@ -360,15 +373,23 @@ class TheHive:
         self.helper.log_info(f"Last Date: {last_date}(s)...")
         query = self.construct_query(type, last_date)
         self.helper.log_info(f"Start Processing {type}(s)...")
+
         # check if type is case or alert, run search based on provided type.
         if type == "case":
             items = self.thehive_api.find_cases(
                 query=query, sort="+updatedAt", range="0-10000"
             ).json()
+
+            if len(items) == 0 or items["type"] != type:
+                self.not_found_items(items, type)
+
         elif type == "alert":
             items = self.thehive_api.find_alerts(
                 query=query, sort="+updatedAt", range="0-10000"
             ).json()
+
+            if len(items) == 0 or items["type"] != type:
+                self.not_found_items(items, type)
         else:
             raise ValueError(f"Unsupported type in process_logic: {type}")
         updated_last_date = self.process_items(
