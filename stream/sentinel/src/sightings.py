@@ -81,7 +81,7 @@ class Sightings(threading.Thread):
                 self.resource_url + self.incident_url + "?$expand=alerts",
                 headers=self.headers,
             )
-            incidents = response.json()["value"]
+            incidents = response.json()["value"] if "value" in response.json() else []
             state = self.helper.get_state()
             if state and "lastIncidentTimestamp" in state:
                 last_timestamp = state["lastIncidentTimestamp"]
