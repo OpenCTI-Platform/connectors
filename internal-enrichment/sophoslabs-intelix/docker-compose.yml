@@ -1,7 +1,7 @@
 version: '3'
 services:
   sophoslabs-intelix:
-    image: opencti/connector-sophoslabs-intelix:5.12.20
+    image: opencti/connector-sophoslabs-intelix:5.12.21
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
