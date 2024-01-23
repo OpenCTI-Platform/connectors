@@ -24,3 +24,4 @@ from .rf_notes_to_stix2 import (
     StixNote,
 )
 from .risk_list import RiskList
+from .threat_map import ThreatMap

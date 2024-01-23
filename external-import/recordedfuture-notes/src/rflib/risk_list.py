@@ -46,7 +46,7 @@ class RiskList(threading.Thread):
                     # Convert into stix object
                     indicator = risk_list_type["class"](row["Name"], key, tlp=self.tlp)
 
-                    MALICOUS_SCORE = 3
+                    MALICIOUS_SCORE = 3
                     rule_criticality_list = (
                         row["RuleCriticality"].strip("][").split(",")
                     )
@@ -56,7 +56,7 @@ class RiskList(threading.Thread):
 
                     for index, criticality in enumerate(rule_criticality_list):
                         criticality_score = int(criticality)
-                        if criticality_score >= MALICOUS_SCORE:
+                        if criticality_score >= MALICIOUS_SCORE:
                             description += "- " + risk_rules_list[index] + "\n\n"
 
                     indicator.add_description(description)
