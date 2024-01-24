@@ -627,7 +627,7 @@ class Malware(RFStixEntity):
                 relationships.append(
                     self._create_rel(self.stix_obj.id, "exploits", entity.id)
                 )
-            if entity["type"] in ["organization"]:
+            if entity["type"] in ["identity"]:
                 relationships.append(
                     self._create_rel(self.stix_obj.id, "targets", entity.id)
                 )
