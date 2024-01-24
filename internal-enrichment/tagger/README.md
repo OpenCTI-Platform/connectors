@@ -20,7 +20,7 @@ In order to configure the tagger logic, use the file `definitions.json` knowing 
 * scope: opencti scope like the ones that are used to configure `CONNECTOR_SCOPE`. Please note that if you are configuring report tagger rule, you must also specify `Report` in `CONNECTOR_SCOPE` setting.
 * label: the actual label that you want to associate to the object
 * search: the regular expression to identify the objects that need the label
-* attributes: list of attributes of the object where the search will be applied
+* attributes: list of attributes of the object where the search will be applied. Searches can also be done on labels, in this case specifiy the attribute `objectLabel` in the attribute list.
 
 As soon as you have the `definitions.json` configured, please execute the following command:
 ```
