@@ -204,12 +204,6 @@ class RFNotes:
                 bundle.serialize(), update=self.update_existing_data, work_id=work_id
             )
 
-    def import_ta_from_rf_watchlists(self):
-        print()
-
-    def import_malware_from_rf_watchlists(self):
-        print()
-
 
 if __name__ == "__main__":
     try:
