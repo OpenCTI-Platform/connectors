@@ -544,9 +544,9 @@ class Malware(RFStixEntity):
             object_marking_refs=self.tlp,
         )
 
-    def map_data(self, actor, tlp):
+    def map_data(self, malware, tlp):
         # Get related entities
-        related_entities_links = actor["links"]
+        related_entities_links = malware["links"]
 
         # If there are related entities
         if related_entities_links and len(related_entities_links) > 0:
@@ -558,6 +558,8 @@ class Malware(RFStixEntity):
                 "InternetDomainName",
                 "Hash",
                 "URL",
+                "Organization",
+                "Person",
             ]
 
             for related_entity in related_entities_links:
@@ -585,6 +587,12 @@ class Malware(RFStixEntity):
                                 self.related_entities.extend(stix_objs)
                             else:
                                 break
+                    elif _type == "Person":
+                        related_element = IntrusionSet(_name, _type, self.author, tlp)
+                        stix_objs = related_element.to_stix_objects()
+                        self.related_entities.extend(stix_objs)
+
+                        continue
                     else:
                         related_element = ENTITY_TYPE_MAPPER[_type](
                             _name, _type, self.author, tlp
@@ -605,7 +613,7 @@ class Malware(RFStixEntity):
         for entity in self.related_entities:
             if entity["type"] in ["malware"]:
                 relationships.append(
-                    self._create_rel(self.stix_obj.id, "uses", entity.id)
+                    self._create_rel(self.stix_obj.id, "related-to", entity.id)
                 )
             if entity["type"] in ["indicator"]:
                 relationships.append(
@@ -617,7 +625,15 @@ class Malware(RFStixEntity):
                 )
             if entity["type"] in ["vulnerability"]:
                 relationships.append(
+                    self._create_rel(self.stix_obj.id, "exploits", entity.id)
+                )
+            if entity["type"] in ["organization"]:
+                relationships.append(
                     self._create_rel(self.stix_obj.id, "targets", entity.id)
+                )
+            if entity["type"] in ["intrusion-set"]:
+                relationships.append(
+                    self._create_rel(entity.id, "uses", self.stix_obj.id)
                 )
         # Add relationships to stix objects
         self.objects.extend(relationships)

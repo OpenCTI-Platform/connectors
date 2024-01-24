@@ -43,7 +43,7 @@ class ThreatMap(threading.Thread):
 
                 info_msg = (
                     f"[THREAT MAPS] Getting {len(entities_mapped_ids)} entities for"
-                    f" {threat_map['type']} threat map..."
+                    f" {threat_map['type']} threat map and links entities..."
                 )
                 self.helper.log_info(info_msg)
 
@@ -51,6 +51,8 @@ class ThreatMap(threading.Thread):
                 entities_mapped_with_links = self.rfapi.get_entities_links(
                     entities_mapped_ids
                 )
+
+                total_mapped_entities = len(entities_mapped_ids)
 
                 for entity_with_links in entities_mapped_with_links:
                     for key, threat_map_type in THREAT_MAP_TYPE_MAPPER.items():
@@ -75,6 +77,16 @@ class ThreatMap(threading.Thread):
                                 "[THREAT MAPS] Sending Bundle to server with "
                                 + str(len(bundle.objects))
                                 + " objects"
+                            )
+
+                            total_mapped_entities -= 1
+
+                            self.helper.log_info(
+                                "[THREAT MAPS] Remaining "
+                                + str(total_mapped_entities)
+                                + " entities with their links to import for "
+                                + threat_map["type"]
+                                + " threat map"
                             )
 
                             # Send stix bundle for ingestion
