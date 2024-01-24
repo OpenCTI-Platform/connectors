@@ -12,7 +12,5 @@ RISK_LIST_TYPE_MAPPER = {
 
 THREAT_MAP_TYPE_MAPPER = {
     "actors": {"class": IntrusionSet},
-    # "malware": {
-    #     "class": Malware
-    # },
+    "malware": {"class": Malware},
 }

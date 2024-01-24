@@ -1,5 +1,3 @@
-import csv
-import re
 import threading
 import time
 from datetime import datetime
@@ -32,7 +30,7 @@ class ThreatMap(threading.Thread):
                 "Recorded Future Threat Map run @ " + now.strftime("%Y-%m-%d %H:%M:%S"),
             )
 
-            self.helper.log_info(f"[THREAT MAPS] Pulling threat maps entities...")
+            self.helper.log_info("[THREAT MAPS] Pulling threat maps entities...")
 
             for threat_map in threat_maps:
                 threat_map_url = parse.quote(threat_map["url"], safe="/")
