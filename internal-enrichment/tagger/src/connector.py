@@ -41,9 +41,23 @@ class TaggerConnector:
                     flags = load_re_flags(rule)
 
                     for attribute in rule["attributes"]:
-                        if not re.search(
-                            rule["search"], entity[attribute], flags=flags
-                        ):
+                        self.helper.log_debug(entity)
+                        attr = entity[attribute]
+                        if attribute.lower() == "objectlabel":
+                            for el in attr:
+                                if not re.search(
+                                    rule["search"], el["value"], flags=flags
+                                ):
+                                    continue
+
+                                self.helper.api.stix_domain_object.add_label(
+                                    id=entity_id, label_name=rule["label"]
+                                )
+                                break
+
+                            continue
+
+                        if not re.search(rule["search"], attr, flags=flags):
                             continue
 
                         self.helper.api.stix_domain_object.add_label(
