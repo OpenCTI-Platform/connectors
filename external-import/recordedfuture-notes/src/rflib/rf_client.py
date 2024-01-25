@@ -27,6 +27,8 @@ NOTES_SEARCH = NOTES_BASE + "/search"
 FUSION_FILE_BASE = CONNECT_BASE + "/fusion/files"
 THREAT_ACTOR_PATH = "/public/opencti/threat_actors.json"
 INSIKT_SOURCE = "VKz42X"
+THREAT_MAPS_PATH = API_BASE + "/threat/maps"
+LINKS_PATH = API_BASE + "/links/search"
 
 
 class RFClient:
@@ -165,3 +167,33 @@ class RFClient:
         )
         res.raise_for_status()
         return res.json()["data"]["risk"]["score"]
+
+    def get_threat_maps(self):
+        """
+        Get threat maps for an organization
+        :return: List of threat map for Threat actor and Malware for an organization
+        """
+        res = self.session.get(THREAT_MAPS_PATH)
+        res.raise_for_status()
+
+        threat_maps_list = res.json()["data"]
+
+        return threat_maps_list
+
+    def get_entities_mapped(self, path: string):
+        res = self.session.post(API_BASE + path, json={})
+        res.raise_for_status()
+
+        threat_map_data = res.json()["data"]["threat_map"]
+
+        return threat_map_data
+
+    def get_entities_links(self, entities_id: list):
+        entities_params = {"entities": entities_id}
+
+        res = self.session.post(LINKS_PATH, json=entities_params)
+        res.raise_for_status()
+
+        entity_links = res.json()["data"]
+
+        return entity_links

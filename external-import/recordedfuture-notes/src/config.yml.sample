@@ -26,3 +26,5 @@ rf-notes:
   TA_to_intrusion_set: False # optional
   risk_as_score: False # optional
   risk_threshold: 60 # optional
+  pull_threat_maps: False # optional - Pull Threat Actors and Malware maps
+  threat_maps_interval: 24 # Required in hours
