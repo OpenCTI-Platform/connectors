@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
 from typing import Tuple
+from dataclasses import dataclass
 
 import yaml
 from prometheus_client import Counter, Gauge, start_http_server
@@ -17,6 +18,12 @@ translation = stix_translation.StixTranslation()
 
 class CrowdstrikeError(Exception):
     ...
+    
+@dataclass
+class IOC:
+    type: str
+    value: str
+    valid_until: str|None
 
 
 class Crowdstrike:
@@ -51,34 +58,37 @@ class Crowdstrike:
 
         return resources[0]
 
-    def create(self, type: str, value: str):
-        if self.id(value) is not None:
+    def create(self, ioc: IOC):
+        if self.id(ioc.value) is not None:
             return
+        
+        indicator = {
+            "action": "detect", # "Detect only" on Falcon web UI
+            "mobile_action": "detect", # "Detect only" on Falcon web UI
+            "severity": "medium",
+            "source": "OpenCTI IOC",
+            "applied_globally": True,
+            "type": ioc.type,
+            "value": ioc.value,
+            "platforms": ["windows", "mac", "linux"]
+            if ioc.type in ["md5", "sha256"]
+            else ["windows", "mac", "linux", "ios", "android"],
+        }
+        
+        if ioc.valid_until is not None:
+            indicator["expiration"] = ioc.valid_until
 
         res = self.cs.indicator_create(
             body={
                 "comment": "OpenCTI IOC",
-                "indicators": [
-                    {
-                        "action": "detect", # "Detect only" on Falcon web UI
-                        "mobile_action": "detect", # "Detect only" on Falcon web UI
-                        "severity": "medium",
-                        "source": "OpenCTI IOC",
-                        "applied_globally": True,
-                        "type": type,
-                        "value": value,
-                        "platforms": ["windows", "mac", "linux"]
-                        if type in ["md5", "sha256"]
-                        else ["windows", "mac", "linux", "ios", "android"],
-                    }
-                ],
+                "indicators": [indicator],
             }
         )
-        print(json.dumps(res, indent=4))
+        
         self._handle_error(res)
 
-    def delete(self, value: str) -> bool:
-        id = self.id(value)
+    def delete(self, ioc: IOC) -> bool:
+        id = self.id(ioc.value)
 
         if id is None:
             return False
@@ -136,7 +146,7 @@ def to_cs_type(octi_type: str) -> str | None:
     return None
 
 
-def extract_iocs(payload: dict) -> list[Tuple[str, str]]:
+def extract_iocs(payload: dict) -> list[IOC]:
     parsed = translation.translate("splunk", "parse", "{}", payload["pattern"])
 
     if "parsed_stix" not in parsed:
@@ -144,14 +154,15 @@ def extract_iocs(payload: dict) -> list[Tuple[str, str]]:
 
     res = []
 
-    for value in parsed["parsed_stix"]:
-        type = to_cs_type(value["attribute"])
+    for stix in parsed["parsed_stix"]:
+        type = to_cs_type(stix["attribute"])
 
         if type is None:
             continue
 
-        value = value["value"]
-        res.append((type, value))
+        value = stix["value"]
+        valid_until = payload.get("valid_until", None)
+        res.append(IOC(type=type, value=value,valid_until=valid_until))
 
     return res
 
@@ -222,7 +233,7 @@ class CrowdstrikeConnector:
             msg = self.queue.get()
 
             payload = json.loads(msg.data)["data"]
-            print(json.dumps(payload, indent=4))
+            
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
             self.helper.log_debug(f"processing message with id {id}")
@@ -235,20 +246,20 @@ class CrowdstrikeConnector:
 
             iocs = extract_iocs(payload)
             
-            for type, value in iocs:
+            for ioc in iocs:
                 match msg.event:
                     case "create" | "update":
                         self.helper.log_debug(f"creating item with id {id}")
                     
                         try:
-                            self.crowdstrike.create(type, value)
+                            self.crowdstrike.create(ioc)
                             self.helper.log_debug(f"crowdstrike item with id {id} created")
                         except CrowdstrikeError as e:
                             self.helper.log_error(f"error while creating item with id {id}, {e}")
 
                     case "delete":
                         self.helper.log_debug(f"deleting item with id {id}")
-                        self.crowdstrike.delete(value)
+                        self.crowdstrike.delete(ioc)
                         self.helper.log_debug(f"crowdstrike item with id {id} deleted")
                     
                 if self.metrics is not None:
