@@ -17,12 +17,13 @@ translation = stix_translation.StixTranslation()
 
 class CrowdstrikeError(Exception):
     ...
-    
+
+
 @dataclass
 class IOC:
     type: str
     value: str
-    valid_until: str|None
+    valid_until: str | None
 
 
 class Crowdstrike:
@@ -60,10 +61,10 @@ class Crowdstrike:
     def create(self, ioc: IOC):
         if self.id(ioc.value) is not None:
             return
-        
+
         indicator = {
-            "action": "detect", # "Detect only" on Falcon web UI
-            "mobile_action": "detect", # "Detect only" on Falcon web UI
+            "action": "detect",  # "Detect only" on Falcon web UI
+            "mobile_action": "detect",  # "Detect only" on Falcon web UI
             "severity": "medium",
             "source": "OpenCTI IOC",
             "applied_globally": True,
@@ -73,7 +74,7 @@ class Crowdstrike:
             if ioc.type in ["md5", "sha256"]
             else ["windows", "mac", "linux", "ios", "android"],
         }
-        
+
         if ioc.valid_until is not None:
             indicator["expiration"] = ioc.valid_until
 
@@ -83,7 +84,7 @@ class Crowdstrike:
                 "indicators": [indicator],
             }
         )
-        
+
         self._handle_error(res)
 
     def delete(self, ioc: IOC) -> bool:
@@ -161,7 +162,7 @@ def extract_iocs(payload: dict) -> list[IOC]:
 
         value = stix["value"]
         valid_until = payload.get("valid_until", None)
-        res.append(IOC(type=type, value=value,valid_until=valid_until))
+        res.append(IOC(type=type, value=value, valid_until=valid_until))
 
     return res
 
@@ -232,7 +233,7 @@ class CrowdstrikeConnector:
             msg = self.queue.get()
 
             payload = json.loads(msg.data)["data"]
-            
+
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
             self.helper.log_debug(f"processing message with id {id}")
@@ -244,23 +245,27 @@ class CrowdstrikeConnector:
             # extract type and values
 
             iocs = extract_iocs(payload)
-            
+
             for ioc in iocs:
                 match msg.event:
                     case "create" | "update":
                         self.helper.log_debug(f"creating item with id {id}")
-                    
+
                         try:
                             self.crowdstrike.create(ioc)
-                            self.helper.log_debug(f"crowdstrike item with id {id} created")
+                            self.helper.log_debug(
+                                f"crowdstrike item with id {id} created"
+                            )
                         except CrowdstrikeError as e:
-                            self.helper.log_error(f"error while creating item with id {id}, {e}")
+                            self.helper.log_error(
+                                f"error while creating item with id {id}, {e}"
+                            )
 
                     case "delete":
                         self.helper.log_debug(f"deleting item with id {id}")
                         self.crowdstrike.delete(ioc)
                         self.helper.log_debug(f"crowdstrike item with id {id} deleted")
-                    
+
                 if self.metrics is not None:
                     self.metrics.msg(msg.event)
                     self.metrics.state(msg.id)
@@ -291,7 +296,9 @@ def check_helper(helper: OpenCTIConnectorHelper) -> None:
 
 
 def fix_loggers() -> None:
-    logging.getLogger("stix_shifter_utils.stix_translation.src.patterns.parser").setLevel(logging.CRITICAL)
+    logging.getLogger(
+        "stix_shifter_utils.stix_translation.src.patterns.parser"
+    ).setLevel(logging.CRITICAL)
     logging.getLogger(
         "stix_shifter_modules.splunk.stix_translation.query_translator"
     ).setLevel(logging.CRITICAL)
