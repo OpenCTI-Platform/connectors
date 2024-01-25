@@ -1,6 +1,6 @@
-# OpenCTI Crowdstrike connector
+# OpenCTI CrowdStrike Endpoint Security connector
 
-This connector allows to push IOC from OpenCTI to Crowdstrike.
+This connector allows to push IOC from OpenCTI to CrowdStrike Endpoint Security.
 
 ## Installation
 
