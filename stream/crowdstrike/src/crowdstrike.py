@@ -1,15 +1,15 @@
 import json
-import os
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from queue import Queue
-from dataclasses import dataclass
 
 import yaml
+from falconpy import IOC as CrowdstrikeIOC
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from falconpy import IOC as CrowdstrikeIOC
 from stix_shifter.stix_translation import stix_translation
 
 translation = stix_translation.StixTranslation()
