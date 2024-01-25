@@ -16,7 +16,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, RFClient, RiskList, StixNote
+from rflib import APP_VERSION, RFClient, RiskList, StixNote, ThreatMap
 
 
 class RFNotes:
@@ -103,6 +103,16 @@ class RFNotes:
         # In a crisis, smash glass and uncomment this line of code
         # self.helper.config['uri'] = self.helper.config['uri'].replace('rabbitmq', '172.19.0.6')
 
+        self.rf_pull_threat_maps = get_config_variable(
+            "RECORDED_FUTURE_PULL_THREAT_MAPS", ["rf-notes", "pull_threat_maps"], config
+        )
+
+        self.threat_maps_interval = get_config_variable(
+            "RECORDED_FUTURE_THREAT_MAPS_INTERVAL",
+            ["rf-notes", "threat_maps_interval"],
+            config,
+        )
+
     def get_interval(self):
         """Converts interval hours to seconds"""
         return int(self.rf_interval) * 3600
@@ -137,6 +147,7 @@ class RFNotes:
                 published = self.rf_initial_lookback
 
             try:
+                # Import, convert and send to OpenCTI platform Analyst Notes
                 self.convert_and_send(published, tas, work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
@@ -197,6 +208,8 @@ class RFNotes:
 if __name__ == "__main__":
     try:
         RF = RFNotes()
+
+        # Pull RF risk lists
         if RF.rf_pull_risk_list:
             RiskList = RiskList(
                 RF.helper,
@@ -209,6 +222,21 @@ if __name__ == "__main__":
             RiskList.start()
         else:
             RF.helper.log_info("[RISK LISTS] Risk list fetching disabled")
+
+        # Pull RF Threat actors and Malware from Threat map
+        if RF.rf_pull_threat_maps:
+            ThreatMap = ThreatMap(
+                RF.helper,
+                RF.update_existing_data,
+                RF.threat_maps_interval,
+                RF.rfapi,
+                RF.tlp,
+                RF.risk_list_threshold,
+            )
+            ThreatMap.start()
+        else:
+            RF.helper.log_info("[THREAT MAPS] Risk list fetching disabled")
+
         RF.run()
     except Exception:
         traceback.print_exc()

@@ -393,6 +393,11 @@ class ThreatActor(RFStixEntity):
 class IntrusionSet(RFStixEntity):
     """Converts Threat Actor to Intrusion Set SDO"""
 
+    def __init__(self, name, _type, author=None, tlp=None):
+        super().__init__(name, _type, author, tlp)
+        self.related_entities = []
+        self.objects = []
+
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.IntrusionSet(
@@ -402,9 +407,112 @@ class IntrusionSet(RFStixEntity):
             object_marking_refs=self.tlp,
         )
 
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(
+            objects=self.objects if self.objects else self.to_stix_objects(),
+            allow_custom=True,
+        )
+
+    def _create_rel(self, source_id, relationship_type, target_id):
+        """Creates Relationship object linking indicator and observable"""
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type, source_id, target_id
+            ),
+            relationship_type=relationship_type,
+            source_ref=source_id,
+            target_ref=target_id,
+            created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
+        )
+
+    def map_data(self, actor, tlp):
+        # Get related entities
+        related_entities_links = actor["links"]
+
+        # If there are related entities
+        if related_entities_links and len(related_entities_links) > 0:
+            handled_related_entities_types = [
+                "MitreAttackIdentifier",
+                "Malware",
+                "CyberVulnerability",
+                "IpAddress",
+                "InternetDomainName",
+                "Hash",
+                "URL",
+            ]
+
+            for related_entity in related_entities_links:
+                _type = related_entity["type"].replace("type:", "")
+                _name = related_entity["name"]
+                _risk_attributes = related_entity["attributes"]
+                RISK_SCORE_MIN = 60
+
+                if _type in handled_related_entities_types:
+                    """
+                    If related entity is in indicator mapper, return add entity if risk score > 60
+                    """
+                    if _type in INDICATOR_TYPE_URL_MAPPER:
+                        for risk_attribute in _risk_attributes:
+                            if (
+                                risk_attribute["id"] == "risk_score"
+                                and risk_attribute["value"] > RISK_SCORE_MIN
+                            ):
+                                related_element = ENTITY_TYPE_MAPPER[_type](
+                                    _name, _type, self.author, tlp
+                                )
+
+                                related_element.risk_score = risk_attribute["value"]
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
+                            else:
+                                break
+                    else:
+                        related_element = ENTITY_TYPE_MAPPER[_type](
+                            _name, _type, self.author, tlp
+                        )
+                        stix_objs = related_element.to_stix_objects()
+                        self.related_entities.extend(stix_objs)
+
+    def build_bundle(self, ta_object):
+        """
+        Adds self and all related entities to objects
+        """
+        self.objects.extend(ta_object.to_stix_objects())
+        # Related entities
+        self.objects.extend(self.related_entities)
+
+        # Create SRO
+        relationships = []
+        for entity in self.related_entities:
+            if entity["type"] in ["malware"]:
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "uses", entity.id)
+                )
+            if entity["type"] in ["indicator"]:
+                relationships.append(
+                    self._create_rel(entity.id, "indicates", self.stix_obj.id)
+                )
+            if entity["type"] in ["attack-pattern"]:
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "uses", entity.id)
+                )
+            if entity["type"] in ["vulnerability"]:
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "targets", entity.id)
+                )
+        # Add relationships to stix objects
+        self.objects.extend(relationships)
+
 
 class Malware(RFStixEntity):
     """Converts Malware to a Malware SDO"""
+
+    def __init__(self, name, _type, author=None, tlp=None):
+        super().__init__(name, _type, author, tlp)
+        self.related_entities = []
+        self.objects = []
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -415,6 +523,120 @@ class Malware(RFStixEntity):
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
         )
+
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(
+            objects=self.objects if self.objects else self.to_stix_objects(),
+            allow_custom=True,
+        )
+
+    def _create_rel(self, source_id, relationship_type, target_id):
+        """Creates Relationship object linking indicator and observable"""
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type, source_id, target_id
+            ),
+            relationship_type=relationship_type,
+            source_ref=source_id,
+            target_ref=target_id,
+            created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
+        )
+
+    def map_data(self, malware, tlp):
+        # Get related entities
+        related_entities_links = malware["links"]
+
+        # If there are related entities
+        if related_entities_links and len(related_entities_links) > 0:
+            handled_related_entities_types = [
+                "MitreAttackIdentifier",
+                "Malware",
+                "CyberVulnerability",
+                "IpAddress",
+                "InternetDomainName",
+                "Hash",
+                "URL",
+                "Organization",
+                "Person",
+            ]
+
+            for related_entity in related_entities_links:
+                _type = related_entity["type"].replace("type:", "")
+                _name = related_entity["name"]
+                _risk_attributes = related_entity["attributes"]
+                RISK_SCORE_MIN = 60
+
+                if _type in handled_related_entities_types:
+                    """
+                    If related entity is in indicator mapper, return add entity if risk score > 60
+                    """
+                    if _type in INDICATOR_TYPE_URL_MAPPER:
+                        for risk_attribute in _risk_attributes:
+                            if (
+                                risk_attribute["id"] == "risk_score"
+                                and risk_attribute["value"] > RISK_SCORE_MIN
+                            ):
+                                related_element = ENTITY_TYPE_MAPPER[_type](
+                                    _name, _type, self.author, tlp
+                                )
+
+                                related_element.risk_score = risk_attribute["value"]
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
+                            else:
+                                break
+                    elif _type == "Person":
+                        related_element = IntrusionSet(_name, _type, self.author, tlp)
+                        stix_objs = related_element.to_stix_objects()
+                        self.related_entities.extend(stix_objs)
+
+                        continue
+                    else:
+                        related_element = ENTITY_TYPE_MAPPER[_type](
+                            _name, _type, self.author, tlp
+                        )
+                        stix_objs = related_element.to_stix_objects()
+                        self.related_entities.extend(stix_objs)
+
+    def build_bundle(self, ta_object):
+        """
+        Adds self and all related entities to objects
+        """
+        self.objects.extend(ta_object.to_stix_objects())
+        # Related entities
+        self.objects.extend(self.related_entities)
+
+        # Create SRO
+        relationships = []
+        for entity in self.related_entities:
+            if entity["type"] in ["malware"]:
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "related-to", entity.id)
+                )
+            if entity["type"] in ["indicator"]:
+                relationships.append(
+                    self._create_rel(entity.id, "indicates", self.stix_obj.id)
+                )
+            if entity["type"] in ["attack-pattern"]:
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "uses", entity.id)
+                )
+            if entity["type"] in ["vulnerability"]:
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "exploits", entity.id)
+                )
+            if entity["type"] in ["identity"]:
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "targets", entity.id)
+                )
+            if entity["type"] in ["intrusion-set"]:
+                relationships.append(
+                    self._create_rel(entity.id, "uses", self.stix_obj.id)
+                )
+        # Add relationships to stix objects
+        self.objects.extend(relationships)
 
 
 class Vulnerability(RFStixEntity):
@@ -596,14 +818,6 @@ RELATIONSHIPS_MAPPER = [
         ],
     },
 ]
-
-# maps RF types to the corresponding url to get the risk score
-INDICATOR_TYPE_URL_MAPPER = {
-    "IpAddress": "ip",
-    "InternetDomainName": "domain",
-    "URL": "url",
-    "Hash": "hash",
-}
 
 
 class StixNote:
