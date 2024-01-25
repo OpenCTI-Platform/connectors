@@ -153,39 +153,6 @@ class ShodanConnector:
 
         return stix_organization_with_relationship
 
-    def _generate_stix_indicator(self, data, description, tags, external_reference):
-        stix_indicator_with_relationship = []
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        # Generate Indicator
-        stix_indicator = stix2.Indicator(
-            id=Indicator.generate_id(data["ip_str"]),
-            name=data["ip_str"],
-            description=description,
-            labels=tags,
-            pattern=f"[ipv4-addr:value = '{data['ip_str']}']",
-            created_by_ref=self.shodan_identity["standard_id"],
-            external_references=[external_reference],
-            valid_from=now,
-            custom_properties={
-                "pattern_type": "stix",
-                "x_opencti_score": self.helper.connect_confidence_level,
-                "x_opencti_main_observable_type": "IPv4-Addr",
-                "detection": True,
-            },
-        )
-        self.stix_objects.append(stix_indicator)
-        stix_indicator_with_relationship.append(stix_indicator)
-
-        # Generate Relationship : Indicator -> "based-on" -> Observable
-        indicator_to_observable = self._generate_stix_relationship(
-            stix_indicator.id, "based-on", self.stix_entity["id"]
-        )
-        self.stix_objects.append(indicator_to_observable)
-        stix_indicator_with_relationship.append(indicator_to_observable)
-
-        return stix_indicator_with_relationship
-
     def _generate_stix_domain(self, data):
         stix_domains_with_relationship = []
         entity_domains = data["domains"]
@@ -240,27 +207,28 @@ class ShodanConnector:
     def _generate_stix_asn(self, data):
         stix_asn_with_relationship = []
 
-        # Generate Asn
-        entity_asn = data["asn"]
-        asn_number = int(data["asn"].replace("AS", ""))
-        stix_asn = stix2.AutonomousSystem(
-            type="autonomous-system",
-            number=asn_number,
-            name=entity_asn,
-            custom_properties={
-                "created_by_ref": self.shodan_identity["standard_id"],
-                "x_opencti_score": self.helper.connect_confidence_level,
-            },
-        )
-        self.stix_objects.append(stix_asn)
-        stix_asn_with_relationship.append(stix_asn)
+        if "asn" in data:
+            # Generate Asn
+            entity_asn = data["asn"]
+            asn_number = int(data["asn"].replace("AS", ""))
+            stix_asn = stix2.AutonomousSystem(
+                type="autonomous-system",
+                number=asn_number,
+                name=entity_asn,
+                custom_properties={
+                    "created_by_ref": self.shodan_identity["standard_id"],
+                    "x_opencti_score": self.helper.connect_confidence_level,
+                },
+            )
+            self.stix_objects.append(stix_asn)
+            stix_asn_with_relationship.append(stix_asn)
 
-        # Generate Relationship : observable -> "belongs-to" -> Asn
-        observable_to_asn = self._generate_stix_relationship(
-            self.stix_entity["id"], "belongs-to", stix_asn.id
-        )
-        self.stix_objects.append(observable_to_asn)
-        stix_asn_with_relationship.append(observable_to_asn)
+            # Generate Relationship : observable -> "belongs-to" -> Asn
+            observable_to_asn = self._generate_stix_relationship(
+                self.stix_entity["id"], "belongs-to", stix_asn.id
+            )
+            self.stix_objects.append(observable_to_asn)
+            stix_asn_with_relationship.append(observable_to_asn)
 
         return stix_asn_with_relationship
 
@@ -401,6 +369,39 @@ class ShodanConnector:
             return stix_vulnerability_with_relationship
         else:
             return []
+
+    def _generate_stix_indicator(self, data, description, tags, external_reference):
+        stix_indicator_with_relationship = []
+        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # Generate Indicator
+        stix_indicator = stix2.Indicator(
+            id=Indicator.generate_id(data["ip_str"]),
+            name=data["ip_str"],
+            description=description,
+            labels=tags,
+            pattern=f"[ipv4-addr:value = '{data['ip_str']}']",
+            created_by_ref=self.shodan_identity["standard_id"],
+            external_references=[external_reference],
+            valid_from=now,
+            custom_properties={
+                "pattern_type": "stix",
+                "x_opencti_score": self.helper.connect_confidence_level,
+                "x_opencti_main_observable_type": "IPv4-Addr",
+                "detection": True,
+            },
+        )
+        self.stix_objects.append(stix_indicator)
+        stix_indicator_with_relationship.append(stix_indicator)
+
+        # Generate Relationship : Indicator -> "based-on" -> Observable
+        indicator_to_observable = self._generate_stix_relationship(
+            stix_indicator.id, "based-on", self.stix_entity["id"]
+        )
+        self.stix_objects.append(indicator_to_observable)
+        stix_indicator_with_relationship.append(indicator_to_observable)
+
+        return stix_indicator_with_relationship
 
     def _upsert_stix_observable(self, data, description, labels, external_reference):
         # Upsert Observable
