@@ -451,12 +451,8 @@ class ShodanConnector:
         self._generate_stix_location(data)  # City + Country
         self._generate_stix_vulnerability(data)
 
-        self._generate_stix_indicator(
-            data, description, labels, external_reference
-        )
-        self._upsert_stix_observable(
-            data, description, labels, external_reference
-        )
+        self._generate_stix_indicator(data, description, labels, external_reference)
+        self._upsert_stix_observable(data, description, labels, external_reference)
 
         uniq_bundles_objects = list(
             {obj["id"]: obj for obj in self.stix_objects}.values()
