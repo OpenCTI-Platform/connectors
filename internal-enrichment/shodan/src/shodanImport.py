@@ -438,20 +438,23 @@ class ShodanConnector:
         self.stix_objects = stix_objects
         self.stix_entity = stix_entity
 
+        # Generate Stix Object for bundle
         description = self._generate_description(data)
         labels = self._generate_labels(data)
         external_reference = self._generate_stix_external_reference(data)
-        identity = self._generate_stix_identity(data)
-        indicator = self._generate_stix_indicator(
+
+        self._generate_stix_identity(data)
+        self._generate_stix_domain(data)
+        self._generate_stix_hostname(data)
+        self._generate_stix_asn(data)
+        self._generate_stix_x509(data)
+        self._generate_stix_location(data)  # City + Country
+        self._generate_stix_vulnerability(data)
+
+        self._generate_stix_indicator(
             data, description, labels, external_reference
         )
-        obs_domain = self._generate_stix_domain(data)
-        obs_hostname = self._generate_stix_hostname(data)
-        obs_autonomous_system_number = self._generate_stix_asn(data)
-        obs_x509_certificate = self._generate_stix_x509(data)
-        location = self._generate_stix_location(data)  # City + Country
-        vulnerability = self._generate_stix_vulnerability(data)
-        upsert_entity = self._upsert_stix_observable(
+        self._upsert_stix_observable(
             data, description, labels, external_reference
         )
 
