@@ -2,4 +2,4 @@ pycti==5.12.21
 prometheus-client==0.19.0
 crowdstrike-falconpy==1.4.0
 stix-shifter==7.0.1
-stix-shifter-utils==6.1.0
+stix-shifter-utils==6.3.0
