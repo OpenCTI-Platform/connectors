@@ -4,7 +4,6 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
-from typing import Tuple
 from dataclasses import dataclass
 
 import yaml
