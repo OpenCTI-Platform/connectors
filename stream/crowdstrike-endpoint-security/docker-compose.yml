@@ -1,7 +1,7 @@
 version: "3"
 services:
-  connector-crowdstrike:
-    image: opencti/connector-crowdstrike:5.12.9
+  connector-crowdstrike-endpoint-security:
+    image: opencti/connector-crowdstrike-endpoint-security:5.12.21
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,7 +10,7 @@ services:
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - "CONNECTOR_NAME=OpenCTI Crowdstrike Connector"
+      - "CONNECTOR_NAME=CrowdStrike Endpoint Security"
       - CONNECTOR_SCOPE=crowdstrike
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
