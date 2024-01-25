@@ -60,6 +60,9 @@ class Crowdstrike:
                 "comment": "OpenCTI IOC",
                 "indicators": [
                     {
+                        "action": "detect", # "Detect only" on Falcon web UI
+                        "mobile_action": "detect", # "Detect only" on Falcon web UI
+                        "severity": "medium",
                         "source": "OpenCTI IOC",
                         "applied_globally": True,
                         "type": type,
@@ -71,6 +74,7 @@ class Crowdstrike:
                 ],
             }
         )
+        print(json.dumps(res, indent=4))
         self._handle_error(res)
 
     def delete(self, value: str) -> bool:
@@ -117,6 +121,8 @@ class Metrics:
 def to_cs_type(octi_type: str) -> str | None:
     match octi_type:
         case "hostname:value":
+            return "domain"
+        case "domain-name:value":
             return "domain"
         case "ipv4-addr:value":
             return "ipv4"
@@ -216,6 +222,7 @@ class CrowdstrikeConnector:
             msg = self.queue.get()
 
             payload = json.loads(msg.data)["data"]
+            print(json.dumps(payload, indent=4))
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
             self.helper.log_debug(f"processing message with id {id}")
@@ -227,17 +234,23 @@ class CrowdstrikeConnector:
             # extract type and values
 
             iocs = extract_iocs(payload)
-
+            
             for type, value in iocs:
                 match msg.event:
-                    case "create":
-                        self.crowdstrike.create(type, value)
-                        self.helper.log_debug(f"crowdstrike item with id {id} created")
+                    case "create" | "update":
+                        self.helper.log_debug(f"creating item with id {id}")
+                    
+                        try:
+                            self.crowdstrike.create(type, value)
+                            self.helper.log_debug(f"crowdstrike item with id {id} created")
+                        except CrowdstrikeError as e:
+                            self.helper.log_error(f"error while creating item with id {id}, {e}")
 
                     case "delete":
+                        self.helper.log_debug(f"deleting item with id {id}")
                         self.crowdstrike.delete(value)
                         self.helper.log_debug(f"crowdstrike item with id {id} deleted")
-
+                    
                 if self.metrics is not None:
                     self.metrics.msg(msg.event)
                     self.metrics.state(msg.id)
@@ -268,6 +281,7 @@ def check_helper(helper: OpenCTIConnectorHelper) -> None:
 
 
 def fix_loggers() -> None:
+    logging.getLogger("stix_shifter_utils.stix_translation.src.patterns.parser").setLevel(logging.CRITICAL)
     logging.getLogger(
         "stix_shifter_modules.splunk.stix_translation.query_translator"
     ).setLevel(logging.CRITICAL)
