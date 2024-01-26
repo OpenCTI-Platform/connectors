@@ -169,9 +169,9 @@ class RiskIQConnector:
                                 new_state.update(importer_state)
 
                             # Set the new state
-                            new_state[
-                                self._STATE_LATEST_RUN_TIMESTAMP
-                            ] = self._current_unix_timestamp()
+                            new_state[self._STATE_LATEST_RUN_TIMESTAMP] = (
+                                self._current_unix_timestamp()
+                            )
                             self.helper.log_info(
                                 f"[RiskIQ] Storing new state: {new_state}"
                             )

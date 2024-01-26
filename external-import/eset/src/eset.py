@@ -213,9 +213,9 @@ class Eset:
                                 .replace("SHA256", "'SHA-256'")
                             )
                             if self.eset_create_observables:
-                                object[
-                                    "x_opencti_create_observables"
-                                ] = self.eset_create_observables
+                                object["x_opencti_create_observables"] = (
+                                    self.eset_create_observables
+                                )
                         objects.append(object)
                     parsed_content["objects"] = objects
                     self.helper.send_stix2_bundle(

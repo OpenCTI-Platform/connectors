@@ -111,9 +111,7 @@ class IronNetConnector:
             work_id=work_id,
         )
 
-    def _create_stix(
-        self, results: List[IronNetItem]
-    ) -> Iterable[
+    def _create_stix(self, results: List[IronNetItem]) -> Iterable[
         Union[
             ObservableType,
             stix2.Indicator,

@@ -1,4 +1,5 @@
 """OpenCTI AlienVault models module."""
+
 from datetime import datetime
 from typing import List, Literal, Optional, Union
 
