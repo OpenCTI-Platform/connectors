@@ -332,11 +332,15 @@ class FileHash(Indicator):
 class TTP(RFStixEntity):
     """Converts MITRE T codes to AttackPattern"""
 
+    def __init__(self, name, _type, author, tlp, display_name=None):
+        super().__init__(name, _type, author, tlp)
+        self.display_name = display_name
+
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.AttackPattern(
             id=pycti.AttackPattern.generate_id(self.name, self.name),
-            name=self.name,
+            name=self.display_name or self.name,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
             custom_properties={"x_mitre_id": self.name},
@@ -467,8 +471,31 @@ class IntrusionSet(RFStixEntity):
                                 related_element.risk_score = risk_attribute["value"]
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
-                            else:
-                                break
+                        continue
+                    elif _type in ["MitreAttackIdentifier"]:
+                        for risk_attribute in _risk_attributes:
+                            if risk_attribute["id"] == "display_name":
+                                """
+                                Format of display name is 'TXXXX (Name of method)'
+                                We need to have TXXXX for name and 'Name of method' as display name
+                                """
+                                # initializing substrings
+                                sub1 = "("
+                                sub2 = ")"
+                                display_name = risk_attribute["value"]
+                                idx1 = display_name.index(sub1)
+                                idx2 = display_name.index(sub2)
+                                # length of substring 1 is added to
+                                # get string from next character
+                                display_name = display_name[idx1 + len(sub1) : idx2]
+
+                                related_element = TTP(
+                                    _name, _type, self.author, tlp, display_name
+                                )
+
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
+                        continue
                     else:
                         related_element = ENTITY_TYPE_MAPPER[_type](
                             _name, _type, self.author, tlp
@@ -597,17 +624,45 @@ class Malware(RFStixEntity):
                                 risk_attribute["id"] == "threat_actor"
                                 and risk_attribute["value"] is True
                             ):
-                                related_element = IntrusionSet(_name, _type, self.author, tlp)
+                                related_element = IntrusionSet(
+                                    _name, _type, self.author, tlp
+                                )
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
-                            elif (risk_attribute["id"] == "threat_actor"
-                                  and risk_attribute["value"] is False):
+                            elif (
+                                risk_attribute["id"] == "threat_actor"
+                                and risk_attribute["value"] is False
+                            ):
                                 related_element = ENTITY_TYPE_MAPPER[_type](
                                     _name, _type, self.author, tlp
                                 )
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
                                 break
+                        continue
+                    elif _type in ["MitreAttackIdentifier"]:
+                        for risk_attribute in _risk_attributes:
+                            if risk_attribute["id"] == "display_name":
+                                """
+                                Format of display name is => 'TXXXX (Name of method)'
+                                We need to have TXXXX for name and 'Name of method' as display name
+                                """
+                                # initializing substrings
+                                sub1 = "("
+                                sub2 = ")"
+                                display_name = risk_attribute["value"]
+                                idx1 = display_name.index(sub1)
+                                idx2 = display_name.index(sub2)
+                                # length of substring 1 is added to
+                                # get string from next character
+                                display_name = display_name[idx1 + len(sub1) : idx2]
+
+                                related_element = TTP(
+                                    _name, _type, self.author, tlp, display_name
+                                )
+
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
                         continue
                     else:
                         related_element = ENTITY_TYPE_MAPPER[_type](
