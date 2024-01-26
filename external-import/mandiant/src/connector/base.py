@@ -542,8 +542,8 @@ class Mandiant:
 
             """
             We check that after each API call the collection respects the interval, 
-            either the default or the one specified in the config; 
-            if it does not, we terminate the job and move on to the next collection.
+            either the default or the one specified in the config.
+            If it does not, we terminate the job and move on to the next collection.
             """
 
             if (
