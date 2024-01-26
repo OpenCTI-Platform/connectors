@@ -258,9 +258,11 @@ class SocprimeConnector:
                                 link_type: str
                                 res.append(
                                     {
-                                        "source_name": link_type.upper()
-                                        if link_type == "cve"
-                                        else link_type.capitalize(),
+                                        "source_name": (
+                                            link_type.upper()
+                                            if link_type == "cve"
+                                            else link_type.capitalize()
+                                        ),
                                         "url": link,
                                     }
                                 )

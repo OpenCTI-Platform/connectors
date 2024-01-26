@@ -162,9 +162,11 @@ class HiveObservableTransform:
             object_marking_refs=self.markings,
             identity_class="individual",
             custom_properties={
-                "description": self.observable.get("message")
-                if self.observable.get("message")
-                else "Imported from TheHive",
+                "description": (
+                    self.observable.get("message")
+                    if self.observable.get("message")
+                    else "Imported from TheHive"
+                ),
                 "labels": self.observable.get("tags"),
                 "created_by_ref": self.created_by_ref,
             },
@@ -177,9 +179,11 @@ class HiveObservableTransform:
             object_marking_refs=self.markings,
             identity_class="system",
             custom_properties={
-                "description": self.observable.get("message")
-                if self.observable.get("message")
-                else "Imported from TheHive",
+                "description": (
+                    self.observable.get("message")
+                    if self.observable.get("message")
+                    else "Imported from TheHive"
+                ),
                 "labels": self.observable.get("tags"),
                 "created_by_ref": self.created_by_ref,
             },
@@ -222,9 +226,11 @@ class HiveObservableTransform:
             object_marking_refs=self.markings,
             identity_class="organization",
             custom_properties={
-                "description": self.observable.get("message")
-                if self.observable.get("message")
-                else "Imported from TheHive",
+                "description": (
+                    self.observable.get("message")
+                    if self.observable.get("message")
+                    else "Imported from TheHive"
+                ),
                 "labels": self.observable.get("tags"),
                 "created_by_ref": self.created_by_ref,
             },

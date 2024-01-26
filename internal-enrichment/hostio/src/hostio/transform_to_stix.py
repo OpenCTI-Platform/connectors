@@ -168,23 +168,27 @@ class BaseStixTransformation:
             id=pycti_location.generate_id(country.get("name"), "Country"),
             name=country.get("name"),
             object_marking_refs=self.marking_refs,
-            country=country.get("name")
-            if hasattr(country, "official_name")
-            else country.get("name"),
-            latitude=float(country.get("latlng")[0])
-            if country.get("latlng")[0]
-            else None,
-            longitude=float(country.get("latlng")[1])
-            if country.get("latlng")[1]
-            else None,
+            country=(
+                country.get("name")
+                if hasattr(country, "official_name")
+                else country.get("name")
+            ),
+            latitude=(
+                float(country.get("latlng")[0]) if country.get("latlng")[0] else None
+            ),
+            longitude=(
+                float(country.get("latlng")[1]) if country.get("latlng")[1] else None
+            ),
             region=country.get("subregion"),
             created_by_ref=self.hostio_id,
             custom_properties={
                 "x_opencti_location_type": "Country",
                 "x_opencti_aliases": [
-                    country.get("name")
-                    if hasattr(country, "official_name")
-                    else country.get("name")
+                    (
+                        country.get("name")
+                        if hasattr(country, "official_name")
+                        else country.get("name")
+                    )
                 ],
             },
         )
@@ -209,9 +213,11 @@ class BaseStixTransformation:
             id=pycti_location.generate_id(city, "City"),
             name=city,
             object_marking_refs=self.marking_refs,
-            country=country.get("name")
-            if hasattr(country, "official_name")
-            else country.get("name"),
+            country=(
+                country.get("name")
+                if hasattr(country, "official_name")
+                else country.get("name")
+            ),
             latitude=float(location_split[0]) if location_split[0] else None,
             longitude=float(location_split[1]) if location_split[1] else None,
             custom_properties={"x_opencti_location_type": "City"},

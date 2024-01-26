@@ -404,12 +404,12 @@ class IntelManager(object):
         ):
             _document["labels"] = data.get("labels")
 
-        _document["event"][
-            "risk_score"
-        ] = OpenCTIConnectorHelper.get_attribute_in_extension("score", entity)
-        _document["event"][
-            "risk_score_norm"
-        ] = OpenCTIConnectorHelper.get_attribute_in_extension("score", entity)
+        _document["event"]["risk_score"] = (
+            OpenCTIConnectorHelper.get_attribute_in_extension("score", entity)
+        )
+        _document["event"]["risk_score_norm"] = (
+            OpenCTIConnectorHelper.get_attribute_in_extension("score", entity)
+        )
         _document["threatintel"]["confidence"] = entity.get("confidence", None)
         _document["threatintel"]["confidence_norm"] = entity.get("confidence", None)
 

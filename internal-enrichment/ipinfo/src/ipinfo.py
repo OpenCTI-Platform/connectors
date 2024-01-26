@@ -32,16 +32,20 @@ class IpInfoConnector:
         country_location = stix2.Location(
             id=Location.generate_id(country.name, "Country"),
             name=country.name,
-            country=country.official_name
-            if hasattr(country, "official_name")
-            else country.name,
+            country=(
+                country.official_name
+                if hasattr(country, "official_name")
+                else country.name
+            ),
             confidence=self.helper.connect_confidence_level,
             custom_properties={
                 "x_opencti_location_type": "Country",
                 "x_opencti_aliases": [
-                    country.official_name
-                    if hasattr(country, "official_name")
-                    else country.name
+                    (
+                        country.official_name
+                        if hasattr(country, "official_name")
+                        else country.name
+                    )
                 ],
             },
         )
@@ -50,9 +54,11 @@ class IpInfoConnector:
         city_location = stix2.Location(
             id=Location.generate_id(city, "City"),
             name=city,
-            country=country.official_name
-            if hasattr(country, "official_name")
-            else country.name,
+            country=(
+                country.official_name
+                if hasattr(country, "official_name")
+                else country.name
+            ),
             latitude=loc_split[0],
             longitude=loc_split[1],
             confidence=self.helper.connect_confidence_level,

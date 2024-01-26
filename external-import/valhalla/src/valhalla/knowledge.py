@@ -164,6 +164,6 @@ class KnowledgeImporter:
         for obj in response.objects:
             if obj.type == "attack-pattern" or obj.type == "intrusion-set":
                 if obj.external_references[0].external_id and obj.id:
-                    self._ATTACK_MAPPING[
-                        obj.external_references[0].external_id
-                    ] = obj.id
+                    self._ATTACK_MAPPING[obj.external_references[0].external_id] = (
+                        obj.id
+                    )
