@@ -254,9 +254,9 @@ class Sekoia(object):
                 and len(item.get("x_ic_observable_types")) > 0
             ):
                 stix_type = item.get("x_ic_observable_types")[0]
-                item[
-                    "x_opencti_main_observable_type"
-                ] = OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
+                item["x_opencti_main_observable_type"] = (
+                    OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
+                )
 
     def _add_confidence_to_objects(self, items: List[Dict]):
         object_types_with_confidence = [

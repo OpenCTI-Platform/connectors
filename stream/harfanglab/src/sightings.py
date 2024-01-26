@@ -237,61 +237,61 @@ class Sightings(threading.Thread):
                             for search_observable in search_observables:
                                 if "hashes" in search_observable:
                                     if "name" in search_observable:
-                                        build_observable_hashes[
-                                            "name"
-                                        ] = search_observable["name"]
+                                        build_observable_hashes["name"] = (
+                                            search_observable["name"]
+                                        )
                                     for observable_hash in search_observable["hashes"]:
                                         if (
                                             "SHA-256" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes[
-                                                "SHA-256"
-                                            ] = observable_hash["hash"]
+                                            build_observable_hashes["SHA-256"] = (
+                                                observable_hash["hash"]
+                                            )
                                         if (
                                             "SHA-1" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes[
-                                                "SHA-1"
-                                            ] = observable_hash["hash"]
+                                            build_observable_hashes["SHA-1"] = (
+                                                observable_hash["hash"]
+                                            )
                                         if (
                                             "MD5" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes[
-                                                "MD5"
-                                            ] = observable_hash["hash"]
+                                            build_observable_hashes["MD5"] = (
+                                                observable_hash["hash"]
+                                            )
 
                         elif search_observables and not observable_matching:
                             for search_observable in search_observables:
                                 if "hashes" in search_observable:
                                     if "name" in search_observable:
-                                        build_observable_hashes[
-                                            "name"
-                                        ] = search_observable["name"]
+                                        build_observable_hashes["name"] = (
+                                            search_observable["name"]
+                                        )
                                     for observable_hash in search_observable["hashes"]:
                                         if (
                                             "SHA-256" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes[
-                                                "SHA-256"
-                                            ] = observable_hash["hash"]
+                                            build_observable_hashes["SHA-256"] = (
+                                                observable_hash["hash"]
+                                            )
                                         if (
                                             "SHA-1" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes[
-                                                "SHA-1"
-                                            ] = observable_hash["hash"]
+                                            build_observable_hashes["SHA-1"] = (
+                                                observable_hash["hash"]
+                                            )
                                         if (
                                             "MD5" in observable_hash["algorithm"]
                                             and observable_hash["algorithm"] != ""
                                         ):
-                                            build_observable_hashes[
-                                                "MD5"
-                                            ] = observable_hash["hash"]
+                                            build_observable_hashes["MD5"] = (
+                                                observable_hash["hash"]
+                                            )
                                         if (
                                             observable_hash["hash"]
                                             == indicator_matching["value"]
@@ -1591,9 +1591,11 @@ class Sightings(threading.Thread):
                 created=indicator_matching["creation_date"],
                 modified=indicator_matching["last_update"],
                 name=indicator_name,
-                description=indicator_matching["description"]
-                if "description" in indicator_matching
-                else "",
+                description=(
+                    indicator_matching["description"]
+                    if "description" in indicator_matching
+                    else ""
+                ),
                 pattern=indicator_matching["content"],
                 object_marking_refs=[marking],
                 custom_properties={

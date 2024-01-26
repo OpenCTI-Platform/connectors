@@ -182,12 +182,16 @@ class ThreatBusConnector(object):
             fromId=sighting.sighting_of_ref,
             toId=entity_id,
             createdBy=entity_id,
-            first_seen=sighting.first_seen.astimezone().strftime("%Y-%m-%dT%H:%M:%SZ")
-            if sighting.get("first_seen")
-            else None,
-            last_seen=sighting.last_seen.astimezone().strftime("%Y-%m-%dT%H:%M:%SZ")
-            if sighting.get("last_seen")
-            else None,
+            first_seen=(
+                sighting.first_seen.astimezone().strftime("%Y-%m-%dT%H:%M:%SZ")
+                if sighting.get("first_seen")
+                else None
+            ),
+            last_seen=(
+                sighting.last_seen.astimezone().strftime("%Y-%m-%dT%H:%M:%SZ")
+                if sighting.get("last_seen")
+                else None
+            ),
             confidence=50,
             externalReferences=[sighting.sighting_of_ref],
             count=1,
@@ -220,9 +224,9 @@ class ThreatBusConnector(object):
 
         if opencti_action == "delete":
             indicator: dict = data
-            indicator[
-                ThreatBusSTIX2Constants.X_THREATBUS_UPDATE.value
-            ] = Operation.REMOVE.value
+            indicator[ThreatBusSTIX2Constants.X_THREATBUS_UPDATE.value] = (
+                Operation.REMOVE.value
+            )
         else:
             indicator: dict = self.opencti_helper.api.indicator.read(id=opencti_id)
             if not indicator:
@@ -231,9 +235,9 @@ class ThreatBusConnector(object):
             # overwrite custom OpenCTI ID
             indicator["id"] = indicator.get("standard_id")
             if opencti_action == "update":
-                indicator[
-                    ThreatBusSTIX2Constants.X_THREATBUS_UPDATE.value
-                ] = Operation.EDIT.value
+                indicator[ThreatBusSTIX2Constants.X_THREATBUS_UPDATE.value] = (
+                    Operation.EDIT.value
+                )
 
         # only propagate indicators that are toggled for detection or the user
         # enabled forwarding of all indicators regardless of the toggle

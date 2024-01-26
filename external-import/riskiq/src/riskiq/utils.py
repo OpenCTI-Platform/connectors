@@ -1,4 +1,5 @@
 """RiskIQ's utility functions."""
+
 import calendar
 from datetime import datetime, timezone
 
