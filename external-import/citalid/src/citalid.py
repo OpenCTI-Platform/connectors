@@ -39,7 +39,9 @@ class Citalid:
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Citalid",
-            description="Citalid is a french software vendor specialized in cyber risk management.",
+            description="Citalid offers a cyber risk quantification SaaS platform to manage security & cyber insurance"
+                        " investments. Citalid is built upon a strong expertise in strategic Cyber Threat Intelligence"
+                        " (CTI) which enriches risk assessment with dynamic state of the threats.",
         )
 
     def get_interval(self):
@@ -88,9 +90,14 @@ class Citalid:
                         last_loaded_bundle_timestamp
                     )
                     self.helper.log_info(message)
-                    self.helper.set_state({"last_loaded_bundle_timestamp": last_loaded_bundle_timestamp})
             else:
                 self.helper.log_info("Last version of Citalid dataset already loaded.")
+
+            message = "Storing last_run_timestamp as " + str(now)
+            self.helper.log_info(message)
+            current_state["last_loaded_bundle_timestamp"] = last_loaded_bundle_timestamp
+            current_state["last_run_timestamp"] = now
+            self.helper.set_state(current_state)
 
             message = "Connector successfully run"
             self.helper.log_info(message)
