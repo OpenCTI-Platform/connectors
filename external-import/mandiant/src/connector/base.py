@@ -8,7 +8,7 @@ import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
-from .api import MandiantAPI
+from .api import OFFSET_PAGINATION, MandiantAPI
 from .utils import Timestamp
 
 STATE_START = "start_epoch"
@@ -489,17 +489,62 @@ class Mandiant:
             collection_interval = getattr(self, f"mandiant_{collection}_interval")
             last_run_value = Timestamp.from_iso(state[collection][STATE_LAST_RUN]).value
 
+            # API types related to simple offset
+            collection_with_offset = ["malwares", "actors", "campaigns"]
+            # Start and End, Offset
+            start_offset = state[collection][STATE_OFFSET]
+            end_offset = start_offset + OFFSET_PAGINATION
+
+            # API types related to start_epoch
+            collection_with_start_epoch = ["reports", "vulnerabilities", "indicators"]
+            # Start and End, Timestamp short format
+            start_short_format = Timestamp.from_iso(
+                state[collection][STATE_START]
+            ).short_format
+            end_short_format = (
+                Timestamp.from_iso(state[collection][STATE_END]).short_format
+                if state[collection][STATE_END] is not None
+                else Timestamp.now().short_format
+            )
+
+            # Additional information for the "work" depending on the collection (offset, epoch)
+            start_work = (
+                start_short_format
+                if collection in collection_with_start_epoch
+                else start_offset
+            )
+            end_work = (
+                end_short_format
+                if collection in collection_with_start_epoch
+                else end_offset
+            )
+
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id,
+                f"{collection.title()} {start_work} - {end_work}",
+            )
+
             import_start_date = (
                 self.mandiant_indicator_import_start_date
                 if collection == "indicators"
                 else self.mandiant_import_start_date
             )
-            first_run = (
-                True
-                if state[collection][STATE_START]
-                == Timestamp.from_iso(import_start_date).iso_format
-                else False
-            )
+
+            if collection in collection_with_start_epoch:
+                first_run = (
+                    True
+                    if state[collection][STATE_START]
+                    == Timestamp.from_iso(import_start_date).iso_format
+                    else False
+                )
+            else:
+                first_run = True if start_offset == 0 else False
+
+            """
+            We check that after each API call the collection respects the interval, 
+            either the default or the one specified in the config; 
+            if it does not, we terminate the job and move on to the next collection.
+            """
 
             if (
                 first_run is False
@@ -521,13 +566,20 @@ class Mandiant:
                 self.helper.connector_logger.info(
                     f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time for the next run : {remaining_time} min"
                 )
+                self.helper.api.work.to_processed(work_id, "Finished")
                 continue
 
             try:
                 self.helper.connector_logger.info(
                     "Start collecting", {"collection": collection}
                 )
-                self._run(collection, state)
+                self._run(
+                    work_id,
+                    collection,
+                    state,
+                    collection_with_offset,
+                    collection_with_start_epoch,
+                )
                 self.helper.connector_logger.info(
                     "Collection", {"collection": collection}
                 )
@@ -541,6 +593,9 @@ class Mandiant:
                 time.sleep(360)
                 continue
 
+            finally:
+                self.helper.api.work.to_processed(work_id, "Finished")
+
         if self.helper.connect_run_and_terminate:
             self.helper.connector_logger.info("Connector stop")
             self.helper.force_ping()
@@ -548,7 +603,14 @@ class Mandiant:
 
         time.sleep(self.mandiant_interval)
 
-    def _run(self, collection, state):
+    def _run(
+        self,
+        work_id,
+        collection,
+        state,
+        collection_with_offset,
+        collection_with_start_epoch,
+    ):
         module = importlib.import_module(f".{collection}", package=__package__)
         collection_api = getattr(self.api, collection)
 
@@ -567,11 +629,6 @@ class Mandiant:
         offset = state[collection][STATE_OFFSET]
 
         parameters = {}
-
-        # API types related to simple offset
-        collection_with_offset = ["malwares", "actors", "campaigns"]
-        # API types related to start_epoch
-        collection_with_start_epoch = ["reports", "vulnerabilities", "indicators"]
 
         if collection in collection_with_offset:
             parameters[STATE_OFFSET] = offset
@@ -597,14 +654,6 @@ class Mandiant:
             offset += 1
 
         if len(bundles_objects) > 0:
-            end_short_format = (
-                end.short_format if end is not None else Timestamp.now().short_format
-            )
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                f"{collection.title()} {start.short_format} - {end_short_format}",
-            )
-
             uniq_bundles_objects = list(
                 {obj["id"]: obj for obj in bundles_objects}.values()
             )
@@ -640,7 +689,6 @@ class Mandiant:
                 )
 
             self.helper.set_state(state)
-            self.helper.api.work.to_processed(work_id, "Finished")
 
         else:
             self.helper.connector_logger.info(
