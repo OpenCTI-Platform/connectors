@@ -586,13 +586,28 @@ class Malware(RFStixEntity):
                                 related_element.risk_score = risk_attribute["value"]
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
-                            else:
-                                break
-                    elif _type == "Person":
-                        related_element = IntrusionSet(_name, _type, self.author, tlp)
-                        stix_objs = related_element.to_stix_objects()
-                        self.related_entities.extend(stix_objs)
 
+                    elif _type in ["Person", "Organization"]:
+                        """
+                        If the related entities is a Person or an Organization
+                        and if it is defined by RF as a Threat Actor, then create an Intrusion Set
+                        """
+                        for risk_attribute in _risk_attributes:
+                            if (
+                                risk_attribute["id"] == "threat_actor"
+                                and risk_attribute["value"] is True
+                            ):
+                                related_element = IntrusionSet(_name, _type, self.author, tlp)
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
+                            elif (risk_attribute["id"] == "threat_actor"
+                                  and risk_attribute["value"] is False):
+                                related_element = ENTITY_TYPE_MAPPER[_type](
+                                    _name, _type, self.author, tlp
+                                )
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
+                                break
                         continue
                     else:
                         related_element = ENTITY_TYPE_MAPPER[_type](
