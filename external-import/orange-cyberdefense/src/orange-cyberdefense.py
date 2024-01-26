@@ -614,9 +614,11 @@ class OrangeCyberDefense:
             created=parse(report["timestamp_detected"]),
             published=parse(report["timestamp_detected"]),
             modified=parse(report["timestamp_updated"]),
-            object_refs=[x["id"] for x in report_objects]
-            if len(report_objects) > 0
-            else [self.identity["standard_id"]],
+            object_refs=(
+                [x["id"] for x in report_objects]
+                if len(report_objects) > 0
+                else [self.identity["standard_id"]]
+            ),
             labels=["severity-" + str(report["severity"]), report["source_name"]],
             allow_custom=True,
             object_marking_refs=[
@@ -1131,12 +1133,12 @@ class OrangeCyberDefense:
                             self.marking["standard_id"],
                         ],
                         custom_properties={
-                            "x_opencti_aliases": vuln["tags"]
-                            if vuln["tags"] is not None
-                            else None,
-                            "x_opencti_base_score": float(cvss_score)
-                            if cvss_score is not None
-                            else None,
+                            "x_opencti_aliases": (
+                                vuln["tags"] if vuln["tags"] is not None else None
+                            ),
+                            "x_opencti_base_score": (
+                                float(cvss_score) if cvss_score is not None else None
+                            ),
                         },
                         external_references=external_references,
                         labels=vuln["tags"],

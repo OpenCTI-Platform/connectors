@@ -255,9 +255,9 @@ class HybridAnalysis:
             result=report["verdict"],
             sample_ref=stix_entity["id"],
             created_by_ref=self.identity,
-            operating_system_ref=operating_system["id"]
-            if operating_system is not None
-            else None,
+            operating_system_ref=(
+                operating_system["id"] if operating_system is not None else None
+            ),
             analysis_sco_refs=analysis_sco_refs,
             external_references=[external_reference],
         )

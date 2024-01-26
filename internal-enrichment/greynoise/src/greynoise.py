@@ -296,24 +296,30 @@ class GreyNoiseConnector:
                 country_object = self.helper.api.location.create(
                     name=country.name,
                     type="Country",
-                    country=country.official_name
-                    if hasattr(country, "official_name")
-                    else country.name,
+                    country=(
+                        country.official_name
+                        if hasattr(country, "official_name")
+                        else country.name
+                    ),
                     custom_properties={
                         "x_opencti_location_type": "Country",
                         "x_opencti_aliases": [
-                            country.official_name
-                            if hasattr(country, "official_name")
-                            else country.name
+                            (
+                                country.official_name
+                                if hasattr(country, "official_name")
+                                else country.name
+                            )
                         ],
                     },
                 )
                 city_object = self.helper.api.location.create(
                     name=json_data["metadata"]["city"],
                     type="City",
-                    country=country.official_name
-                    if hasattr(country, "official_name")
-                    else country.name,
+                    country=(
+                        country.official_name
+                        if hasattr(country, "official_name")
+                        else country.name
+                    ),
                     custom_properties={"x_opencti_location_type": "City"},
                 )
                 self.helper.api.stix_core_relationship.create(

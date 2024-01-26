@@ -37,42 +37,36 @@ if not os.path.isfile(CA_CERT):
 
 
 class ETIError(Exception):
-
     """The base class of all exceptions in this module."""
 
     pass
 
 
 class ETIServerError(ETIError):
-
     """Excpetion with ETI server. Usually, it contains also an original HTTP exception."""
 
     pass
 
 
 class ETITokenError(ETIError):
-
     """Exception with token. Raised if a response is "Your token is not working."."""
 
     pass
 
 
 class ETIXmlError(ETIError):
-
     """Exception with XML response. Raised if XML cannot be parsed from response or if it contains tag "error"."""
 
     pass
 
 
 class ETIFindError(ETIError):
-
     """Exception within finding. Raised if find did not returned exepcted result."""
 
     pass
 
 
 class Connection(object):
-
     """Represents a connection to ETI server with basic interface to all APIs.
 
     It uses HTTPS connection and token authorization. Token is obtained by given username and password.

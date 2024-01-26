@@ -1,4 +1,5 @@
 """Connector to enrich IOCs with Recorded Future data"""
+
 import os
 
 import yaml

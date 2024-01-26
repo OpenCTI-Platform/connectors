@@ -150,15 +150,19 @@ class CrowdSecConnector:
             country = self.helper.api.location.create(
                 name=country_info.name,
                 type="Country",
-                country=country_info.official_name
-                if hasattr(country_info, "official_name")
-                else country_info.name,
+                country=(
+                    country_info.official_name
+                    if hasattr(country_info, "official_name")
+                    else country_info.name
+                ),
                 custom_properties={
                     "x_opencti_location_type": "Country",
                     "x_opencti_aliases": [
-                        country_info.official_name
-                        if hasattr(country_info, "official_name")
-                        else country_info.name
+                        (
+                            country_info.official_name
+                            if hasattr(country_info, "official_name")
+                            else country_info.name
+                        )
                     ],
                 },
             )

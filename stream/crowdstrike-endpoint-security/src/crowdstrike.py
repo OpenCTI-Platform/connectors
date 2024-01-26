@@ -15,8 +15,7 @@ from stix_shifter.stix_translation import stix_translation
 translation = stix_translation.StixTranslation()
 
 
-class CrowdstrikeError(Exception):
-    ...
+class CrowdstrikeError(Exception): ...
 
 
 @dataclass
@@ -70,9 +69,11 @@ class Crowdstrike:
             "applied_globally": True,
             "type": ioc.type,
             "value": ioc.value,
-            "platforms": ["windows", "mac", "linux"]
-            if ioc.type in ["md5", "sha256"]
-            else ["windows", "mac", "linux", "ios", "android"],
+            "platforms": (
+                ["windows", "mac", "linux"]
+                if ioc.type in ["md5", "sha256"]
+                else ["windows", "mac", "linux", "ios", "android"]
+            ),
         }
 
         if ioc.valid_until is not None:

@@ -435,14 +435,16 @@ class TheHive:
             object_marking_refs=markings,
             labels=case.get("tags") if case.get("tags") else None,
             created_by_ref=self.identity.get("standard_id"),
-            severity=self.severity_mapping[case.get("severity")]
-            if case.get("severity") in self.severity_mapping
-            else None,
+            severity=(
+                self.severity_mapping[case.get("severity")]
+                if case.get("severity") in self.severity_mapping
+                else None
+            ),
             confidence=int(self.helper.connect_confidence_level),
             x_opencti_workflow_id=opencti_case_status,
-            x_opencti_assignee_ids=[opencti_case_user]
-            if opencti_case_user is not None
-            else None,
+            x_opencti_assignee_ids=(
+                [opencti_case_user] if opencti_case_user is not None else None
+            ),
             object_refs=object_refs if object_refs is not None else [],
         )
 
@@ -555,17 +557,17 @@ class TheHive:
                 name=task.get("title"),
                 description=task.get("description"),
                 created=created,
-                due_date=format_datetime(
-                    task.get("dueDate") / 1000, DEFAULT_UTC_DATETIME
-                )
-                if "dueDate" in task
-                else None,
+                due_date=(
+                    format_datetime(task.get("dueDate") / 1000, DEFAULT_UTC_DATETIME)
+                    if "dueDate" in task
+                    else None
+                ),
                 confidence=int(self.helper.connect_confidence_level),
                 object_refs=[stix_case.id],
                 x_opencti_workflow_id=opencti_task_status,
-                x_opencti_assignee_ids=[opencti_task_user]
-                if opencti_task_user is not None
-                else None,
+                x_opencti_assignee_ids=(
+                    [opencti_task_user] if opencti_task_user is not None else None
+                ),
             )
             processed_tasks.append(stix_task)
 

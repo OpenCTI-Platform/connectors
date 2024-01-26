@@ -1227,9 +1227,9 @@ class Misp:
                             )
                         elif OPENCTISTIX2[observable_resolver]["path"][0] == "hashes":
                             hashes = {}
-                            hashes[
-                                OPENCTISTIX2[observable_resolver]["path"][1]
-                            ] = observable_value
+                            hashes[OPENCTISTIX2[observable_resolver]["path"][1]] = (
+                                observable_value
+                            )
                             observable = stix2.File(
                                 name=file_name,
                                 hashes=hashes,
@@ -1319,9 +1319,9 @@ class Misp:
                             last_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"]) + 3600
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            where_sighted_refs=[sighted_by]
-                            if sighted_by is not None
-                            else None,
+                            where_sighted_refs=(
+                                [sighted_by] if sighted_by is not None else None
+                            ),
                         )
                         sightings.append(sighting)
                     # if observable is not None:
@@ -1379,9 +1379,9 @@ class Misp:
                         relationship_type="related-to",
                         created_by_ref=author["id"],
                         source_ref=object_observable.id,
-                        target_ref=observable.id
-                        if (observable is not None)
-                        else indicator.id,
+                        target_ref=(
+                            observable.id if (observable is not None) else indicator.id
+                        ),
                         allow_custom=True,
                     )
                 )

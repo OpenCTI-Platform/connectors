@@ -1,4 +1,5 @@
 """Cyber Monitor connector module."""
+
 import base64
 import mimetypes
 import os

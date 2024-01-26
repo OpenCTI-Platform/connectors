@@ -42,9 +42,11 @@ class FeedlyRunner:
 
             self.connector.fetch_and_publish(
                 stream_id,
-                datetime.fromisoformat(last_run)
-                if last_run
-                else (now - timedelta(days=self.days_to_back_fill)),
+                (
+                    datetime.fromisoformat(last_run)
+                    if last_run
+                    else (now - timedelta(days=self.days_to_back_fill))
+                ),
             )
 
             success_message = f"Finished {run_name}"

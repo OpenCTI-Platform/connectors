@@ -1,4 +1,5 @@
 """DISARM Framework connector module."""
+
 import json
 import os
 import ssl
