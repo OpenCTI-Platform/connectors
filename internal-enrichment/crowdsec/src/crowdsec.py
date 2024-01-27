@@ -128,10 +128,11 @@ class CrowdSecConnector:
         scenarios = [attack["name"] for attack in cti_data["attack_details"]]
         labels.extend(scenarios)
         for label in labels:
-            label_id = self.helper.api.label.create(value=label)["id"]
-            self.helper.api.stix_cyber_observable.add_label(
-                id=observable_id, label_id=label_id
-            )
+            label = self.helper.api.label.read_or_create_unchecked(value=label)
+            if label is not None:
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable_id, label_id=label["id"]
+                )
 
         for scenario in scenarios:
             cves = find_all_cve(scenario)

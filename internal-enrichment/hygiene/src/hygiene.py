@@ -132,14 +132,22 @@ class HygieneConnector:
         self.warninglists = WarningLists(slow_search=warninglists_slow_search)
 
         # Create Hygiene Tag
-        self.label_hygiene = self.helper.api.label.create(
+        self.label_hygiene = self.helper.api.label.read_or_create_unchecked(
             value="hygiene", color="#fc0341"
         )
+        if self.label_hygiene is None:
+            raise ValueError(
+                "The hygiene label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
+            )
 
         if self.enrich_subdomains:
-            self.label_hygiene_parent = self.helper.api.label.create(
+            self.label_hygiene_parent = self.helper.api.label.read_or_create_unchecked(
                 value="hygiene_parent", color="#fc0341"
             )
+            if self.label_hygiene_parent is None:
+                raise ValueError(
+                    "The hygiene label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
+                )
 
     def _process_observable(self, stix_objects, stix_entity, opencti_entity) -> str:
         # Search in warninglist

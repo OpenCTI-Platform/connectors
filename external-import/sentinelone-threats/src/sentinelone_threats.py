@@ -119,10 +119,11 @@ class SentinelOneThreats:
                 config,
             )
             for label in labels.split(","):
-                created_label = self.helper.api.label.create(
+                created_label = self.helper.api.label.read_or_create_unchecked(
                     value=label, color=labels_color
                 )
-                self.label_ids.append(created_label["id"])
+                if created_label is not None:
+                    self.label_ids.append(created_label["id"])
 
     def run(self):
         self.helper.log_info("Starting SentinelOne Threats Connector")
@@ -213,22 +214,24 @@ class SentinelOneThreats:
 
                         # Attach file extension as label
                         if self.file_extension_label and file_ext:
-                            label = self.helper.api.label.create(
+                            label = self.helper.api.label.read_or_create_unchecked(
                                 value=file_ext, color=self.file_extension_label_color
                             )
-                            self.helper.api.stix_cyber_observable.add_label(
-                                id=response["id"], label_id=label["id"]
-                            )
+                            if label is not None:
+                                self.helper.api.stix_cyber_observable.add_label(
+                                    id=response["id"], label_id=label["id"]
+                                )
 
                         # Attach classification as label
                         if self.classification_label and classification:
-                            label = self.helper.api.label.create(
+                            label = self.helper.api.label.read_or_create_unchecked(
                                 value=classification,
                                 color=self.classification_label_color,
                             )
-                            self.helper.api.stix_cyber_observable.add_label(
-                                id=response["id"], label_id=label["id"]
-                            )
+                            if label is not None:
+                                self.helper.api.stix_cyber_observable.add_label(
+                                    id=response["id"], label_id=label["id"]
+                                )
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
