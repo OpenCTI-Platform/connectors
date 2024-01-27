@@ -31,9 +31,13 @@ class AbuseIPDBConnector:
         self.max_tlp = get_config_variable(
             "ABUSEIPDB_MAX_TLP", ["abuseipdb", "max_tlp"], config
         )
-        self.whitelist_label = self.helper.api.label.create(
+        self.whitelist_label = self.helper.api.label.read_or_create_unchecked(
             value="whitelist", color="#4caf50"
         )
+        if self.whitelist_label is None:
+            raise ValueError(
+                "The whitelist label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
+            )
 
     @staticmethod
     def extract_abuse_ipdb_category(category_number):
