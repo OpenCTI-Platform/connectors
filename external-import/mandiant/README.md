@@ -13,7 +13,7 @@ The connector can be configured with the following variables:
 | `MANDIANT_API_V4_KEY_SECRET`                             |                                       | Mandiant API Key Secret                                                     |
 | `MANDIANT_IMPORT_START_DATE`                             | 2023-01-01                            | Date to start collect data                                                  |
 | `MANDIANT_INDICATOR_IMPORT_START_DATE`                   | 2023-01-01                            | Date to start collect indicators                                            |
-| `MANDIANT_IMPORT_PERIOD`                                 | 7                                     | Number of days to fetch in one round trip                                   |
+| `MANDIANT_IMPORT_PERIOD`                                 | 2                                     | Number of days to fetch in one round trip                                   |
 | `MANDIANT_INDICATOR_MINIMUM_SCORE`                       | 80                                    | Minimum score (based on mscore) that an indicator must have to be processed |
 | `MANDIANT_CREATE_NOTES`                                  | False                                 | Create notes                                                                |
 | `MANDIANT_IMPORT_ACTORS`                                 | True                                  | Enable to collect actors                                                    |

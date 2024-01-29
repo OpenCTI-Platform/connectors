@@ -55,7 +55,7 @@ class Mandiant:
             ["mandiant", "import_period"],
             config,
             isNumber=True,
-            default=7,
+            default=2,
         )
         self.mandiant_create_notes = get_config_variable(
             "MANDIANT_CREATE_NOTES",
