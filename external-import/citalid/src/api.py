@@ -1,8 +1,5 @@
-import json
-
-from time import sleep
-
-import requests, base64
+import requests
+import base64
 import urllib.parse
 
 

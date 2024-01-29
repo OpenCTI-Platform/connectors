@@ -1,1 +1,10 @@
+<<<<<<< HEAD
 pycti==5.12.29
+=======
+<<<<<<< HEAD
+pycti==5.12.27
+=======
+pycti==5.12.22
+requests==2.31.0
+>>>>>>> 4068e06a (add libraries to requirements.txt, clean useless imports)
+>>>>>>> eef8eadf (add libraries to requirements.txt, clean useless imports)
