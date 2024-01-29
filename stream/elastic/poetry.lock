@@ -475,13 +475,13 @@ files = [
 
 [[package]]
 name = "pycti"
-version = "5.12.23"
+version = "5.12.24"
 description = "Python API client for OpenCTI."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.12.23-py3-none-any.whl", hash = "sha256:ea0f20e7b5df2cb556ece9e37aec105e4704048517333d051902da020c83f720"},
-    {file = "pycti-5.12.23.tar.gz", hash = "sha256:c1ecd67ed4083d0aabdea21aff20039582fd84c862d80615d9ebc5b22496615a"},
+    {file = "pycti-5.12.24-py3-none-any.whl", hash = "sha256:8d8198d741c20e48b8f8216e290c85bfa4e0e7de8561a64616b9dda5d06d34e7"},
+    {file = "pycti-5.12.24.tar.gz", hash = "sha256:54d0d02090361851467954a0ed701be04ee1534617dbafcd2cfcbd384ae3ed35"},
 ]
 
 [package.dependencies]
@@ -663,13 +663,13 @@ files = [
 
 [[package]]
 name = "pytz"
-version = "2023.3.post1"
+version = "2023.4"
 description = "World timezone definitions, modern and historical"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytz-2023.3.post1-py2.py3-none-any.whl", hash = "sha256:ce42d816b81b68506614c11e8937d3aa9e41007ceb50bfdcb0749b921bf646c7"},
-    {file = "pytz-2023.3.post1.tar.gz", hash = "sha256:7b4fddbeb94a1eba4b557da24f19fdf9db575192544270a9101d8509f9f43d7b"},
+    {file = "pytz-2023.4-py2.py3-none-any.whl", hash = "sha256:f90ef520d95e7c46951105338d918664ebfd6f1d995bd7d153127ce90efafa6a"},
+    {file = "pytz-2023.4.tar.gz", hash = "sha256:31d4583c4ed539cd037956140d695e42c033a19e984bfce9964a3f7d59bc2b40"},
 ]
 
 [[package]]
@@ -1104,4 +1104,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "fdb284ca98b6edb3dc64ce4ce44d068839d68b0d7e055852e46d0a625ff9d44b"
+content-hash = "c964d4b9fe70c69c2486d8f210ff1342dc416caf1b2887006e019db1e253ce6c"
