@@ -1,3 +1,3 @@
 tldextract==5.1.1
-pycti==5.12.24
+pycti==5.12.25
 git+http://github.com/MISP/PyMISPWarningLists.git@main#egg=pymispwarninglists
