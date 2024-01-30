@@ -519,11 +519,6 @@ class Mandiant:
                 else end_offset
             )
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                f"{collection.title()} {start_work} - {end_work}",
-            )
-
             import_start_date = (
                 self.mandiant_indicator_import_start_date
                 if collection == "indicators"
@@ -563,12 +558,20 @@ class Mandiant:
                         / 60
                     )
                 )
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id,
+                    f"{collection.title()} {start_work} - {end_work} - Ignored due to interval",
+                )
                 self.helper.connector_logger.info(
                     f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time for the next run : {remaining_time} min"
                 )
                 self.helper.api.work.to_processed(work_id, "Finished")
                 continue
 
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id,
+                f"{collection.title()} {start_work} - {end_work}",
+            )
             try:
                 self.helper.connector_logger.info(
                     "Start collecting", {"collection": collection}
