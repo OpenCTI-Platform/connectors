@@ -25,7 +25,7 @@ The connector adds the following Entities:
 
 ### Requirements
 
-- OpenCTI Platform >= 5.12.25
+- OpenCTI Platform >= 5.12.26
 
 ### Configuration
 
