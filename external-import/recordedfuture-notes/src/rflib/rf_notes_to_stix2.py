@@ -274,7 +274,7 @@ class IPAddress(Indicator):
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
-    def __init__(self, name, _type, author, tlp):
+    def __init__(self, name, _type, author=None, tlp=None):
         super().__init__(name, _type, author, tlp)
 
     def _create_pattern(self):
@@ -287,7 +287,7 @@ class Domain(Indicator):
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
-    def __init__(self, name, _type, author, tlp):
+    def __init__(self, name, _type, author=None, tlp=None):
         super().__init__(name, _type, author, tlp)
 
     def _create_pattern(self):
@@ -302,7 +302,7 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, _type, author, tlp):
+    def __init__(self, name, _type, author=None, tlp=None):
         super().__init__(name, _type, author, tlp)
         self.algorithm = self._determine_algorithm()
 
@@ -332,7 +332,7 @@ class FileHash(Indicator):
 class TTP(RFStixEntity):
     """Converts MITRE T codes to AttackPattern"""
 
-    def __init__(self, name, _type, author, tlp, display_name=None):
+    def __init__(self, name, _type, author=None, tlp=None, display_name=None):
         super().__init__(name, _type, author, tlp)
         self.display_name = display_name
 
