@@ -55,7 +55,7 @@ class Mandiant:
             ["mandiant", "import_period"],
             config,
             isNumber=True,
-            default=2,
+            default=3,
         )
         self.mandiant_create_notes = get_config_variable(
             "MANDIANT_CREATE_NOTES",
@@ -79,7 +79,7 @@ class Mandiant:
             ["mandiant", "import_actors_interval"],
             config,
             isNumber=True,
-            default=2,
+            default=1,
         )
         self.mandiant_actors_interval = timedelta(hours=mandiant_actors_interval)
 
@@ -113,7 +113,7 @@ class Mandiant:
             ["mandiant", "import_malwares_interval"],
             config,
             isNumber=True,
-            default=96,
+            default=1,
         )
         self.mandiant_malwares_interval = timedelta(hours=mandiant_malwares_interval)
 
@@ -130,7 +130,7 @@ class Mandiant:
             ["mandiant", "import_campaigns_interval"],
             config,
             isNumber=True,
-            default=2,
+            default=1,
         )
         self.mandiant_campaigns_interval = timedelta(hours=mandiant_campaigns_interval)
 
@@ -558,14 +558,9 @@ class Mandiant:
                         / 60
                     )
                 )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id,
-                    f"{collection.title()} {start_work} - {end_work} - Ignored due to interval",
-                )
                 self.helper.connector_logger.info(
                     f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time for the next run : {remaining_time} min"
                 )
-                self.helper.api.work.to_processed(work_id, "Finished")
                 continue
 
             work_id = self.helper.api.work.initiate_work(
