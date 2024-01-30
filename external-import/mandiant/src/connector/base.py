@@ -661,7 +661,14 @@ class Mandiant:
                 update=self.update_existing_data,
                 work_id=work_id,
             )
+            if collection in collection_with_offset:
+                state[collection][STATE_OFFSET] = offset
+        else:
+            self.helper.connector_logger.info(
+                f"No data has been imported for the '{collection}' collection since the last run"
+            )
 
+        if collection in collection_with_start_epoch:
             after_process_now = Timestamp.now()
             next_start = (
                 end if end is not None else before_process_now
@@ -669,41 +676,9 @@ class Mandiant:
             next_end = next_start.delta(days=self.mandiant_import_period)
             if next_end.value > after_process_now.value:
                 next_end = None
-
-            if collection in collection_with_offset:
-                state[collection][STATE_OFFSET] = offset
-                state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-
-            elif collection in collection_with_start_epoch:
-                state[collection][STATE_START] = next_start.iso_format
-                state[collection][STATE_END] = (
-                    next_end.iso_format if next_end is not None else None
-                )
-                state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-
-            else:
-                self.helper.connector_logger.error(
-                    f"The '{collection}' collection has not been correctly identified"
-                )
-            self.helper.set_state(state)
-
-        else:
-            # If start epoch, we need to update epoch (but not last run, to speed-up collection)
-            if collection in collection_with_start_epoch:
-                after_process_now = Timestamp.now()
-                next_start = (
-                    end if end is not None else before_process_now
-                )  # next start is the previous end
-                next_end = next_start.delta(days=self.mandiant_import_period)
-                if next_end.value > after_process_now.value:
-                    next_end = None
-                state[collection][STATE_START] = next_start.iso_format
-                state[collection][STATE_END] = (
-                    next_end.iso_format if next_end is not None else None
-                )
-                state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-                self.helper.set_state(state)
-
-            self.helper.connector_logger.info(
-                f"No data has been imported for the '{collection}' collection since the last run"
+            state[collection][STATE_START] = next_start.iso_format
+            state[collection][STATE_END] = (
+                next_end.iso_format if next_end is not None else None
             )
+        state[collection][STATE_LAST_RUN] = before_process_now.iso_format
+        self.helper.set_state(state)
