@@ -1,4 +1,4 @@
-pycti==5.12.26
+pycti==5.12.27
 html2text==2020.1.16
 beautifulsoup4==4.12.3
 lxml==5.1.0
