@@ -3,9 +3,9 @@ import datetime
 import json
 import logging
 import os
+import re
 import sys
 import time
-import re
 import zipfile
 from html.parser import HTMLParser
 from io import StringIO
@@ -110,11 +110,14 @@ def extract_and_read_zip_file(filepath, extract_path):
     return json_files_content
 
 
-
 def generate_markdown_table(data):
     markdown_str = "## Threat scores\n"
-    markdown_str += "| DDoS | Fraud | Hack | Leak | Malware | Phishing | Scam | Scan | Spam |\n"
-    markdown_str += "|------|-------|------|------|---------|----------|------|------|------|\n"
+    markdown_str += (
+        "| DDoS | Fraud | Hack | Leak | Malware | Phishing | Scam | Scan | Spam |\n"
+    )
+    markdown_str += (
+        "|------|-------|------|------|---------|----------|------|------|------|\n"
+    )
 
     threat_scores = data.get("x_datalake_score", {})
     ddos = threat_scores.get("ddos", "-")
@@ -129,8 +132,12 @@ def generate_markdown_table(data):
 
     markdown_str += f"| {ddos} | {fraud} | {hack} | {leak} | {malware} | {phishing} | {scam} | {scan} | {spam} |\n"
     markdown_str += "## Threat intelligence sources\n"
-    markdown_str += "| source_id | count | first_seen | last_updated | min_depth | max_depth |\n"
-    markdown_str += "|-----------|-------|------------|--------------|-----------|-----------|\n"
+    markdown_str += (
+        "| source_id | count | first_seen | last_updated | min_depth | max_depth |\n"
+    )
+    markdown_str += (
+        "|-----------|-------|------------|--------------|-----------|-----------|\n"
+    )
 
     threat_sources = data.get("x_datalake_sources", [])
 
@@ -143,18 +150,21 @@ def generate_markdown_table(data):
         first_seen = source.get("first_seen", "-")
         if first_seen != "-":
             # Format 'first_seen' to 'YYYY-MM-DD'
-            first_seen = datetime.datetime.fromisoformat(first_seen.rstrip("Z")).strftime("%Y-%m-%d %H:%M")
+            first_seen = datetime.datetime.fromisoformat(
+                first_seen.rstrip("Z")
+            ).strftime("%Y-%m-%d %H:%M")
         last_updated = source.get("last_updated", "-")
         if last_updated != "-":
             # Format 'last_updated' to 'YYYY-MM-DD'
-            last_updated = datetime.datetime.fromisoformat(last_updated.rstrip("Z")).strftime("%Y-%m-%d %H:%M")
+            last_updated = datetime.datetime.fromisoformat(
+                last_updated.rstrip("Z")
+            ).strftime("%Y-%m-%d %H:%M")
         min_depth = source.get("min_depth", "-")
         max_depth = source.get("max_depth", "-")
 
         markdown_str += f"| {source_id} | {count} | {first_seen} | {last_updated} | {min_depth} | {max_depth} |\n"
 
     return markdown_str
-
 
 
 class OrangeCyberDefense:
@@ -622,9 +632,11 @@ class OrangeCyberDefense:
             created=parse(report["timestamp_detected"]),
             published=parse(report["timestamp_detected"]),
             modified=parse(report["timestamp_updated"]),
-            object_refs=[x["id"] for x in report_objects]
-            if len(report_objects) > 0
-            else [self.identity["standard_id"]],
+            object_refs=(
+                [x["id"] for x in report_objects]
+                if len(report_objects) > 0
+                else [self.identity["standard_id"]]
+            ),
             labels=["severity-" + str(report["severity"]), report["source_name"]],
             allow_custom=True,
             object_marking_refs=[
@@ -1106,27 +1118,29 @@ class OrangeCyberDefense:
         dtl = Datalake(
             username=self.ocd_datalake_login, password=self.ocd_datalake_password
         )
-        tag_subcategory_list = dtl.FilteredTagSubcategory.get_filtered_and_sorted_list(category_name="Vulnerability", limit=50, ordering="-updated_at")
+        tag_subcategory_list = dtl.FilteredTagSubcategory.get_filtered_and_sorted_list(
+            category_name="Vulnerability", limit=50, ordering="-updated_at"
+        )
         objects = []
         pattern = r"CVSS Score: (\d+\.\d+)"
         if tag_subcategory_list is not None:
-            for vuln in tag_subcategory_list['results']:
-                match = re.search(pattern, vuln['description'])
+            for vuln in tag_subcategory_list["results"]:
+                match = re.search(pattern, vuln["description"])
                 cvss_score = match.group(1) if match else None
                 external_references = []
-                if 'external_references' in vuln:
-                    for ref in vuln['external_references']:
-                        source_name = ref.get('source_name', 'Orange Cyberdefense')
-                        description = ref.get('description', 'No description provided')
+                if "external_references" in vuln:
+                    for ref in vuln["external_references"]:
+                        source_name = ref.get("source_name", "Orange Cyberdefense")
+                        description = ref.get("description", "No description provided")
                         external_reference = stix2.ExternalReference(
                             source_name=source_name,
                             description=description,
-                            url=ref['url']
+                            url=ref["url"],
                         )
                         external_references.append(external_reference)
                 objects.append(
                     stix2.Vulnerability(
-                        id=Vulnerability.generate_id(vuln['stix_uuid'].split("--")[1]),
+                        id=Vulnerability.generate_id(vuln["stix_uuid"].split("--")[1]),
                         name=vuln["name"],
                         description=vuln["description"],
                         created=parse(vuln["created_at"]),
@@ -1139,13 +1153,15 @@ class OrangeCyberDefense:
                             self.marking["standard_id"],
                         ],
                         custom_properties={
-                            "x_opencti_aliases": vuln["tags"]
-                            if vuln["tags"] is not None else None,
-                            "x_opencti_base_score": float(cvss_score) if cvss_score is not None else None
+                            "x_opencti_aliases": (
+                                vuln["tags"] if vuln["tags"] is not None else None
+                            ),
+                            "x_opencti_base_score": (
+                                float(cvss_score) if cvss_score is not None else None
+                            ),
                         },
                         external_references=external_references,
-                        labels=vuln['tags']
-
+                        labels=vuln["tags"],
                     )
                 )
                 if "updated_at" in vuln:
@@ -1168,6 +1184,7 @@ class OrangeCyberDefense:
             )
         self.helper.set_state(current_state)
         return current_state
+
     def _set_initial_state(self):
         initial_state = {
             "worldwatch": _parse_date(
