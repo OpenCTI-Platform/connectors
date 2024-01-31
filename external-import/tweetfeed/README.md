@@ -15,7 +15,7 @@ An openCTI instance.
 
 ## Installation
 
-Please refer to [these](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://filigran.notion.site/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://filigran.notion.site/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
+Please refer to [these](https://docs.opencti.io/latest/deployment/connectors/) [three](https://docs.opencti.io/latest/deployment/troubleshooting/) [articles](https://docs.opencti.io/latest/development/connectors/) in OpenCTI's documentation as the authoritative source on installing connectors.
 
 ### Configuration
 
