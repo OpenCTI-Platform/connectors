@@ -94,11 +94,13 @@ class Citalid:
             else:
                 self.helper.log_info("Last version of Citalid dataset already loaded.")
 
-            message = "Storing last_run_timestamp as " + str(now)
+            message = "Storing last_run as " + str(now)
             self.helper.log_info(message)
-            current_state["last_loaded_bundle_timestamp"] = last_loaded_bundle_timestamp
-            current_state["last_run_timestamp"] = now
-            self.helper.set_state(current_state)
+            state = {
+                "last_loaded_bundle_timestamp": last_loaded_bundle_timestamp,
+                "last_run": str(now)
+            }
+            self.helper.set_state(state)
 
             message = "Connector successfully run"
             self.helper.log_info(message)
