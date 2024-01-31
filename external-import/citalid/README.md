@@ -28,4 +28,4 @@ Follow this guide to deploy the connector: https://github.com/OpenCTI-Platform/c
 | `citalid_customer_sub_domain_url` | `CITALID_CUSTOMER_SUB_DOMAIN_URL` | Yes       | URL of your Citalid instance.                                                                 |
 | `citalid_user`                    | `CITALID_USER`                    | Yes       | User that has access to Citalid instance.                                                     |
 | `citalid_password`                | `CITALID_PASSWORD`                | Yes       | The user's password.                                                                          |
-| `citalid_interval`                | `CITALID_INTERVA`                 | Yes       | The interval (in hours) between each run.                                                     |
+| `citalid_interval`                | `CITALID_INTERVAL`                | Yes       | The interval (in hours) between each run.                                                     |
