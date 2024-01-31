@@ -107,7 +107,7 @@ class ExportFileStix:
                 )
                 bundle = self.helper.api_impersonate.stix2.export_list(
                     entity_type,
-                    list_params["search"],
+                    list_params.get("search"),
                     list_params.get("filters"),
                     list_params["orderBy"],
                     list_params["orderMode"],

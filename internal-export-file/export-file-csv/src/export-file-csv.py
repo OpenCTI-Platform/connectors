@@ -205,8 +205,8 @@ class ExportFileCsv:
                 )
                 entities_list = self.helper.api_impersonate.stix2.export_entities_list(
                     entity_type=entity_type,
-                    search=list_params["search"],
-                    filters=list_params["filters"],
+                    search=list_params.get("search"),
+                    filters=list_params.get("filters"),
                     orderBy=list_params["orderBy"],
                     orderMode=list_params["orderMode"],
                     getAll=True,
