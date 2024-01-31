@@ -9,7 +9,7 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=Orange Cyberdefense Cyber Threat Intelligence"
       - CONNECTOR_SCOPE=ocd
-      - CONNECTOR_CONFIDENCE_LEVEL=55 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - OCD_PORTAL_API_LOGIN=ChangeMe
       - OCD_PORTAL_API_KEY=ChangeMe
