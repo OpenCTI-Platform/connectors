@@ -73,7 +73,7 @@ class IPQSConnector:
 
         if response==None:
              builder.create_indicator_based_on(f"""[ipv4-addr:value = '{observable["observable_value"]}']""",observable["observable_value"])
-            return []
+            return builder.send_bundle()
         else:
             builder = IPQSBuilder(
             self.helper, self.author, observable, response.get("fraud_score")
