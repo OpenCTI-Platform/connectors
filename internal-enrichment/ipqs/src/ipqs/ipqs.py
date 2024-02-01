@@ -71,35 +71,32 @@ class IPQSConnector:
             self._IP_ENRICH, observable["observable_value"]
         )
 
-        builder = IPQSBuilder(
+        if response==None:
+             builder.create_indicator_based_on(f"""[ipv4-addr:value = '{observable["observable_value"]}']""",observable["observable_value"])
+            return []
+        else:
+            builder = IPQSBuilder(
             self.helper, self.author, observable, response.get("fraud_score")
-        )
+            )
 
-        if self.ip_add_relationships:
-            builder.create_asn_belongs_to(response.get("ASN"))
+            if self.ip_add_relationships:
+                builder.create_asn_belongs_to(response.get("ASN"))
 
-        res_format = ""
-        for (
-            ip_enrich_field,
-            ip_enrich_field_value,
-        ) in self.client.ip_enrich_fields.items():
-            if ip_enrich_field in response:
-                enrich_field_value = response.get(ip_enrich_field)
-                res_format = (
-                    res_format
-                    + f"- **{ip_enrich_field_value}:**    {enrich_field_value} \n"
-                )
+            res_format = ""
+            for (ip_enrich_field, ip_enrich_field_value,) in self.client.ip_enrich_fields.items():
+                if ip_enrich_field in response:
+                    enrich_field_value = response.get(ip_enrich_field)
+                    res_format = (
+                        res_format
+                        + f"- **{ip_enrich_field_value}:**    {enrich_field_value} \n"
+                    )
 
-        labels = builder.ip_address_risk_scoring()
+            labels = builder.ip_address_risk_scoring()
 
-        builder.create_indicator_based_on(
-            labels,
-            f"""[ipv4-addr:value = '{observable["observable_value"]}']""",
-            observable["observable_value"],
-            res_format,
-        )
+            builder.create_indicator_based_on(labels,f"""[ipv4-addr:value = '{observable["observable_value"]}']""",observable["observable_value"],res_format)
+            
 
-        return builder.send_bundle()
+            return builder.send_bundle()
 
     def _process_email(self, observable):
         """
