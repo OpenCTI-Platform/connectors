@@ -53,10 +53,10 @@ class Citalid:
             # Get the current timestamp and check
             current_state = self.helper.get_state()
             # Load last_bundle timestamp
-            if current_state is None or not current_state.get("last_loaded_bundle_timestamp"):
-                last_loaded_bundle_timestamp = None
+            if current_state is None or not current_state.get("last_loaded_bundle_id"):
+                last_loaded_bundle_id = None
             else:
-                last_loaded_bundle_timestamp = current_state["last_loaded_bundle_timestamp"]
+                last_loaded_bundle_id = current_state["last_loaded_bundle_id"]
 
             now = datetime.now()
             friendly_name = "Citalid run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
@@ -72,23 +72,24 @@ class Citalid:
 
             self.helper.log_info('Fetching last bundle version info ...')
             last_version_metadata = api_client.get_last_version()
-            raw_file_date = last_version_metadata["date"]
-            date = datetime.strptime(raw_file_date, "%Y-%m-%d")
-            file_timestamp = date.timestamp()
-            file_date = datetime.strptime(raw_file_date, '%Y-%m-%d').strftime('%Y-%m-%d %H:%M:%S')
+            bundle_id = last_version_metadata["id"]
+            # raw_file_date = last_version_metadata["date"]
+            # date = datetime.strptime(raw_file_date, "%Y-%m-%d")
+            # file_timestamp = date.timestamp()
+            # file_date = datetime.strptime(raw_file_date, '%Y-%m-%d').strftime('%Y-%m-%d %H:%M:%S')
 
-            if last_loaded_bundle_timestamp is None or file_timestamp != last_loaded_bundle_timestamp:
-                self.helper.log_info('Processing file "' + file_date + '"')
+            if last_loaded_bundle_id is None or bundle_id != last_loaded_bundle_id:
+                self.helper.log_info('Processing file "' + bundle_id + '"')
                 bundle_dict = api_client.get_latest_bundle()
                 bundle = json.dumps(bundle_dict)
                 sent_bundle = self.send_bundle(work_id, bundle)
                 if sent_bundle is None:
                     self.helper.log_error('Error while sending bundle')
                 else:
-                    last_loaded_bundle_timestamp = file_timestamp
-                    # Store the current timestamp as a last loaded bundle
-                    message = "Bundle successfully loaded, storing last_loaded_bundle_timestamp as " + str(
-                        last_loaded_bundle_timestamp
+                    last_loaded_bundle_id = bundle_id
+                    # Store the current bundle id as a last loaded bundle id
+                    message = "Bundle successfully loaded, storing last_loaded_bundle_id as " + str(
+                        last_loaded_bundle_id
                     )
                     self.helper.log_info(message)
             else:
@@ -97,7 +98,7 @@ class Citalid:
             message = "Storing last_run as " + str(now)
             self.helper.log_info(message)
             state = {
-                "last_loaded_bundle_timestamp": last_loaded_bundle_timestamp,
+                "last_loaded_bundle_id": last_loaded_bundle_id,
                 "last_run": str(now)
             }
             self.helper.set_state(state)
