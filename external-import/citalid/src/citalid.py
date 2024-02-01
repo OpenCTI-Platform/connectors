@@ -77,7 +77,7 @@ class Citalid:
             file_timestamp = date.timestamp()
             file_date = datetime.strptime(raw_file_date, '%Y-%m-%d').strftime('%Y-%m-%d %H:%M:%S')
 
-            if last_loaded_bundle_timestamp is None or file_timestamp > last_loaded_bundle_timestamp:
+            if last_loaded_bundle_timestamp is None or file_timestamp != last_loaded_bundle_timestamp:
                 self.helper.log_info('Processing file "' + file_date + '"')
                 bundle_dict = api_client.get_latest_bundle()
                 bundle = json.dumps(bundle_dict)
