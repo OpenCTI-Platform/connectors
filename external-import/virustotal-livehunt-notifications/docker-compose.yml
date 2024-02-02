@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-virustotal-livehunt-notifications:
-    image: opencti/connector-virustotal-livehunt-notifications:5.12.28
+    image: opencti/connector-virustotal-livehunt-notifications:5.12.29
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe

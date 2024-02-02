@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-google-drive:
-    image: opencti/connector-google-drive:5.12.28
+    image: opencti/connector-google-drive:5.12.29
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

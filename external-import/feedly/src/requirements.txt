@@ -1,3 +1,3 @@
-pycti==5.12.28
+pycti==5.12.29
 feedly-client==0.26
 schedule==1.2.1
