@@ -9,7 +9,14 @@ from .constants import RISK_LIST_TYPE_MAPPER
 
 class RiskList(threading.Thread):
     def __init__(
-        self, helper, update_existing_data, interval, rfapi, tlp, risk_list_threshold
+        self,
+        helper,
+        update_existing_data,
+        interval,
+        rfapi,
+        tlp,
+        risk_list_threshold,
+        risklist_related_entities,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
@@ -18,6 +25,7 @@ class RiskList(threading.Thread):
         self.rfapi = rfapi
         self.tlp = tlp
         self.risk_list_threshold = risk_list_threshold
+        self.risklist_related_entities = risklist_related_entities
 
     def run(self):
         while True:
@@ -60,7 +68,7 @@ class RiskList(threading.Thread):
                             description += "- " + risk_rules_list[index] + "\n\n"
 
                     indicator.add_description(description)
-                    indicator.map_data(row, self.tlp)
+                    indicator.map_data(row, self.tlp, self.risklist_related_entities)
                     indicator.build_bundle(indicator)
                     # Create bundle
                     bundle = indicator.to_stix_bundle()
