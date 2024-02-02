@@ -50,9 +50,9 @@ class Citalid:
 
     def process_data(self):
         try:
-            # Get the current timestamp and check
+            # Get the current state and check
             current_state = self.helper.get_state()
-            # Load last_bundle timestamp
+            # Load last_bundle id
             if current_state is None or not current_state.get("last_loaded_bundle_id"):
                 last_loaded_bundle_id = None
             else:
