@@ -1,12 +1,13 @@
-from datetime import datetime
 import json
 import os
 import sys
 import time
+from datetime import datetime
 
-import api
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+import api
 
 
 class Citalid:
