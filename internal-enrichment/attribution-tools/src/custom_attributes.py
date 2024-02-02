@@ -27,19 +27,15 @@ CUSTOM_ATTRIBUTES_RELATIONSHIP = """
     parent_types
     relationship_type
     objectMarking {
-        edges {
-            node {
-                id
-                standard_id
-                entity_type
-                definition_type
-                created
-                modified
-                definition
-                x_opencti_order
-                x_opencti_color
-            }
-        }
+        id
+        standard_id
+        entity_type
+        definition_type
+        created
+        modified
+        definition
+        x_opencti_order
+        x_opencti_color
     }
     from {
         ... on BasicObject {

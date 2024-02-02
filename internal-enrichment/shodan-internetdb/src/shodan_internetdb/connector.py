@@ -69,13 +69,9 @@ class ShodanInternetDBConnector:
             id
             entity_type
             objectMarking {
-              edges {
-                node {
-                  id
-                  definition_type
-                  definition
-                }
-              }
+              id
+              definition_type
+              definition
             }
             observable_value
         """
