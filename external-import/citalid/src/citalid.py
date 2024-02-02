@@ -1,10 +1,11 @@
 import os
 import sys
 import time
-from datetime import datetime
-import api
 import yaml
 import json
+from datetime import datetime
+
+import api
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 

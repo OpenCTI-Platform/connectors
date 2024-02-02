@@ -1,6 +1,7 @@
-import requests
 import base64
 import urllib.parse
+
+import requests
 
 
 class Client:
