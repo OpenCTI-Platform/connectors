@@ -55,6 +55,7 @@ Please note that if you don't want to use an optional variable, best practice is
 | RECORDED_FUTURE_TLP                 | TLP                 | TLP marking of the report. One of White, Green, Amber, Red
 | RECORDED_FUTURE_PULL_RISK_LIST      | pull_risk_list      | A boolean flag of whether to pull risk lists into OpenCTI. Defaults to False
 | RECORDED_FUTURE_RISK_LIST_THRESHOLD | risk_list_threshold | A threshold value below which the related indicators are not taken into account in the risk list.
+| RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES | risklist_related_entities | A list of related entities, **required** if pull_risk_list is `True`. Available related entities: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
 | RECORDED_FUTURE_PULL_SIGNATURES     | pull_signatures     | A boolean flag of whether to pull YARA, SIGMA, and SNORT rules from hunting packages into OpenCTI. Defaults to False
 | RECORDED_FUTURE_INSIKT_ONLY         | insikt_only         | A boolean flag of whether to pull analyst notes only from the Insikt research team, or whether to include notes written by Users. Defaults to True
 | RECORDED_FUTURE_TOPIC               | topic               | Filter Analyst Notes on a specific topic. Topics can be found [here](https://support.recordedfuture.com/hc/en-us/articles/360006361774-Analyst-Note-API). You **must** use the topic RFID, for example aUyI9M. Multiple topics are allowed (separated by ','). Optional
