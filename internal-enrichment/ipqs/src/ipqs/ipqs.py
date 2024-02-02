@@ -72,7 +72,7 @@ class IPQSConnector:
         )
 
         if response==None:
-             builder.create_indicator_based_on(f"""[ipv4-addr:value = '{observable["observable_value"]}']""",observable["observable_value"])
+            builder.create_indicator_based_on(f"""[ipv4-addr:value = '{observable["observable_value"]}']""",observable["observable_value"])
             return builder.send_bundle()
         else:
             builder = IPQSBuilder(
