@@ -156,7 +156,9 @@ class Sightings(threading.Thread):
         alerts_filtered_total_count = int(alert_filtered["count"])
 
         if alerts_filtered_total_count == 0:
-            return self.helper.log_info("[INCIDENTS] No security events have been detected at HarfangLab")
+            return self.helper.log_info(
+                "[INCIDENTS] No security events have been detected at HarfangLab"
+            )
 
         alerts_filtered = self.get_alerts_filtered(alerts_filtered_total_count)
         alerts_filtered_by_date = self.filtered_by_date(
@@ -164,7 +166,9 @@ class Sightings(threading.Thread):
         )
 
         if alerts_filtered_by_date is None:
-            return self.helper.log_info("[INCIDENTS] No new security events have been detection")
+            return self.helper.log_info(
+                "[INCIDENTS] No new security events have been detection"
+            )
 
         convert_marking_for_stix2 = self.handle_marking()
 
