@@ -113,6 +113,17 @@ class RFNotes:
             config,
         )
 
+        risklist_related_entities_list = get_config_variable(
+            "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES",
+            ["rf-notes", "risklist_related_entities"],
+            config,
+        )
+
+        if risklist_related_entities_list is None:
+            raise ValueError("Missing or incorrect value in configuration parameter 'Risk List Related Entities'")
+        else:
+            self.risklist_related_entities = risklist_related_entities_list.split(",")
+
     def get_interval(self):
         """Converts interval hours to seconds"""
         return int(self.rf_interval) * 3600
@@ -218,6 +229,7 @@ if __name__ == "__main__":
                 RF.rfapi,
                 RF.tlp,
                 RF.risk_list_threshold,
+                RF.risklist_related_entities
             )
             RiskList.start()
         else:
