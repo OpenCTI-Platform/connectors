@@ -20,13 +20,19 @@ class Citalid:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.citalid_customer_sub_domain_url = get_config_variable(
-            "CITALID_CUSTOMER_SUB_DOMAIN_URL", ["citalid", "customer_sub_domain_url"], config,
+            "CITALID_CUSTOMER_SUB_DOMAIN_URL",
+            ["citalid", "customer_sub_domain_url"],
+            config,
         )
         self.citalid_user = get_config_variable(
-            "CITALID_USER", ["citalid", "user"], config,
+            "CITALID_USER",
+            ["citalid", "user"],
+            config,
         )
         self.citalid_password = get_config_variable(
-            "CITALID_PASSWORD", ["citalid", "password"], config,
+            "CITALID_PASSWORD",
+            ["citalid", "password"],
+            config,
         )
         self.citalid_interval = get_config_variable(
             "CITALID_INTERVAL", ["citalid", "interval"], config, True
@@ -41,8 +47,8 @@ class Citalid:
             type="Organization",
             name="Citalid",
             description="Citalid offers a cyber risk quantification SaaS platform to manage security & cyber insurance"
-                        " investments. Citalid is built upon a strong expertise in strategic Cyber Threat Intelligence"
-                        " (CTI) which enriches risk assessment with dynamic state of the threats.",
+            " investments. Citalid is built upon a strong expertise in strategic Cyber Threat Intelligence"
+            " (CTI) which enriches risk assessment with dynamic state of the threats.",
         )
 
     def get_interval(self):
@@ -64,13 +70,13 @@ class Citalid:
                 self.helper.connect_id, friendly_name
             )
 
-            self.helper.log_info('Connecting to customer sub domain ...')
+            self.helper.log_info("Connecting to customer sub domain ...")
             api_client = api.Client(
                 self.citalid_customer_sub_domain_url,
             )
             api_client.login(self.citalid_user, self.citalid_password)
 
-            self.helper.log_info('Fetching last bundle version info ...')
+            self.helper.log_info("Fetching last bundle version info ...")
             last_version_metadata = api_client.get_last_version()
             bundle_id = last_version_metadata["id"]
 
@@ -80,12 +86,13 @@ class Citalid:
                 bundle = json.dumps(bundle_dict)
                 sent_bundle = self.send_bundle(work_id, bundle)
                 if sent_bundle is None:
-                    self.helper.log_error('Error while sending bundle')
+                    self.helper.log_error("Error while sending bundle")
                 else:
                     last_loaded_bundle_id = bundle_id
                     # Store the current bundle id as a last loaded bundle id
-                    message = "Bundle successfully loaded, storing last_loaded_bundle_id as " + str(
-                        last_loaded_bundle_id
+                    message = (
+                        "Bundle successfully loaded, storing last_loaded_bundle_id as "
+                        + str(last_loaded_bundle_id)
                     )
                     self.helper.log_info(message)
             else:
@@ -95,7 +102,7 @@ class Citalid:
             self.helper.log_info(message)
             state = {
                 "last_loaded_bundle_id": last_loaded_bundle_id,
-                "last_run": str(now)
+                "last_run": str(now),
             }
             self.helper.set_state(state)
 

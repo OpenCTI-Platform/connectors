@@ -9,16 +9,16 @@ class Client:
         if not url.lower().startswith("https://") and url.lower() != "":
             url = "https://" + url
         parsed = urllib.parse.urlparse(url)
-        path = parsed.path.lstrip('/')
+        path = parsed.path.lstrip("/")
         return urllib.parse.urlunparse(parsed._replace(path=path))
 
-    def __init__(
-            self, customer_sub_domain_url, language="en"
-    ):
+    def __init__(self, customer_sub_domain_url, language="en"):
         self.client_id = "0RcQ2BmuJRRsZKvY1Xf1gdjiwYRZhQKBNOxY9KOI"
         self.customer_sub_domain_url = self._parse_url(customer_sub_domain_url)
         self.connection_service_base_url = f"{customer_sub_domain_url}/auth"
-        self.api_base_url = f"{customer_sub_domain_url}/facade/risk-intelligence-center/api/v1"
+        self.api_base_url = (
+            f"{customer_sub_domain_url}/facade/risk-intelligence-center/api/v1"
+        )
         self.headers = {}
         self.set_language(language)
 
@@ -56,4 +56,3 @@ class Client:
             raise Exception(
                 f"{res.status_code} error for url {res.url}: {res.content[:100]}"
             )
-
