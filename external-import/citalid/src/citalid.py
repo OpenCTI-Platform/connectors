@@ -73,10 +73,6 @@ class Citalid:
             self.helper.log_info('Fetching last bundle version info ...')
             last_version_metadata = api_client.get_last_version()
             bundle_id = last_version_metadata["id"]
-            # raw_file_date = last_version_metadata["date"]
-            # date = datetime.strptime(raw_file_date, "%Y-%m-%d")
-            # file_timestamp = date.timestamp()
-            # file_date = datetime.strptime(raw_file_date, '%Y-%m-%d').strftime('%Y-%m-%d %H:%M:%S')
 
             if last_loaded_bundle_id is None or bundle_id != last_loaded_bundle_id:
                 self.helper.log_info('Processing file "' + bundle_id + '"')
