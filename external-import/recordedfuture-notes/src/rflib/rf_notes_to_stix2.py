@@ -168,14 +168,8 @@ class Indicator(RFStixEntity):
             allow_custom=True,
         )
 
-    def map_data(self, rf_indicator, tlp):
-        handled_related_entities_types = [
-            "Malware",
-            "Hash",
-            "URL",
-            "Threat Actor",
-            "MitreAttackIdentifier",
-        ]
+    def map_data(self, rf_indicator, tlp, risklist_related_entities):
+        handled_related_entities_types = risklist_related_entities
         self.risk_score = int(rf_indicator["Risk"])
         related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
         if (
