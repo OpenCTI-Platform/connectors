@@ -120,7 +120,9 @@ class RFNotes:
         )
 
         if risklist_related_entities_list is None:
-            raise ValueError("Missing or incorrect value in configuration parameter 'Risk List Related Entities'")
+            raise ValueError(
+                "Missing or incorrect value in configuration parameter 'Risk List Related Entities'"
+            )
         else:
             self.risklist_related_entities = risklist_related_entities_list.split(",")
 
@@ -229,7 +231,7 @@ if __name__ == "__main__":
                 RF.rfapi,
                 RF.tlp,
                 RF.risk_list_threshold,
-                RF.risklist_related_entities
+                RF.risklist_related_entities,
             )
             RiskList.start()
         else:

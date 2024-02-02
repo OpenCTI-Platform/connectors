@@ -9,7 +9,14 @@ from .constants import RISK_LIST_TYPE_MAPPER
 
 class RiskList(threading.Thread):
     def __init__(
-        self, helper, update_existing_data, interval, rfapi, tlp, risk_list_threshold, risklist_related_entities
+        self,
+        helper,
+        update_existing_data,
+        interval,
+        rfapi,
+        tlp,
+        risk_list_threshold,
+        risklist_related_entities,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
