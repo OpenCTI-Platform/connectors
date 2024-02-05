@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import datetime
 
-import api
+import citalid_api
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -73,7 +73,7 @@ class Citalid:
             )
 
             self.helper.log_info("Connecting to customer sub domain ...")
-            api_client = api.Client(
+            api_client = citalid_api.Client(
                 self.citalid_customer_sub_domain_url,
             )
             api_client.login(self.citalid_user, self.citalid_password)
