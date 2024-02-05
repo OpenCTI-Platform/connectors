@@ -9,7 +9,6 @@ import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
-
 class Citalid:
     def __init__(self):
         # Instantiate the connector helper from config
