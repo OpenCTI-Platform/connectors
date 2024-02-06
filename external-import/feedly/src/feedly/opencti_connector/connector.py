@@ -58,6 +58,6 @@ def _add_main_observable_type_to_indicators(bundle: dict) -> None:
             stix_type = pattern.remove_prefix("[").split("=")
             if stix_type.startswith("file:hashes"):
                 stix_type = "file:hashes"
-            o[
-                "x_opencti_main_observable_type"
-            ] = OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
+            o["x_opencti_main_observable_type"] = (
+                OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
+            )
