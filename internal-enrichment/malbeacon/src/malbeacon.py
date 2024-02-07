@@ -46,7 +46,7 @@ class MalBeaconConnector:
             else {}
         )
 
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, True)
 
         self.confidence_level = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config
@@ -154,7 +154,7 @@ class MalBeaconConnector:
         if obs_type in obs_list:
             stix_objects = self.process_c2(obs_value, obs_standard_id, obs_type)
 
-            if len(stix_objects) is not None:
+            if stix_objects is not None and len(stix_objects) is not None:
                 stix_objects_bundle = self._to_stix_bundle(stix_objects)
                 stix_objects_to_json = self._to_json_bundle(stix_objects_bundle)
 
@@ -208,7 +208,6 @@ class MalBeaconConnector:
         """
         try:
             response = self.session.get(url_path)
-            response.raise_for_status()
 
             return response.json()
 
@@ -421,7 +420,10 @@ class MalBeaconConnector:
             =========================================================
             """
             if data is None or "message" in data:
-                raise Exception("[API] " + str(data))
+                error_msg = "No data found for this following observable: "
+                self.helper.connector_logger.info(
+                    error_msg, {"observable_value": obs_value}
+                )
 
             else:
                 """
