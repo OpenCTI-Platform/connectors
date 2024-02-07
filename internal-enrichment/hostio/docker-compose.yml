@@ -7,7 +7,6 @@ services:
       - OPENCTI_URL=${OPENCTI_URL}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
       # Connector's definition parameters:
-      - CONNECTOR_TYPE=${CONNECTOR_TYPE}  # Must be INTERNAL_ENRICHMENT.
       - CONNECTOR_NAME=${CONNECTOR_NAME}
       - CONNECTOR_SCOPE=${CONNECTOR_SCOPE} # Scope supported, e.g., `IPv4-Addr, Domain-Name, IPv6-Addr`.
       - CONNECTOR_ID=${CONNECTOR_ID}

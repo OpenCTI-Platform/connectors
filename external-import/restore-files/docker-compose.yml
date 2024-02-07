@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://localhost # Local OpenCTI URL
       - OPENCTI_TOKEN=ChangeMe # Local OpenCTI token
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=RestoreFiles
       - CONNECTOR_SCOPE=restore
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)

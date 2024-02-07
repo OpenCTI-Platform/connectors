@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=Joe_Sandbox
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - "CONNECTOR_NAME=Joe Sandbox"
       - CONNECTOR_SCOPE=Artifact,Url
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables

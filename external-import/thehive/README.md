@@ -11,7 +11,6 @@ Setting up TheHive Connector is straightforward. The following table provides de
 | `opencti.url`                   | `OPENCTI_URL`                 | Yes       | The URL of the OpenCTI platform.                                |
 | `opencti.token`                 | `OPENCTI_TOKEN`               | Yes       | The token for accessing OpenCTI.                                |
 | `connector.id`                  | `CONNECTOR_ID`                | Yes       | A unique `UUIDv4` identifier for this connector instance.       |
-| `connector.type`                | `CONNECTOR_TYPE`              | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.   |
 | `connector.name`                | `CONNECTOR_NAME`              | Yes       | Name of the connector. Should always be "TheHive".              |
 | `connector.scope`               | `CONNECTOR_SCOPE`             | Yes       | The scope of data the connector is importing.                   |
 | `connector.confidence_level`    | `CONNECTOR_CONFIDENCE_LEVEL`  | Yes       | Confidence level for the data imported.                         |

@@ -1,4 +1,5 @@
 FROM python:3.11-bullseye
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Copy the connector
 COPY src /opt/opencti-connector-import-external-reference

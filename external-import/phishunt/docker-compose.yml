@@ -6,7 +6,6 @@ services :
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
       - CONNECTOR_ID=ChangeMe(UUIDv4 token)
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Phishunt
       - CONNECTOR_SCOPE=phishunt
       - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)

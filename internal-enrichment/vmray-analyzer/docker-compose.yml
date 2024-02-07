@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=VMRay_Analyzer
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - "CONNECTOR_NAME=VMRay Analyzer"
       - CONNECTOR_SCOPE=Artifact
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
