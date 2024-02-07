@@ -66,8 +66,15 @@ class MalBeaconConnector:
             config,
         )
 
+        self.max_tlp = get_config_variable(
+            "MALBEACON_MAX_TLP",
+            ["malbeacon", "max_tlp"],
+            config,
+        )
+
         # Define variables
         self.author = None
+        self.tlp = None
         self.stix_object_list = []
 
         # Define headers in session and update when needed
@@ -132,6 +139,22 @@ class MalBeaconConnector:
         self.helper.send_stix2_bundle(stix_bundle_json)
         pass
 
+    def extract_and_check_markings(self, opencti_entity: dict) -> bool:
+        """
+        Extract TLP, and we check if the variable "max_tlp" is less than
+        or equal to the markings access of the entity from OpenCTI
+        If this is true, we can send the data to connector for enrichment.
+        :param opencti_entity: Dict of observable from OpenCTI
+        :return: Boolean
+        """
+        for marking_definition in opencti_entity["objectMarking"]:
+            if marking_definition["definition_type"] == "TLP":
+                self.tlp = marking_definition["definition"]
+
+        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(self.tlp, self.max_tlp)
+
+        return is_valid_max_tlp
+
     def _process_observable(self, observable: dict) -> str:
         """
         Get the observable created in OpenCTI and check which type
@@ -139,6 +162,13 @@ class MalBeaconConnector:
         :param observable: dict of observable properties
         :return: Info message in string
         """
+
+        is_valid_tlp = self.extract_and_check_markings(observable)
+        if not is_valid_tlp:
+            raise ValueError(
+                "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
+                "the connector does not has access to this observable, please check the group of the connector user"
+            )
 
         # Extract IPv4, IPv6, Hostname and Domain from entity data
         obs_standard_id = observable["standard_id"]
@@ -180,13 +210,6 @@ class MalBeaconConnector:
         """
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-
-        if observable is None:
-            return (
-                "[CONNECTOR] Observable not found or "
-                "the connector does not has access to this observable, "
-                "please check the group of the connector user"
-            )
 
         return self._process_observable(observable)
 

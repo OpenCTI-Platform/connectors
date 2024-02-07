@@ -15,4 +15,5 @@ services:
       - MALBEACON_API_KEY=ChangeMe # Required
       - MALBEACON_API_BASE_URL=https://api.malbeacon.com/v1/ # Required
       - MALBEACON_INDICATOR_SCORE_LEVEL=50 # Optional
+      - MALBEACON_MAX_TLP=TLP:AMBER # Required, Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
     restart: always
