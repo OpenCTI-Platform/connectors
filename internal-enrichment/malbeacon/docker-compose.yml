@@ -12,5 +12,7 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name
       - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
-      - MALBEACON_API_KEY=ChangeMe
+      - MALBEACON_API_KEY=ChangeMe # Required
+      - MALBEACON_API_BASE_URL=https://api.malbeacon.com/v1/ # Required
+      - MALBEACON_INDICATOR_SCORE_LEVEL=50 # Optional
     restart: always
