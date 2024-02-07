@@ -6,6 +6,7 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=Malbeacon
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name
