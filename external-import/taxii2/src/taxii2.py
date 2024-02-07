@@ -13,11 +13,19 @@ import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
 import yaml
 from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes, get_config_variable
-from requests.auth import HTTPBasicAuth
+from requests.auth import HTTPBasicAuth, AuthBase
 from requests.exceptions import HTTPError
 from taxii2client.common import TokenAuth
 from taxii2client.exceptions import TAXIIServiceException
 
+class ApiKeyAuth(AuthBase):
+    def __init__(self, api_key, value):
+        self.api_key = api_key
+        self.value = value
+
+    def __call__(self, r):
+        r.headers[self.api_key] = '{}'.format(self.value)
+        return r
 
 class Taxii2Connector:
     """Connector object"""
@@ -43,6 +51,11 @@ class Taxii2Connector:
             "TAXII2_USE_TOKEN", ["taxii2", "use_token"], config, default=False
         )
         token = get_config_variable("TAXII2_TOKEN", ["taxii2", "token"], config)
+        use_apikey = get_config_variable(
+            "TAXII2_USE_APIKEY", ["taxii2", "use_apikey"], config, default=False
+        )
+        apikey_key = get_config_variable("TAXII2_APIKEY_KEY", ["taxii2", "apikey_key"], config)
+        apikey_value = get_config_variable("TAXII2_APIKEY_VALUE", ["taxii2", "apikey_value"], config)
         server_url = get_config_variable(
             "TAXII2_DISCOVERY_URL", ["taxii2", "discovery_url"], config
         )
@@ -58,6 +71,8 @@ class Taxii2Connector:
         )
         if use_token:
             auth = TokenAuth(token)
+        elif use_apikey:
+            auth = ApiKeyAuth(apikey_key, apikey_value)
         else:
             auth = HTTPBasicAuth(username, password)
         if self.taxii2v21:
