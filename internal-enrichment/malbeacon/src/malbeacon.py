@@ -147,9 +147,10 @@ class MalBeaconConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: Boolean
         """
-        for marking_definition in opencti_entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                self.tlp = marking_definition["definition"]
+        if len(opencti_entity["objectMarking"]) != 0:
+            for marking_definition in opencti_entity["objectMarking"]:
+                if marking_definition["definition_type"] == "TLP":
+                    self.tlp = marking_definition["definition"]
 
         is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(self.tlp, self.max_tlp)
 
@@ -211,7 +212,8 @@ class MalBeaconConnector:
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
 
-        return self._process_observable(observable)
+        if observable is not None:
+            return self._process_observable(observable)
 
     def start(self) -> None:
         """
