@@ -1,6 +1,7 @@
-from pydantic import BaseModel
 from typing import Optional
+
 from dateutil import parser
+from pydantic import BaseModel
 
 
 class EmailBeacon(BaseModel):

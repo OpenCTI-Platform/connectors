@@ -6,6 +6,7 @@ class MalbeaconClient:
     """
     Working with Malbeacon API
     """
+
     def __init__(self, helper):
         self.config = ConfigMalbeacon()
         self.helper = helper

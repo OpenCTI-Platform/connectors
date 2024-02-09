@@ -1,28 +1,16 @@
 import ipaddress
 from datetime import datetime
 
-
 import stix2
 import validators
-from pycti import (
-    Identity,
-    Indicator,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-)
-from models.c2_model import C2Beacon
-from stix2 import Bundle
-from malbeacon_config_variables import ConfigMalbeacon
 from malbeacon_client import MalbeaconClient
-
-C2_PATH = "c2/c2/"
-SOURCE_URL = "https://portal.malbeacon.com/illuminate"
-
-STIX_OBS_MAP = {
-    "domain-name:value": "Domain-Name",
-    "ipv4-addr:value": "IPv4-Addr",
-    "ipv6-addr:value": "IPv6-Addr",
-}
+from malbeacon_config_variables import ConfigMalbeacon
+from malbeacon_converter import MalbeaconConverter
+from malbeacon_endpoints import C2_PATH, SOURCE_URL
+from malbeacon_utils import STIX_OBS_MAP
+from models.c2_model import C2Beacon
+from pycti import Indicator, OpenCTIConnectorHelper, StixCoreRelationship
+from stix2 import Bundle
 
 
 class MalBeaconConnector:
@@ -37,41 +25,12 @@ class MalBeaconConnector:
         self.config = ConfigMalbeacon()
         self.helper = OpenCTIConnectorHelper(self.config.load, True)
         self.client = MalbeaconClient(self.helper)
+        self.converter = MalbeaconConverter(self.helper)
 
         # Define variables
         self.author = None
         self.tlp = None
         self.stix_object_list = []
-
-    @staticmethod
-    def _create_author() -> dict:
-        """
-        Create Malbeacon Author
-        :return: Author in Stix2 object
-        """
-        return stix2.Identity(
-            id=Identity.generate_id("Malbeacon", "organization"),
-            name="Malbeacon",
-            identity_class="organization",
-            description="""The first system of its kind, MalBeacon implants \
-                    beacons via malware bot check-in traffic. Adversaries conducting \
-                    campaigns in the wild who are logging in to these malware C2 \
-                    panels can now be tracked. MalBeacon is a tool for the good guys \
-                    that provides additional intelligence on attack attribution.""",
-        )
-
-    @staticmethod
-    def _create_external_reference() -> list:
-        """
-        Create external reference
-        :return: External reference STIX2 list
-        """
-        external_reference = stix2.ExternalReference(
-            source_name="Malbeacon C2 Domains",
-            url=SOURCE_URL,
-            description="Found in Malbeacon C2 Domains",
-        )
-        return [external_reference]
 
     @staticmethod
     def _to_stix_bundle(stix_objects: list) -> Bundle:
@@ -113,7 +72,7 @@ class MalBeaconConnector:
                 if marking_definition["definition_type"] == "TLP":
                     self.tlp = marking_definition["definition"]
 
-        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(self.tlp, self.config.max_tlp)
+        is_valid_max_tlp = self.helper.check_max_tlp(self.tlp, self.config.max_tlp)
 
         return is_valid_max_tlp
 
@@ -239,7 +198,9 @@ class MalBeaconConnector:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self._create_external_reference(),
+                    "x_opencti_external_references": self.converter.create_external_reference(
+                        SOURCE_URL
+                    ),
                     "x_opencti_score": self.config.indicator_score_level,
                 },
             )
@@ -249,7 +210,9 @@ class MalBeaconConnector:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self._create_external_reference(),
+                    "x_opencti_external_references": self.converter.create_external_reference(
+                        SOURCE_URL
+                    ),
                     "x_opencti_score": self.config.indicator_score_level,
                 },
             )
@@ -259,7 +222,9 @@ class MalBeaconConnector:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self._create_external_reference(),
+                    "x_opencti_external_references": self.converter.create_external_reference(
+                        SOURCE_URL
+                    ),
                     "x_opencti_score": self.config.indicator_score_level,
                 },
             )
@@ -322,7 +287,7 @@ class MalBeaconConnector:
             valid_from=datetime.now(),
             pattern=self.create_indicator_pattern(value),
             created_by_ref=self.author["id"],
-            external_references=self._create_external_reference(),
+            external_references=self.converter.create_external_reference(SOURCE_URL),
             custom_properties={
                 "x_opencti_score": self.config.indicator_score_level,
                 "x_opencti_main_observable_type": obs_type,
@@ -351,7 +316,7 @@ class MalBeaconConnector:
             source_ref=source_id,
             target_ref=target_id,
             created_by_ref=self.author["id"],
-            external_references=self._create_external_reference(),
+            external_references=self.converter.create_external_reference(SOURCE_URL),
         )
 
     """
@@ -374,7 +339,9 @@ class MalBeaconConnector:
         try:
             already_processed = []
 
-            data = self.client.request_data(self.config.api_base_url + C2_PATH + obs_value)
+            data = self.client.request_data(
+                self.config.api_base_url + C2_PATH + obs_value
+            )
 
             """
             =========================================================
@@ -396,7 +363,7 @@ class MalBeaconConnector:
                 Add author, external references and indicator based on this observable
                 ========================================================================
                 """
-                self.author = self._create_author()
+                self.author = self.converter.create_author()
                 stix_external_ref_on_base_obs = self._create_obs(
                     obs_value, obs_standard_id
                 )
