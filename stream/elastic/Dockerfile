@@ -29,7 +29,10 @@ RUN /runtime/bin/pip3 install --upgrade pip && \
 COPY . .
 RUN poetry build && /runtime/bin/pip install dist/*.whl
 
+
 FROM base as runtime
+ENV CONNECTOR_TYPE=STREAM
+
 RUN apt-get update && apt-get install -y libmagic1 && apt-get clean
 COPY --from=builder /runtime /runtime
 

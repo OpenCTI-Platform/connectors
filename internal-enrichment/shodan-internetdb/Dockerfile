@@ -26,6 +26,7 @@ COPY src ./src
 RUN poetry install --no-dev
 
 FROM python:3.11-alpine
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 WORKDIR /opt/connector
 

@@ -5,7 +5,6 @@ services:
     container_name: ${CONTAINER_NAME}
     environment:
       # Connector's definition parameters:
-      - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
       - CONNECTOR_NAME=ExportConnectorTemplate
       - CONNECTOR_SCOPE=text/markdown
       # Connector's generic execution parameters:

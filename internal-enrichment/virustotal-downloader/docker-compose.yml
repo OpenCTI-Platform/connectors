@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - "CONNECTOR_NAME=VirusTotal Downloader"
       - CONNECTOR_SCOPE=StixFile
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables

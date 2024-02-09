@@ -24,7 +24,6 @@ OpenCTI data is coming from *import* connectors. Once this data is ingested in O
 | `opencti_url`                 | `OPENCTI_URL`                 | Yes          | The URL of the OpenCTI platform.                                                                                           |
 | `opencti_token`               | `OPENCTI_TOKEN`               | Yes          | The token of the OpenCTI user (it's recommanded to create a dedicated user for the connector with the Administrator role). |
 | `connector_id`                | `CONNECTOR_ID`                | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                         |
-| `connector_type`              | `CONNECTOR_TYPE`              | Yes          | Must be `STREAM` (this is the connector type).                                                                             |
 | `connector_live_stream_id`    | `CONNECTOR_LIVE_STREAM_ID`    | Yes          | The Live Stream ID of the stream created in the OpenCTI interface                                                          |
 | `connector_name`              | `CONNECTOR_NAME`              | Yes          | The name of the Tanium instance, to identify it if you have multiple Tanium connectors.                                    |
 | `connector_scope`             | `CONNECTOR_SCOPE`             | Yes          | Must be `tanium`, not used in this connector.                                                                              |

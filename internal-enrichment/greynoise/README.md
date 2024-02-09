@@ -22,7 +22,6 @@ If you are using it independently, remember that the connector will try to conne
 | `opencti_url`                    			| `OPENCTI_URL`                         | Yes       | The URL of the OpenCTI platform.                                                                         |
 | `opencti_token`                  			| `OPENCTI_TOKEN`                       | Yes       | The default admin token configured in the OpenCTI platform parameters file.                              |
 | `connector_id`                  			| `CONNECTOR_ID`                        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                       |
-| `connector_type`                			| `CONNECTOR_TYPE`                      | Yes       | Must be `INTERNAL_ENRICHMENT` (this is the connector type).                                              |
 | `connector_name`                			| `CONNECTOR_NAME`                      | Yes       | The name of the GreyNoise connector instance, to identify it if you have multiple GreyNoise connectors.  |
 | `connector_scope`              			| `CONNECTOR_SCOPE`                     | Yes       | Must be `ipv4-addr`.                                                        |
 | `connector_auto`							| `CONNECTOR_AUTO`                      | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables                                                         |

@@ -1,4 +1,5 @@
 FROM python:3.11-alpine
+ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
 
 # Copy the connector
 COPY src /opt/opencti-connector-import-file-stix

@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=SIEMRULES
       - CONNECTOR_SCOPE=identity,report,indicator
       - CONNECTOR_CONFIDENCE_LEVEL=70

@@ -18,7 +18,6 @@ Configuration parameters are set using environment variables. Some are set in th
 |--------------------------|-----------|-----------------------------------------------|
 | `OPENCTI_URL`                 | Yes       | URL of the OpenCTI platform. e.g., http://opencti:8080                    |
 | `OPENCTI_TOKEN`               | Yes       | Default admin token for OpenCTI.                 |
-| `CONNECTOR_TYPE`         | Yes       | Must be `EXTERNAL_IMPORT`.                    |
 | `CONNECTOR_NAME`         | Yes       | Name displayed in OpenCTI. e.g., crtsh                    |
 | `CONNECTOR_SCOPE`        | Yes       | Supported scope, e.g., `stix2`.           |
 | `CONNECTOR_ID`                | Yes       | Unique `UUIDv4` for this connector.              |
@@ -50,7 +49,6 @@ CONNECTOR_CONFIDENCE_LEVEL=100
 CONNECTOR_LOG_LEVEL=info
 CONNECTOR_RUN_EVERY=60s
 CONNECTOR_UPDATE_EXISTING_DATA=false
-CONNECTOR_TYPE=EXTERNAL_IMPORT
 CONNECTOR_SCOPE=stix2
 CONNECTOR_NAME=crtsh
 CRTSH_DOMAIN=[Domain to search, e.g., google.com]

@@ -4,7 +4,6 @@ services:
     image: opencti/connector-crtsh:5.12.29
     environment:
       # Connector's definition parameters:
-      - CONNECTOR_TYPE=${CONNECTOR_TYPE}
       - CONNECTOR_NAME=${CONNECTOR_NAME}
       - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
       # Connector's generic execution parameters:

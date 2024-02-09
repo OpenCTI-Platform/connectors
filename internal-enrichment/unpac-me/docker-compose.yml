@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=Unpac_Me
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - "CONNECTOR_NAME=UnpacMe"
       - CONNECTOR_SCOPE=Artifact
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
