@@ -710,7 +710,9 @@ class GreyNoiseConnector:
             self._generate_stix_malware_with_relationship(malwares)
             self._generate_stix_threat_actor_with_relationship(data)
 
-            self._generate_stix_indicator_with_relationship(data, labels, external_reference)
+            self._generate_stix_indicator_with_relationship(
+                data, labels, external_reference
+            )
             self._generate_stix_observable(labels, external_reference)
 
         uniq_bundles_objects = list(
@@ -738,7 +740,7 @@ class GreyNoiseConnector:
             else:
                 return self.helper.connector_logger.info(
                     "[INFO] The trigger does not concern the initial scope found in the config",
-                    {"scope_config": scope, "entity_id": entity["entity_id"]}
+                    {"scope_config": scope, "entity_id": entity["entity_id"]},
                 )
 
         # OpenCTI entity information retrieval
