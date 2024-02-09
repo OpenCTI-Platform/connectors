@@ -13,3 +13,6 @@ connector:
 
 malbeacon:
   api_key: "ChangeMe"
+  api_base_url: "https://api.malbeacon.com/v1/" # Required
+  indicator_score_level: 50
+  max_tlp: "TLP:AMBER" # Required, Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
