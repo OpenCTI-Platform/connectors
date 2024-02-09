@@ -1,22 +1,19 @@
 import ipaddress
-import os
 from datetime import datetime
-from typing import Optional
 
-import requests
+
 import stix2
 import validators
-import yaml
-from dateutil import parser
 from pycti import (
     Identity,
     Indicator,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
-from pydantic import BaseModel
+from models.c2_model import C2Beacon
 from stix2 import Bundle
+from malbeacon_config_variables import ConfigMalbeacon
+from malbeacon_client import MalbeaconClient
 
 C2_PATH = "c2/c2/"
 SOURCE_URL = "https://portal.malbeacon.com/illuminate"
@@ -37,50 +34,14 @@ class MalBeaconConnector:
         """
         Initialize the Malbeacon Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        self.helper = OpenCTIConnectorHelper(config, True)
-
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], config
-        )
-
-        self.api_key = get_config_variable(
-            "MALBEACON_API_KEY", ["malbeacon", "api_key"], config
-        )
-
-        self.api_base_url = get_config_variable(
-            "MALBEACON_API_BASE_URL", ["malbeacon", "api_base_url"], config
-        )
-
-        self.indicator_score_level = get_config_variable(
-            "MALBEACON_INDICATOR_SCORE_LEVEL",
-            ["malbeacon", "indicator_score_level"],
-            config,
-        )
-
-        self.max_tlp = get_config_variable(
-            "MALBEACON_MAX_TLP",
-            ["malbeacon", "max_tlp"],
-            config,
-        )
+        self.config = ConfigMalbeacon()
+        self.helper = OpenCTIConnectorHelper(self.config.load, True)
+        self.client = MalbeaconClient(self.helper)
 
         # Define variables
         self.author = None
         self.tlp = None
         self.stix_object_list = []
-
-        # Define headers in session and update when needed
-        headers = {"X-Api-Key": self.api_key}
-        self.session = requests.Session()
-        self.session.headers.update(headers)
 
     @staticmethod
     def _create_author() -> dict:
@@ -152,7 +113,7 @@ class MalBeaconConnector:
                 if marking_definition["definition_type"] == "TLP":
                     self.tlp = marking_definition["definition"]
 
-        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(self.tlp, self.max_tlp)
+        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(self.tlp, self.config.max_tlp)
 
         return is_valid_max_tlp
 
@@ -179,10 +140,9 @@ class MalBeaconConnector:
         info_msg = "[CONNECTOR] Processing observable for the following entity type: "
         self.helper.connector_logger.info(info_msg, {"type": {obs_type}})
 
-        # TODO: add "Email-Address"
-        obs_list = ["Domain-Name", "IPv4-Addr", "IPv6-Addr"]
+        # TODO: add "Email-Address" in scope
 
-        if obs_type in obs_list:
+        if obs_type in self.config.connector_scope:
             stix_objects = self.process_c2(obs_value, obs_standard_id, obs_type)
 
             if stix_objects is not None and len(stix_objects) is not None:
@@ -210,6 +170,7 @@ class MalBeaconConnector:
         :return: A string from process observable
         """
         entity_id = data["entity_id"]
+
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
 
         if observable is not None:
@@ -220,28 +181,6 @@ class MalBeaconConnector:
         Start main execution loop procedure for Malbeacon connector
         """
         self.helper.listen(self._process_message)
-
-    """
-    Helper Functions
-    """
-
-    def _request_data(self, url_path: str) -> list | None:
-        """
-        Handle API requests
-        :param url_path: URL path in string
-        :return: Response in JSON list format or None
-        """
-        try:
-            response = self.session.get(url_path)
-
-            return response.json()
-
-        except requests.exceptions.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": {url_path}, "error": {str(err)}}
-            )
-            return None
 
     """
     Handle Observables
@@ -301,7 +240,7 @@ class MalBeaconConnector:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self._create_external_reference(),
-                    "x_opencti_score": self.indicator_score_level,
+                    "x_opencti_score": self.config.indicator_score_level,
                 },
             )
         elif self._is_ipv4(value) is True:
@@ -311,7 +250,7 @@ class MalBeaconConnector:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self._create_external_reference(),
-                    "x_opencti_score": self.indicator_score_level,
+                    "x_opencti_score": self.config.indicator_score_level,
                 },
             )
         elif self._is_domain(value) is True:
@@ -321,7 +260,7 @@ class MalBeaconConnector:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self._create_external_reference(),
-                    "x_opencti_score": self.indicator_score_level,
+                    "x_opencti_score": self.config.indicator_score_level,
                 },
             )
         else:
@@ -385,7 +324,7 @@ class MalBeaconConnector:
             created_by_ref=self.author["id"],
             external_references=self._create_external_reference(),
             custom_properties={
-                "x_opencti_score": self.indicator_score_level,
+                "x_opencti_score": self.config.indicator_score_level,
                 "x_opencti_main_observable_type": obs_type,
             },
         )
@@ -435,7 +374,7 @@ class MalBeaconConnector:
         try:
             already_processed = []
 
-            data = self._request_data(self.api_base_url + C2_PATH + obs_value)
+            data = self.client.request_data(self.config.api_base_url + C2_PATH + obs_value)
 
             """
             =========================================================
@@ -575,93 +514,6 @@ class MalBeaconConnector:
             error_msg = "[CONNECTOR] Error while processing C2 beacons: "
             self.helper.connector_logger.error(error_msg, {"error": {str(err)}})
             return None
-
-
-"""
-===========
-Models
-===========
-"""
-
-
-class C2Beacon(BaseModel):
-    """
-    MalBeacon C2 Beacon base model
-    """
-
-    tstamp: Optional[str]  # format: 2020-10-22 09:04:40
-    actorasnorg: Optional[str]
-    actorcity: Optional[str]
-    actorcountrycode: Optional[str]
-    actorhostname: Optional[str]
-    actorip: Optional[str]
-    actorloc: Optional[str]
-    actorregion: Optional[str]
-    actortimezone: Optional[str]
-    c2: Optional[str]
-    c2asnorg: Optional[str]
-    c2city: Optional[str]
-    c2countrycode: Optional[str]
-    c2domain: Optional[str]
-    c2domainresolved: Optional[str]
-    c2hostname: Optional[str]
-    c2loc: Optional[str]
-    c2region: Optional[str]
-    c2timezone: Optional[str]
-    cookie_id: Optional[str]
-    useragent: Optional[str]
-    tags: Optional[str]
-
-    @property
-    def cti_tags(self) -> list:
-        return self.tags.split(",")
-
-    @property
-    def cti_date(self) -> str:
-        return parser.parse(self.tstamp).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-
-
-class EmailBeacon(BaseModel):
-    """
-    Malbeacon Email Beacon base model
-    """
-
-    tstamp: Optional[str]  # format: 2020-10-22 09:04:40
-    emailaddress: Optional[str]
-    cookie_id: Optional[str]
-    useragent: Optional[str]
-    tags: Optional[str]
-    malhashes: Optional[str]
-    actorip: Optional[str]
-    actorcity: Optional[str]
-    actorregion: Optional[str]
-    actorcountrycode: Optional[str]
-    actorasnorg: Optional[str]
-    actorhostname: Optional[str]
-    actorloc: Optional[str]
-    actortimezone: Optional[str]
-    referrer: Optional[str]
-    refdomain: Optional[str]
-    refdomainresolved: Optional[str]
-    refcity: Optional[str]
-    refregion: Optional[str]
-    refcountrycode: Optional[str]
-    reftimezone: Optional[str]
-    refasnorg: Optional[str]
-    refloc: Optional[str]
-    refhostname: Optional[str]
-
-    @property
-    def cti_tags(self) -> list:
-        return self.tags.split(",")
-
-    @property
-    def cti_hashes(self) -> list:
-        return self.malhashes.split(",")
-
-    @property
-    def cti_date(self) -> str:
-        return parser.parse(self.tstamp).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
 if __name__ == "__main__":
