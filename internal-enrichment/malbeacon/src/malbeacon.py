@@ -171,7 +171,7 @@ class MalBeaconConnector:
                 "the connector does not has access to this observable, please check the group of the connector user"
             )
 
-        # Extract IPv4, IPv6, Hostname and Domain from entity data
+        # Extract IPv4, IPv6, and Domain from entity data
         obs_standard_id = observable["standard_id"]
         obs_value = observable["observable_value"]
         obs_type = observable["entity_type"]
@@ -207,7 +207,7 @@ class MalBeaconConnector:
         """
         Get observable newly created from OpenCTI and process enrichment
         :param data: Dictionary of data
-        :return: None
+        :return: A string from process observable
         """
         entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
