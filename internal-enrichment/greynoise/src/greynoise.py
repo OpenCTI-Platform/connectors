@@ -650,7 +650,6 @@ class GreyNoiseConnector:
 
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
         :param data_tags: A parameter that contains all the data relating to the existing tags in GreyNoise.
-        we will also add bundles to this list as we go.
         :param stix_entity: A parameter that contains all the IPv4 information in OpenCTI.
         :return: str bundle
         """
@@ -739,6 +738,7 @@ class GreyNoiseConnector:
         for scope in scopes:
             if entity["entity_id"].startswith(scope):
                 is_entity_in_scope = True
+                break
             else:
                 is_entity_in_scope = False
 
@@ -823,7 +823,8 @@ class GreyNoiseConnector:
                 )
         else:
             return self.helper.connector_logger.info(
-                "[INFO] The trigger does not concern the initial scope found in the config",
+                "[INFO] The trigger does not concern the initial scope found in the config connector, "
+                "maybe choose a more specific filter in the playbook",
                 {"entity_id": entity["entity_id"]},
             )
 
