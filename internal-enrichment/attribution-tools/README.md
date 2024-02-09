@@ -8,7 +8,6 @@ The tool will assess the best matching intrusion-sets for the incident based on 
 | `opencti.opencti_url` | `OPENCTI_URL` | string | true | The URL of the OpenCTI platform. |
 | `opencti.opencti_token` | `OPENCTI_TOKEN` | string | true | The default admin token configured in the OpenCTI platform parameters file. |
 | `connector.id` | `CONNECTOR_ID` | uuidv4 string | true |  A valid arbitrary UUIDv4 that must be unique for this connector. |
-| `connector.type` | `CONNECTOR_TYPE` | string=`INTERNAL_ENRICHMENT` | true | Must be `INTERNAL_ENRICHMENT` |
 | `connector.name` | `CONNECTOR_NAME` | string | true | The name of the connector such as `attribution-tools` |
 | `connector.scope` | `CONNECTOR_SCOPE` | string=`Incident` | true | Must be `Incident` |
 | `connector.auto` | `CONNECTOR_AUTO` | boolean | true | Whether new Incident entities should be automatically enriched. Either `true` or `false`. |

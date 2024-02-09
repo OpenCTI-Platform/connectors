@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Urlscan
       - CONNECTOR_SCOPE=urlscan
       - CONNECTOR_LOG_LEVEL=error

@@ -17,7 +17,6 @@ An SSL certificate can be associated with one or more servers (IP address:port c
 | `opencti_url`                | `OPENCTI_URL`                | Yes       | The URL of the OpenCTI platform.                                                              |
 | `opencti_token`              | `OPENCTI_TOKEN`              | Yes       | The default admin token configured in the OpenCTI platform parameters file.                   |
 | `connector_id`               | `CONNECTOR_ID`               | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                            |
-| `connector_type`             | `CONNECTOR_TYPE`             | Yes       |                                                                                               |
 | `connector_name`             | `CONNECTOR_NAME`             | Yes       |                                                                                               |
 | `connector_scope`            | `CONNECTOR_SCOPE`            | Yes       |                                                                                               |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 1 and 4).                |

@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://opencti:4000
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=Recorded Future Enrichment
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain-name,url,stixfile
       - CONNECTOR_AUTO=false

@@ -1,4 +1,5 @@
 FROM python:3.11-alpine
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy only requirements, to cache them in docker layer
 WORKDIR /opt/opencti-connector-orange-cyberdefense

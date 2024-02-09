@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=#Changeme
       # Connector's definition parameters:
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT  # Must be INTERNAL_ENRICHMENT.
       - CONNECTOR_NAME=hostio
       - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,IPv6-Addr
       - CONNECTOR_ID=#Changeme

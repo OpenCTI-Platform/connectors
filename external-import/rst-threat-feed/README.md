@@ -32,7 +32,6 @@ Configuration of the connector is straightforward. The minimal configuration req
 | OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform. |
 | OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token set in the OpenCTI platform. |
 | Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` identifier for this connector instance. |
-| Connector Type | `CONNECTOR_TYPE` | Yes | Should always be set to `EXTERNAL_IMPORT` for this connector. |
 | Connector Name | `CONNECTOR_NAME` | Yes | Name of the connector. For example: `RST Threat Feed`. |
 | Connector Scope | `CONNECTOR_SCOPE` | Yes | The scope or type of data the connector is importing, either a MIME type or Stix Object. E.g. application/json |
 | Confidence Level | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | The default confidence level for created sightings. It's a number between 1 and 100, with 100 being the most confident. |

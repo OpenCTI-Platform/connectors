@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - "CONNECTOR_NAME=Hybrid Analysis (Sandbox Windows 10 64bit)"
       - "CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,Hostname"
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables

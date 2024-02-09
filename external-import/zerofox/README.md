@@ -35,7 +35,6 @@ The connectors adds the following Entities:
 | `opencti_url`        | `OPENCTI_URL`        | Yes          | The URL of the OpenCTI platform.                                            |
 | `opencti_token`      | `OPENCTI_TOKEN`      | Yes          | The default admin token configured in the OpenCTI platform parameters file. |
 | `connector_id`       | `CONNECTOR_ID`       | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.          |
-| `connector_type`     | `CONNECTOR_TYPE`     | Yes          | Must be `EXTERNAL_IMPORT` (this is the connector type).                     |
 | `connector_name`     | `CONNECTOR_NAME`     | Yes          | Option `ZeroFox`                                                            |
 | `connector_scope`    | `CONNECTOR_SCOPE`    | Yes          | Supported scope: Template Scope (MIME Type or Stix Object)                  |
 | `username`           | `ZEROFOX_USERNAME`   | Yes          | The username used to sign into zerofox and retrive the access tokens        
