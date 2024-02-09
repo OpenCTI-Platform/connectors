@@ -290,7 +290,7 @@ class GreyNoiseConnector:
         )
         self.stix_objects.append(self.greynoise_identity)
 
-    def _generate_other_stix_identity(self, data: dict):
+    def _generate_other_stix_identity_with_relationship(self, data: dict):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Identity (organization)"
         provided by GreyNoise in Stix2 format,
@@ -317,7 +317,7 @@ class GreyNoiseConnector:
         )
         self.stix_objects.append(observable_to_organization)
 
-    def _generate_stix_asn(self, data: dict):
+    def _generate_stix_asn_with_relationship(self, data: dict):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Autonomous System Number"
         provided by GreyNoise in Stix2 format,
@@ -346,7 +346,7 @@ class GreyNoiseConnector:
         )
         self.stix_objects.append(observable_to_asn)
 
-    def _generate_stix_location(self, data: dict):
+    def _generate_stix_location_with_relationship(self, data: dict):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Location (City + Country)"
         provided by GreyNoise in Stix2 format.
@@ -395,7 +395,7 @@ class GreyNoiseConnector:
         )
         self.stix_objects.append(city_to_country)
 
-    def _generate_stix_vulnerability(self, data: dict):
+    def _generate_stix_vulnerability_with_relationship(self, data: dict):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "vulnerability"
         provided by GreyNoise in Stix2 format.
@@ -427,7 +427,7 @@ class GreyNoiseConnector:
                 )
                 self.stix_objects.append(observable_to_vulnerability)
 
-    def _generate_stix_tool(self, data: dict):
+    def _generate_stix_tool_with_relationship(self, data: dict):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "tool"
         provided by GreyNoise in Stix2 format.
@@ -513,7 +513,7 @@ class GreyNoiseConnector:
         )
         self.stix_objects.append(stix_sighting)
 
-    def _generate_stix_malware(self, malwares: list):
+    def _generate_stix_malware_with_relationship(self, malwares: list):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "malware"
         provided by GreyNoise in Stix2 format.
@@ -546,7 +546,7 @@ class GreyNoiseConnector:
             )
             self.stix_objects.append(observable_to_malware)
 
-    def _generate_stix_threat_actor(self, data: dict):
+    def _generate_stix_threat_actor_with_relationship(self, data: dict):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Threat Actor"
         provided by GreyNoise in Stix2 format.
@@ -579,7 +579,7 @@ class GreyNoiseConnector:
             )
             self.stix_objects.append(observable_to_threat_actor)
 
-    def _generate_stix_indicator(
+    def _generate_stix_indicator_with_relationship(
         self, data: dict, labels: list, external_reference: list
     ):
         """
@@ -700,17 +700,17 @@ class GreyNoiseConnector:
             # Generate Stix Object for bundle
             labels, malwares = self._process_labels(data, data_tags)
             external_reference = self._generate_stix_external_reference(data)
-
-            self._generate_other_stix_identity(data)
-            self._generate_stix_asn(data)
-            self._generate_stix_location(data)  # City + Country
-            self._generate_stix_vulnerability(data)
-            self._generate_stix_tool(data)
             self._generate_stix_sighting(external_reference)
-            self._generate_stix_malware(malwares)
-            self._generate_stix_threat_actor(data)
 
-            self._generate_stix_indicator(data, labels, external_reference)
+            self._generate_other_stix_identity_with_relationship(data)
+            self._generate_stix_asn_with_relationship(data)
+            self._generate_stix_location_with_relationship(data)  # City + Country
+            self._generate_stix_vulnerability_with_relationship(data)
+            self._generate_stix_tool_with_relationship(data)
+            self._generate_stix_malware_with_relationship(malwares)
+            self._generate_stix_threat_actor_with_relationship(data)
+
+            self._generate_stix_indicator_with_relationship(data, labels, external_reference)
             self._generate_stix_observable(labels, external_reference)
 
         uniq_bundles_objects = list(
@@ -729,6 +729,17 @@ class GreyNoiseConnector:
         return stix2_bundle
 
     def _process_message(self, entity: dict) -> str:
+
+        # Security to limit playbook triggers to something other than the scope initial
+        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
+        for scope in scopes:
+            if entity["entity_id"].startswith(scope):
+                pass
+            else:
+                return self.helper.connector_logger.info(
+                    "[INFO] The trigger does not concern the initial scope found in the config",
+                    {"scope_config": scope, "entity_id": entity["entity_id"]}
+                )
 
         # OpenCTI entity information retrieval
         opencti_entity = self._get_entity_in_opencti(entity)
