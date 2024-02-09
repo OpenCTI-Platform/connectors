@@ -12,7 +12,8 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=error
-      - CITALID_FILES_PATH=/path/to/data
-      - CITALID_START_DATE=1609455600 # 2021-01-01
-      - CITALID_INTERVAL=5 # In minutes
+      - CITALID_CUSTOMER_SUB_DOMAIN_URL='https://ChangeMe.citalid.com'
+      - CITALID_USER=ChangeMe
+      - CITALID_PASSWORD=ChangeMe
+      - CITALID_INTERVAL=24 # In hours
     restart: always
