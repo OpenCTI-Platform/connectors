@@ -15,7 +15,6 @@ The connector requires a configuration file or certain environment variables to 
 | `opencti.url`                   | `OPENCTI_URL`                 | Yes       | The URL of the OpenCTI platform. |
 | `opencti.token`                 | `OPENCTI_TOKEN`               | Yes       | The default admin token configured in the OpenCTI platform parameters file. |
 | `connector.id`                  | `CONNECTOR_ID`                | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector. |
-| `connector.type`                | `CONNECTOR_TYPE`              | Yes       | Must be `STREAM` (this is the connector type). |
 | `connector.name`                | `CONNECTOR_NAME`              | Yes       | An arbitrary name for this connector. Unused. |
 | `connector.scope`               | `CONNECTOR_SCOPE`             | Yes       | Must be `threatbus`. |
 | `connector.confidence_level`    | `CONNECTOR_CONFIDENCE_LEVEL`  | Yes       | The confidence_level of relationships created by the connector. Unused. |

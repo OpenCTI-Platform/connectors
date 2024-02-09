@@ -15,7 +15,6 @@ This connector allows to push IOC from OpenCTI to CrowdStrike Endpoint Security.
 | `opencti_url`                          | `OPENCTI_URL`                          | Yes          | The URL of the OpenCTI platform.                                                              |
 | `opencti_token`                        | `OPENCTI_TOKEN`                        | Yes          | The default admin token configured in the OpenCTI platform parameters file.                   |
 | `connector_id`                         | `CONNECTOR_ID`                         | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                            |
-| `connector_type`                       | `CONNECTOR_TYPE`                       | Yes          | Must be `STREAM` (this is the connector type).                                                |
 | `connector_name`                       | `CONNECTOR_NAME`                       | Yes          | Connector name.       |
 | `connector_scope`                      | `CONNECTOR_SCOPE`                      | Yes          | Must be `crowdstrike`, not used in this connector.                                            |
 | `connector_confidence_level`           | `CONNECTOR_CONFIDENCE_LEVEL`           | Yes          | The default confidence level for created sightings (a number between 1 and 4).                |

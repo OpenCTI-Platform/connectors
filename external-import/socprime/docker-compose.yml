@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=SOC Prime
       - CONNECTOR_SCOPE=socprime
       - CONNECTOR_LOG_LEVEL=error

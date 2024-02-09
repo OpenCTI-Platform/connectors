@@ -1,4 +1,5 @@
 FROM python:3.11-alpine
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 RUN apk --no-cache add git build-base libmagic libffi-dev
 

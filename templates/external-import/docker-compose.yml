@@ -5,7 +5,6 @@ services:
     container_name: ${CONTAINER_NAME}
     environment:
       # Connector's definition parameters:
-      - CONNECTOR_TYPE=${CONNECTOR_TYPE}
       - CONNECTOR_NAME=${CONNECTOR_NAME}
       - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
       # Connector's generic execution parameters:

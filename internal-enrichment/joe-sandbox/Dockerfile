@@ -1,4 +1,5 @@
 FROM python:3.11-alpine
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Copy the worker
 COPY src/requirements.txt /opt/opencti-connector-joe-sandbox/requirements.txt

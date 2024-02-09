@@ -19,7 +19,6 @@ connector creates a relationship between the Artifact and Indicator.
 | `opencti_url`                        | `OPENCTI_URL`                       | Yes          | The URL of the OpenCTI platform.                                                                                                                           |
 | `opencti_token`                      | `OPENCTI_TOKEN`                     | Yes          | The default admin token configured in the OpenCTI platform parameters file.                                                                                |
 | `connector_id`                       | `CONNECTOR_ID`                      | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                         |
-| `connector_type`                     | `CONNECTOR_TYPE`                    | Yes          | Must be `INTERNAL_ENRICHMENT` (this is the connector type).                                                                                                      |
 | `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | Set to "YARA"
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope: Artifact
 | `connector_auto`                    | `CONNECTOR_AUTO`                   | Yes          | Enable or disable auto-enrichment
