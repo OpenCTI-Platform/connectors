@@ -1,4 +1,4 @@
-# External Ingestion Template Connector
+# RansomwareLive Connector
 
 <!--
 General description of the connector
