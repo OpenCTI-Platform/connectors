@@ -23,24 +23,8 @@ class YaraConnector:
 
     def _get_artifact(self, entity_id):
         self.helper.log_debug("Getting Artifact from OpenCTI")
-
-        customAttributes = """
-        id
-        standard_id
-        observable_value
-        ... on Artifact {
-                importFiles {
-                        edges {
-                                node {
-                                    id
-                                    name
-                                }
-                            }
-                        }
-        }
-        """
         observable = self.helper.api.stix_cyber_observable.read(
-            id=entity_id, customAttributes=customAttributes
+            id=entity_id, withFiles=True
         )
         return observable
 
