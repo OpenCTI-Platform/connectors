@@ -33,7 +33,7 @@ class CustomConnector(RansomwareAPIConnector):
 
         Returns:
             stix_objects: A list of STIX2 objects."""
-        
+
         raise NotImplementedError("This method has not been implemented yet")
 
 
