@@ -2,7 +2,6 @@
 import sys
 import time
 
-import stix2
 from lib.ransomConn import RansomwareAPIConnector
 
 
