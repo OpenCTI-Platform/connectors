@@ -6,8 +6,15 @@ from datetime import datetime
 
 import requests
 from pycti import OpenCTIConnectorHelper
-from stix2 import (Bundle, ExternalReference, Identity, Location, Relationship,
-                   Report, ThreatActor)
+from stix2 import (
+    Bundle,
+    ExternalReference,
+    Identity,
+    Location,
+    Relationship,
+    Report,
+    ThreatActor,
+)
 
 
 class RansomwareAPIConnector:
