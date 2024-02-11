@@ -10,8 +10,8 @@ services:
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report
       # Connector's generic execution parameters:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=b80a5564-45a4-4f1d-a001-2e06012c1b6c
-      - CONNECTOR_ID=6368fb76-7eef-4e97-8aef-732fed4974fd
+      - OPENCTI_TOKEN=Changeme #generate user token
+      - CONNECTOR_ID=Changeme #Valid UUIDv4 tokem
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted).
       - CONNECTOR_LOG_LEVEL=info # Log level: debug, info, warn, error, fatal
       - CONNECTOR_UPDATE_EXISTING_DATA=false
