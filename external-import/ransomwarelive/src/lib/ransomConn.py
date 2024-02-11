@@ -1,14 +1,13 @@
+import datetime as dt
 import os
 import sys
 import time
-import json
-import requests
 from datetime import datetime
-import datetime as dt
 
-import stix2
-from stix2 import Bundle, Report, Identity, ThreatActor, ExternalReference,Location,Relationship
+import requests
 from pycti import OpenCTIConnectorHelper
+from stix2 import (Bundle, ExternalReference, Identity, Location, Relationship,
+                   Report, ThreatActor)
 
 
 class RansomwareAPIConnector:
@@ -280,7 +279,7 @@ class RansomwareAPIConnector:
 
                        #Creating Bundle
                         
-                        bundle = stix2.Bundle(
+                        bundle = Bundle(
                             objects=bundle_objects, allow_custom=True
                         ).serialize()
 
