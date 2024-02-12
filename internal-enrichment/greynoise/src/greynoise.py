@@ -725,8 +725,6 @@ class GreyNoiseConnector:
             },
         )
 
-        # stix2_bundle_standard = stix2.Bundle(uniq_bundles_objects, allow_custom=True)
-        # stix_bundle_serialize = stix2_bundle_standard.serialize()
         stix2_bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
         return stix2_bundle
 
