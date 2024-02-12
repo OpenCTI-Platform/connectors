@@ -761,7 +761,7 @@ class GreyNoiseConnector:
                 )
                 json_data: dict = response.json()
 
-                if json_data["seen"] is False and self.sighting_not_seen is False:
+                if "seen" in json_data and json_data["seen"] is False and self.sighting_not_seen is False:
                     raise ValueError(
                         "[API] This IP has not yet been identified by GreyNoise"
                     )
@@ -775,27 +775,9 @@ class GreyNoiseConnector:
                 json_data_tags: dict = tags_response.json()
 
                 # Handling specific errors for Greynoise API
-                if response.status_code == 429 or tags_response.status_code == 429:
+                if response.status_code >= 400 or tags_response.status_code >= 400:
                     raise ValueError(
-                        "[API] Status code 429: Observable processed after quota reached, waiting 1 hour."
-                    )
-
-                if response.status_code >= 400:
-                    raise ValueError(
-                        "[API] Error:",
-                        {
-                            "status_code": response.status_code,
-                            "response": response.text,
-                        },
-                    )
-
-                if tags_response.status_code >= 400:
-                    raise ValueError(
-                        "[API] Error:",
-                        {
-                            "status_code": tags_response.status_code,
-                            "response": tags_response.text,
-                        },
+                        f"[API] Error - Status code : {response.status_code}, {response.text}",
                     )
 
                 # Generate a stix bundle
