@@ -761,7 +761,11 @@ class GreyNoiseConnector:
                 )
                 json_data: dict = response.json()
 
-                if "seen" in json_data and json_data["seen"] is False and self.sighting_not_seen is False:
+                if (
+                    "seen" in json_data
+                    and json_data["seen"] is False
+                    and self.sighting_not_seen is False
+                ):
                     raise ValueError(
                         "[API] This IP has not yet been identified by GreyNoise"
                     )
