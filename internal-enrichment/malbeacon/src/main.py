@@ -32,33 +32,6 @@ class MalBeaconConnector:
         self.tlp = None
         self.stix_object_list = []
 
-    @staticmethod
-    def _to_stix_bundle(stix_objects: list) -> Bundle:
-        """
-        Create a bundle of STIX objects
-        :param stix_objects: List of STIX objects
-        :return:STIX objects as a Bundle
-        """
-        return stix2.Bundle(objects=stix_objects, allow_custom=True)
-
-    @staticmethod
-    def _to_json_bundle(stix_bundle: Bundle) -> str:
-        """
-        Convert bundle into JSON format
-        :param stix_bundle: Bundle of STIX object
-        :return: STIX bundle as JSON format
-        """
-        return stix_bundle.serialize()
-
-    def send_stix_bundle(self, stix_bundle_json: str) -> None:
-        """
-        Send stix bundle to OpenCTI
-        :param stix_bundle_json:
-        :return: None
-        """
-        self.helper.send_stix2_bundle(stix_bundle_json)
-        pass
-
     def extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
         Extract TLP, and we check if the variable "max_tlp" is less than
@@ -76,46 +49,53 @@ class MalBeaconConnector:
 
         return is_valid_max_tlp
 
-    def _process_observable(self, observable: dict) -> str:
+    def _process_observable(
+        self, data_from_enrichment: dict, opencti_entity: dict
+    ) -> str:
         """
         Get the observable created in OpenCTI and check which type
         Send for process c2
-        :param observable: dict of observable properties
+        :param data_from_enrichment: dict of observable properties
         :return: Info message in string
         """
 
-        is_valid_tlp = self.extract_and_check_markings(observable)
+        is_valid_tlp = self.extract_and_check_markings(opencti_entity)
         if not is_valid_tlp:
             raise ValueError(
                 "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
                 "the connector does not has access to this observable, please check the group of the connector user"
             )
 
+        self.stix_object_list = data_from_enrichment["stix_objects"]
+        observable = data_from_enrichment["stix_entity"]
+
         # Extract IPv4, IPv6, and Domain from entity data
-        obs_standard_id = observable["standard_id"]
-        obs_value = observable["observable_value"]
-        obs_type = observable["entity_type"]
+        obs_standard_id = observable["id"]
+        obs_value = observable["value"]
+        obs_type = observable["type"]
 
         info_msg = "[CONNECTOR] Processing observable for the following entity type: "
         self.helper.connector_logger.info(info_msg, {"type": {obs_type}})
 
         # TODO: add "Email-Address" in scope
-
-        if obs_type in self.config.connector_scope:
-            stix_objects = self.process_c2(obs_value, obs_standard_id, obs_type)
+        connector_scope = (
+            self.config.connector_scope.lower().replace(" ", "").split(",")
+        )
+        if obs_type in connector_scope:
+            stix_objects = self.process_c2(
+                obs_value, obs_standard_id, opencti_entity["entity_type"]
+            )
 
             if stix_objects is not None and len(stix_objects) is not None:
-                stix_objects_bundle = self._to_stix_bundle(stix_objects)
-                stix_objects_to_json = self._to_json_bundle(stix_objects_bundle)
-
-                self.send_stix_bundle(stix_objects_to_json)
+                stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+                bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
 
                 info_msg = (
                     "[API] Observable value found on Malbeacon API and knowledge added for type: "
                     + obs_type
                     + ", sending "
-                    + str(len(stix_objects))
-                    + " objects"
+                    + str(len(bundles_sent))
+                    + " stix bundle(s) for worker import"
                 )
                 return info_msg
             else:
@@ -130,10 +110,13 @@ class MalBeaconConnector:
         """
         entity_id = data["entity_id"]
 
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        opencti_entity = self.helper.api.stix_cyber_observable.read(id=entity_id)
 
-        if observable is not None:
-            return self._process_observable(observable)
+        if opencti_entity is not None:
+            data_from_enrichment = self.helper.get_data_from_enrichment(
+                data, opencti_entity
+            )
+            return self._process_observable(data_from_enrichment, opencti_entity)
 
     def start(self) -> None:
         """
