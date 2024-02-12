@@ -1,16 +1,9 @@
-import ipaddress
-from datetime import datetime
-
-import stix2
-import validators
 from malbeacon_client import MalbeaconClient
 from malbeacon_config_variables import ConfigMalbeacon
 from malbeacon_converter import MalbeaconConverter
-from malbeacon_endpoints import C2_PATH, SOURCE_URL
-from malbeacon_utils import STIX_OBS_MAP
+from malbeacon_endpoints import C2_PATH
 from models.c2_model import C2Beacon
-from pycti import Indicator, OpenCTIConnectorHelper, StixCoreRelationship
-from stix2 import Bundle
+from pycti import OpenCTIConnectorHelper
 
 
 class MalBeaconConnector:
@@ -30,6 +23,7 @@ class MalBeaconConnector:
         # Define variables
         self.author = None
         self.tlp = None
+        self.external_references = None
         self.stix_object_list = []
 
     def extract_and_check_markings(self, opencti_entity: dict) -> bool:
@@ -125,184 +119,6 @@ class MalBeaconConnector:
         self.helper.listen(self._process_message)
 
     """
-    Handle Observables
-    """
-
-    @staticmethod
-    def _is_ipv6(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv6
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv6Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_ipv4(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv4
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv4Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_domain(value: str) -> bool:
-        """
-        Valid domain name regex including internationalized domain name
-        :param value: Value in string
-        :return: A boolean
-        """
-        is_valid_domain = validators.domain(value)
-
-        if is_valid_domain:
-            return True
-        else:
-            return False
-
-    def _create_obs(self, value: str, obs_id: str = None) -> dict:
-        """
-        Create observable according to value given
-        :param value: Value in string
-        :param obs_id: Value of observable ID in string
-        :return: Stix object for IPV4, IPV6 or Domain
-        """
-        if self._is_ipv6(value) is True:
-            return stix2.IPv6Address(
-                id=obs_id if obs_id is not None else None,
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.converter.create_external_reference(
-                        SOURCE_URL
-                    ),
-                    "x_opencti_score": self.config.indicator_score_level,
-                },
-            )
-        elif self._is_ipv4(value) is True:
-            return stix2.IPv4Address(
-                id=obs_id if obs_id is not None else None,
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.converter.create_external_reference(
-                        SOURCE_URL
-                    ),
-                    "x_opencti_score": self.config.indicator_score_level,
-                },
-            )
-        elif self._is_domain(value) is True:
-            return stix2.DomainName(
-                id=obs_id if obs_id is not None else None,
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.converter.create_external_reference(
-                        SOURCE_URL
-                    ),
-                    "x_opencti_score": self.config.indicator_score_level,
-                },
-            )
-        else:
-            raise ValueError(
-                f"This observable value '{value}' is not a valid IPv4 or IPv6 address nor DomainName."
-            )
-
-    """
-    Handle Indicator
-    """
-
-    def create_indicator_pattern(self, value: str) -> str:
-        """
-        Create indicator pattern
-        :param value: Value in string
-        :return: String of the pattern
-        """
-        if self._is_ipv6(value) is True:
-            return f"[ipv6-addr:value = '{value}']"
-        elif self._is_ipv4(value) is True:
-            return f"[ipv4-addr:value = '{value}']"
-        elif self._is_domain(value) is True:
-            return f"[domain-name:value = '{value}']"
-        else:
-            raise ValueError(
-                f"This pattern value {value} is not a valid IPv4 or IPv6 address nor Domain name"
-            )
-
-    def main_observable_type(self, value: str) -> str:
-        """
-        Find the observable type according to value
-        :param value: Value in string
-        :return: Observable type in string
-        """
-        pattern = self.create_indicator_pattern(value)
-        pattern_split = pattern.split("=")
-        observable_type = pattern_split[0].strip("[").strip()
-
-        if observable_type in STIX_OBS_MAP:
-            return STIX_OBS_MAP[observable_type]
-        else:
-            return "Unknown"
-
-    def _create_indicator(
-        self, obs_type: str, value: str, description: str = None
-    ) -> dict:
-        """
-        Creates and returns STIX2 indicator object
-        :param obs_type: Type in string
-        :param value: Value in string
-        :param description: Description in string
-        :return: Indicator STIX object
-        """
-        return stix2.Indicator(
-            id=Indicator.generate_id(self.create_indicator_pattern(value)),
-            name=value,
-            description=description,
-            pattern_type="stix",
-            valid_from=datetime.now(),
-            pattern=self.create_indicator_pattern(value),
-            created_by_ref=self.author["id"],
-            external_references=self.converter.create_external_reference(SOURCE_URL),
-            custom_properties={
-                "x_opencti_score": self.config.indicator_score_level,
-                "x_opencti_main_observable_type": obs_type,
-            },
-        )
-
-    """
-    Handle relationships
-    """
-
-    def _create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
-        """
-        Creates Relationship object linking indicator and observable
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
-        """
-        return stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author["id"],
-            external_references=self.converter.create_external_reference(SOURCE_URL),
-        )
-
-    """
     ==============================================================
     Main C2 process
     Convert Malbeacon data imported into STIX2 standard object
@@ -346,14 +162,15 @@ class MalBeaconConnector:
                 Add author, external references and indicator based on this observable
                 ========================================================================
                 """
+
                 self.author = self.converter.create_author()
-                stix_external_ref_on_base_obs = self._create_obs(
+                stix_external_ref_on_base_obs = self.converter.create_obs(
                     obs_value, obs_standard_id
                 )
-                stix_indicator_based_on_obs = self._create_indicator(
+                stix_indicator_based_on_obs = self.converter.create_indicator(
                     obs_type, obs_value
                 )
-                base_stix_relationship = self._create_relationship(
+                base_stix_relationship = self.converter.create_relationship(
                     stix_indicator_based_on_obs["id"],
                     "based-on",
                     stix_external_ref_on_base_obs["id"],
@@ -399,22 +216,24 @@ class MalBeaconConnector:
                         and c2_beacon.actorip not in already_processed
                     ):
                         c2_value = c2_beacon.actorip
-                        c2_type = self.main_observable_type(c2_value)
+                        c2_type = self.converter.main_observable_type(c2_value)
                         c2_description = (
                             "Malbeacon Actor IP Address for C2 " + obs_value
                         )
 
-                        c2_stix_observable = self._create_obs(c2_value)
-                        c2_stix_indicator = self._create_indicator(
+                        c2_stix_observable = self.converter.create_obs(c2_value)
+                        c2_stix_indicator = self.converter.create_indicator(
                             c2_type, c2_value, c2_description
                         )
-                        c2_stix_relationship = self._create_relationship(
+                        c2_stix_relationship = self.converter.create_relationship(
                             c2_stix_indicator["id"],
                             "based-on",
                             c2_stix_observable["id"],
                         )
-                        base_relationship = self._create_relationship(
-                            obs_standard_id, "related-to", c2_stix_observable["id"]
+                        base_relationship = self.converter.create_relationship(
+                            obs_standard_id,
+                            "related-to",
+                            c2_stix_observable["id"],
                         )
 
                         self.stix_object_list.extend(
@@ -428,22 +247,24 @@ class MalBeaconConnector:
 
                         if c2_beacon.actorhostname != "NA":
                             c2_value = c2_beacon.actorhostname
-                            c2_type = self.main_observable_type(c2_value)
+                            c2_type = self.converter.main_observable_type(c2_value)
                             c2_description = (
                                 "Malbeacon Actor DomainName for C2 " + obs_value
                             )
 
-                            c2_stix_observable = self._create_obs(c2_value)
-                            c2_stix_indicator = self._create_indicator(
+                            c2_stix_observable = self.converter.create_obs(c2_value)
+                            c2_stix_indicator = self.converter.create_indicator(
                                 c2_type, c2_value, c2_description
                             )
-                            c2_stix_relationship = self._create_relationship(
+                            c2_stix_relationship = self.converter.create_relationship(
                                 c2_stix_indicator["id"],
                                 "based-on",
                                 c2_stix_observable["id"],
                             )
-                            base_relationship = self._create_relationship(
-                                obs_standard_id, "related-to", c2_stix_observable["id"]
+                            base_relationship = self.converter.create_relationship(
+                                obs_standard_id,
+                                "related-to",
+                                c2_stix_observable["id"],
                             )
 
                             self.stix_object_list.extend(
