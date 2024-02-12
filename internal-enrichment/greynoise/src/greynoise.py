@@ -314,7 +314,7 @@ class GreyNoiseConnector:
 
         # Generate Relationship : Observable -> "related-to" -> Organization
         observable_to_organization = self._generate_stix_relationship(
-            self.stix_entity["standard_id"], "related-to", stix_organization.id
+            self.stix_entity["id"], "related-to", stix_organization.id
         )
         self.stix_objects.append(observable_to_organization)
 
@@ -343,7 +343,7 @@ class GreyNoiseConnector:
 
         # Generate Relationship : observable -> "belongs-to" -> Asn
         observable_to_asn = self._generate_stix_relationship(
-            self.stix_entity["standard_id"], "belongs-to", stix_asn.id
+            self.stix_entity["id"], "belongs-to", stix_asn.id
         )
         self.stix_objects.append(observable_to_asn)
 
@@ -373,7 +373,7 @@ class GreyNoiseConnector:
 
         # Generate Relationship : observable -> "located-at" -> city
         observable_to_city = self._generate_stix_relationship(
-            self.stix_entity["standard_id"], "located-at", stix_city_location.id
+            self.stix_entity["id"], "located-at", stix_city_location.id
         )
         self.stix_objects.append(observable_to_city)
 
@@ -420,7 +420,7 @@ class GreyNoiseConnector:
 
                 # Generate Relationship : observable -> "related-to" -> vulnerability
                 observable_to_vulnerability = self._generate_stix_relationship(
-                    self.stix_entity["standard_id"],
+                    self.stix_entity["id"],
                     "related-to",
                     stix_vulnerability.id,
                     self.first_seen,
@@ -451,7 +451,7 @@ class GreyNoiseConnector:
 
             # Generate Relationship : observable -> "related-to" -> tool
             observable_to_tool = self._generate_stix_relationship(
-                self.stix_entity["standard_id"],
+                self.stix_entity["id"],
                 "related-to",
                 stix_tool.id,
                 self.first_seen,
@@ -488,7 +488,7 @@ class GreyNoiseConnector:
 
         stix_sighting = stix2.Sighting(
             id=StixSightingRelationship.generate_id(
-                self.stix_entity["standard_id"],
+                self.stix_entity["id"],
                 self.greynoise_identity["id"],
                 default_now if sighting_not_seen is True else self.first_seen,
                 default_now if sighting_not_seen is True else self.last_seen,
@@ -508,7 +508,7 @@ class GreyNoiseConnector:
                 else self.final_confidence_level
             ),
             custom_properties={
-                "x_opencti_sighting_of_ref": self.stix_entity["standard_id"],
+                "x_opencti_sighting_of_ref": self.stix_entity["id"],
                 "x_opencti_negative": True,
             },
         )
@@ -539,7 +539,7 @@ class GreyNoiseConnector:
 
             # Generate Relationship : observable -> "related-to" -> malware
             observable_to_malware = self._generate_stix_relationship(
-                self.stix_entity["standard_id"],
+                self.stix_entity["id"],
                 "related-to",
                 stix_malware.id,
                 self.first_seen,
@@ -572,7 +572,7 @@ class GreyNoiseConnector:
 
             # Generate Relationship : observable -> "related-to" -> threat actor
             observable_to_threat_actor = self._generate_stix_relationship(
-                self.stix_entity["standard_id"],
+                self.stix_entity["id"],
                 "related-to",
                 stix_threat_actor.id,
                 self.first_seen,
@@ -615,7 +615,7 @@ class GreyNoiseConnector:
 
         # Generate Relationship : Indicator -> "based-on" -> Observable
         indicator_to_observable = self._generate_stix_relationship(
-            stix_indicator.id, "based-on", self.stix_entity["standard_id"]
+            stix_indicator.id, "based-on", self.stix_entity["id"]
         )
         self.stix_objects.append(indicator_to_observable)
 
@@ -630,7 +630,7 @@ class GreyNoiseConnector:
 
         # Generate Observable
         stix_observable = stix2.IPv4Address(
-            id=self.stix_entity["standard_id"],
+            id=self.stix_entity["id"],
             type="ipv4-addr",
             value=self.stix_entity["value"],
             custom_properties={
@@ -730,22 +730,19 @@ class GreyNoiseConnector:
         stix2_bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
         return stix2_bundle
 
-    def _process_message(self, entity: dict) -> str:
+    def _process_message(self, data: dict) -> str:
 
         # Security to limit playbook triggers to something other than the scope initial
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        is_entity_in_scope = None
-        for scope in scopes:
-            if entity["entity_id"].startswith(scope):
-                is_entity_in_scope = True
-                break
-            else:
-                is_entity_in_scope = False
+        entity_splited = data["entity_id"].split("--")
+        entity_type = entity_splited[0].lower()
 
-        if is_entity_in_scope:
+        if entity_type in scopes:
             # OpenCTI entity information retrieval
-            opencti_entity = self._get_entity_in_opencti(entity)
-            stix_entity = opencti_entity
+            opencti_entity = self._get_entity_in_opencti(data)
+            result = self.helper.get_data_from_enrichment(data, opencti_entity)
+            self.stix_objects = result["stix_objects"]
+            stix_entity = result["stix_entity"]
 
             is_valid_max_tlp = self._extract_and_check_markings(opencti_entity)
             if not is_valid_max_tlp:
@@ -822,10 +819,11 @@ class GreyNoiseConnector:
                     "[ERROR] Unexpected Error occured :", {"Exception": str(e)}
                 )
         else:
+
             return self.helper.connector_logger.info(
                 "[INFO] The trigger does not concern the initial scope found in the config connector, "
                 "maybe choose a more specific filter in the playbook",
-                {"entity_id": entity["entity_id"]},
+                {"entity_id": data["entity_id"]},
             )
 
     # Start the main loop
