@@ -23,25 +23,22 @@ class YaraConnector:
 
     def _get_artifact(self, entity_id):
         self.helper.log_debug("Getting Artifact from OpenCTI")
+        max_retries = 5
+        wait = 1  # seconds
 
-        customAttributes = """
-        id
-        standard_id
-        observable_value
-        ... on Artifact {
-                importFiles {
-                        edges {
-                                node {
-                                    id
-                                    name
-                                }
-                            }
-                        }
-        }
-        """
-        observable = self.helper.api.stix_cyber_observable.read(
-            id=entity_id, customAttributes=customAttributes
-        )
+        for i in range(max_retries):
+            observable = self.helper.api.stix_cyber_observable.read(
+                id=entity_id, withFiles=True
+            )
+            if observable["importFiles"]:
+                break
+            self.helper.log_debug(
+                f"Artifact files not ready yet, retrying ({i+1}/{max_retries})..."
+            )
+            time.sleep(wait)
+
+        if not observable["importFiles"]:
+            raise Exception(f"Exceeded max retries of {max_retries} for Artifact files")
         return observable
 
     def _get_artifact_contents(self, artifact) -> bytes:
