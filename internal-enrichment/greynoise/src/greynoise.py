@@ -66,6 +66,12 @@ class GreyNoiseConnector:
             config,
             True,
         )
+        self.greynoise_indicator_score = get_config_variable(
+            "GREYNOISE_INDICATOR_SCORE",
+            ["greynoise", "indicator_score"],
+            config,
+            True,
+        )
 
         # Define variables
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
@@ -269,7 +275,7 @@ class GreyNoiseConnector:
         # Generate ExternalReference
         external_reference = stix2.ExternalReference(
             source_name=self.greynoise_ent_name,
-            url=f'https://www.greynoise.io/viz/ip/{data["ip"]}',
+            url="www.greynoise.io/viz/ip/" + data["ip"],
             external_id=data["ip"],
             description=description,
         )
@@ -460,7 +466,10 @@ class GreyNoiseConnector:
             self.stix_objects.append(observable_to_tool)
 
     def _generate_stix_sighting(
-        self, external_reference: list, sighting_not_seen: bool = False
+        self,
+        external_reference: list,
+        stix_indicator: dict,
+        sighting_not_seen: bool = False,
     ):
         """
         This method creates a sighting.
@@ -484,7 +493,6 @@ class GreyNoiseConnector:
         """
 
         default_now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        fake_indicator_id = "indicator--89ee4fb4-71ea-4520-88aa-bc6af4cec6da"
 
         stix_sighting = stix2.Sighting(
             id=StixSightingRelationship.generate_id(
@@ -498,7 +506,7 @@ class GreyNoiseConnector:
             count=0 if sighting_not_seen is True else 1,
             description=self.greynoise_ent_desc,
             created_by_ref=self.greynoise_identity["id"],
-            sighting_of_ref=fake_indicator_id,
+            sighting_of_ref=stix_indicator["id"],
             where_sighted_refs=[self.greynoise_identity["id"]],
             external_references=external_reference,
             object_marking_refs=stix2.TLP_WHITE,
@@ -581,16 +589,18 @@ class GreyNoiseConnector:
             self.stix_objects.append(observable_to_threat_actor)
 
     def _generate_stix_indicator_with_relationship(
-        self, data: dict, labels: list, external_reference: list
-    ):
+        self, data: dict, detection: bool, external_reference: list, labels: list = None
+    ) -> dict:
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Indicator"
         in Stix2 format.
 
         - Relationship : Indicator -> "based-on" -> Observable
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
-        :param labels: This parameter contains a list of all labels associated with the IPv4.
+        :param detection: If sighting_not_seen is true, then this detection parameter is false and vice versa.
         :param external_reference: This parameter contains the list external reference associated with the IPv4.
+        :param labels: This parameter contains a list of all labels associated with the IPv4.
+        :return: dict
         """
 
         now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -599,16 +609,16 @@ class GreyNoiseConnector:
         stix_indicator = stix2.Indicator(
             id=Indicator.generate_id(data["ip"]),
             name=data["ip"],
-            labels=labels,
+            labels=labels if detection is True else [],
             pattern=f"[ipv4-addr:value = '{data['ip']}']",
             created_by_ref=self.greynoise_identity["id"],
             external_references=external_reference,
             valid_from=now,
             custom_properties={
                 "pattern_type": "stix",
-                "x_opencti_score": self.connect_confidence_level,
+                "x_opencti_score": self.greynoise_indicator_score,
                 "x_opencti_main_observable_type": "IPv4-Addr",
-                "detection": True,
+                "detection": True if detection is True else False,
             },
         )
         self.stix_objects.append(stix_indicator)
@@ -619,13 +629,18 @@ class GreyNoiseConnector:
         )
         self.stix_objects.append(indicator_to_observable)
 
-    def _generate_stix_observable(self, labels: list, external_reference: list):
+        return stix_indicator
+
+    def _generate_stix_observable(
+        self, detection: bool, external_reference: list, labels: list = None
+    ):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Observable"
         in Stix2 format.
 
-        :param labels: This parameter contains a list of all labels associated with the IPv4.
+        :param detection: If sighting_not_seen is true, then this detection parameter is false and vice versa.
         :param external_reference: This parameter contains the list external reference associated with the IPv4.
+        :param labels: This parameter contains a list of all labels associated with the IPv4.
         """
 
         # Generate Observable
@@ -635,8 +650,8 @@ class GreyNoiseConnector:
             value=self.stix_entity["value"],
             custom_properties={
                 "x_opencti_external_references": external_reference,
-                "x_opencti_score": self.connect_confidence_level,
-                "x_opencti_labels": labels,
+                "x_opencti_score": self.greynoise_indicator_score,
+                "x_opencti_labels": labels if detection is True else [],
                 "x_opencti_created_by_ref": self.greynoise_identity["id"],
             },
         )
@@ -657,6 +672,17 @@ class GreyNoiseConnector:
         self.stix_entity = stix_entity
         self._generate_greynoise_stix_identity()
 
+        """
+        If GreyNoise determines that the activity was spoofed (the IP address failed to establish a full TCP connection), 
+        the trust level of all entities generated via this IP will be set to spoofable_confidence_level instead of connect_confidence_level.
+        """
+        # Handle confidence level
+        self.final_confidence_level = int(
+            self.spoofable_confidence_level
+            if "spoofable" in data and data["spoofable"] is True
+            else self.connect_confidence_level
+        )
+
         if data["seen"] is False and self.sighting_not_seen is True:
             """
             If the IP has not been identified by GreyNoise, but the user still wants to create a sighting at count=0,
@@ -673,7 +699,12 @@ class GreyNoiseConnector:
             )
 
             external_reference = self._generate_stix_external_reference(data, True)
-            self._generate_stix_sighting(external_reference, True)
+            stix_indicator = self._generate_stix_indicator_with_relationship(
+                data, False, external_reference
+            )
+
+            self._generate_stix_observable(False, external_reference)
+            self._generate_stix_sighting(external_reference, stix_indicator, True)
 
         else:
             self.helper.connector_logger.info(
@@ -684,21 +715,12 @@ class GreyNoiseConnector:
             self.first_seen = parse(data["first_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
             self.last_seen = parse(data["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            """
-            If GreyNoise determines that the activity was spoofed (the IP address failed to establish a full TCP connection), 
-            the trust level of all entities generated via this IP will be set to spoofable_confidence_level instead of connect_confidence_level.
-            """
-            # Handle confidence level
-            self.final_confidence_level = int(
-                self.spoofable_confidence_level
-                if data["spoofable"] is True
-                else self.connect_confidence_level
-            )
-
             # Generate Stix Object for bundle
             labels, malwares = self._process_labels(data, data_tags)
             external_reference = self._generate_stix_external_reference(data)
-            self._generate_stix_sighting(external_reference)
+            stix_indicator = self._generate_stix_indicator_with_relationship(
+                data, True, external_reference, labels
+            )
 
             self._generate_other_stix_identity_with_relationship(data)
             self._generate_stix_asn_with_relationship(data)
@@ -707,11 +729,8 @@ class GreyNoiseConnector:
             self._generate_stix_tool_with_relationship(data)
             self._generate_stix_malware_with_relationship(malwares)
             self._generate_stix_threat_actor_with_relationship(data)
-
-            self._generate_stix_indicator_with_relationship(
-                data, labels, external_reference
-            )
-            self._generate_stix_observable(labels, external_reference)
+            self._generate_stix_observable(True, external_reference, labels)
+            self._generate_stix_sighting(external_reference, stix_indicator, False)
 
         uniq_bundles_objects = list(
             {obj["id"]: obj for obj in self.stix_objects}.values()
