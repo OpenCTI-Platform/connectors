@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-malbeacon
 
 # Launch the worker
-python3 malbeacon.py
+python3 main.py
