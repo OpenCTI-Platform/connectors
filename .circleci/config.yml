@@ -651,6 +651,10 @@ jobs:
           name: Build Docker image opencti/connector-cluster25
           command: docker build -t opencti/connector-cluster25:latest . && docker tag opencti/connector-cluster25:latest opencti/connector-cluster25:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/ransomwarelive
+          name: Build Docker image opencti/connector-ransomwarelive
+          command: docker build -t opencti/connector-ransomwarelive:latest . && docker tag opencti/connector-ransomwarelive:latest opencti/connector-ransomwarelive:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -764,6 +768,8 @@ jobs:
             docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
             docker push opencti/connector-cluster25:latest
             docker push opencti/connector-cluster25:${CIRCLE_TAG}
+            docker push opencti/connector-ransomwarelive:latest
+            docker push opencti/connector-ransomwarelive:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1311,6 +1317,10 @@ jobs:
           name: Build Docker image opencti/connector-cluster25
           command: docker build -t opencti/connector-cluster25:rolling .
       - run:
+          working_directory: ~/opencti/external-import/ransomwarelive
+          name: Build Docker image opencti/connector-ransomwarelive
+          command: docker build -t opencti/connector-ransomwarelive:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1370,6 +1380,7 @@ jobs:
             docker push opencti/connector-phishunt:rolling
             docker push opencti/connector-attribution-tools:rolling
             docker push opencti/connector-cluster25:rolling
+            docker push opencti/connector-ransomwarelive:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
