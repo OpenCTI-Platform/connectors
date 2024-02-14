@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-abuse-ssl:
-    image: opencti/connector-abuse-ssl:5.12.29
+    image: opencti/connector-abuse-ssl:5.12.30
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME
