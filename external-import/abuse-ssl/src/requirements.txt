@@ -1,2 +1,2 @@
 beautifulsoup4==4.12.3
-pycti==5.12.30
+pycti==5.12.31

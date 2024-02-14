@@ -17,7 +17,7 @@ The OpenCTI Feedly connector allows you to import data from Feedly boards and fo
 
 ### Requirements
 
-- OpenCTI Platform >= 5.12.30
+- OpenCTI Platform >= 5.12.31
 
 ### Configuration
 
