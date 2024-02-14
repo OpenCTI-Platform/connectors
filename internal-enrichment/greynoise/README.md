@@ -17,22 +17,23 @@ If you are using it independently, remember that the connector will try to conne
 ## Configuration
 
 
-| Parameter           	     				| Docker envvar                         | Mandatory	| Description                                                                                              |
-| ------------------------------------------|-------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------- |
-| `opencti_url`                    			| `OPENCTI_URL`                         | Yes       | The URL of the OpenCTI platform.                                                                         |
-| `opencti_token`                  			| `OPENCTI_TOKEN`                       | Yes       | The default admin token configured in the OpenCTI platform parameters file.                              |
-| `connector_id`                  			| `CONNECTOR_ID`                        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                       |
-| `connector_name`                			| `CONNECTOR_NAME`                      | Yes       | The name of the GreyNoise connector instance, to identify it if you have multiple GreyNoise connectors.  |
-| `connector_scope`              			| `CONNECTOR_SCOPE`                     | Yes       | Must be `ipv4-addr`.                                                        |
-| `connector_auto`							| `CONNECTOR_AUTO`                      | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables                                                         |
-| `connector_confidence_level`				| `CONNECTOR_CONFIDENCE_LEVEL`          | Yes       | The confidence level for created sightings (a number between 0 and 100).                  |
-| `connector_log_level`						| `CONNECTOR_LOG_LEVEL`                 | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).       |
-| `greynoise_key`							| `GREYNOISE_KEY`                       | Yes       | The GreyNoise API key .                                                                              |
-| `greynoise_max_tlp`						| `GREYNOISE_MAX_TLP`                   | Yes       | Do not send any data to GreyNoise if the TLP of the observable is greater than GREYNOISE_MAX_TLP               |
-| `greynoise_name`							| `GREYNOISE_NAME`               		| Yes       | The GreyNoise organization name                                                                              |
-| `greynoise_description`					| `GREYNOISE_DESCRIPTION`               | Yes       | The GreyNoise organization description                                                                              |
-| `greynoise_sighting_not_seen`				| `GREYNOISE_SIGHTING_NOT_SEEN`			| Yes       | Must be `true` or `false` to enable or disable the creation of a sighting with `count=0` when an IP has not been seen.
-| `greynoise_spoofable_confidence_level`	| `GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL`| Yes       | The confidence level for created sighting (a number between 0 and 100) when activity could be spoofed (the IP has failed to complete a full TCP connection).
+| Parameter                                 | Docker envvar                          | Mandatory  | Description                                                                                                                                                  |
+|-------------------------------------------|----------------------------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `opencti_url`                             | `OPENCTI_URL`                          | Yes        | The URL of the OpenCTI platform.                                                                                                                             |
+| `opencti_token`                           | `OPENCTI_TOKEN`                        | Yes        | The default admin token configured in the OpenCTI platform parameters file.                                                                                  |
+| `connector_id`                            | `CONNECTOR_ID`                         | Yes        | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                           |
+| `connector_name`                          | `CONNECTOR_NAME`                       | Yes        | The name of the GreyNoise connector instance, to identify it if you have multiple GreyNoise connectors.                                                      |
+| `connector_scope`                         | `CONNECTOR_SCOPE`                      | Yes        | Must be `ipv4-addr`.                                                                                                                                         |
+| `connector_auto`	                         | `CONNECTOR_AUTO`                       | Yes        | Must be `true` or `false` to enable or disable auto-enrichment of observables                                                                                |
+| `connector_confidence_level`	             | `CONNECTOR_CONFIDENCE_LEVEL`           | Yes        | The confidence level for created sightings (a number between 0 and 100).                                                                                     |
+| `connector_log_level`                     | `CONNECTOR_LOG_LEVEL`                  | Yes        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                |
+| `greynoise_key`                           | `GREYNOISE_KEY`                        | Yes        | The GreyNoise API key .                                                                                                                                      |
+| `greynoise_max_tlp`                       | `GREYNOISE_MAX_TLP`                    | Yes        | Do not send any data to GreyNoise if the TLP of the observable is greater than GREYNOISE_MAX_TLP                                                             |
+| `greynoise_name`	                         | `GREYNOISE_NAME`                       | Yes        | The GreyNoise organization name                                                                                                                              |
+| `greynoise_description`                   | `GREYNOISE_DESCRIPTION`                | Yes        | The GreyNoise organization description                                                                                                                       |
+| `greynoise_sighting_not_seen`             | `GREYNOISE_SIGHTING_NOT_SEEN`          | Yes        | Must be `true` or `false` to enable or disable the creation of a sighting with `count=0` when an IP has not been seen.                                       |
+| `greynoise_spoofable_confidence_level`    | `GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL` | Yes        | The confidence level for created sighting (a number between 0 and 100) when activity could be spoofed (the IP has failed to complete a full TCP connection). |
+| `greynoise_indicator_score`               | `GREYNOISE_INDICATOR_SCORE`            | Yes        | Indicator_score allows you to default the score of an indicator and its observable                                                                           | 
 
 
 ## Behavior
