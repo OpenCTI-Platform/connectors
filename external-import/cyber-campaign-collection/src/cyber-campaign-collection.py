@@ -55,11 +55,6 @@ class CyberMonitor:
             ["connector", "update_existing_data"],
             config,
         )
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-        )
 
         self.dummy_organization = self.helper.api.identity.create(
             type="Organization",

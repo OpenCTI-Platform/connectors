@@ -9,7 +9,6 @@ services:
       - CONNECTOR_NAME=Malbeacon
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name
-      - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - MALBEACON_API_KEY=ChangeMe # Required
       - MALBEACON_API_BASE_URL=https://api.malbeacon.com/v1/ # Required
