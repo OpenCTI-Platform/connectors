@@ -84,6 +84,9 @@ class HarfangLabConnector:
             "description": "Cyber Threat Intelligence knowledge imported from OpenCTI, and any changes must be made only to it.",
             "enabled": True,
         }
+        self.default_score = get_config_variable(
+            "HARFANGLAB_DEFAULT_SCORE", ["harfanglab", "default_score"]
+        )
 
         # Check config parameters
         if (
@@ -1141,6 +1144,7 @@ class HarfangLabConnector:
             self.harfanglab_import_threats_as_case_incidents,
             self.harfanglab_default_markings,
             self.harfanglab_rule_maturity,
+            self.default_score,
         )
         self.sightings.start()
         self.helper.listen_stream(self._process_message)

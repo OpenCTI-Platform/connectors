@@ -27,7 +27,6 @@ The connector can be configured with the following variables:
 | `api_key `             | `VALHALLA_API_KEY`               |         | API authentication key                                      |
 | `interval_sec`         | `VALHALLA_INTERVAL_SEC`          | `86400` | Interval in seconds before a new import is considered       |
 | `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | `false` | This will allow the connector to overwrite existing entries |
-| `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | `3`     | The confidence level you give to the connector              |
 
 ## Notes
 
