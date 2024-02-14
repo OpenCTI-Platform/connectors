@@ -1101,8 +1101,8 @@ class CRITsConnector:
             default=100,
         )
         self.default_score = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
+            "CRITS_DEFAULT_SCORE",
+            ["crits", "default_score"],
             config,
             isNumber=True,
             default=50,
