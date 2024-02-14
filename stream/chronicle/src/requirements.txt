@@ -1,5 +1,5 @@
 pycti==5.12.31
 google-auth==2.27.0
-google-api-python-client==2.117.0
+google-api-python-client==2.118.0
 requests~=2.31.0
 PyYAML~=6.0.1
