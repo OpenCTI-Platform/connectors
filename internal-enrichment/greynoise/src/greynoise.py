@@ -275,7 +275,7 @@ class GreyNoiseConnector:
         # Generate ExternalReference
         external_reference = stix2.ExternalReference(
             source_name=self.greynoise_ent_name,
-            url="www.greynoise.io/viz/ip/" + data["ip"],
+            url=f"https://www.greynoise.io/viz/ip/{data['ip']}",
             external_id=data["ip"],
             description=description,
         )
