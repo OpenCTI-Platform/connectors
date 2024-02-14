@@ -95,6 +95,12 @@ class MalBeaconConnector:
             else:
                 info_msg = "[API] No information found on Malbeacon"
                 return info_msg
+        else:
+            return self.helper.connector_logger.info(
+                "[CONNECTOR] Skip the following entity as it does not concern "
+                "the initial scope found in the config connector: ",
+                {"entity_id": opencti_entity["entity_id"]},
+            )
 
     def _process_message(self, data: dict) -> str:
         """
