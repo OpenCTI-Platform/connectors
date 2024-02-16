@@ -97,4 +97,4 @@ class ThreatMap(threading.Thread):
                             )
 
             self.helper.set_state({"last_threat_map_run": timestamp})
-            time.sleep(self.interval * 3600)
+            time.sleep(int(self.interval) * 3600)
