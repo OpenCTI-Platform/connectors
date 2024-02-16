@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-greynoise:
+    image: opencti/connector-greynoisefeed:5.9.6
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe # Valid UUIDv4
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=GreyNoiseFeed
+      - CONNECTOR_SCOPE=greynoisefeed
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - GREYNOISE_API_KEY=ChangeMe
+      - GREYNOISE_SOURCE=Feed
+      - GREYNOISE_FEED_TYPE=Benign
+      - GREYNOISE_TAG_LIST="Tag 1,Tag 2"
+      - GREYNOISE_LIMIT=10000
+      - GREYNOISE_INTERVAL=2 #Day
+    restart: always
+                                                     |
