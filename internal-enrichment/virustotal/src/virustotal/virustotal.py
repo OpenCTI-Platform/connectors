@@ -49,13 +49,6 @@ class VirusTotalConnector:
         # Cache to store YARA rulesets.
         self.yara_cache = {}
 
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-            True,
-        )
-
         # File/Artifact specific settings
         self.file_create_note_full_report = get_config_variable(
             "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT",

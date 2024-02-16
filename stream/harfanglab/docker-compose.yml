@@ -11,7 +11,6 @@ services:
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false # Necessary to detect observables in the stream
       - CONNECTOR_NAME=HarfangLab
       - CONNECTOR_SCOPE=harfanglab
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - HARFANGLAB_URL=https://console.changeme.com
       - HARFANGLAB_SSL_VERIFY=true
@@ -26,4 +25,5 @@ services:
       - HARFANGLAB_IMPORT_SECURITY_EVENTS_FILTERS_BY_STATUS=ChangeMe # Filters available : new, investigating, false_positive, closed
       - HARFANGLAB_IMPORT_FILTERS_BY_ALERT_TYPE=ChangeMe # Filters available : yara, sigma, ioc
       - HARFANGLAB_DEFAULT_MARKINGS=ChangeMe # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED
+      - HARFANGLAB_DEFAULT_SCORE=50 # Former confidence_level deprecated in OpenCTI version >= 6.0
     restart: always

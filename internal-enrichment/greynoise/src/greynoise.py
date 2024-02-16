@@ -42,11 +42,6 @@ class GreyNoiseConnector:
         self.max_tlp = get_config_variable(
             "GREYNOISE_MAX_TLP", ["greynoise", "max_tlp"], config
         )
-        self.spoofable_confidence_level = get_config_variable(
-            "GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL",
-            ["greynoise", "spoofable_confidence_level"],
-            config,
-        )
         self.sighting_not_seen = get_config_variable(
             "GREYNOISE_SIGHTING_NOT_SEEN", ["greynoise", "sighting_not_seen"], config
         )
@@ -60,15 +55,9 @@ class GreyNoiseConnector:
             "key": self.greynoise_key,
             "Accept": "application/json",
         }
-        self.connect_confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-            True,
-        )
-        self.greynoise_indicator_score = get_config_variable(
-            "GREYNOISE_INDICATOR_SCORE",
-            ["greynoise", "indicator_score"],
+        self.default_score = get_config_variable(
+            "GREYNOISE_DEFAULT_SCORE",
+            ["greynoise", "default_score"],
             config,
             True,
         )
@@ -142,7 +131,6 @@ class GreyNoiseConnector:
             stop_time=stop_time,
             target_ref=target_ref,
             created_by_ref=self.greynoise_identity["id"],
-            confidence=self.final_confidence_level,
         )
 
     def _create_custom_label(self, name_label: str, color_label: str):
@@ -293,7 +281,6 @@ class GreyNoiseConnector:
             name=self.greynoise_ent_name,
             description=f"Connector Enrichment {self.greynoise_ent_name}",
             identity_class="organization",
-            confidence=self.connect_confidence_level,
         )
         self.stix_objects.append(self.greynoise_identity)
 
@@ -314,7 +301,6 @@ class GreyNoiseConnector:
             name=organization,
             identity_class="organization",
             created_by_ref=self.greynoise_identity["id"],
-            confidence=self.final_confidence_level,
         )
         self.stix_objects.append(stix_organization)
 
@@ -342,7 +328,7 @@ class GreyNoiseConnector:
             name=entity_asn,
             custom_properties={
                 "created_by_ref": self.greynoise_identity["id"],
-                "x_opencti_score": self.final_confidence_level,
+                "x_opencti_score": self.default_score,
             },
         )
         self.stix_objects.append(stix_asn)
@@ -372,7 +358,6 @@ class GreyNoiseConnector:
             id=Location.generate_id(data["metadata"]["city"], "City"),
             name=data["metadata"]["city"],
             country=country_name,
-            confidence=self.final_confidence_level,
             custom_properties={"x_opencti_location_type": "City"},
         )
         self.stix_objects.append(stix_city_location)
@@ -388,7 +373,6 @@ class GreyNoiseConnector:
             id=Location.generate_id(country.name, "Country"),
             name=country_name,
             country=country_name,
-            confidence=self.final_confidence_level,
             custom_properties={
                 "x_opencti_location_type": "Country",
                 "x_opencti_aliases": [data["metadata"]["country_code"]],
@@ -418,7 +402,6 @@ class GreyNoiseConnector:
                 stix_vulnerability = stix2.Vulnerability(
                     id=Vulnerability.generate_id(vuln),
                     name=vuln,
-                    confidence=self.final_confidence_level,
                     created_by_ref=self.greynoise_identity["id"],
                     allow_custom=True,
                 )
@@ -476,15 +459,12 @@ class GreyNoiseConnector:
 
         - If the IPv4 is known by GreyNoise:
 
-          - if the activity could be spoofed: create a `sighting` from the IPv4 observable to the
-            GreyNoise entity with `count=1` and `confidence=GREYNOISE_SPOOFABLE_CONFIDENCE_LEVEL`
-          - if the activity could not be spoofed: create a `sighting` from the IPv4 observable to the
-            GreyNoise entity with `count=1` and `confidence=CONNECTOR_CONFIDENCE_LEVEL`
+          - Create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=1`
 
         - If the IPv4 is not knew by GreyNoise:
 
           - if `GREYNOISE_SIGHTING_NOT_SEEN=true`: create a `sighting` from the IPv4 observable to the
-            GreyNoise entity with `count=0` and `confidence=CONNECTOR_CONFIDENCE_LEVEL`
+            GreyNoise entity with `count=0`
           - if `GREYNOISE_SIGHTING_NOT_SEEN=false`: do nothing.
 
         :param external_reference: This parameter contains the list external reference associated with the IPv4.
@@ -510,11 +490,6 @@ class GreyNoiseConnector:
             where_sighted_refs=[self.greynoise_identity["id"]],
             external_references=external_reference,
             object_marking_refs=stix2.TLP_WHITE,
-            confidence=(
-                self.connect_confidence_level
-                if sighting_not_seen is True
-                else self.final_confidence_level
-            ),
             custom_properties={
                 "x_opencti_sighting_of_ref": self.stix_entity["id"],
                 "x_opencti_negative": True,
@@ -540,7 +515,6 @@ class GreyNoiseConnector:
                 description=malware["description"],
                 is_family=False,
                 malware_types=malware["type"] if malware["type"] == "worm" else None,
-                confidence=self.connect_confidence_level,
                 created=self.first_seen,
             )
             self.stix_objects.append(stix_malware)
@@ -616,7 +590,7 @@ class GreyNoiseConnector:
             valid_from=now,
             custom_properties={
                 "pattern_type": "stix",
-                "x_opencti_score": self.greynoise_indicator_score,
+                "x_opencti_score": self.default_score,
                 "x_opencti_main_observable_type": "IPv4-Addr",
                 "detection": True if detection is True else False,
             },
@@ -650,7 +624,7 @@ class GreyNoiseConnector:
             value=self.stix_entity["value"],
             custom_properties={
                 "x_opencti_external_references": external_reference,
-                "x_opencti_score": self.greynoise_indicator_score,
+                "x_opencti_score": self.default_score,
                 "x_opencti_labels": labels if detection is True else [],
                 "x_opencti_created_by_ref": self.greynoise_identity["id"],
             },
@@ -671,17 +645,6 @@ class GreyNoiseConnector:
 
         self.stix_entity = stix_entity
         self._generate_greynoise_stix_identity()
-
-        """
-        If GreyNoise determines that the activity was spoofed (the IP address failed to establish a full TCP connection), 
-        the trust level of all entities generated via this IP will be set to spoofable_confidence_level instead of connect_confidence_level.
-        """
-        # Handle confidence level
-        self.final_confidence_level = int(
-            self.spoofable_confidence_level
-            if "spoofable" in data and data["spoofable"] is True
-            else self.connect_confidence_level
-        )
 
         if data["seen"] is False and self.sighting_not_seen is True:
             """
