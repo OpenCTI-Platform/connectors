@@ -249,7 +249,7 @@ if __name__ == "__main__":
             )
             ThreatMap.start()
         else:
-            RF.helper.log_info("[THREAT MAPS] Risk list fetching disabled")
+            RF.helper.log_info("[THREAT MAPS] Threat maps fetching disabled")
 
         RF.run()
     except Exception:
