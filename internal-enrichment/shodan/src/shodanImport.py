@@ -39,6 +39,9 @@ class ShodanConnector:
             True,
         )
         self.shodanAPI = shodan.Shodan(self.token)
+        self.default_score = get_config_variable(
+            "SHODAN_DEFAULT_SCORE", ["shodan", "default_score"]
+        )
 
         # Shodan Identity
         self.shodan_identity = self.helper.api.identity.create(
@@ -78,7 +81,6 @@ class ShodanConnector:
             source_ref=source_ref,
             target_ref=target_ref,
             created_by_ref=self.shodan_identity["standard_id"],
-            confidence=self.helper.connect_confidence_level,
         )
 
     @staticmethod
@@ -139,7 +141,6 @@ class ShodanConnector:
             name=organization,
             identity_class="organization",
             created_by_ref=self.shodan_identity["standard_id"],
-            confidence=self.helper.connect_confidence_level,
         )
         self.stix_objects.append(stix_organization)
         stix_organization_with_relationship.append(stix_organization)
@@ -164,7 +165,7 @@ class ShodanConnector:
                 value=entity_domain,
                 custom_properties={
                     "created_by_ref": self.shodan_identity["standard_id"],
-                    "x_opencti_score": self.helper.connect_confidence_level,
+                    "x_opencti_score": self.default_score,
                 },
             )
             self.stix_objects.append(stix_domain)
@@ -189,7 +190,7 @@ class ShodanConnector:
                 value=entity_hostname,
                 custom_properties={
                     "created_by_ref": self.shodan_identity["standard_id"],
-                    "x_opencti_score": self.helper.connect_confidence_level,
+                    "x_opencti_score": self.default_score,
                 },
             )
             self.stix_objects.append(stix_hostname)
@@ -217,7 +218,7 @@ class ShodanConnector:
                 name=entity_asn,
                 custom_properties={
                     "created_by_ref": self.shodan_identity["standard_id"],
-                    "x_opencti_score": self.helper.connect_confidence_level,
+                    "x_opencti_score": self.default_score,
                 },
             )
             self.stix_objects.append(stix_asn)
@@ -306,7 +307,6 @@ class ShodanConnector:
             country=data["country_name"],
             latitude=data["latitude"],
             longitude=data["longitude"],
-            confidence=self.helper.connect_confidence_level,
             custom_properties={"x_opencti_location_type": "City"},
         )
         self.stix_objects.append(stix_city_location)
@@ -324,7 +324,6 @@ class ShodanConnector:
             id=Location.generate_id(data["country_name"], "Country"),
             name=data["country_name"],
             country=data["country_name"],
-            confidence=self.helper.connect_confidence_level,
             custom_properties={
                 "x_opencti_location_type": "Country",
                 "x_opencti_aliases": [data["country_code"]],
@@ -352,7 +351,6 @@ class ShodanConnector:
                 stix_vulnerability = stix2.Vulnerability(
                     id=Vulnerability.generate_id(vuln),
                     name=vuln,
-                    confidence=self.helper.connect_confidence_level,
                     created_by_ref=self.shodan_identity["standard_id"],
                     allow_custom=True,
                 )
@@ -386,7 +384,7 @@ class ShodanConnector:
             valid_from=now,
             custom_properties={
                 "pattern_type": "stix",
-                "x_opencti_score": self.helper.connect_confidence_level,
+                "x_opencti_score": self.default_score,
                 "x_opencti_main_observable_type": "IPv4-Addr",
                 "detection": True,
             },
@@ -412,7 +410,7 @@ class ShodanConnector:
             custom_properties={
                 "x_opencti_external_references": [external_reference],
                 "x_opencti_description": description,
-                "x_opencti_score": self.helper.connect_confidence_level,
+                "x_opencti_score": self.default_score,
                 "x_opencti_labels": labels,
                 "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
             },

@@ -8,7 +8,6 @@ connector:
   name: 'GreyNoise'
   scope: 'IPv4-Addr'
   auto: true # Enable/disable auto-enrichment of observables
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 greynoise:
@@ -17,5 +16,4 @@ greynoise:
   name: 'GreyNoise sensors'
   description: 'GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.'
   sighting_not_seen: false
-  spoofable_confidence_level: 30
-  indicator_score: 50
+  default_score: 50 # Former confidence_level deprecated in OpenCTI version >= 6.0

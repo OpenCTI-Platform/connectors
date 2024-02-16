@@ -48,12 +48,6 @@ class RSTThreatFeed:
             "dirs": {"tmp": self.get_config("dirs_tmp", config, "/tmp")},
         }
         self._state_dir = self.get_config("dirs_tmp", config, "/tmp")
-        self._confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-            isNumber=True,
-        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -246,7 +240,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} malware".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     external_references=external_references,
                 )
             elif threat["type"] == ThreatTypes.RANSOMWARE:
@@ -256,7 +249,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} ransomware".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     malware_types=["ransomware"],
                     external_references=external_references,
                 )
@@ -267,7 +259,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} backdoor".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     malware_types=["backdoor"],
                     external_references=external_references,
                 )
@@ -278,7 +269,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} remote access trojan".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     malware_types=["remote-access-trojan"],
                     external_references=external_references,
                 )
@@ -289,7 +279,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} exploit".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     malware_types=["exploit-kit"],
                     external_references=external_references,
                 )
@@ -300,7 +289,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} cryptominer".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     malware_types=["resource-exploitation"],
                     external_references=external_references,
                 )
@@ -310,7 +298,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} group".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     external_references=external_references,
                 )
             elif threat["type"] == ThreatTypes.CAMPAIGN:
@@ -319,7 +306,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} campaign".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     external_references=external_references,
                 )
             elif threat["type"] == ThreatTypes.TOOL:
@@ -328,7 +314,6 @@ class RSTThreatFeed:
                     name=threat["name"],
                     description="{} tool".format(threat["name"]),
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     external_references=external_references,
                 )
             elif threat["type"] == ThreatTypes.VULNERABILITY:
@@ -336,7 +321,6 @@ class RSTThreatFeed:
                     id=threat_key,
                     name=threat["name"],
                     created_by_ref=organization.id,
-                    confidence=self._confidence_level,
                     external_references=[
                         stix2.v21.ExternalReference(
                             source_name=threat["name"],
@@ -382,7 +366,6 @@ class RSTThreatFeed:
                 description="IOC associated with: {}".format(
                     threats[threat_id]["name"]
                 ),
-                confidence=self._confidence_level,
                 created_by_ref=organization.id,
                 object_marking_refs=[stix2.TLP_WHITE],
                 created=collect,

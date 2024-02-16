@@ -38,6 +38,7 @@ class Sightings(threading.Thread):
         harfanglab_import_threats_as_case_incidents,
         harfanglab_default_markings,
         harfanglab_rule_maturity,
+        harfanglab_default_score,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
@@ -59,6 +60,7 @@ class Sightings(threading.Thread):
         self.default_markings = harfanglab_default_markings
         self.harfanglab_rule_maturity = harfanglab_rule_maturity
         self.list_info = {}
+        self.default_score = harfanglab_default_score
 
         # Identity
         self.identity = self.helper.api.identity.create(
@@ -327,7 +329,6 @@ class Sightings(threading.Thread):
                         description=f"{new_alert_built['msg']}",
                         object_marking_refs=[convert_marking_for_stix2],
                         created_by_ref=self.identity["standard_id"],
-                        confidence=self.helper.connect_confidence_level,
                         external_references=[
                             {
                                 "source_name": "HarfangLab - Security Events",
@@ -436,7 +437,7 @@ class Sightings(threading.Thread):
                             object_marking_refs=[convert_marking_for_stix2],
                             custom_properties={
                                 "pattern_type": "stix",
-                                "x_opencti_score": self.helper.connect_confidence_level,
+                                "x_opencti_score": self.default_score,
                                 "detection": True,
                             },
                         )
@@ -1024,7 +1025,6 @@ class Sightings(threading.Thread):
                             "external_id": threat["id"],
                         }
                     ],
-                    confidence=self.helper.connect_confidence_level,
                     created_by_ref=self.identity["standard_id"],
                     object_marking_refs=[convert_marking_for_stix2],
                     object_refs=[x["id"] for x in merge_all_references],
@@ -1051,7 +1051,6 @@ class Sightings(threading.Thread):
 
             return stix2.Note(
                 id=Note.generate_id(threat_note["title"], note_date),
-                confidence=self.helper.connect_confidence_level,
                 created=threat_note["creation_date"],
                 modified=threat_note["last_update"],
                 created_by_ref=self.identity["standard_id"],
@@ -1100,7 +1099,6 @@ class Sightings(threading.Thread):
                 count=int(len(external_references)),
                 sighting_of_ref=sighting["sighting_of_ref"],
                 where_sighted_refs=[self.identity["standard_id"]],
-                confidence=self.helper.connect_confidence_level,
                 object_marking_refs=sighting["object_marking_refs"],
                 external_references=external_references,
                 custom_properties={
@@ -1154,7 +1152,6 @@ class Sightings(threading.Thread):
                     "object_marking_refs"
                 ],
                 created_by_ref=self.identity["standard_id"],
-                confidence=self.helper.connect_confidence_level,
                 external_references=incident_unique["all_external_references"],
                 allow_custom=True,
                 custom_properties={
@@ -1198,7 +1195,6 @@ class Sightings(threading.Thread):
             sighting_of_ref=indicator,
             where_sighted_refs=[self.identity["standard_id"]],
             count=1,
-            confidence=self.helper.connect_confidence_level,
             object_marking_refs=marking,
             external_references=[
                 {
@@ -1573,7 +1569,6 @@ class Sightings(threading.Thread):
                 description=f"{new_alert_built['msg']}",
                 object_marking_refs=[marking],
                 created_by_ref=self.identity["standard_id"],
-                confidence=self.helper.connect_confidence_level,
                 external_references=[
                     {
                         "source_name": "HarfangLab - Security Events",
@@ -1608,7 +1603,7 @@ class Sightings(threading.Thread):
                 object_marking_refs=[marking],
                 custom_properties={
                     "pattern_type": pattern_type,
-                    "x_opencti_score": self.helper.connect_confidence_level,
+                    "x_opencti_score": self.default_score,
                     "detection": True,
                 },
             )

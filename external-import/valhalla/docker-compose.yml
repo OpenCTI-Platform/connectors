@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Valhalla
       - CONNECTOR_SCOPE=valhalla
-      - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - VALHALLA_API_KEY= # Empty key only fetches public/demo information
       - VALHALLA_INTERVAL_SEC=86400 # Run once every day

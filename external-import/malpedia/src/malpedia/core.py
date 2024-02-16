@@ -31,12 +31,6 @@ class Malpedia:
         )
 
         # Extra config
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-            isNumber=True,
-        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -85,7 +79,6 @@ class Malpedia:
         self.knowledge_importer = KnowledgeImporter(
             self.helper,
             self.client,
-            self.confidence_level,
             self.update_existing_data,
             self.import_intrusion_sets,
             self.import_yara,

@@ -10,7 +10,6 @@ connector:
   live_stream_no_dependencies: false # Necessary to detect observables in the stream
   name: 'HarfangLab'
   scope: 'harfanglab' # Reserved
-  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 harfanglab:
@@ -27,3 +26,4 @@ harfanglab:
   import_security_events_filters_by_status: 'ChangeMe' # Filters available : new, investigating, false_positive, closed
   import_filters_by_alert_type: 'ChangeMe' # Filters available : yara, sigma, ioc
   default_markings: 'ChangeMe' # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED
+  default_score: 50 # Former confidence_level deprecated in OpenCTI version >= 6.0

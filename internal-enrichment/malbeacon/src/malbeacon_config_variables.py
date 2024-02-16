@@ -34,9 +34,6 @@ class ConfigMalbeacon:
         Connector configuration variables
         :return: None
         """
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL", ["connector", "confidence_level"], self.load
-        )
 
         self.connector_scope = get_config_variable(
             "CONNECTOR_SCOPE",

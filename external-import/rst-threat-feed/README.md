@@ -34,7 +34,6 @@ Configuration of the connector is straightforward. The minimal configuration req
 | Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` identifier for this connector instance. |
 | Connector Name | `CONNECTOR_NAME` | Yes | Name of the connector. For example: `RST Threat Feed`. |
 | Connector Scope | `CONNECTOR_SCOPE` | Yes | The scope or type of data the connector is importing, either a MIME type or Stix Object. E.g. application/json |
-| Confidence Level | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | The default confidence level for created sightings. It's a number between 1 and 100, with 100 being the most confident. |
 | Log Level | `CONNECTOR_LOG_LEVEL` | Yes | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 | Run and Terminate | `CONNECTOR_RUN_AND_TERMINATE` | Yes | If set to true, the connector will terminate after a successful run. Useful for debugging or one-time runs. |
 | Update Existing Data | `CONFIG_UPDATE_EXISTING_DATA` | Yes | Decide whether the connector should update already existing data in the database. |
