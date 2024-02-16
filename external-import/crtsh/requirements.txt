@@ -1,4 +1,4 @@
-pycti==5.12.31
+pycti==5.12.32
 requests
 stix2
 validators
