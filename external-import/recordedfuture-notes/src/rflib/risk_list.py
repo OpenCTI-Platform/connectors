@@ -83,4 +83,4 @@ class RiskList(threading.Thread):
                         work_id=work_id,
                     )
             self.helper.set_state({"last_risk_list_run": timestamp})
-            time.sleep(self.interval * 3600)
+            time.sleep(int(self.interval) * 3600)
