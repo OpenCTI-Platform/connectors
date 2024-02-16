@@ -1,4 +1,4 @@
-pycti==5.12.31
+pycti==5.12.32
 pydantic==1.10.14
 urllib3==2.2.0
 validators==0.22.0
