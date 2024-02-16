@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=9288e3aa-3f94-4505-b31b-69585c47081b
       - CONNECTOR_NAME=RST Threat Feed
       - CONNECTOR_SCOPE=application/json
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1/
       - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}

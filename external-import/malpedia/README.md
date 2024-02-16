@@ -33,7 +33,6 @@ The connector can be configured with the following variables:
 | `import_intrusion_sets`        | `MALPEDIA_IMPORT_INTRUSION_SETS` | `false`  | Choose if you want to import Intrusion-Sets from Malpedia   |
 | `import_yara`                  | `MALPEDIA_IMPORT_YARA`           | `false`  | Choose if you want to import Yara rules from Malpedia       |
 | `update_existing_data`         | `CONNECTOR_UPDATE_EXISTING_DATA` | `false`  | This will allow the connector to overwrite existing entries |
-| `confidence_level`             | `CONNECTOR_CONFIDENCE_LEVEL`     | `3`      | The confidence level you give to the connector              |
 
 ## Notes
 

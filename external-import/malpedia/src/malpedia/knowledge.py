@@ -31,7 +31,6 @@ class KnowledgeImporter:
         self,
         helper: OpenCTIConnectorHelper,
         api_client: MalpediaClient,
-        confidence_level: int,
         update_data: bool,
         import_intrusion_sets: bool,
         import_yara: bool,
@@ -44,7 +43,6 @@ class KnowledgeImporter:
         self.api_client = api_client
         self.guess_malware = True
         self.guess_intrusion_set = True
-        self.confidence_level = confidence_level
         self.update_data = update_data
         self.import_intrusion_sets = import_intrusion_sets
         self.import_yara = import_yara
@@ -171,7 +169,6 @@ class KnowledgeImporter:
                     toId=malware_id,
                     relationship_type="uses",
                     description="Malpedia indicates usage",
-                    confidence=self.confidence_level,
                     createdBy=self.organization["id"],
                     update=self.update_data,
                 )
@@ -210,7 +207,6 @@ class KnowledgeImporter:
                         toId=malware_id,
                         relationship_type="uses",
                         description="Malpedia indicates usage",
-                        confidence=self.confidence_level,
                         createdByRef=self.organization["id"],
                         update=self.update_data,
                     )
@@ -290,7 +286,6 @@ class KnowledgeImporter:
                         toId=malware_id,
                         relationship_type="indicates",
                         description="Sample in Malpedia database",
-                        confidence=self.confidence_level,
                         createdBy=self.organization["id"],
                         objectMarking=[self.default_marking["id"]],
                         update=self.update_data,
@@ -306,7 +301,6 @@ class KnowledgeImporter:
                         toId=malware_id,
                         relationship_type="related-to",
                         description="Sample in Malpedia database",
-                        confidence=self.confidence_level,
                         createdBy=self.organization["id"],
                         objectMarking=[self.default_marking["id"]],
                         update=self.update_data,
@@ -369,7 +363,6 @@ class KnowledgeImporter:
                     toId=malware_id,
                     relationship_type="indicates",
                     description="Yara rule for " + fam.main_name,
-                    confidence=self.confidence_level,
                     createdBy=self.organization["id"],
                     update=self.update_data,
                 )

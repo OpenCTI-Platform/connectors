@@ -8,10 +8,10 @@ connector:
   name: 'Shodan'
   scope: 'IPv4-Addr'
   auto: true # Enable/disable auto-enrichment of observables
-  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 shodan:
   token: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
   create_indicators: true
+  default_score: 50 # Former confidence_level deprecated in OpenCTI version >= 6.0

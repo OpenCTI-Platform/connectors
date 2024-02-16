@@ -24,7 +24,6 @@ class KnowledgeImporter:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        confidence_level: int,
         update_data: bool,
         default_marking,
         valhalla_client: str,
@@ -33,7 +32,6 @@ class KnowledgeImporter:
         self.helper = helper
         self.guess_malware = True
         self.guess_actor = True
-        self.confidence_level = confidence_level
         self.update_data = update_data
         self.default_marking = default_marking
         self.valhalla_client = valhalla_client
@@ -100,7 +98,6 @@ class KnowledgeImporter:
                 valid_until=datetime.utcnow() + relativedelta(years=2),
                 object_marking_refs=[self.default_marking],
                 created_by_ref=self.organization,
-                confidence=self.confidence_level,
                 external_references=refs,
                 custom_properties={
                     "x_opencti_main_observable_type": "StixFile",
@@ -128,7 +125,6 @@ class KnowledgeImporter:
                         target_ref=attack_pattern_id,
                         description="Yara Rule from Valhalla API",
                         created_by_ref=self.organization,
-                        confidence=self.confidence_level,
                         object_marking_refs=[self.default_marking],
                     )
                     self.bundle_objects.append(ap_rel)
@@ -147,7 +143,6 @@ class KnowledgeImporter:
                         target_ref=intrusion_set_id,
                         description="Yara Rule from Valhalla API",
                         created_by_ref=self.organization,
-                        confidence=self.confidence_level,
                         object_marking_refs=[self.default_marking],
                     )
                     self.bundle_objects.append(is_rel)
