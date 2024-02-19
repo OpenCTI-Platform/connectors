@@ -3,7 +3,6 @@ import sys
 import time
 import requests
 import json
-import stix2
 from lib.external_import import ExternalImportConnector
 
 
