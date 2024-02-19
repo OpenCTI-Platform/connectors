@@ -86,15 +86,16 @@ class AnyRunTask:
             time.sleep(1)
             num += 1
             response = self.call_anyrun_api('GET', 'v1/analysis/{}'.format(task_id))
-            result = json.loads(response.text)
-            if result.get('data') is not None:
+            try:
+                result = json.loads(response.text)
                 if result['data']['status'] == 'done':
                     self.helper.log_info('ANY.RUN task {} completed'.format(task_id))
                     return result
-                elif num == timer:
-                    raise ValueError('ANY.RUN task waiting timeout')
-            else:
+            except:
                 continue
+            finally:
+                if num == timer:
+                    raise ValueError('ANY.RUN task waiting timeout')
 
     def _process_message(self, data):
         self.helper.log_debug(str(data))
