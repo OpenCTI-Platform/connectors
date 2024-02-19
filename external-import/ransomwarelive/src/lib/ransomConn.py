@@ -185,7 +185,7 @@ class RansomwareAPIConnector:
                             stix_bundles.append(bundle)
                             stix_objects.extend(bundle.objects)
                     else:
-                        print("Error: ", response.status_code)
+                        
                         self.helper.log_info(
                             f"Error and response status code {response.status_code}"
                         )
