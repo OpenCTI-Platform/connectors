@@ -108,11 +108,6 @@ class RansomwareAPIConnector:
             source_ref=threat_actor.id,
             target_ref=identity.id,
         )
-        Report_attribution = Relationship(
-            relationship_type="attributed-to",
-            source_ref=report.id,
-            target_ref=identity.id,
-        )
         Report_relation = Relationship(
             relationship_type="related-to",
             source_ref=report.id,
