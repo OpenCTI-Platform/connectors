@@ -8,9 +8,8 @@ from datetime import datetime, timedelta
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix_shifter.stix_translation import stix_translation
-
 from sightings import Sightings
+from stix_shifter.stix_translation import stix_translation
 
 
 def fix_loggers() -> None:
