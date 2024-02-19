@@ -1,12 +1,9 @@
 import os
 import re
-import time
-from datetime import datetime
 
 import dnstwist
-import whois
 from pycti import OpenCTIConnectorHelper
-from stix2 import DomainName, IPv4Address, IPv6Address, Note, Relationship
+from stix2 import DomainName, IPv4Address, IPv6Address, Relationship
 
 
 class DnsTwistConnector:
@@ -163,6 +160,7 @@ class DnsTwistConnector:
                                 description="related-to",
                             )
                         stix_objects.append(mx_object)
+                        stix_objects.append(mx_relation_object)
 
                 bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
