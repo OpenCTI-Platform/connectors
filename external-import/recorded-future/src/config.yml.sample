@@ -10,7 +10,7 @@ connector:
   update_existing_data: false
   log_level: 'info'
 
-rf-notes:
+rf:
   token: 'ChangeMe' # Required
   initial_lookback: 240 # Required, in hours
   TLP: white

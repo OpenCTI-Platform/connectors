@@ -60,8 +60,6 @@ To use the connector, you need to have a Recorded Future account.
 - OpenCTI Platform version 5.12.0 or higher
 - An API Key for accessing
 
-*You can contact jonah.feldman@recordedfuture.com with questions*
-
 ## Configuration variables
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
@@ -86,7 +84,6 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Type       | type                 | `CONNECTOR_TYPE`                 | EXTERNAL_IMPORT                                                             | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                                                                               |
 | Connector Name       | name                 | `CONNECTOR_NAME`                 | Recorded Future                                                             | Yes       | Name of the connector.                                                                                                                      |
 | Connector Scope      | scope                | `CONNECTOR_SCOPE`                | ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                    |
-| Confidence Level     | confidence_level     | `CONNECTOR_CONFIDENCE_LEVEL`     | 5                                                                           | Yes       | The default confidence level for created sightings. It's a number between 0 and 100, with 100 being the most confident.                     |
 | Update existing data | update_existing_data | `CONNECTOR_UPDATE_EXISTING_DATA` | False                                                                       | No        | If an entity already exists, update its attributes with information provided by this connector. Takes 2 available values: `True` or `False` |
 | Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info                                                                        | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                      |
 
@@ -173,7 +170,7 @@ Find the "Recorded Future" connector, and click on the refresh button to reset t
 
 ### Analyst notes
 
-Analyst Notes provide a platform for documenting your team's evaluations, conclusions, and insights on potential threats. These notes, exclusive to your team's analysts, can be generated through the web application, browser extensions, or API. Once created, they are incorporated into a collective space for analysis shared by your team.
+Analyst Notes are notes which include analysis and insights from Insikt Group research or the organization's notes.
 
 #### Initial population
 
@@ -189,7 +186,7 @@ _insikt_only: True_
 
 ![RF logs](./__docs__/media/rf-logs.png)
 
-Each Analyst Note is converted into a a STIX2 report. The report contains STIX2 SDOs that are converted as per below
+Each Analyst Note is converted into a STIX2 report. The report contains STIX2 SDOs that are converted as per below
 
 - Note Title and Content -> STIX2 report content
 - Topic-> STIX2 report labels

@@ -34,59 +34,57 @@ class RFNotes:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf-notes", "token"], config
+            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config
         )
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
-            ["rf-notes", "initial_lookback"],
+            ["rf", "initial_lookback"],
             config,
             True,
         )
         self.rf_interval = get_config_variable(
-            "RECORDED_FUTURE_INTERVAL", ["rf-notes", "interval"], config, True
+            "RECORDED_FUTURE_INTERVAL", ["rf", "interval"], config, True
         )
         self.rf_risk_list_interval = get_config_variable(
             "RECORDED_FUTURE_RISK_LIST_INTERVAL",
-            ["rf-notes", "risk_list_interval"],
+            ["rf", "risk_list_interval"],
             config,
             True,
         )
-        self.tlp = get_config_variable(
-            "RECORDED_FUTURE_TLP", ["rf-notes", "TLP"], config
-        )
+        self.tlp = get_config_variable("RECORDED_FUTURE_TLP", ["rf", "TLP"], config)
         self.rf_pull_signatures = get_config_variable(
-            "RECORDED_FUTURE_PULL_SIGNATURES", ["rf-notes", "pull_signatures"], config
+            "RECORDED_FUTURE_PULL_SIGNATURES", ["rf", "pull_signatures"], config
         )
         self.rf_pull_risk_list = get_config_variable(
-            "RECORDED_FUTURE_PULL_RISK_LIST", ["rf-notes", "pull_risk_list"], config
+            "RECORDED_FUTURE_PULL_RISK_LIST", ["rf", "pull_risk_list"], config
         )
         self.rf_insikt_only = get_config_variable(
-            "RECORDED_FUTURE_INSIKT_ONLY", ["rf-notes", "insikt_only"], config
+            "RECORDED_FUTURE_INSIKT_ONLY", ["rf", "insikt_only"], config
         )
         topics_value = get_config_variable(
-            "RECORDED_FUTURE_TOPIC", ["rf-notes", "topic"], config
+            "RECORDED_FUTURE_TOPIC", ["rf", "topic"], config
         )
         self.rf_topics = topics_value.split(",") if topics_value else [None]
         self.rf_person_to_TA = get_config_variable(
-            "RECORDED_FUTURE_PERSON_TO_TA", ["rf-notes", "person_to_TA"], config
+            "RECORDED_FUTURE_PERSON_TO_TA", ["rf", "person_to_TA"], config
         )
         self.rf_TA_to_intrusion_set = get_config_variable(
             "RECORDED_FUTURE_TA_TO_INTRUSION_SET",
-            ["rf-notes", "TA_to_intrusion_set"],
+            ["rf", "TA_to_intrusion_set"],
             config,
         )
         self.risk_as_score = get_config_variable(
-            "RECORDED_FUTURE_RISK_AS_SCORE", ["rf-notes", "risk_as_score"], config
+            "RECORDED_FUTURE_RISK_AS_SCORE", ["rf", "risk_as_score"], config
         )
         self.risk_threshold = get_config_variable(
             "RECORDED_FUTURE_RISK_THRESHOLD",
-            ["rf-notes", "risk_threshold"],
+            ["rf", "risk_threshold"],
             config,
             True,
         )
         self.risk_list_threshold = get_config_variable(
             "RECORDED_FUTURE_RISK_LIST_THRESHOLD",
-            ["rf-notes", "risk_list_threshold"],
+            ["rf", "risk_list_threshold"],
             config,
             True,
         )
@@ -98,24 +96,24 @@ class RFNotes:
         self.rfapi = RFClient(
             self.rf_token,
             self.helper,
-            header=f"OpenCTI-notes/{APP_VERSION}",
+            header=f"OpenCTI/{APP_VERSION}",
         )
         # In a crisis, smash glass and uncomment this line of code
         # self.helper.config['uri'] = self.helper.config['uri'].replace('rabbitmq', '172.19.0.6')
 
         self.rf_pull_threat_maps = get_config_variable(
-            "RECORDED_FUTURE_PULL_THREAT_MAPS", ["rf-notes", "pull_threat_maps"], config
+            "RECORDED_FUTURE_PULL_THREAT_MAPS", ["rf", "pull_threat_maps"], config
         )
 
         self.threat_maps_interval = get_config_variable(
             "RECORDED_FUTURE_THREAT_MAPS_INTERVAL",
-            ["rf-notes", "threat_maps_interval"],
+            ["rf", "threat_maps_interval"],
             config,
         )
 
         risklist_related_entities_list = get_config_variable(
             "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES",
-            ["rf-notes", "risklist_related_entities"],
+            ["rf", "risklist_related_entities"],
             config,
         )
 
