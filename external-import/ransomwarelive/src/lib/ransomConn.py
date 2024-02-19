@@ -196,7 +196,6 @@ class RansomwareAPIConnector:
                         self.helper.log_info(
                             f"Error and response status code {response.status_code}"
                         )
-                         
 
                 except Exception as e:
                     self.helper.log_error(str(e))
