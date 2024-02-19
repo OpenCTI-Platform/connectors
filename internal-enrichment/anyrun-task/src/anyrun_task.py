@@ -81,7 +81,7 @@ class AnyRunTask:
 
     def wait_for_task(self, task_id, timer=300):
         num = 0
-        self.helper.log_info('ANY.RUN Waiting {} seconds for task'.format(timer, task_id))
+        self.helper.log_info('ANY.RUN Waiting {} seconds for task {}'.format(timer, task_id))
         while True:
             time.sleep(1)
             num += 1
