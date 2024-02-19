@@ -191,12 +191,12 @@ class RansomwareAPIConnector:
                             )  # calling the stix_object_generator method to create stix objects
                             stix_bundles.append(bundle)
                             stix_objects.extend(bundle.objects)
-
-                        return stix_objects
-
                     else:
                         print("Error: ", response.status_code)
-                        stix_objects = []
+                        self.helper.log_info(
+                            f"Error and response status code {response.status_code}"
+                        )
+                         
 
                 except Exception as e:
                     self.helper.log_error(str(e))
