@@ -23,6 +23,7 @@ The connector can be configured with the following variables:
 | Env var | Default | Description |
 | - | - | - |
 | `MITRE_INTERVAL` | 7 | Number of the days between each MITRE datasets collection. |
+| `MITRE_REMOVE_STATEMENT_MARKING` | true | Remove the statement MITRE marking definition. |
 | `MITRE_ENTERPRISE_FILE_URL` | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json | Resource URL |
 | `MITRE_MOBILE_ATTACK_FILE_URL` | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json | Resource URL |
 | `MITRE_ICS_ATTACK_FILE_URL` | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json | Resource URL |

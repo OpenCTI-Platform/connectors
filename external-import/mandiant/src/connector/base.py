@@ -63,6 +63,12 @@ class Mandiant:
             config,
             default=False,
         )
+        self.mandiant_remove_statement_marking = get_config_variable(
+            "MANDIANT_REMOVE_STATEMENT_MARKING",
+            ["mandiant", "remove_statement_marking"],
+            config,
+            default=False,
+        )
 
         self.mandiant_collections = []
 
@@ -601,6 +607,18 @@ class Mandiant:
 
         time.sleep(self.mandiant_interval)
 
+    def remove_statement_marking(self, stix_objects):
+        for obj in stix_objects:
+            if "object_marking_refs" in obj:
+                new_markings = []
+                for ref in obj["object_marking_refs"]:
+                    if (
+                        ref
+                        != "marking-definition--ad2caa47-58fd-5491-8f67-255377927369"
+                    ):
+                        new_markings.append(ref)
+                obj.new_version(object_marking_refs=new_markings)
+
     def _run(
         self,
         work_id,
@@ -655,6 +673,8 @@ class Mandiant:
             uniq_bundles_objects = list(
                 {obj["id"]: obj for obj in bundles_objects}.values()
             )
+            if self.mandiant_remove_statement_marking:
+                self.remove_statement_marking(uniq_bundles_objects)
             bundle = stix2.Bundle(objects=uniq_bundles_objects, allow_custom=True)
             self.helper.send_stix2_bundle(
                 bundle.serialize(),
