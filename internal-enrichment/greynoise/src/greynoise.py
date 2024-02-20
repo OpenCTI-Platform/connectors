@@ -719,10 +719,9 @@ class GreyNoiseConnector:
 
         if entity_type in scopes:
             # OpenCTI entity information retrieval
-            opencti_entity = self._get_entity_in_opencti(data)
-            result = self.helper.get_data_from_enrichment(data, opencti_entity)
-            self.stix_objects = result["stix_objects"]
-            stix_entity = result["stix_entity"]
+            stix_entity = data["stix_entity"]
+            opencti_entity = data["opencti_entity"]
+            self.stix_objects = data["stix_objects"]
 
             is_valid_max_tlp = self._extract_and_check_markings(opencti_entity)
             if not is_valid_max_tlp:
@@ -794,7 +793,7 @@ class GreyNoiseConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
 
 
 if __name__ == "__main__":

@@ -43,16 +43,14 @@ class MalBeaconConnector:
 
         return is_valid_max_tlp
 
-    def _process_observable(
-        self, data_from_enrichment: dict, opencti_entity: dict
-    ) -> str:
+    def _process_observable(self, data: dict) -> str:
         """
         Get the observable created in OpenCTI and check which type
         Send for process c2
         :param data_from_enrichment: dict of observable properties
         :return: Info message in string
         """
-
+        opencti_entity = data["opencti_entity"]
         is_valid_tlp = self.extract_and_check_markings(opencti_entity)
         if not is_valid_tlp:
             raise ValueError(
@@ -60,8 +58,8 @@ class MalBeaconConnector:
                 "the connector does not has access to this observable, please check the group of the connector user"
             )
 
-        self.stix_object_list = data_from_enrichment["stix_objects"]
-        observable = data_from_enrichment["stix_entity"]
+        self.stix_object_list = data["stix_objects"]
+        observable = data["stix_entity"]
 
         # Extract IPv4, IPv6, and Domain from entity data
         obs_standard_id = observable["id"]
@@ -108,21 +106,13 @@ class MalBeaconConnector:
         :param data: Dictionary of data
         :return: A string from process observable
         """
-        entity_id = data["entity_id"]
-
-        opencti_entity = self.helper.api.stix_cyber_observable.read(id=entity_id)
-
-        if opencti_entity is not None:
-            data_from_enrichment = self.helper.get_data_from_enrichment(
-                data, opencti_entity
-            )
-            return self._process_observable(data_from_enrichment, opencti_entity)
+        return self._process_observable(data)
 
     def start(self) -> None:
         """
         Start main execution loop procedure for Malbeacon connector
         """
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
 
     """
     ==============================================================

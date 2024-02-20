@@ -50,13 +50,6 @@ class ShodanConnector:
             description=f"Connector Enrichment {self.helper.get_name()}",
         )
 
-    def _get_entity_in_opencti(self, data):
-        opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
-        )
-        if opencti_entity is not None:
-            return opencti_entity
-
     def _extract_and_check_markings(self, entity):
         tlp = "TLP:CLEAR"
         for marking_definition in entity["objectMarking"]:
@@ -461,10 +454,9 @@ class ShodanConnector:
 
     def _process_message(self, data):
         # OpenCTI entity information retrieval
-        opencti_entity = self._get_entity_in_opencti(data)
-        result = self.helper.get_data_from_enrichment(data, opencti_entity)
-        stix_objects = result["stix_objects"]
-        stix_entity = result["stix_entity"]
+        stix_objects = data["stix_objects"]
+        stix_entity = data["stix_entity"]
+        opencti_entity = data["opencti_entity"]
 
         """
         Extract TLP and we check if the variable "max_tlp" is less than 
@@ -499,7 +491,7 @@ class ShodanConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
 
 
 if __name__ == "__main__":

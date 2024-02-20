@@ -343,16 +343,9 @@ class VirusTotalConnector:
     def _process_message(self, data):
         self.helper.metric.inc("run_count")
         self.helper.metric.state("running")
-        opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"], withFiles=True
-        )
-        if opencti_entity is None:
-            raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
-            )
-        result = self.helper.get_data_from_enrichment(data, opencti_entity)
-        stix_objects = result["stix_objects"]
-        stix_entity = result["stix_entity"]
+        stix_objects = data["stix_objects"]
+        stix_entity = data["stix_entity"]
+        opencti_entity = data["opencti_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -387,4 +380,4 @@ class VirusTotalConnector:
     def start(self):
         """Start the main loop."""
         self.helper.metric.state("idle")
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
