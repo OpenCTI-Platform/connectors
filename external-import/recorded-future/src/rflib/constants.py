@@ -1,4 +1,4 @@
-from .rf_notes_to_stix2 import URL, Domain, FileHash, IntrusionSet, IPAddress, Malware
+from .rf_to_stix2 import URL, Domain, FileHash, IntrusionSet, IPAddress, Malware
 
 RISK_LIST_TYPE_MAPPER = {
     "IpAddress": {"class": IPAddress, "path": "/public/opencti/default_ip.csv"},
