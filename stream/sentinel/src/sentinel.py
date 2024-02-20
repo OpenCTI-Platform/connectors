@@ -291,9 +291,10 @@ class SentinelConnector:
             )
         # This is for file types. Does a check for MD5, SHA1, and SHA256 being present. Must contain at least one hash value
         elif ioc_type == "file":
+            created_date = self.helper.get_attribute_in_extension("created_at", data)
             if "MD5" in data["hashes"]:
                 body = {
-                    "fileCreatedDateTime": data["ctime"],
+                    "fileCreatedDateTime": created_date,
                     "fileHashType": "md5",
                     "fileHashValue": data["hashes"]["MD5"],
                     "fileName": file_name,
@@ -316,7 +317,7 @@ class SentinelConnector:
                 )
             if "SHA-1" in data["hashes"]:
                 body = {
-                    "fileCreatedDateTime": data["ctime"],
+                    "fileCreatedDateTime": created_date,
                     "fileHashType": "sha1",
                     "fileHashValue": data["hashes"]["SHA-1"],
                     "fileName": file_name,
@@ -340,7 +341,7 @@ class SentinelConnector:
                 )
             if "SHA-256" in data["hashes"]:
                 body = {
-                    "fileCreatedDateTime": data["ctime"],
+                    "fileCreatedDateTime": created_date,
                     "fileHashType": "sha256",
                     "fileHashValue": data["hashes"]["SHA-256"],
                     "fileName": file_name,
