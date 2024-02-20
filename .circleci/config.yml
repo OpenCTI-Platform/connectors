@@ -587,9 +587,9 @@ jobs:
           name: Build Docker image opencti/connector-ironnet
           command: docker build -t opencti/connector-ironnet:latest . && docker tag opencti/connector-ironnet:latest opencti/connector-ironnet:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/recordedfuture-notes
-          name: Build Docker image opencti/connector-recordedfuture-notes
-          command: docker build -t opencti/connector-recordedfuture-notes:latest . && docker tag opencti/connector-recordedfuture-notes:latest opencti/connector-recordedfuture-notes:${CIRCLE_TAG}
+          working_directory: ~/opencti/external-import/recorded-future
+          name: Build Docker image opencti/connector-recorded-future
+          command: docker build -t opencti/connector-recorded-future:latest . && docker tag opencti/connector-recorded-future:latest opencti/connector-recorded-future:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/opencsam
           name: Build Docker image opencti/connector-opencsam
@@ -736,8 +736,8 @@ jobs:
             docker push opencti/connector-abuse-ssl:${CIRCLE_TAG}
             docker push opencti/connector-ironnet:latest
             docker push opencti/connector-ironnet:${CIRCLE_TAG}
-            docker push opencti/connector-recordedfuture-notes:latest
-            docker push opencti/connector-recordedfuture-notes:${CIRCLE_TAG}
+            docker push opencti/connector-recorded-future:latest
+            docker push opencti/connector-recorded-future:${CIRCLE_TAG}
             docker push opencti/connector-opencsam:latest
             docker push opencti/connector-opencsam:${CIRCLE_TAG}
             docker push opencti/connector-joe-sandbox:latest
@@ -1253,9 +1253,9 @@ jobs:
           name: Build Docker image opencti/connector-ironnet
           command: docker build -t opencti/connector-ironnet:rolling .
       - run:
-          working_directory: ~/opencti/external-import/recordedfuture-notes
-          name: Build Docker image opencti/connector-recordedfuture-notes
-          command: docker build -t opencti/connector-recordedfuture-notes:rolling .
+          working_directory: ~/opencti/external-import/recorded-future
+          name: Build Docker image opencti/connector-recorded-future
+          command: docker build -t opencti/connector-recorded-future:rolling .
       - run:
           working_directory: ~/opencti/external-import/opencsam
           name: Build Docker image opencti/connector-opencsam
@@ -1364,7 +1364,7 @@ jobs:
             docker push opencti/connector-chapsvision:rolling
             docker push opencti/connector-abuse-ssl:rolling
             docker push opencti/connector-ironnet:rolling
-            docker push opencti/connector-recordedfuture-notes:rolling
+            docker push opencti/connector-recorded-future:rolling
             docker push opencti/connector-opencsam:rolling
             docker push opencti/connector-joe-sandbox:rolling
             docker push opencti/connector-crits:rolling
