@@ -1099,7 +1099,7 @@ class StixNote:
             created_by_ref=self.author.id,
             labels=self.labels,
             report_types=self.report_types,
-            object_refs=[obj.id for obj in self.objects] + [self.author.id],
+            object_refs=[obj.id for obj in self.objects],
             external_references=self.external_references,
             object_marking_refs=self.tlp,
         )
