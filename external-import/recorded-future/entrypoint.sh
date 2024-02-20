@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Correct working directory
-cd /opt/opencti-connector-rf-notes
+cd /opt/opencti-connector-rf
 
 # Start the connector
-python rf_notes.py
+python main.py

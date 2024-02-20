@@ -2,7 +2,7 @@ FROM python:3.11-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
-COPY src /opt/opencti-connector-rf-notes
+COPY src /opt/opencti-connector-rf
 
 # Install Python modules
 # hadolint ignore=DL3003
