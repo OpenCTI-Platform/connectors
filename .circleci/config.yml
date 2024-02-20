@@ -253,10 +253,6 @@ jobs:
           name: Build Docker image opencti/connector-comlaude
           command: docker build -t opencti/connector-comlaude:latest . && docker tag opencti/connector-comlaude:latest opencti/connector-comlaude:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/recordedfuture-feeds
-          name: Build Docker image opencti/connector-recordedfuture-feeds
-          command: docker build -t opencti/connector-recordedfuture-feeds:latest . && docker tag opencti/connector-recordedfuture-feeds:latest opencti/connector-recordedfuture-feeds:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/stream/harfanglab
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
@@ -396,8 +392,6 @@ jobs:
             docker push opencti/connector-orion-malware:${CIRCLE_TAG}
             docker push opencti/connector-comlaude:latest
             docker push opencti/connector-comlaude:${CIRCLE_TAG}
-            docker push opencti/connector-recordedfuture-feeds:latest
-            docker push opencti/connector-recordedfuture-feeds:${CIRCLE_TAG}
             docker push opencti/connector-harfanglab:latest
             docker push opencti/connector-harfanglab:${CIRCLE_TAG}
             docker push opencti/connector-crtsh:latest
@@ -977,10 +971,6 @@ jobs:
           name: Build Docker image opencti/connector-comlaude
           command: docker build -t opencti/connector-comlaude:rolling .
       - run:
-          working_directory: ~/opencti/external-import/recordedfuture-feeds
-          name: Build Docker image opencti/connector-recordedfuture-feeds
-          command: docker build -t opencti/connector-recordedfuture-feeds:rolling .
-      - run:
           working_directory: ~/opencti/stream/harfanglab
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:rolling .
@@ -1068,7 +1058,6 @@ jobs:
             docker push opencti/connector-logrhythm:rolling
             docker push opencti/connector-orion-malware:rolling
             docker push opencti/connector-comlaude:rolling
-            docker push opencti/connector-recordedfuture-feeds:rolling
             docker push opencti/connector-harfanglab:rolling
             docker push opencti/connector-crtsh:rolling
             docker push opencti/connector-rst-report-hub:rolling
