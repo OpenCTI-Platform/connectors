@@ -66,6 +66,12 @@ class Mitre:
             ["connector", "update_existing_data"],
             config,
         )
+        self.mitre_remove_statement_marking = get_config_variable(
+            "MITRE_REMOVE_STATEMENT_MARKING",
+            ["mitre", "remove_statement_marking"],
+            config,
+            default=False,
+        )
         self.mitre_interval = get_config_variable(
             "MITRE_INTERVAL", ["mitre", "interval"], config, isNumber=True
         )
@@ -146,6 +152,9 @@ class Mitre:
             stix_bundle["objects"] = not_revoked_objects
             # Add default confidence for each object that require this field
             self.add_confidence_to_bundle_objects(stix_bundle)
+            # Remove statement marking
+            if self.mitre_remove_statement_marking:
+                self.remove_statement_marking(stix_bundle)
             return stix_bundle
         except (
             urllib.error.URLError,
@@ -155,6 +164,21 @@ class Mitre:
             self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
             self.helper.metric.inc("client_error_count")
         return None
+
+    def remove_statement_marking(self, stix_bundle: dict):
+        for obj in stix_bundle["objects"]:
+            if "object_marking_refs" in obj:
+                new_markings = []
+                for ref in obj["object_marking_refs"]:
+                    if ref not in [
+                        "marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168",
+                        "marking-definition--17d82bb2-eeeb-4898-bda5-3ddbcd2b799d",
+                    ]:
+                        new_markings.append(ref)
+                if len(new_markings) == 0:
+                    del obj["object_marking_refs"]
+                else:
+                    obj["object_marking_refs"] = new_markings
 
     def add_confidence_to_bundle_objects(self, stix_bundle: dict):
         # the list of object types for which the confidence has to be added
