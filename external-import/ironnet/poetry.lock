@@ -212,13 +212,13 @@ twisted = ["twisted"]
 
 [[package]]
 name = "pycti"
-version = "5.12.32"
+version = "5.12.33"
 description = "Python API client for OpenCTI."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-5.12.32-py3-none-any.whl", hash = "sha256:985eebee218056f0dc7cda28d7d43f1350ce72385bbc57e0a3f21138dfc5be1e"},
-    {file = "pycti-5.12.32.tar.gz", hash = "sha256:a19f8432ac5c22a1186116c3f1ec651466f1a6b781a83daa5600f2d0a69a724d"},
+    {file = "pycti-5.12.33-py3-none-any.whl", hash = "sha256:f500d542869a77913a70323fe08c897846051b342b65a7704156a9860efc9071"},
+    {file = "pycti-5.12.33.tar.gz", hash = "sha256:7e9e7096b32e66154704584ada5794bbca4941e461db53e0bf7c023a6663aa3b"},
 ]
 
 [package.dependencies]
@@ -721,13 +721,13 @@ files = [
 
 [[package]]
 name = "urllib3"
-version = "2.2.0"
+version = "2.2.1"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "urllib3-2.2.0-py3-none-any.whl", hash = "sha256:ce3711610ddce217e6d113a2732fafad960a03fd0318c91faa79481e35c11224"},
-    {file = "urllib3-2.2.0.tar.gz", hash = "sha256:051d961ad0c62a94e50ecf1af379c3aba230c66c710493493560c0c223c49f20"},
+    {file = "urllib3-2.2.1-py3-none-any.whl", hash = "sha256:450b20ec296a467077128bff42b73080516e71b56ff59a60a02bef2232c4fa9d"},
+    {file = "urllib3-2.2.1.tar.gz", hash = "sha256:d0570876c61ab9e520d776c38acbbb5b05a776d3f9ff98a5c8fd5162a444cf19"},
 ]
 
 [package.extras]
@@ -739,4 +739,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "3bb5feaf42a1179bdc7cec7f84d8aa246b3ec4edf57e83992bd1b1ca81fc9d02"
+content-hash = "c3af3ce87b5040fcf3938f12e2bfed84e00e49049505d02f5025ae4e5f93d61d"
