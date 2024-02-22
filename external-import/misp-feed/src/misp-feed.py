@@ -1908,7 +1908,9 @@ class MispFeed:
             # Report in STIX lib must have at least one object_refs
             if len(object_refs) == 0:
                 # Put a fake ID in the report
-                object_refs.append("intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e")
+                object_refs.append(
+                    "intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e"
+                )
             report = stix2.Report(
                 id=Report.generate_id(
                     event["Event"]["info"],
