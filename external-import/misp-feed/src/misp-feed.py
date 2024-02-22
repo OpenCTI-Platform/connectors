@@ -650,9 +650,11 @@ class MispFeed:
                         )
                         added_names.append(name)
             # Get the linked attack_patterns
-            if tag["name"].startswith("misp-galaxy:attack-pattern") or tag[
-                "name"
-            ].startswith("mitre-attack:attack-pattern"):
+            if (
+                tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
+                or tag["name"].startswith("misp-galaxy:attack-pattern")
+                or tag["name"].startswith("mitre-attack:attack-pattern")
+            ):
                 tag_value_split = tag["name"].split('="')
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
                     tag_value = tag_value_split[1][:-1].strip()
