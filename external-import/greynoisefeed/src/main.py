@@ -1,20 +1,16 @@
-import json
 import os
-import re
-import ssl
 import time
-import urllib
 from datetime import datetime
-from greynoise import GreyNoise
-from urllib import parse
 
-import certifi
+import requests
 import stix2
 import yaml
+from greynoise import GreyNoise
 from pycti import (
     Indicator,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
+    Vulnerability,
     get_config_variable,
 )
 
@@ -28,9 +24,7 @@ class GreyNoiseFeed:
             if os.path.isfile(config_file_path)
             else {}
         )
-        print('helper')
         self.helper = OpenCTIConnectorHelper(config)
-        print('api_key')
         self.api_key = get_config_variable(
             "GREYNOISE_API_KEY", ["greynoisefeed", "api_key"], config
         )
@@ -40,14 +34,17 @@ class GreyNoiseFeed:
         self.feed_type = get_config_variable(
             "GREYNOISE_FEED_TYPE", ["greynoisefeed", "feed_type"], config, required=True
         )
-        self.tag_list = get_config_variable(
-            "GREYNOISE_TAG_LIST", ["greynoisefeed", "tag_list"], config
+        self.tag_slugs = get_config_variable(
+            "GREYNOISE_TAG_LIST", ["greynoisefeed", "tag_slugs"], config
         )
         self.limit = get_config_variable(
             "GREYNOISE_LIMIT", ["greynoisefeed", "limit"], config, True
         )
         self.interval = get_config_variable(
-            "GREYNOISE_INTERVAL", ["greynoisefeed", "interval"], config, True,
+            "GREYNOISE_INTERVAL",
+            ["greynoisefeed", "interval"],
+            config,
+            True,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -67,15 +64,18 @@ class GreyNoiseFeed:
         return
 
     def get_feed_query(self, feed_type):
-        print('get_feed_query')
         query = ""
-        if feed_type.lower() not in ['benign', 'malicious', 'all']:
-            self.helper.log_error("Value for feed_type is not one of: benign, malicious, or all")
+        if feed_type.lower() not in ["benign", "malicious", "benign+malicious", "all"]:
+            self.helper.log_error(
+                "Value for feed_type is not one of: benign, malicious, or all"
+            )
             exit(1)
         elif feed_type.lower() == "benign":
             query = "last_seen:1d classification:benign"
         elif feed_type.lower() == "malicious":
             query = "last_seen:1d classification:malicious"
+        elif feed_type.lower() == "benign+malicious":
+            query = "last_seen:1d (classification:malicious OR classification:benign)"
         elif feed_type.lower() == "all":
             query = "last_seen:1d"
 
@@ -83,7 +83,7 @@ class GreyNoiseFeed:
 
     def run(self):
         self.helper.log_info("greynoise feed dataset...")
-        print('main')
+        print("main")
         while True:
             try:
                 # Get the current timestamp and check
@@ -116,64 +116,116 @@ class GreyNoiseFeed:
                     try:
                         # Requesting data over GreyNoise
                         ip_list = []
-                        session = GreyNoise(api_key=self.api_key, integration_name="opencti-feed-v2.0")
+                        session = GreyNoise(
+                            api_key=self.api_key, integration_name="opencti-feed-v2.0"
+                        )
                         if self.source == "feed":
                             self.helper.log_info("GreyNoise Feed Type - Indicator Feed")
                             query = self.get_feed_query(self.feed_type)
-                            self.helper.log_info("Query GreyNoise API - First Results Page")
-                            response = session.query(query=query, exclude_raw=True, size=10)
-                            complete = True
-                            #complete = response.get("complete", True)
+                            self.helper.log_info(
+                                "Query GreyNoise API - First Results Page"
+                            )
+                            response = session.query(query=query, exclude_raw=True)
+                            complete = response.get("complete", True)
                             scroll = response.get("scroll", "")
 
                             for item in response["data"]:
                                 item_trimmed = {
                                     "ip": item["ip"],
-                                    "classification": item["classification"]
+                                    "classification": item["classification"],
                                 }
                                 ip_list.append(item_trimmed)
-
+                            self.helper.log_info(
+                                "GreyNoise Indicator Count: " + str(len(ip_list))
+                            )
                             # get additional indicators
                             while not complete:
-                                self.helper.log_info("Query GreyNoise API - Next Results Page")
-                                response = session.query(query=query, scroll=scroll, exclude_raw=True)
+                                self.helper.log_info(
+                                    "Query GreyNoise API - Next Results Page"
+                                )
+                                response = session.query(
+                                    query=query, scroll=scroll, exclude_raw=True
+                                )
                                 complete = response.get("complete", True)
                                 scroll = response.get("scroll", "")
 
                                 for item in response["data"]:
                                     item_trimmed = {
                                         "ip": item["ip"],
-                                        "classification": item["classification"]
+                                        "classification": item["classification"],
                                     }
                                     ip_list.append(item_trimmed)
+                                self.helper.log_info(
+                                    "GreyNoise Indicator Count: " + str(len(ip_list))
+                                )
                         elif self.source == "tags":
-                            for tag in tag_list:
+                            self.helper.log_info("GreyNoise Feed Type - Tag Feed")
+                            metadata = session.metadata()
+                            tag_slugs = self.tag_slugs.strip().split(",")
+                            for tag in tag_slugs:
+                                tag_name = ""
+                                cves = []
+                                self.helper.log_info(
+                                    "Getting IPs from Tag Slug: " + str(tag)
+                                )
+                                for meta in metadata["metadata"]:
+                                    if meta["slug"] == tag:
+                                        tag_id = meta["id"]
+                                        tag_name = meta["name"]
+                                        cves = meta["cves"]
+                                url = (
+                                    "https://api.greynoise.io/v3/tags/"
+                                    + str(tag_id)
+                                    + "/ips/download?format=txt"
+                                )
+                                headers = {
+                                    "key": self.api_key,
+                                    "User-Agent": "greynoise-opencti-feed-tags-v2.0",
+                                }
+                                response = requests.get(url, headers=headers)
+                                ips = response.text.split("\n")
+                                for item in ips:
+                                    item_object = {
+                                        "ip": item,
+                                        "tag_name": tag_name,
+                                        "cves": cves,
+                                    }
+                                    ip_list.append(item_object)
                                 continue
                         else:
-                            self.helper.log_error("Value for source is not one of: feed, tag")
+                            self.helper.log_error(
+                                "Value for source is not one of: feed, tags"
+                            )
                             exit(1)
 
                         self.helper.log_info("Query GreyNoise API - Completed")
 
                         # preparing the bundle to be sent to OpenCTI worker
-                        external_reference = stix2.ExternalReference(
-                            source_name="GreyNoise",
-                            url="https://viz.greynoise.io/",
-                            description="GreyNoise Visualizer URL",
-                        )
+
                         bundle_objects = []
 
                         self.helper.log_info("Building Indicator Bundles")
                         for d in ip_list:
                             if self.source == "feed":
-                                description = (f"Internet Scanning IP detected by GreyNoise with "
-                                               f"classification {d.get('classification', '')}")
+                                description = (
+                                    f"Internet Scanning IP detected by GreyNoise with "
+                                    f"classification {d.get('classification', '')}"
+                                )
                             elif self.source == "tags":
-                                description = (f"Internet Scanning IP detected by GreyNoise with "
-                                               f"tag name {d.get('tag_name', '')}")
+                                description = (
+                                    f"Internet Scanning IP detected by GreyNoise with "
+                                    f"tag name {d.get('tag_name', '')}"
+                                )
                             else:
-                                description = "Internet Scanning IP detected by GreyNoise"
+                                description = (
+                                    "Internet Scanning IP detected by GreyNoise"
+                                )
                             pattern = "[ipv4-addr:value = '" + d.get("ip", "") + "']"
+                            external_reference = stix2.ExternalReference(
+                                source_name="GreyNoise",
+                                url="https://viz.greynoise.io/ip/" + d.get("ip", ""),
+                                description="GreyNoise Visualizer URL",
+                            )
                             stix_indicator = stix2.Indicator(
                                 id=Indicator.generate_id(pattern),
                                 name=d["ip"],
@@ -185,7 +237,7 @@ class GreyNoiseFeed:
                                 external_references=[external_reference],
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 custom_properties={
-                                    "x_opencti_score": "85",
+                                    "x_opencti_score": 85,
                                     "x_opencti_main_observable_type": "IPv4-Addr",
                                 },
                             )
@@ -196,7 +248,7 @@ class GreyNoiseFeed:
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 custom_properties={
                                     "x_opencti_description": description,
-                                    "x_opencti_score": "85",
+                                    "x_opencti_score": 85,
                                     "created_by_ref": self.identity["standard_id"],
                                     "external_references": [external_reference],
                                 },
@@ -212,6 +264,31 @@ class GreyNoiseFeed:
                                 target_ref=stix_observable.id,
                                 object_marking_refs=[stix2.TLP_WHITE],
                             )
+                            if cves:
+                                for cve in cves:
+                                    # Generate Vulnerability
+                                    stix_vulnerability = stix2.Vulnerability(
+                                        id=Vulnerability.generate_id(cve),
+                                        name=cve,
+                                        confidence=85,
+                                        created_by_ref=self.identity["standard_id"],
+                                        allow_custom=True,
+                                    )
+                                    bundle_objects.append(stix_vulnerability)
+
+                                    # Generate Relationship : observable -> "related-to" -> vulnerability
+                                    observable_to_vulnerability = stix2.Relationship(
+                                        id=StixCoreRelationship.generate_id(
+                                            "related-to",
+                                            stix_vulnerability.id,
+                                            stix_observable.id,
+                                        ),
+                                        relationship_type="related-to",
+                                        source_ref=stix_vulnerability.id,
+                                        target_ref=stix_observable.id,
+                                        object_marking_refs=[stix2.TLP_WHITE],
+                                    )
+                                    bundle_objects.append(observable_to_vulnerability)
                             bundle_objects.append(stix_indicator)
                             bundle_objects.append(stix_observable)
                             bundle_objects.append(stix_relationship)
@@ -258,12 +335,8 @@ class GreyNoiseFeed:
 
 if __name__ == "__main__":
     try:
-        print('init')
         connector = GreyNoiseFeed()
-        print('run')
         connector.run()
-    except Exception as e:
-#        print('except')
-        # print(e)
+    except:
         time.sleep(10)
         exit(0)
