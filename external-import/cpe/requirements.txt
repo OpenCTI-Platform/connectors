@@ -1,0 +1,4 @@
+pycti==5.12.9
+requests
+stix2
+langcodes
