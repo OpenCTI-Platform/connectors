@@ -2,6 +2,7 @@
 """VirusTotal enrichment module."""
 import json
 from pathlib import Path
+from typing import Dict
 
 import stix2
 import yaml
@@ -340,12 +341,12 @@ class VirusTotalConnector:
         builder.create_notes()
         return builder.send_bundle()
 
-    def _process_message(self, data):
+    def _process_message(self, data: Dict):
         self.helper.metric.inc("run_count")
         self.helper.metric.state("running")
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
-        opencti_entity = data["opencti_entity"]
+        opencti_entity = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -380,4 +381,4 @@ class VirusTotalConnector:
     def start(self):
         """Start the main loop."""
         self.helper.metric.state("idle")
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)

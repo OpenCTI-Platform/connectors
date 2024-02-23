@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 
 import pycountry
 import requests
@@ -87,12 +88,10 @@ class IpInfoConnector:
         stix_objects.append(observable_to_city)
         return self.helper.stix2_create_bundle(stix_objects)
 
-    def _process_message(self, data):
-        stix_objects = data["stix_objects"]
-        stix_entity = data["stix_entity"]
-        opencti_entity = data["opencti_entity"]
+    def _process_message(self, data: Dict):
+        opencti_entity = data["enrichment_entity"]
 
-        # Extract TLP
+        # Extract TLP and validate
         tlp = "TLP:CLEAR"
         for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
@@ -103,6 +102,9 @@ class IpInfoConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
+        # Enrich the bundle with ip info
+        stix_entity = data["stix_entity"]
+        stix_objects = data["stix_objects"]
         # Get the geo loc from the API
         api_url = (
             "https://ipinfo.io/" + stix_entity["value"] + "/json/?token=" + self.token
@@ -130,7 +132,7 @@ class IpInfoConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 
 from datetime import datetime
 from pathlib import Path
+from typing import Dict
 
 import domaintools
 import stix2
@@ -242,9 +243,8 @@ class DomainToolsConnector:
         self.helper.metric.state("idle")
         return result
 
-    def _process_message(self, data):
-        stix_objects = data["stix_objects"]
-        opencti_entity = data["opencti_entity"]
+    def _process_message(self, data: Dict):
+        opencti_entity = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -257,8 +257,9 @@ class DomainToolsConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
+        stix_objects = data["stix_objects"]
         return self._process_file(stix_objects, opencti_entity)
 
     def start(self):
         """Start the main loop."""
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)

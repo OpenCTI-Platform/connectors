@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """IPQS enrichment module."""
 from os import path
+from typing import Dict
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
@@ -210,8 +211,8 @@ class IPQSConnector:
 
         return builder.send_bundle()
 
-    def _process_message(self, data):
-        observable = self.helper.api.stix_cyber_observable.read(id=data["entity_id"])
+    def _process_message(self, data: Dict):
+        observable = data["enrichment_entity"]
 
         if observable is None:
             raise ValueError(
@@ -238,4 +239,4 @@ class IPQSConnector:
     # Start the main loop
     def start(self):
         """Main method to start."""
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)

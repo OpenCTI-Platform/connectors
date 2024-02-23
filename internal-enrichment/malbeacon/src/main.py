@@ -50,7 +50,7 @@ class MalBeaconConnector:
         :param data_from_enrichment: dict of observable properties
         :return: Info message in string
         """
-        opencti_entity = data["opencti_entity"]
+        opencti_entity = data["enrichment_entity"]
         is_valid_tlp = self.extract_and_check_markings(opencti_entity)
         if not is_valid_tlp:
             raise ValueError(
@@ -112,7 +112,7 @@ class MalBeaconConnector:
         """
         Start main execution loop procedure for Malbeacon connector
         """
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)
 
     """
     ==============================================================

@@ -112,11 +112,9 @@ class AttributionTools:
 
         self.helper.log_info(f"Model retraining schedule set to {self.cron}")
 
-    def _process_message(self, data) -> None:
+    def _process_message(self, data: Dict):
         # get standard_id for the incident where user triggered the attribution tool
-        incident_standard_id = self.helper.api.stix_domain_object.read(
-            id=data["entity_id"], types=["Incident"], customAttributes="standard_id"
-        )["standard_id"]
+        incident_standard_id = data["enrichment_entity"]["standard_id"]
 
         # get the incident entity and all first neighbours as bundle
         bundle: Dict = self.dataexport.export_entity(
@@ -342,7 +340,10 @@ class AttributionTools:
             target=self.scheduled_model_training_loop, daemon=True
         )
         scheduled_training_thread.start()
-        self.helper.listen(self._process_message)
+        self.helper.listen(
+            message_callback=self._process_message,
+            custom_attributes_resolution="standard_id",
+        )
 
 
 if __name__ == "__main__":

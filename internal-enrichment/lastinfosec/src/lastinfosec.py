@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import time
+from typing import Dict
 
 import requests
 import yaml
@@ -49,15 +50,8 @@ class LastInfoSecEnrichment:
         bundles_sent = self.helper.send_stix2_bundle(bundle)
         return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
 
-    def _process_message(self, data):
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
-            raise ValueError(
-                "Observable not found "
-                "(may be linked to data seggregation, check your group and permissions)"
-            )
-
+    def _process_message(self, data: Dict):
+        observable = data["enrichment_entity"]
         value = observable["observable_value"]
         proxy_dic = {}
         if self.proxy_http is not None:
@@ -81,7 +75,7 @@ class LastInfoSecEnrichment:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

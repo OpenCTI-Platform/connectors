@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from typing import Dict
 
 import shodan
 import stix2
@@ -452,11 +453,11 @@ class ShodanConnector:
         )
         return self.helper.stix2_create_bundle(uniq_bundles_objects)
 
-    def _process_message(self, data):
+    def _process_message(self, data: Dict):
         # OpenCTI entity information retrieval
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
-        opencti_entity = data["opencti_entity"]
+        opencti_entity = data["enrichment_entity"]
 
         """
         Extract TLP and we check if the variable "max_tlp" is less than 
@@ -491,7 +492,7 @@ class ShodanConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

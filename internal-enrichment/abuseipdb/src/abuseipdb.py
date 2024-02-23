@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from typing import Dict
 
 import requests
 import stix2
@@ -67,10 +68,8 @@ class AbuseIPDBConnector:
         }
         return mapping.get(str(category_number), "unknown category")
 
-    def _process_message(self, data):
-        stix_objects = data["stix_objects"]
-        stix_entity = data["stix_entity"]
-        opencti_entity = data["opencti_entity"]
+    def _process_message(self, data: Dict) -> str:
+        opencti_entity = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -82,6 +81,9 @@ class AbuseIPDBConnector:
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
+
+        stix_objects = data["stix_objects"]
+        stix_entity = data["stix_entity"]
         # Extract IP from entity data
         url = "https://api.abuseipdb.com/api/v2/check"
         headers = {
@@ -184,7 +186,7 @@ class AbuseIPDBConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from typing import Dict
 
 import pycountry
 import requests
@@ -710,7 +711,7 @@ class GreyNoiseConnector:
         stix2_bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
         return stix2_bundle
 
-    def _process_message(self, data: dict) -> str:
+    def _process_message(self, data: Dict) -> str:
 
         # Security to limit playbook triggers to something other than the scope initial
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
@@ -720,7 +721,7 @@ class GreyNoiseConnector:
         if entity_type in scopes:
             # OpenCTI entity information retrieval
             stix_entity = data["stix_entity"]
-            opencti_entity = data["opencti_entity"]
+            opencti_entity = data["enrichment_entity"]
             self.stix_objects = data["stix_objects"]
 
             is_valid_max_tlp = self._extract_and_check_markings(opencti_entity)
@@ -793,7 +794,7 @@ class GreyNoiseConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

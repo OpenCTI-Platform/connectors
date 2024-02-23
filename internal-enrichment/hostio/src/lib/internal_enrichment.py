@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 
 from pycti import OpenCTIConnectorHelper
 
@@ -26,35 +27,10 @@ class InternalEnrichmentConnector:
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
 
-    def _process_message(self, data):
-        """Processing the enrichment request
-
-        API enrichment can be performed using the `self.helper.api` helper. Examples below:
-        >>> self.helper.api.stix_cyber_observable.update_field(
-        ...     id=entity_id,
-        ...     input={
-        ...         "key": "x_opencti_score",
-        ...         "value": 100,
-        ...     },
-        ... )
-        >>> external_reference = self.helper.api.external_reference.create(
-        ...         source_name="Example source",
-        ...         url=f"https://www.example.com/1.1.1.1",
-        ...         description="This IP address is from within our whitelist.",
-        ... )
-        >>> self.helper.api.stix_cyber_observable.add_external_reference(
-        ...         id=entity_id, external_reference_id=external_reference["id"]
-        ... )
-        >>> self.helper.api.stix_cyber_observable.add_label(
-        ...         id=entity_id, label_name="dns"
-        ... )
-
-        Args:
-            data (dict): The data to process. The `entity_id` attribute contains the objeccct to enrich.
-        """
+    def _process_message(self, data: Dict):
         # entity_id = data["entity_id"]
         raise NotImplementedError
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)

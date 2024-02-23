@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from typing import Dict
 
 import requests
 import stix2
@@ -404,10 +405,10 @@ class HybridAnalysis:
             return "Observable not found and no file to upload in the sandbox"
         return self._trigger_sandbox(stix_objects, stix_entity, opencti_entity)
 
-    def _process_message(self, data):
+    def _process_message(self, data: Dict):
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
-        opencti_entity = data["opencti_entity"]
+        opencti_entity = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -422,7 +423,7 @@ class HybridAnalysis:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)
 
     def detect_ip_version(self, value):
         if len(value) > 16:

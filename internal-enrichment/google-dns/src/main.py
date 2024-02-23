@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from typing import Dict
 
 import yaml
 from client import GoogleDNSClient
@@ -18,19 +19,6 @@ class GoogleDNSConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.dns_client = GoogleDNSClient()
-
-    def _get_domain(self, entity_id):
-        self.helper.log_debug("Getting Domain Name from OpenCTI")
-        custom_attributes = """
-            id
-            entity_type
-            observable_value
-            standard_id
-        """
-        observable = self.helper.api.stix_cyber_observable.read(
-            id=entity_id, customAttributes=custom_attributes
-        )
-        return observable
 
     def _build_ip_addrs(self, domain, a_records) -> list:
         self.helper.log_debug("Creating and sending STIX bundle")
@@ -190,11 +178,8 @@ class GoogleDNSConnector:
 
         return objects
 
-    def _process_message(self, data: dict) -> str:
-        entity_id = data["entity_id"]
-        self.helper.log_info(f"Enriching {entity_id}")
-        domain = self._get_domain(entity_id)
-
+    def _process_message(self, data: Dict) -> str:
+        domain = data["enrichment_entity"]
         # Handle 'NS' records
         self.helper.log_debug("Getting 'NS' records via Google Public DNS")
         ns_records = self.dns_client.ns(domain["observable_value"])
@@ -239,7 +224,15 @@ class GoogleDNSConnector:
 
     def start(self) -> None:
         self.helper.log_info("Google DNS connector started")
-        self.helper.listen(self._process_message)
+        self.helper.listen(
+            message_callback=self._process_message,
+            custom_attributes_resolution="""
+            id
+            entity_type
+            observable_value
+            standard_id
+        """,
+        )
 
 
 if __name__ == "__main__":

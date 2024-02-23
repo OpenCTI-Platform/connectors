@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 
 import tldextract
 import yaml
@@ -262,15 +263,15 @@ class HygieneConnector:
                 self.helper.send_stix2_bundle(serialized_bundle)
             return "Observable value found on warninglist and tagged accordingly"
 
-    def _process_message(self, data) -> str:
+    def _process_message(self, data: Dict) -> str:
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
-        opencti_entity = data["opencti_entity"]
+        opencti_entity = data["enrichment_entity"]
         return self._process_observable(stix_objects, stix_entity, opencti_entity)
 
     # Start the main loop
     def start(self):
-        self.helper.listen(message_callback=self._process_message, auto_resolution=True)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

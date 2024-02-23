@@ -1,6 +1,7 @@
 import os
 import ssl
 import urllib.request
+from typing import Dict
 
 import html2text
 import pdfkit
@@ -176,9 +177,8 @@ class ImportExternalReferenceConnector:
                     self.helper.log_error(e)
         return "Import process is finished."
 
-    def _process_message(self, data):
-        entity_id = data["entity_id"]
-        external_reference = self.helper.api.external_reference.read(id=entity_id)
+    def _process_message(self, data: Dict):
+        external_reference = data["enrichment_entity"]
         self.helper.log_info(
             "External reference found: " + external_reference["source_name"]
         )
@@ -186,7 +186,7 @@ class ImportExternalReferenceConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":
