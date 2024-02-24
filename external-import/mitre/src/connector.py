@@ -128,7 +128,6 @@ class Mitre:
                 .read()
                 .decode("utf-8")
             )
-
             # Convert the data to python dictionary
             stix_bundle = json.loads(serialized_bundle)
             stix_objects = stix_bundle["objects"]
@@ -141,17 +140,13 @@ class Mitre:
                 )
             )
             revoked_ids = list(map(lambda stix: stix["id"], revoked_objects))
-
             # Filter every revoked MITRE elements
             not_revoked_objects = list(
                 filter(
                     lambda stix: filter_stix_revoked(revoked_ids, stix), stix_objects
                 )
             )
-
             stix_bundle["objects"] = not_revoked_objects
-            # Add default confidence for each object that require this field
-            self.add_confidence_to_bundle_objects(stix_bundle)
             # Remove statement marking
             if self.mitre_remove_statement_marking:
                 self.remove_statement_marking(stix_bundle)
@@ -179,27 +174,6 @@ class Mitre:
                     del obj["object_marking_refs"]
                 else:
                     obj["object_marking_refs"] = new_markings
-
-    def add_confidence_to_bundle_objects(self, stix_bundle: dict):
-        # the list of object types for which the confidence has to be added
-        # (skip marking-definition, identity, external-reference-as-report)
-        object_types_with_confidence = [
-            "attack-pattern",
-            "course-of-action",
-            "threat-actor",
-            "intrusion-set",
-            "campaign",
-            "malware",
-            "tool",
-            "vulnerability",
-            "report",
-            "relationship",
-        ]
-        for obj in stix_bundle["objects"]:
-            object_type = obj["type"]
-            if object_type in object_types_with_confidence:
-                # self.helper.log_info(f"Adding confidence to {object_type} object")
-                obj["confidence"] = int(self.helper.connect_confidence_level)
 
     def process_data(self):
         unixtime_now = get_unixtime_now()

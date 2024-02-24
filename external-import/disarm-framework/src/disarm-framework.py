@@ -72,30 +72,6 @@ class DisarmFramework:
             self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
         return None
 
-    # Add confidence to every object in a bundle
-    def add_confidence_to_bundle_objects(self, serialized_bundle: str) -> str:
-        # the list of object types for which the confidence has to be added
-        # (skip marking-definition, identity, external-reference-as-report)
-        object_types_with_confidence = [
-            "attack-pattern",
-            "course-of-action",
-            "threat-actor",
-            "intrusion-set",
-            "campaign",
-            "malware",
-            "tool",
-            "vulnerability",
-            "report",
-            "relationship",
-        ]
-        stix_bundle = json.loads(serialized_bundle)
-        for obj in stix_bundle["objects"]:
-            object_type = obj["type"]
-            if object_type in object_types_with_confidence:
-                # self.helper.log_info(f"Adding confidence to {object_type} object")
-                obj["confidence"] = int(self.helper.connect_confidence_level)
-        return json.dumps(stix_bundle)
-
     def change_kill_chain_name(self, serialized_bundle: str) -> str:
         object_types_with_kill_chain = ["attack-pattern"]
         stix_bundle = json.loads(serialized_bundle)
@@ -144,11 +120,8 @@ class DisarmFramework:
                     and len(self.disarm_framework_file_url) > 0
                 ):
                     disarm_data = self.retrieve_data(self.disarm_framework_file_url)
-                    disarm_data_with_confidence = self.add_confidence_to_bundle_objects(
-                        disarm_data
-                    )
                     disarm_data_with_proper_kill_chain = self.change_kill_chain_name(
-                        disarm_data_with_confidence
+                        disarm_data
                     )
                     self.send_bundle(work_id, disarm_data_with_proper_kill_chain)
 
