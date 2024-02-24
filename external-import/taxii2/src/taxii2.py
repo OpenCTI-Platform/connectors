@@ -25,8 +25,9 @@ class ApiKeyAuth(AuthBase):
         self.value = value
 
     def __call__(self, r):
-        r.headers[self.api_key] = '{}'.format(self.value)
+        r.headers[self.api_key] = "{}".format(self.value)
         return r
+
 
 class Taxii2Connector:
     """Connector object"""
@@ -55,8 +56,12 @@ class Taxii2Connector:
         use_apikey = get_config_variable(
             "TAXII2_USE_APIKEY", ["taxii2", "use_apikey"], config, default=False
         )
-        apikey_key = get_config_variable("TAXII2_APIKEY_KEY", ["taxii2", "apikey_key"], config)
-        apikey_value = get_config_variable("TAXII2_APIKEY_VALUE", ["taxii2", "apikey_value"], config)
+        apikey_key = get_config_variable(
+            "TAXII2_APIKEY_KEY", ["taxii2", "apikey_key"], config
+        )
+        apikey_value = get_config_variable(
+            "TAXII2_APIKEY_VALUE", ["taxii2", "apikey_value"], config
+        )
         server_url = get_config_variable(
             "TAXII2_DISCOVERY_URL", ["taxii2", "discovery_url"], config
         )
