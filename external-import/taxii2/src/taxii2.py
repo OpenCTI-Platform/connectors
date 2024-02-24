@@ -18,6 +18,7 @@ from requests.exceptions import HTTPError
 from taxii2client.common import TokenAuth
 from taxii2client.exceptions import TAXIIServiceException
 
+
 class ApiKeyAuth(AuthBase):
     def __init__(self, api_key, value):
         self.api_key = api_key
