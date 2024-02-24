@@ -5,7 +5,6 @@ import sys
 import time
 import urllib.request
 from datetime import datetime
-from typing import Optional
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
