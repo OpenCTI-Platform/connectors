@@ -770,6 +770,54 @@ jobs:
       - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
+  build_fips_1:
+    working_directory: ~/opencti
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run:
+          working_directory: ~/opencti/internal-import-file/import-file-stix
+          name: Build Docker image opencti/connector-import-file-stix
+          command: docker build -f Dockerfile_fips -t opencti/connector-import-file-stix:latest . && docker tag opencti/connector-import-file-stix:latest-fips opencti/connector-import-file-stix:${CIRCLE_TAG}-fips
+      - run:
+          working_directory: ~/opencti/internal-import-file/import-document
+          name: Build Docker image opencti/connector-import-document
+          command: docker build -f Dockerfile_fips -t opencti/connector-import-document:latest . && docker tag opencti/connector-import-document:latest-fips opencti/connector-import-document:${CIRCLE_TAG}-fips
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-stix
+          name: Build Docker image opencti/connector-export-file-stix
+          command: docker build -f Dockerfile_fips -t opencti/connector-export-file-stix:latest . && docker tag opencti/connector-export-file-stix:latest-fips opencti/connector-export-file-stix:${CIRCLE_TAG}-fips
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-csv
+          name: Build Docker image opencti/connector-export-file-csv
+          command: docker build -f Dockerfile_fips -t opencti/connector-export-file-csv:latest . && docker tag opencti/connector-export-file-csv:latest-fips opencti/connector-export-file-csv:${CIRCLE_TAG}-fips
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-txt
+          name: Build Docker image opencti/connector-export-file-txt
+          command: docker build -f Dockerfile_fips -t opencti/connector-export-file-txt:latest . && docker tag opencti/connector-export-file-txt:latest-fips opencti/connector-export-file-txt:${CIRCLE_TAG}-fips
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-import-file-stix:latest-fips
+            docker push opencti/connector-import-file-stix:${CIRCLE_TAG}-fips
+            docker push opencti/connector-import-document:latest-fips
+            docker push opencti/connector-import-document:${CIRCLE_TAG}-fips
+            docker push opencti/connector-export-file-stix:latest-fips
+            docker push opencti/connector-export-file-stix:${CIRCLE_TAG}-fips
+            docker push opencti/connector-export-file-csv:latest-fips
+            docker push opencti/connector-export-file-csv:${CIRCLE_TAG}-fips
+            docker push opencti/connector-export-file-txt:latest-fips
+            docker push opencti/connector-export-file-txt:${CIRCLE_TAG}-fips
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   build_rolling_1:
     working_directory: ~/opencti
     docker:
@@ -1376,6 +1424,49 @@ jobs:
       - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
+  build_fips_rolling_1:
+    working_directory: ~/opencti
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run:
+          working_directory: ~/opencti/internal-import-file/import-file-stix
+          name: Build Docker image opencti/connector-import-file-stix
+          command: docker build -f Dockerfile_fips -t opencti/connector-import-file-stix:rolling-fips .
+      - run:
+          working_directory: ~/opencti/internal-import-file/import-document
+          name: Build Docker image opencti/connector-import-document
+          command: docker build -f Dockerfile_fips -t opencti/connector-import-document:rolling-fips .
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-stix
+          name: Build Docker image opencti/connector-export-file-stix
+          command: docker build -f Dockerfile_fips -t opencti/connector-export-file-stix:rolling-fips .
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-csv
+          name: Build Docker image opencti/connector-export-file-csv
+          command: docker build -f Dockerfile_fips -t opencti/connector-export-file-csv:rolling-fips .
+      - run:
+          working_directory: ~/opencti/internal-export-file/export-file-txt
+          name: Build Docker image opencti/connector-export-file-txt
+          command: docker build -f Dockerfile_fips -t opencti/connector-export-file-txt:rolling-fips .
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-import-file-stix:rolling-fips
+            docker push opencti/connector-import-document:rolling-fips
+            docker push opencti/connector-export-file-stix:rolling-fips
+            docker push opencti/connector-export-file-csv:rolling-fips
+            docker push opencti/connector-export-file-txt:rolling-fips
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   notify_rolling:
     docker:
       - image: "cimg/base:stable"
@@ -1416,6 +1507,12 @@ workflows:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
               ignore: /.*/
+      - build_fips_1:
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
       - build_rolling_1:
           requires:
             - ensure_formatting
@@ -1432,14 +1529,24 @@ workflows:
             branches:
               only:
                 - master
+      - build_fips_rolling_1:
+          requires:
+            - ensure_formatting
+            - linter
+          filters:
+            branches:
+              only:
+                - master
       - notify_rolling:
           requires:
             - build_rolling_1
             - build_rolling_2
+            - build_fips_rolling_1
       - notify:
           requires:
             - build_1
             - build_2
+            - build_fips_1
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
