@@ -14,6 +14,9 @@ There are a number of configuration options, which are set either in `docker-com
 | TAXII2_PASSWORD     | password        | Password credential to access TAXII Server
 | TAXII2_USE_TOKEN    | false           | Switch from using username and password to using a single token as authentication method.
 | TAXII2_TOKEN        | token           | Token string from taxii server.
+| TAXII2_USE_APIKEY   | false           | Switch from using username and password to using a key/value pair as authentication method.
+| TAXII2_APIKEY_KEY   | apikey          | API key - name of the HTTP header.
+| TAXII2_APIKEY_VALUE | value           | The secret value set as the header value.
 | TAXII2_v21          | v2.1            | Boolean statement to determine if the TAXII Server is V2.0 or V2.1. Defaults to False (V2.0)
 | TAXII2_COLLECTIONS  | collections     | Specify what TAXII Collections you want to poll. Syntax Detailed below
 | TAXII2_INITIAL_HISTORY| initial_history| In hours, the "lookback" window for the intial Poll. This will limit the respones only to STIX2 objects that were added to the collection during the specified lookback time. In all subsequent polls, the `interval` configuration option is used to determine the lookback window
