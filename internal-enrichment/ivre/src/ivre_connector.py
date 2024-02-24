@@ -104,7 +104,7 @@ class IvreConnector:
         self.ivre_instance_name = get_config_variable(
             "CONNECTOR_NAME", ["connector", "name"], config, default="IVRE"
         )
-        self.confidence = int(self.helper.connect_confidence_level)
+        self.confidence = self.helper.connect_confidence_level
         self.max_tlp = get_config_variable("IVRE_MAX_TLP", ["ivre", "max_tlp"], config)
 
     @property
