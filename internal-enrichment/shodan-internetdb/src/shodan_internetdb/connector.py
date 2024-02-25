@@ -54,19 +54,7 @@ class ShodanInternetDBConnector:
         Start the connector
         :return: None
         """
-        self._helper.listen(
-            message_callback=self._process_message,
-            custom_attributes_resolution="""
-            id
-            entity_type
-            objectMarking {
-              id
-              definition_type
-              definition
-            }
-            observable_value
-        """,
-        )
+        self._helper.listen(message_callback=self._process_message)
 
     def _process_message(self, data: Dict) -> str:
         """

@@ -932,9 +932,7 @@ class JoeSandboxConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(
-            message_callback=self._process_message, with_files_resolution=True
-        )
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

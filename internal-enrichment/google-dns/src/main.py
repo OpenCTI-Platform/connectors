@@ -224,15 +224,7 @@ class GoogleDNSConnector:
 
     def start(self) -> None:
         self.helper.log_info("Google DNS connector started")
-        self.helper.listen(
-            message_callback=self._process_message,
-            custom_attributes_resolution="""
-            id
-            entity_type
-            observable_value
-            standard_id
-        """,
-        )
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

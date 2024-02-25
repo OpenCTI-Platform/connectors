@@ -340,10 +340,7 @@ class AttributionTools:
             target=self.scheduled_model_training_loop, daemon=True
         )
         scheduled_training_thread.start()
-        self.helper.listen(
-            message_callback=self._process_message,
-            custom_attributes_resolution="standard_id",
-        )
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":
