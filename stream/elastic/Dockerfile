@@ -1,49 +1,18 @@
-FROM python:3.11-slim AS base
-
-FROM base AS builder
-
-ENV PYTHONFAULTHANDLER=1 \
-  PYTHONUNBUFFERED=1 \
-  PYTHONHASHSEED=random \
-  PIP_NO_CACHE_DIR=off \
-  PIP_DISABLE_PIP_VERSION_CHECK=on \
-  PIP_DEFAULT_TIMEOUT=100 \
-  POETRY_NO_INTERACTION=1 \
-  POETRY_VIRTUALENVS_CREATE=false \
-  PATH="$PATH:/runtime/bin" \
-  PYTHONPATH="$PYTHONPATH:/runtime/lib/python3.9/site-packages" \
-  # Versions:
-  POETRY_VERSION=1.5.0
-
-# System deps:
-RUN apt-get update && apt-get install -y build-essential unzip wget python3-dev
-RUN pip install --upgrade pip && pip install --pre "poetry==$POETRY_VERSION"
-RUN python3 -m venv /runtime
-
-# Generate requirements and install dependencies.
-COPY pyproject.toml ./
-RUN /runtime/bin/pip3 install --upgrade pip && \
-  poetry lock --no-plugins && \
-  poetry export --no-plugins --without-hashes -f requirements.txt | /runtime/bin/pip3 install -r /dev/stdin
-
-COPY . .
-RUN poetry build && /runtime/bin/pip install dist/*.whl
-
-
-FROM base as runtime
+FROM python:3.11-alpine
 ENV CONNECTOR_TYPE=STREAM
 
-RUN apt-get update && apt-get install -y libmagic1 && apt-get clean
-COPY --from=builder /runtime /runtime
+# Copy the worker
+COPY src /opt/opencti-connector-elastic
+
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+
+RUN cd /opt/opencti-connector-elastic && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
 
 # Expose and entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
-
-# Add Tini
-ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
-
-# Run your program under Tini
-ENTRYPOINT ["/tini", "--", "/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]

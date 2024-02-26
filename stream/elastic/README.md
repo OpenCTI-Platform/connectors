@@ -73,29 +73,17 @@ To build the container to run on Docker, Kubernetes, or other OCI runtime, simpl
 docker build -t elastic-connector:latest .
 ```
 
-## Building virtual environment
-
-This connector uses [Python Poetry](https://python-poetry.org/) to manage dependencies. If you want to run the project locally, create a virtual environment using your favorite tool (I like pyenv, but the virtualenv module would be just fine). See the
-Poetry installation docs on how to install it.
+## Configuration file
 
 ```shell
-# Install runtime dependencies
-poetry install --no-dev
-
 # Configure connector as noted above
-cp config.reference.yml config.yml
-
-# Run main script, it was installed to your virtualenv bin/ dir.
-elastic-connector
+cp config.yml.sample config.yml
 ```
 
-If you want to run tests and do other development things use poetry to install those deps.
+And run main script from src:
 
 ```shell
-poetry install
-
-# Run all tests tests (flake8, black, isort, unit tests in tests/ dir)
-pytest
+python3 -m elastic
 ```
 
 ### Using a Constrained API key
