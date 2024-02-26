@@ -16,5 +16,6 @@ greynoisefeed:
   source: 'feed'  # set to either feed or tags
   feed_type: 'benign'  # if using "feed" option, set to benign, malicious, benign+malicious, or all
   tag_slugs: 'tag id 1,tag id 2'  # if using "tags" option, provide list of tag slugs
-  limit: 1000
+  indicator_score: 50
+  limit: 100000
   interval: 2 # In days, must be strictly greater than 1

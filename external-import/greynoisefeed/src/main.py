@@ -35,7 +35,13 @@ class GreyNoiseFeed:
             "GREYNOISE_FEED_TYPE", ["greynoisefeed", "feed_type"], config, required=True
         )
         self.tag_slugs = get_config_variable(
-            "GREYNOISE_TAG_LIST", ["greynoisefeed", "tag_slugs"], config
+            "GREYNOISE_TAG_SLUGS", ["greynoisefeed", "tag_slugs"], config
+        )
+        self.indicator_score = get_config_variable(
+            "GREYNOISE_INDICATOR_SCORE",
+            ["greynoisefeed", "indicator_score"],
+            config,
+            True,
         )
         self.limit = get_config_variable(
             "GREYNOISE_LIMIT", ["greynoisefeed", "limit"], config, True
@@ -83,7 +89,6 @@ class GreyNoiseFeed:
 
     def run(self):
         self.helper.log_info("greynoise feed dataset...")
-        print("main")
         while True:
             try:
                 # Get the current timestamp and check
@@ -138,6 +143,11 @@ class GreyNoiseFeed:
                             self.helper.log_info(
                                 "GreyNoise Indicator Count: " + str(len(ip_list))
                             )
+                            if len(ip_list) >= self.limit:
+                                complete = True
+                                self.helper.log_info(
+                                    "GreyNoise Indicator Limit Reached"
+                                )
                             # get additional indicators
                             while not complete:
                                 self.helper.log_info(
@@ -158,6 +168,11 @@ class GreyNoiseFeed:
                                 self.helper.log_info(
                                     "GreyNoise Indicator Count: " + str(len(ip_list))
                                 )
+                                if len(ip_list) >= self.limit:
+                                    self.helper.log_info(
+                                        "GreyNoise Indicator Limit Reached"
+                                    )
+                                    complete = True
                         elif self.source == "tags":
                             self.helper.log_info("GreyNoise Feed Type - Tag Feed")
                             metadata = session.metadata()
@@ -191,7 +206,14 @@ class GreyNoiseFeed:
                                         "cves": cves,
                                     }
                                     ip_list.append(item_object)
-                                continue
+                                self.helper.log_info(
+                                    "GreyNoise Indicator Count: " + str(len(ip_list))
+                                )
+                                if len(ip_list) >= self.limit:
+                                    self.helper.log_info(
+                                        "GreyNoise Indicator Limit Reached"
+                                    )
+                                    break
                         else:
                             self.helper.log_error(
                                 "Value for source is not one of: feed, tags"
@@ -205,7 +227,7 @@ class GreyNoiseFeed:
                         bundle_objects = []
 
                         self.helper.log_info("Building Indicator Bundles")
-                        for d in ip_list:
+                        for d in ip_list[: self.limit]:
                             if self.source == "feed":
                                 description = (
                                     f"Internet Scanning IP detected by GreyNoise with "
@@ -237,7 +259,7 @@ class GreyNoiseFeed:
                                 external_references=[external_reference],
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 custom_properties={
-                                    "x_opencti_score": 85,
+                                    "x_opencti_score": self.indicator_score,
                                     "x_opencti_main_observable_type": "IPv4-Addr",
                                 },
                             )
@@ -248,7 +270,7 @@ class GreyNoiseFeed:
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 custom_properties={
                                     "x_opencti_description": description,
-                                    "x_opencti_score": 85,
+                                    "x_opencti_score": self.indicator_score,
                                     "created_by_ref": self.identity["standard_id"],
                                     "external_references": [external_reference],
                                 },
@@ -264,13 +286,13 @@ class GreyNoiseFeed:
                                 target_ref=stix_observable.id,
                                 object_marking_refs=[stix2.TLP_WHITE],
                             )
-                            if cves:
+                            if "cves" in d and d["cves"]:
                                 for cve in cves:
                                     # Generate Vulnerability
                                     stix_vulnerability = stix2.Vulnerability(
                                         id=Vulnerability.generate_id(cve),
                                         name=cve,
-                                        confidence=85,
+                                        confidence=self.helper.connect_confidence_level,
                                         created_by_ref=self.identity["standard_id"],
                                         allow_custom=True,
                                     )
@@ -301,20 +323,23 @@ class GreyNoiseFeed:
                             update=self.update_existing_data,
                             work_id=work_id,
                         )
+
+                        # Store the current timestamp as a last run
+                        message = (
+                            "Connector successfully run, storing last_run as "
+                            + str(timestamp)
+                        )
+                        self.helper.log_info(message)
+                        self.helper.set_state({"last_run": timestamp})
+                        self.helper.api.work.to_processed(work_id, message)
+                        self.helper.log_info(
+                            "Last_run stored, next run in: "
+                            + str(round(self.get_interval() / 60 / 60 / 24, 2))
+                            + " days"
+                        )
                     except Exception as e:
                         self.helper.log_error(str(e))
-                    # Store the current timestamp as a last run
-                    message = "Connector successfully run, storing last_run as " + str(
-                        timestamp
-                    )
-                    self.helper.log_info(message)
-                    self.helper.set_state({"last_run": timestamp})
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(
-                        "Last_run stored, next run in: "
-                        + str(round(self.get_interval() / 60 / 60 / 24, 2))
-                        + " days"
-                    )
+
                     time.sleep(60)
                 else:
                     # wait for next run
