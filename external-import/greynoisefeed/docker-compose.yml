@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-greynoise:
-    image: opencti/connector-greynoisefeed:5.9.6
+    image: opencti/connector-greynoisefeed:5.12.31
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -12,9 +12,10 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - GREYNOISE_API_KEY=ChangeMe
-      - GREYNOISE_SOURCE=Feed
-      - GREYNOISE_FEED_TYPE=Benign
-      - GREYNOISE_TAG_LIST="Tag 1,Tag 2"
+      - GREYNOISE_SOURCE="feed"
+      - GREYNOISE_FEED_TYPE="benign"
+      - GREYNOISE_TAG_SLUGS="tag-slug-1,tag-slug-2"
+      - GREYNOISE_INDICATOR_SCORE=50
       - GREYNOISE_LIMIT=10000
       - GREYNOISE_INTERVAL=2 #Day
     restart: always

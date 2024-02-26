@@ -15,7 +15,7 @@ greynoisefeed:
   api_key: 'ChangeMe'  # set if using the "feed" option
   source: 'feed'  # set to either feed or tags
   feed_type: 'benign'  # if using "feed" option, set to benign, malicious, benign+malicious, or all
-  tag_slugs: 'tag id 1,tag id 2'  # if using "tags" option, provide list of tag slugs
+  tag_slugs: 'tag-slug-1,tag-slug-2'  # if using "tags" option, provide list of tag slugs
   indicator_score: 50
   limit: 100000
   interval: 2 # In days, must be strictly greater than 1
