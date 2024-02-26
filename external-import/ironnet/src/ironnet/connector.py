@@ -15,7 +15,6 @@ from pycti import Indicator
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 from .client import IronNetClient, IronNetItem
-from .config import RootConfig
 from .loop import ConnectorLoop
 
 __all__ = [
