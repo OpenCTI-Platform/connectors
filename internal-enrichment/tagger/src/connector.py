@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Dict
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -23,26 +24,25 @@ class TaggerConnector:
         self.definitions = json.loads(get_config_variable("TAGGER_DEFINITIONS", []))
 
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
-    def _process_message(self, data):
-        entity_id = data.get("entity_id")
+    def _process_message(self, data: Dict) -> str:
+        enrichment_entity = data["enrichment_entity"]
 
         for definition in self.definitions:
             for scope in definition["scopes"]:
                 entity_type = scope.lower()
-                api = getattr(self.helper.api, entity_type)
-                entity = api.read(id=entity_id)
 
-                if not entity:
+                #  Check if enrichment entity is supported
+                if enrichment_entity["entity_type"] != entity_type:
                     continue
 
                 for rule in definition["rules"]:
                     flags = load_re_flags(rule)
 
                     for attribute in rule["attributes"]:
-                        self.helper.log_debug(entity)
-                        attr = entity[attribute]
+                        self.helper.log_debug(enrichment_entity)
+                        attr = enrichment_entity[attribute]
                         if attribute.lower() == "objectlabel":
                             for el in attr:
                                 if not re.search(
@@ -51,7 +51,8 @@ class TaggerConnector:
                                     continue
 
                                 self.helper.api.stix_domain_object.add_label(
-                                    id=entity_id, label_name=rule["label"]
+                                    id=enrichment_entity["standard_id"],
+                                    label_name=rule["label"],
                                 )
                                 break
 
@@ -61,7 +62,8 @@ class TaggerConnector:
                             continue
 
                         self.helper.api.stix_domain_object.add_label(
-                            id=entity_id, label_name=rule["label"]
+                            id=enrichment_entity["standard_id"],
+                            label_name=rule["label"],
                         )
                         break
 

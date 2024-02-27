@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 
 import tldextract
 import yaml
@@ -262,22 +263,15 @@ class HygieneConnector:
                 self.helper.send_stix2_bundle(serialized_bundle)
             return "Observable value found on warninglist and tagged accordingly"
 
-    def _process_message(self, data) -> str:
-        opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
-        )
-        if opencti_entity is None:
-            raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
-            )
-        result = self.helper.get_data_from_enrichment(data, opencti_entity)
-        return self._process_observable(
-            result["stix_objects"], result["stix_entity"], opencti_entity
-        )
+    def _process_message(self, data: Dict) -> str:
+        stix_objects = data["stix_objects"]
+        stix_entity = data["stix_entity"]
+        opencti_entity = data["enrichment_entity"]
+        return self._process_observable(stix_objects, stix_entity, opencti_entity)
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":
