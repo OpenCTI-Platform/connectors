@@ -1,0 +1,4 @@
+pycti==5.12.31
+urllib3==2.2.0
+certifi==2024.2.2
+greynoise==2.1.0
