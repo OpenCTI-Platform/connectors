@@ -1,8 +1,9 @@
+import json
 import os
 import sys
 import time
+
 import requests
-import json
 from lib.external_import import ExternalImportConnector
 
 
@@ -11,14 +12,18 @@ class AnyrunFeed(ExternalImportConnector):
 
         super().__init__()
         self.token = os.environ.get("ANYRUN_TI_TOKEN", "")
-        self.ti_url = 'https://api.any.run/v1/feeds/stix.json'
+        self.ti_url = "https://api.any.run/v1/feeds/stix.json"
 
     def get_feed(self):
-        response = requests.get(self.ti_url,
-                                headers={"Authorization": "Basic {}".format(self.token)})
+        response = requests.get(
+            self.ti_url, headers={"Authorization": "Basic {}".format(self.token)}
+        )
         if response.status_code != 200:
-            raise ValueError("Any.RUN api code {}. text: {}".format(response.status_code,
-                                                                    response.text))
+            raise ValueError(
+                "Any.RUN api code {}. text: {}".format(
+                    response.status_code, response.text
+                )
+            )
         return json.loads(response.text)
 
     def _collect_intelligence(self) -> []:
@@ -29,7 +34,7 @@ class AnyrunFeed(ExternalImportConnector):
 
         feed = self.get_feed()
 
-        stix_objects = feed['data']['objects']
+        stix_objects = feed["data"]["objects"]
 
         self.helper.log_info(
             f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
