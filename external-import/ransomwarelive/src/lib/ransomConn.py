@@ -108,11 +108,6 @@ class RansomwareAPIConnector:
             source_ref=threat_actor.id,
             target_ref=identity.id,
         )
-        Report_attribution = Relationship(
-            relationship_type="attributed-to",
-            source_ref=report.id,
-            target_ref=identity.id,
-        )
         Report_relation = Relationship(
             relationship_type="related-to",
             source_ref=report.id,
@@ -135,7 +130,6 @@ class RansomwareAPIConnector:
                     location,
                     Target_attribution,
                     Target_relation,
-                    Report_attribution,
                     Report_relation,
                     Threat_relation,
                 ],
@@ -149,7 +143,6 @@ class RansomwareAPIConnector:
                     threat_actor,
                     Target_attribution,
                     Target_relation,
-                    Report_attribution,
                     Report_relation,
                     Threat_relation,
                 ],
@@ -191,12 +184,11 @@ class RansomwareAPIConnector:
                             )  # calling the stix_object_generator method to create stix objects
                             stix_bundles.append(bundle)
                             stix_objects.extend(bundle.objects)
-
-                        return stix_objects
-
                     else:
-                        print("Error: ", response.status_code)
-                        stix_objects = []
+
+                        self.helper.log_info(
+                            f"Error and response status code {response.status_code}"
+                        )
 
                 except Exception as e:
                     self.helper.log_error(str(e))
