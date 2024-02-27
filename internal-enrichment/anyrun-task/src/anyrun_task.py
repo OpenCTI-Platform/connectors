@@ -1,6 +1,7 @@
 import json
 import time
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import (OpenCTIConnectorHelper,
+                   get_config_variable)
 import yaml
 import os
 import requests
