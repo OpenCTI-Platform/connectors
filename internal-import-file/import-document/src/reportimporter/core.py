@@ -473,7 +473,7 @@ class ReportImporter:
                     relationships.append(
                         stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "related-to", observable["id"], entity_stix_bundle["id"]
+                                "related-to", observable["id"], entity_stix["id"]
                             ),
                             relationship_type="related-to",
                             source_ref=observable["id"],
@@ -494,11 +494,11 @@ class ReportImporter:
                                     id=StixCoreRelationship.generate_id(
                                         "attributed-to",
                                         entity_stix["id"],
-                                        entity["id"],
+                                        entity_id,
                                     ),
                                     relationship_type="attributed-to",
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity,
+                                    target_ref=entity_id,
                                     allow_custom=True,
                                 )
                             )
@@ -509,11 +509,11 @@ class ReportImporter:
                                     id=StixCoreRelationship.generate_id(
                                         "targets",
                                         entity_stix["id"],
-                                        entity["id"],
+                                        entity_id,
                                     ),
                                     relationship_type="targets",
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity,
+                                    target_ref=entity_id,
                                     allow_custom=True,
                                 )
                             )
@@ -522,60 +522,11 @@ class ReportImporter:
                             relationships.append(
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
-                                        "uses", entity_stix["id"], entity["id"]
+                                        "uses", entity_stix["id"], entity_id
                                     ),
                                     relationship_type="uses",
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity,
-                                    allow_custom=True,
-                                )
-                            )
-                if entity_stix["type"] == "incident":
-                    for entity_id in entities_ids:
-                        # Incident attributed-to Threats
-                        if (
-                            entity_id.startswith("threat-actor")
-                            or entity_id.startswith("intrusion-set")
-                            or entity_id.startswith("campaign")
-                        ):
-                            relationships.append(
-                                stix2.Relationship(
-                                    id=StixCoreRelationship.generate_id(
-                                        "attributed-to",
-                                        entity_stix["id"],
-                                        entity["id"],
-                                    ),
-                                    relationship_type="attributed-to",
-                                    source_ref=entity_stix["id"],
-                                    target_ref=entity,
-                                    allow_custom=True,
-                                )
-                            )
-                        # Incident targets Vulnerabilities
-                        elif entity_id.startswith("vulnerability"):
-                            relationships.append(
-                                stix2.Relationship(
-                                    id=StixCoreRelationship.generate_id(
-                                        "targets",
-                                        entity_stix["id"],
-                                        entity["id"],
-                                    ),
-                                    relationship_type="targets",
-                                    source_ref=entity_stix["id"],
-                                    target_ref=entity,
-                                    allow_custom=True,
-                                )
-                            )
-                        # Incident uses Attack Patterns
-                        elif entity_id.startswith("attack-pattern"):
-                            relationships.append(
-                                stix2.Relationship(
-                                    id=StixCoreRelationship.generate_id(
-                                        "uses", entity_stix["id"], entity["id"]
-                                    ),
-                                    relationship_type="uses",
-                                    source_ref=entity_stix["id"],
-                                    target_ref=entity,
+                                    target_ref=entity_id,
                                     allow_custom=True,
                                 )
                             )
@@ -588,11 +539,11 @@ class ReportImporter:
                                     id=StixCoreRelationship.generate_id(
                                         "targets",
                                         entity_stix["id"],
-                                        entity["id"],
+                                        entity_id,
                                     ),
                                     relationship_type="targets",
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity,
+                                    target_ref=entity_id,
                                     allow_custom=True,
                                 )
                             )
@@ -601,11 +552,11 @@ class ReportImporter:
                             relationships.append(
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
-                                        "uses", entity_stix["id"], entity["id"]
+                                        "uses", entity_stix["id"], entity_id
                                     ),
                                     relationship_type="uses",
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity,
+                                    target_ref=entity_id,
                                     allow_custom=True,
                                 )
                             )
