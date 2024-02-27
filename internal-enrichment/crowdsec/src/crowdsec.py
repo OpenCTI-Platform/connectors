@@ -175,13 +175,8 @@ class CrowdSecConnector:
             )
         return f"{ip} found in CrowdSec CTI. Enrichment complete"
 
-    def _process_message(self, data: Dict) -> str:
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
-            raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
-            )
+    def _process_message(self, data: Dict):
+        observable = data["enrichment_entity"]
 
         tlp = "TLP:WHITE"
         for marking_definition in observable["objectMarking"]:
@@ -196,7 +191,7 @@ class CrowdSecConnector:
 
     def start(self) -> None:
         self.helper.log_info("CrowdSec connector started")
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

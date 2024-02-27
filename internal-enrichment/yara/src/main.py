@@ -21,26 +21,6 @@ class YaraConnector:
             "OPENCTI_URL", ["opencti", "url"], config
         )
 
-    def _get_artifact(self, entity_id):
-        self.helper.log_debug("Getting Artifact from OpenCTI")
-        max_retries = 5
-        wait = 1  # seconds
-
-        for i in range(max_retries):
-            observable = self.helper.api.stix_cyber_observable.read(
-                id=entity_id, withFiles=True
-            )
-            if observable["importFiles"]:
-                break
-            self.helper.log_debug(
-                f"Artifact files not ready yet, retrying ({i+1}/{max_retries})..."
-            )
-            time.sleep(wait)
-
-        if not observable["importFiles"]:
-            raise Exception(f"Exceeded max retries of {max_retries} for Artifact files")
-        return observable
-
     def _get_artifact_contents(self, artifact) -> bytes:
         self.helper.log_debug("Getting Artifact contents (bytes) from OpenCTI")
 
@@ -117,11 +97,9 @@ class YaraConnector:
     def _process_message(self, data: dict) -> str:
         entity_id = data["entity_id"]
         self.helper.log_info(f"Enriching {entity_id}")
+        artifact = data["enrichment_entity"]
 
         response = "Done"
-
-        artifact = self._get_artifact(entity_id)
-
         yara_indicators = self._get_yara_indicators()
         if any(yara_indicators):
             rule_count = len(yara_indicators)
@@ -136,7 +114,7 @@ class YaraConnector:
     # Start the main loop
     def start(self) -> None:
         self.helper.log_info("YARA connector started")
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

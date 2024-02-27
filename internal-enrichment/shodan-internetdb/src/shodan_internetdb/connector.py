@@ -54,34 +54,16 @@ class ShodanInternetDBConnector:
         Start the connector
         :return: None
         """
-        self._helper.listen(self._process_message)
+        self._helper.listen(message_callback=self._process_message)
 
-    def _process_message(self, data: Dict[str, Any]) -> str:
+    def _process_message(self, data: Dict) -> str:
         """
         Process the data message
         :param data: Entity data
         :return: None
         """
         # Fetch the observable being processed
-        entity_id = data["entity_id"]
-
-        custom_attributes = """
-            id
-            entity_type
-            objectMarking {
-              id
-              definition_type
-              definition
-            }
-            observable_value
-        """
-        observable = self._helper.api.stix_cyber_observable.read(
-            id=entity_id, customAttributes=custom_attributes
-        )
-
-        if observable is None:
-            log.error("Observable not found with entity_id %s", entity_id)
-            return "Observable not found"
+        observable = data["enrichment_entity"]
 
         # Check TLP markings, do not submit higher than the max allowed
         tlps = ["TLP:CLEAR"]
