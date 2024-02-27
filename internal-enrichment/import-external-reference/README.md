@@ -11,7 +11,7 @@ OpenCTI data is coming from *import* connectors.
 ### Requirements
 
 - OpenCTI Platform >= 5.0.0
-- Install wkhtmltopdf
+- Install wkhtmltox
 
 ### Configuration
 
@@ -28,7 +28,7 @@ OpenCTI data is coming from *import* connectors.
 | `import_external_reference_import_as_pdf`    | `IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF`    | Yes       | Import as PDF file                                                                       |
 | `import_external_reference_import_as_md`     | `IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD`     | Yes       | Import as MD file                                                                        |
 | `import_external_reference_import_pdf_as_md` | `IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD` | Yes       | If import_as_md is true, try to convert PDF as Markdown                                  | 
-| `wkhtmltopdf_path`                           | `WKHTMLTOPDF_PATH`                           | Yes       | If the environment variable does not work, set the wkhtmltopdf installation path here    |
+| `wkhtmltopdf_path`                           | `WKHTMLTOPDF_PATH`                           | No        | If the environment variable does not work, set the wkhtmltopdf installation path here    |
 After adding the connector, you should be able to extract information from a report.
 
 *Reference: https://docs.oasis-open.org/cti/stix/v2.1/cs01/stix-v2.1-cs01.html*
