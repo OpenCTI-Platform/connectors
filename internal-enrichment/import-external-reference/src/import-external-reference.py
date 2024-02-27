@@ -86,7 +86,9 @@ class ImportExternalReferenceConnector:
                                 ),
                             ],
                         }
-                        data = pdfkit.from_url(url_to_import, False, options=options)
+                        path_wkhtmltopdf = "C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe"
+                        config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+                        data = pdfkit.from_url(url_to_import, False, options=options, configuration=config)
                         self.helper.api.external_reference.add_file(
                             id=external_reference["id"],
                             file_name=file_name,
@@ -97,7 +99,7 @@ class ImportExternalReferenceConnector:
                         if "Done" not in str(e):
                             raise e
             except Exception as e:
-                self.helper.log_error(e)
+                raise ValueError(e)
         if self.import_as_md:
             if url_to_import.endswith(".pdf") and self.import_pdf_as_md:
                 try:
