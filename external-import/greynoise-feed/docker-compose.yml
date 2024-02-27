@@ -1,7 +1,7 @@
 version: '3'
 services:
-  connector-greynoise:
-    image: opencti/connector-greynoisefeed:5.12.31
+  connector-greynoise-feed:
+    image: opencti/connector-greynoise-feed:5.12.33
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -19,4 +19,3 @@ services:
       - GREYNOISE_LIMIT=10000
       - GREYNOISE_INTERVAL=2 #Day
     restart: always
-                                                     |
