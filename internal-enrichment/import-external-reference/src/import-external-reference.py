@@ -92,10 +92,20 @@ class ImportExternalReferenceConnector:
                                 ),
                             ],
                         }
-                        config = pdfkit.configuration(wkhtmltopdf=self.wkhtmltopdf_path)
-                        data = pdfkit.from_url(
-                            url_to_import, False, options=options, configuration=config
-                        )
+                        if self.wkhtmltopdf_path:
+                            config = pdfkit.configuration(
+                                wkhtmltopdf=self.wkhtmltopdf_path
+                            )
+                            data = pdfkit.from_url(
+                                url_to_import,
+                                False,
+                                options=options,
+                                configuration=config,
+                            )
+                        else:
+                            data = pdfkit.from_url(
+                                url_to_import, False, options=options
+                            )
                         self.helper.api.external_reference.add_file(
                             id=external_reference["id"],
                             file_name=file_name,
