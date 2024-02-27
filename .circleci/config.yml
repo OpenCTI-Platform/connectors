@@ -659,6 +659,10 @@ jobs:
           name: Build Docker image opencti/connector-anyrun-feed
           command: docker build -t opencti/connector-anyrun-feed:latest . && docker tag opencti/connector-anyrun-feed:latest opencti/connector-anyrun-feed:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichmen/anyrun-task
+          name: Build Docker image opencti/connector-anyrun-task
+          command: docker build -t opencti/connector-anyrun-task:latest . && docker tag opencti/connector-anyrun-tasklatest opencti/connector-anyrun-task:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -776,6 +780,8 @@ jobs:
             docker push opencti/connector-ransomwarelive:${CIRCLE_TAG}
             docker push opencti/connector-anyrun-feed:latest
             docker push opencti/connector-anyrun-feed:${CIRCLE_TAG}
+            docker push opencti/connector-anyrun-task:latest
+            docker push opencti/connector-anyrun-task:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1379,6 +1385,10 @@ jobs:
           name: Build Docker image opencti/connector-anyrun-feed
           command: docker build -t opencti/connector-anyrun-feed:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/anyrun-task
+          name: Build Docker image opencti/connector-anyrun-task
+          command: docker build -t opencti/connector-anyrun-task:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1440,6 +1450,7 @@ jobs:
             docker push opencti/connector-cluster25:rolling
             docker push opencti/connector-ransomwarelive:rolling
             docker push opencti/connector-anyrun-feed:rolling
+            docker push opencti/connector-anyrun-task:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
