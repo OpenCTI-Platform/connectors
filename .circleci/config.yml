@@ -289,6 +289,10 @@ jobs:
           name: Build Docker image opencti/connector-crowdstrike-endpoint-security
           command: docker build -t opencti/connector-crowdstrike-endpoint-security:latest . && docker tag opencti/connector-crowdstrike-endpoint-security:latest opencti/connector-crowdstrike-endpoint-security:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/dnstwist
+          name: Build Docker image opencti/connector-dnstwist
+          command: docker build -t opencti/connector-dnstwist:latest . && docker tag opencti/connector-dnstwist:latest opencti/connector-dnstwist:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -410,6 +414,8 @@ jobs:
             docker push opencti/connector-google-drive:${CIRCLE_TAG}
             docker push opencti/connector-crowdstrike-endpoint-security:latest
             docker push opencti/connector-crowdstrike-endpoint-security:${CIRCLE_TAG}
+            docker push opencti/connector-dnstwist:latest
+            docker push opencti/connector-dnstwist:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1055,6 +1061,10 @@ jobs:
           name: Build Docker image opencti/connector-crowdstrike-endpoint-security
           command: docker build -t opencti/connector-crowdstrike-endpoint-security:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/dnstwist
+          name: Build Docker image opencti/connector-dnstwist
+          command: docker build -t opencti/connector-dnstwist:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1115,6 +1125,7 @@ jobs:
             docker push opencti/connector-export-ttps-file-navigator:rolling
             docker push opencti/connector-google-drive:rolling
             docker push opencti/connector-crowdstrike-endpoint-security:rolling
+            docker push opencti/connector-dnstwist:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

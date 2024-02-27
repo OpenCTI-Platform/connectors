@@ -1,11 +1,8 @@
 version: '3'
 services:
-  connector_opencti:
-    build: .
-    container_name: dns_twister
+  connector-dnstwist:
+    image: opencti/connector-dnstwist:5.12.33
     environment:
-      # Connector's definition parameters:
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=DNS_TWISTER
       - CONNECTOR_SCOPE=Domain-Name
       # Connector's generic execution parameters:
@@ -20,8 +17,3 @@ services:
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       # Connector's custom execution parameters:
     restart: always
-
-networks:
-  default:
-    external: true
-    name: open_cti_docker_default
