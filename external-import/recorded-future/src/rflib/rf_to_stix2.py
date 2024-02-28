@@ -208,9 +208,9 @@ class Indicator(RFStixEntity):
         relationships = []
         # Then add 'related-to' relationship with all related entities
         for entity in self.related_entities:
-            if entity["type"] in ["indicator", "malware", "threat-actor"]:
+            if entity["type"] in ["indicator"]:
                 relationships.append(self._create_rel("related-to", entity.id))
-            if entity["type"] in ["attack-pattern"]:
+            if entity["type"] in ["attack-pattern", "malware", "threat-actor"]:
                 relationships.append(self._create_rel("indicates", entity.id))
         self.objects.extend(relationships)
 
