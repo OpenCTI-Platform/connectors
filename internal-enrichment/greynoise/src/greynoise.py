@@ -70,20 +70,6 @@ class GreyNoiseConnector:
         self.tlp = None
         self.stix_objects = []
 
-    def _get_entity_in_opencti(self, entity: dict) -> dict:
-        """
-        This method allows you to find all the information associated with the entity ID in OpenCTI.
-
-        :param entity: A parameter that includes the entity_id
-        :return: A dict
-        """
-
-        opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=entity["entity_id"]
-        )
-        if opencti_entity is not None:
-            return opencti_entity
-
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
         Extract TLP, and we check if the variable "max_tlp" is less than
