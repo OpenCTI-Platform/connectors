@@ -44,7 +44,11 @@ class RiskList(threading.Thread):
                 for row in reader:
                     # Filtered by score with a threshold
                     if self.risk_list_threshold is not None:
-                        row_risk_score = int(row["Risk"])
+                        try:
+                            row_risk_score = int(row["Risk"])
+                        except ValueError:
+                            row_risk_score = 0
+
                         row_name = row["Name"]
                         if row_risk_score < self.risk_list_threshold:
                             self.helper.log_info(
