@@ -4,7 +4,7 @@ import threading
 import time
 from datetime import datetime
 
-from .constants import RISK_LIST_TYPE_MAPPER
+from .constants import RISK_LIST_TYPE_MAPPER, RISK_RULES_MAPPER
 
 
 class RiskList(threading.Thread):
@@ -58,18 +58,34 @@ class RiskList(threading.Thread):
                     # Convert into stix object
                     indicator = risk_list_type["class"](row["Name"], key, tlp=self.tlp)
 
-                    MALICIOUS_SCORE = 3
                     rule_criticality_list = (
                         row["RuleCriticality"].strip("][").split(",")
                     )
                     risk_rules_list_str = row["RiskRules"].strip("][")
                     risk_rules_list = re.sub(r"\"", "", risk_rules_list_str).split(",")
-                    description = ""
+                    description = (
+                        "Triggered risk rules:"
+                        + "\n\n"
+                        + "|Rule|Risk Rule Severity|Risk Score Severity|"
+                        + "\n"
+                        + "|--|--|--|"
+                        + "\n"
+                    )
 
                     for index, criticality in enumerate(rule_criticality_list):
                         criticality_score = int(criticality)
-                        if criticality_score >= MALICIOUS_SCORE:
-                            description += "- " + risk_rules_list[index] + "\n\n"
+                        for corresponding_rule in RISK_RULES_MAPPER:
+                            if criticality_score == corresponding_rule["rule_score"]:
+                                description += (
+                                    "|"
+                                    + risk_rules_list[index]
+                                    + "|"
+                                    + corresponding_rule["severity"]
+                                    + "|"
+                                    + corresponding_rule["risk_score"]
+                                    + "|"
+                                    + "\n"
+                                )
 
                     indicator.add_description(description)
                     indicator.map_data(row, self.tlp, self.risklist_related_entities)
