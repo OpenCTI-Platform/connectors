@@ -170,7 +170,10 @@ class Indicator(RFStixEntity):
 
     def map_data(self, rf_indicator, tlp, risklist_related_entities):
         handled_related_entities_types = risklist_related_entities
-        self.risk_score = int(rf_indicator["Risk"])
+        try:
+            self.risk_score = int(rf_indicator["Risk"])
+        except ValueError:
+            self.risk_score = 0
         related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
         if (
             related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
