@@ -661,7 +661,7 @@ jobs:
       - run:
           working_directory: ~/opencti/internal-enrichment/anyrun-task
           name: Build Docker image opencti/connector-anyrun-task
-          command: docker build -t opencti/connector-anyrun-task:latest . && docker tag opencti/connector-anyrun-tasklatest opencti/connector-anyrun-task:${CIRCLE_TAG}
+          command: docker build -t opencti/connector-anyrun-task:latest . && docker tag opencti/connector-anyrun-task:latest opencti/connector-anyrun-task:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/greynoise-feed
           name: Build Docker image opencti/connector-greynoise-feed
