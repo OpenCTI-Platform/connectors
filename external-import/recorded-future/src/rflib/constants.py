@@ -14,3 +14,10 @@ THREAT_MAP_TYPE_MAPPER = {
     "actors": {"class": IntrusionSet},
     "malware": {"class": Malware},
 }
+
+RISK_RULES_MAPPER = [
+    {"rule_score": 1, "severity": "Unusual", "risk_score": "5-24"},
+    {"rule_score": 2, "severity": "Suspicious", "risk_score": "25-64"},
+    {"rule_score": 3, "severity": "Malicious", "risk_score": "65-89"},
+    {"rule_score": 4, "severity": "Very Malicious", "risk_score": "90-99"},
+]
