@@ -24,7 +24,7 @@ This connector collects CPE data from the NVD, converts to STIX2 and imports the
 
 ### Request an API Key
 
-To import data from the NVD at a higher speed and use the connector, you need to request an API Key:
+To import data (CVE and CPE) from the NVD at a higher speed and use the connector, you need to request an API Key:
 
 - [Request an API Key](https://nvd.nist.gov/developers/request-an-api-key)
 
@@ -52,6 +52,6 @@ Below are the parameters you'll need to set for CPE connector:
 
 | Parameter              | config.yml         | Docker environment variable | Default                                      | Mandatory | Description                                                                                                                                                         |
 |------------------------|--------------------|-----------------------------|----------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| CVE Base URL           | base_url           | `CPE_BASE_URL`              | https://services.nvd.nist.gov/rest/json/cpes/2.0 | Yes       | URL for the CVE API.                                                                                                                                                |
-| CVE API Key            | api_key            | `NIST_API_KEY`               | /                                            | Yes       | API Key for the CVE API.                                                                                                                                            |
-| CVE Interval           | interval           | `CPE_INTERVAL`              | 6h                                            | Yes       | Interval in hours to check and import new CPEs. Must be strictly greater than 1, advice minimum 6 hours                                                   |
+| CPE Base URL           | base_url           | `CPE_BASE_URL`              | https://services.nvd.nist.gov/rest/json/cpes/2.0 | Yes       | URL for the CPE API.                                                                                                                                                |
+| CPE API Key            | api_key            | `NIST_API_KEY`               | /                                            | Yes       | API Key for the CPE API.                                                                                                                                            |
+| CPE Interval           | interval           | `CPE_INTERVAL`              | 6h                                            | Yes       | Interval in hours to check and import new CPEs. Must be strictly greater than 1, advice minimum 6 hours                                                   |
