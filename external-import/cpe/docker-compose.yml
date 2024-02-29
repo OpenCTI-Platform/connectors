@@ -3,21 +3,15 @@ services:
   connector-cpe:
     build: .
     environment:
-      - OPENCTI_URL=http://192.168.8.111:8080
-      - OPENCTI_TOKEN=77a110f3-3052-48ff-84a3-5ea78d8a4ca5
-      - CONNECTOR_ID=66d639f7-43f2-43ab-91e4-62cff2274f71
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Common Platform Enumeration
       - CONNECTOR_SCOPE=software
       - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted).
-      - CONNECTOR_LOG_LEVEL=debug
+      - CONNECTOR_LOG_LEVEL=info
       - CPE_BASE_URL=https://services.nvd.nist.gov/rest/json/cpes/2.0
-      - NIST_API_KEY=093c3e5a-8577-454c-b467-0a2cf6b58908 # Required
+      - NIST_API_KEY=ChangeMe # Required
       - CPE_INTERVAL=6h # Required, in hours advice min 6
     restart: always
-    networks:
-      - docker_opencti-network
-
-networks:
-  docker_opencti-network:
-    external: true
