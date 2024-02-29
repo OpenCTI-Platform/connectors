@@ -1,4 +1,4 @@
-pycti==5.12.33
+pycti==6.0.0
 pandas==2.2.0
 elasticsearch==7.17.9
 scalpl==0.4.2
