@@ -1,4 +1,4 @@
-# External Ingestion Template Connector
+# CPE Connector
 
 ## Introduction
 
