@@ -212,13 +212,13 @@ twisted = ["twisted"]
 
 [[package]]
 name = "pycti"
-version = "6.0.0"
+version = "6.0.1"
 description = "Python API client for OpenCTI."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pycti-6.0.0-py3-none-any.whl", hash = "sha256:3d3d68f3c19bb05eba1068ce08eeb6f947f748f5d860b0e14469cfc7a601aabb"},
-    {file = "pycti-6.0.0.tar.gz", hash = "sha256:50d33bd851c2ae777457d4b78df94ac3df23cffa151367024dcef23e00264c39"},
+    {file = "pycti-6.0.1-py3-none-any.whl", hash = "sha256:f2287eaefc47e3e8e5b22312b7c629e43c2187f4d5a3b3a3e3e00a04e41a4227"},
+    {file = "pycti-6.0.1.tar.gz", hash = "sha256:287f81130c5c57f881c4aa52c65e148d29b5eb21bc60a0a8aa9f8300a59549ad"},
 ]
 
 [package.dependencies]
@@ -739,4 +739,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "bad27f7689a845fb1441b3c8919010206500c1e62f95229dd31953a1fa41995b"
+content-hash = "2558abf9993e2caebed6f565f8a6ce5d71955ea2729c327be92734b57fa834b7"
