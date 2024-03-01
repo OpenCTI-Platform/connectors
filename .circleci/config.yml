@@ -295,7 +295,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/cpe
           name: Build Docker image opencti/connector-cpe
-          command: docker build -t opencti/connector-cpe:latest . && docker tag opencti/connector-cpee:latest opencti/connector-cpe:${CIRCLE_TAG}
+          command: docker build -t opencti/connector-cpe:latest . && docker tag opencti/connector-cpe:latest opencti/connector-cpe:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
