@@ -92,7 +92,7 @@ class RansomwareAPIConnector:
             report_types=["Ransomware-report"],
             name=item.get("post_title"),
             description=item.get("description"),
-            object_refs=[threat_actor.id],
+            object_refs=[threat_actor.get("id")],
             published=datetime.strptime(item.get("published"), "%Y-%m-%d %H:%M:%S.%f"),
             created=datetime.strptime(item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"),
             external_references=external_references,
@@ -100,28 +100,41 @@ class RansomwareAPIConnector:
         # Creating Relationships
         Target_attribution = Relationship(
             relationship_type="attributed-to",
-            source_ref=threat_actor.id,
-            target_ref=identity.id,
+            source_ref=threat_actor.get("id"),
+            target_ref=identity.get("id"),
         )
         Target_relation = Relationship(
             relationship_type="targets",
-            source_ref=threat_actor.id,
-            target_ref=identity.id,
+            source_ref=threat_actor.get("id"),
+            target_ref=identity.get("id"),
         )
         Report_relation = Relationship(
             relationship_type="related-to",
-            source_ref=report.id,
-            target_ref=threat_actor.id,
+            source_ref=report.get("id"),
+            target_ref=threat_actor.get("id"),
         )
         Threat_relation = Relationship(
             relationship_type="related-to",
-            source_ref=threat_actor.id,
-            target_ref=report.id,
+            source_ref=threat_actor.get("id"),
+            target_ref=report.get("id"),
+        )
+
+        Report_Organisation_relation = Relationship(
+            relationship_type="related-to",
+            source_ref=report.get("id"),
+            target_ref=identity.get("id"),
         )
 
         # Creating Location object
         if item["country"] != "":
             location = Location(name=item["country"], country=item["country"])
+
+            Location_relation = Relationship(
+                relationship_type="located-at",
+                source_ref=identity.get("id"),
+                target_ref=location.get("id"),
+            )
+
             bundle = Bundle(
                 objects=[
                     report,
@@ -132,6 +145,8 @@ class RansomwareAPIConnector:
                     Target_relation,
                     Report_relation,
                     Threat_relation,
+                    Report_Organisation_relation,
+                    Location_relation,
                 ],
                 allow_custom=True,
             )
@@ -145,6 +160,7 @@ class RansomwareAPIConnector:
                     Target_relation,
                     Report_relation,
                     Threat_relation,
+                    Report_Organisation_relation,
                 ],
                 allow_custom=True,
             )
