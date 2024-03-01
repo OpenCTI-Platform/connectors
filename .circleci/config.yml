@@ -293,6 +293,10 @@ jobs:
           name: Build Docker image opencti/connector-dnstwist
           command: docker build -t opencti/connector-dnstwist:latest . && docker tag opencti/connector-dnstwist:latest opencti/connector-dnstwist:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/cpe
+          name: Build Docker image opencti/connector-cpe
+          command: docker build -t opencti/connector-cpe:latest . && docker tag opencti/connector-cpee:latest opencti/connector-cpe:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -416,6 +420,8 @@ jobs:
             docker push opencti/connector-crowdstrike-endpoint-security:${CIRCLE_TAG}
             docker push opencti/connector-dnstwist:latest
             docker push opencti/connector-dnstwist:${CIRCLE_TAG}
+            docker push opencti/connector-cpe:latest
+            docker push opencti/connector-cpe:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1083,6 +1089,10 @@ jobs:
           name: Build Docker image opencti/connector-dnstwist
           command: docker build -t opencti/connector-dnstwist:rolling .
       - run:
+          working_directory: ~/opencti/external-import/cpe
+          name: Build Docker image opencti/connector-cpe
+          command: docker build -t opencti/connector-cpe:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1144,6 +1154,7 @@ jobs:
             docker push opencti/connector-google-drive:rolling
             docker push opencti/connector-crowdstrike-endpoint-security:rolling
             docker push opencti/connector-dnstwist:rolling
+            docker push opencti/connector-cpe:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
