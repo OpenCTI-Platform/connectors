@@ -1,2 +1,2 @@
-pycti==6.0.2
+pycti==6.0.3
 pydantic==1.10.14
