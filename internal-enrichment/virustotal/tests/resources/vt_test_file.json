@@ -472,7 +472,7 @@
                 "Symantec": {
                     "category": "malicious",
                     "engine_name": "Symantec",
-                    "engine_version": "1.16.0.2",
+                    "engine_version": "1.16.0.3",
                     "result": "Trojan Horse",
                     "method": "blacklist",
                     "engine_update": "20211109"
@@ -536,7 +536,7 @@
                 "SUPERAntiSpyware": {
                     "category": "undetected",
                     "engine_name": "SUPERAntiSpyware",
-                    "engine_version": "6.0.2.1032",
+                    "engine_version": "6.0.3.1032",
                     "result": null,
                     "method": "blacklist",
                     "engine_update": "20211106"
@@ -672,7 +672,7 @@
                 "Jiangmin": {
                     "category": "malicious",
                     "engine_name": "Jiangmin",
-                    "engine_version": "16.0.200",
+                    "engine_version": "16.0.300",
                     "result": "TrojanDownloader.Agent.fshy",
                     "method": "blacklist",
                     "engine_update": "20211108"
@@ -856,7 +856,7 @@
                 "Yandex": {
                     "category": "malicious",
                     "engine_name": "Yandex",
-                    "engine_version": "6.0.2.24",
+                    "engine_version": "6.0.3.24",
                     "result": "Trojan.GenAsa!Ad91bBBOkW4",
                     "method": "blacklist",
                     "engine_update": "20211109"
