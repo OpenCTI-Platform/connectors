@@ -122,7 +122,9 @@ class Misp:
         self.misp_ssl_verify = get_config_variable(
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
         )
-        self.misp_client_cert = get_config_variable("MISP_CLIENT_CERT", ["misp", "cert"], config)
+        self.misp_client_cert = get_config_variable(
+            "MISP_CLIENT_CERT", ["misp", "cert"], config
+        )
         self.misp_datetime_attribute = get_config_variable(
             "MISP_DATETIME_ATTRIBUTE",
             ["misp", "datetime_attribute"],
@@ -276,7 +278,11 @@ class Misp:
 
         # Initialize MISP
         self.misp = PyMISP(
-            url=self.misp_url, key=self.misp_key, cert=self.misp_client_cert, ssl=self.misp_ssl_verify, debug=False
+            url=self.misp_url,
+            key=self.misp_key,
+            cert=self.misp_client_cert,
+            ssl=self.misp_ssl_verify,
+            debug=False,
         )
 
     def get_interval(self):
