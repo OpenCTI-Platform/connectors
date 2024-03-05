@@ -48,7 +48,7 @@ class SocprimeConnector:
         tdm_api_key = get_config_variable(
             "SOCPRIME_API_KEY", ["socprime", "api_key"], config
         )
-        self.tdm_content_list_name = get_config_variable(
+        self._content_list_names = get_config_variable(
             "SOCPRIME_CONTENT_LIST_NAME", ["socprime", "content_list_name"], config
         )
         self._siem_type = get_config_variable(
@@ -366,10 +366,26 @@ class SocprimeConnector:
                 self.helper.log_error("Error while getting availables siem types.")
         return res
 
-    def _get_rules_from_content_list(self) -> List[dict]:
+    def _get_rules_from_content_lists(self) -> list[str]:
+        res = []
+        for list_name in self._get_content_list_names():
+            res.extend(
+                self._get_rules_from_one_content_list(content_list_name=list_name)
+            )
+        return res
+
+    def _get_content_list_names(self) -> list[str]:
+        if not self._content_list_names:
+            return []
+        names = str(self._content_list_names).split(",")
+        names = [x for x in names if x.strip()]
+        return names
+
+    def _get_rules_from_one_content_list(self, content_list_name: str) -> List[dict]:
+        self.helper.log_info(f"Getting rules from content list {content_list_name}")
         try:
             return self.tdm_api_client.get_rules_from_content_list(
-                content_list_name=self.tdm_content_list_name,
+                content_list_name=content_list_name,
                 siem_type=self._indicator_siem_type,
             )
         except Exception as err:
@@ -406,7 +422,7 @@ class SocprimeConnector:
         author_id = self._create_author_identity(work_id)
 
         bundle_objects = []
-        rules = self._get_rules_from_content_list()
+        rules = self._get_rules_from_content_lists()
         available_siem_types = self._get_available_siem_types(
             rule_ids=[x["case"]["id"] for x in rules]
         )
