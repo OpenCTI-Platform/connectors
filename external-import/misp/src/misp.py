@@ -122,7 +122,6 @@ class Misp:
         self.misp_ssl_verify = get_config_variable(
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
         )
-        self.misp_client_cert = get_config_variable("MISP_CLIENT_CERT", ["misp", "cert"], config)
         self.misp_datetime_attribute = get_config_variable(
             "MISP_DATETIME_ATTRIBUTE",
             ["misp", "datetime_attribute"],
@@ -273,6 +272,7 @@ class Misp:
             ["connector", "update_existing_data"],
             config,
         )
+        self.misp_client_cert = get_config_variable("MISP_CLIENT_CERT", ["misp", "cert"], config)
 
         # Initialize MISP
         self.misp = PyMISP(
