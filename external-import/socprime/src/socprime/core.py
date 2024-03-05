@@ -2,10 +2,12 @@ import datetime
 import os
 import sys
 import time
-from typing import Any, Dict, List, Mapping, Optional, Union
+from copy import deepcopy
+from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
 
 import pycti
 import yaml
+from dateutil.parser import parse as parse_date_str
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
@@ -25,6 +27,16 @@ from stix2 import (
 )
 
 
+class ParsedRule(NamedTuple):
+    name: str
+    description: str | None
+    pattern: str
+    status: str | None
+    author: str | None
+    sigma_tags: list[str]
+    release_date: datetime.datetime | None
+
+
 class SocprimeConnector:
     _DEFAULT_CONNECTOR_RUN_INTERVAL_SEC = 3600
     _STATE_LAST_RUN = "last_run"
@@ -41,6 +53,12 @@ class SocprimeConnector:
         )
         self._siem_type = get_config_variable(
             "SOCPRIME_SIEM_TYPE", ["socprime", "siem_type"], config
+        )
+        self._indicator_siem_type = get_config_variable(
+            "SOCPRIME_INDICATOR_SIEM_TYPE",
+            ["socprime", "indicator_siem_type"],
+            config,
+            default="sigma",
         )
         self.interval_sec = get_config_variable(
             env_var="SOCPRIME_INTERVAL_SEC",
@@ -104,27 +122,32 @@ class SocprimeConnector:
     def get_stix_objects_from_rule(
         self,
         rule: dict,
+        indicator_siem_type: str,
         siem_types: Optional[List[str]] = None,
         author_id: Optional[str] = None,
     ) -> List:
         stix_objects = []
-        sigma_body = self._get_sigma_body_from_rule(rule)
+        parsed_rule = self._parse_rule(rule)
+        labels = deepcopy(parsed_rule.sigma_tags)
+        if parsed_rule.author:
+            labels.append(f"Sigma Author: {parsed_rule.author}")
         indicator = Indicator(
-            id=f'indicator--{sigma_body["id"]}' if sigma_body.get("id") else None,
+            id=pycti.Indicator.generate_id(pattern=parsed_rule.pattern),
             type="indicator",
-            name=rule["case"]["name"],
-            description=rule.get("description"),
-            pattern=rule["sigma"]["text"],
-            pattern_type="sigma",
-            labels=sigma_body.get("tags", [])
-            + ["Sigma Author: " + sigma_body.get("author")],
+            name=parsed_rule.name,
+            description=parsed_rule.description,
+            pattern=parsed_rule.pattern,
+            pattern_type=indicator_siem_type,
+            labels=labels,
             confidence=self.convert_sigma_status_to_stix_confidence(
-                sigma_level=sigma_body.get("status")
+                sigma_level=parsed_rule.status
             ),
             external_references=self._get_external_refs_from_rule(
                 rule, siem_types=siem_types
             ),
             created_by_ref=author_id,
+            valid_from=parsed_rule.release_date,
+            valid_until=None,
         )
         stix_objects.append(indicator)
 
@@ -149,6 +172,37 @@ class SocprimeConnector:
         )
 
         return stix_objects
+
+    @classmethod
+    def _parse_rule(cls, rule: dict) -> ParsedRule:
+        if rule["siem_type"] == "sigma":
+            sigma_body = cls._get_sigma_body_from_rule(rule)
+            sigma_status = sigma_body.get("status")
+            sigma_author = sigma_body.get("author")
+            sigma_tags = sigma_body.get("tags") or []
+        else:
+            sigma_status = rule["sigma"].get("status")
+            sigma_author = rule["tags"].get("author") if rule.get("tags") else None
+            if not sigma_author:
+                sigma_author = None
+            if isinstance(sigma_author, list):
+                sigma_author = ", ".join(sigma_author)
+            sigma_tags = []
+
+        try:
+            release_date = parse_date_str(rule.get("release_date"))
+        except Exception:
+            release_date = None
+
+        return ParsedRule(
+            pattern=rule["sigma"]["text"],
+            status=sigma_status,
+            author=sigma_author,
+            sigma_tags=sigma_tags,
+            name=rule["case"]["name"],
+            description=rule.get("description"),
+            release_date=release_date,
+        )
 
     @staticmethod
     def _get_tools_from_rule(rule: dict) -> List[str]:
@@ -267,7 +321,9 @@ class SocprimeConnector:
                                     }
                                 )
 
-        res.append({"source_name": "SOC Prime", "url": cls._get_link_to_socprime(rule)})
+        link_to_socprime = cls._get_link_to_socprime(rule)
+        if link_to_socprime:
+            res.append({"source_name": "SOC Prime", "url": link_to_socprime})
         return res
 
     @staticmethod
@@ -275,10 +331,11 @@ class SocprimeConnector:
         return yaml.safe_load(rule["sigma"]["text"].replace("---", ""))
 
     @classmethod
-    def _get_link_to_socprime(cls, rule: dict) -> str:
+    def _get_link_to_socprime(cls, rule: dict) -> str | None:
         body = cls._get_sigma_body_from_rule(rule)
-        sigma_id = body["id"]
-        return f"https://socprime.com/rs/rule/{sigma_id}"
+        if isinstance(body, dict) and body.get("id"):
+            sigma_id = body["id"]
+            return f"https://socprime.com/rs/rule/{sigma_id}"
 
     @staticmethod
     def convert_sigma_status_to_stix_confidence(sigma_level: str) -> Optional[int]:
@@ -312,7 +369,8 @@ class SocprimeConnector:
     def _get_rules_from_content_list(self) -> List[dict]:
         try:
             return self.tdm_api_client.get_rules_from_content_list(
-                content_list_name=self.tdm_content_list_name, siem_type="sigma"
+                content_list_name=self.tdm_content_list_name,
+                siem_type=self._indicator_siem_type,
             )
         except Exception as err:
             self.helper.log_error(
@@ -356,7 +414,8 @@ class SocprimeConnector:
         for rule in rules:
             try:
                 rule_stix_objects = self.get_stix_objects_from_rule(
-                    rule,
+                    rule=rule,
+                    indicator_siem_type=self._indicator_siem_type,
                     siem_types=available_siem_types.get(rule["case"]["id"]),
                     author_id=author_id,
                 )
