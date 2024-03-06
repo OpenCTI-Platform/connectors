@@ -135,11 +135,11 @@ class ReportHub:
                             "data": base64.b64encode(pdf_report).decode("utf-8"),
                         }
                         self._combine_report_and_send(stix_report, file_pdf, report_id)
-                except requests.exceptions.RequestException:
+                except requests.exceptions.RequestException as ex:
                     self.helper.log_error(
-                        f"Failed to download and save entry {report_id} as PDF."
+                        f"Failed to download and save entry {report_id} as PDF. {ex}"
                     )
-                    self._combine_report_and_send(stix_report, "")
+                    self._combine_report_and_send(stix_report, {}, "")
         return True
 
     def _fetch_stix_reports(self, current_state):
