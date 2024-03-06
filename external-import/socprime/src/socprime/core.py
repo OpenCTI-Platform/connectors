@@ -57,7 +57,7 @@ class SocprimeConnector:
         self._job_ids = get_config_variable(
             "SOCPRIME_JOB_IDS", ["socprime", "job_ids"], config
         )
-        self._siem_type = get_config_variable(
+        self._siem_types_for_refs = get_config_variable(
             "SOCPRIME_SIEM_TYPE", ["socprime", "siem_type"], config
         )
         self._indicator_siem_type = get_config_variable(
@@ -88,13 +88,13 @@ class SocprimeConnector:
             return {}
         return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
 
-    def get_siem_types(self) -> List[str]:
-        if not self._siem_type:
+    def get_siem_types_for_refs(self) -> List[str]:
+        if not self._siem_types_for_refs:
             return []
-        elif isinstance(self._siem_type, list):
-            return self._siem_type
+        elif isinstance(self._siem_types_for_refs, list):
+            return self._siem_types_for_refs
         else:
-            return [x.strip() for x in str(self._siem_type).split(",")]
+            return [x.strip() for x in str(self._siem_types_for_refs).split(",")]
 
     @staticmethod
     def _current_unix_timestamp() -> int:
@@ -361,7 +361,7 @@ class SocprimeConnector:
         if rule_ids:
             try:
                 query = "case.id: (" + " OR ".join(rule_ids) + ")"
-                for siem_type in self.get_siem_types():
+                for siem_type in self.get_siem_types_for_refs():
                     rules = self.tdm_api_client.search_rules(
                         siem_type=siem_type, client_query_string=query
                     )
