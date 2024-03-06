@@ -30,7 +30,8 @@ class RSTNoiseControlConnector:
         self.max_tlp = get_config_variable(
             "RST_NOISE_CONTROL_MAX_TLP",
             ["rst-noise-control", "max_tlp"],
-            config, default="TLP:AMBER+STRICT"
+            config,
+            default="TLP:AMBER+STRICT",
         )
         self.change_score = int(
             get_config_variable(
