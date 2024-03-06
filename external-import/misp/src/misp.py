@@ -123,7 +123,7 @@ class Misp:
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
         )
         self.misp_client_cert = get_config_variable(
-            "MISP_CLIENT_CERT", ["misp", "cert"], config
+            "MISP_CLIENT_CERT", ["misp", "client_cert"], config
         )
         self.misp_datetime_attribute = get_config_variable(
             "MISP_DATETIME_ATTRIBUTE",
