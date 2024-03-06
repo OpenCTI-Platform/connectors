@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-rst-noise-control:
-    image: connector-rst-noise-control:latest
+    image: opencti/connector-rst-noise-control:6.0.5
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -9,7 +9,6 @@ services:
       - CONNECTOR_NAME=RST Noise Control
       - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,Url,StixFile,indicator
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - RST_NOISE_CONTROL_BASE_URL=https://api.rstcloud.net/v1
       - RST_NOISE_CONTROL_API_KEY=${RST_NOISE_CONTROL_API_KEY}
