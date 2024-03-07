@@ -582,13 +582,13 @@ pytest = ">=7.0"
 
 [[package]]
 name = "pytest-isort"
-version = "3.1.0"
+version = "4.0.0"
 description = "py.test plugin to check import ordering using isort"
 optional = false
-python-versions = ">=3.7,<4"
+python-versions = ">=3.8,<4"
 files = [
-    {file = "pytest_isort-3.1.0-py3-none-any.whl", hash = "sha256:13e68d84b35d4f79d20d3d165f491bffc9e4b9509f420381a4186118c4454bd3"},
-    {file = "pytest_isort-3.1.0.tar.gz", hash = "sha256:067801dc5e54a474330d074d521c815948ff6d5cf0ed3b9d057b78216851186c"},
+    {file = "pytest_isort-4.0.0-py3-none-any.whl", hash = "sha256:14bb3281bab587d6beb53129481e8885232249ec5cfeaf5d903a561ff0589620"},
+    {file = "pytest_isort-4.0.0.tar.gz", hash = "sha256:00e99642e282b00b849cf9b49d9102a02ab8c4ec549ace57d7868b723713aaa9"},
 ]
 
 [package.dependencies]
@@ -1104,4 +1104,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "90e92c99948a49d5c0dcdfe9c0439aaaa7a78a678149aa4c520907dd96fccb1f"
+content-hash = "1319d18c97a0f77e095af3ada8bfbcc48ebbc0075e30dfa2b95d4ba96b21dcc5"
