@@ -51,7 +51,10 @@ class RFNotes:
             config,
             True,
         )
-        self.tlp = get_config_variable("RECORDED_FUTURE_TLP", ["rf", "TLP"], config)
+        self.tlp = get_config_variable(
+            "RECORDED_FUTURE_TLP", ["rf", "TLP"], config
+        ).lower()
+
         self.rf_pull_signatures = get_config_variable(
             "RECORDED_FUTURE_PULL_SIGNATURES", ["rf", "pull_signatures"], config
         )
