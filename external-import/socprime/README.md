@@ -1,6 +1,6 @@
 # OpenCTI SOC Prime Connector
 
-The OpenCTI SOC Prime connector can be used to import Sigma rules from the SOC Prime Platform.
+The OpenCTI SOC Prime connector can be used to import rules (indicators) from the SOC Prime Platform.
 The connector leverages the SOC Prime Continuous Content Management API to get the rules.
 
 
@@ -25,11 +25,13 @@ The connector can be configured with the following variables:
 | Config Parameter                 | Docker env var                              | Default                      | Description                                                                                             |
 | -------------------------------- | ------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `api_key`                        | `SOCPRIME_API_KEY`                          | `ChangeMe`                   | The SOC Prime CCM API Key                                                                               |
-| `content_list_name`              | `SOCPRIME_CONTENT_LIST_NAME`                | `ChangeMe`                   | The name of the SOC Prime CCM Content List from which Sigma rules will be obtained                      |
+| `content_list_name`              | `SOCPRIME_CONTENT_LIST_NAME`                |                  | List of comma separated TDM content list names for downloading rules from. At least one of `content_list_name` or `job_ids` parameters must be provided. If `content_list_name` is provided - then the parameter `indicator_siem_type` must be provided too.                   |
+| `indicator_siem_type`              | `SOCPRIME_INDICATOR_SIEM_TYPE`                | `sigma`                   | Security platform formats for which rules will be downloaded. This parameter is applicable only for `content_list_name` parameter and not for `job_ids`. Optional. Default value is `sigma`.                     |
+| `job_ids`                   | `SOCPRIME_JOB_IDS`                     |                       | List of comma separated TDM job ids for downloading rules from. At least one of `content_list_name` or `job_ids` parameters must be provided.                                                                          |
 | `interval_sec`                   | `SOCPRIME_INTERVAL_SEC`                     | `3600`                       | The import interval in seconds                                                                          |
 | `siem_type`                      | `SOCPRIME_SIEM_TYPE`                        |                              | (Optional) Security platform formats for which extetrnal links will be generated. In case of using `config.yml`, it should be a list; and in case of Docker env var, it should be a string with comma-separeted values. See possibles values below. |
 
-The list of possible values for the `siem_type` (`SOCPRIME_SIEM_TYPE`) variable:
+The list of possible values for the `siem_type` or `indicator_siem_type` (`SOCPRIME_SIEM_TYPE` or `SOCPRIME_INDICATOR_SIEM_TYPE`) variables:
 * `ala-rule` — Microsoft Sentinel Rule
 * `ala` — Microsoft Sentinel Query
 * `elasticsearch` — Elasticsearch Query
