@@ -47,7 +47,7 @@ class SocprimeConnector:
         config = self._read_configuration()
         self.helper = OpenCTIConnectorHelper(config)
         tdm_api_key = get_config_variable(
-            "SOCPRIME_API_KEY", ["socprime", "api_key"], config, required=True
+            "SOCPRIME_API_KEY", ["socprime", "api_key"], config
         )
         if not tdm_api_key:
             raise Exception("Configuration error. SOCPRIME_API_KEY is required.")
