@@ -150,7 +150,7 @@ class ThreatFox:
                             quotechar='"',
                             skipinitialspace=True,
                         )
-                        rdr = csv.reader(
+                        csv_reader = csv.reader(
                             (line for line in fp if not line.startswith("#")),
                             dialect="custom",
                         )
@@ -183,7 +183,7 @@ class ThreatFox:
                         else:
                             wanted_ioc.append("all_types")
 
-                        for i, row in enumerate(rdr):
+                        for i, row in enumerate(csv_reader):
 
                             data_object = {
                                 "first_seen_utc": row[0],
