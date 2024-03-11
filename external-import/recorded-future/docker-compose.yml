@@ -27,4 +27,6 @@ services:
       - RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES='Malware,Hash,URL,Threat Actor,MitreAttackIdentifier' #required if RECORDED_FUTURE_PULL_RISK_LIST is True, possible values: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
       - RECORDED_FUTURE_PULL_THREAT_MAPS=False #optional, can remove
       - RECORDED_FUTURE_THREAT_MAPS_INTERVAL=24 #required, in hours
+      - RECORDED_FUTURE_CUSTOM_BUNDLE_PATHS=/public/opencti/threat_actor_bundle.json #optional
+      - RECORDED_FUTURE_CUSTOM_BUNDLE_INTERVAL=24 #in hours
     restart: always
