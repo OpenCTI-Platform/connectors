@@ -154,7 +154,7 @@ class ThreatFox:
                             (line for line in fp if not line.startswith("#")),
                             dialect="custom",
                         )
-                        # rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
+
                         bundle_objects = []
                         # the csv-file has the following columns:
                         # first_seen_utc, ioc_id, ioc_value, ioc_type, threat_type, fk_malware, malware_alias,
