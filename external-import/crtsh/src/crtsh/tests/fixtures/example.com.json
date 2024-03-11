@@ -240,16 +240,5 @@
         "not_before": "2021-08-31T15:55:23",
         "not_after": "2031-08-29T15:55:23",
         "serial_number": "1000"
-    },
-    {
-        "issuer_ca_id": -1,
-        "issuer_name": "Issuer Not Found",
-        "common_name": "example.com",
-        "name_value": "example.com\nuser@example.com",
-        "id": 8506962125,
-        "entry_timestamp": null,
-        "not_before": "2023-01-27T01:21:18",
-        "not_after": "2033-01-24T01:21:18",
-        "serial_number": "1ac1e693c87d36563a92ca145c87bbc26fd49f4c"
     }
 ]

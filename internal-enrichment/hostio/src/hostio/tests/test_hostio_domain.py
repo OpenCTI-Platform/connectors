@@ -4,7 +4,7 @@ import os
 import random
 
 import pytest
-from hostio.hostio_domain import HostIODomain
+from hostio import HostIODomain
 from hostio.hostio_utils import create_author
 from stix2 import TLP_GREEN, DomainName, IPv4Address, IPv6Address, Relationship
 

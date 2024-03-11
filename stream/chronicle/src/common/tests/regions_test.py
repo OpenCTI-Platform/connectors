@@ -16,7 +16,7 @@
 
 import unittest
 
-from . import regions
+from common import regions
 
 
 class RegionsTest(unittest.TestCase):
