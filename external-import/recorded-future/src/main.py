@@ -327,9 +327,9 @@ class RFConnector:
             self.RF.helper.log_info("[ANALYST NOTES] Analyst notes fetching disabled")
 
         if self.RF.custom_bundle_paths:
+            self.RF.helper.log_info('[CUSTOM BUNDLES] Starting bundles thread...')
             self.CustomBundles = CustomBundles(
                 self.RF.helper,
-                self.RF.update_existing_data,
                 self.RF.custom_bundle_interval,
                 self.RF.rfapi,
                 self.RF.custom_bundle_paths,
@@ -338,7 +338,6 @@ class RFConnector:
             self.CustomBundles.start()
         else:
             self.RF.helper.log_info("[CUSTOM BUNDLES] Fetching custom bundles disabled")
-
 
     def run_all_processes(self):
         if self.RF.duration_period:
