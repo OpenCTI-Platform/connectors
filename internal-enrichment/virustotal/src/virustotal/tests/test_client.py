@@ -2,7 +2,7 @@
 """Virustotal client unittest."""
 import unittest
 
-from src.virustotal.client import VirusTotalClient
+from virustotal.client import VirusTotalClient
 
 
 class VirusTotalClientTest(unittest.TestCase):
