@@ -350,9 +350,7 @@ class ThreatFox:
                             # Create the malware object
                             self.helper.log_info("Creating Malware object...")
                             malware_object = stix2.Malware(
-                                id=Malware.generate_id(
-                                    ioc_object["malware_printable"]
-                                ),
+                                id=Malware.generate_id(ioc_object["malware_printable"]),
                                 name=ioc_object["malware_printable"],
                                 aliases=ioc_aliases,
                                 created_by_ref=self.identity["standard_id"],
