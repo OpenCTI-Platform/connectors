@@ -1,12 +1,11 @@
 import pytest
-from hostio.hostio_domain import HostIODomain
-from hostio.hostio_utils import create_author
-from hostio.tests.constants import generate_random_token, load_fixture
-from hostio.transform_to_stix import (
+from hostio import (
     BaseStixTransformation,
     HostIODomainStixTransformation,
     HostIOIPtoDomainStixTransform,
 )
+from hostio.hostio_domain import HostIODomain
+from hostio.hostio_utils import create_author
 from stix2 import (
     TLP_GREEN,
     TLP_WHITE,
@@ -17,6 +16,8 @@ from stix2 import (
     Relationship,
 )
 from stix2.exceptions import InvalidValueError
+
+from .constants import generate_random_token, load_fixture
 
 VALID_DOMAIN = "example.com"
 VALID_IP = "8.8.8.8"

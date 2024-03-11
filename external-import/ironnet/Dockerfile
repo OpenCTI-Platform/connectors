@@ -1,40 +1,17 @@
-FROM python:3.11-alpine as build
-
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    POETRY_HOME="/opt/poetry" \
-    POETRY_VIRTUALENVS_IN_PROJECT=true \
-    POETRY_NO_INTERACTION=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
-WORKDIR /opt/build
-
-# Install poetry
-RUN apk add --no-cache git
-RUN pip3 install poetry
-
-# Install package dependencies
-COPY pyproject.toml poetry.lock ./
-RUN poetry env use /usr/local/bin/python3 && \
-    poetry install --no-root --no-dev
-
-# Install package
-COPY src ./src
-RUN poetry install --no-dev
-
 FROM python:3.11-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-WORKDIR /opt/connector
+# Copy the connector
+COPY src /opt/opencti-connector-ironnet
 
-RUN apk add --no-cache libmagic
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk --no-cache add git build-base libmagic libffi-dev && \
+    cd /opt/opencti-connector-ironnet && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
 
-# Copy the package
-COPY --from=build /opt/build/.venv ./.venv
-COPY --from=build /opt/build/src   ./
-
-# "Activate" the venv
-ENV PATH="/opt/connector/.venv/bin:${PATH}"
-
-# Entrypoint
-ENTRYPOINT ["python3", "-m", "ironnet"]
+# Expose and entrypoint
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
