@@ -144,7 +144,17 @@ class ThreatFox:
                             "r",
                             encoding="utf-8",
                         )
-                        rdr = csv.reader(filter(lambda row: row[0] != "#", fp))
+                        csv.register_dialect(
+                            "custom",
+                            delimiter=",",
+                            quotechar='"',
+                            skipinitialspace=True,
+                        )
+                        csv_reader = csv.reader(
+                            (line for line in fp if not line.startswith("#")),
+                            dialect="custom",
+                        )
+
                         bundle_objects = []
                         # the csv-file has the following columns:
                         # first_seen_utc, ioc_id, ioc_value, ioc_type, threat_type, fk_malware, malware_alias,
@@ -173,10 +183,43 @@ class ThreatFox:
                         else:
                             wanted_ioc.append("all_types")
 
-                        for i, row in enumerate(rdr):
+                        for i, row in enumerate(csv_reader):
+
+                            ioc_object = {
+                                "first_seen_utc": row[0],
+                                "ioc_id": row[1],
+                                "ioc_value": row[2],
+                                "ioc_type": row[3],
+                                "threat_type": row[4],
+                                "fk_malware": row[5] if row[5] != "unknown" else "",
+                                "malware_alias": row[6].split(","),
+                                "malware_printable": (
+                                    row[7] if row[7] != "Unknown malware" else ""
+                                ),
+                                "last_seen_utc": row[8],
+                                "confidence_level": row[9],
+                                "reference": row[10],
+                                "tags": row[11].split(","),
+                                "anonymous": row[12],
+                                "reporter": row[13],
+                            }
+
                             # Pre-process row data for efficiency
-                            ioc_value = row[2].strip().replace('"', "")
-                            ioc_type = row[3].strip().strip('"')
+                            ioc_value = ioc_object["ioc_value"]
+                            ioc_type = ioc_object["ioc_type"]
+                            ioc_object["malware_alias"].insert(
+                                0, ioc_object["fk_malware"]
+                            )
+                            ioc_aliases = [
+                                x
+                                for x in ioc_object["malware_alias"]
+                                if x not in {"None", ""}
+                            ]
+                            ioc_object["tags"].insert(0, ioc_object["threat_type"])
+                            ioc_labels = [
+                                x for x in ioc_object["tags"] if x not in {"None", ""}
+                            ]
+
                             self.helper.log_info(f"ioc_type: '{ioc_type}'")
 
                             # Skip unwanted IOC types
@@ -187,7 +230,7 @@ class ThreatFox:
                                 continue
 
                             entry_date = datetime.datetime.strptime(
-                                row[0], "%Y-%m-%d %H:%M:%S"
+                                ioc_object["first_seen_utc"], "%Y-%m-%d %H:%M:%S"
                             )
                             if i % 5000 == 0:
                                 self.helper.log_info(
@@ -244,11 +287,11 @@ class ThreatFox:
                                 continue
 
                             # Check if we have an external reference
-                            if validators.url(row[10]):
+                            if validators.url(ioc_object["reference"]):
                                 indicator_external_reference = [
                                     stix2.ExternalReference(
                                         source_name="ThreatFox source reference",
-                                        url=row[10],
+                                        url=ioc_object["reference"],
                                     )
                                 ]
 
@@ -261,11 +304,7 @@ class ThreatFox:
                                     valid_from=datetime.datetime.utcnow().strftime(
                                         "%Y-%m-%dT%H:%M:%S.%fZ"
                                     ),
-                                    labels=[
-                                        row[i].replace('"', "")
-                                        for i in range(4, 9)
-                                        if row[i]
-                                    ],
+                                    labels=ioc_labels,
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     created_by_ref=self.identity["standard_id"],
                                     external_references=indicator_external_reference,
@@ -284,11 +323,7 @@ class ThreatFox:
                                     valid_from=datetime.datetime.utcnow().strftime(
                                         "%Y-%m-%dT%H:%M:%S.%fZ"
                                     ),
-                                    labels=[
-                                        row[i].replace('"', "")
-                                        for i in range(4, 9)
-                                        if row[i]
-                                    ],
+                                    labels=ioc_labels,
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     created_by_ref=self.identity["standard_id"],
                                     custom_properties={
@@ -302,9 +337,12 @@ class ThreatFox:
 
                             bundle_objects.append(stix_indicator)
 
-                            if row[4] == "botnet_cc":
+                            if not ioc_object["malware_printable"]:
+                                continue
+
+                            if ioc_object["threat_type"] == "botnet_cc":
                                 malware_type = "Bot"
-                            elif row[4] == "payload_delivery":
+                            elif ioc_object["threat_type"] == "payload_delivery":
                                 malware_type = "dropper"
                             else:
                                 malware_type = ""
@@ -312,25 +350,17 @@ class ThreatFox:
                             # Create the malware object
                             self.helper.log_info("Creating Malware object...")
                             malware_object = stix2.Malware(
-                                id=Malware.generate_id(row[5].replace('"', "")),
-                                name=row[5].replace('"', ""),
-                                aliases=[
-                                    row[i].replace('"', "")
-                                    for i in range(6, 8)
-                                    if row[i]
-                                ],
+                                id=Malware.generate_id(ioc_object["malware_printable"]),
+                                name=ioc_object["malware_printable"],
+                                aliases=ioc_aliases,
                                 created_by_ref=self.identity["standard_id"],
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 description="Threat: "
-                                + row[5].replace('"', "")
+                                + ioc_object["fk_malware"]
                                 + " - Reporter: "
-                                + row[13].replace('"', ""),
+                                + ioc_object["reporter"],
                                 is_family="false",
-                                labels=[
-                                    row[i].replace('"', "")
-                                    for i in range(4, 9)
-                                    if row[i] != "None"
-                                ],
+                                labels=ioc_labels,
                                 malware_types=[malware_type] if malware_type else None,
                             )
                             self.helper.log_info(
