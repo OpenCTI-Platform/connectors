@@ -38,7 +38,7 @@ class BaseRFConnector:
 
         # Extra config
         self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config, required=True
+            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config,
         )
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
