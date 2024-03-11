@@ -265,7 +265,6 @@ if __name__ == "__main__":
                 RF.update_existing_data,
                 RF.custom_bundle_interval,
                 RF.rfapi,
-                RF.tlp,
                 RF.custom_bundle_paths,
 
             )
