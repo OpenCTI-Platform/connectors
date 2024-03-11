@@ -332,7 +332,6 @@ class RFConnector:
                 self.RF.update_existing_data,
                 self.RF.custom_bundle_interval,
                 self.RF.rfapi,
-                self.RF.tlp,
                 self.RF.custom_bundle_paths,
 
             )
@@ -355,7 +354,6 @@ class RFConnector:
             )
 
 
-<<<<<<< HEAD
 if __name__ == "__main__":
     try:
         RF_connector = RFConnector()
