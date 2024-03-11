@@ -38,7 +38,7 @@ class BaseRFConnector:
 
         # Extra config
         self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config
+            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config, required=True
         )
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
@@ -97,6 +97,17 @@ class BaseRFConnector:
 
         self.rf_pull_threat_maps = get_config_variable(
             "RECORDED_FUTURE_PULL_THREAT_MAPS", ["rf", "pull_threat_maps"], config
+        )
+
+        self.custom_bundle_paths = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_PATHS",
+            ["rf", "custom_bundle_paths"],
+            config,
+        )
+        self.custom_bundle_interval = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_INTERVAL",
+            ["rf", "custom_bundle_interval"],
+            config,
         )
 
         risklist_related_entities_list = get_config_variable(
@@ -198,13 +209,14 @@ class RFNotes:
 
         try:
             # Import, convert and send to OpenCTI platform Analyst Notes
+            self.fetch_custom_bundles()
             self.convert_and_send(published, tas, work_id)
         except Exception as e:
             self.helper.log_error(str(e))
 
         self.helper.set_state({"last_run": timestamp})
 
-    def convert_and_send(self, published, tas, work_id):
+    def convert_and_send_notes(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
         self.helper.log_info(
             f"[ANALYST NOTES] Pull Signatures is {str(self.rf_pull_signatures)} of type "
