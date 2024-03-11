@@ -16,14 +16,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import (
-    APP_VERSION,
-    RecordedFutureAlertConnector,
-    RFClient,
-    RiskList,
-    StixNote,
-    ThreatMap,
-)
+from rflib import APP_VERSION, RecordedFutureAlertConnector, RFClient, RiskList, StixNote, ThreatMap, CustomBundles
 
 
 class BaseRFConnector:
@@ -333,6 +326,21 @@ class RFConnector:
         else:
             self.RF.helper.log_info("[ANALYST NOTES] Analyst notes fetching disabled")
 
+        if self.RF.custom_bundle_paths:
+            self.CustomBundles = CustomBundles(
+                self.RF.helper,
+                self.RF.update_existing_data,
+                self.RF.custom_bundle_interval,
+                self.RF.rfapi,
+                self.RF.tlp,
+                self.RF.custom_bundle_paths,
+
+            )
+            self.CustomBundles.start()
+        else:
+            self.RF.helper.log_info("[CUSTOM BUNDLES] Fetching custom bundles disabled")
+
+
     def run_all_processes(self):
         if self.RF.duration_period:
             self.RF.helper.schedule_iso(
@@ -347,10 +355,12 @@ class RFConnector:
             )
 
 
+<<<<<<< HEAD
 if __name__ == "__main__":
     try:
         RF_connector = RFConnector()
         RF_connector.run_all_processes()
+
     except Exception:
         traceback.print_exc()
         exit(1)

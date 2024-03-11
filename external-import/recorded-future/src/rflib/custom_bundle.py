@@ -7,7 +7,7 @@ from urllib3.exceptions import HTTPError
 from .constants import RISK_LIST_TYPE_MAPPER
 
 
-class RiskList(threading.Thread):
+class CustomBundles(threading.Thread):
     def __init__(
         self,
         helper,
