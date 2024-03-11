@@ -28,7 +28,7 @@ from pycti import (
     Tool,
     get_config_variable,
 )
-from pymisp import ExpandedPyMISP
+from pymisp import PyMISP
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -121,6 +121,9 @@ class Misp:
         self.misp_key = get_config_variable("MISP_KEY", ["misp", "key"], config)
         self.misp_ssl_verify = get_config_variable(
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
+        )
+        self.misp_client_cert = get_config_variable(
+            "MISP_CLIENT_CERT", ["misp", "client_cert"], config
         )
         self.misp_datetime_attribute = get_config_variable(
             "MISP_DATETIME_ATTRIBUTE",
@@ -274,8 +277,12 @@ class Misp:
         )
 
         # Initialize MISP
-        self.misp = ExpandedPyMISP(
-            url=self.misp_url, key=self.misp_key, ssl=self.misp_ssl_verify, debug=False
+        self.misp = PyMISP(
+            url=self.misp_url,
+            key=self.misp_key,
+            cert=self.misp_client_cert,
+            ssl=self.misp_ssl_verify,
+            debug=False,
         )
 
     def get_interval(self):
