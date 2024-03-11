@@ -4,7 +4,6 @@ from unittest.mock import Mock, patch
 import pytest
 from hostio.hostio_utils import create_author, get_tlp_marking
 from hostio.ipinfo import IPInfo
-from hostio.tests.constants import generate_random_token, load_fixture
 from stix2 import (
     AutonomousSystem,
     DomainName,
@@ -14,6 +13,8 @@ from stix2 import (
     Location,
     Relationship,
 )
+
+from .constants import generate_random_token, load_fixture
 
 LOGGER = logging.getLogger(__name__)
 AUTHOR = create_author()
