@@ -260,6 +260,7 @@ if __name__ == "__main__":
             RF.helper.log_info("[THREAT MAPS] Threat maps fetching disabled")
 
         if RF.custom_bundle_paths:
+            RF.helper.log_info('[CUSTOM BUNDLES] Starting bundles thread...')
             CustomBundles = CustomBundles(
                 RF.helper,
                 RF.update_existing_data,
