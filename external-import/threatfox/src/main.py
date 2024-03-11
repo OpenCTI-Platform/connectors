@@ -185,7 +185,7 @@ class ThreatFox:
 
                         for i, row in enumerate(csv_reader):
 
-                            data_object = {
+                            ioc_object = {
                                 "first_seen_utc": row[0],
                                 "ioc_id": row[1],
                                 "ioc_value": row[2],
@@ -205,19 +205,19 @@ class ThreatFox:
                             }
 
                             # Pre-process row data for efficiency
-                            ioc_value = data_object["ioc_value"]
-                            ioc_type = data_object["ioc_type"]
-                            data_object["malware_alias"].insert(
-                                0, data_object["fk_malware"]
+                            ioc_value = ioc_object["ioc_value"]
+                            ioc_type = ioc_object["ioc_type"]
+                            ioc_object["malware_alias"].insert(
+                                0, ioc_object["fk_malware"]
                             )
                             ioc_aliases = [
                                 x
-                                for x in data_object["malware_alias"]
+                                for x in ioc_object["malware_alias"]
                                 if x not in {"None", ""}
                             ]
-                            data_object["tags"].insert(0, data_object["threat_type"])
+                            ioc_object["tags"].insert(0, ioc_object["threat_type"])
                             ioc_labels = [
-                                x for x in data_object["tags"] if x not in {"None", ""}
+                                x for x in ioc_object["tags"] if x not in {"None", ""}
                             ]
 
                             self.helper.log_info(f"ioc_type: '{ioc_type}'")
@@ -230,7 +230,7 @@ class ThreatFox:
                                 continue
 
                             entry_date = datetime.datetime.strptime(
-                                data_object["first_seen_utc"], "%Y-%m-%d %H:%M:%S"
+                                ioc_object["first_seen_utc"], "%Y-%m-%d %H:%M:%S"
                             )
                             if i % 5000 == 0:
                                 self.helper.log_info(
@@ -287,11 +287,11 @@ class ThreatFox:
                                 continue
 
                             # Check if we have an external reference
-                            if validators.url(data_object["reference"]):
+                            if validators.url(ioc_object["reference"]):
                                 indicator_external_reference = [
                                     stix2.ExternalReference(
                                         source_name="ThreatFox source reference",
-                                        url=data_object["reference"],
+                                        url=ioc_object["reference"],
                                     )
                                 ]
 
@@ -337,12 +337,12 @@ class ThreatFox:
 
                             bundle_objects.append(stix_indicator)
 
-                            if not data_object["malware_printable"]:
+                            if not ioc_object["malware_printable"]:
                                 continue
 
-                            if data_object["threat_type"] == "botnet_cc":
+                            if ioc_object["threat_type"] == "botnet_cc":
                                 malware_type = "Bot"
-                            elif data_object["threat_type"] == "payload_delivery":
+                            elif ioc_object["threat_type"] == "payload_delivery":
                                 malware_type = "dropper"
                             else:
                                 malware_type = ""
@@ -351,16 +351,16 @@ class ThreatFox:
                             self.helper.log_info("Creating Malware object...")
                             malware_object = stix2.Malware(
                                 id=Malware.generate_id(
-                                    data_object["malware_printable"]
+                                    ioc_object["malware_printable"]
                                 ),
-                                name=data_object["malware_printable"],
+                                name=ioc_object["malware_printable"],
                                 aliases=ioc_aliases,
                                 created_by_ref=self.identity["standard_id"],
                                 object_marking_refs=[stix2.TLP_WHITE],
                                 description="Threat: "
-                                + data_object["fk_malware"]
+                                + ioc_object["fk_malware"]
                                 + " - Reporter: "
-                                + data_object["reporter"],
+                                + ioc_object["reporter"],
                                 is_family="false",
                                 labels=ioc_labels,
                                 malware_types=[malware_type] if malware_type else None,
