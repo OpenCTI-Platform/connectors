@@ -16,7 +16,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, RFClient, RiskList, StixNote, ThreatMap
+from rflib import APP_VERSION, RFClient, RiskList, StixNote, ThreatMap, CustomBundles
 
 
 class RFNotes:
@@ -169,7 +169,6 @@ class RFNotes:
 
             try:
                 # Import, convert and send to OpenCTI platform Analyst Notes
-                self.fetch_custom_bundles()
                 self.convert_and_send_notes(published, tas, work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
@@ -260,7 +259,21 @@ if __name__ == "__main__":
         else:
             RF.helper.log_info("[THREAT MAPS] Threat maps fetching disabled")
 
+        if RF.custom_bundle_paths:
+            CustomBundles = CustomBundles(
+                RF.helper,
+                RF.update_existing_data,
+                RF.custom_bundle_interval,
+                RF.rfapi,
+                RF.tlp,
+                RF.custom_bundle_paths,
+
+            )
+            CustomBundles.start()
+        else:
+            RF.helper.log_info("[CUSTOM BUNDLES] Fetching custom bundles disabled")
         RF.run()
+
     except Exception:
         traceback.print_exc()
         time.sleep(10)
