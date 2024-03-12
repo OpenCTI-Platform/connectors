@@ -454,10 +454,6 @@ jobs:
           name: Build Docker image opencti/connector-sekoia
           command: docker build -t opencti/connector-sekoia:latest . && docker tag opencti/connector-sekoia:latest opencti/connector-sekoia:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/threatbus
-          name: Build Docker image opencti/connector-threatbus
-          command: docker build -t opencti/connector-threatbus:latest . && docker tag opencti/connector-threatbus:latest opencti/connector-threatbus:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/internal-enrichment/hybrid-analysis-sandbox
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:latest . && docker tag opencti/connector-hybrid-analysis-sandbox:latest opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
@@ -691,8 +687,6 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-sekoia:latest
             docker push opencti/connector-sekoia:${CIRCLE_TAG}
-            docker push opencti/connector-threatbus:latest
-            docker push opencti/connector-threatbus:${CIRCLE_TAG}
             docker push opencti/connector-hybrid-analysis-sandbox:latest
             docker push opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
             docker push opencti/connector-splunk:latest
@@ -1187,10 +1181,6 @@ jobs:
           name: Build Docker image opencti/connector-sekoia
           command: docker build -t opencti/connector-sekoia:rolling .
       - run:
-          working_directory: ~/opencti/stream/threatbus
-          name: Build Docker image opencti/connector-threatbus
-          command: docker build -t opencti/connector-threatbus:rolling .
-      - run:
           working_directory: ~/opencti/internal-enrichment/hybrid-analysis-sandbox
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:rolling .
@@ -1427,7 +1417,6 @@ jobs:
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-sekoia:rolling
-            docker push opencti/connector-threatbus:rolling
             docker push opencti/connector-hybrid-analysis-sandbox:rolling
             docker push opencti/connector-splunk:rolling
             docker push opencti/connector-elastic:rolling
