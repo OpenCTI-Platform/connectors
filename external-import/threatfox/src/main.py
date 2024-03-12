@@ -185,7 +185,6 @@ class ThreatFox:
 
             for i, row in enumerate(csv_reader):
                 ioc = FeedRow(row)
-                print(f"{ioc=}")
 
                 # skip unwanted IOC types
                 if ALL_TYPES not in self.ioc_to_import:
