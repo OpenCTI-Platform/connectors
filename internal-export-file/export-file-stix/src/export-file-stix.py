@@ -23,6 +23,7 @@ class ExportFileStix:
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
         max_marking = data["max_marking"]
+        file_markings = data["file_markings"]
 
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
@@ -49,7 +50,7 @@ class ExportFileStix:
                 },
             )
             self.helper.api.stix_domain_object.push_entity_export(
-                entity_id, file_name, json_bundle
+                entity_id, file_name, json_bundle, file_markings
             )
             self.helper.connector_logger.info(
                 "Export done",
