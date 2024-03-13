@@ -1,9 +1,4 @@
 import pytest
-from hostio import (
-    BaseStixTransformation,
-    HostIODomainStixTransformation,
-    HostIOIPtoDomainStixTransform,
-)
 from hostio.hostio_domain import HostIODomain
 from hostio.hostio_utils import create_author
 from stix2 import (
@@ -16,6 +11,12 @@ from stix2 import (
     Relationship,
 )
 from stix2.exceptions import InvalidValueError
+
+from hostio import (
+    BaseStixTransformation,
+    HostIODomainStixTransformation,
+    HostIOIPtoDomainStixTransform,
+)
 
 from .constants import generate_random_token, load_fixture
 

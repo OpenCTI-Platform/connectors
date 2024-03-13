@@ -4,9 +4,10 @@ import os
 import random
 
 import pytest
-from hostio import HostIODomain
 from hostio.hostio_utils import create_author
 from stix2 import TLP_GREEN, DomainName, IPv4Address, IPv6Address, Relationship
+
+from hostio import HostIODomain
 
 LOGGER = logging.getLogger(__name__)
 

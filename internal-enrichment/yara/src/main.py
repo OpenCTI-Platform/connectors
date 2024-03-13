@@ -3,9 +3,10 @@ import sys
 import time
 
 import yaml
-import yara
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 from stix2 import Bundle, Relationship
+
+import yara
 
 
 class YaraConnector:

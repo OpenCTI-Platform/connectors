@@ -5,11 +5,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
-import domaintools
 import stix2
 import validators
 import yaml
 from pycti import Identity, OpenCTIConnectorHelper, get_config_variable
+
+import domaintools
 
 from .builder import DtBuilder
 from .constants import DEFAULT_RISK_SCORE, DOMAIN_FIELDS, EMAIL_FIELDS, EntityType
