@@ -16,11 +16,10 @@ import re
 from typing import Dict
 
 import yaml
+from ivre import config as ivre_config
 from ivre.db import MetaDB
 from ivre.utils import HEX
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
-from ivre import config as ivre_config
 
 DATABASES = [
     ("data", "data"),

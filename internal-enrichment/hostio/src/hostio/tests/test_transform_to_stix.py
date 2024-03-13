@@ -1,6 +1,4 @@
 import pytest
-from hostio.hostio_domain import HostIODomain
-from hostio.hostio_utils import create_author
 from stix2 import (
     TLP_GREEN,
     TLP_WHITE,
@@ -17,6 +15,8 @@ from hostio import (
     HostIODomainStixTransformation,
     HostIOIPtoDomainStixTransform,
 )
+from hostio.hostio_domain import HostIODomain
+from hostio.hostio_utils import create_author
 
 from .constants import generate_random_token, load_fixture
 

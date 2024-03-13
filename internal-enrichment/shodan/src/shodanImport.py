@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from typing import Dict
 
+import shodan
 import stix2
 import yaml
 from pycti import (
@@ -15,8 +16,6 @@ from pycti import (
     Vulnerability,
     get_config_variable,
 )
-
-import shodan
 
 
 class ShodanConnector:

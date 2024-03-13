@@ -1,4 +1,6 @@
 import pytest
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+
 from hostio.hostio_utils import (
     can_be_int,
     extract_asn_number,
@@ -10,7 +12,6 @@ from hostio.hostio_utils import (
     lookup_tlp_string,
     validate_tlp_marking,
 )
-from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 VALID_IPV4 = "10.0.0.1"
 VALID_IPV6 = "2001:db8::"
