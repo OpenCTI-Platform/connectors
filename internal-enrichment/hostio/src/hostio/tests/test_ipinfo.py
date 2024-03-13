@@ -2,8 +2,6 @@ import logging
 from unittest.mock import Mock, patch
 
 import pytest
-from hostio.hostio_utils import create_author, get_tlp_marking
-from hostio.ipinfo import IPInfo
 from stix2 import (
     AutonomousSystem,
     DomainName,
@@ -13,6 +11,9 @@ from stix2 import (
     Location,
     Relationship,
 )
+
+from hostio.hostio_utils import create_author, get_tlp_marking
+from hostio.ipinfo import IPInfo
 
 from .constants import generate_random_token, load_fixture
 
