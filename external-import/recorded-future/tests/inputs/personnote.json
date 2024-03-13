@@ -1,0 +1,98 @@
+{
+  "attributes": {
+    "validated_on": "2022-04-13T04:00:00.000Z",
+    "published": "2022-04-18T12:42:22.250Z",
+    "text": "On April 13, 2022, The Philippine Daily Inquirer reported about the Philippine National Bureau of Investigation (NBI) filing a complaint against a former Smartmatic employee, Ricardo Argana, who was found linked to the security breach at the automated elections technology provider, Smartmatic.\n\nThe house of the former Smartmatic Employee was raided by NBI agents in San Pedro, Laguna and was able to take hold of several computers and mobile gadgets, according to NBI spokesperson, Ferdinand Lavin. The accused will be filed charges of illegal access, qualified theft and possibly obstruction of justice. According to the report, the senators of the Philippines had discovered that the accused former employee of Smartmatic had allowed undisclosed adversaries to gain access and copy contents from the company’s laptop.\n\nSmartmatic and the Commission on Elections (COMELEC) confirmed that the data breach did not include election data but only leaked Smartmatic’s internal operations. The NBI is conducting an ongoing investigation on the confiscated devices and to determine the full scope of the potentially affected data.\n",
+    "topic": [
+      {
+        "id": "TXSFt5",
+        "name": "Validated Intelligence Event",
+        "type": "Topic",
+        "description": "Concise analysis of a cyber event, particularly around a breaking or new cyber attack event."
+      }
+    ],
+    "context_entities": [
+      {
+        "id": "B_FeO",
+        "name": "Philippines",
+        "type": "Country"
+      },
+      {
+        "id": "Jackbj",
+        "name": "San Pedro",
+        "type": "City"
+      }
+    ],
+    "validation_urls": [
+      {
+        "id": "url:https://newsinfo.inquirer.net/1582383/fwd-nbi-to-file-raps-against-smartmatic-employee-linked-to-data-breach",
+        "name": "https://newsinfo.inquirer.net/1582383/fwd-nbi-to-file-raps-against-smartmatic-employee-linked-to-data-breach",
+        "type": "URL"
+      },
+      {
+        "id": "url:https://news.abs-cbn.com/news/04/13/22/nbi-raids-house-of-ex-smartmatic-employee",
+        "name": "https://news.abs-cbn.com/news/04/13/22/nbi-raids-house-of-ex-smartmatic-employee",
+        "type": "URL"
+      },
+      {
+        "id": "url:https://newsinfo.inquirer.net/1576775/comelec-data-leak-only-concerns-smartmatics-internal-operations",
+        "name": "https://newsinfo.inquirer.net/1576775/comelec-data-leak-only-concerns-smartmatics-internal-operations",
+        "type": "URL"
+      },
+      {
+        "id": "url:https://newsinfo.inquirer.net/1569815/very-serious-security-breach-occurred-in-smartmatic-ops-says-imee-marcos",
+        "name": "https://newsinfo.inquirer.net/1569815/very-serious-security-breach-occurred-in-smartmatic-ops-says-imee-marcos",
+        "type": "URL"
+      }
+    ],
+    "title": "Philippine NBI Files Complaint to Former Smartmatic Employee Linked to Data Breach",
+    "note_entities": [
+      {
+        "id": "B_HQS",
+        "name": "Software",
+        "type": "Industry"
+      },
+      {
+        "id": "CjxrR",
+        "name": "Smartmatic",
+        "type": "Company"
+      },
+      {
+        "id": "I3jA2T",
+        "name": "Ricardo Argana",
+        "type": "Person"
+      },
+      {
+        "id": "mitre:T1565.001",
+        "name": "T1565.001",
+        "type": "MitreAttackIdentifier"
+      },
+      {
+        "id": "G8hMQ_",
+        "name": "Ferdinand Lavin",
+        "type": "Person"
+      },
+      {
+        "id": "mitre:T1005",
+        "name": "T1005",
+        "type": "MitreAttackIdentifier"
+      },
+      {
+        "id": "e5gIR3",
+        "name": "National Bureau of Investigation",
+        "type": "Organization"
+      },
+      {
+        "id": "B_FAM",
+        "name": "Commission on Elections",
+        "type": "Organization"
+      }
+    ]
+  },
+  "source": {
+    "id": "VKz42X",
+    "name": "Insikt Group",
+    "type": "Source"
+  },
+  "id": "mUBSkX"
+}

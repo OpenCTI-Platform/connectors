@@ -1,0 +1,53 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - notarealtoken
+    method: GET
+    uri: https://api.recordedfuture.com/v2/analystnote/search?published=-100h&limit=100&source=VKz42X
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAKtWSi0qyi9SsqpWKi5JLCktVrIyMTCsrQUAJzwAUBgAAAA=
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json;charset=utf-8
+      Date:
+      - Thu, 12 Oct 2023 15:25:44 GMT
+      Transfer-Encoding:
+      - chunked
+      cache-control:
+      - no-cache, no-store, private, must-revalidate, max-age=0, no-transform
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - 'default-src ''self'' data:; img-src ''self'' https: data:; script-src ''self''
+        ''unsafe-inline'' ''unsafe-eval'' cdn.jsdelivr.net; style-src ''self'' ''unsafe-inline''
+        fonts.googleapis.com cdn.jsdelivr.net; font-src ''self'' fonts.gstatic.com;
+        worker-src blob:;'
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      pragma:
+      - no-cache
+      set-cookie:
+      - JSESSIONID=node0rfc7sj1n2dvt271aemb82y7v2741948.node0; Path=/rfq; Secure;
+        HttpOnly
+      strict-transport-security:
+      - max-age=86400; includeSubDomains
+      x-content-type-options:
+      - nosniff
+    status:
+      code: 401
+      message: Unauthorized
+version: 1

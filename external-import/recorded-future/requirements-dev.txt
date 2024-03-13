@@ -1,0 +1,8 @@
+pytest==7.1.1
+pytest-vcr==1.0.2
+pytest-cov==3.0.0
+pytest-mock
+pylint==2.13.7
+pydocstyle==6.1.1
+black==22.3.0
+-r ./src/requirements.txt
