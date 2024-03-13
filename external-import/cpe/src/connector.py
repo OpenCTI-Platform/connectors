@@ -320,6 +320,17 @@ class CPEConnector:
         return stix_objects
 
     def _get_cpe_title(self, cpe: dict) -> str:
+        """
+        Extracts the title from the cpe.
+
+        Args:
+            self
+            cpe (dict): The cpe where the title is extracted
+
+        Returns:
+            str: The title of the cpe.
+        """
+        
         cpe_title = ""
 
         for title in cpe["titles"]:
