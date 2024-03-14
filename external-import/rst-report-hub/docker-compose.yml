@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=aa817c8b-abae-460a-9ebc-97b1551e70ee
       - CONNECTOR_NAME=RST Report Hub
       - CONNECTOR_SCOPE=application/json,application/pdf
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - RST_REPORT_HUB_BASE_URL=https://api.rstcloud.net/v1
       - RST_REPORT_HUB_API_KEY=${RST_REPORT_HUB_API_KEY}

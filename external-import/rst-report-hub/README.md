@@ -2,15 +2,15 @@
 
 The **RST Report Hub Connector** integrates various APT reports from security companies, research groups, cyber communities, and individuals into OpenCTI. RST Cloud manages the conversion of human-readable reports into STIX bundles. This connector retrieves data from RST Cloud, importing the PDF version of each report along with a corresponding summary, key ideas, and facts into OpenCTI. It also includes extracted objects and relationships between them, such as Intrusion Sets (threat actors), campaigns, malware, TTPs, tools, geographic data, sectors, CVEs, indicators, and other relevant objects. This integration enhances the capabilities of OpenCTI by providing valuable threat intelligence data, enabling CTI analysts to streamline APT report processing through automation via the [RST Report Hub](https://www.rstcloud.com/rst-report-hub/) integration, ultimately saving time.
 
-## Key Features:
+## Key Features
 
 - **Brilliant Time Saver**: Manual import of threat reports is a time consuming activity that does not need to happen anymore.
-- **Threat Report Library**: Keep all APT reports and their metadata, extracted objects in one place. 
+- **Threat Report Library**: Keep all APT reports and their metadata, extracted objects in one place.
 - **OpenCTI Integration**: Seamlessly integrates the fetched data into OpenCTI's database.
 
 This connector provides users with an enhanced and comprehensive understanding of the cybersecurity threat landscape by leveraging the detailed threat intelligence provided by RST Cloud.
 
-## Requirements:
+## Requirements
 - OpenCTI Platform version 5.10.x or higher.
 - An API Key for accessing RST Cloud.
 
