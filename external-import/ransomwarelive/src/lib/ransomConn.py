@@ -171,7 +171,12 @@ class RansomwareAPIConnector:
     def collect_historic_intelligence(self):
         """Collects historic intelligence from ransomware.live"""
         base_url = "https://api.ransomware.live/victims/"
-        headers = {"accept": "application/json"}
+        headers = {
+            "User-Agent": "OpenCTI Connector",
+            "accept": "application/json"
+        }
+        
+        
         curent_year = int(dt.date.today().year)
         # Checking if the historic year is less than 2020 as there is no data past 2020
         if int(self.get_historic_year) < 2020:
@@ -215,7 +220,10 @@ class RansomwareAPIConnector:
     def collect_intelligence(self, last_run) -> list:
 
         url = "https://api.ransomware.live/recentvictims"
-        headers = {"accept": "application/json"}
+        headers = {
+            "User-Agent": "OpenCTI Connector",
+            "accept": "application/json"
+        }
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             response_json = response.json()
