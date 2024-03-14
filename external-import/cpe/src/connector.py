@@ -263,7 +263,12 @@ class CPEConnector:
         if cpe.split(":")[8] == "*":
             language = ""
         else:
-            language = langcodes.standardize_tag(cpe.split(":")[8], "ietf")
+            try:
+                language = langcodes.standardize_tag(cpe.split(":")[8], "ietf")
+            except Exception as e:
+                language = ""
+
+                self.helper.log_error(f"Error while getting language. {str(e)}")
 
         return {
             "is_hardware": is_hardware,
