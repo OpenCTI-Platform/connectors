@@ -2,7 +2,7 @@
 
 The **RST Threat Feed Connector** integrates RST Cloud threat intelligence feeds into OpenCTI. This connector imports Indicators (IP, Domain, URL, Hash) with their relationships to malware, TTPs, tools, threat groups, sectors, CVE, and other objects. This enhances the capability of OpenCTI by providing actionable threat intelligence data, allowing users to make informed decisions based on the latest information from ([RST Threat Feed](https://www.rstcloud.com/rst-threat-feed/)).
 
-## Key Features:
+## Key Features
 
 - **Lots of contextual information**: Indicators come with additional info including threat category, malware name, threat actor names, tools and frameworks, TTPs, CVE, industry tags, reference to the source of the indicator and more.
 - **OpenCTI Integration**: Seamlessly integrates the fetched data into OpenCTI's database.
@@ -11,7 +11,7 @@ The **RST Threat Feed Connector** integrates RST Cloud threat intelligence feeds
 
 This connector empowers users with an expanded and in-depth insight into the cyber threat landscape by tapping into the detailed threat intelligence delivered by RST Cloud.
 
-## Requirements:
+## Requirements
 - OpenCTI Platform version 5.10.x or higher.
 - An API Key for accessing RST Cloud.
 
@@ -23,7 +23,7 @@ This connector is aligned with data populated by common OpenCTI connectors. We r
  - CISA Known Exploited Vulnerabilities (https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cisa-known-exploited-vulnerabilities)
 
 
-## Configuration:
+## Configuration
 
 Configuration of the connector is straightforward. The minimal configuration requires you just enter the RST Cloud API key to be provided and OpenCTI connection settings specified. Below is the full list of parameters you can set:
 
