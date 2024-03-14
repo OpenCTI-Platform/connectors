@@ -23,7 +23,9 @@ class URLScanSubmissionsConnector:
         self.helper = OpenCTIConnectorHelper({})
         self.api_key = os.environ.get("URLSCAN_API_KEY", None).lower()
         self.want_results = os.environ.get("CONNECTOR_WANT_RESULTS", "false").lower()
-        self.domain_note_count = os.environ.get("CONNECTOR_DOMAIN_ENRICHMENT_COUNT", 5)
+        self.domain_note_count = int(
+            os.environ.get("CONNECTOR_DOMAIN_ENRICHMENT_COUNT", 5)
+        )
 
         update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
         if update_existing_data.lower() in ["true", "false"]:
@@ -39,14 +41,14 @@ class URLScanSubmissionsConnector:
 
         for key, value in data.items():
             if value not in unsupported_values:
-                table += f"\\\n \| **{key}** \| {value} \|"
+                table += f"\\\n | **{key}** | {value} |"
 
         return table
 
     def urlscan_fetch_results(self, uuid, counter):
         """Fetch the results of the URLScan API call for the UUID"""
 
-        self.helper.log_info(f"URLScan fetch result call")
+        self.helper.log_info("URLScan fetch result call")
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/119.0",
@@ -58,7 +60,7 @@ class URLScanSubmissionsConnector:
             response_data = response.json()
             verdict = response_data["verdicts"]
             page = response_data["page"]
-            self.helper.log_info(f"URLScan fetch result call successful")
+            self.helper.log_info("URLScan fetch result call successful")
             return {"verdict": verdict, "page": page}
 
         elif response.status_code == 404 and counter < 5:
@@ -82,10 +84,10 @@ class URLScanSubmissionsConnector:
         )
 
         stix_objects = []
-        content = f"### URL SCAN RESULTS\n\n"
+        content = "### URL SCAN RESULTS\n\n"
 
         if response.status_code == 200:
-            self.helper.log_info(f"URLScan API call successful")
+            self.helper.log_info("URLScan API call successful")
             url_scan_domain_data = response.json()
 
             if len(url_scan_domain_data["results"]) > 0:
@@ -97,8 +99,8 @@ class URLScanSubmissionsConnector:
 
                 for result in range(0, index):
                     table = ""
-                    table += f" \\\n\| Field \| Value \|"
-                    table += f" \\\n\| \-\-\- \| \-\-\-\|"
+                    table += " \\\n| Field | Value |"
+                    table += " \\\n| --- | ---|"
                     result_dict = url_scan_domain_data["results"][result]
                     result_page = result_dict.get("page")
                     result_page["result"] = result_dict.get("result")
@@ -136,7 +138,7 @@ class URLScanSubmissionsConnector:
         )
 
         if response.status_code == 200:
-            self.helper.log_info(f"URLScan API call successful")
+            self.helper.log_info("URLScan API call successful")
             url_scan_data = response.json()
             if url_scan_data["message"] == "Submission successful":
 
