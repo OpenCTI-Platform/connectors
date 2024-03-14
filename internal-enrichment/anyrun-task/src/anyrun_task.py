@@ -106,7 +106,7 @@ class AnyRunTask:
             "opt_automated_interactivity": self.automated_interactivity,
         }
 
-        response = self.call_anyrun_api("POST", "v1/analysis", rdata, file)
+        response = self.call_anyrun_api("POST", "analysis", rdata, file)
         # self.helper.log_error(str(response.text))
         json_data = json.loads(response.text)
         return json_data
