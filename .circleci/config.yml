@@ -314,6 +314,10 @@ jobs:
           name: Build Docker image opencti/connector-urlscan-enrichment
           command: docker build -t opencti/connector-urlscan-enrichment:latest . && docker tag opencti/connector-urlscan-enrichment:latest opencti/connector-urlscan-enrichment:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/mitre-atlas
+          name: Build Docker image opencti/connector-mitre-atlas
+          command: docker build -t opencti/connector-mitre-atlas:latest . && docker tag opencti/connector-mitre-atlas:latest opencti/connector-mitre-atlas:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -441,6 +445,8 @@ jobs:
             docker push opencti/connector-cpe:${CIRCLE_TAG}
             docker push opencti/connector-urlscan-enrichment:latest
             docker push opencti/connector-urlscan-enrichment:${CIRCLE_TAG}
+            docker push opencti/connector-mitre-atlas:latest
+            docker push opencti/connector-mitre-atlas:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1110,6 +1116,10 @@ jobs:
           name: Build Docker image opencti/connector-urlscan-enrichment
           command: docker build -t opencti/connector-urlscan-enrichment:rolling .
       - run:
+          working_directory: ~/opencti/external-import/mitre-atlas
+          name: Build Docker image opencti/connector-mitre-atlas
+          command: docker build -t opencti/connector-mitre-atlas:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1173,6 +1183,7 @@ jobs:
             docker push opencti/connector-dnstwist:rolling
             docker push opencti/connector-cpe:rolling
             docker push opencti/connector-urlscan-enrichment:rolling
+            docker push opencti/connector-mitre-atlas:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
