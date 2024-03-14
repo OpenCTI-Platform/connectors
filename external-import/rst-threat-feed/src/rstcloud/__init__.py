@@ -181,21 +181,23 @@ def feed_converter(
                     )
                     main_observable_type = "Domain-Name"
                 elif feed_type == FeedType.URL:
-                    indicator_name = ioc_raw["url"]
+                    # encode apostrophe to avoid escaping as it is required
+                    # in "9.2 Constants", STIX v2.1 OASIS Standard
+                    indicator_name = ioc_raw["url"].replace("'", "%27")
                     indicator_pattern = "[url:value='{}']".format(indicator_name)
                     main_observable_type = "Url"
                 elif feed_type == FeedType.HASH:
                     hashes = list()
                     names = list()
-                    if ioc_raw["md5"] is not None and ioc_raw["md5"] != "":
+                    if ioc_raw["md5"] and len(ioc_raw["md5"]) == 32:
                         hashes.append("file:hashes.MD5 = '{}'".format(ioc_raw["md5"]))
                         names.append(ioc_raw["md5"])
-                    if ioc_raw["sha1"] is not None and ioc_raw["sha1"] != "":
+                    if ioc_raw["sha1"] and len(ioc_raw["sha1"]) == 40:
                         hashes.append(
                             "file:hashes.'SHA-1' = '{}'".format(ioc_raw["sha1"])
                         )
                         names.append(ioc_raw["sha1"])
-                    if ioc_raw["sha256"] is not None and ioc_raw["sha256"] != "":
+                    if ioc_raw["sha256"] and len(ioc_raw["sha256"]) == 64:
                         hashes.append(
                             "file:hashes.'SHA-256' = '{}'".format(ioc_raw["sha256"])
                         )
