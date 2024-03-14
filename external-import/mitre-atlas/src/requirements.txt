@@ -1,2 +1,2 @@
-pycti==6.0.6
+pycti==6.0.7
 urllib3==2.2.1

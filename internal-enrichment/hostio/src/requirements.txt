@@ -1,4 +1,4 @@
-pycti==6.0.6
+pycti==6.0.7
 countryinfo
 requests
 validators
