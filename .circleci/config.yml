@@ -694,6 +694,10 @@ jobs:
           name: Build Docker image opencti/connector-greynoise-feed
           command: docker build -t opencti/connector-greynoise-feed:latest . && docker tag opencti/connector-greynoise-feed:latest opencti/connector-greynoise-feed:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/rst-noise-control
+          name: Build Docker image opencti/connector-rst-noise-control
+          command: docker build -t opencti/connector-rst-noise-control:latest . && docker tag opencti/connector-rst-noise-control:latest opencti/connector-rst-noise-control:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -813,6 +817,8 @@ jobs:
             docker push opencti/connector-anyrun-task:${CIRCLE_TAG}
             docker push opencti/connector-greynoise-feed:latest
             docker push opencti/connector-greynoise-feed:${CIRCLE_TAG}
+            docker push opencti/connector-rst-noise-control:latest
+            docker push opencti/connector-rst-noise-control:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1435,6 +1441,10 @@ jobs:
           name: Build Docker image opencti/connector-greynoise-feed
           command: docker build -t opencti/connector-greynoise-feed:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/rst-noise-control
+          name: Build Docker image opencti/connector-rst-noise-control
+          command: docker build -t opencti/connector-rst-noise-control:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1497,6 +1507,7 @@ jobs:
             docker push opencti/connector-anyrun-feed:rolling
             docker push opencti/connector-anyrun-task:rolling
             docker push opencti/connector-greynoise-feed:rolling
+            docker push opencti/connector-rst-noise-control:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
