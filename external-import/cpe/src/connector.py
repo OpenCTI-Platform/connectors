@@ -330,7 +330,7 @@ class CPEConnector:
         Returns:
             str: The title of the cpe.
         """
-        
+
         cpe_title = ""
 
         for title in cpe["titles"]:
@@ -340,7 +340,7 @@ class CPEConnector:
         if cpe_title == "":
             cpe_title = self._get_cpe_infos(cpe["cpeName"])["name"]
 
-        return cpe_title    
+        return cpe_title
 
     def _import_all(self, work_id) -> None:
         """
