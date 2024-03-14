@@ -256,9 +256,6 @@ class IPAddress(Indicator):
                 f"This observable value '{self.name}' is not a valid IPv4 or IPv6 address."
             )
 
-    def to_stix_bundle(self):
-        """Returns STIX objects as a Bundle"""
-        return stix2.Bundle(objects=self.objects, allow_custom=True)
 
 
 class Domain(Indicator):
