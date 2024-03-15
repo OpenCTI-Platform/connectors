@@ -384,7 +384,7 @@ class Taxii2Connector:
             object_type = obj["type"]
             if object_type in object_types_with_confidence:
                 if "confidence" not in obj:
-                    obj["confidence"] = int(self.helper.connect_confidence_level)
+                    obj["confidence"] = self.helper.connect_confidence_level
             if object_type == "indicator":
                 obj["x_opencti_create_observables"] = self.create_observables
             elif StixCyberObservableTypes.has_value(object_type):
