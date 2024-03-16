@@ -36,8 +36,8 @@ class SafeBrowsingConnector:
         url = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={API_KEY}"
         payload = {
             "client": {
-                "clientId": "OpenCTI_Connector",  
-                "clientVersion": "1.0",  
+                "clientId": "OpenCTI_Connector",
+                "clientVersion": "1.0",
             },
             "threatInfo": {
                 "threatTypes": [
