@@ -245,7 +245,7 @@ Recorded Future comes equipped with five Recorded Future Risk Lists, which serve
 
 Subscribers who have API access can retrieve lists of entities that have been assigned risk scores by Recorded Future by utilizing the Connect API calls.
 
-Every item in a Risk List, whether it's an IP address, domain, or another element, comes with a risk score and the details that influenced that score. Additionally, having Fusion access enables the customization of Risk Lists.
+Every item in a Risk List, whether it's an IP address, domain, or another element, comes with a risk score and the details that influenced that score.
 
 Vulnerabilities are not handled by the connector.
 
