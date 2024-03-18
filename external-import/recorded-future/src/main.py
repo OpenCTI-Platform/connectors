@@ -16,7 +16,8 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, RFClient, RiskList, StixNote, ThreatMap, CustomBundles
+
+from rflib import APP_VERSION, CustomBundles, RFClient, RiskList, StixNote, ThreatMap
 
 
 class RFNotes:
@@ -34,7 +35,9 @@ class RFNotes:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config,
+            "RECORDED_FUTURE_TOKEN",
+            ["rf", "token"],
+            config,
         )
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
@@ -213,7 +216,7 @@ class RFNotes:
                 self.risk_as_score,
                 self.risk_threshold,
             )
-            stixnote.from_json(note, self.tlp)
+            stixnote.from_json(note)
             stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
@@ -260,14 +263,13 @@ if __name__ == "__main__":
             RF.helper.log_info("[THREAT MAPS] Threat maps fetching disabled")
 
         if RF.custom_bundle_paths:
-            RF.helper.log_info('[CUSTOM BUNDLES] Starting bundles thread...')
+            RF.helper.log_info("[CUSTOM BUNDLES] Starting bundles thread...")
             CustomBundles = CustomBundles(
                 RF.helper,
                 RF.update_existing_data,
                 RF.custom_bundle_interval,
                 RF.rfapi,
                 RF.custom_bundle_paths,
-
             )
             CustomBundles.start()
         else:

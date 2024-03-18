@@ -1,10 +1,9 @@
-import csv
-import re
 import threading
 import time
 from datetime import datetime
+
 from urllib3.exceptions import HTTPError
-from .constants import RISK_LIST_TYPE_MAPPER
+
 
 
 class CustomBundles(threading.Thread):
@@ -32,7 +31,7 @@ class CustomBundles(threading.Thread):
                 "Recorded Future custom bundle import "
                 + now.strftime("%Y-%m-%d %H:%M:%S"),
             )
-            for path in self.paths.split(',;'):
+            for path in self.paths.split(",;"):
                 self.helper.log_info(f"[CUSTOM BUNDLES] Pulling bundle at {path}")
                 try:
                     bundle = self.rfapi.get_fusion_file(path)
@@ -41,7 +40,7 @@ class CustomBundles(threading.Thread):
                         update=self.update_existing_data,
                         work_id=work_id,
                     )
-                except (HTTPError,ValueError) as err:
+                except (HTTPError, ValueError) as err:
                     self.helper.log_error(err)
                     continue
             self.helper.set_state({"last_bundle_run": timestamp})
