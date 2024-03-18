@@ -84,7 +84,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw, note.tlp.serialize())
         assert len(note.objects) > 2
-        with open(os.path.join(CWD, 'personnoteflag.json'), 'w') as file:
+        with open(os.path.join(tmp_path, 'personnoteflag.json'), 'w') as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
     def test_person_note_creation_flag(self, opencti_helper, tas, rf_client, tmp_path):
@@ -114,7 +114,7 @@ class TestStixObjects:
         with open(os.path.join(tmp_path, 'yaranote.json'), 'w+') as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
-    def test_report_type_conversion(self, opencti_helper, tas, rf_client, tmp_path):
+    def test_report_type_conversion(self, opencti_helper, tas, rf_client):
         topics = [
             {
                 "id": "ZjnoP2",
