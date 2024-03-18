@@ -1,4 +1,3 @@
-
 import json
 import os
 from pathlib import Path
@@ -9,6 +8,7 @@ import stix2.v21
 from src.rflib import URL, Domain, FileHash, IPAddress, StixNote
 
 CWD = Path(__file__).parent
+
 
 @pytest.fixture
 def rf_identity():
@@ -125,10 +125,10 @@ class TestStixObjects:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
     def test_report_type_conversion(self, opencti_helper, tas, rf_client, rf_identity):
-        obj = IPAddress('8.8.8.8', 'IpAdress', rf_identity)
+        obj = IPAddress("8.8.8.8", "IpAdress", rf_identity)
         js = json.loads(obj.to_json_bundle())
-        assert len(js['objects']) == 3
-        with open(os.path.join(CWD, 'outputs/iptest.json'), 'w') as file:
+        assert len(js["objects"]) == 3
+        with open(os.path.join(CWD, "outputs/iptest.json"), "w") as file:
             json.dump(js, file, indent=4)
 
         topics = [

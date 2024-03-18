@@ -21,7 +21,6 @@ class DummyHelper:
         print("WARNING: {}".format(message))
 
 
-
 @pytest.fixture(scope="session")
 def vcr_config():
     return {

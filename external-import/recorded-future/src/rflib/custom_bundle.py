@@ -5,7 +5,6 @@ from datetime import datetime
 from urllib3.exceptions import HTTPError
 
 
-
 class CustomBundles(threading.Thread):
     def __init__(
         self,
