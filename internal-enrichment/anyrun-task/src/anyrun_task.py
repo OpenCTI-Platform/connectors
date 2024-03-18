@@ -20,7 +20,7 @@ class AnyRunTask:
 
         self.token = get_config_variable("ANYRUN_TOKEN", ["anyrun", "token"], config)
         self.anyrun_url = get_config_variable(
-            "ANYRUN_API_URL", ["anyrun", "url"], config, default="https://api.any.run"
+            "ANYRUN_API_URL", ["anyrun", "url"], config, default="https://api.any.run/v1"
         )
         self.organization = self.helper.api.identity.create(
             type="Organization",
