@@ -1,0 +1,307 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: GET
+    uri: https://api.recordedfuture.com/v2/analystnote/search?published=-1000h&limit=10&source=VKz42X
+  response:
+    body:
+      string: "{\"data\":{\"results\":[{\"attributes\":{\"validated_on\":\"2024-03-16T04:00:00.000Z\",\"published\":\"2024-03-17T09:46:26.593Z\",\"text\":\"CVE-2024-2563
+        is a critical vulnerability found in PandaXGO PandaX. This issue affects the
+        function DeleteImage of the file /apps/system/router/upload.go. The manipulation
+        of the argument fileName with the input .. /.. /.. /.. /.. /.. /.. /.. /../tmp/1.txt
+        leads to path traversal. The attack may be initiated remotely. Furthermore,
+        there is an exploit available.\\n\\nIt affects the product versions of PandaXGO
+        PandaX 20240310 and prior. There is no information about possible countermeasures
+        known. It may be suggested to replace the affected object with an alternative
+        product.\",\"topic\":[{\"id\":\"UrMRnT\",\"name\":\"Informational\",\"type\":\"Topic\",\"description\":\"Brief
+        description of CVE/new vulnerability/flaw.\"}],\"context_entities\":[{\"id\":\"u5h7wf\",\"name\":\"PandaXGo
+        PandaX ver. 20240310\",\"type\":\"Product\"},{\"id\":\"u5h7we\",\"name\":\"PandaXGo
+        PandaX\",\"type\":\"Product\"},{\"id\":\"JvKFfE\",\"name\":\"Directory Traversal\",\"type\":\"AttackVector\"}],\"validation_urls\":[{\"id\":\"url:https://vuldb.com/?id.257062\",\"name\":\"https://vuldb.com/?id.257062\",\"type\":\"URL\"}],\"title\":\"CVE-2024-2563
+        allows Path Traversal affecting PandaXGO PandaX\",\"note_entities\":[{\"id\":\"u6Ebm5\",\"name\":\"CVE-2024-2563\",\"type\":\"CyberVulnerability\",\"description\":\"A
+        vulnerability has been found in PandaXGO PandaX up to 20240310 and classified
+        as critical. This vulnerability affects the function DeleteImage of the file
+        /apps/system/router/upload.go. The manipulation of the argument fileName with
+        the input ../../../../../../../../../tmp/1.txt leads to path traversal: '../filedir'.
+        The attack can be initiated remotely. The exploit has been disclosed to the
+        public and may be used. VDB-257062 is the identifier assigned to this vulnerability.\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u64AWH\"},{\"attributes\":{\"validated_on\":\"2024-03-16T04:00:00.000Z\",\"published\":\"2024-03-18T03:58:12.289Z\",\"text\":\"CVE-2024-2565
+        is a critical vulnerability found in PandaXGO PandaX. Affected by this vulnerability
+        is an unknown functionality of the file /apps/system/router/upload.go of the
+        component File Extension Handler. The manipulation of the argument file with
+        an unknown input leads to unrestricted upload. The attack can be launched
+        remotely. Furthermore, there is an exploit available.\\n\\nIt affects the
+        product versions of PandaXGO PandaX 20240310 and prior. There is no information
+        about possible countermeasures known. It may be suggested to replace the affected
+        object with an alternative product.\",\"topic\":[{\"id\":\"UrMRnT\",\"name\":\"Informational\",\"type\":\"Topic\",\"description\":\"Brief
+        description of CVE/new vulnerability/flaw.\"}],\"context_entities\":[{\"id\":\"u5h7wf\",\"name\":\"PandaXGo
+        PandaX ver. 20240310\",\"type\":\"Product\"},{\"id\":\"U3C28d\",\"name\":\"Arbitrary
+        File Upload\",\"type\":\"AttackVector\"},{\"id\":\"u5h7we\",\"name\":\"PandaXGo
+        PandaX\",\"type\":\"Product\"}],\"validation_urls\":[{\"id\":\"url:https://vuldb.com/?id.257064\",\"name\":\"https://vuldb.com/?id.257064\",\"type\":\"URL\"}],\"title\":\"CVE-2024-2565
+        allows Unrestricted Upload affecting PandaXGO PandaX\",\"note_entities\":[{\"id\":\"u6DrYT\",\"name\":\"CVE-2024-2565\",\"type\":\"CyberVulnerability\",\"description\":\"A
+        vulnerability was found in PandaXGO PandaX up to 20240310. It has been classified
+        as critical. Affected is an unknown function of the file /apps/system/router/upload.go
+        of the component File Extension Handler. The manipulation of the argument
+        file leads to unrestricted upload. It is possible to launch the attack remotely.
+        The exploit has been disclosed to the public and may be used. The identifier
+        of this vulnerability is VDB-257064.\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u64Be0\"},{\"attributes\":{\"validated_on\":\"2024-03-16T04:00:00.000Z\",\"published\":\"2024-03-17T09:47:36.903Z\",\"text\":\"CVE-2024-2559
+        is a vulnerability found in Tenda AC18. Affected by this vulnerability is
+        the function fromSysToolReboot of the file /goform/SysToolReboot, which could
+        lead to cross-site request forgery. Furthermore, there is an exploit available.
+        The vendor was contacted early about this disclosure but did not respond in
+        any way.\\n\\nIt affects the product Tenda AC18 firmware version 15.03.05.05.
+        It is recommended to uninstall the affected software and find a replacement.\",\"topic\":[{\"id\":\"UrMRnT\",\"name\":\"Informational\",\"type\":\"Topic\",\"description\":\"Brief
+        description of CVE/new vulnerability/flaw.\"}],\"context_entities\":[{\"id\":\"u5aWzI\",\"name\":\"Tenda
+        AC18 15.03.05.05\",\"type\":\"Product\"},{\"id\":\"JtYdTk\",\"name\":\"Cross-site
+        Request Forgery\",\"type\":\"AttackVector\"},{\"id\":\"i9Xo14\",\"name\":\"Tenda
+        AC18\",\"type\":\"Product\"}],\"validation_urls\":[{\"id\":\"url:https://vuldb.com/?id.257058\",\"name\":\"https://vuldb.com/?id.257058\",\"type\":\"URL\"}],\"title\":\"CVE-2024-2559
+        allows Cross-Site Request Forgery affecting Tenda AC18\",\"note_entities\":[{\"id\":\"u6EIPk\",\"name\":\"CVE-2024-2559\",\"type\":\"CyberVulnerability\",\"description\":\"A
+        vulnerability classified as problematic has been found in Tenda AC18 15.03.05.05.
+        Affected is the function fromSysToolReboot of the file /goform/SysToolReboot.
+        The manipulation leads to cross-site request forgery. It is possible to launch
+        the attack remotely. The exploit has been disclosed to the public and may
+        be used. VDB-257058 is the identifier assigned to this vulnerability. NOTE:
+        The vendor was contacted early about this disclosure but did not respond in
+        any way.\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt Group\",\"type\":\"Source\"},\"id\":\"u64C_b\"},{\"attributes\":{\"validated_on\":\"2024-03-16T04:00:00.000Z\",\"published\":\"2024-03-17T09:48:23.330Z\",\"text\":\"CVE-2024-2561
+        is a critical vulnerability found in 74CMS. This affects the function sendCompanyLogo
+        of the file /controller/company/Index.php#sendCompanyLogo of the component
+        Company Logo Handler. The manipulation of the argument imgBase64 leads to
+        unrestricted upload. It is possible to initiate the attack remotely. Furthermore,
+        there is an exploit available.\\n\\nThis affects the product version of 74CMS
+        3.28.0. There is no information about possible countermeasures known. It may
+        be suggested to replace the affected object with an alternative product.\",\"topic\":[{\"id\":\"UrMRnT\",\"name\":\"Informational\",\"type\":\"Topic\",\"description\":\"Brief
+        description of CVE/new vulnerability/flaw.\"}],\"context_entities\":[{\"id\":\"u5iCWh\",\"name\":\"74CMS
+        3.28.0\",\"type\":\"Product\"},{\"id\":\"U3C28d\",\"name\":\"Arbitrary File
+        Upload\",\"type\":\"AttackVector\"},{\"id\":\"u6Dvbq\",\"name\":\"CVE-2024-2561\",\"type\":\"CyberVulnerability\",\"description\":\"A
+        vulnerability, which was classified as critical, has been found in 74CMS 3.28.0.
+        Affected by this issue is the function sendCompanyLogo of the file /controller/company/Index.php#sendCompanyLogo
+        of the component Company Logo Handler. The manipulation of the argument imgBase64
+        leads to unrestricted upload. The attack may be launched remotely. The exploit
+        has been disclosed to the public and may be used. The identifier of this vulnerability
+        is VDB-257060.\"}],\"validation_urls\":[{\"id\":\"url:https://vuldb.com/?id.257060\",\"name\":\"https://vuldb.com/?id.257060\",\"type\":\"URL\"}],\"title\":\"CVE-2024-2561
+        allows Unrestricted Upload affecting 74CMS\",\"note_entities\":[{\"id\":\"YvAIwc\",\"name\":\"74cms\",\"type\":\"Product\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u64EDa\"},{\"attributes\":{\"validated_on\":\"2024-03-16T04:00:00.000Z\",\"published\":\"2024-03-17T11:50:03.422Z\",\"text\":\"CVE-2024-2566
+        s a critical vulnerability found in Fujian Kelixin Communication Command and
+        Dispatch Platform. Affected by this issue is some unknown functionality of
+        the file api/client/get_extension_yl.php. The manipulation of the argument
+        imei leads to sql injection. The attack may be launched remotely. Furthermore,
+        there is an exploit available.\\n\\nIt affects the product versions of Fujian
+        Kelixin Communication Command and Dispatch Platform up to 20240313. There
+        is no information about possible countermeasures known. It may be suggested
+        to replace the affected object with an alternative product.\",\"topic\":[{\"id\":\"UrMRnT\",\"name\":\"Informational\",\"type\":\"Topic\",\"description\":\"Brief
+        description of CVE/new vulnerability/flaw.\"}],\"context_entities\":[{\"id\":\"u5iCWj\",\"name\":\"Fujian
+        Kelixin Communication Command and Dispatch Platform ver. 20240313\",\"type\":\"Product\"},{\"id\":\"JJ7-_x\",\"name\":\"SQL
+        injection\",\"type\":\"AttackVector\"},{\"id\":\"u5iCWi\",\"name\":\"Fujian
+        Kelixin Communication Command and Dispatch Platform\",\"type\":\"Product\"}],\"validation_urls\":[{\"id\":\"url:https://vuldb.com/?id.257065\",\"name\":\"https://vuldb.com/?id.257065\",\"type\":\"URL\"}],\"title\":\"CVE-2024-2566
+        allows SQL Injection affecting Fujian Kelixin Communication Command and Dispatch
+        Platform\",\"note_entities\":[{\"id\":\"u6FEw7\",\"name\":\"CVE-2024-2566\",\"type\":\"CyberVulnerability\",\"description\":\"A
+        vulnerability was found in Fujian Kelixin Communication Command and Dispatch
+        Platform up to 20240313. It has been declared as critical. Affected by this
+        vulnerability is an unknown functionality of the file api/client/get_extension_yl.php.
+        The manipulation of the argument imei leads to sql injection. The attack can
+        be launched remotely. The exploit has been disclosed to the public and may
+        be used. The identifier VDB-257065 was assigned to this vulnerability.\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u68xZK\"},{\"attributes\":{\"validated_on\":\"2024-03-15T04:00:00.000Z\",\"published\":\"2024-03-17T16:11:49.648Z\",\"text\":\"On
+        March 15, 2024, Unit 42 reported an analysis on BunnyLoader 3.0, released
+        on February 11, 2024, by \\\"PLAYER_BUNNY\\\". BunnyLoader malware operates
+        as malware-as-a-service (MaaS) and is available on dark web forums. Player_Bunny
+        advertised that the new version is \u201Ccompletely redesigned and enhanced
+        by 90%,\u201D including improving the payload performance, reducing payload
+        size, and advanced keylogging capabilities. Since the first version was released
+        in September 2023, BunnyLoader has undergone rapid development to enhance
+        its capabilities and evade detection. The loader is developed to steal information,
+        credentials, cryptocurrency theft, and the capability to deploy further malicious
+        payloads such as Denial-of-Service (DOS). BunnyLoader 3.0 payload is delivered
+        by downloading an embedded dropper via a CMD file.\\n\\nUnit 42's report identifies
+        BunnyLoader 3.0's evolution into a modular MaaS. The operator can choose to
+        deploy the needed modules. The modular components include:\\n\\n- Keylogger
+        Module: This module captures keystrokes and logs sensitive input data. It's
+        developed to detect when users interact with particular applications or services,
+        targeting those moments for data capture to maximize the theft of valuable
+        information.\\n- Stealer Module: Operating autonomously, this module specializes
+        in extracting a broad array of data, including credentials, from the compromised
+        system. It communicates directly with the command-and-control (C2) server,
+        uploading stolen data for the threat actors.\\n- Clipper Module: Focused on
+        cryptocurrency theft, this module monitors the clipboard for cryptocurrency
+        wallet addresses. Upon detection, it replaces the legitimate address with
+        one controlled by the threat actors, redirecting funds to the threat actor's
+        wallets.\\n- Denial of Service (DoS) Module: This module enables threat actors
+        to disrupt services by overwhelming targets with traffic. Threat actors can
+        overload services with excessive traffic and execute GET or POST HTTP flood
+        attacks.\\n\\nFor further detection, the analyzed IOCs are available in this
+        note, and the YARA detection rule is available in Unit 42's report.\",\"topic\":[{\"id\":\"TXSFt5\",\"name\":\"Validated
+        Intelligence Event\",\"type\":\"Topic\",\"description\":\"Concise analysis
+        of a cyber event, particularly around a breaking or new cyber attack event.\"}],\"context_entities\":[{\"id\":\"LPc838\",\"name\":\"C&C
+        Server\",\"type\":\"AttackVector\"},{\"id\":\"WpT1La\",\"name\":\"Malware-as-a-Service\",\"type\":\"MalwareCategory\"},{\"id\":\"QrYTmu\",\"name\":\"Denial-of-Service\",\"type\":\"AttackVector\"},{\"id\":\"KeKude\",\"name\":\"Keylogger\",\"type\":\"AttackVector\"},{\"id\":\"hy9dg6\",\"name\":\"PureCrypter\",\"type\":\"Malware\"},{\"id\":\"pWmpse\",\"name\":\"PureLogs\",\"type\":\"Malware\"},{\"id\":\"rnxtIo\",\"name\":\"Meduza
+        Stealer\",\"type\":\"Malware\"},{\"id\":\"hash:0f425950ceaed6578b2ad22b7baea7d5fe4fd550a97af501bca87d9eb551b825\",\"name\":\"0f425950ceaed6578b2ad22b7baea7d5fe4fd550a97af501bca87d9eb551b825\",\"type\":\"Hash\"},{\"id\":\"hash:52b7cdf5402f77f11ffebc2988fc8cdcd727f51a2f87ce3b88a41fd0fb06a124\",\"name\":\"52b7cdf5402f77f11ffebc2988fc8cdcd727f51a2f87ce3b88a41fd0fb06a124\",\"type\":\"Hash\"},{\"id\":\"hash:3a64f44275b6ff41912654ae1a4af1d9c629f94b8062be441902aeff2d38af3e\",\"name\":\"3a64f44275b6ff41912654ae1a4af1d9c629f94b8062be441902aeff2d38af3e\",\"type\":\"Hash\"},{\"id\":\"hash:c006f2f58784671504a1f2e7df8da495759227e64f58657f23efee4f9eb58216\",\"name\":\"c006f2f58784671504a1f2e7df8da495759227e64f58657f23efee4f9eb58216\",\"type\":\"Hash\"},{\"id\":\"hash:2e9d6fb42990126155b8e781f4ba941d54bcc346bcf85b30e3348dde75fbeca1\",\"name\":\"2e9d6fb42990126155b8e781f4ba941d54bcc346bcf85b30e3348dde75fbeca1\",\"type\":\"Hash\"},{\"id\":\"hash:2ab21d859f1c3c21a69216c176499c79591da63e1907b0d155f45bb9c6aed4eb\",\"name\":\"2ab21d859f1c3c21a69216c176499c79591da63e1907b0d155f45bb9c6aed4eb\",\"type\":\"Hash\"},{\"id\":\"hash:5f09411395c8803f2a735b71822ad15aa454f47e96fd10acc98da4862524813a\",\"name\":\"5f09411395c8803f2a735b71822ad15aa454f47e96fd10acc98da4862524813a\",\"type\":\"Hash\"},{\"id\":\"hash:ebc17dbf5970acb38c35e08560ae7b38c7394f503f227575cd56ba1a4c87c8a4\",\"name\":\"ebc17dbf5970acb38c35e08560ae7b38c7394f503f227575cd56ba1a4c87c8a4\",\"type\":\"Hash\"},{\"id\":\"hash:fffdf51cdb54f707db617b29e2178bb54b67f527c866289887a7ada4d26b7563\",\"name\":\"fffdf51cdb54f707db617b29e2178bb54b67f527c866289887a7ada4d26b7563\",\"type\":\"Hash\"}],\"validation_urls\":[{\"id\":\"url:https://unit42.paloaltonetworks.com/analysis-of-bunnyloader-malware/\",\"name\":\"https://unit42.paloaltonetworks.com/analysis-of-bunnyloader-malware/\",\"type\":\"URL\"},{\"id\":\"url:https://www.hackread.com/bunnyloader-3-0-malware-steals-credentials-crypto/\",\"name\":\"https://www.hackread.com/bunnyloader-3-0-malware-steals-credentials-crypto/\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/live/sc/1tHbM1ZM9roj\",\"name\":\"https://app.recordedfuture.com/live/sc/1tHbM1ZM9roj\",\"type\":\"URL\"}],\"title\":\"New
+        BunnyLoader 3.0 Malware Steals Credentials and Cryptocurrency Data\",\"note_entities\":[{\"id\":\"J2TQmu\",\"name\":\"Cryptocurrency\",\"type\":\"Technology\"},{\"id\":\"sjuPNs\",\"name\":\"PLAYER_BUNNY\",\"type\":\"Username\"},{\"id\":\"sll2Ov\",\"name\":\"BunnyLoader\",\"type\":\"Malware\"},{\"id\":\"LPc838\",\"name\":\"C&C
+        Server\",\"type\":\"AttackVector\"},{\"id\":\"mitre:T1041\",\"name\":\"T1041\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1027\",\"name\":\"T1027\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1204\",\"name\":\"T1204\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1071\",\"name\":\"T1071\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"KeKude\",\"name\":\"Keylogger\",\"type\":\"AttackVector\"},{\"id\":\"JitILV\",\"name\":\"Input
+        Capture\",\"type\":\"AttackVector\"},{\"id\":\"mitre:T1059\",\"name\":\"T1059\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"SMlvRl\",\"name\":\"Stealware\",\"type\":\"MalwareCategory\"},{\"id\":\"mitre:T1115\",\"name\":\"T1115\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"WpT1La\",\"name\":\"Malware-as-a-Service\",\"type\":\"MalwareCategory\"},{\"id\":\"ip:172.105.124.34\",\"name\":\"172.105.124.34\",\"type\":\"IpAddress\"},{\"id\":\"ip:37.139.129.145\",\"name\":\"37.139.129.145\",\"type\":\"IpAddress\"},{\"id\":\"ip:134.122.197.80\",\"name\":\"134.122.197.80\",\"type\":\"IpAddress\"},{\"id\":\"ip:185.241.208.104\",\"name\":\"185.241.208.104\",\"type\":\"IpAddress\"},{\"id\":\"ip:185.241.208.83\",\"name\":\"185.241.208.83\",\"type\":\"IpAddress\"},{\"id\":\"XagF-r\",\"name\":\"User
+        Execution\",\"type\":\"AttackVector\"},{\"id\":\"QrYTmu\",\"name\":\"Denial-of-Service\",\"type\":\"AttackVector\"},{\"id\":\"mitre:T1056\",\"name\":\"T1056\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"D-47bZ\",\"name\":\"Data
+        Exfiltration\",\"type\":\"AttackVector\"},{\"id\":\"mitre:T1056.001\",\"name\":\"T1056.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1555\",\"name\":\"T1555\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1499\",\"name\":\"T1499\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"ip:195.10.205.23\",\"name\":\"195.10.205.23\",\"type\":\"IpAddress\"},{\"id\":\"D5z01i\",\"name\":\"HTTP
+        Flood Attack\",\"type\":\"AttackVector\"},{\"id\":\"NCfiVe\",\"name\":\"HTTP
+        DoS\",\"type\":\"AttackVector\"},{\"id\":\"hash:1a5ad9ae7b0dcdc2edb7e93556f2c59c84f113879df380d95835fb8ea3914ed8\",\"name\":\"1a5ad9ae7b0dcdc2edb7e93556f2c59c84f113879df380d95835fb8ea3914ed8\",\"type\":\"Hash\"},{\"id\":\"hash:c80a63350ec791a16d84b759da72e043891b739a04c7c1709af83da00f7fdc3a\",\"name\":\"c80a63350ec791a16d84b759da72e043891b739a04c7c1709af83da00f7fdc3a\",\"type\":\"Hash\"},{\"id\":\"dlIkCX\",\"name\":\"Loader\",\"type\":\"MalwareCategory\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u7IMuj\"},{\"attributes\":{\"validated_on\":\"2024-03-12T04:00:00.000Z\",\"published\":\"2024-03-17T16:43:05.436Z\",\"text\":\"On
+        March 12, 2024, IBM security researchers disclosed GhostRace (CVE-2024-2193),
+        a vulnerability merging speculative execution with race conditions into Speculative
+        Race Conditions (SRCs), allowing threat actors to sidestep synchronization
+        methods like mutexes via branch misprediction attacks, thus facilitating unauthorized
+        data leakage. The race conditions are anticipated to affect major hardware
+        vendors (Intel, AMD, ARM, IBM) and the Linux kernel at the end of 2023. USENIX
+        Security\u201924 research paper highlighted the challenge of addressing speculative
+        execution combined with race conditions, the team prepares to share their
+        insights, Proof Of Concept (POC), and mitigation techniques. At the time of
+        writing, the vulnerability was not being exploited in the wild.\\n\\nOn March
+        15, 2024, The Hacker News further detailed GhostRace, comparing it to the
+        previously identified Spectre 1.0 (CVE-2017-5753) vulnerability. The report
+        indicates that GhostRace enables threat actors to perform unauthorized data
+        extraction from processors through Speculative Concurrent Use-After-Free (SCUAF)
+        attacks. SRC operates on paths that the CPU inaccurately speculates on, similar
+        to Spectre v1, but it specifically targets vulnerable code segments for information
+        leakage.\\n\\nFollowing the disclosure of GhostRace, AMD indicated its existing
+        Spectre-related security measures are effective for this new vulnerability.
+        Meanwhile, Xen, an open-source hypervisor, implemented LOCK_HARDEN, a security
+        enhancement for x86 architectures, aiming to defend vulnerabilities like GhostRace.\",\"topic\":[{\"id\":\"UrMRnT\",\"name\":\"Informational\",\"type\":\"Topic\",\"description\":\"Brief
+        description of CVE/new vulnerability/flaw.\"},{\"id\":\"TXSFt5\",\"name\":\"Validated
+        Intelligence Event\",\"type\":\"Topic\",\"description\":\"Concise analysis
+        of a cyber event, particularly around a breaking or new cyber attack event.\"}],\"context_entities\":[{\"id\":\"U9O8i-\",\"name\":\"CVE-2017-5753\",\"type\":\"CyberVulnerability\",\"description\":\"Systems
+        with microprocessors utilizing speculative execution and branch prediction
+        may allow unauthorized disclosure of information to an attacker with local
+        user access via a side-channel analysis.\"},{\"id\":\"tplCh\",\"name\":\"Xen\",\"type\":\"Product\"},{\"id\":\"CCJfP\",\"name\":\"Hypervisor\",\"type\":\"Technology\"},{\"id\":\"CnhspO\",\"name\":\"Information
+        Leakage\",\"type\":\"AttackVector\"},{\"id\":\"XnCD2\",\"name\":\"Proof Of
+        Concept\",\"type\":\"Technology\"},{\"id\":\"JjIIZP\",\"name\":\"branch misprediction\",\"type\":\"Technology\"},{\"id\":\"C7r8If\",\"name\":\"Linux
+        Kernel\",\"type\":\"Product\"},{\"id\":\"PCX4qO\",\"name\":\"use-after-free\",\"type\":\"AttackVector\"},{\"id\":\"B_FiW\",\"name\":\"IBM
+        Corporation\",\"type\":\"Company\"},{\"id\":\"B_HGb\",\"name\":\"Intel Corp.\",\"type\":\"Company\"}],\"validation_urls\":[{\"id\":\"url:https://ibm.github.io/system-security-research-updates/2024/03/12/ghostrace\",\"name\":\"https://ibm.github.io/system-security-research-updates/2024/03/12/ghostrace\",\"type\":\"URL\"},{\"id\":\"url:https://thehackernews.com/2024/03/ghostrace-new-data-leak-vulnerability.html\",\"name\":\"https://thehackernews.com/2024/03/ghostrace-new-data-leak-vulnerability.html\",\"type\":\"URL\"},{\"id\":\"url:https://github.com/vusec/ghostrace\",\"name\":\"https://github.com/vusec/ghostrace\",\"type\":\"URL\"},{\"id\":\"url:https://download.vusec.net/papers/ghostrace_sec24.pdf\",\"name\":\"https://download.vusec.net/papers/ghostrace_sec24.pdf\",\"type\":\"URL\"}],\"title\":\"GhostRace:
+        CVE-2024-2193, A New Data Leak Vulnerability Targeting CPUs\",\"note_entities\":[{\"id\":\"uxHFao\",\"name\":\"CVE-2024-2193\",\"type\":\"CyberVulnerability\",\"description\":\"A
+        Speculative Race Condition (SRC) vulnerability that impacts modern CPU architectures
+        supporting speculative execution (related to Spectre V1) has been disclosed.
+        An unauthenticated attacker can exploit this vulnerability to disclose arbitrary
+        data from the CPU using race conditions to access the speculative executable
+        code paths.\"},{\"id\":\"tplCh\",\"name\":\"Xen\",\"type\":\"Product\"},{\"id\":\"B_G85\",\"name\":\"Linux\",\"type\":\"Product\"},{\"id\":\"C7r8If\",\"name\":\"Linux
+        Kernel\",\"type\":\"Product\"},{\"id\":\"B_HGb\",\"name\":\"Intel Corp.\",\"type\":\"Company\"},{\"id\":\"B_FiW\",\"name\":\"IBM
+        Corporation\",\"type\":\"Company\"},{\"id\":\"B_JoI\",\"name\":\"Advanced
+        Micro Devices\",\"type\":\"Company\"},{\"id\":\"I50Ccd\",\"name\":\"ARM Architecture\",\"type\":\"Technology\"},{\"id\":\"XnCD2\",\"name\":\"Proof
+        Of Concept\",\"type\":\"Technology\"},{\"id\":\"PCX4qO\",\"name\":\"use-after-free\",\"type\":\"AttackVector\"},{\"id\":\"CnhspO\",\"name\":\"Information
+        Leakage\",\"type\":\"AttackVector\"},{\"id\":\"CCJfP\",\"name\":\"Hypervisor\",\"type\":\"Technology\"},{\"id\":\"JjIIZP\",\"name\":\"branch
+        misprediction\",\"type\":\"Technology\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u7Iqkq\"},{\"attributes\":{\"validated_on\":\"2024-03-17T16:44:21.106Z\",\"published\":\"2024-03-17T16:45:05.993Z\",\"text\":\"On
+        March 13, 2024, Wordfence disclosed critical and high-severity vulnerabilities
+        in widely used WordPress plugins. CVE-2024-2172, a critical vulnerability
+        residing in miniOrange's Malware Scanner and Web Application Firewall plugins,
+        enables unauthenticated threat actors to escalate privileges to administrator
+        access due to a missing capability check on the mo_wpns_init() function. This
+        allows unauthenticated attackers to escalate their privileges to an administrator.
+        The vulnerability affects over 10,300 WordPress installations collectively.
+        Both plugins have been permanently closed without patches, necessitating immediate
+        removal.\\n\\nConcurrently, CVE-2024-1991, a high-severity vulnerability in
+        the RegistrationMagic plugin, allows authenticated threat actors to arbitrarily
+        elevate their privileges due to the insecure implementation of an update_users_role()
+        function. Successful exploitation of this vulnerability could enable threat
+        actors to alter site content and user permissions to grant administrator privileges.
+        This vulnerability affects over 10,000 sites but has been addressed in RegistrationMagic
+        version 5.3.1.0.\\n\\nAt the time of writing, there are no confirmed instances
+        of exploitation in the wild for the mentioned vulnerabilities.\",\"topic\":[{\"id\":\"TXSFt5\",\"name\":\"Validated
+        Intelligence Event\",\"type\":\"Topic\",\"description\":\"Concise analysis
+        of a cyber event, particularly around a breaking or new cyber attack event.\"},{\"id\":\"UrMRnT\",\"name\":\"Informational\",\"type\":\"Topic\",\"description\":\"Brief
+        description of CVE/new vulnerability/flaw.\"}],\"context_entities\":[{\"id\":\"dD9drp\",\"name\":\"Registrationmagic\",\"type\":\"Company\"},{\"id\":\"JY2CjY\",\"name\":\"Wordfence\",\"type\":\"Company\"},{\"id\":\"agG9Vy\",\"name\":\"MiniOrange\",\"type\":\"Company\"},{\"id\":\"uwTDh4\",\"name\":\"CVE-2024-2172\",\"type\":\"CyberVulnerability\",\"description\":\"The
+        Malware Scanner plugin and the Web Application Firewall plugin for WordPress
+        (both by MiniOrange) are vulnerable to privilege escalation due to a missing
+        capability check on the mo_wpns_init() function in all versions up to, and
+        including, 4.7.2 (for Malware Scanner) and 2.1.1 (for Web Application Firewall).
+        This makes it possible for unauthenticated attackers  to escalate their privileges
+        to that of an administrator.\"},{\"id\":\"TWvpI2\",\"name\":\"WordPress Plugins\",\"type\":\"Product\"},{\"id\":\"usRa9K\",\"name\":\"CVE-2024-1991\",\"type\":\"CyberVulnerability\"}],\"validation_urls\":[{\"id\":\"url:https://www.wordfence.com/blog/2024/03/1313-bounty-awarded-for-privilege-escalation-vulnerability-patched-in-registrationmagic-wordpress-plugin/\",\"name\":\"https://www.wordfence.com/blog/2024/03/1313-bounty-awarded-for-privilege-escalation-vulnerability-patched-in-registrationmagic-wordpress-plugin/\",\"type\":\"URL\"},{\"id\":\"url:https://www.securityweek.com/discontinued-security-plugins-expose-many-wordpress-sites-to-takeover/\",\"name\":\"https://www.securityweek.com/discontinued-security-plugins-expose-many-wordpress-sites-to-takeover/\",\"type\":\"URL\"},{\"id\":\"url:https://www.wordfence.com/blog/2024/03/critical-vulnerability-remains-unpatched-in-two-permanently-closed-miniorange-wordpress-plugins-1250-bounty-awarded/\",\"name\":\"https://www.wordfence.com/blog/2024/03/critical-vulnerability-remains-unpatched-in-two-permanently-closed-miniorange-wordpress-plugins-1250-bounty-awarded/\",\"type\":\"URL\"}],\"title\":\"New
+        WordPress Plugin Vulnerabilities Affects Thousands of WordPress Sites\",\"note_entities\":[{\"id\":\"uwTDh4\",\"name\":\"CVE-2024-2172\",\"type\":\"CyberVulnerability\",\"description\":\"The
+        Malware Scanner plugin and the Web Application Firewall plugin for WordPress
+        (both by MiniOrange) are vulnerable to privilege escalation due to a missing
+        capability check on the mo_wpns_init() function in all versions up to, and
+        including, 4.7.2 (for Malware Scanner) and 2.1.1 (for Web Application Firewall).
+        This makes it possible for unauthenticated attackers  to escalate their privileges
+        to that of an administrator.\"},{\"id\":\"TWvpI2\",\"name\":\"WordPress Plugins\",\"type\":\"Product\"},{\"id\":\"usRa9K\",\"name\":\"CVE-2024-1991\",\"type\":\"CyberVulnerability\"},{\"id\":\"uieFuS\",\"name\":\"Malware
+        Scanner Plugin\",\"type\":\"Product\"},{\"id\":\"u5f9S1\",\"name\":\"Web Application
+        Firewall plugin\",\"type\":\"Product\"},{\"id\":\"B_sus\",\"name\":\"WordPress\",\"type\":\"Company\"},{\"id\":\"JPv_5Q\",\"name\":\"Privilege
+        Escalation\",\"type\":\"AttackVector\"},{\"id\":\"dD9drp\",\"name\":\"Registrationmagic\",\"type\":\"Company\"},{\"id\":\"agG9Vy\",\"name\":\"MiniOrange\",\"type\":\"Company\"},{\"id\":\"JY2CjY\",\"name\":\"Wordfence\",\"type\":\"Company\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u7JAMz\"},{\"attributes\":{\"validated_on\":\"2024-03-14T04:00:00.000Z\",\"published\":\"2024-03-18T09:39:39.951Z\",\"text\":\"On
+        March 14, 2024, the US Cybersecurity and Infrastructure Security Agency (CISA)
+        disclosed two critical vulnerabilities affecting Softing AG's edgeConnector
+        and edgeAggregator version 3.60, tracked as CVE-2023-38126 and CVE-2024-0860.
+        CISA recommended organizations to update affected devices to version 3.70
+        or greater to address the vulnerabilities. Neither of the two vulnerabilities
+        have been exploited in the wild at the time of writing. \\n\\nDetails surrounding
+        the two vulnerabilities are as follows:\\n\\n-CVE-2023-38126: a path traversal
+        flaw with a severity rating of 7.2 that stems from the absence of proper validation
+        of a user-supplied path before incorporating it into file operations. CVE-2023-38126
+        requires that threat actors acquire administrative privileges to modify files
+        within the filesystem. Successful exploitation can allow threat actors to
+        execute arbitrary code, potentially leading to unauthorized access, data compromise,
+        or system manipulation.\\n\\n-CVE-2024-0860: a cleartext transmission of sensitive
+        information flaw with a severity rating of 8.0. If exploited,  threat actors
+        cam intercept packets and manipulate requests, potentially leading to unauthorized
+        access to sensitive information like user data.\\n\",\"topic\":[{\"id\":\"TXSFt5\",\"name\":\"Validated
+        Intelligence Event\",\"type\":\"Topic\",\"description\":\"Concise analysis
+        of a cyber event, particularly around a breaking or new cyber attack event.\"},{\"id\":\"UrMRnT\",\"name\":\"Informational\",\"type\":\"Topic\",\"description\":\"Brief
+        description of CVE/new vulnerability/flaw.\"}],\"validation_urls\":[{\"id\":\"url:https://www.cisa.gov/news-events/ics-advisories/icsa-24-074-13\",\"name\":\"https://www.cisa.gov/news-events/ics-advisories/icsa-24-074-13\",\"type\":\"URL\"},{\"id\":\"url:https://www.incibe.es/en/incibe-cert/early-warning/vulnerabilities/cve-2023-38126\",\"name\":\"https://www.incibe.es/en/incibe-cert/early-warning/vulnerabilities/cve-2023-38126\",\"type\":\"URL\"},{\"id\":\"url:https://www.incibe.es/en/incibe-cert/early-warning/vulnerabilities/cve-2024-0860\",\"name\":\"https://www.incibe.es/en/incibe-cert/early-warning/vulnerabilities/cve-2024-0860\",\"type\":\"URL\"}],\"title\":\"CISA
+        Discloses Two Vulnerabilities Affecting Softing edgeConnector\",\"note_entities\":[{\"id\":\"kmN3zh\",\"name\":\"Softing
+        edgeConnector\",\"type\":\"Product\"},{\"id\":\"ZbRU\",\"name\":\"Softing
+        AG\",\"type\":\"Company\"},{\"id\":\"uRE3_s\",\"name\":\"CVE-2024-0860\",\"type\":\"CyberVulnerability\",\"description\":\"The
+        affected product is vulnerable to a cleartext transmission of sensitive information
+        vulnerability, which may allow an attacker to capture packets to craft their
+        own requests.\"},{\"id\":\"sSACaB\",\"name\":\"CVE-2023-38126\",\"type\":\"CyberVulnerability\",\"description\":\"Softing
+        edgeAggregator Restore Configuration Directory Traversal Remote Code Execution
+        Vulnerability. This vulnerability allows remote attackers to execute arbitrary
+        code on affected installations of Softing edgeAggregator. Authentication is
+        required to exploit this vulnerability.\\n\\nThe specific flaw exists within
+        the processing of backup zip files. The issue results from the lack of proper
+        validation of a user-supplied path prior to using it in file operations. An
+        attacker can leverage this to execute code in the context of root. Was ZDI-CAN-20543.\"},{\"id\":\"nqmK0D\",\"name\":\"Softing
+        edgeAggregator\",\"type\":\"Product\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u7pagC\"}]},\"counts\":{\"returned\":10,\"total\":2675}}"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665197f1e706364-LHR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json;charset=utf-8
+      Date:
+      - Mon, 18 Mar 2024 12:06:57 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      cache-control:
+      - no-cache, no-store, private, must-revalidate, max-age=0, no-transform
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - 'default-src ''self'' data:; img-src ''self'' https: data: blob:; script-src
+        ''self'' ''unsafe-inline'' ''unsafe-eval'' cdn.jsdelivr.net; style-src ''self''
+        ''unsafe-inline'' fonts.googleapis.com cdn.jsdelivr.net; font-src ''self''
+        fonts.gstatic.com; worker-src blob:;'
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      pragma:
+      - no-cache
+      set-cookie:
+      - JSESSIONID=node01r1z5dau9q1qe15xixgxj9mj6f4581274.node0; Path=/rfq; Secure;
+        HttpOnly
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains
+      x-content-type-options:
+      - nosniff
+    status:
+      code: 200
+      message: OK
+version: 1

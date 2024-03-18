@@ -1,0 +1,1207 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: GET
+    uri: https://api.recordedfuture.com/v2/analystnote/search?published=-1000h&limit=10&source=VKz42X&topic=ZjnoP2
+  response:
+    body:
+      string: "{\"data\":{\"results\":[{\"attributes\":{\"validated_on\":\"2024-03-01T18:09:16.446Z\",\"published\":\"2024-03-01T18:56:08.489Z\",\"text\":\"RedDelta
+        (also known as Earth Preta, Mustang Panda, Temp.Hex, Red Lich, and BRONZE
+        PRESIDENT) is a suspected Chinese state-sponsored group that has been observed
+        persistently targeting government, non-governmental, and religious organizations
+        within Europe and Southeast Asia using consistently updated PlugX versions
+        since at least 2019. Previous reporting on this customized PlugX malware by
+        Insikt Group can be found in the Validation URL section of this note. On February
+        20, 2024, Trend Micro published their analysis of a campaign called SMUGX
+        using two PlugX variants: one containing a backdoor command module, and one
+        used for downloading the former. The PlugX downloader has been dubbed DOPLUGS
+        by Trend Micro. DOPLUGS contains the following commands:\\n\u2022 0x7002:
+        Starts a CMD shell. The function is directly copied from the shell module
+        present in non-variant PlugX payloads\\n\u2022 0x1007: Splits the data from
+        the command-and-control (C&C) server by ',',  with the following data format:\\n{WINHTTP_OPTION_CONNECT_TIMEOUT},{sleep_time},\\n{WINHTTP_OPTION_SEND_TIMEOUT},{sleep_time}
+        or {WINHTTP_OPTION_RECEIVE_TIMEOUT},{sleep_time}\\n\u2022 0x3004: Downloads
+        files from the command and control server, including . DLL, EXE and DAT, which
+        are the general type of the PlugX malware\\n\u2022 0x1005: Deletes registry
+        key (HKCU | HKLM) Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\nDeletes
+        itself by creating and executing a batch file del_OneNoteUpdate.bat in %temp%\\n\\nInsikt
+        Group obtained a sample of DOPLUGS (SHA256: 7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b)
+        first seen on June 28, 2024, from Recorded Future Malware Intelligence. Once
+        executed, the sample checks the computer location settings and drops the following
+        files for further execution:\\n\u2022 %localappdata%\\\\xWTdUq\\\\NoteLogger.dat
+        (encrypted payload)\\n\u2022 %localappdata%\\\\xWTdUq\\\\msi.dll (malicious
+        DLL file)\\n\u2022 %localappdata%\\\\xWTdUq\\\\OnesNotem.exe (legitimate executable)\\n\\nAfter
+        dropping these files, DOPLUGS loads the dropped DLL file, adds a Windows registry
+        Run key entry for persistence, and performs the following actions on the victim
+        machine:\\n\u2022 Enumerates connected drives\\n\u2022 Enumerates physical
+        storage devices (often done to infect USB drives)\\n\u2022 Checks SCSI registry
+        keys (often read to detect sandboxing environments)\\n\u2022 Modifies Internet
+        Explorer settings\\n\u2022 Modifies data under HKEY_USERS\\n\u2022 Modifies
+        registry class\\n\u2022 Enumerates processes\\n\u2022 Writes data to an area
+        of memory in a specified process\\n\u2022 Sends a GET and POST request to
+        the C2 server (hxxps://103.107.104[.]37/)\\n\\nInsikt Group created a YARA
+        rule to detect DOPLUGS, which can be found attached to this note. IOCs for
+        the analyzed DOPLUGS samples are also included in this note.\\n\\nIoCs:\\nc7ec098093eb08d2b36d1c37b928d716d8da021f93319a093808a7ceb3b35dc1\\n364f38b48565814b576f482c1e0eb4c8d58effcd033fd45136ee00640a2b5321\\n471e61015ff18349f4bf357447597a54579839336188d98d299b14cff458d132\\n7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b\\n103.107.104.37:443
+        Command and Control Server (C2)\\n\\n\\nMITRE ATT&CK: T1497.001 (Virtualization/Sandbox
+        Evasion: System Checks), T1547.001 (Boot or Logon Autostart Execution: Registry
+        Run Keys / Startup Folder), T1112 (Modify Registry), T1012 (Query Registry),
+        T1082 (System Information Discovery), T1120 (Peripheral Device Discovery),
+        T1071.001 (Application Layer Protocol: Web Protocols), T1573 (Encrypted Channel),
+        T1204.002 (User Execution: Malicious File), T1608.001 (Stage Capabilities:
+        Upload Malware), T1583.004 (Acquire Infrastructure: Server)\",\"attachment\":\"MAL_DOPLUGS.yar\",\"topic\":[{\"id\":\"aDKkpk\",\"name\":\"TTP
+        Instance\",\"type\":\"Topic\",\"description\":\"Notes on tools, scripts, or
+        malware sourced from Recorded Future proprietary sources that may be used
+        in future adversarial campaigns.\"},{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"},{\"id\":\"VTrvnW\",\"name\":\"YARA
+        Rule\",\"type\":\"Topic\",\"description\":\"Rules for identifying malware
+        samples through pattern recognition.\"}],\"context_entities\":[{\"id\":\"B_KuC\",\"name\":\"Microsoft
+        Internet Explorer\",\"type\":\"Product\"},{\"id\":\"JQ1VGf\",\"name\":\"Windows
+        Registry\",\"type\":\"Product\"},{\"id\":\"QCqLhE\",\"name\":\"Backdoor\",\"type\":\"MalwareCategory\"},{\"id\":\"fs-nBq\",\"name\":\"system
+        checks\",\"type\":\"Technology\"},{\"id\":\"source:T5\",\"name\":\"Trend Micro\",\"type\":\"Source\"}],\"validation_urls\":[{\"id\":\"url:https://tria.ge/230907-j28ftsff46/behavioral1\",\"name\":\"https://tria.ge/230907-j28ftsff46/behavioral1\",\"type\":\"URL\"},{\"id\":\"url:https://tria.ge/231211-rjk7ksacb3/behavioral2\",\"name\":\"https://tria.ge/231211-rjk7ksacb3/behavioral2\",\"type\":\"URL\"},{\"id\":\"url:https://tria.ge/230728-kg51msda8s/behavioral2\",\"name\":\"https://tria.ge/230728-kg51msda8s/behavioral2\",\"type\":\"URL\"},{\"id\":\"url:https://tria.ge/230510-j5nktsfa32/behavioral2\",\"name\":\"https://tria.ge/230510-j5nktsfa32/behavioral2\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:pLAAtd\",\"name\":\"https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:pLAAtd\",\"type\":\"URL\"},{\"id\":\"url:https://www.trendmicro.com/en_us/research/24/b/earth-preta-campaign-targets-asia-doplugs.html\",\"name\":\"https://www.trendmicro.com/en_us/research/24/b/earth-preta-campaign-targets-asia-doplugs.html\",\"type\":\"URL\"}],\"title\":\"Insikt
+        Validated TTP: Detecting DOPLUGS, a PlugX Variant, Using YARA\",\"note_entities\":[{\"id\":\"ulrPxh\",\"name\":\"DOPLUGS\",\"type\":\"Malware\"},{\"id\":\"JS5BdY\",\"name\":\"PlugX\",\"type\":\"Malware\"},{\"id\":\"mitre:T1204.002\",\"name\":\"T1204.002\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1082\",\"name\":\"T1082\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1497.001\",\"name\":\"T1497.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1573\",\"name\":\"T1573\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"hash:471e61015ff18349f4bf357447597a54579839336188d98d299b14cff458d132\",\"name\":\"471e61015ff18349f4bf357447597a54579839336188d98d299b14cff458d132\",\"type\":\"Hash\"},{\"id\":\"hash:c7ec098093eb08d2b36d1c37b928d716d8da021f93319a093808a7ceb3b35dc1\",\"name\":\"c7ec098093eb08d2b36d1c37b928d716d8da021f93319a093808a7ceb3b35dc1\",\"type\":\"Hash\"},{\"id\":\"mitre:T1608.001\",\"name\":\"T1608.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1071.001\",\"name\":\"T1071.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"hash:364f38b48565814b576f482c1e0eb4c8d58effcd033fd45136ee00640a2b5321\",\"name\":\"364f38b48565814b576f482c1e0eb4c8d58effcd033fd45136ee00640a2b5321\",\"type\":\"Hash\"},{\"id\":\"hash:7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b\",\"name\":\"7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b\",\"type\":\"Hash\"},{\"id\":\"mitre:T1583.004\",\"name\":\"T1583.004\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1012\",\"name\":\"T1012\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1547.001\",\"name\":\"T1547.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1120\",\"name\":\"T1120\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1112\",\"name\":\"T1112\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"ip:103.107.104.37\",\"name\":\"103.107.104.37\",\"type\":\"IpAddress\"},{\"id\":\"url:https://103.107.104.37\",\"name\":\"https://103.107.104.37\",\"type\":\"URL\"},{\"id\":\"en_T6N\",\"name\":\"RedDelta\",\"type\":\"Organization\"},{\"id\":\"B_HOS\",\"name\":\"Microsoft
+        Windows\",\"type\":\"Product\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"ut2OD-\"},{\"attributes\":{\"validated_on\":\"2024-03-01T20:52:44.475Z\",\"published\":\"2024-03-01T20:53:49.369Z\",\"text\":\"The
+        attached SNORT rule can be used to detect network communications associated
+        with Formbook/XLoader malware.\",\"attachment\":\"mal_formbook_snort.txt\",\"topic\":[{\"id\":\"ZjnoP0\",\"name\":\"SNORT
+        Rule\",\"type\":\"Topic\",\"description\":\"Rules for network intrusion prevention.
+        Identify traffic associated with specific malware.\"},{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"}],\"context_entities\":[{\"id\":\"CzXnMO\",\"name\":\"Snort
+        Rules\",\"type\":\"Technology\"}],\"validation_urls\":[{\"id\":\"url:https://tria.ge/240301-p1k7ssgd22\",\"name\":\"https://tria.ge/240301-p1k7ssgd22\",\"type\":\"URL\"}],\"title\":\"SNORT
+        Rule: Detect Formbook/XLoader\",\"note_entities\":[{\"id\":\"T5WQpJ\",\"name\":\"Formbook\",\"type\":\"Malware\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"ut8i16\"},{\"attributes\":{\"validated_on\":\"2024-03-08T20:15:33.061Z\",\"published\":\"2024-03-08T20:17:30.744Z\",\"text\":\"The
+        attached YARA rule can be used to detect IDAT Loader (aka HijackLoader) PNG
+        payloads containing encrypted configuration data and shellcode.\",\"attachment\":\"MAL_IDAT_Loader_PNG.yar\",\"topic\":[{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"},{\"id\":\"VTrvnW\",\"name\":\"YARA
+        Rule\",\"type\":\"Topic\",\"description\":\"Rules for identifying malware
+        samples through pattern recognition.\"}],\"context_entities\":[{\"id\":\"Kt5me7\",\"name\":\"ShellCode\",\"type\":\"AttackVector\"}],\"validation_urls\":[{\"id\":\"url:https://www.rapid7.com/blog/post/2023/08/31/fake-update-utilizes-new-idat-loader-to-execute-stealc-and-lumma-infostealers/\",\"name\":\"https://www.rapid7.com/blog/post/2023/08/31/fake-update-utilizes-new-idat-loader-to-execute-stealc-and-lumma-infostealers/\",\"type\":\"URL\"},{\"id\":\"url:https://alpine-sec.medium.com/hijackloader-targets-hotels-a-technical-analysis-c2795fc4f3a3\",\"name\":\"https://alpine-sec.medium.com/hijackloader-targets-hotels-a-technical-analysis-c2795fc4f3a3\",\"type\":\"URL\"},{\"id\":\"url:https://www.crowdstrike.com/blog/hijackloader-expands-techniques/\",\"name\":\"https://www.crowdstrike.com/blog/hijackloader-expands-techniques/\",\"type\":\"URL\"}],\"title\":\"YARA
+        Rule: IDAT Loader PNG Payloads\",\"note_entities\":[{\"id\":\"shiuKz\",\"name\":\"IDAT
+        Loader\",\"type\":\"Malware\"},{\"id\":\"sp5mQW\",\"name\":\"HijackLoader\",\"type\":\"Malware\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"uz48kL\"},{\"attributes\":{\"validated_on\":\"2024-03-08T22:28:28.141Z\",\"published\":\"2024-03-08T22:31:33.327Z\",\"text\":\"The
+        attached SNORT rules can be used to detect network communications associated
+        with Meduza Stealer malware.\",\"attachment\":\"mal_meduza_stealer_snort.txt\",\"topic\":[{\"id\":\"ZjnoP0\",\"name\":\"SNORT
+        Rule\",\"type\":\"Topic\",\"description\":\"Rules for network intrusion prevention.
+        Identify traffic associated with specific malware.\"},{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"}],\"context_entities\":[{\"id\":\"SMlvRl\",\"name\":\"Stealware\",\"type\":\"MalwareCategory\"},{\"id\":\"CzXnMO\",\"name\":\"Snort
+        Rules\",\"type\":\"Technology\"}],\"validation_urls\":[{\"id\":\"url:https://tria.ge/240307-zpd98adf78/behavioral2\",\"name\":\"https://tria.ge/240307-zpd98adf78/behavioral2\",\"type\":\"URL\"}],\"title\":\"SNORT
+        rules: Detect Meduza Stealer\",\"note_entities\":[{\"id\":\"rnxtIo\",\"name\":\"Meduza
+        Stealer\",\"type\":\"Malware\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"uz-DXq\"},{\"attributes\":{\"validated_on\":\"2024-03-08T22:28:31.359Z\",\"published\":\"2024-03-08T22:33:05.925Z\",\"text\":\"The
+        attached SNORT rule can be used to detect network communications associated
+        with Aurora Stealer malware.\",\"attachment\":\"mal_aurora_stealer_snort.txt\",\"topic\":[{\"id\":\"ZjnoP0\",\"name\":\"SNORT
+        Rule\",\"type\":\"Topic\",\"description\":\"Rules for network intrusion prevention.
+        Identify traffic associated with specific malware.\"},{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"}],\"context_entities\":[{\"id\":\"SMlvRl\",\"name\":\"Stealware\",\"type\":\"MalwareCategory\"},{\"id\":\"CzXnMO\",\"name\":\"Snort
+        Rules\",\"type\":\"Technology\"}],\"validation_urls\":[{\"id\":\"url:https://tria.ge/230329-g1gwdafa48/behavioral2\",\"name\":\"https://tria.ge/230329-g1gwdafa48/behavioral2\",\"type\":\"URL\"}],\"title\":\"SNORT
+        rule: Aurora Stealer\",\"note_entities\":[{\"id\":\"n8q6Jn\",\"name\":\"Aurora
+        Stealer\",\"type\":\"Malware\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"uz-HUC\"},{\"attributes\":{\"validated_on\":\"2024-03-11T19:48:55.234Z\",\"published\":\"2024-03-11T20:01:37.628Z\",\"text\":\"The
+        attached Snort rule can be used to detect COOKBOX's outbound C2 requests.\",\"attachment\":\"mal_cookbox_snort.txt\",\"topic\":[{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"},{\"id\":\"ZjnoP0\",\"name\":\"SNORT
+        Rule\",\"type\":\"Topic\",\"description\":\"Rules for network intrusion prevention.
+        Identify traffic associated with specific malware.\"}],\"validation_urls\":[{\"id\":\"url:https://cert.gov.ua/article/6277849\",\"name\":\"https://cert.gov.ua/article/6277849\",\"type\":\"URL\"}],\"title\":\"Snort
+        Rule: COOKBOX\",\"note_entities\":[{\"id\":\"Tv5-OH\",\"name\":\"COOKBOX\",\"type\":\"Malware\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u2OoaM\"},{\"attributes\":{\"validated_on\":\"2024-03-13T16:47:54.719Z\",\"published\":\"2024-03-15T16:39:44.007Z\",\"text\":\"The
+        attached SNORT rules can be used to detect network communications associated
+        with MetaStealer Malware.\",\"attachment\":\"mal_metastealer_snort.txt\",\"topic\":[{\"id\":\"ZjnoP0\",\"name\":\"SNORT
+        Rule\",\"type\":\"Topic\",\"description\":\"Rules for network intrusion prevention.
+        Identify traffic associated with specific malware.\"},{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"}],\"context_entities\":[{\"id\":\"dMi0G8\",\"name\":\"RedLine
+        Stealer\",\"type\":\"Malware\"},{\"id\":\"CzXnMO\",\"name\":\"Snort Rules\",\"type\":\"Technology\"}],\"validation_urls\":[{\"id\":\"url:https://tria.ge/240308-yggjyaef72\",\"name\":\"https://tria.ge/240308-yggjyaef72\",\"type\":\"URL\"}],\"title\":\"SNORT
+        Rules: Detect MetaStealer Malware\",\"note_entities\":[{\"id\":\"mPUH36\",\"name\":\"MetaStealer\",\"type\":\"Malware\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u30CIE\"},{\"attributes\":{\"validated_on\":\"2024-03-13T17:02:07.805Z\",\"published\":\"2024-03-13T17:02:21.717Z\",\"text\":\"The
+        attached Sigma rule can be used to detect the PowerShell command line used
+        by LNK files to run Subtle-Paws.\",\"attachment\":\"apt_ru_gamaredon_subtle-paws.yml\",\"topic\":[{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"},{\"id\":\"g1KBGl\",\"name\":\"Sigma
+        Rule\",\"type\":\"Topic\",\"description\":\"Threat detections using the Sigma
+        open signature format for log events related to malicious activity\"}],\"context_entities\":[{\"id\":\"DfALH\",\"name\":\"PowerShell\",\"type\":\"Product\"},{\"id\":\"IFr1_l\",\"name\":\".lnk\",\"type\":\"Technology\"}],\"validation_urls\":[{\"id\":\"url:https://www.securonix.com/blog/security-advisory-steadyursa-attack-campaign-targets-ukraine-military/\",\"name\":\"https://www.securonix.com/blog/security-advisory-steadyursa-attack-campaign-targets-ukraine-military/\",\"type\":\"URL\"}],\"title\":\"Sigma
+        Rule: Subtle-Paws LNK Files\",\"note_entities\":[{\"id\":\"uWRGjY\",\"name\":\"SUBTLE-PAWS\",\"type\":\"Malware\"},{\"id\":\"SvSvaT\",\"name\":\"Gamaredon
+        Group\",\"type\":\"Organization\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u30RCK\"},{\"attributes\":{\"validated_on\":\"2024-03-13T19:11:53.075Z\",\"published\":\"2024-03-13T22:37:04.831Z\",\"text\":\"Aurora
+        Stealer had been advertised on underground forums since April 2022, originally
+        as a botnet. After a brief pause in Aurora distribution starting in June 2022,
+        in late August 2022, Aurora returned to the market and was advertised as a
+        fully functioning information stealer on Telegram and underground forums.
+        Aurora Stealer, written in Go, collects a variety of user data from virtual
+        currency wallets, browsers, screenshots, Telegram, and Discord. Aurora Stealer
+        exfiltrates stolen data to an attacker-controlled C2 server over TCP. Threat
+        actors primarily disseminate Aurora Stealer via phishing webpages, disguising
+        the malware as legitimate software and services.\\n\\nIn June 2023, \u201CMeduzaCorp\u201D,
+        member of the underground forum Exploit (also known as \u201CMeduza\u201D
+        on XSS), began advertising a then-new C++ infostealer malware called \u201CMeduza
+        Stealer'' that operators manage via a web-based administrative panel. Similar
+        to Aurora Stealer, Meduza Stealer communicates with C2 infrastructure over
+        TCP. Meduza Stealer targets data from web browsers, cryptocurrency wallets,
+        password management applications, OpenVPN, Microsoft Outlook, Google Tokens,
+        and software clients (Discord, Steam, and Telegram).\\n\\nShortly following
+        this release of Meduza Stealer, threat intelligence researcher Russian Panda
+        published their analysis of the malware on their blog. Russian Panda noted
+        similarities between Meduza Stealer and Aurora Stealer, namely the method
+        by which their stealer logs are sent to their C2 servers (JSON format, base64-encoded).
+        Russian Panda also found that early samples of Meduza Stealer included mentions
+        of Aurora Stealer in its code. Russian Panda assessed that the authors of
+        Aurora Stealer are also responsible for Meduza Stealer, however, the authors
+        of Meduza denied any connection to Aurora.\\n\\nPrior to Meduza\u2019s release,
+        advertisements for \u201Cfree\u201D and \u201Ccracked\u201D versions of Aurora
+        Stealer began appearing on underground forums as early as April 28, 2023.
+        Shortly after in May 2023, Aurora Stealer\u2019s developers reportedly committed
+        an exit scam, thus tarnishing the developers\u2019 reputation on the criminal
+        underground. This timing aligns with Insikt Group\u2019s observations of Aurora
+        Stealer sample submissions slowing down on malware repositories such as Malware
+        Bazaar in May 2023. Insikt Group obtained samples of Aurora Stealer submitted
+        to Recorded Future Malware Intelligence between December and February 2024.
+        Our analysis of network traffic related to these samples revealed that Aurora\u2019s
+        C2 servers remain unresponsive.\\n\\nThe most recent version of Meduza Stealer
+        is 2.2, which Meduza\u2019s developers released in December 2023. According
+        to Resecurity's HUNTER Team, this update included support for additional software
+        clients, an upgraded credit card grabber, and \u201Cadvanced mechanisms''
+        for credential and token dumping. Resecurity noted that Meduza Stealer\u2019s
+        password stealing functionality is effective against Windows Server 2012,
+        2016, 2019, 2022, as well as Windows 10 and 11. Insikt Group also identified
+        \u201CMeduza\u201D posting an update to Meduza Stealer 2.2 on the underground
+        forum XSS on February 23, 2024. According to \u201CMeduza\u201D, this release
+        provides bug fixes, panel updates, and new collection opportunities, primarily
+        new cryptocurrency wallet extensions to target.\\n\\nInsikt Group created
+        Snort rules to detect Aurora Stealer and Meduza Stealer, which can be found
+        in the Validation URL section of this note. Aurora Stealer uses a simple custom
+        text based protocol for inbound C2 communication. We created a Snort rule
+        to detect the initial Aurora C2 server message containing the word \\\"WORK\\\"
+        followed by a newline character. Meduza Stealer base64 encodes stolen data
+        and exfiltrates it in the format of a JSON file, which is also base64 encoded.
+        We created Snort rules to detect double-base64 encoded variations of browser
+        database headers as well as the JSON tags used to designate stolen files and
+        other content.\\n\\nInsikt Group also created Sigma rules to detect both stealers,
+        which can also be found in the Validation URL section of this note. The first
+        Sigma rule, susp_powershell_scheduledtask, detects suspicious use of PowerShell
+        to create a scheduled task for persistence. We observed this behavior in Aurora
+        Stealer and other malware families, with the end date of the scheduled task
+        set to December 2030. The second Sigma rule, susp_self_deletion_quiet, detects
+        when a file quietly self deletes. We observed this behavior in Meduza Stealer
+        and other malware families.\\n\\nInsikt Group also revalidated their existing
+        YARA rule for Meduza Stealer and created an updated version capable of detecting
+        recent samples observed between January 2024 to March 2024. The updated YARA
+        rule, MAL_Meduza_Stealer_V2, can be found attached to this note.\\n\\nAt the
+        time of this writing, many security researchers consider Aurora Stealer to
+        be \u201Cdead\u201D and speculate that Meduza is its predecessor. While Insikt
+        Group acknowledges similarities between Aurora and Meduza, we do not have
+        enough evidence at this time to definitively determine if the same developers
+        are responsible for both stealers.\\n\\nIoCs:\\nAurora Stealer\\nff3977b7044b3739035cbd17b6d462886b7e228d666c780b8a70c887af797243\\n432a7171271b0d0135e2acff0e050b5f1a4b6a54a3f04d6e58d598f687c9c128\\nf4139d1d3f3fb68c221b9c63ad30b560420959803ab3011de83c4028213e96c6\\n10b527427042ca32d0683e016e2b5458799363d68bb4ee616b66ffdcd9377585\\n107.182.129[.]73:8081\\n\\nMeduza
+        Stealer\\n2ab767ed95da57611db4f66990f750d981fdabce02b606e6910e2690a2b5acef\\n2dfd108136c4763641f3cb14e384f162c6a79d6e992108f10cc145d5d50c5072\\nd8991bee4dd6c742d48c3f7e286bcb3ee1ed8076b50d8b40bef4aa5d10070b7e\\n16d9e602dc8b40cef745035a5c6dc37cf563ab9f791081c4283e24e3e63f9b8b\\nc6817881e1178b0b49ad76b002e11e69f74fc97de69d47f57d503f1e743a745b\\n62f3ab01f7fa27a82b402520204ce76091725364d42a58a6b9fcd8b123dee313\\nb03457370bd51cd31382497aca8a07858c89e115c3e854cf25c366f7c0f34976\\ne26e1427369f0426424fb7a699f5e53a7cae4fece3b677ba0a343dc62f088f02\\n89.185.85[.]207:15666\\n\",\"attachment\":\"MAL_Meduza_Stealer_V2.yar\",\"topic\":[{\"id\":\"aDKkpk\",\"name\":\"TTP
+        Instance\",\"type\":\"Topic\",\"description\":\"Notes on tools, scripts, or
+        malware sourced from Recorded Future proprietary sources that may be used
+        in future adversarial campaigns.\"},{\"id\":\"VTrvnW\",\"name\":\"YARA Rule\",\"type\":\"Topic\",\"description\":\"Rules
+        for identifying malware samples through pattern recognition.\"},{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"}],\"context_entities\":[{\"id\":\"source:KZFCph\",\"name\":\"XSS
+        (ex DamageLab) Forum\",\"type\":\"Source\"},{\"id\":\"source:SYrUYn\",\"name\":\"Exploit
+        Forum\",\"type\":\"Source\"}],\"validation_urls\":[{\"id\":\"url:https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:uz-HUC\",\"name\":\"https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:uz-HUC\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:uz-DXq\",\"name\":\"https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:uz-DXq\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/portal/analyst-note/doc:u3vOX4/true\",\"name\":\"https://app.recordedfuture.com/portal/analyst-note/doc:u3vOX4/true\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/portal/analyst-note/doc:u3xl1P/true\",\"name\":\"https://app.recordedfuture.com/portal/analyst-note/doc:u3xl1P/true\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/live/sc/2gAP8mMKflCi\",\"name\":\"https://app.recordedfuture.com/live/sc/2gAP8mMKflCi\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:o6rE78\",\"name\":\"https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:o6rE78\",\"type\":\"URL\"},{\"id\":\"url:https://d01a.github.io/aurora-stealer/\",\"name\":\"https://d01a.github.io/aurora-stealer/\",\"type\":\"URL\"},{\"id\":\"url:https://www.esentire.com/blog/esentire-threat-intelligence-malware-analysis-aurora-stealer\",\"name\":\"https://www.esentire.com/blog/esentire-threat-intelligence-malware-analysis-aurora-stealer\",\"type\":\"URL\"},{\"id\":\"url:https://russianpanda.com/2023/06/28/Meduza-Stealer-or-The-Return-of-The-Infamous-Aurora-Stealer/\",\"name\":\"https://russianpanda.com/2023/06/28/Meduza-Stealer-or-The-Return-of-The-Infamous-Aurora-Stealer/\",\"type\":\"URL\"},{\"id\":\"url:https://g0njxa.medium.com/approaching-stealers-devs-a-brief-interview-with-meduza-f1bbd2efb84f\",\"name\":\"https://g0njxa.medium.com/approaching-stealers-devs-a-brief-interview-with-meduza-f1bbd2efb84f\",\"type\":\"URL\"},{\"id\":\"url:https://www.resecurity.com/blog/article/new-version-of-medusa-stealer-released-in-dark-web\",\"name\":\"https://www.resecurity.com/blog/article/new-version-of-medusa-stealer-released-in-dark-web\",\"type\":\"URL\"},{\"id\":\"url:https://twitter.com/Jane_0sint/status/1757447264266555690\",\"name\":\"https://twitter.com/Jane_0sint/status/1757447264266555690\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/live/sc/1viTdyFRH4TR\",\"name\":\"https://app.recordedfuture.com/live/sc/1viTdyFRH4TR\",\"type\":\"URL\"},{\"id\":\"url:https://www.linkedin.com/posts/yelisey-bohuslavskiy-214a02bb_meduza-stealer-or-the-return-of-the-infamous-activity-7163601314650787840-GMCA\",\"name\":\"https://www.linkedin.com/posts/yelisey-bohuslavskiy-214a02bb_meduza-stealer-or-the-return-of-the-infamous-activity-7163601314650787840-GMCA\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/live/sc/3PTpeAZM4oy6\",\"name\":\"https://app.recordedfuture.com/live/sc/3PTpeAZM4oy6\",\"type\":\"URL\"},{\"id\":\"url:https://www.resecurity.com/blog/article/new-version-of-medusa-stealer-released-in-dark-web\",\"name\":\"https://www.resecurity.com/blog/article/new-version-of-medusa-stealer-released-in-dark-web\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/live/sc/6BHClrs1Jw0d\",\"name\":\"https://app.recordedfuture.com/live/sc/6BHClrs1Jw0d\",\"type\":\"URL\"},{\"id\":\"url:https://bazaar.abuse.ch/browse.php?search=tag%3Aaurora\",\"name\":\"https://bazaar.abuse.ch/browse.php?search=tag%3Aaurora\",\"type\":\"URL\"},{\"id\":\"url:https://bazaar.abuse.ch/browse/tag/Meduza/\",\"name\":\"https://bazaar.abuse.ch/browse/tag/Meduza/\",\"type\":\"URL\"},{\"id\":\"url:https://tria.ge/240215-f3h1saad63/behavioral2\",\"name\":\"https://tria.ge/240215-f3h1saad63/behavioral2\",\"type\":\"URL\"},{\"id\":\"url:https://tria.ge/240213-k964eaed2t/behavioral1\",\"name\":\"https://tria.ge/240213-k964eaed2t/behavioral1\",\"type\":\"URL\"}],\"title\":\"Insikt
+        Validated TTP: Aurora Stealer\u2019s C2 Servers Are Down While Meduza Stealer
+        Continues to Gain Popularity, Detect Both with Sigma and Snort\",\"note_entities\":[{\"id\":\"LPc838\",\"name\":\"C&C
+        Server\",\"type\":\"AttackVector\"},{\"id\":\"n8q6Jn\",\"name\":\"Aurora Stealer\",\"type\":\"Malware\"},{\"id\":\"hash:ff3977b7044b3739035cbd17b6d462886b7e228d666c780b8a70c887af797243\",\"name\":\"ff3977b7044b3739035cbd17b6d462886b7e228d666c780b8a70c887af797243\",\"type\":\"Hash\"},{\"id\":\"hash:f4139d1d3f3fb68c221b9c63ad30b560420959803ab3011de83c4028213e96c6\",\"name\":\"f4139d1d3f3fb68c221b9c63ad30b560420959803ab3011de83c4028213e96c6\",\"type\":\"Hash\"},{\"id\":\"hash:10b527427042ca32d0683e016e2b5458799363d68bb4ee616b66ffdcd9377585\",\"name\":\"10b527427042ca32d0683e016e2b5458799363d68bb4ee616b66ffdcd9377585\",\"type\":\"Hash\"},{\"id\":\"hash:432a7171271b0d0135e2acff0e050b5f1a4b6a54a3f04d6e58d598f687c9c128\",\"name\":\"432a7171271b0d0135e2acff0e050b5f1a4b6a54a3f04d6e58d598f687c9c128\",\"type\":\"Hash\"},{\"id\":\"ip:107.182.129.73\",\"name\":\"107.182.129.73\",\"type\":\"IpAddress\"},{\"id\":\"rnxtIo\",\"name\":\"Meduza
+        Stealer\",\"type\":\"Malware\"},{\"id\":\"hash:2ab767ed95da57611db4f66990f750d981fdabce02b606e6910e2690a2b5acef\",\"name\":\"2ab767ed95da57611db4f66990f750d981fdabce02b606e6910e2690a2b5acef\",\"type\":\"Hash\"},{\"id\":\"hash:2dfd108136c4763641f3cb14e384f162c6a79d6e992108f10cc145d5d50c5072\",\"name\":\"2dfd108136c4763641f3cb14e384f162c6a79d6e992108f10cc145d5d50c5072\",\"type\":\"Hash\"},{\"id\":\"hash:d8991bee4dd6c742d48c3f7e286bcb3ee1ed8076b50d8b40bef4aa5d10070b7e\",\"name\":\"d8991bee4dd6c742d48c3f7e286bcb3ee1ed8076b50d8b40bef4aa5d10070b7e\",\"type\":\"Hash\"},{\"id\":\"hash:16d9e602dc8b40cef745035a5c6dc37cf563ab9f791081c4283e24e3e63f9b8b\",\"name\":\"16d9e602dc8b40cef745035a5c6dc37cf563ab9f791081c4283e24e3e63f9b8b\",\"type\":\"Hash\"},{\"id\":\"hash:c6817881e1178b0b49ad76b002e11e69f74fc97de69d47f57d503f1e743a745b\",\"name\":\"c6817881e1178b0b49ad76b002e11e69f74fc97de69d47f57d503f1e743a745b\",\"type\":\"Hash\"},{\"id\":\"hash:62f3ab01f7fa27a82b402520204ce76091725364d42a58a6b9fcd8b123dee313\",\"name\":\"62f3ab01f7fa27a82b402520204ce76091725364d42a58a6b9fcd8b123dee313\",\"type\":\"Hash\"},{\"id\":\"hash:b03457370bd51cd31382497aca8a07858c89e115c3e854cf25c366f7c0f34976\",\"name\":\"b03457370bd51cd31382497aca8a07858c89e115c3e854cf25c366f7c0f34976\",\"type\":\"Hash\"},{\"id\":\"hash:e26e1427369f0426424fb7a699f5e53a7cae4fece3b677ba0a343dc62f088f02\",\"name\":\"e26e1427369f0426424fb7a699f5e53a7cae4fece3b677ba0a343dc62f088f02\",\"type\":\"Hash\"},{\"id\":\"mitre:T1555\",\"name\":\"T1555\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1095\",\"name\":\"T1095\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1070.004\",\"name\":\"T1070.004\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"b4ymBH\",\"name\":\"Indicator
+        Removal\",\"type\":\"AttackVector\"},{\"id\":\"mitre:T1132.001\",\"name\":\"T1132.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1053.005\",\"name\":\"T1053.005\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1059.001\",\"name\":\"T1059.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"ip:89.185.85.207\",\"name\":\"89.185.85.207\",\"type\":\"IpAddress\"},{\"id\":\"SMlvRl\",\"name\":\"Stealware\",\"type\":\"MalwareCategory\"},{\"id\":\"JQ0FoX\",\"name\":\"Microsoft
+        Windows 10\",\"type\":\"Product\"},{\"id\":\"RDZvnv\",\"name\":\"Microsoft
+        Windows Server 2016\",\"type\":\"Product\"},{\"id\":\"VgrFUi\",\"name\":\"Microsoft
+        Windows Server 2019\",\"type\":\"Product\"},{\"id\":\"j8y1ZJ\",\"name\":\"Windows
+        Server 2022\",\"type\":\"Product\"},{\"id\":\"JTIgaS\",\"name\":\"Microsoft
+        Windows 11\",\"type\":\"Product\"},{\"id\":\"JIRKR8\",\"name\":\"Microsoft
+        Windows Server 2012\",\"type\":\"Product\"},{\"id\":\"JPKen5\",\"name\":\"Steam\",\"type\":\"Product\"},{\"id\":\"CeYWu\",\"name\":\"Microsoft
+        Office Outlook\",\"type\":\"Product\"},{\"id\":\"EKHLiy\",\"name\":\"OpenVPN\",\"type\":\"Product\"},{\"id\":\"LEpDn3\",\"name\":\"Telegram
+        \",\"type\":\"Product\"},{\"id\":\"SmCnYD\",\"name\":\"Discord (Software)\",\"type\":\"Product\"},{\"id\":\"B_HOS\",\"name\":\"Microsoft
+        Windows\",\"type\":\"Product\"},{\"id\":\"J2TQmu\",\"name\":\"Cryptocurrency\",\"type\":\"Technology\"},{\"id\":\"rryGV9\",\"name\":\"MeduzaCorp\",\"type\":\"Username\"},{\"id\":\"rnY6rl\",\"name\":\"Meduza\",\"type\":\"Username\"},{\"id\":\"0eyAM\",\"name\":\"Phishing\",\"type\":\"AttackVector\"},{\"id\":\"Xt2hhF\",\"name\":\"Scheduled
+        Task\",\"type\":\"AttackVector\"},{\"id\":\"mitre:T1566\",\"name\":\"T1566\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"Kl70Oe\",\"name\":\"Password
+        Theft \",\"type\":\"AttackVector\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u4AafF\"},{\"attributes\":{\"validated_on\":\"2024-03-15T19:59:41.439Z\",\"published\":\"2024-03-15T20:13:44.962Z\",\"text\":\"Previously,
+        Insikt Group published a TTP Instance discussing a malware competition being
+        held on the top-tier forum XSS. That TTP Instance, titled \u201CForked Version
+        of XSSLite Stealer Shared on X, Available from Recorded Future Malware Intelligence\u201D,
+        \ included a link to a sample of XSSLite, a cryptocurrency wallet and browser
+        data grabber malware developed for the competition. The sample was disclosed
+        in a post  on X by user S! Ri, who referred to the sample as a \u201Cforked\u201D
+        version of XSSLite. We believe that S! Ri refers to the sample they discovered
+        as \u201Cforked\u201D because our analysis of the sample indicates it contains
+        minor code-based deviations from the original XSSLite source code, which Insikt
+        Group also obtained and analyzed.\\n\\nXSSLite was originally submitted to
+        the above-mentioned malware competition by the user \u201CCognitoInc\u201D
+        on January 25, 2024. A review of this thread showed generally favorable reviews
+        of the malware, with XSS users responding with questions regarding how to
+        operate XSSLite and requests for additional functionality. However, one user
+        alleges that, while the malware is passable, \u201Cit\u2019s a shame they\u2019ll
+        kill you quickly\u201D, likely referring to threat researchers creating detections
+        for XSSLite or law enforcement performing takedowns of XSSLite web panels.
+        While most comments were positive, we did observe some users negatively criticizing
+        XSSLite\u2019s code and functionality.\\n\\nInsikt Group analysts performed
+        static analysis on the forked sample shared by S! Ri (SHA256: 65da3824b373ed19b61bd1a4f4d132884c742755e2fdb755300cdd1b719246e9)
+        to identify the sample\u2019s capabilities and determine if file and/or log-based
+        detection opportunities were present. Insikt Group and other malware researchers
+        previously identified various string-based artifacts within the sample, including
+        an unsanitized PDB path and a hardcoded IP address directing to a web panel
+        for \u201CDmitry Stealer\u201D.\\n\\nAdditionally, Insikt Group identified
+        the developer\u2019s signature, a string stating \u201CMade by the CognitoInc
+        coder for the xss forum\u201D and strings associated with the malware\u2019s
+        functionality, including strings related to browser data grabbing, cryptocurrency
+        wallet grabbing, virtual machine (VM) detection and evasion, and remote server
+        contact. Using these strings, Insikt Group created a YARA rule capable of
+        detecting XSSLite samples, which successfully identified 3 previously unreported
+        samples which we believe to be modified versions of XSSLite:\\n\\n\u2022 52e980cd0ed565f7ea12ef25c36e9e7477873a9e171e1db6fd37ced18b5043f5\\n\u2022
+        06af8bceef9f7996aa8c351795d0fd8af6b2ef7fb82e8c18b6738cab2fd4c9be\\n\u2022
+        26e6744773a1fe8663bc4b70e1fa58b72afdead38afa288a4fb75ec13da79d38\\n\\nInsikt
+        Group investigated XSSLite\u2019s original source code, shared by CognitoInc
+        in the same forum post that XSSLite was initially advertised on, to gain a
+        better understanding of how the malware operates. The source code includes
+        a document from the developer titled \u0418\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044F.txt
+        in Russian, or Instructions.txt in English, discussing how to set up XSSLite.
+        This file includes a full list of capabilities XSSLite is equipped with, including
+        (written verbatim as translated by Google Translate):\\n\\n\u2022 \u201CCollection
+        of Chromium browsers\u201D\\n\u2022 \u201CGrabber files from the desktop\u201D\\n\u2022
+        \u201CCollection of absolutely all plugins from the browser\u201D\\n\u2022
+        \u201CCollection of crypto wallets\u201D\\n\u2022 \u201CCollecting information
+        about the system\u201D\\n\u2022 \u201CDecryption of logs on the server side\u201D\\n\\nThe
+        file also includes instructions for setting up the XSSLite web panel and generating
+        client-side payloads, which the developer states are coded using Python Flask
+        and C#, respectively. The file also includes an explanation of how XSSLite
+        client-side payloads collect and send cookie and password data. The developer
+        states that a copy of all collected data is encoded in byte format in a JSON
+        message and sent to the server, where the data is decrypted using AES.\\n\\nAdditionally,
+        Instructions.txt included statements regarding CognitoInc\u2019s motivations
+        for creating XSSLite malware, and their plans to develop a more fully-functional
+        product in the future, which they intend to sell. Allegedly, CognitoInc initially
+        designed XSSLite with RAT functionality and additional stealer functionalities
+        that were removed from the source code, with CognitoInc stating \u201Cit would
+        be too awkward to put such ready-made software in the public domain\u201D.\\n\\nInsikt
+        Group has created a YARA rule capable of detecting XSSLite client-side payloads.
+        The YARA rule can be found attached to this note.\",\"attachment\":\"MAL_XSSLite.yar\",\"topic\":[{\"id\":\"aDKkpk\",\"name\":\"TTP
+        Instance\",\"type\":\"Topic\",\"description\":\"Notes on tools, scripts, or
+        malware sourced from Recorded Future proprietary sources that may be used
+        in future adversarial campaigns.\"},{\"id\":\"ZjnoP2\",\"name\":\"Hunting
+        Package\",\"type\":\"Topic\",\"description\":\"Technical detection and mitigations
+        for specific malware, including YARA or Snort rules.\"},{\"id\":\"VTrvnW\",\"name\":\"YARA
+        Rule\",\"type\":\"Topic\",\"description\":\"Rules for identifying malware
+        samples through pattern recognition.\"}],\"context_entities\":[{\"id\":\"B_-x-\",\"name\":\"Python\",\"type\":\"Product\"},{\"id\":\"J2TQmu\",\"name\":\"Cryptocurrency\",\"type\":\"Technology\"},{\"id\":\"CoL9zI\",\"name\":\"Windows
+        Management Instrumentation\",\"type\":\"Product\"},{\"id\":\"fs-nBq\",\"name\":\"system
+        checks\",\"type\":\"Technology\"}],\"validation_urls\":[{\"id\":\"url:https://twitter.com/siri_urz/status/1763187796498325550\",\"name\":\"https://twitter.com/siri_urz/status/1763187796498325550\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:utuObf\",\"name\":\"https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:utuObf\",\"type\":\"URL\"},{\"id\":\"url:https://www.cyfirma.com/outofband/malware-development-competition-fuels-creation-of-20-malware/\",\"name\":\"https://www.cyfirma.com/outofband/malware-development-competition-fuels-creation-of-20-malware/\",\"type\":\"URL\"},{\"id\":\"url:https://app.recordedfuture.com/live/sc/3GNHjYSotDbR\",\"name\":\"https://app.recordedfuture.com/live/sc/3GNHjYSotDbR\",\"type\":\"URL\"}],\"title\":\"Insikt
+        Validated TTP: Detecting XSSLite Client-Side Payloads with YARA\",\"note_entities\":[{\"id\":\"mitre:T1134\",\"name\":\"T1134\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1555.003\",\"name\":\"T1555.003\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"WHnOR7\",\"name\":\"System
+        Network Configuration Discovery\",\"type\":\"AttackVector\"},{\"id\":\"hash:26e6744773a1fe8663bc4b70e1fa58b72afdead38afa288a4fb75ec13da79d38\",\"name\":\"26e6744773a1fe8663bc4b70e1fa58b72afdead38afa288a4fb75ec13da79d38\",\"type\":\"Hash\"},{\"id\":\"mitre:T1005\",\"name\":\"T1005\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1614\",\"name\":\"T1614\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1041\",\"name\":\"T1041\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1082\",\"name\":\"T1082\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1571\",\"name\":\"T1571\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1497.001\",\"name\":\"T1497.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1047\",\"name\":\"T1047\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"hash:65da3824b373ed19b61bd1a4f4d132884c742755e2fdb755300cdd1b719246e9\",\"name\":\"65da3824b373ed19b61bd1a4f4d132884c742755e2fdb755300cdd1b719246e9\",\"type\":\"Hash\"},{\"id\":\"ugfb9o\",\"name\":\"XSSLite
+        Stealer\",\"type\":\"Malware\"},{\"id\":\"mitre:T1217\",\"name\":\"T1217\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1071.001\",\"name\":\"T1071.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1489\",\"name\":\"T1489\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"WHnOR5\",\"name\":\"System
+        Information Discovery\",\"type\":\"AttackVector\"},{\"id\":\"mitre:T1552.001\",\"name\":\"T1552.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1620\",\"name\":\"T1620\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1016\",\"name\":\"T1016\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"r5pX91\",\"name\":\"Reflective
+        Code Loading\",\"type\":\"AttackVector\"},{\"id\":\"hash:06af8bceef9f7996aa8c351795d0fd8af6b2ef7fb82e8c18b6738cab2fd4c9be\",\"name\":\"06af8bceef9f7996aa8c351795d0fd8af6b2ef7fb82e8c18b6738cab2fd4c9be\",\"type\":\"Hash\"},{\"id\":\"mitre:T1057\",\"name\":\"T1057\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"hash:52e980cd0ed565f7ea12ef25c36e9e7477873a9e171e1db6fd37ced18b5043f5\",\"name\":\"52e980cd0ed565f7ea12ef25c36e9e7477873a9e171e1db6fd37ced18b5043f5\",\"type\":\"Hash\"},{\"id\":\"JQ0VYr\",\"name\":\"Cross
+        site scripting\",\"type\":\"AttackVector\"},{\"id\":\"TzxCDV\",\"name\":\"Access
+        Token Manipulation\",\"type\":\"AttackVector\"},{\"id\":\"mitre:T1587.001\",\"name\":\"T1587.001\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"mitre:T1083\",\"name\":\"T1083\",\"type\":\"MitreAttackIdentifier\"},{\"id\":\"u5iCUt\",\"name\":\"CognitoInc\",\"type\":\"Person\"},{\"id\":\"url:http://45.135.164.71\",\"name\":\"http://45.135.164.71\",\"type\":\"URL\"},{\"id\":\"url:http://193.233.132.5\",\"name\":\"http://193.233.132.5\",\"type\":\"URL\"},{\"id\":\"url:http://37.60.255.96\",\"name\":\"http://37.60.255.96\",\"type\":\"URL\"},{\"id\":\"uQkLR9\",\"name\":\"CognitoInc\",\"type\":\"Username\"},{\"id\":\"Fxbz4\",\"name\":\"Google
+        Chromium\",\"type\":\"Product\"}]},\"source\":{\"id\":\"source:VKz42X\",\"name\":\"Insikt
+        Group\",\"type\":\"Source\"},\"id\":\"u5urwk\"}]},\"counts\":{\"returned\":10,\"total\":22}}"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 866519814d193855-LHR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json;charset=utf-8
+      Date:
+      - Mon, 18 Mar 2024 12:06:58 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      cache-control:
+      - no-cache, no-store, private, must-revalidate, max-age=0, no-transform
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - 'default-src ''self'' data:; img-src ''self'' https: data: blob:; script-src
+        ''self'' ''unsafe-inline'' ''unsafe-eval'' cdn.jsdelivr.net; style-src ''self''
+        ''unsafe-inline'' fonts.googleapis.com cdn.jsdelivr.net; font-src ''self''
+        fonts.gstatic.com; worker-src blob:;'
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      pragma:
+      - no-cache
+      set-cookie:
+      - JSESSIONID=node0i7g1lr583y00hccw7uteiwkh4578953.node0; Path=/rfq; Secure;
+        HttpOnly
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains
+      x-content-type-options:
+      - nosniff
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:ut2OD-"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: "{\"count\":1,\"total_count\":1,\"result\":[{\"id\":\"doc:ut2OD-\",\"type\":\"yara\",\"title\":\"Insikt
+        Validated TTP: Detecting DOPLUGS, a PlugX Variant, Using YARA\",\"description\":\"RedDelta
+        (also known as Earth Preta, Mustang Panda, Temp.Hex, Red Lich, and BRONZE
+        PRESIDENT) is a suspected Chinese state-sponsored group that has been observed
+        persistently targeting government, non-governmental, and religious organizations
+        within Europe and Southeast Asia using consistently updated PlugX versions
+        since at least 2019. Previous reporting on this customized PlugX malware by
+        Insikt Group can be found in the Validation URL section of this note. On February
+        20, 2024, Trend Micro published their analysis of a campaign called SMUGX
+        using two PlugX variants: one containing a backdoor command module, and one
+        used for downloading the former. The PlugX downloader has been dubbed DOPLUGS
+        by Trend Micro. DOPLUGS contains the following commands:\\n\u2022 0x7002:
+        Starts a CMD shell. The function is directly copied from the shell module
+        present in non-variant PlugX payloads\\n\u2022 0x1007: Splits the data from
+        the command-and-control (C&C) server by ',',  with the following data format:\\n{WINHTTP_OPTION_CONNECT_TIMEOUT},{sleep_time},\\n{WINHTTP_OPTION_SEND_TIMEOUT},{sleep_time}
+        or {WINHTTP_OPTION_RECEIVE_TIMEOUT},{sleep_time}\\n\u2022 0x3004: Downloads
+        files from the command and control server, including . DLL, EXE and DAT, which
+        are the general type of the PlugX malware\\n\u2022 0x1005: Deletes registry
+        key (HKCU | HKLM) Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\nDeletes
+        itself by creating and executing a batch file del_OneNoteUpdate.bat in %temp%\\n\\nInsikt
+        Group obtained a sample of DOPLUGS (SHA256: 7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b)
+        first seen on June 28, 2024, from Recorded Future Malware Intelligence. Once
+        executed, the sample checks the computer location settings and drops the following
+        files for further execution:\\n\u2022 %localappdata%\\\\xWTdUq\\\\NoteLogger.dat
+        (encrypted payload)\\n\u2022 %localappdata%\\\\xWTdUq\\\\msi.dll (malicious
+        DLL file)\\n\u2022 %localappdata%\\\\xWTdUq\\\\OnesNotem.exe (legitimate executable)\\n\\nAfter
+        dropping these files, DOPLUGS loads the dropped DLL file, adds a Windows registry
+        Run key entry for persistence, and performs the following actions on the victim
+        machine:\\n\u2022 Enumerates connected drives\\n\u2022 Enumerates physical
+        storage devices (often done to infect USB drives)\\n\u2022 Checks SCSI registry
+        keys (often read to detect sandboxing environments)\\n\u2022 Modifies Internet
+        Explorer settings\\n\u2022 Modifies data under HKEY_USERS\\n\u2022 Modifies
+        registry class\\n\u2022 Enumerates processes\\n\u2022 Writes data to an area
+        of memory in a specified process\\n\u2022 Sends a GET and POST request to
+        the C2 server (hxxps://103.107.104[.]37/)\\n\\nInsikt Group created a YARA
+        rule to detect DOPLUGS, which can be found attached to this note. IOCs for
+        the analyzed DOPLUGS samples are also included in this note.\\n\\nIoCs:\\nc7ec098093eb08d2b36d1c37b928d716d8da021f93319a093808a7ceb3b35dc1\\n364f38b48565814b576f482c1e0eb4c8d58effcd033fd45136ee00640a2b5321\\n471e61015ff18349f4bf357447597a54579839336188d98d299b14cff458d132\\n7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b\\n103.107.104.37:443
+        Command and Control Server (C2)\\n\\n\\nMITRE ATT&CK: T1497.001 (Virtualization/Sandbox
+        Evasion: System Checks), T1547.001 (Boot or Logon Autostart Execution: Registry
+        Run Keys / Startup Folder), T1112 (Modify Registry), T1012 (Query Registry),
+        T1082 (System Information Discovery), T1120 (Peripheral Device Discovery),
+        T1071.001 (Application Layer Protocol: Web Protocols), T1573 (Encrypted Channel),
+        T1204.002 (User Execution: Malicious File), T1608.001 (Stage Capabilities:
+        Upload Malware), T1583.004 (Acquire Infrastructure: Server)\",\"created\":\"2024-03-01T18:18:12.862Z\",\"updated\":\"2024-03-01T18:18:12.862Z\",\"rules\":[{\"entities\":[{\"id\":\"mitre:T1547.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1547.001\",\"display_name\":\"T1547.001
+        (Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder)\"},{\"id\":\"mitre:T1583.004\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1583.004\",\"display_name\":\"T1583.004
+        (Acquire Infrastructure: Server)\"},{\"id\":\"ulrPxh\",\"type\":\"Malware\",\"name\":\"DOPLUGS\"},{\"id\":\"mitre:T1497.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1497.001\",\"display_name\":\"T1497.001
+        (Virtualization/Sandbox Evasion: System Checks)\"},{\"id\":\"mitre:T1573\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1573\",\"display_name\":\"T1573
+        (Encrypted Channel)\"},{\"id\":\"mitre:T1012\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1012\",\"display_name\":\"T1012
+        (Query Registry)\"},{\"id\":\"mitre:T1112\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1112\",\"display_name\":\"T1112
+        (Modify Registry)\"},{\"id\":\"hash:7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b\",\"type\":\"Hash\",\"name\":\"7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b\"},{\"id\":\"hash:c7ec098093eb08d2b36d1c37b928d716d8da021f93319a093808a7ceb3b35dc1\",\"type\":\"Hash\",\"name\":\"c7ec098093eb08d2b36d1c37b928d716d8da021f93319a093808a7ceb3b35dc1\"},{\"id\":\"B_HOS\",\"type\":\"Product\",\"name\":\"Microsoft
+        Windows\"},{\"id\":\"mitre:T1120\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1120\",\"display_name\":\"T1120
+        (Peripheral Device Discovery)\"},{\"id\":\"ip:103.107.104.37\",\"type\":\"IpAddress\",\"name\":\"103.107.104.37\"},{\"id\":\"mitre:T1082\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1082\",\"display_name\":\"T1082
+        (System Information Discovery)\"},{\"id\":\"mitre:T1204.002\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1204.002\",\"display_name\":\"T1204.002
+        (User Execution: Malicious File)\"},{\"id\":\"hash:471e61015ff18349f4bf357447597a54579839336188d98d299b14cff458d132\",\"type\":\"Hash\",\"name\":\"471e61015ff18349f4bf357447597a54579839336188d98d299b14cff458d132\"},{\"id\":\"hash:364f38b48565814b576f482c1e0eb4c8d58effcd033fd45136ee00640a2b5321\",\"type\":\"Hash\",\"name\":\"364f38b48565814b576f482c1e0eb4c8d58effcd033fd45136ee00640a2b5321\"},{\"id\":\"en_T6N\",\"type\":\"Organization\",\"name\":\"RedDelta\",\"display_name\":\"RedDelta
+        (BRONZE PRESIDENT, HoneyMyte, Mustang Panda, Red Lich, TA416, Twill Typhoon,
+        Vertigo Panda)\"},{\"id\":\"url:https://103.107.104.37\",\"type\":\"URL\",\"name\":\"https://103.107.104.37\"},{\"id\":\"mitre:T1071.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1071.001\",\"display_name\":\"T1071.001
+        (Application Layer Protocol: Web Protocols)\"},{\"id\":\"mitre:T1608.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1608.001\",\"display_name\":\"T1608.001
+        (Stage Capabilities: Upload Malware)\"},{\"id\":\"JS5BdY\",\"type\":\"Malware\",\"name\":\"PlugX\"},{\"id\":\"QCqLhE\",\"type\":\"MalwareCategory\",\"name\":\"Backdoor\"},{\"id\":\"JQ1VGf\",\"type\":\"Product\",\"name\":\"Windows
+        Registry\"},{\"id\":\"source:T5\",\"type\":\"Source\",\"name\":\"Trend Micro\"},{\"id\":\"B_KuC\",\"type\":\"Product\",\"name\":\"Microsoft
+        Internet Explorer\"},{\"id\":\"fs-nBq\",\"type\":\"Technology\",\"name\":\"system
+        checks\"}],\"content\":\"rule MAL_DOPLUGS\\n{\\n    meta:\\n        author
+        = \\\"ispe, Insikt Group, Recorded Future\\\"\\n        date = \\\"2024-02-27\\\"\\n
+        \       description = \\\"Detects DOPLUGS\\\"\\n        version = \\\"1.0\\\"\\n
+        \       reference = \\\"https://www.trendmicro.com/en_us/research/24/b/earth-preta-campaign-targets-asia-doplugs.html\\\"\\n
+        \       hash = \\\"c7ec098093eb08d2b36d1c37b928d716d8da021f93319a093808a7ceb3b35dc1\\\"\\n
+        \       hash = \\\"364f38b48565814b576f482c1e0eb4c8d58effcd033fd45136ee00640a2b5321\\\"\\n
+        \       hash = \\\"471e61015ff18349f4bf357447597a54579839336188d98d299b14cff458d132\\\"\\n
+        \       hash = \\\"7c741c8bcd19990140f3fa4aa95bb195929c9429fc47f95cf4ab9fad03040f7b\\\"\\n
+        \       RF_MALWARE = \\\"DOPLUGS\\\"\\n        RF_MALWARE_ID = \\\"ulrPxh\\\"\\n\\n/*\\nStrings
+        from s0-s2 are unique GUID generated when creating the MSI file and observed
+        in all four samples.\\n*/\\n\\n  strings:\\n    $s0 = \\\"{AA0FBF6B-45F7-443D-8835-BDF4F3E57D47}\\\"\\n
+        \   $s1 = \\\"{BA0FBF6B-45F7-443F-8835-BDF4F3E57D48}\\\"\\n    $s2 = \\\"{CA0FBF6B-45F7-443F-8835-BDF4F3E57D48}Set\\\"\\n
+        \   $s3 = \\\"<?BIKM\\\\x0CPR03Y[][`ceg3'#%'#%'nprtv<x\\\" wide\\n  condition:\\n
+        \   uint32(0) == 0xe011cfd0 and filesize < 7MB and all of them\\n}\\n\",\"file_name\":\"MAL_DOPLUGS.yar\"}]}],\"next_offset\":\"eyJvZmZzZXQiOlsxMDk0OF19\"}"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 86651987bf9f76ff-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:06:58 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:ut8i16"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: '{"count":1,"total_count":1,"result":[{"id":"doc:ut8i16","type":"snort","title":"SNORT
+        Rule: Detect Formbook/XLoader","description":"The attached SNORT rule can
+        be used to detect network communications associated with Formbook/XLoader
+        malware.","created":"2024-03-01T20:53:49.369Z","updated":"2024-03-01T20:53:49.369Z","rules":[{"entities":[{"id":"T5WQpJ","type":"Malware","name":"Formbook"},{"id":"CzXnMO","type":"Technology","name":"Snort
+        Rules"}],"content":"alert tcp $HOME_NET any -> $EXTERNAL_NET any (msg:\"Formbook/XLoader
+        Malware Outbound HTTP GET Request\"; flow:established,to_server; dsize:150<>225;
+        content:\"GET|20 2F|\"; depth:5; content:\"|2F 3F|\"; distance:2; within:4;  content:\"HTTP|2F|1|2E|1|0D
+        0A|Host|3A 20|\"; distance:0; content:\"on|3A 20|close|0D 0A 0D 0A 00 00 00
+        00 00 00|\"; fast_pattern; distance:0; isdataat:!1,relative; content:!\"User-Agent\";
+        content:!\"Accept\"; pcre:\"/Host\\x3a\\x20[^\\x0d]+\\x0d\\x0aConnection\\x3a/\";
+        sid:52460146; reference:url,https://tria.ge/240301-p1k7ssgd22; metadata:date
+        2024-02-29; metadata: author MGUT; )\n","file_name":"mal_formbook_snort.txt"}]}],"next_offset":"eyJvZmZzZXQiOlsxMTkyOF19"}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 86651989ac4f418e-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:06:59 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:uz48kL"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: '{"count":1,"total_count":1,"result":[{"id":"doc:uz48kL","type":"yara","title":"YARA
+        Rule: IDAT Loader PNG Payloads","description":"The attached YARA rule can
+        be used to detect IDAT Loader (aka HijackLoader) PNG payloads containing encrypted
+        configuration data and shellcode.","created":"2024-03-08T20:17:30.744Z","updated":"2024-03-08T20:17:30.744Z","rules":[{"entities":[{"id":"shiuKz","type":"Malware","name":"IDAT
+        Loader"},{"id":"sp5mQW","type":"Malware","name":"HijackLoader"},{"id":"Kt5me7","type":"AttackVector","name":"ShellCode"}],"content":"rule
+        MAL_IDAT_Loader_PNG {\n    meta:\n        author = \"CNANCE, Insikt Group,
+        Recorded Future\"\n        date = \"2024-03-04\"\n        description = \"Detects
+        IDAT Loader (aka HijackLoader) PNG payloads containing encrypted configuration
+        data and shellcode\"\n        version = \"1.0\"\n        reference = \"https://www.rapid7.com/blog/post/2023/08/31/fake-update-utilizes-new-idat-loader-to-execute-stealc-and-lumma-infostealers/\"\n        reference
+        = \"https://alpine-sec.medium.com/hijackloader-targets-hotels-a-technical-analysis-c2795fc4f3a3\"\n        reference
+        = \"https://www.crowdstrike.com/blog/hijackloader-expands-techniques/\"\n        hash
+        = \"4f467597123f1da4d95e74008461b699b3c1eae7e3c3f0905eb024b67208c4b9\"\n        hash
+        = \"695c1ff840d7cfa5ce31a56422f8419e6970143267c2bad1cfa7799a0e2266c1\"\n        hash
+        = \"4849062d4d9e8221d9d6144339375d1040002991d421ebc517ad06cf36a04d10\"\n        RF_MALWARE
+        = \"IDAT Loader\"\n        RF_MALWARE_ID = \"shiuKz\"\n\n    strings:\n        $png_header
+        = {89 50 4e 47}\n        $idat_magic = {49 44 41 54 c6 a5 79 ea} // IDAT followed
+        by magic 0xc6a579ea\n        $iend_chunk = {49 45 4E 44 AE 42 60 82}\n\n    condition:\n        all
+        of them and\n        #idat_magic == 1 and\n        // check that idat_magic
+        occurs within a PNG file\n        for any i in (1..#png_header) : (\n            for
+        any j in (1..#iend_chunk): (\n                @png_header[i] < @idat_magic
+        and\n                @idat_magic < @iend_chunk[j] \n            )\n        )
+        and\n        /*\n            uint32(@idat_magic + 8)  -> xor key\n            uint32(@idat_magic
+        + 12) -> compressed size\n            uint32(@idat_magic + 16) -> uncompressed
+        size\n            uint32(@idat_magic + 20) -> start of xor data\n        */\n        uint32(@idat_magic+12)
+        < uint32(@idat_magic+16) and // compressed size < uncompressed size\n        for
+        any i in (1 .. uint32(@idat_magic+12)) : (\n            uint8(@idat_magic
+        + 8 + (i % 4)) ^ uint8(@idat_magic + 20 + i) == 0x2e and // ''.''\n            (\n                (uint8(@idat_magic
+        + 8 + ((i + 1) % 4)) ^ uint8(@idat_magic + 20 + i + 1)) | 0x20 == 0x64 and
+        // ''d''\n                (uint8(@idat_magic + 8 + ((i + 2) % 4)) ^ uint8(@idat_magic
+        + 20 + i + 2)) | 0x20 == 0x6c and // ''l''\n                (uint8(@idat_magic
+        + 8 + ((i + 3) % 4)) ^ uint8(@idat_magic + 20 + i + 3)) | 0x20 == 0x6c     //
+        ''l''\n            ) or\n            (\n                (uint8(@idat_magic
+        + 8 + ((i + 1) % 4)) ^ uint8(@idat_magic + 20 + i + 1)) | 0x20 == 0x65 and
+        // ''e''\n                (uint8(@idat_magic + 8 + ((i + 2) % 4)) ^ uint8(@idat_magic
+        + 20 + i + 2)) | 0x20 == 0x78 and // ''x''\n                (uint8(@idat_magic
+        + 8 + ((i + 3) % 4)) ^ uint8(@idat_magic + 20 + i + 3)) | 0x20 == 0x65     //
+        ''e''\n            ) \n        )\n}","file_name":"MAL_IDAT_Loader_PNG.yar"}]}],"next_offset":"eyJvZmZzZXQiOls5MDUzXX0="}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665198cdabe63b4-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:06:59 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:uz-DXq"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: '{"count":1,"total_count":1,"result":[{"id":"doc:uz-DXq","type":"snort","title":"SNORT
+        rules: Detect Meduza Stealer","description":"The attached SNORT rules can
+        be used to detect network communications associated with Meduza Stealer malware.","created":"2024-03-08T22:30:58.296Z","updated":"2024-03-08T22:31:33.327Z","rules":[{"entities":[{"id":"rnxtIo","type":"Malware","name":"Meduza
+        Stealer"},{"id":"CzXnMO","type":"Technology","name":"Snort Rules"},{"id":"SMlvRl","type":"MalwareCategory","name":"Stealware"}],"content":"alert
+        tcp $HOME_NET any -> $EXTERNAL_NET any (msg:\"Meduza Stealer Malware Outbound
+        Data Exfiltration\"; flow:established,to_server; stream_size:server,=,1; content:\"ewogICAgI\";
+        depth:9; pcre:\"/(Rk1hWFJs|IlUxRk1h|VTFGTWFY)/\"; sid:52460147; reference:url,https://tria.ge/240307-zpd98adf78/behavioral2;
+        metadata: date 2024-03-05; metadata: author MGUT; )\n\nalert tcp $HOME_NET
+        any -> $EXTERNAL_NET any (msg:\"Meduza Stealer Malware Outbound Browser Database
+        Exfiltration\"; flow:established,to_server; stream_size:server,=,1; content:\"ewogICAgI\";
+        depth:9; pcre:\"/(ICJjb250|Y29udGVu|ImNvbnRl)/\"; sid:52460148; reference:url,https://tria.ge/240302-f4v2qsag9t/behavioral2;
+        metadata: date 2024-03-05; metadata: author MGUT; )\n","file_name":"mal_meduza_stealer_snort.txt"}]}],"next_offset":"eyJvZmZzZXQiOlsxMDk3OV19"}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665198e0c62639a-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:06:59 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:uz-HUC"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: '{"count":1,"total_count":1,"result":[{"id":"doc:uz-HUC","type":"snort","title":"SNORT
+        rule: Aurora Stealer","description":"The attached SNORT rule can be used to
+        detect network communications associated with Aurora Stealer malware.","created":"2024-03-08T22:33:05.925Z","updated":"2024-03-08T22:33:05.924Z","rules":[{"entities":[{"id":"n8q6Jn","type":"Malware","name":"Aurora
+        Stealer"},{"id":"CzXnMO","type":"Technology","name":"Snort Rules"},{"id":"SMlvRl","type":"MalwareCategory","name":"Stealware"}],"content":"alert
+        tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"Aurora Stealer Malware Inbound
+        C2 Communication\"; flow:established,to_client; dsize:5; stream_size:client,=,1;
+        stream_size:server,=,6; content:\"WORK|0A|\"; depth:5; sid:52460149; reference:url,https://tria.ge/230329-g1gwdafa48/behavioral2;
+        metadata: date 2024-03-05; metadata: author MGUT; )\n","file_name":"mal_aurora_stealer_snort.txt"}]}],"next_offset":"eyJvZmZzZXQiOls5ODEwXX0="}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 866519914af0dc97-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:07:00 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:u2OoaM"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: '{"count":1,"total_count":1,"result":[{"id":"doc:u2OoaM","type":"snort","title":"Snort
+        Rule: COOKBOX","description":"The attached Snort rule can be used to detect
+        COOKBOX''s outbound C2 requests.","created":"2024-03-11T19:58:14.824Z","updated":"2024-03-11T19:58:14.823Z","rules":[{"entities":[{"id":"Tv5-OH","type":"Malware","name":"COOKBOX"}],"content":"alert
+        tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:\"COOKBOX Malware Outbound
+        C2 Request\"; flow:established,to_server; content:\"T|20|\"; offset:2; depth:3;
+        content:\"User|2D|Agent|3A 20|Mozilla|2F|5|2E|0|28|Windows|20|NT|20|10|2E|0|3B|Win64|3B|x64|3B|rv|3A|109|2E|0|29|Gecko|2F|20100101|20|Firefox|2F|116|2E|0|0D
+        0A|Host|3A 20|\"; fast_pattern:44,20; distance:0; sid:52460150; reference:url,https://cert.gov.ua/article/6277849;
+        metadata: date 2024-03-11; metadata: author CNANCE;)","file_name":"mal_cookbox_snort.txt"}]}],"next_offset":"eyJvZmZzZXQiOlsxMDMzOF19"}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 866519934873640c-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:07:00 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:u30CIE"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: '{"count":1,"total_count":1,"result":[{"id":"doc:u30CIE","type":"snort","title":"SNORT
+        Rules: Detect MetaStealer Malware","description":"The attached SNORT rules
+        can be used to detect network communications associated with MetaStealer Malware.","created":"2024-03-13T16:55:24.401Z","updated":"2024-03-15T16:39:44.007Z","rules":[{"entities":[{"id":"mPUH36","type":"Malware","name":"MetaStealer"},{"id":"CzXnMO","type":"Technology","name":"Snort
+        Rules"},{"id":"dMi0G8","type":"Malware","name":"RedLine Stealer"}],"content":"alert
+        tcp any any -> any any (msg:\"MetaStealer Malware C2 Communication\"; flow:established;
+        content:\"http|3A 2F 2F|tempuri|2E|org|2F|RestAPI|2F|TreeObject\"; fast_pattern:11,20;
+        offset:3; depth:50; sid:52460154; reference:url,https://tria.ge/240308-yggjyaef72;
+        metadata: date 2024-03-11; metadata: author MGUT;)\n\nalert tcp any any ->
+        any any (msg:\"MetaStealer Malware C2 Communication\"; flow:established; content:\"http|3A
+        2F 2F|tempuri|2E|org|2F|Contract|2F|MSValue\"; fast_pattern:11,20; offset:3;
+        depth:50; sid:52460153; reference:url,https://tria.ge/231009-hlan7adc28; metadata:
+        date 2024-03-11; metadata: author MGUT;)\n\nalert tcp any any -> any any (msg:\"MetaStealer
+        Malware C2 Communication\"; flow:established; content:\"http|3A 2F 2F|tempuri|2E|org|2F|example|2F|Field\";
+        fast_pattern:11,20; offset:3; depth:50; sid:52460156; reference:url,https://tria.ge/240315-tbwz8aee38/behavioral1;
+        metadata: date 2024-03-15; metadata: author MGUT;)\n","file_name":"mal_metastealer_snort.txt"}]}],"next_offset":"eyJvZmZzZXQiOlsxMTcwNF19"}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 86651994a80f7780-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:07:00 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:u30RCK"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: '{"count":1,"total_count":1,"result":[{"id":"doc:u30RCK","type":"sigma","title":"Sigma
+        Rule: Subtle-Paws LNK Files","description":"The attached Sigma rule can be
+        used to detect the PowerShell command line used by LNK files to run Subtle-Paws.","created":"2024-03-13T17:02:21.717Z","updated":"2024-03-13T17:02:21.715Z","rules":[{"entities":[{"id":"SvSvaT","type":"Organization","name":"Gamaredon
+        Group","display_name":"Gamaredon Group (Aqua Blizzard, Armageddon Group)"},{"id":"uWRGjY","type":"Malware","name":"SUBTLE-PAWS"},{"id":"IFr1_l","type":"Technology","name":".lnk"},{"id":"DfALH","type":"Product","name":"PowerShell"}],"content":"title:
+        SubtlePaws LNK Command Line\nid: 170ad745-e93f-4ddc-aefb-6113a3fcabe2\ndescription:
+        Detects the PowerShell command line used by LNK files to run Subtle-Paws\nreferences:\n  -
+        https://www.securonix.com/blog/security-advisory-steadyursa-attack-campaign-targets-ukraine-military/\nstatus:
+        stable\nauthor: CNANCE, Insikt Group, Recorded Future\ndate: 2024/03/12\nlevel:
+        medium\ntags:\n  - attack.t1204.002 # User Execution: Malicious File\n  -
+        attack.t1059.001 # Command and Scripting Interpreter: PowerShell\nlogsource:\n  category:
+        process_create\n  product: windows\ndetection:\n  selection:\n    CommandLine:
+        \"*$(gc * |out-string)|powershell -noprofile -\"\n  condition: selection\nfalsepositives:\n  -
+        Unlikely","file_name":"apt_ru_gamaredon_subtle-paws.yml"}]}],"next_offset":"eyJvZmZzZXQiOlsxMTc4MV19"}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 866519962ec5652d-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:07:00 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:u4AafF"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: "{\"count\":1,\"total_count\":1,\"result\":[{\"id\":\"doc:u4AafF\",\"type\":\"yara\",\"title\":\"Insikt
+        Validated TTP: Aurora Stealer\u2019s C2 Servers Are Down While Meduza Stealer
+        Continues to Gain Popularity, Detect Both with Sigma and Snort\",\"description\":\"Aurora
+        Stealer had been advertised on underground forums since April 2022, originally
+        as a botnet. After a brief pause in Aurora distribution starting in June 2022,
+        in late August 2022, Aurora returned to the market and was advertised as a
+        fully functioning information stealer on Telegram and underground forums.
+        Aurora Stealer, written in Go, collects a variety of user data from virtual
+        currency wallets, browsers, screenshots, Telegram, and Discord. Aurora Stealer
+        exfiltrates stolen data to an attacker-controlled C2 server over TCP. Threat
+        actors primarily disseminate Aurora Stealer via phishing webpages, disguising
+        the malware as legitimate software and services.\\n\\nIn June 2023, \u201CMeduzaCorp\u201D,
+        member of the underground forum Exploit (also known as \u201CMeduza\u201D
+        on XSS), began advertising a then-new C++ infostealer malware called \u201CMeduza
+        Stealer'' that operators manage via a web-based administrative panel. Similar
+        to Aurora Stealer, Meduza Stealer communicates with C2 infrastructure over
+        TCP. Meduza Stealer targets data from web browsers, cryptocurrency wallets,
+        password management applications, OpenVPN, Microsoft Outlook, Google Tokens,
+        and software clients (Discord, Steam, and Telegram).\\n\\nShortly following
+        this release of Meduza Stealer, threat intelligence researcher Russian Panda
+        published their analysis of the malware on their blog. Russian Panda noted
+        similarities between Meduza Stealer and Aurora Stealer, namely the method
+        by which their stealer logs are sent to their C2 servers (JSON format, base64-encoded).
+        Russian Panda also found that early samples of Meduza Stealer included mentions
+        of Aurora Stealer in its code. Russian Panda assessed that the authors of
+        Aurora Stealer are also responsible for Meduza Stealer, however, the authors
+        of Meduza denied any connection to Aurora.\\n\\nPrior to Meduza\u2019s release,
+        advertisements for \u201Cfree\u201D and \u201Ccracked\u201D versions of Aurora
+        Stealer began appearing on underground forums as early as April 28, 2023.
+        Shortly after in May 2023, Aurora Stealer\u2019s developers reportedly committed
+        an exit scam, thus tarnishing the developers\u2019 reputation on the criminal
+        underground. This timing aligns with Insikt Group\u2019s observations of Aurora
+        Stealer sample submissions slowing down on malware repositories such as Malware
+        Bazaar in May 2023. Insikt Group obtained samples of Aurora Stealer submitted
+        to Recorded Future Malware Intelligence between December and February 2024.
+        Our analysis of network traffic related to these samples revealed that Aurora\u2019s
+        C2 servers remain unresponsive.\\n\\nThe most recent version of Meduza Stealer
+        is 2.2, which Meduza\u2019s developers released in December 2023. According
+        to Resecurity's HUNTER Team, this update included support for additional software
+        clients, an upgraded credit card grabber, and \u201Cadvanced mechanisms''
+        for credential and token dumping. Resecurity noted that Meduza Stealer\u2019s
+        password stealing functionality is effective against Windows Server 2012,
+        2016, 2019, 2022, as well as Windows 10 and 11. Insikt Group also identified
+        \u201CMeduza\u201D posting an update to Meduza Stealer 2.2 on the underground
+        forum XSS on February 23, 2024. According to \u201CMeduza\u201D, this release
+        provides bug fixes, panel updates, and new collection opportunities, primarily
+        new cryptocurrency wallet extensions to target.\\n\\nInsikt Group created
+        Snort rules to detect Aurora Stealer and Meduza Stealer, which can be found
+        in the Validation URL section of this note. Aurora Stealer uses a simple custom
+        text based protocol for inbound C2 communication. We created a Snort rule
+        to detect the initial Aurora C2 server message containing the word \\\"WORK\\\"
+        followed by a newline character. Meduza Stealer base64 encodes stolen data
+        and exfiltrates it in the format of a JSON file, which is also base64 encoded.
+        We created Snort rules to detect double-base64 encoded variations of browser
+        database headers as well as the JSON tags used to designate stolen files and
+        other content.\\n\\nInsikt Group also created Sigma rules to detect both stealers,
+        which can also be found in the Validation URL section of this note. The first
+        Sigma rule, susp_powershell_scheduledtask, detects suspicious use of PowerShell
+        to create a scheduled task for persistence. We observed this behavior in Aurora
+        Stealer and other malware families, with the end date of the scheduled task
+        set to December 2030. The second Sigma rule, susp_self_deletion_quiet, detects
+        when a file quietly self deletes. We observed this behavior in Meduza Stealer
+        and other malware families.\\n\\nInsikt Group also revalidated their existing
+        YARA rule for Meduza Stealer and created an updated version capable of detecting
+        recent samples observed between January 2024 to March 2024. The updated YARA
+        rule, MAL_Meduza_Stealer_V2, can be found attached to this note.\\n\\nAt the
+        time of this writing, many security researchers consider Aurora Stealer to
+        be \u201Cdead\u201D and speculate that Meduza is its predecessor. While Insikt
+        Group acknowledges similarities between Aurora and Meduza, we do not have
+        enough evidence at this time to definitively determine if the same developers
+        are responsible for both stealers.\\n\\nIoCs:\\nAurora Stealer\\nff3977b7044b3739035cbd17b6d462886b7e228d666c780b8a70c887af797243\\n432a7171271b0d0135e2acff0e050b5f1a4b6a54a3f04d6e58d598f687c9c128\\nf4139d1d3f3fb68c221b9c63ad30b560420959803ab3011de83c4028213e96c6\\n10b527427042ca32d0683e016e2b5458799363d68bb4ee616b66ffdcd9377585\\n107.182.129[.]73:8081\\n\\nMeduza
+        Stealer\\n2ab767ed95da57611db4f66990f750d981fdabce02b606e6910e2690a2b5acef\\n2dfd108136c4763641f3cb14e384f162c6a79d6e992108f10cc145d5d50c5072\\nd8991bee4dd6c742d48c3f7e286bcb3ee1ed8076b50d8b40bef4aa5d10070b7e\\n16d9e602dc8b40cef745035a5c6dc37cf563ab9f791081c4283e24e3e63f9b8b\\nc6817881e1178b0b49ad76b002e11e69f74fc97de69d47f57d503f1e743a745b\\n62f3ab01f7fa27a82b402520204ce76091725364d42a58a6b9fcd8b123dee313\\nb03457370bd51cd31382497aca8a07858c89e115c3e854cf25c366f7c0f34976\\ne26e1427369f0426424fb7a699f5e53a7cae4fece3b677ba0a343dc62f088f02\\n89.185.85[.]207:15666\\n\",\"created\":\"2024-03-13T22:26:43.192Z\",\"updated\":\"2024-03-13T22:37:04.831Z\",\"rules\":[{\"entities\":[{\"id\":\"hash:f4139d1d3f3fb68c221b9c63ad30b560420959803ab3011de83c4028213e96c6\",\"type\":\"Hash\",\"name\":\"f4139d1d3f3fb68c221b9c63ad30b560420959803ab3011de83c4028213e96c6\"},{\"id\":\"hash:10b527427042ca32d0683e016e2b5458799363d68bb4ee616b66ffdcd9377585\",\"type\":\"Hash\",\"name\":\"10b527427042ca32d0683e016e2b5458799363d68bb4ee616b66ffdcd9377585\"},{\"id\":\"mitre:T1566\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1566\",\"display_name\":\"T1566
+        (Phishing)\"},{\"id\":\"n8q6Jn\",\"type\":\"Malware\",\"name\":\"Aurora Stealer\"},{\"id\":\"JQ0FoX\",\"type\":\"Product\",\"name\":\"Microsoft
+        Windows 10\"},{\"id\":\"hash:d8991bee4dd6c742d48c3f7e286bcb3ee1ed8076b50d8b40bef4aa5d10070b7e\",\"type\":\"Hash\",\"name\":\"d8991bee4dd6c742d48c3f7e286bcb3ee1ed8076b50d8b40bef4aa5d10070b7e\"},{\"id\":\"hash:2dfd108136c4763641f3cb14e384f162c6a79d6e992108f10cc145d5d50c5072\",\"type\":\"Hash\",\"name\":\"2dfd108136c4763641f3cb14e384f162c6a79d6e992108f10cc145d5d50c5072\"},{\"id\":\"j8y1ZJ\",\"type\":\"Product\",\"name\":\"Windows
+        Server 2022\"},{\"id\":\"VgrFUi\",\"type\":\"Product\",\"name\":\"Microsoft
+        Windows Server 2019\"},{\"id\":\"b4ymBH\",\"type\":\"AttackVector\",\"name\":\"Indicator
+        Removal\"},{\"id\":\"rnY6rl\",\"type\":\"Username\",\"name\":\"Meduza\"},{\"id\":\"hash:16d9e602dc8b40cef745035a5c6dc37cf563ab9f791081c4283e24e3e63f9b8b\",\"type\":\"Hash\",\"name\":\"16d9e602dc8b40cef745035a5c6dc37cf563ab9f791081c4283e24e3e63f9b8b\"},{\"id\":\"SmCnYD\",\"type\":\"Product\",\"name\":\"Discord
+        (Software)\"},{\"id\":\"RDZvnv\",\"type\":\"Product\",\"name\":\"Microsoft
+        Windows Server 2016\"},{\"id\":\"ip:107.182.129.73\",\"type\":\"IpAddress\",\"name\":\"107.182.129.73\"},{\"id\":\"LPc838\",\"type\":\"AttackVector\",\"name\":\"C&C
+        Server\"},{\"id\":\"hash:ff3977b7044b3739035cbd17b6d462886b7e228d666c780b8a70c887af797243\",\"type\":\"Hash\",\"name\":\"ff3977b7044b3739035cbd17b6d462886b7e228d666c780b8a70c887af797243\"},{\"id\":\"LEpDn3\",\"type\":\"Product\",\"name\":\"Telegram
+        \"},{\"id\":\"JPKen5\",\"type\":\"Product\",\"name\":\"Steam\"},{\"id\":\"CeYWu\",\"type\":\"Product\",\"name\":\"Microsoft
+        Office Outlook\"},{\"id\":\"hash:e26e1427369f0426424fb7a699f5e53a7cae4fece3b677ba0a343dc62f088f02\",\"type\":\"Hash\",\"name\":\"e26e1427369f0426424fb7a699f5e53a7cae4fece3b677ba0a343dc62f088f02\"},{\"id\":\"Xt2hhF\",\"type\":\"AttackVector\",\"name\":\"Scheduled
+        Task\"},{\"id\":\"mitre:T1132.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1132.001\",\"display_name\":\"T1132.001
+        (Data Encoding: Standard Encoding)\"},{\"id\":\"hash:62f3ab01f7fa27a82b402520204ce76091725364d42a58a6b9fcd8b123dee313\",\"type\":\"Hash\",\"name\":\"62f3ab01f7fa27a82b402520204ce76091725364d42a58a6b9fcd8b123dee313\"},{\"id\":\"J2TQmu\",\"type\":\"Technology\",\"name\":\"Cryptocurrency\"},{\"id\":\"hash:432a7171271b0d0135e2acff0e050b5f1a4b6a54a3f04d6e58d598f687c9c128\",\"type\":\"Hash\",\"name\":\"432a7171271b0d0135e2acff0e050b5f1a4b6a54a3f04d6e58d598f687c9c128\"},{\"id\":\"hash:b03457370bd51cd31382497aca8a07858c89e115c3e854cf25c366f7c0f34976\",\"type\":\"Hash\",\"name\":\"b03457370bd51cd31382497aca8a07858c89e115c3e854cf25c366f7c0f34976\"},{\"id\":\"mitre:T1053.005\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1053.005\",\"display_name\":\"T1053.005
+        (Scheduled Task/Job: Scheduled Task)\"},{\"id\":\"rnxtIo\",\"type\":\"Malware\",\"name\":\"Meduza
+        Stealer\"},{\"id\":\"mitre:T1555\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1555\",\"display_name\":\"T1555
+        (Credentials from Password Stores)\"},{\"id\":\"hash:c6817881e1178b0b49ad76b002e11e69f74fc97de69d47f57d503f1e743a745b\",\"type\":\"Hash\",\"name\":\"c6817881e1178b0b49ad76b002e11e69f74fc97de69d47f57d503f1e743a745b\"},{\"id\":\"mitre:T1070.004\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1070.004\",\"display_name\":\"T1070.004
+        (Indicator Removal: File Deletion)\"},{\"id\":\"mitre:T1095\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1095\",\"display_name\":\"T1095
+        (Non-Application Layer Protocol)\"},{\"id\":\"B_HOS\",\"type\":\"Product\",\"name\":\"Microsoft
+        Windows\"},{\"id\":\"EKHLiy\",\"type\":\"Product\",\"name\":\"OpenVPN\"},{\"id\":\"JTIgaS\",\"type\":\"Product\",\"name\":\"Microsoft
+        Windows 11\"},{\"id\":\"Kl70Oe\",\"type\":\"AttackVector\",\"name\":\"Password
+        Theft \"},{\"id\":\"hash:2ab767ed95da57611db4f66990f750d981fdabce02b606e6910e2690a2b5acef\",\"type\":\"Hash\",\"name\":\"2ab767ed95da57611db4f66990f750d981fdabce02b606e6910e2690a2b5acef\"},{\"id\":\"mitre:T1059.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1059.001\",\"display_name\":\"T1059.001
+        (Command and Scripting Interpreter: PowerShell)\"},{\"id\":\"SMlvRl\",\"type\":\"MalwareCategory\",\"name\":\"Stealware\"},{\"id\":\"0eyAM\",\"type\":\"AttackVector\",\"name\":\"Phishing\"},{\"id\":\"ip:89.185.85.207\",\"type\":\"IpAddress\",\"name\":\"89.185.85.207\"},{\"id\":\"JIRKR8\",\"type\":\"Product\",\"name\":\"Microsoft
+        Windows Server 2012\"},{\"id\":\"rryGV9\",\"type\":\"Username\",\"name\":\"MeduzaCorp\"},{\"id\":\"source:SYrUYn\",\"type\":\"Source\",\"name\":\"Exploit
+        Forum\"},{\"id\":\"source:KZFCph\",\"type\":\"Source\",\"name\":\"XSS (ex
+        DamageLab) Forum\"}],\"content\":\"rule MAL_Meduza_Stealer_V2\\n{\\n    meta:\\n
+        \       author = \\\"CNANCE and KHOR, Insikt Group, Recorded Future\\\"\\n
+        \       date = \\\"2024-03-12\\\"\\n        description = \\\"Detects Meduza
+        Stealer\\\"\\n        version = \\\"2.0\\\"\\n        reference = \\\"https://russianpanda.com/2023/06/28/Meduza-Stealer-or-The-Return-of-The-Infamous-Aurora-Stealer/\\\"\\n
+        \       reference = \\\"https://bazaar.abuse.ch/browse/tag/Meduza/\\\"\\n
+        \       hash = \\\"2ab767ed95da57611db4f66990f750d981fdabce02b606e6910e2690a2b5acef\\\"\\n
+        \       hash = \\\"2dfd108136c4763641f3cb14e384f162c6a79d6e992108f10cc145d5d50c5072\\\"\\n
+        \       hash = \\\"d8991bee4dd6c742d48c3f7e286bcb3ee1ed8076b50d8b40bef4aa5d10070b7e\\\"\\n
+        \       RF_MALWARE = \\\"Meduza Stealer\\\"\\n        RF_MALWARE_ID = \\\"rnxtIo\\\"\\n\\n
+        \   strings:\\n        /*\\n            14003967a 66 0f 6f        MOVDQA     XMM0,xmmword
+        ptr [RBP + local_140[0]]\\n                        45 20\\n            14003967f
+        66 0f ef        PXOR       XMM0,xmmword ptr [RBP + local_70[0]]\\n                        85
+        f0 00 \\n                        00 00\\n            140039687 66 0f 7f        MOVDQA
+        \    xmmword ptr [RBP + local_140[0]],XMM0\\n                        45 20\\n
+        \           14003968c 89 7c 24 28     MOV        dword ptr [RSP + local_180],EDI\\n
+        \           140039690 48 89 7c        MOV        qword ptr [RSP + local_188],RDI\\n
+        \                       24 20\\n            140039695 4c 8d 45 10     LEA
+        \       R8=>local_150,[RBP + 0x10]\\n            140039699 48 8d 55 20     LEA
+        \       RDX=>local_140,[RBP + 0x20]\\n            14003969d 33 c9           XOR
+        \       ECX,ECX\\n            14003969f ff 15 1b        CALL       qword ptr
+        [->SHELL32.DLL::ShellExecuteA]    \\n                        2e 06 00\\n\\n
+        \       */\\n        $s1 = { 66 0f 6f 4? ?? 66 0f ef 8? ?? ?? ?? ?? 66 0f
+        7f 4? ?? 89 ?? ?? ?? 4? 89 ?? ?? ?? 4? 8d ?? ?? 4? 8d ?? ?? 33 ?? ff 15 }\\n\\n
+        \       /*\\n            0044f243 8d 85 20        LEA        EAX=>local_100,[EBP
+        + 0xffffff20]\\n                    ff ff ff\\n            0044f249 8b 8d
+        44        MOV        ECX,dword ptr [EBP + local_dc]\\n                    ff
+        ff ff\\n            0044f24f 0f 28 8d        MOVAPS     XMM1,xmmword ptr [EBP
+        + local_100[0]]\\n                    20 ff ff ff\\n            0044f256 89
+        4d bc        MOV        dword ptr [EBP + local_70[12]],ECX\\n            0044f259
+        66 0f ef        PXOR       XMM1,xmmword ptr [EBP + local_70[0]]\\n                    4d
+        b0\\n            0044f25e 50              PUSH       EAX\\n            0044f25f
+        6a 00           PUSH       0x0\\n            0044f261 0f 29 8d        MOVAPS
+        \    xmmword ptr [EBP + local_100[0]],XMM1\\n                    20 ff ff
+        ff\\n            0044f268 ff 15 20        CALL       dword ptr [->SHELL32.DLL::ShellExecuteA]
+        \ \\n                    b2 49 00\\n        */\\n        $s2 = { 8d 8? ??
+        ?? ?? ?? 8b 8? ?? ?? ?? ?? 0f 28 ?? ?? ?? ?? ?? 89 4? ?? 66 0f ef ?? ?? 50
+        6a 00 0f 29 ?? ?? ?? ?? ?? ff 15 }\\n\\n        $s3 = {\\n            48 B8
+        ?? ?? ?? ?? ?? ?? ?? ??       // mov     rax, 0F85CD950543E0DFAh\\n            48
+        89 [2-5]                         // mov     [rbp+1C70h+var_1C70], rax\\n            48
+        8B [2-5]                         // mov     rax, [rbp+1C70h+var_1C70]\\n            48
+        89 [2-5]                         // mov     qword ptr [rbp+1C70h+var_17D0],
+        rax\\n            48 B8 ?? ?? ?? ?? ?? ?? ?? ??       // mov     rax, 0B3CC79E546C3BBDDh\\n
+        \       }\\n        \\n        $x1 = \\\"current_path()\\\" fullword\\n        $x2
+        = \\\"computer_name\\\" fullword\\n        $x3 = \\\"timezone\\\" fullword\\n
+        \       $x4 = \\\"cores\\\" fullword\\n        $x5 = \\\"%d-%m-%Y, %H:%M:%S\\\"
+        fullword\\n        $x6 = \\\"user_name\\\" fullword\\n        $x7 = \\\"screenshot\\\"
+        fullword\\n        $x8 = \\\"screen_resolution\\\" fullword\\n        $x9
+        = \\\"execute_path\\\" fullword\\n\\n    condition:\\n        uint16(0) ==
+        0x5a4d and\\n        filesize > 300KB and\\n        1 of ($s1, $s2) or\\n
+        \       (5 of ($x*) and $s3)\\n}\\n\",\"file_name\":\"MAL_Meduza_Stealer_V2.yar\"}]}],\"next_offset\":\"eyJvZmZzZXQiOlsxMTMxM119\"}"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 866519977a3063fa-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:07:01 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"filter": {"doc_id": "doc:u5urwk"}, "limit": 1}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: POST
+    uri: https://api.recordedfuture.com/detection-rule/search
+  response:
+    body:
+      string: "{\"count\":1,\"total_count\":1,\"result\":[{\"id\":\"doc:u5urwk\",\"type\":\"yara\",\"title\":\"Insikt
+        Validated TTP: Detecting XSSLite Client-Side Payloads with YARA\",\"description\":\"Previously,
+        Insikt Group published a TTP Instance discussing a malware competition being
+        held on the top-tier forum XSS. That TTP Instance, titled \u201CForked Version
+        of XSSLite Stealer Shared on X, Available from Recorded Future Malware Intelligence\u201D,
+        \ included a link to a sample of XSSLite, a cryptocurrency wallet and browser
+        data grabber malware developed for the competition. The sample was disclosed
+        in a post  on X by user S! Ri, who referred to the sample as a \u201Cforked\u201D
+        version of XSSLite. We believe that S! Ri refers to the sample they discovered
+        as \u201Cforked\u201D because our analysis of the sample indicates it contains
+        minor code-based deviations from the original XSSLite source code, which Insikt
+        Group also obtained and analyzed.\\n\\nXSSLite was originally submitted to
+        the above-mentioned malware competition by the user \u201CCognitoInc\u201D
+        on January 25, 2024. A review of this thread showed generally favorable reviews
+        of the malware, with XSS users responding with questions regarding how to
+        operate XSSLite and requests for additional functionality. However, one user
+        alleges that, while the malware is passable, \u201Cit\u2019s a shame they\u2019ll
+        kill you quickly\u201D, likely referring to threat researchers creating detections
+        for XSSLite or law enforcement performing takedowns of XSSLite web panels.
+        While most comments were positive, we did observe some users negatively criticizing
+        XSSLite\u2019s code and functionality.\\n\\nInsikt Group analysts performed
+        static analysis on the forked sample shared by S! Ri (SHA256: 65da3824b373ed19b61bd1a4f4d132884c742755e2fdb755300cdd1b719246e9)
+        to identify the sample\u2019s capabilities and determine if file and/or log-based
+        detection opportunities were present. Insikt Group and other malware researchers
+        previously identified various string-based artifacts within the sample, including
+        an unsanitized PDB path and a hardcoded IP address directing to a web panel
+        for \u201CDmitry Stealer\u201D.\\n\\nAdditionally, Insikt Group identified
+        the developer\u2019s signature, a string stating \u201CMade by the CognitoInc
+        coder for the xss forum\u201D and strings associated with the malware\u2019s
+        functionality, including strings related to browser data grabbing, cryptocurrency
+        wallet grabbing, virtual machine (VM) detection and evasion, and remote server
+        contact. Using these strings, Insikt Group created a YARA rule capable of
+        detecting XSSLite samples, which successfully identified 3 previously unreported
+        samples which we believe to be modified versions of XSSLite:\\n\\n\u2022 52e980cd0ed565f7ea12ef25c36e9e7477873a9e171e1db6fd37ced18b5043f5\\n\u2022
+        06af8bceef9f7996aa8c351795d0fd8af6b2ef7fb82e8c18b6738cab2fd4c9be\\n\u2022
+        26e6744773a1fe8663bc4b70e1fa58b72afdead38afa288a4fb75ec13da79d38\\n\\nInsikt
+        Group investigated XSSLite\u2019s original source code, shared by CognitoInc
+        in the same forum post that XSSLite was initially advertised on, to gain a
+        better understanding of how the malware operates. The source code includes
+        a document from the developer titled \u0418\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044F.txt
+        in Russian, or Instructions.txt in English, discussing how to set up XSSLite.
+        This file includes a full list of capabilities XSSLite is equipped with, including
+        (written verbatim as translated by Google Translate):\\n\\n\u2022 \u201CCollection
+        of Chromium browsers\u201D\\n\u2022 \u201CGrabber files from the desktop\u201D\\n\u2022
+        \u201CCollection of absolutely all plugins from the browser\u201D\\n\u2022
+        \u201CCollection of crypto wallets\u201D\\n\u2022 \u201CCollecting information
+        about the system\u201D\\n\u2022 \u201CDecryption of logs on the server side\u201D\\n\\nThe
+        file also includes instructions for setting up the XSSLite web panel and generating
+        client-side payloads, which the developer states are coded using Python Flask
+        and C#, respectively. The file also includes an explanation of how XSSLite
+        client-side payloads collect and send cookie and password data. The developer
+        states that a copy of all collected data is encoded in byte format in a JSON
+        message and sent to the server, where the data is decrypted using AES.\\n\\nAdditionally,
+        Instructions.txt included statements regarding CognitoInc\u2019s motivations
+        for creating XSSLite malware, and their plans to develop a more fully-functional
+        product in the future, which they intend to sell. Allegedly, CognitoInc initially
+        designed XSSLite with RAT functionality and additional stealer functionalities
+        that were removed from the source code, with CognitoInc stating \u201Cit would
+        be too awkward to put such ready-made software in the public domain\u201D.\\n\\nInsikt
+        Group has created a YARA rule capable of detecting XSSLite client-side payloads.
+        The YARA rule can be found attached to this note.\",\"created\":\"2024-03-15T20:13:44.962Z\",\"updated\":\"2024-03-15T20:13:44.962Z\",\"rules\":[{\"entities\":[{\"id\":\"mitre:T1489\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1489\",\"display_name\":\"T1489
+        (Service Stop)\"},{\"id\":\"mitre:T1005\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1005\",\"display_name\":\"T1005
+        (Data from Local System)\"},{\"id\":\"mitre:T1620\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1620\",\"display_name\":\"T1620
+        (Reflective Code Loading)\"},{\"id\":\"mitre:T1497.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1497.001\",\"display_name\":\"T1497.001
+        (Virtualization/Sandbox Evasion: System Checks)\"},{\"id\":\"mitre:T1555.003\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1555.003\",\"display_name\":\"T1555.003
+        (Credentials from Password Stores: Credentials from Web Browsers)\"},{\"id\":\"mitre:T1047\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1047\",\"display_name\":\"T1047
+        (Windows Management Instrumentation)\"},{\"id\":\"hash:06af8bceef9f7996aa8c351795d0fd8af6b2ef7fb82e8c18b6738cab2fd4c9be\",\"type\":\"Hash\",\"name\":\"06af8bceef9f7996aa8c351795d0fd8af6b2ef7fb82e8c18b6738cab2fd4c9be\"},{\"id\":\"mitre:T1041\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1041\",\"display_name\":\"T1041
+        (Exfiltration Over C2 Channel)\"},{\"id\":\"mitre:T1552.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1552.001\",\"display_name\":\"T1552.001
+        (Unsecured Credentials: Credentials In Files)\"},{\"id\":\"TzxCDV\",\"type\":\"AttackVector\",\"name\":\"Access
+        Token Manipulation\"},{\"id\":\"r5pX91\",\"type\":\"AttackVector\",\"name\":\"Reflective
+        Code Loading\"},{\"id\":\"hash:26e6744773a1fe8663bc4b70e1fa58b72afdead38afa288a4fb75ec13da79d38\",\"type\":\"Hash\",\"name\":\"26e6744773a1fe8663bc4b70e1fa58b72afdead38afa288a4fb75ec13da79d38\"},{\"id\":\"ugfb9o\",\"type\":\"Malware\",\"name\":\"XSSLite
+        Stealer\"},{\"id\":\"mitre:T1614\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1614\",\"display_name\":\"T1614
+        (System Location Discovery)\"},{\"id\":\"mitre:T1217\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1217\",\"display_name\":\"T1217
+        (Browser Information Discovery)\"},{\"id\":\"WHnOR5\",\"type\":\"AttackVector\",\"name\":\"System
+        Information Discovery\"},{\"id\":\"WHnOR7\",\"type\":\"AttackVector\",\"name\":\"System
+        Network Configuration Discovery\"},{\"id\":\"mitre:T1016\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1016\",\"display_name\":\"T1016
+        (System Network Configuration Discovery)\"},{\"id\":\"uQkLR9\",\"type\":\"Username\",\"name\":\"CognitoInc\"},{\"id\":\"mitre:T1134\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1134\",\"display_name\":\"T1134
+        (Access Token Manipulation)\"},{\"id\":\"mitre:T1057\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1057\",\"display_name\":\"T1057
+        (Process Discovery)\"},{\"id\":\"mitre:T1587.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1587.001\",\"display_name\":\"T1587.001
+        (Develop Capabilities: Malware)\"},{\"id\":\"mitre:T1571\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1571\",\"display_name\":\"T1571
+        (Non-Standard Port)\"},{\"id\":\"u5iCUt\",\"type\":\"Person\",\"name\":\"CognitoInc\"},{\"id\":\"hash:65da3824b373ed19b61bd1a4f4d132884c742755e2fdb755300cdd1b719246e9\",\"type\":\"Hash\",\"name\":\"65da3824b373ed19b61bd1a4f4d132884c742755e2fdb755300cdd1b719246e9\"},{\"id\":\"hash:52e980cd0ed565f7ea12ef25c36e9e7477873a9e171e1db6fd37ced18b5043f5\",\"type\":\"Hash\",\"name\":\"52e980cd0ed565f7ea12ef25c36e9e7477873a9e171e1db6fd37ced18b5043f5\"},{\"id\":\"mitre:T1082\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1082\",\"display_name\":\"T1082
+        (System Information Discovery)\"},{\"id\":\"mitre:T1083\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1083\",\"display_name\":\"T1083
+        (File and Directory Discovery)\"},{\"id\":\"JQ0VYr\",\"type\":\"AttackVector\",\"name\":\"Cross
+        site scripting\"},{\"id\":\"mitre:T1071.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1071.001\",\"display_name\":\"T1071.001
+        (Application Layer Protocol: Web Protocols)\"},{\"id\":\"url:http://45.135.164.71\",\"type\":\"URL\",\"name\":\"http://45.135.164.71\"},{\"id\":\"Fxbz4\",\"type\":\"Product\",\"name\":\"Google
+        Chromium\"},{\"id\":\"url:http://37.60.255.96\",\"type\":\"URL\",\"name\":\"http://37.60.255.96\"},{\"id\":\"url:http://193.233.132.5\",\"type\":\"URL\",\"name\":\"http://193.233.132.5\"},{\"id\":\"J2TQmu\",\"type\":\"Technology\",\"name\":\"Cryptocurrency\"},{\"id\":\"B_-x-\",\"type\":\"Product\",\"name\":\"Python\"},{\"id\":\"CoL9zI\",\"type\":\"Product\",\"name\":\"Windows
+        Management Instrumentation\"},{\"id\":\"fs-nBq\",\"type\":\"Technology\",\"name\":\"system
+        checks\"}],\"content\":\"rule MAL_XSSLite {\\n    meta:\\n        author =
+        \\\"CKOVACS, Insikt Group, Recorded Future\\\"\\n        date = \\\"2024-03-05\\\"\\n
+        \       description = \\\"Detects XSSLite client-side payloads\\\"\\n        version
+        = \\\"1.0\\\"\\n        reference = \\\"https://twitter.com/siri_urz/status/1763187796498325550\\\"\\n
+        \       hash = \\\"65da3824b373ed19b61bd1a4f4d132884c742755e2fdb755300cdd1b719246e9\\\"\\n
+        \       hash = \\\"52e980cd0ed565f7ea12ef25c36e9e7477873a9e171e1db6fd37ced18b5043f5\\\"\\n
+        \       hash = \\\"06af8bceef9f7996aa8c351795d0fd8af6b2ef7fb82e8c18b6738cab2fd4c9be\\\"\\n
+        \       hash = \\\"26e6744773a1fe8663bc4b70e1fa58b72afdead38afa288a4fb75ec13da79d38\\\"\\n
+        \       RF_MALWARE = \\\"XSSLite Stealer\\\"\\n        RF_MALWARE_ID = \\\"ugfb9o\\\"\\n
+        \       RF_THREATACTOR = \\\"CognitoInc\\\"\\n        RF_THREATACTOR_ID =
+        \\\"u5iCUt\\\"\\n\\n    strings:\\n        //CognitoInc\\n        $cognito
+        = \\\"Made by the CognitoInc coder for the xss forum\\\" wide\\n\\n        //strings\\n
+        \       $a0 = \\\"Grabber.Grabber+<BrowserGrabber>\\\"\\n        $a1 = \\\"CheckVM\\\"\\n
+        \       $a2 = \\\"CreateConfigAndSendRequest\\\"\\n\\n        //functions\\n
+        \       $b0 = \\\"get_postal\\\"\\n        $b1 = \\\"get_ram\\\"\\n        $b2
+        = \\\"get_CultureInfo\\\"\\n        $b3 = \\\"get_BrowserPaths\\\"\\n        $b4
+        = \\\"get_WalletsPaths\\\"\\n\\n    condition:\\n        uint16(0) == 0x5A4D
+        // PE File\\n        and filesize < 1500KB\\n        and (\\n            all
+        of ($a*)\\n            and 4 of ($b*)\\n        )\\n        or $cognito\\n}\\n\",\"file_name\":\"MAL_XSSLite.yar\"}]}],\"next_offset\":\"eyJvZmZzZXQiOls5NTg4XX0=\"}"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 86651998b93979ba-LHR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Mar 2024 12:07:01 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+version: 1

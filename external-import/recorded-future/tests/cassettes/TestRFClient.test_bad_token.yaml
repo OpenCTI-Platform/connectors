@@ -1,0 +1,58 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - OpenCTI-notes/1.0
+      X-RFToken:
+      - bmljZSB0cnkgOikpKSk=
+    method: GET
+    uri: https://api.recordedfuture.com/v2/analystnote/search?published=-100h&limit=100&source=VKz42X
+  response:
+    body:
+      string: '{"error":{"status":401}}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665197e194d418f-LHR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json;charset=utf-8
+      Date:
+      - Mon, 18 Mar 2024 12:06:57 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      cache-control:
+      - no-cache, no-store, private, must-revalidate, max-age=0, no-transform
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - 'default-src ''self'' data:; img-src ''self'' https: data: blob:; script-src
+        ''self'' ''unsafe-inline'' ''unsafe-eval'' cdn.jsdelivr.net; style-src ''self''
+        ''unsafe-inline'' fonts.googleapis.com cdn.jsdelivr.net; font-src ''self''
+        fonts.gstatic.com; worker-src blob:;'
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      pragma:
+      - no-cache
+      set-cookie:
+      - JSESSIONID=node01noh74uu5zpfdnxp8y1yxw6vx4581227.node0; Path=/rfq; Secure;
+        HttpOnly
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains
+      x-content-type-options:
+      - nosniff
+    status:
+      code: 401
+      message: Unauthorized
+version: 1
