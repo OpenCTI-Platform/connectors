@@ -1,14 +1,14 @@
+
 import json
 import os
-import pathlib
+from pathlib import Path
 
 import pytest
 import stix2.v21
 
 from src.rflib import URL, Domain, FileHash, IPAddress, StixNote
 
-CWD = pathlib.Path(__file__).parent.resolve()
-
+CWD = Path(__file__).parent
 
 @pytest.fixture
 def rf_identity():
@@ -50,6 +50,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw)
         assert len(note.objects) > 2
+
         with open(os.path.join(CWD, "outputs/basicnote.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
@@ -59,6 +60,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw)
         assert len(note.objects) > 2
+
         with open(os.path.join(CWD, "outputs/tanote.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
@@ -68,6 +70,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw)
         assert len(note.objects) > 2
+
         with open(os.path.join(CWD, "outputs/taorgnote.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
@@ -77,6 +80,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw)
         assert len(note.objects) > 2
+
         with open(os.path.join(CWD, "outputs/taorgnoteflag.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
@@ -86,6 +90,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw)
         assert len(note.objects) > 2
+
         with open(os.path.join(CWD, "outputs/personnoteflag.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
@@ -95,6 +100,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw)
         assert len(note.objects) > 2
+
         with open(os.path.join(CWD, "outputs/personnoteflag.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
@@ -104,6 +110,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw)
         assert len(note.objects) > 1
+
         with open(os.path.join(CWD, "outputs/vulnnote.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
@@ -113,6 +120,7 @@ class TestStixObjects:
             raw = json.load(file)
         note.from_json(raw)
         assert len(note.objects) > 1
+
         with open(os.path.join(CWD, "outputs/yaranote.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 

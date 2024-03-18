@@ -28,6 +28,7 @@ def vcr_config():
         "filter_headers": [("X-RFToken", "bmljZSB0cnkgOikpKSk=")],
     }
 
+
 @pytest.fixture()
 def rf_token():
     return os.environ.get(RF_API_KEY)

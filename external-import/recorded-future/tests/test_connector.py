@@ -12,7 +12,7 @@ OUPUT_DIR = os.path.join(CWD, "outputs")
 
 class TestConnector:
     @pytest.mark.vcr()
-    def test_basic_pull_conversion(self, rf_client, opencti_helper):
+    def test_basic_pull_conversion(self, rf_client, opencti_helper, tmp_path):
         notes = rf_client.get_notes(10000, limit=20)
         tas = rf_client.get_threat_actors()
         for i, note in enumerate(notes):

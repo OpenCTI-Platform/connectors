@@ -1,0 +1,154 @@
+{
+    "type": "bundle",
+    "id": "bundle--2f292d6b-a2e8-469a-93dd-cd971d8dde26",
+    "objects": [
+        {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": "identity--36919e0c-75f6-53dd-a132-ecc3937a1fc1",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.100763Z",
+            "modified": "2024-03-18T14:09:05.100763Z",
+            "name": "Software",
+            "identity_class": "class"
+        },
+        {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": "identity--7b89f1a3-285a-5987-8b1b-981ae32b51b8",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.101104Z",
+            "modified": "2024-03-18T14:09:05.101104Z",
+            "name": "Smartmatic",
+            "identity_class": "organization"
+        },
+        {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": "identity--5f5bfe47-c07b-5a8b-b71f-1fc89d5136ce",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.101401Z",
+            "modified": "2024-03-18T14:09:05.101401Z",
+            "name": "Ricardo Argana",
+            "identity_class": "individual"
+        },
+        {
+            "type": "attack-pattern",
+            "spec_version": "2.1",
+            "id": "attack-pattern--83601a2d-a20c-5ca1-aaf8-101a6bb7e468",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.101686Z",
+            "modified": "2024-03-18T14:09:05.101686Z",
+            "name": "T1565.001",
+            "x_mitre_id": "T1565.001"
+        },
+        {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": "identity--4c543958-9816-5958-ada6-43c573d451bb",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.101993Z",
+            "modified": "2024-03-18T14:09:05.101993Z",
+            "name": "Ferdinand Lavin",
+            "identity_class": "individual"
+        },
+        {
+            "type": "attack-pattern",
+            "spec_version": "2.1",
+            "id": "attack-pattern--840125ca-c313-5059-bb55-93b15cfdcd2e",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.102269Z",
+            "modified": "2024-03-18T14:09:05.102269Z",
+            "name": "T1005",
+            "x_mitre_id": "T1005"
+        },
+        {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": "identity--28527ee9-c8b0-5cf3-9740-6047e40eda7a",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.102553Z",
+            "modified": "2024-03-18T14:09:05.102553Z",
+            "name": "National Bureau of Investigation",
+            "identity_class": "organization"
+        },
+        {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": "identity--18a40bfa-dbd1-5278-9e2e-8eeac4d981a3",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.102835Z",
+            "modified": "2024-03-18T14:09:05.102835Z",
+            "name": "Commission on Elections",
+            "identity_class": "organization"
+        },
+        {
+            "type": "report",
+            "spec_version": "2.1",
+            "id": "report--e856e215-2d0b-5849-9768-b0569101c6ee",
+            "created_by_ref": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.103386Z",
+            "modified": "2024-03-18T14:09:05.103386Z",
+            "name": "Philippine NBI Files Complaint to Former Smartmatic Employee Linked to Data Breach",
+            "description": "On April 13, 2022, The Philippine Daily Inquirer reported about the Philippine National Bureau of Investigation (NBI) filing a complaint against a former Smartmatic employee, Ricardo Argana, who was found linked to the security breach at the automated elections technology provider, Smartmatic.\n\nThe house of the former Smartmatic Employee was raided by NBI agents in San Pedro, Laguna and was able to take hold of several computers and mobile gadgets, according to NBI spokesperson, Ferdinand Lavin. The accused will be filed charges of illegal access, qualified theft and possibly obstruction of justice. According to the report, the senators of the Philippines had discovered that the accused former employee of Smartmatic had allowed undisclosed adversaries to gain access and copy contents from the company\u2019s laptop.\n\nSmartmatic and the Commission on Elections (COMELEC) confirmed that the data breach did not include election data but only leaked Smartmatic\u2019s internal operations. The NBI is conducting an ongoing investigation on the confiscated devices and to determine the full scope of the potentially affected data.\n",
+            "report_types": [
+                "Observed-Data"
+            ],
+            "published": "2022-04-18T12:42:22.25Z",
+            "object_refs": [
+                "identity--36919e0c-75f6-53dd-a132-ecc3937a1fc1",
+                "identity--7b89f1a3-285a-5987-8b1b-981ae32b51b8",
+                "identity--5f5bfe47-c07b-5a8b-b71f-1fc89d5136ce",
+                "attack-pattern--83601a2d-a20c-5ca1-aaf8-101a6bb7e468",
+                "identity--4c543958-9816-5958-ada6-43c573d451bb",
+                "attack-pattern--840125ca-c313-5059-bb55-93b15cfdcd2e",
+                "identity--28527ee9-c8b0-5cf3-9740-6047e40eda7a",
+                "identity--18a40bfa-dbd1-5278-9e2e-8eeac4d981a3"
+            ],
+            "labels": [
+                "Validated Intelligence Event"
+            ],
+            "external_references": [
+                {
+                    "source_name": "inquirer",
+                    "url": "https://newsinfo.inquirer.net/1582383/fwd-nbi-to-file-raps-against-smartmatic-employee-linked-to-data-breach"
+                },
+                {
+                    "source_name": "abs-cbn",
+                    "url": "https://news.abs-cbn.com/news/04/13/22/nbi-raids-house-of-ex-smartmatic-employee"
+                },
+                {
+                    "source_name": "inquirer",
+                    "url": "https://newsinfo.inquirer.net/1576775/comelec-data-leak-only-concerns-smartmatics-internal-operations"
+                },
+                {
+                    "source_name": "inquirer",
+                    "url": "https://newsinfo.inquirer.net/1569815/very-serious-security-breach-occurred-in-smartmatic-ops-says-imee-marcos"
+                }
+            ],
+            "object_marking_refs": [
+                "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+            ]
+        },
+        {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+            "created": "2024-03-18T14:09:05.099904Z",
+            "modified": "2024-03-18T14:09:05.099904Z",
+            "name": "Recorded Future",
+            "identity_class": "organization"
+        },
+        {
+            "type": "marking-definition",
+            "spec_version": "2.1",
+            "id": "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9",
+            "created": "2017-01-20T00:00:00.000Z",
+            "definition_type": "tlp",
+            "name": "TLP:WHITE",
+            "definition": {
+                "tlp": "white"
+            }
+        }
+    ]
+}
