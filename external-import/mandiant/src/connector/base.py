@@ -1,10 +1,10 @@
 import importlib
+import json
 import os
 import sys
 import time
 from datetime import timedelta
 
-import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -617,7 +617,10 @@ class Mandiant:
                         != "marking-definition--ad2caa47-58fd-5491-8f67-255377927369"
                     ):
                         new_markings.append(ref)
-                obj.new_version(object_marking_refs=new_markings)
+                if len(new_markings) == 0:
+                    del obj["object_marking_refs"]
+                else:
+                    obj["object_marking_refs"] = new_markings
 
     def _run(
         self,
@@ -673,11 +676,16 @@ class Mandiant:
             uniq_bundles_objects = list(
                 {obj["id"]: obj for obj in bundles_objects}.values()
             )
+            # Transform objects to dicts
+            uniq_bundles_objects = [
+                json.loads(obj.serialize()) for obj in uniq_bundles_objects
+            ]
             if self.mandiant_remove_statement_marking:
                 self.remove_statement_marking(uniq_bundles_objects)
-            bundle = stix2.Bundle(objects=uniq_bundles_objects, allow_custom=True)
+
+            bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
             self.helper.send_stix2_bundle(
-                bundle.serialize(),
+                bundle,
                 update=self.update_existing_data,
                 work_id=work_id,
             )
