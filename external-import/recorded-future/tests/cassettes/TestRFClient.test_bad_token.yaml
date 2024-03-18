@@ -11,7 +11,7 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - notarealtoken
+      - bmljZSB0cnkgOikpKSk=
     method: GET
     uri: https://api.recordedfuture.com/v2/analystnote/search?published=-100h&limit=100&source=VKz42X
   response:
@@ -19,12 +19,18 @@ interactions:
       string: !!binary |
         H4sIAAAAAAAAAKtWSi0qyi9SsqpWKi5JLCktVrIyMTCsrQUAJzwAUBgAAAA=
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c88bdc8c6fc7-IAD
       Connection:
       - keep-alive
       Content-Type:
       - application/json;charset=utf-8
       Date:
-      - Thu, 12 Oct 2023 15:25:44 GMT
+      - Mon, 18 Mar 2024 14:06:27 GMT
+      Server:
+      - cloudflare
       Transfer-Encoding:
       - chunked
       cache-control:
@@ -32,19 +38,19 @@ interactions:
       content-encoding:
       - gzip
       content-security-policy:
-      - 'default-src ''self'' data:; img-src ''self'' https: data:; script-src ''self''
-        ''unsafe-inline'' ''unsafe-eval'' cdn.jsdelivr.net; style-src ''self'' ''unsafe-inline''
-        fonts.googleapis.com cdn.jsdelivr.net; font-src ''self'' fonts.gstatic.com;
-        worker-src blob:;'
+      - 'default-src ''self'' data:; img-src ''self'' https: data: blob:; script-src
+        ''self'' ''unsafe-inline'' ''unsafe-eval'' cdn.jsdelivr.net; style-src ''self''
+        ''unsafe-inline'' fonts.googleapis.com cdn.jsdelivr.net; font-src ''self''
+        fonts.gstatic.com; worker-src blob:;'
       expires:
       - Thu, 01 Jan 1970 00:00:00 GMT
       pragma:
       - no-cache
       set-cookie:
-      - JSESSIONID=node0rfc7sj1n2dvt271aemb82y7v2741948.node0; Path=/rfq; Secure;
+      - JSESSIONID=node0skkvl4ht4pdehj2qlhckb4564708546.node0; Path=/rfq; Secure;
         HttpOnly
       strict-transport-security:
-      - max-age=86400; includeSubDomains
+      - max-age=31536000; includeSubDomains
       x-content-type-options:
       - nosniff
     status:

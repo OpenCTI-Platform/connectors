@@ -21,6 +21,13 @@ class DummyHelper:
         print("WARNING: {}".format(message))
 
 
+
+@pytest.fixture(scope="session")
+def vcr_config():
+    return {
+        "filter_headers": [("X-RFToken", "bmljZSB0cnkgOikpKSk=")],
+    }
+
 @pytest.fixture()
 def rf_token():
     return os.environ.get(RF_API_KEY)

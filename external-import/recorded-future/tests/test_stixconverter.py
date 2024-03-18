@@ -1,4 +1,3 @@
-# from src.rflib import IPAddress, Domain, URL, FileHash, TTP, Identity, Malware, StixNote
 import json
 import os
 import pathlib
@@ -117,7 +116,13 @@ class TestStixObjects:
         with open(os.path.join(CWD, "outputs/yaranote.json"), "w") as file:
             json.dump(json.loads(note.to_json_bundle()), file, indent=4)
 
-    def test_report_type_conversion(self, opencti_helper, tas, rf_client):
+    def test_report_type_conversion(self, opencti_helper, tas, rf_client, rf_identity):
+        obj = IPAddress('8.8.8.8', 'IpAdress', rf_identity)
+        js = json.loads(obj.to_json_bundle())
+        assert len(js['objects']) == 3
+        with open(os.path.join(CWD, 'outputs/iptest.json'), 'w') as file:
+            json.dump(js, file, indent=4)
+
         topics = [
             {
                 "id": "ZjnoP2",

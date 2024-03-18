@@ -1,4 +1,3 @@
-# from src.rflib import IPAddress, Domain, URL, FileHash, TTP, Identity, Malware, StixNote, RFClient
 import json
 import os
 import pathlib

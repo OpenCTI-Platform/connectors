@@ -11,207 +11,211 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: GET
     uri: https://api.recordedfuture.com/v2/analystnote/search?published=-1000h&limit=10&source=VKz42X&topic=ZjnoP2
   response:
     body:
       string: !!binary |
-        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
+        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
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c88f2b8c3938-IAD
       Connection:
       - keep-alive
       Content-Type:
       - application/json;charset=utf-8
       Date:
-      - Thu, 12 Oct 2023 15:25:53 GMT
+      - Mon, 18 Mar 2024 14:06:28 GMT
+      Server:
+      - cloudflare
       Transfer-Encoding:
       - chunked
       cache-control:
@@ -219,26 +223,26 @@ interactions:
       content-encoding:
       - gzip
       content-security-policy:
-      - 'default-src ''self'' data:; img-src ''self'' https: data:; script-src ''self''
-        ''unsafe-inline'' ''unsafe-eval'' cdn.jsdelivr.net; style-src ''self'' ''unsafe-inline''
-        fonts.googleapis.com cdn.jsdelivr.net; font-src ''self'' fonts.gstatic.com;
-        worker-src blob:;'
+      - 'default-src ''self'' data:; img-src ''self'' https: data: blob:; script-src
+        ''self'' ''unsafe-inline'' ''unsafe-eval'' cdn.jsdelivr.net; style-src ''self''
+        ''unsafe-inline'' fonts.googleapis.com cdn.jsdelivr.net; font-src ''self''
+        fonts.gstatic.com; worker-src blob:;'
       expires:
       - Thu, 01 Jan 1970 00:00:00 GMT
       pragma:
       - no-cache
       set-cookie:
-      - JSESSIONID=node07bwhp5zviva96g0bb6xtd3os2731166.node0; Path=/rfq; Secure;
+      - JSESSIONID=node0a3dqn5ajvafabmmk4fuaichl4708561.node0; Path=/rfq; Secure;
         HttpOnly
       strict-transport-security:
-      - max-age=86400; includeSubDomains
+      - max-age=31536000; includeSubDomains
       x-content-type-options:
       - nosniff
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:sqk59z"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:ut2OD-"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -253,75 +257,90 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: '{"count":1,"total_count":1,"result":[{"id":"doc:sqk59z","type":"yara","title":"Microsoft
-        Teams used to Deliver DarkGate Malware","description":"On September 6, 2023,
-        TrueSec Cybersecurity Incident Response Team (CSIRT) published an article
-        outlining their investigation into a Microsoft Teams campaign that took place
-        on August 29, 2023. This campaign was responsible for disseminating DarkGate
-        malware. The attackers operated through 2 compromised external Office 365
-        accounts, employing social engineering tactics to deceive victims into downloading
-        a malicious ZIP file from a SharePoint URL. The ZIP file contains a malicious
-        LNK file, which serves to execute a VBS script, subsequently initiating the
-        download and execution of AutoIt3 with an AutoIt script. This AutoIt script
-        deobfuscates and injects shellcode, ultimately leading to the execution of
-        the final DarkGate payload. Insikt Group created a YARA rule that can be used
-        to detect the malicious LNK files used to initiate the DarkGate infection,
-        which can be found attached to this note.\n\nIOCs\n\nCompromised Email Accounts\n63090101@my.buu.ac.th\nadriverar@unadvirtual.edu.co\n\nC2
-        Address\nhXXp://5.188.87.58:2351\n\nSHA256 Hashes\n0c59f568da43731e3212b6461978e960644be386212cc448a715dbf3f489d758\nbcd449470626f4f34a15be00812f850c5e032723e35776fb4b9be6c7be6c8913\n4c21711de81bb5584d35e744394eed2f36fef0d93474dfc5685665a9e159eef1\n1bcde4d4613f046b63e970aa10ea2662d8aa7d326857128b59cb88484cce9a2d","created":"2023-09-12T15:16:39.634Z","updated":"2023-09-12T15:16:39.634Z","rules":[{"entities":[{"id":"mitre:T1566.002","type":"MitreAttackIdentifier","name":"T1566.002","display_name":"T1566.002
-        (Phishing: Spearphishing Link)"},{"id":"J4WbXT","type":"AttackVector","name":"Social
-        Engineering"},{"id":"mitre:T1055","type":"MitreAttackIdentifier","name":"T1055","display_name":"T1055
-        (Process Injection)"},{"id":"email:63090101@my.buu.ac.th","type":"EmailAddress","name":"63090101@my.buu.ac.th"},{"id":"email:adriverar@unadvirtual.edu.co","type":"EmailAddress","name":"adriverar@unadvirtual.edu.co"},{"id":"YGjwOY","type":"Malware","name":"DarkGate"},{"id":"ip:5.188.87.58","type":"IpAddress","name":"5.188.87.58"},{"id":"mitre:T1204.002","type":"MitreAttackIdentifier","name":"T1204.002","display_name":"T1204.002
-        (User Execution: Malicious File)"},{"id":"JsTAK6","type":"Product","name":"Microsoft
-        Teams"},{"id":"0eyAM","type":"AttackVector","name":"Phishing"},{"id":"mitre:T1586.002","type":"MitreAttackIdentifier","name":"T1586.002","display_name":"T1586.002
-        (Compromise Accounts: Email Accounts)"},{"id":"rcfdOI","type":"Malware","name":"DarkGate
-        Loader"},{"id":"hash:1bcde4d4613f046b63e970aa10ea2662d8aa7d326857128b59cb88484cce9a2d","type":"Hash","name":"1bcde4d4613f046b63e970aa10ea2662d8aa7d326857128b59cb88484cce9a2d"},{"id":"idn:unadvirtualedu-my.sharepoint.com","type":"InternetDomainName","name":"unadvirtualedu-my.sharepoint.com"},{"id":"hash:4c21711de81bb5584d35e744394eed2f36fef0d93474dfc5685665a9e159eef1","type":"Hash","name":"4c21711de81bb5584d35e744394eed2f36fef0d93474dfc5685665a9e159eef1"},{"id":"idn:burapha-my.sharepoint.com","type":"InternetDomainName","name":"burapha-my.sharepoint.com"},{"id":"hash:bcd449470626f4f34a15be00812f850c5e032723e35776fb4b9be6c7be6c8913","type":"Hash","name":"bcd449470626f4f34a15be00812f850c5e032723e35776fb4b9be6c7be6c8913"},{"id":"email:63090101@my.buu.ac.th","type":"EmailAddress","name":"63090101@my.buu.ac.th"},{"id":"hash:0c59f568da43731e3212b6461978e960644be386212cc448a715dbf3f489d758","type":"Hash","name":"0c59f568da43731e3212b6461978e960644be386212cc448a715dbf3f489d758"},{"id":"B_E7B","type":"Company","name":"Microsoft"},{"id":"email:adriverar@unadvirtual.edu.co","type":"EmailAddress","name":"adriverar@unadvirtual.edu.co"}],"content":"rule
-        MAL_DarkGate_LNK\n{\n    meta:\n        author = \"CNANCE, Insikt Group, Recorded
-        Future\"\n        date = \"2023-09-11\"\n        description = \"Detects DarkGate
-        LNK loader samples based on strings and metadata\"\n        version = \"1.0\"\n        reference
-        = \"https://twitter.com/malwrhunterteam/status/1701160900386820220\"\n        hash
-        = \"62c10a69e945fe29209ff9ccee0b0b7f57669d86c74bef53ac4f303c1231ea1a\"\n        hash
-        = \"0c439d6f8777e97c6d1414f42a5ba79efb3a8eef78f4a6c87857a30766eed0e9\"\n        hash
-        = \"0299cdc44b480680707ff16a4b7299fd9e368a0130319dba0af7c5553f992334\"\n        hash
-        = \"2c6af12f603743fcc3effdc24783c969c906816960fbfbf012974fc04722a679\"\n        hash
-        = \"0fe9747c2987d2a39be01db0f233b31bfa2c8592d1f220c4877859e98ff32a12\"\n        hash
-        = \"670143bb7db44fc7f58dee50efd7470f45a1f36c421d2fbb3f1751a3428f23a9\"\n        hash
-        = \"0df969aec2ade7b328bec0c98e16c268c0b97bafe0907c8129ff6411d7fff0a3\"\n        hash
-        = \"64302a1987273c3eaa118c77295c7b15226ed753f5eef74a071ee3a136c75a31\"\n        hash
-        = \"6d1b39599a514c857318c8532dad0f429bee95ad3a59cb6681b3420bcc284f84\"\n        hash
-        = \"5b01ad121191d7178c4409eafbe42ae1b040e08ff446bcc45da2ca4045d0a209\"\n        hash
-        = \"0da725817af1dc8403ccd49eb654e05de1e65e9ce9b37b5d6b1eb322170c07ad\"\n        hash
-        = \"0f291f94513d29fef8802f4813a337b7b308b49a363e8ea1ca4d188a6c8114c1\"\n        hash
-        = \"bcd449470626f4f34a15be00812f850c5e032723e35776fb4b9be6c7be6c8913\"\n        hash
-        = \"263349f8dc1fd418cb66257ffa87cd93111317af98ced3eb4e61b80d54a6c566\"\n        RF_MALWARE
-        = \"DarkGate\"\n        RF_MALWARE_ID = \"YGjwOY\"\n\n    strings:\n        $d1
-        = { 89 90 f5 f0 } \n        $d2 = { 67 40 da 10 }\n\n        $s1 = \"WINHTTP.WinHTTPRequest\"
-        wide\n        $s2 = \"Shell.Application\" wide\n        $s3 = \".ShellExecute\"
-        wide\n        $s4 = \"CreateObject(\" wide\n        $s5 = \":.Open ^\\\"get^\\\"\"
-        wide\n        $s6 = \"= .responseText\" wide\n        $s7 = \"mkdir\" wide\n        $s8
-        = \"echo \" wide\n        $s9 = \"http\" wide\n\n    condition:\n        uint32(0)
-        == 0x0000004c and // lnk file\n        filesize < 10KB and\n        (uint32(0x14)
-        >> 1) & 0x1 == 0x1 and // HasLinkInfo flag\n        for any of ($d*): ($ at
-        (0x4e + uint16(0x4c) + uint32(0x4e + uint16(0x4c) + 0xc) + 0x8)) and // drive
-        serial number\n        all of ($s*)\n}","file_name":"MAL_DarkGate_LNK.yar"}]}],"next_offset":"eyJvZmZzZXQiOlsxMTE5Ml19"}'
+      string: !!binary |
+        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
+        ztxe7dv/AQAA//8DAClu3FZBHwAA
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c891dfac3938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '6176'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:53 GMT
+      - Mon, 18 Mar 2024 14:06:31 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:srPvvG"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:ut8i16"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -336,70 +355,49 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: '{"count":1,"total_count":1,"result":[{"id":"doc:srPvvG","type":"yara","title":"YARA
-        Rule: Detect Meduza Crypt","description":"Meduza Crypt uses a 2 stage method
-        of executing a crypted payload. In the first stage, it decrypts and runs an
-        \"extractor\" DLL, and in the second stage, the extractor DLL decrypts and
-        executes the final payload. The provided YARA ruleset can be used to detect
-        Meduza Crypt and its second-stage DLL.","created":"2023-09-13T15:56:51.008Z","updated":"2023-09-13T15:56:51.007Z","rules":[{"entities":[{"id":"siA_A7","type":"Malware","name":"Meduza
-        Crypt"}],"content":"import \"pe\"\n\nrule MAL_Meduza_Crypt\n{\n    meta:\n        author
-        = \"CNANCE, Insikt Group, Recorded Future\"\n        date = \"2023-09-13\"\n        description
-        = \"Detects Meduza Crypt first stage samples\"\n        version = \"1.0\"\n        RF_MALWARE
-        = \"Meduza Crypt\"\n        RF_MALWARE_ID = \"siA_A7\"\n\n    strings:\n        /*\n            140007605
-        48 63 04 24     MOVSXD     RAX,dword ptr [RSP]=>local_18\n            140007609
-        48 8b 4c        MOV        param_1,qword ptr [RSP + local_res10]\n                        24
-        28\n            14000760e 0f be 04 01     MOVSX      EAX,byte ptr [param_1
-        + RAX*0x1]\n            140007612 89 44 24 04     MOV        dword ptr [RSP
-        + local_14],EAX\n            140007616 8b 04 24        MOV        EAX,dword
-        ptr [RSP]=>local_18\n            140007619 99              CDQ\n            14000761a
-        b9 39 00        MOV        param_1,0x39\n                        00 00\n            14000761f
-        f7 f9           IDIV       param_1\n            140007621 8b c2           MOV        EAX,param_2\n            140007623
-        83 c0 38        ADD        EAX,0x38\n            140007626 8b 4c 24 04     MOV        param_1,dword
-        ptr [RSP + local_14]\n            14000762a 33 c8           XOR        param_1,EAX\n            14000762c
-        8b c1           MOV        EAX,param_1\n            14000762e 48 63 0c 24     MOVSXD     param_1,dword
-        ptr [RSP]=>local_18\n            140007632 48 8b 54        MOV        param_2,qword
-        ptr [RSP + local_res8]\n                        24 20\n            140007637
-        88 04 0a        MOV        byte ptr [param_2 + param_1*0x1],AL\n        */\n        $
-        = { 4? 63 04 ?? 4? 8b 4c ?? ?? 0f be 04 01 89 44 ?? ?? 8b 04 ?? 99 b9 39 00
-        00 00 f7 f9 8b c2 83 c0 38 8b 4c ?? ?? 33 c8 8b c1 4? 63 0c ?? 4? 8b 54 ??
-        ?? 88 04 0a }\n\n    condition:\n        uint16(0) == 0x5a4d and\n        filesize
-        > 200KB and\n        all of them\n}\n\n\nrule MAL_Meduza_Crypt_DLL\n{\n    meta:\n        author
-        = \"CNANCE, Insikt Group, Recorded Future\"\n        date = \"2023-09-13\"\n        description
-        = \"Detects Meduza Crypt''s second stage DLL\"\n        version = \"1.0\"\n        RF_MALWARE
-        = \"Meduza Crypt\"\n        RF_MALWARE_ID = \"siA_A7\"\n\n    strings:\n        /*\n            180001220
-        49 8b c0        MOV        RAX,R8\n            180001223 48 f7 e1        MUL        RCX\n            180001226
-        48 c1 ea 02     SHR        RDX,0x2\n            18000122a 48 6b c2 0d     IMUL       RAX,RDX,0xd\n            18000122e
-        48 8b d1        MOV        RDX,RCX\n            180001231 48 2b d0        SUB        RDX,RAX\n            180001234
-        0f b6 44        MOVZX      EAX,byte ptr [RSP + RDX*0x1 + 0x20]\n                        14
-        20\n            180001239 30 04 19        XOR        byte ptr [RCX + RBX*0x1],AL\n            18000123c
-        48 ff c1        INC        RCX\n            18000123f 48 81 f9        CMP        RCX,0xc6800\n                        00
-        68 0c 00\n            180001246 72 d8           JC         LAB_180001220\n            180001248
-        48 8b cb        MOV        RCX,RBX\n            18000124b e8 30 00        CALL       RunPortableExecutable                  \n                        00
-        00\n        */\n        $ = { 4? 8b c0 4? f7 e1 4? ?1 ea [1-2] 6b c2 ?? 4?
-        8b d1 4? 2b d0 0f b6 44 14 20 30 04 19 4? ff c1 4? 81 f9 ?? ?? ?? ?? 72 ??
-        4? 8b cb e8 }\n    condition:\n        uint16(0) == 0x5a4d and\n        filesize
-        > 200KB and\n        pe.exports(\"Execute\") and\n        pe.exports(\"RunPortableExecutable\")
-        and\n        pe.exports(\"encryptionKey\") and\n        pe.exports(\"globalByteArray\")
-        and\n        all of them\n}","file_name":"MAL_Meduza_Crypt.yar"}]}],"next_offset":"eyJvZmZzZXQiOls4ODI1XX0="}'
+      string: !!binary |
+        H4sIAAAAAAAAA4RUXW/bOBD8K1uiD1dUjiXaThv6UMBo7QRFHbepigtS5QyGWttEJFIlV4mdKv+9
+        oKw7J9eHAwQK+zU7Gg70kylbG2IiiRhZksXyEDv0dUFMfP/JdM4Ey60SNb3VyTGLGO0qZIJ5Yx2F
+        UFMR4q/ni4sULuoCBXxAQkUws668sfa2f/nJyhwdi1iOXjldkbaGCZZuECSRVBvMYQ/g6gJBSQM3
+        CLXHHMhCvoczSPfW3YKyZVkbrWRA8SC9t0pLwhzuNW1+2wqlLO6lwyMWMeUwNDLBeMyHvXjQi5OU
+        x2I0EMOTo8HxyRWLWF3l/98UePpWITSkSXdBK1c6+utL9fEg1XxPgEXMyDIk/qHIHqNu5P3DpZkv
+        DiMpqo2xhV3vDlNfg+Ktwp49XkdMWUMYbozJAh0BqQpeni3m0+X5NAVpdtB7By+nl+n04nzy6d/k
+        H6Vfi4z9JlPHEhY13dja5HCWpp/hdJrCBf6o0VPGxrAq7L1AT/Km0H6DeUR26dHdoRtD7vUDimQU
+        //mO89EYOn4iY6fTtOEx8FkTMHKsaCOeNTR8BoOuqj1Jo1DwcXuf2ojhGJ70BloNnzVJw6dN0sQf
+        IJ40Z9ZTM5gAj5+DxE+3WNO1qMJ63E9Cd8b/eVqYlfS0rCQROvMcVPtckpQkXiSRw0KSvsPDqhcZ
+        ++bR9SZrNK1sTwoTpbBqk5VyKDLWD9yzbDuQWbbl8fe/s2wb59ev21c45HtrDKrg9ratH4a9zsWI
+        D4/jZHg8BocrdBi41a6INkSVF/0+OS2P1tjnw3gQJ70quX3j/TrnfAwlkgxfIILVYe9z3uMnTyog
+        a9pYB/PTb+kYXmWGRWylC1x2dixlsVx1Jlq2f4Mj2hJ7vA7eNLilpV2tPAZ/4u7j3VV59XB1+UUv
+        Cr+dp7e7xSw5YY+/AAAA//8DAJ3hwsWGBAAA
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8a72e853938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '4274'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:54 GMT
+      - Mon, 18 Mar 2024 14:06:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:ssdjeR"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:uz48kL"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -414,60 +412,59 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: '{"count":1,"total_count":1,"result":[{"id":"doc:ssdjeR","type":"yara","title":"YARA
-        Rule: Contagion Packer","description":"Contagion Packer is a packing and crypting
-        service promoted and sold by PlagueMalware on the XSS Forum. The service is
-        advertised as being fully undetectable (FUD) and capable of supporting various
-        payload types, including regular PE files, . NET files, and scripts. Insikt
-        Group analyzed Contagion Packer samples and developed the attached YARA rule,
-        which can be used to detect instances of Contagion Packer samples.","created":"2023-09-15T13:42:14.707Z","updated":"2023-09-15T13:42:14.706Z","rules":[{"entities":[{"id":"ssV7Eq","type":"Malware","name":"Contagion
-        Packer"},{"id":"r6Snmj","type":"Username","name":"PlagueMalware"},{"id":"source:KZFCph","type":"Source","name":"XSS
-        (ex DamageLab) Forum"}],"content":"rule MAL_Contagion_Packer\n{\n    meta:\n        author
-        = \"CNANCE, Insikt Group, Recorded Future\"\n        date = \"2023-09-14\"\n        description
-        = \"Detects Contagion Packer based on its payload decryption algorithm\"\n        version
-        = \"1.0\"\n        RF_MALWARE = \"Contagion Packer\"\n        RF_MALWARE_ID
-        = \"ssV7Eq\"\n\n    strings:\n        $ = \"base64.nim\" fullword\n        $
-        = \"fatal.nim\" fullword\n        /*\n           140009d5a 48 85 db        TEST       RBX,RBX\n           140009d5d
-        75 2a           JNZ        LAB_140009d89\n           140009d5f 48 89 ea        MOV        RDX=>DAT_14004dd68,RBP                          \n           140009d62
-        4c 89 e1        MOV        RCX=>DAT_14004d9a0,R12                        \n           140009d65
-        4d 89 f9        MOV        R9=>DAT_14004dd88,R15                         \n           140009d68
-        41 b8 20        MOV        R8D,0x20\n                     00 00 00\n           140009d6e
-        48 c7 44        MOV        qword ptr [RSP + local_78],0x20\n                     24
-        20 20 \n                     00 00 00\n           140009d77 e8 89 f7        CALL       FUN_140009505                                    \n                     ff
-        ff\n           140009d7c ba 20 00        MOV        EDX,0x20\n                     00
-        00\n           140009d81 48 89 e9        MOV        RCX=>DAT_14004dd68,RBP                       \n           140009d84
-        e8 b7 d5        CALL       FUN_140007340                                   \n                     ff
-        ff\n           140009d89 8a 44 37 10     MOV        AL,byte ptr [RDI + RSI*0x1
-        + 0x10]\n           140009d8d 41 32 84        XOR        AL,byte ptr [R12
-        + RBX*offset DAT_14004dd88 +  \n                     1c e8 03 \n                     00
-        00\n           140009d95 48 ff c3        INC        RBX\n           140009d98
-        41 88 44        MOV        byte ptr [R14 + RSI*0x1 + 0x10],AL\n                     36
-        10\n           140009d9d 83 e3 0f        AND        EBX,0xf\n           140009da0
-        48 ff c6        INC        RSI\n           140009da3 eb 89           JMP        LAB_140009d2e\n        */\n        $
-        = { 4? 85 db 75 ?? 4? 89 e? 4? 89 e? 4? 89 f? 4? b8 ?? ?? ?? ?? 4? c7 44 ??
-        ?? ?? ?? ?? ?? e8 ?? ?? ?? ?? ba ?? ?? ?? ?? 4? 89 e? e8 ?? ?? ?? ?? 8a ??
-        37 [1-2] 32 84 ?? ?? ?? ?? ?? 4? ff c3 [0-1] 88 44 ?? ?? 83 e3 ?? ?? ff c6
-        eb ?? }\n\n    condition:\n        uint16(0) == 0x5a4d and\n        filesize
-        > 20KB and\n        all of them\n}","file_name":"MAL_Contagion_Packer.yar"}]}],"next_offset":"eyJvZmZzZXQiOlsxMDUwMl19"}'
+      string: !!binary |
+        H4sIAAAAAAAAA8RWYXfTNhT9K+9426GhcSLbsh3n0B1yaGGMlkHHBitlOYr0XIs4UmbLpGmX/74j
+        p42dtozyYSyfLOned9+7elJ06XBdKeMMva5jtGH5uBkXWFa5cYbvLx0pnKEjNB9WF3QwPXS6jlnO
+        0Rk6S1YwO5Imt8M/RscjOK5yHMLz/dEbONRMYAGvXj6DV2yZayZKp+sILHkh50Zq5QydNxkCM4bx
+        DAXUAYoqR+BMwQShKlGA0SDQIDdbUXfYlMFP8iPj0/VMpxaaXwkB18owqaQ6A1S8WM4NCjuZyrOq
+        YFYdBDMMmBJQZpjnXAvsOV2HF8gM2pJ94lOXBC4ZvPHJ0IuHAenFlJ44Xaeaiy+DbCVl7SAqI428
+        GtR2lpmsXlw0Vh6xfMEKdLqOYjM70arVWXWvWfNw9vrtv7DahjS0FyacYdzQRtbw6e/IjS4a7q/W
+        hSdaoLP60HWsf2h7oS4DjkaHY5vSeB17bL2+PFUAADM0bLj+tD9WmUwXsAenzpOXo5dPDrrwXJVy
+        auBZoat5F46R60KggKeVqQo8dRquNbVmblylW8tN69So/botyv++L9pJfMKivE7A65H2UoEpFqj4
+        uobMmHk57PcXi0WvYHMp4h7Xs/4k12f9uS5N3yd+0CeDfuD1UzZFd91UbmVkLi+wdBUuXCmYcfO6
+        ENdoF8+RVwbd0iDLucuUcPNqNmOuVKmuJ7Eo+1/OieVzqdAtkfdmKGQ1q1PLatuu1VhxhqZ0M20w
+        L13mGuSZkpzlLlMsX5aydLkfJ2HKaRqw4H5G8EIvRGkKOcXGjS1dPJ8zJcorub8q3K4nY2VWR6Up
+        jeIwiT0/SD3BqEhCjCkhAxp5kyhJJgH3kGGMAQ9SkpAQJ8Snkyj2yYDTSXJn0CgJuZemA0pEzFMW
+        cgw8FkbU99MB9RKMkph4NPCjmPsTJjyesjhOEkbQ96OIe3dnOqAJiXxBRYID3/dEIiKP0iBIgjgU
+        HqGEED9JPEF9Dyc89GImSMTTIGKECm+rxY6fjo9Gh29Hxwd16Fbn340aP9+vgev7xmLWKLsF6qxs
+        ndvv5+psnGF9iPbgcpBASIAi0HjVAtl+HM/YmeQWRBOgFKgHIQUeAQshTgDZCvr99aFMdZ7rBQqY
+        LGHNIuc8YmGcIGtHRSXGPKvU9DpqCPTAxh4dAPUhIjDwV9e5c62EtCe1fevkOegUTIYze3Sbhe/a
+        Ge+Bt73a7wPPkE/BZMxAC6o5r4oSFtJkUgGr75BU5thQU10AU0uQIBXseL3ed42BHRjCTgNtwz9u
+        4E3RnVto+3vcxHsvP8AjeNzKb6uKDaMFsPCNwPuPH2Ab3mmGnRuWPNxGVlKZwN9px96FQQfA/RHO
+        dQFTXN6D4PkdS+B6Ni+wtH/rpbzA+xCjmlipr6f6pKaWhhXGNofN1t7tDfVhv/m+HWLXJv3ozoWo
+        Nq1un+20LP7zqd7oGej1PiN7RwNZ4ODmNsAu7Ej4AWinA3/eCfEJ7ILs2N4n5z5ep/2g92A7/B0N
+        uPNZyR1pd6ZzD+Ea14G/rThZJxHRTRLiwVer+vdU9W+q8o1q/vWqwT1Vg9uqV9fMLdUO6OJ/24Jw
+        YwZ+uy2IBxvV82+4BeFmC/DWFrRuwVO1crqOvePHVw/iO968vSUrnNUH+0BWeG7GOk1LtI9kXP78
+        6WR2cnHy7rX8JS/Do/3fLt69I3vO6h8AAAD//wMAlEB8AmUNAAA=
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8b85ed63938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '3374'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:54 GMT
+      - Mon, 18 Mar 2024 14:06:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:sslz1P"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:uz-DXq"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -482,94 +479,49 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: '{"count":1,"total_count":1,"result":[{"id":"doc:sslz1P","type":"yara","title":"YARA
-        Rule: Dark Crystal RAT","description":"The attached YARA rule can be used
-        to detect obfuscated and deobfuscated samples of Dark Crystal RAT.","created":"2023-09-15T18:03:46.158Z","updated":"2023-09-15T18:03:46.156Z","rules":[{"entities":[{"id":"ZEqKiV","type":"Malware","name":"Dark
-        Crystal RAT"}],"content":"rule MAL_DCRat_obf {\n    meta:\n        author
-        = \"N1GHTW0LF, Insikt Group, Recorded Future\"\n        date = \"2023-03-27\"\n        description
-        = \"Detects obfuscated DCRat (Dark Crystal RAT) payloads\"\n        version
-        = \"1.0\"\n        hash = \"e1af9666a324f81fd84a5f4d4bea48d2cfc1a79ef36844343dd1c78cd701d93a\"\n        hash
-        = \"be25d59082e0385eac3802a664fb78212c70c460fee29b634ded6cca406f70ec\"\n        RF_MALWARE
-        = \"Dark Crystal RAT\"\n        RF_MALWARE_ID = \"ZEqKiV\"\n\n    strings:\n        //
-        random url parameter generation function\n        $rand_url_params = {\n            06                      //
-        IL_0012: ldloc.0\n            A2                      // IL_0013: stelem.ref\n            25                      //
-        IL_0014: dup\n            17                      // IL_0015: ldc.i4.1\n            [0-5]\n            18                      //
-        IL_001B: ldc.i4.2\n            1F 20                   // IL_001C: ldc.i4.s  32\n            [0-5]\n            28
-        ?? ?? ?? ??          // IL_001E: call      instance int32 ns42.XlgfATUG::K788N29X(int32,
-        int32)\n            28 ?? ?? ?? ??          // IL_0023: call      string X78SCKPh.rno48S3A::smethod_0(int32)\n            A2                      //
-        IL_0028: stelem.ref\n            25                      // IL_0029: dup\n            18                      //
-        IL_002A: ldc.i4.2\n            [5-15]\n            A2                      //
-        IL_0030: stelem.ref\n            25                      // IL_0031: dup\n            19                      //
-        IL_0032: ldc.i4.3\n            [0-5]\n            18                      //
-        IL_0038: ldc.i4.2\n            1F 20                   // IL_0039: ldc.i4.s  32\n            [0-5]\n            28
-        ?? ?? ?? ??          // IL_003B: call      instance int32 ns42.XlgfATUG::K788N29X(int32,
-        int32)\n            28 ?? ?? ?? ??          // IL_0040: call      string X78SCKPh.rno48S3A::smethod_0(int32)\n        }\n        //
-        c2 connection function\n        $c2_conn = {\n            07                      //
-        IL_0071: ldloc.1\n            73 ?? ?? ?? ??          // IL_0048: newobj    instance
-        void Q7S1x9.Class81::.ctor()\n            28 ?? ?? ?? ??          // IL_004D:
-        call      instance int32 Q7S1x9.Class81::pJKpT3()\n            20 E8 03 00
-        00          // IL_0052: ldc.i4    1000\n            5D                      //
-        IL_0057: rem\n            17                      // IL_0058: ldc.i4.1\n            58                      //
-        IL_0059: add\n            8D ?? ?? ?? ??          // IL_005A: newarr    [mscorlib]System.Byte\n            06                      //
-        IL_005F: ldloc.0\n            (28 | 6F) ?? ?? ?? ??   // IL_0060: call int32
-        Socket::SendTo\n            [5-15]\n            1F ??                   //
-        IL_006B: ldc.i4.s  10\n            28 ?? ?? ?? ??          // IL_006D: call      void
-        Thread::Sleep(int32)\n        }\n        // string decryption function\n        $dec_str
-        = {\n            20 EF BE 66 06          // IL_0001: ldc.i4    0x666beef\n            61                      //
-        IL_0006: xor\n            10 00                   // IL_0007: starg.s   int_0\n            02                      //
-        IL_0009: ldarg.0\n            7E ?? ?? ?? ??          // IL_000A: ldsfld    int32
-        sTq.wT6::nio\n            59                      // IL_000F: sub\n            10
-        00                   // IL_0010: starg.s   int_0\n            7E ?? ?? ??
-        ??          // IL_0012: ldsfld    bool sTq.wT6::eib\n            [2-5]\n            02                      //
-        IL_0019: ldarg.0\n            28 ?? ?? ?? ??          // IL_001A: call      string
-        sTq.wT6::pis(int32)\n            2A                      // IL_001F: ret\n            02                      //
-        IL_0020: ldarg.0\n            28 ?? ?? ?? ??          // IL_0021: call      string
-        sTq.wT6::Ii9(int32)\n            2A                      // IL_0026: ret\n        }\n        //
-        config char replacement function\n        $dec_cfg = {\n            1F 28                   //
-        IL_000B: ldc.i4.s  40;  ''(''\n            1F 61                   // IL_000D:
-        ldc.i4.s  97;  ''a''\n            (28|6F) ?? ?? ?? ??     // IL_000F: callvirt  instance
-        String::Replace(char, char)\n            1F 29                   // IL_0014:
-        ldc.i4.s  41;  '')''\n            1F 6D                   // IL_0016: ldc.i4.s  109;
-        ''m''\n            (28|6F) ?? ?? ?? ??     // IL_0018: callvirt  instance
-        String::Replace(char, char)\n            1F 23                   // IL_001D:
-        ldc.i4.s  35;  ''#''\n            1F 41                   // IL_001F: ldc.i4.s  65;  ''A''\n            (28|6F)
-        ?? ?? ?? ??     // IL_0021: callvirt  instance String::Replace(char, char)\n        }\n\n    condition:\n        uint16(0)
-        == 0x5a4d and filesize < 4000KB and\n        2 of them\n}\n\nrule MAL_DCRat_clean
-        {\n    meta:\n        author = \"N1GHTW0LF, Insikt Group, Recorded Future\"\n        date
-        = \"2023-03-27\"\n        description = \"Detects clean DCRat (Dark Crystal
-        RAT) payloads\"\n        version = \"1.0\"\n        hash = \"84ad4547b1b6eacb1fa94a456851380b0cdf04a30d5461cf9c7e5dcededd8a1a\"\n        hash
-        = \"cec4c1f1028ab24b6ae3b339b6c72f360516566d4f9c3cd3cbb9b3bc0c0c7104\"\n        RF_MALWARE
-        = \"Dark Crystal RAT\"\n        RF_MALWARE_ID = \"ZEqKiV\"\n\n    strings:\n        $m1  =
-        \"DCRat.Code\" wide\n        $m2 =  \"DCRat-Log\" wide\n        $s1  = \"(\\\\w\\\\W.+)Telegram.exe\"
-        wide // telegram match regex\n        $s2  = \"\\\\tdesktop.tg\" wide // telegram
-        registry key\n        $s3  = \"/config/loginusers.vdf\" wide // steam logins
-        db\n        $s4  = \"del /a /q /f \\\"\" wide // embedded bat file\n        $s5  =
-        \"{0:0.##} {1}\" wide // format str for dir info\n        $s6  = \"Saving
-        log...\" wide\n        $s7  = \"~Work.log\" wide // logs file\n        $s8  =
-        \"token_uid\" wide // url exfil data\n        $s9  = \"Content-Type: {3}\"
-        wide\n        $s10 = \"Content-Disposition: form-data; name=\\\"{1}\\\"\"
-        wide\n        $s11 = \"Content-Disposition: form-data; name=\\\"{1}\\\"; filename=\\\"{2}\\\";\"
-        wide\n\n    condition:\n        uint16(0) == 0x5a4d and filesize < 4000KB
-        and\n        (1 of ($m*) and 7 of ($s*)) or\n        (all of ($s*))\n}","file_name":"MAL_DCRat.yar"}]}],"next_offset":"eyJvZmZzZXQiOls5NTQ4XX0="}'
+      string: !!binary |
+        H4sIAAAAAAAAA7yU227bMAyGX4UQdtEBzslJ10TBBmxt2qVYGix1D+syGIrFxFplKZPonJq++2A3
+        aLvDxS62XZLmT/76JPqOJTY3xHgjYGRJ6PgpduhzTYx/vmNKMs6kTXi+qRxdf2MBo/UcGWfeWEdF
+        qEgX8fnZcBSByzV6DkdImBAMUOYbAeeEQqNjAZPoE6fmpKxhnEUpgiASSYoSnukhEQYmCLlHCWRB
+        PnQzSEvrbiGxWZYblYiijQfhvU2UIJSwVJT+NBQyoZfCYZUFLHFYlDHOwnrYqtSblXo7CkPerPP9
+        djXsvLphAcvn8vdFDd5sVpvhQVFU2iz5oCFFaheUsJxZUd8+gRo8GGABMyIrEz9SuQ92wsPNtRkM
+        n4QRJqmx2s7WT9rzgjqMyvGPwvOBXoz0LxMPBeHMuufqYmRp5v5LwBJrCIsbZ4UPAkrm8OL9cNCL
+        z3oRCLOGyht40buOeqOztx8ek3uZn/HxT6eA3UwY5jSxuZFwJEhAbzVVmlx5U2PWham2S46exEQr
+        n6IMyMYe3QJdFzw5FFns1Qb5Qy54HTS6sLPJxwyXdtY/fDvrF60kzinlnS7ME4d8zGp7o9tGenV8
+        6rd9fbEqgu1ldHwSXR1/elkrFF5Jvh+2XtUbrYMuOJyiQ5Mgz50OUqK557UaOSWqM6yFrXqzflDZ
+        zGWnLeT0oF2bYCoWyjqhwy5kSEIKEhyKxwKPL2X/+SeRU2odDE4uoi68HJux+Rec3zm79OhK3hPh
+        8f8y7x+efp2E+/Xtp7CTy5PLfNvPzhYTM9K/MG//EfOwMm0twm9ezDr0F5izgE2Vxni3AJnQcVYC
+        jf0D0Lj8j1VpRez+S7EVBlcU2+nUY7EZuD5d3GQ3m5vrj2qo/WpwdNscXjY67P47AAAA//8DACQZ
+        5zxABQAA
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8b998973938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '6592'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:54 GMT
+      - Mon, 18 Mar 2024 14:06:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:ssqSLS"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:uz-HUC"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -584,83 +536,47 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: '{"count":1,"total_count":1,"result":[{"id":"doc:ssqSLS","type":"yara","title":"Insikt
-        Validated TTP: Hunting Ransomwhere, an Open-Source POC Ransomware, with YARA","description":"On
-        September 4, 2023, malware researcher Gameel Ali (@MalGamy12 on Twitter) shared
-        a sample of a Linux ransomware called Ransomwhere. Ransomwhere is an open
-        source proof-of-concept (POC) ransomware developed by Niels Hofmans (hazcod
-        on GitHub) to test ransomware detection and prevention strategies of organizations.\n\nInsikt
-        Group obtained the Ransomwhere sample shared by Ali on Hatching Triage (SHA256:
-        81cc484036eeb43dae1a7d10f3222854aba9e549bd4b0c8b61b4700da03d65e6).\nSandbox
-        analysis detected the sample as malicious and that it matched the Sandbox
-        detection for Mirai Botnet. The sample is packed using the open-source packer
-        UPX. Insikt Group also obtained the unpacked sample of Ransomwhere from Hatching
-        Triage (SHA256: 57840dc9447b77991b214be8fbbc758d7fdd96d3e3a808e6df24f908338ca90a),
-        which Sandbox analysis detected as suspicious, due to it exhibiting persistence
-        capability.\n\nOnce executed, the unpacked sample enumerates running processes,
-        enumerates the contents of the \"/proc\" and \"/sys\" file systems to check
-        system and hardware information, and queries network interface configurations.
-        It encrypts user files, including the contents of the \"/etc\" and \"/usr\"
-        file systems, and appends the \".crypted\" extension.\n\nInsikt Group also
-        performed static code analysis on the unpacked sample and found the open-source
-        link of Ransomwhere embedded in the sample binary. We were also able to download
-        and compile the Ransomwhere source code from its GitHub repository. Upon execution,
-        our compiled payload encrypted files and appended the \".crypted\" extension
-        to those files. Based on static code analysis of our payload, Ransomwhere
-        encrypts the following file types: \".txt\", \".pem\", \".crt\", \".key\",
-        \".pfx\", \".p12\", \".pdf\", \".ppt\", \".xml\", \".xls\", \".ics\", \".csv\",
-        \".pyc\", \".css\", \".jar\", \".ps1\", \".bat\", \".gif\", \".png\", \".jpg\",
-        \".mp4\", \".mov\", and \".mkv\". Our payload also contained functions related
-        to deleting files after encryption and wiping local snapshots, as well as
-        a hardcoded key used to encrypt and decrypt files on the victim machine.\n\nInsikt
-        Group created a YARA rule based on the payload we compiled from the open-source
-        project, as well as the sample shared by Ali, which can be found attached
-        to this note. IOCs for the analyzed sample shared by Ali are also included
-        in this note.","created":"2023-09-15T21:22:35.165Z","updated":"2023-09-15T21:22:35.165Z","rules":[{"entities":[{"id":"skJBit","type":"Malware","name":"Ransomwhere"},{"id":"mitre:T1016","type":"MitreAttackIdentifier","name":"T1016","display_name":"T1016
-        (System Network Configuration Discovery)"},{"id":"B_G85","type":"Product","name":"Linux"},{"id":"mitre:T1027.002","type":"MitreAttackIdentifier","name":"T1027.002","display_name":"T1027.002
-        (Obfuscated Files or Information: Software Packing)"},{"id":"mitre:T1057","type":"MitreAttackIdentifier","name":"T1057","display_name":"T1057
-        (Process Discovery)"},{"id":"mitre:T1486","type":"MitreAttackIdentifier","name":"T1486","display_name":"T1486
-        (Data Encrypted for Impact)"},{"id":"B_HOS","type":"Product","name":"Microsoft
-        Windows"},{"id":"hash:81cc484036eeb43dae1a7d10f3222854aba9e549bd4b0c8b61b4700da03d65e6","type":"Hash","name":"81cc484036eeb43dae1a7d10f3222854aba9e549bd4b0c8b61b4700da03d65e6"},{"id":"mitre:T1082","type":"MitreAttackIdentifier","name":"T1082","display_name":"T1082
-        (System Information Discovery)"},{"id":"mitre:T1490","type":"MitreAttackIdentifier","name":"T1490","display_name":"T1490
-        (Inhibit System Recovery)"},{"id":"vE3-n","type":"AttackVector","name":"Obfuscation"},{"id":"hash:57840dc9447b77991b214be8fbbc758d7fdd96d3e3a808e6df24f908338ca90a","type":"Hash","name":"57840dc9447b77991b214be8fbbc758d7fdd96d3e3a808e6df24f908338ca90a"},{"id":"B_qGH","type":"Product","name":"MacOS"},{"id":"k9VAgb","type":"Username","name":"@malgamy12"},{"id":"source:BV5","type":"Source","name":"Twitter"},{"id":"Rfd6H6","type":"Malware","name":"Mirai"},{"id":"Vc9LA8","type":"Person","name":"Niels
-        Hofmans"},{"id":"source:kDz2p-","type":"Source","name":"tria.ge"},{"id":"J0Nl-p","type":"MalwareCategory","name":"Ransomware"}],"content":"import
-        \"pe\"\n\nrule MAL_Ransomwhere {\n    meta:\n        author = \"DGRANGE, Insikt
-        Group, Recorded Future\"\n        date = \"2023-09-15\"\n        description
-        = \"Detects payloads based on open-source Ransomwhere\"\n        version =
-        \"1.0\"\n        reference = \"https://app.recordedfuture.com/live/sc/5dnfNcyjDbDE\"\n        hash
-        = \"57840dc9447b77991b214be8fbbc758d7fdd96d3e3a808e6df24f908338ca90a\"\n        RF_MALWARE
-        = \"Ransomwhere\"\n        RF_MALWARE_ID = \"skJBit\"\n\n   strings:\n      //
-        Unique Strings\n      $r1 = \"ransomwhere\"\n      $r2 = \"AGE-SECRET-KEY-1J9YS9QK3JM5FKS423VF6LVPG7D8NNKQWT9Y7YLFYH2Z2F3LR5MRQJYLQ6W\"
-        // hardcoded private key used to encrypt/decrypt files\n\n      // Inhibit
-        System Recovery\n      $d1 = \"DeleteFile\" // deletes orignal file after
-        encryption\n      $d2 = \"WipeSnapshots\" // wipes local snapshots\n      $d3
-        = \"deletingvssadmin\"\n      \n      // Encryption\n      $c1 = \".crypted\"
-        // extension appended to encrypted files\n      $c2 = \"filippo.io/age\" //
-        imported encryption library\n      $c3 = \"WalkFiles\" // iterating over files
-        to be encrypted\n\n   condition:\n      filesize < 10000KB and\n      ( all
-        of ($r*) or\n      ( 1 of ($r*) and 1 of ($d*) and 1 of ($c*) ) or\n      (
-        pe.imphash() == \"4f2f006e2ecf7172ad368f8289dc96c1\" and\n      ( ($c1) or
-        ($c2) ) ) )\n}\n","file_name":"MAL_Ransomwhere.yar"}]}],"next_offset":"eyJvZmZzZXQiOlsxMDI2MF19"}'
+      string: !!binary |
+        H4sIAAAAAAAAA3xT0W4aMRD8lZXVh1Y64DggSoxSKaKoaVqCCkRFlOhkfAtn1WdTew8CCf9e+YJC
+        mkp9nPWOZz2zfmTSloYYb0aMLAmdnrBDX2pi/OcjUxnjLLOSl/va9V2PRYx2a2SceWMdBahIBzy+
+        HY4m4EqNHK5KZ52AMaHQ6FjEMvTSqTUpaxhnkxxBEAmZYwYnHkhhYIFQesyALGRIKAkM0ta6XyBt
+        UZRGSRFu8SC8t1IJwgy2ivI3mlAIvRUO6yxi0mFoY5wlcdKuxa1afD5JEt5q8bhTv0g6Mxaxcp39
+        t6kdmsKUvrIFDSlSR1B5ZM5/n92Ykz+D5wFYxIwoQuGNKYfoSOztp2YwPBEnKHNjtV3tTtxxMBtG
+        lfwLcTzQm5H+R7EnCFfWvWYHyWqYw33EpDWEIWgW5iAguYZ3/emkP7q9+pbe9icgzA5qH+Hd9XDQ
+        fym8L/yKz9+8Ao6a8MUsbGky6CXQe53TnHVhqe2Woyex0MrnmEVkU6kVGupC5tUeeacLnhyKIq3g
+        82F0GTX/rnt0G3TRZXTWheMr+Jz9GI6+PsVXT0EqwzXl1XUq452kfRY32xddcLhEh0YiL52OcqK1
+        540GOSXqK2wkrbiVXNRWzdU2E0vRPm8sMBcbZZ3QSRcKJJEJEhzChsDLenReH4mScutg8Plu0oUP
+        87AHS6UxPSZQCJ2KyrnUPzuXVv+nTg/EDvchFoMPlNrl0mOIBnc3m1kx28+m39VQ+87wU387ncaX
+        7PAHAAD//wMAVKEndrgDAAA=
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8bada2a3938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '5767'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:55 GMT
+      - Mon, 18 Mar 2024 14:06:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:swya4F"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:u2OoaM"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -675,44 +591,47 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: '{"count":1,"total_count":1,"result":[{"id":"doc:swya4F","type":"yara","title":"YARA
-        Rule: RA Group Ransomware","description":"RA Group ransomware was first observed
-        in April 2023, and is likely based on leaked Babuk ransomware source code.
-        Insikt Group analyzed samples of RA Group ransomware and created the attached
-        YARA rule that can be used to detect unpacked samples.","created":"2023-09-22T15:47:44.039Z","updated":"2023-09-22T15:47:44.038Z","rules":[{"entities":[{"id":"roo3as","type":"Malware","name":"RA
-        Group Ransomware"},{"id":"rPQPO4","type":"Organization","name":"RA Group"},{"id":"J0Nl-p","type":"MalwareCategory","name":"Ransomware"},{"id":"gqQowp","type":"Malware","name":"Babuk
-        Ransomware","display_name":"Babuk Ransomware (Babuk Locker, Babyk Locker,
-        Babyk Ransomware)"}],"content":"rule MAL_RA_Group_Ransomware\n{\n    meta:\n        author
-        = \"CNANCE, Insikt Group, Recorded Future\"\n        date = \"2023-09-20\"\n        description
-        = \"Detects unpacked RA Group ransomware samples\"\n        version = \"1.0\"\n        hash
-        = \"3ab167a82c817cbcc4707a18fcb86610090b8a76fe184ee1e8073db152ecd45e\"\n        RF_MALWARE
-        = \"RA Group Ransomware\"\n        RF_THREATACTOR = \"RA Group\"\n        RF_MALWARE_ID
-        = \"roo3as\"\n        RF_THREATACTOR_ID = \"rPQPO4\"\n\n    strings:\n        $a1
-        = \"shares\" fullword wide\n        $a2 = \"paths\" fullword wide\n        $n1
-        = \"How To Restore Your Files.txt\" fullword wide\n        $n2 = \"RAGroup-Warning-Readme.txt\"
-        fullword wide\n        $s1 = \"RA_Group\"\n        $s2 = \"RA Group\"\n        $s3
-        = \".RAGUP\" fullword wide\n        $s4 = \".GAGUP\" fullword wide\n    condition:\n        uint16(0)
-        == 0x5a4d and\n        1 of ($a*) and\n        1 of ($n*) and\n        1 of
-        ($s*)\n}","file_name":"MAL_RA_Group_Ransomware.yar"}]}],"next_offset":"eyJvZmZzZXQiOlsxMTY5NF19"}'
+      string: !!binary |
+        H4sIAAAAAAAAA3xT72/aMBD9V05WpW1SACcECo40iVI6tA3S0UyrWKvIJEeJFmJmXyht3f99Mj/U
+        fton+909P987n19YpuqKmPA9Ropkmb5hjaYuiYnfL6zImWC5ykQdxEpOmMfoaYNMMFMpTQ4WVDp8
+        4zDM6hIFDOP420V8yzyWo8l0saFCVUywZIUgiWS2whwOB3RdImSyggVCbTAHUpAjYUYnlQ8GVE0L
+        VVc5DAPQ+LdGQ6bJPJZplISuwoAHYYO3G76f+H3R6Qk/bPaCcM48Vm/y/5LajuTKMHvDWFFBxRHs
+        3SfbTiMevzmfyPJRamQeq+TaBU52X+89lqmK0LWRyRI1AWUbOBvHk1E6HSUgqydofIaz0W0ymk0H
+        3/fBs3GSXKfX8Sy5gY9r8yDuTopwvAridw2YHRpwxyJYlupRoCG5KAuzwtwjlRrUW9QRHAsRdyyx
+        AbeOrpZLgySCCHLc0Eq037N+GtQ2uLSDB6zItgcQcDtRz0VZShtc2Y4NRpbboGd/FVWuHo0Tne6l
+        fX7ItS9crhu6ze6w6K1tD6zP+8fTffsFsz/KCQbc59znvlO4KjQu1c6Ffb974PJL4AM7VuZUzN6w
+        NJRuJBHqSoShF/AI8sKQrDIUPAJT5KIThF3ud3gEGpeo0aVqXXoroo0RrVaGmpoPatusZUtqKrIS
+        W93g/LwX9iNYI8lckhTghgbeJuZ9Sta0UhqG08F0OIo+MY8tixLT4zSs919J/VmoXbr/JE3aEXu9
+        d9NR4Y7SwzMwwfDp63a+nj/Pb38UcWl2k8vJc3zl99nrPwAAAP//AwB0aQnCnQMAAA==
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8bbbb883938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '1842'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:55 GMT
+      - Mon, 18 Mar 2024 14:06:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:sw6EsK"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:u30CIE"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -727,161 +646,48 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: "{\"count\":1,\"total_count\":1,\"result\":[{\"id\":\"doc:sw6EsK\",\"type\":\"yara\",\"title\":\"Insikt
-        Validated TTP: Hunting New Infostealer \\\"Nagogy Grabber\\\"\",\"description\":\"On
-        September 4, 2023, threat researcher Gameel Ali (@MalGamy12 on X, formerly
-        known as Twitter) shared information on a new information stealer they discovered
-        named \\\"Nagogy Grabber\\\". Per Ali, Nagogy Grabber can collect user credentials,
-        credit card information, browser data, application cookies, desktop screenshots,
-        and system information. Based on Recorded Future data, Nagogy Grabber was
-        referenced on Doxbin in May 2023. Doxbin is a pastesite hosted on the Tor
-        network used to post stolen personal information. It was shut down by the
-        FBI in 2014 but reportedly resurrected on other hidden Tor services. Insikt
-        Group found Nagogy Grabber advertised on the website hxxps://www[.]dreamyoak[.]xyz/
-        along with other services offered by its developer, Fadi, also known as \\\"Dreamyoak\\\".\\n\\nAli
-        also shared 38 hashes of Nagogy Grabber samples on Twitter, with the earliest
-        sample detected on April 20, 2023. Insikt Group obtained the following Nagogy
-        Grabber samples from PolySwarm and Hatching Triage:\\n\\n1.) 1e828b39b97fa746b4efcb4ceb35c03cabc6134e7d4e3a3cf96e572ddbd465b1\\n2.)
-        59de17d13a1ed32780388bdb8f173ffb0ad7166c6b776658f4cf139b87cb8d0e\\n3.) f3bc959099c6beb8e02df20203f7d9cdb0f7a4199263ebe104b7c954a7159596\\n4.)
-        b41e7a3da1d450dc770072a5c2761af441509e17b7fb704d86fb0049fdade071\\n5.) dd80b836ed6b3665734e11fb1fda4a3bbbb0a0efea963467b2eae91fc526e50b\\n6.)
-        8d6061fcd9f59b3059f1a582345fc70aaaf3f619cb785e65ba247a337389d369\\n7.) 64368a5ad70678f19b53f1eae4b2602dd5c063ca1277dcd08e16dd31c9705e5b\\n8.)
-        53fe973fd9a5be2154cf2d21344f3698a192ab238b11995aba8da6ccf9e26f32\\n\\nBased
-        on Sandbox and static code analysis, the samples can perform the following
-        malicious actions on a victim machine:\\n\u2022 Capture a desktop screenshot
-        and save it as \\\"Screenshot.bmp\\\"\\n\u2022 Use Windows Management Instrumentation
-        command-line (WMIC) utility to retrieve the current refresh rate of the video
-        controller in hertz, machine's universally unique identifier (UUID), CPU and
-        video controller name, and operating system (OS) information. It then saves
-        it as \\\"System-Info.txt\\\"\\n\u2022 Use a PowerShell command to retrieve
-        the Windows product key from the Windows registry\\n\u2022 Use a Powershell
-        command to obtain the . ROBLOSECURITY key stored in the Windows registry.
-        This key protects the user's login credentials and security token\\n\u2022
-        Collect sensitive browser data and save it to text files (Passwords.txt, Cookies.txt,
-        History.txt, Download History.txt, Bookmarks.txt, and Extensions.txt)\\n\u2022
-        Retrieve wireless network credentials and save them as \\\"Wifi-Passwords.txt\\\"
-        (excluding sample 7)\\n\u2022 Contact a legitimate IP lookup service ipinfo.io
-        to retrieve the victim machine's IP address\\n\u2022 Collect Minecraft data
-        (accounts and profile), Roblox cookies, and Discord tokens\\n\u2022 Use Windows
-        Management Instrumentation command-line (WMIC) utility to obtain the name
-        of the antivirus (AV) product currently installed on the system (samples 7
-        and 8). Sample 8 saves the AV information in a file named \\\"Installed-Antiviruses.txt\\\".\\n\u2022
-        Use a PowerShell command to query the Windows registry and list all installed
-        applications, along with their display name, display version, publisher, install
-        date, and install location (samples 7 and 8). Sample 8 stores the collected
-        data in a file named \\\"Installed-Apps.txt\\\".\\n\u2022 Disable User Account
-        Control (UAC) prompts by creating an empty value named \\\"DelegateExecute\\\"
-        inside the registry key \\\"HKCU\\\\Software\\\\Classes\\\\ms-settings\\\\Shell\\\\Open\\\\command\\\"
-        and setting the \\\"ConsentPromptBehaviorAdmin\\\" value to \\\"0\\\" in the
-        \\\"HKLM\\\\software\\\\microsoft\\\\windows\\\\currentversion\\\\policies\\\\system\\\"\\n\u2022
-        Retrieve clipboard contents\\n\\nThe samples contain a hardcoded list of environment
-        parameters (username, hostname, and System UUID) and process names related
-        to debuggers, monitoring tools, virtual machines, and sandbox environments.
-        The samples also check whether a machine has 1 of these directories: D:\\\\Tools,
-        D:\\\\OS2, and D:\\\\NT3X. If the machine matches any of these values, the
-        stealer will terminate its processes.\\n\\nThe Nagogy Grabber samples analyzed
-        by Insikt Group exfiltrated stolen data to/via the following:\\n\u2022 Webhooks
-        (Discord and Webhook[.]site)\\n\u2022 File hosting service (catbox[.]moe)\\n\u2022
-        URLs hxxps://cdn-1.thughunter.repl.co/api/upload/nagogy1337 and hxxps://cdn.dreamyoak.repl.co/api/upload/nagogy1337\\n\\nInsikt
-        Group created a YARA rule to detect Nagogy Grabber, which can be found attached
-        to this note. This note also includes IOCs associated with the analyzed samples
-        of Nagogy Grabber.\",\"created\":\"2023-09-22T19:54:26.427Z\",\"updated\":\"2023-09-22T19:54:26.427Z\",\"rules\":[{\"entities\":[{\"id\":\"hash:f3bc959099c6beb8e02df20203f7d9cdb0f7a4199263ebe104b7c954a7159596\",\"type\":\"Hash\",\"name\":\"f3bc959099c6beb8e02df20203f7d9cdb0f7a4199263ebe104b7c954a7159596\"},{\"id\":\"mitre:T1528\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1528\",\"display_name\":\"T1528
-        (Steal Application Access Token)\"},{\"id\":\"sh9sp-\",\"type\":\"Malware\",\"name\":\"Nagogy
-        Grabber\"},{\"id\":\"mitre:T1497.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1497.001\",\"display_name\":\"T1497.001
-        (Virtualization/Sandbox Evasion: System Checks)\"},{\"id\":\"url:https://webhook.site/3648ed0b-47b0-4a6f-ae42-3d5de1e54ecd\",\"type\":\"URL\",\"name\":\"https://webhook.site/3648ed0b-47b0-4a6f-ae42-3d5de1e54ecd\"},{\"id\":\"mitre:T1622\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1622\",\"display_name\":\"T1622
-        (Debugger Evasion)\"},{\"id\":\"mitre:T1567\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1567\",\"display_name\":\"T1567
-        (Exfiltration Over Web Service)\"},{\"id\":\"mitre:T1555.003\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1555.003\",\"display_name\":\"T1555.003
-        (Credentials from Password Stores: Credentials from Web Browsers)\"},{\"id\":\"mitre:T1548.002\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1548.002\",\"display_name\":\"T1548.002
-        (Abuse Elevation Control Mechanism: Bypass User Account Control)\"},{\"id\":\"hash:8d6061fcd9f59b3059f1a582345fc70aaaf3f619cb785e65ba247a337389d369\",\"type\":\"Hash\",\"name\":\"8d6061fcd9f59b3059f1a582345fc70aaaf3f619cb785e65ba247a337389d369\"},{\"id\":\"mitre:T1047\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1047\",\"display_name\":\"T1047
-        (Windows Management Instrumentation)\"},{\"id\":\"url:https://cdn.dreamyoak.repl.co/api/upload/nagogy1337\",\"type\":\"URL\",\"name\":\"https://cdn.dreamyoak.repl.co/api/upload/nagogy1337\"},{\"id\":\"hash:dd80b836ed6b3665734e11fb1fda4a3bbbb0a0efea963467b2eae91fc526e50b\",\"type\":\"Hash\",\"name\":\"dd80b836ed6b3665734e11fb1fda4a3bbbb0a0efea963467b2eae91fc526e50b\"},{\"id\":\"SmCnYD\",\"type\":\"Product\",\"name\":\"Discord
-        (Software)\"},{\"id\":\"hash:59de17d13a1ed32780388bdb8f173ffb0ad7166c6b776658f4cf139b87cb8d0e\",\"type\":\"Hash\",\"name\":\"59de17d13a1ed32780388bdb8f173ffb0ad7166c6b776658f4cf139b87cb8d0e\"},{\"id\":\"mitre:T1518.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1518.001\",\"display_name\":\"T1518.001
-        (Software Discovery: Security Software Discovery)\"},{\"id\":\"url:https://discord.com/api/webhooks/1057718479463141486/QP5FXqUqc8hXePp6oni7t1S_Fgxo31EELGybz0N7Vb3kTkGDSbWQIs4Q9cXqAWX9pCs6\",\"type\":\"URL\",\"name\":\"https://discord.com/api/webhooks/1057718479463141486/QP5FXqUqc8hXePp6oni7t1S_Fgxo31EELGybz0N7Vb3kTkGDSbWQIs4Q9cXqAWX9pCs6\"},{\"id\":\"mitre:T1552.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1552.001\",\"display_name\":\"T1552.001
-        (Unsecured Credentials: Credentials In Files)\"},{\"id\":\"mitre:T1552.002\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1552.002\",\"display_name\":\"T1552.002
-        (Unsecured Credentials: Credentials in Registry)\"},{\"id\":\"hash:1e828b39b97fa746b4efcb4ceb35c03cabc6134e7d4e3a3cf96e572ddbd465b1\",\"type\":\"Hash\",\"name\":\"1e828b39b97fa746b4efcb4ceb35c03cabc6134e7d4e3a3cf96e572ddbd465b1\"},{\"id\":\"hash:53fe973fd9a5be2154cf2d21344f3698a192ab238b11995aba8da6ccf9e26f32\",\"type\":\"Hash\",\"name\":\"53fe973fd9a5be2154cf2d21344f3698a192ab238b11995aba8da6ccf9e26f32\"},{\"id\":\"hash:b41e7a3da1d450dc770072a5c2761af441509e17b7fb704d86fb0049fdade071\",\"type\":\"Hash\",\"name\":\"b41e7a3da1d450dc770072a5c2761af441509e17b7fb704d86fb0049fdade071\"},{\"id\":\"JQcjxu\",\"type\":\"Product\",\"name\":\"Minecraft\"},{\"id\":\"mitre:T1217\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1217\",\"display_name\":\"T1217
-        (Browser Information Discovery)\"},{\"id\":\"mitre:T1539\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1539\",\"display_name\":\"T1539
-        (Steal Web Session Cookie)\"},{\"id\":\"mitre:T1555\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1555\",\"display_name\":\"T1555
-        (Credentials from Password Stores)\"},{\"id\":\"mitre:T1115\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1115\",\"display_name\":\"T1115
-        (Clipboard Data)\"},{\"id\":\"mitre:T1016\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1016\",\"display_name\":\"T1016
-        (System Network Configuration Discovery)\"},{\"id\":\"url:https://cdn-1.thughunter.repl.co/api/upload/nagogy1337\",\"type\":\"URL\",\"name\":\"https://cdn-1.thughunter.repl.co/api/upload/nagogy1337\"},{\"id\":\"mitre:T1012\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1012\",\"display_name\":\"T1012
-        (Query Registry)\"},{\"id\":\"mitre:T1112\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1112\",\"display_name\":\"T1112
-        (Modify Registry)\"},{\"id\":\"JSgH-p\",\"type\":\"Product\",\"name\":\"Credit
-        Cards\"},{\"id\":\"hash:64368a5ad70678f19b53f1eae4b2602dd5c063ca1277dcd08e16dd31c9705e5b\",\"type\":\"Hash\",\"name\":\"64368a5ad70678f19b53f1eae4b2602dd5c063ca1277dcd08e16dd31c9705e5b\"},{\"id\":\"mitre:T1113\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1113\",\"display_name\":\"T1113
-        (Screen Capture)\"},{\"id\":\"B_HOS\",\"type\":\"Product\",\"name\":\"Microsoft
-        Windows\"},{\"id\":\"mitre:T1082\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1082\",\"display_name\":\"T1082
-        (System Information Discovery)\"},{\"id\":\"mitre:T1083\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1083\",\"display_name\":\"T1083
-        (File and Directory Discovery)\"},{\"id\":\"mitre:T1059.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1059.001\",\"display_name\":\"T1059.001
-        (Command and Scripting Interpreter: PowerShell)\"},{\"id\":\"SMlvRl\",\"type\":\"MalwareCategory\",\"name\":\"Stealware\"},{\"id\":\"url:https://www.dreamyoak.xyz\",\"type\":\"URL\",\"name\":\"https://www.dreamyoak.xyz\"},{\"id\":\"mitre:T1567.002\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1567.002\",\"display_name\":\"T1567.002
-        (Exfiltration Over Web Service: Exfiltration to Cloud Storage)\"},{\"id\":\"mitre:T1518\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1518\",\"display_name\":\"T1518
-        (Software Discovery)\"},{\"id\":\"eMbIaU\",\"type\":\"Product\",\"name\":\"Roblox\"},{\"id\":\"KN6kq5\",\"type\":\"Product\",\"name\":\"Windows
-        Management Instrumentation Command Line\"},{\"id\":\"url:https://catbox.moe/user/api.php\",\"type\":\"URL\",\"name\":\"https://catbox.moe/user/api.php\"},{\"id\":\"k9VAgb\",\"type\":\"Username\",\"name\":\"@malgamy12\"},{\"id\":\"JQ1VGf\",\"type\":\"Product\",\"name\":\"Windows
-        Registry\"},{\"id\":\"JRZMNv\",\"type\":\"Technology\",\"name\":\"User Access
-        Control\"},{\"id\":\"source:bRAL5E\",\"type\":\"Source\",\"name\":\"Doxbin\"},{\"id\":\"CwUFLr\",\"type\":\"Technology\",\"name\":\"Universally
-        Unique Identifier\"},{\"id\":\"S8U8o7\",\"type\":\"Technology\",\"name\":\"Pastesite\"}],\"content\":\"import
-        \\\"pe\\\"\\n\\nrule MAL_NagogyGrabber {\\n    meta:\\n        author = \\\"TTPMNL,
-        Insikt Group, Recorded Future\\\"\\n        date = \\\"2023-09-19\\\"\\n        description
-        = \\\"Detects Nagogy Grabber samples\\\"\\n        version = \\\"1.0\\\"\\n
-        \       reference = \\\"https://twitter.com/MalGamy12/status/1698367753919357255\\\"\\n
-        \       hash = \\\"F3bc959099c6beb8e02df20203f7d9cdb0f7a4199263ebe104b7c954a7159596\\\"\\n
-        \       hash = \\\"8d6061fcd9f59b3059f1a582345fc70aaaf3f619cb785e65ba247a337389d369\\\"\\n
-        \       hash = \\\"B41e7a3da1d450dc770072a5c2761af441509e17b7fb704d86fb0049fdade071\\\"\\n
-        \       hash = \\\"1e828b39b97fa746b4efcb4ceb35c03cabc6134e7d4e3a3cf96e572ddbd465b1\\\"\\n
-        \       hash = \\\"Dd80b836ed6b3665734e11fb1fda4a3bbbb0a0efea963467b2eae91fc526e50b\\\"\\n
-        \       hash = \\\"59de17d13a1ed32780388bdb8f173ffb0ad7166c6b776658f4cf139b87cb8d0e\\\"\\n
-        \       hash = \\\"64368a5ad70678f19b53f1eae4b2602dd5c063ca1277dcd08e16dd31c9705e5b\\\"\\n
-        \       hash = \\\"53fe973fd9a5be2154cf2d21344f3698a192ab238b11995aba8da6ccf9e26f32\\\"\\n
-        \       RF_MALWARE = \\\"Nagogy Grabber\\\"\\n        RF_MALWARE_ID = \\\"sh9sp-\\\"\\n\\n
-        \  strings:\\n    // unique strings\\n        $s1 = \\\"Nagogy grabber\\\"
-        nocase //Nagogy grabber - DreamyOak\\n        $s2 = \\\"nagogy.html\\\"\\n
-        \       $s3 = \\\"Dreamyoak\\\" nocase //author alias\\n        //exfiltrates
-        data to URLs cdn.dreamyoak.repl.co/api/upload/nagogy1337 and cdn-1.thughunter.repl.co/api/upload/nagogy1337\\n
-        \       //samples 64368a5ad70678f19b53f1eae4b2602dd5c063ca1277dcd08e16dd31c9705e5b
-        and 53fe973fd9a5be2154cf2d21344f3698a192ab238b11995aba8da6ccf9e26f32\\n        $s4
-        = \\\"nagogy1337\\\" \\n\\n    // saved files\\n        $f1 = \\\"System-Info.txt\\\"\\n
-        \       $f2 = \\\"Screenshot.bmp\\\"\\n        $f3 = \\\"Wifi-Passwords.txt\\\"
-        //excluding 64368a5ad70678f19b53f1eae4b2602dd5c063ca1277dcd08e16dd31c9705e5b\\n
-        \       $f4 = \\\"Tokens.txt\\\" //excluding 64368a5ad70678f19b53f1eae4b2602dd5c063ca1277dcd08e16dd31c9705e5b\\n
-        \       $f5 = \\\"Passwords.txt\\\"\\n        $f6 = \\\"Cookies.txt\\\"\\n
-        \       $f7 = \\\"History.txt\\\"\\n        $f8 = \\\"Other Info.txt\\\"\\n
-        \       $f9 = \\\"Download History.txt\\\"\\n        $f10 = \\\"Bookmarks.txt\\\"\\n
-        \       $f11 = \\\"Extensions.txt\\\"\\n        $f12 = \\\"launcher_log.txt\\\"\\n
-        \       $f13 = \\\"Installed-Antiviruses.txt\\\" //in 53fe973fd9a5be2154cf2d21344f3698a192ab238b11995aba8da6ccf9e26f32\\n
-        \       $f14 = \\\"Installed-Apps.txt\\\" //in 53fe973fd9a5be2154cf2d21344f3698a192ab238b11995aba8da6ccf9e26f32\\n\\n
-        \   // registry modifications for UAC bypass and persistence\\n\\n        $r1
-        = \\\"HKCU\\\\\\\\SOFTWARE\\\\\\\\Classes\\\\\\\\ms-settings\\\\\\\\shell\\\\\\\\open\\\\\\\\command\\\"
-        nocase\\n        $r2 = \\\"HKLM\\\\\\\\software\\\\\\\\microsoft\\\\\\\\windows\\\\\\\\currentversion\\\\\\\\policies\\\\\\\\system\\\"
-        ascii \\n        $r3 = \\\"ConsentPromptBehaviorAdmin\\\" wide ascii\\n        $r4
-        = \\\"DelegateExecute\\\" wide ascii\\n        $r5 = \\\"Software\\\\\\\\Microsoft\\\\\\\\Windows\\\\\\\\CurrentVersion\\\\\\\\Run\\\"
-        wide\\n\\n    //Nagogy Grabber Logo (only Nagogy)\\n        $l1 = {20 5F 20
-        5F 5F 20 20 20 5F 5F 20 5F 20 20 5F 5F 20 5F 20 20 5F 5F 5F 20 20 20 5F 5F
-        20 5F 20 5F 20 20 20 5F}\\n        $l2 = {20 7C 20 27 5F 20 5C 20 2F 20 5F
-        60 20 7C 2F 20 5F 60 20 7C 2F 20 5F 20 5C 20 2F 20 5F 60 20 7C 20 7C 20 7C
-        20 7C}\\n        $l3 = {20 7C 20 7C 20 7C 20 7C 20 28 5F 7C 20 7C 20 28 5F
-        7C 20 7C 20 28 5F 29 20 7C 20 28 5F 7C 20 7C 20 7C 5F 7C 20 7C}\\n        $l4
-        = {20 7C 5F 7C 20 7C 5F 7C 5C 5F 5F 2C 5F 7C 5C 5F 5F 2C 20 7C 5C 5F 5F 5F
-        2F 20 5C 5F 5F 2C 20 7C 5C 5F 5F 2C 20}\\n        $l5 = {7C 5F 5F 5F 2F 20
-        20 20 20 20 20 20 7C 5F 5F 5F 2F 20 7C 5F 5F 5F 2F} \\n\\n   condition:\\n
-        \       uint16(0) == 0x5a4d and \\n        filesize < 17MB and\\n        ((pe.imphash()
-        == \\\"ea19fad7034fac26044aac90e32071e5\\\" or \\n        pe.imphash() ==
-        \\\"ec73b857ffd91773cc1857c1c8aa125b\\\") or \\n        (3 of ($s*) and \\n
-        \       10 of ($f*) and\\n        all of ($r*) and\\n        all of ($l*)))\\n\\n}\\n\",\"file_name\":\"MAL_NagogyGrabber.yar\"}]}],\"next_offset\":\"eyJvZmZzZXQiOls4Njk2XX0=\"}"
+      string: !!binary |
+        H4sIAAAAAAAAA9SUb0/bMBDGv4p1rzYpLfnTQnGlSaijjGkFBmVCrKhynWtj5tiRfaEUynef3CKK
+        JsYmXm0vIt05d89j/y7OPUhbGwKeRECWhB5vcoe+1gT8+z2oHDjkVvI6i3uH+xABLSoEDt5YRyFV
+        pEN+dnR8OmSntUbP2UcklMQGSOKMUGh0bCD0XDiECHL00qmKlDXAYVggE0RCFpiztYgLIkwKwybI
+        ao85I8vytaRBmlv3g0lblrVRUgQZz4T3VipBmLO5ouIl5yZEIB2GGuCQxmmrEWeNJBsm27zd5mmr
+        2YqTS4igrvJfi9qhKNvlrVYzjndC0WqPK0JoSJF6TFa4ypPzT9n2BtXm6EaUq4XN7uAheuzq3V2Y
+        wfGma4iyMFbb2WLTeBagryFvGvOBig86r9idYv5FGWRPllcRSGsIw7ghLBEjWTFhFqun8eEpfFf6
+        GR/BCzhZL2W950MYQZdNtZ1z9CQmWvkC8y579OEjKIiqZbbH0j5L+0vCsqqdWqb7S+tmy7S/PEVP
+        eyeHIRw6xOPJNUpaiQpP40oQoTM8SaI07jI7nXoknnVZjhUVvB13mVc5b6et7Thpt7rM4RQdGom8
+        djoK5p5vbZFTojnDrbQVZ3GnsZjNrhcCpztpl5VIIhckOAvjZ0+zT56/EjUV1rHBwfmw+35kRuZf
+        odezhpyQFOLB2Teha3wju+yP7LIkjncbhRZmR+Qy7fzv7PBWlJXGEPYV6vyN4Lb/5qNL2g2azO86
+        AjHrbE2wEDfKOqGT30NsvwIRIpgqjePHm14KPQ61fk1svPpJN+mW4OEq3HqDtzReHwM44OLzzWV5
+        eXd58VUda387GMr5UT/ZhYefAAAA//8DAAcn5lcdBgAA
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8bd6e2a3938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '14807'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:55 GMT
+      - Mon, 18 Mar 2024 14:06:35 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:sz5FA1"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:u30RCK"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -896,47 +702,51 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: '{"count":1,"total_count":1,"result":[{"id":"doc:sz5FA1","type":"yara","title":"YARA
-        Rule: Detect LummaC2 v14.09","description":"The attached YARA rule can be
-        used to detect newer versions of LummaC2  (up to v14.09) based on their string
-        decryption techniques.","created":"2023-09-27T13:37:43.199Z","updated":"2023-09-27T13:37:43.199Z","rules":[{"entities":[{"id":"nlflWX","type":"Malware","name":"Lumma"}],"content":"rule
-        MAL_Lumma\n{\n    meta:\n        author = \"CNANCE, Insikt Group, Recorded
-        Future\"\n        date = \"2023-09-26\"\n        description = \"Detects newer
-        versions of Lumma Stealer based on their string decryption techniques\"\n        version
-        = \"1.0\"\n        reference = \"https://www.esentire.com/blog/the-case-of-lummac2-v4-0\"\n        hash
-        = \"f8b04b38e2c941657114b67a47aee8993a3f0d7e080eeb31fb681bf360546722\"\n        hash
-        = \"ad1ac8926b52a4ac84e3238bcd4b10b88c542a9c676853ac0cc489f00637da05\"\n        hash
-        = \"07510f458c647b53a849638b1d9ab77fd378a28bda62e3f123c35fe7672aab3f\"\n        hash
-        = \"2b15789e7039e875b9bc784f98a0c0d9d7a9bbc0297fca5f3a6df7063505cef4\"\n        RF_MALWARE
-        = \"Lumma\"\n        RF_MALWARE_ID = \"nlflWX\"\n\n    strings:\n        $c1
-        = {\n            89 C8          // mov eax, ecx\n            31 D2          //
-        xor edx, edx\n            F7 F?          // div esi\n            0F B? 44
-        ?D ?? // movzx eax, word ptr [ebp + ecx*2]\n            66 33 04 5?    //
-        xor ax, word ptr [edi + edx*2]\n            66 89 44 4D    // mov word ptr
-        [ebp + ecx*2], ax\n        }\n\n        $c2 = {\n            89 CA          //
-        mov edx, ecx\n            83 E2 ??       // and edx, 3\n            8A ?4
-        14 [0-1] // mov dl, byte ptr [esp + edx + 8]\n            32 54 0?       //
-        xor dl, byte ptr [ebp + ecx + 4]\n        }\n\n    condition:\n        uint16(0)
-        == 0x5a4d and\n        1 of them\n}\n","file_name":"MAL_Lumma.yar"}]}],"next_offset":"eyJvZmZzZXQiOlsxMDI4Nl19"}'
+      string: !!binary |
+        H4sIAAAAAAAAA6SUUVPjNhDHv8qOrg93N3ZiJ6EMfuM4oPSAoyT0WupORpE2joos+aRVgrnju3dk
+        A2Y6nb70wQ8r7V/6a/e3/saEDYZYkSeMLHG9HGKHPmhixR/fmJKsYNKKIkyz66NPLGHUNsgK5lVV
+        8xgq0jGexxiug8YC5mFFGtMrvvNwfvkJTpRGzxIm0QunGlLWsIItNgiciIsNSujlLmgEwQ2sEIJH
+        CWRBIqEgoA3Cld2hm29QaxC2rrmRoJV5Sl213V3reFfUuWBeGxmxhAmHnDC+aJJNZmk2TfPpIt8v
+        skkxyUf7+f4tS1ho5H8m7cWkaNR3BUJDitRT0FVrvp1v+WKo1GdXcaMeePfshBlex9VTXnOH0ho4
+        dTY0sTrKN5q3y39PgLeHXwOHD1o9PHAnEzh0Na9QviS8Y4/Jk4Pw5fr0r98HBxdc77jD4fL5zYfF
+        +XF6dfhlPqjOTly+1INqgWJjrLZVOwhH2twNio/rw/OfBsGVszIIGrKHfrHHPxMmrCGMiPXQPHPy
+        gsnRU0/PlcHSKFlAvp9xuT/bS/Fguk5nUoqU43qV/pjnUz5dC77CSWleYVXAxw4X/795KY3DNTo0
+        An1RGoAUNkSNL8bj3W438iiCs0bdj4Stxyttq3G3pKhNudwqb12bekIu2+A8TzvQ71LB64aryqTE
+        XYXk03DnuDKY1kor4q4dl8YTp+AL8MRXGkvDA22sK+Do8vDy6DiBM+PVHfVNT+AahXUSJZwECg5L
+        E+ktILI7zqbjfFIajVvUBdQoVahLQ7x6flHvakT5JJuNsmwCb+DGo4PjexShr+cF10ooG3w3xf+Q
+        ZXsHoyzL4c1L7+I377thKjgzhK5xSOiKV90ojbaVt8EJ7IwITlhZ1xbQOCvQ+2U/qXGv6aEqYKeM
+        tLEv/Q8hmov7HvWrCJ6NRIYKKNn7H95WAt7Ddxso9eSUqd59b6IT33GRGts4GyGAtGSdGWuk6t/+
+        cnZp1lx7bKxXpLYvQNwYre5Qx/mIJzxPLm9o6cKyeh7gpe+xauJvqK3jMMRxMHhPS7tee4wjge3P
+        29v69uH2t1/UZ+3vLxZidvFrfsAe/wYAAP//AwAz3tyWqgUAAA==
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8be1f023938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '1916'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:55 GMT
+      - Mon, 18 Mar 2024 14:06:35 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:s0uzpu"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:u4AafF"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -951,130 +761,126 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: "{\"count\":1,\"total_count\":1,\"result\":[{\"id\":\"doc:s0uzpu\",\"type\":\"yara\",\"title\":\"Detecting
-        Open-Source Information Stealer \\\"SapphireStealer\\\"\",\"description\":\"On
-        August 31, 2023, Cisco Talos published a blog detailing SapphireStealer, an
-        open-source . NET information stealer that has gained prominence since its
-        public release in December 2022. As previously reported by Insikt Group, SapphireStealer
-        is designed to steal sensitive user information from infected systems such
-        as web browser credentials, cached data, and system files with specific extensions.
-        Reportedly, SapphireStealer primarily targets popular browsers such as Chrome,
-        Opera, and Microsoft Edge. According to Cisco Talos's blog, SapphireStealer
-        can terminate browser processes, collect data such as screenshots and system
-        files, archive the collected data into a ZIP file, and exfiltrate the collected
-        data via Simple Mail Transfer Protocol (SMTP). Per Cisco Talos, SapphireStealer
-        has evolved with multiple variants, and threat actors have enhanced its functionality,
-        extending its support for different data exfiltration methods.\\n\\nPer Cisco
-        Talos, SapphireStealer's operational significance lies in its simplicity and
-        effectiveness, making it attractive to financially motivated threat actors.
-        Stolen data, including credentials, can be sold or used for subsequent malicious
-        activities such as espionage or ransomware attacks. SapphireStealer has previously
-        been delivered through multi-stage infection processes, where open-source
-        malware downloaders like FUD-Loader were used to deliver SapphireStealer to
-        potential victims.\\n\\nInsikt Group obtained the following samples of SapphireStealer
-        shared on Cisco Talos's blog from PolySwarm and Hatching Triage:\\n1.) e596b3f12b96bf5526285df19dc9674aaaafeb8375eeac4face8eb4285c63e3b\\n2.)
-        d453919141d456afce8476b4af9082b4af8d4c644e8468aa62259d704c22e074\\n3.) 7392019700b493b87ba4a53cc25e7cc639ce58da390b1b3780eaf8ee0889dcf3\\n4.)
-        4ed3e2b343a8bff981a139af0f871bbe76e3e93ac0d6ad4c16acbb1ec0a74bff\\n5.) 0e27b766a44e3524aee546e3279bcbca22255fa7171b8c6013efa7708e37c633\\n6.)
-        53c1fca1263a535ac740916a24b28807246a204c6fa22b7374dc17fe913375d4\\n7.) e97941f812323e05ba4e83b138e8bb794b88efcd56980d07313b5acc965b2661\\n\\nSandbox
-        analysis detected all samples as malicious. Samples 1, 2, 3, 4, 5, and 7 have
-        been detected with stealer capabilities, while sample 6 exhibits ransomware
-        and stealer capabilities. Sample 6 also matched a sandbox YARA rule for detecting
-        Sapphire Ransomware.\\n\\nBased on Sandbox and static code analysis, the samples
-        are capable of the following:\\n\u2022 Detecting debuggers\\n\u2022 Reading
-        the victim's web browser profile to check for stored credentials and data\\n\u2022
-        Identifying the currently logged-in username\\n\u2022 Querying system volume
-        information\\n\u2022 Querying files and directories\\n\u2022 Capturing desktop
-        screenshots\\n\u2022 Performing reflective portable executable (PE) injection\\n\u2022
-        Enumerating running processes\\n\u2022 Enabling SeDebugPrivilege using the
-        AdjustTokenPrivilege to perform malicious actions with elevated permissions
-        (available on samples 1, 5, 6, and 7)\\n\u2022 Detecting virtual machine environments
-        (VME) by checking for VM-related string artifacts in memory (available on
-        samples 1, 2, 3, 4, and 7)\\n\u2022 Capturing the victim's keystrokes (available
-        on sample 7)\\n\u2022 Using the Windows API Sleep function for evasion (available
-        on samples 1 and 7)\\n\u2022 Sending GET requests to Discord URLs, potentially
-        for downloading an additional payload (DotNetZip.dll). At the time of writing,
-        the Discord URL returns an error 404 \\\"Not Found\\\" (available on samples
-        1 and 6)\\n\u2022 Using Telegram bot URL for command-and-control (C2) communication
-        (available on samples 3, 5, and 6)\\n\\nInsikt Group also found the embedded
-        program database (PDB) path in the SapphireStealer binary (new_game.pdb for
-        sample 1 and Sapphire.pdb for the remaining samples) as well as the files
-        used by SapphireStealer to store collected information (Passwords.txt and
-        log.zip). Insikt Group also identified the following strings, likely used
-        by threat actors as their aliases: \\\"barion @dark_legion89\\\" (on samples
-        1 and 3) and \\\"r3vengerx0\\\" (on samples 4 and 6).\\n\\nInsikt Group created
-        a YARA rule to detect SapphireStealer, which can be found attached to this
-        note. This note includes IOCs of the analyzed Sapphire Stealer samples.\\n\\n\",\"created\":\"2023-09-28T17:55:08.978Z\",\"updated\":\"2023-09-28T17:55:08.978Z\",\"rules\":[{\"entities\":[{\"id\":\"mitre:T1489\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1489\",\"display_name\":\"T1489
-        (Service Stop)\"},{\"id\":\"mitre:T1497.003\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1497.003\",\"display_name\":\"T1497.003
-        (Virtualization/Sandbox Evasion: Time Based Evasion)\"},{\"id\":\"mitre:T1048\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1048\",\"display_name\":\"T1048
-        (Exfiltration Over Alternative Protocol)\"},{\"id\":\"qRZBPr\",\"type\":\"Malware\",\"name\":\"Sapphire
-        Stealer\"},{\"id\":\"mitre:T1620\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1620\",\"display_name\":\"T1620
-        (Reflective Code Loading)\"},{\"id\":\"mitre:T1105\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1105\",\"display_name\":\"T1105
-        (Ingress Tool Transfer)\"},{\"id\":\"mitre:T1497.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1497.001\",\"display_name\":\"T1497.001
-        (Virtualization/Sandbox Evasion: System Checks)\"},{\"id\":\"mitre:T1622\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1622\",\"display_name\":\"T1622
-        (Debugger Evasion)\"},{\"id\":\"mitre:T1555.003\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1555.003\",\"display_name\":\"T1555.003
-        (Credentials from Password Stores: Credentials from Web Browsers)\"},{\"id\":\"hash:e596b3f12b96bf5526285df19dc9674aaaafeb8375eeac4face8eb4285c63e3b\",\"type\":\"Hash\",\"name\":\"e596b3f12b96bf5526285df19dc9674aaaafeb8375eeac4face8eb4285c63e3b\"},{\"id\":\"mitre:T1560\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1560\",\"display_name\":\"T1560
-        (Archive Collected Data)\"},{\"id\":\"mitre:T1102.002\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1102.002\",\"display_name\":\"T1102.002
-        (Web Service: Bidirectional Communication)\"},{\"id\":\"Jv5KYy\",\"type\":\"Product\",\"name\":\"Microsoft
-        Edge\"},{\"id\":\"CB46R\",\"type\":\"Product\",\"name\":\"Google Chrome\"},{\"id\":\"hash:53c1fca1263a535ac740916a24b28807246a204c6fa22b7374dc17fe913375d4\",\"type\":\"Hash\",\"name\":\"53c1fca1263a535ac740916a24b28807246a204c6fa22b7374dc17fe913375d4\"},{\"id\":\"hash:d453919141d456afce8476b4af9082b4af8d4c644e8468aa62259d704c22e074\",\"type\":\"Hash\",\"name\":\"d453919141d456afce8476b4af9082b4af8d4c644e8468aa62259d704c22e074\"},{\"id\":\"mitre:T1056.001\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1056.001\",\"display_name\":\"T1056.001
-        (Input Capture: Keylogging)\"},{\"id\":\"url:https://cdn.discordapp.com/attachments/1023018120211869706/1082072513267380274/DotNetZip.dll\",\"type\":\"URL\",\"name\":\"https://cdn.discordapp.com/attachments/1023018120211869706/1082072513267380274/DotNetZip.dll\"},{\"id\":\"mitre:T1217\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1217\",\"display_name\":\"T1217
-        (Browser Information Discovery)\"},{\"id\":\"mitre:T1057\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1057\",\"display_name\":\"T1057
-        (Process Discovery)\"},{\"id\":\"mitre:T1134\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1134\",\"display_name\":\"T1134
-        (Access Token Manipulation)\"},{\"id\":\"mitre:T1113\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1113\",\"display_name\":\"T1113
-        (Screen Capture)\"},{\"id\":\"Fe_iV\",\"type\":\"Product\",\"name\":\"Opera
-        Browser\"},{\"id\":\"B_HOS\",\"type\":\"Product\",\"name\":\"Microsoft Windows\"},{\"id\":\"hash:e97941f812323e05ba4e83b138e8bb794b88efcd56980d07313b5acc965b2661\",\"type\":\"Hash\",\"name\":\"e97941f812323e05ba4e83b138e8bb794b88efcd56980d07313b5acc965b2661\"},{\"id\":\"hash:7392019700b493b87ba4a53cc25e7cc639ce58da390b1b3780eaf8ee0889dcf3\",\"type\":\"Hash\",\"name\":\"7392019700b493b87ba4a53cc25e7cc639ce58da390b1b3780eaf8ee0889dcf3\"},{\"id\":\"mitre:T1082\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1082\",\"display_name\":\"T1082
-        (System Information Discovery)\"},{\"id\":\"mitre:T1083\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1083\",\"display_name\":\"T1083
-        (File and Directory Discovery)\"},{\"id\":\"SMlvRl\",\"type\":\"MalwareCategory\",\"name\":\"Stealware\"},{\"id\":\"hash:0e27b766a44e3524aee546e3279bcbca22255fa7171b8c6013efa7708e37c633\",\"type\":\"Hash\",\"name\":\"0e27b766a44e3524aee546e3279bcbca22255fa7171b8c6013efa7708e37c633\"},{\"id\":\"hash:4ed3e2b343a8bff981a139af0f871bbe76e3e93ac0d6ad4c16acbb1ec0a74bff\",\"type\":\"Hash\",\"name\":\"4ed3e2b343a8bff981a139af0f871bbe76e3e93ac0d6ad4c16acbb1ec0a74bff\"},{\"id\":\"url:https://api.telegram.org/bot6228811625:AAHLiy2oFkwv-27FAk5KqltothFkPnNRSL8/sendMessage\",\"type\":\"URL\",\"name\":\"https://api.telegram.org/bot6228811625:AAHLiy2oFkwv-27FAk5KqltothFkPnNRSL8/sendMessage\"},{\"id\":\"PTKaba\",\"type\":\"Malware\",\"name\":\"FUD
-        Loader\"},{\"id\":\"JROnIp\",\"type\":\"Product\",\"name\":\"Windows API\"},{\"id\":\"eGdnL4\",\"type\":\"Malware\",\"name\":\"Sapphire
-        Ransomware\"},{\"id\":\"JSLFIT\",\"type\":\"Technology\",\"name\":\"Simple
-        Mail Transfer Protocol\"},{\"id\":\"hCbLgp\",\"type\":\"Technology\",\"name\":\"Telegram
-        bot\"}],\"content\":\"rule MAL_Sapphire_Stealer {\\n    meta:\\n        author
-        = \\\"TTPMNL, Insikt Group, Recorded Future\\\"\\n        date = \\\"2023-09-18\\\"\\n
-        \       description = \\\"Detects Sapphire Stealer\\\"\\n        version =
-        \\\"1.0\\\"\\n        hash = \\\"e596b3f12b96bf5526285df19dc9674aaaafeb8375eeac4face8eb4285c63e3b\\\"\\n
-        \       hash = \\\"d453919141d456afce8476b4af9082b4af8d4c644e8468aa62259d704c22e074\\\"\\n
-        \       hash = \\\"7392019700b493b87ba4a53cc25e7cc639ce58da390b1b3780eaf8ee0889dcf3\\\"\\n
-        \       hash = \\\"4ed3e2b343a8bff981a139af0f871bbe76e3e93ac0d6ad4c16acbb1ec0a74bff\\\"\\n
-        \       hash = \\\"0e27b766a44e3524aee546e3279bcbca22255fa7171b8c6013efa7708e37c633\\\"\\n
-        \       hash = \\\"53c1fca1263a535ac740916a24b28807246a204c6fa22b7374dc17fe913375d4\\\"\\n
-        \       hash = \\\"e97941f812323e05ba4e83b138e8bb794b88efcd56980d07313b5acc965b2661\\\"\\n
-        \       RF_MALWARE = \\\"Sapphire Stealer\\\"\\n        RF_MALWARE_ID = \\\"qRZBPr\\\"\\n\\n
-        \       strings:\\n                //sapphire unique strings\\n                $s1
-        = \\\"Sapphire\\\" ascii\\n                $s2 = \\\"Sapphire.exe\\\" wide
-        ascii\\n                $s3 = \\\"Sapphire_ProcessedByFody\\\" wide ascii\\n
-        \               $s4 = \\\"Sapphire.SendLog\\\" wide ascii //present in 2 samples\\n
-        \               \\n                //modules used\\n                $m1 =
-        \\\"Sapphire.Modules.Steal\\\" wide ascii\\n                $m2 = \\\"Sapphire.Modules.Grabbers\\\"
-        wide ascii\\n                $m3 = \\\"Sapphire.Modules.Passwords\\\" wide
-        ascii\\n                $m4 = \\\"Sapphire.Modules.Information\\\" wide ascii\\n
-        \               $m5 = \\\"Sapphire.Modules.Others\\\" wide ascii\\n                $m6
-        = \\\"Sapphire.Modules.Helpers\\\" wide ascii\\n                $m7 = \\\"Sapphire.Modules.\\\"
-        wide ascii\\n                \\n                //debug path \\n                $d1
-        = \\\"Sapphire.pdb\\\" wide ascii\\n                $d2 = \\\"new_game.pdb\\\"
-        wide ascii //present in 1 sample\\n                \\n                //files
-        stored\\n                $f1 = \\\"Passwords.txt\\\" wide ascii\\n                $f2
-        = \\\"Screenshot.png\\\" wide ascii\\n                $f3 = \\\"log.zip\\\"
-        wide ascii\\n        \\n        condition:\\n                uint16(0) ==
-        0x5A4d and filesize < 600KB and\\n                2 of ($s*) and \\n                4
-        of ($m*) and \\n                1 of ($d*) and\\n                2 of ($f*)\\n}\\n\",\"file_name\":\"MAL_Sapphire_Stealer.yar\"}]}],\"next_offset\":\"eyJvZmZzZXQiOlsxMjI2N119\"}"
+      string: !!binary |
+        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
+        ZGM6AAA=
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8becffa3938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '11195'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:56 GMT
+      - Mon, 18 Mar 2024 14:06:35 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
 - request:
-    body: '{"filter": {"doc_id": "doc:s6WdiU"}, "limit": 1}'
+    body: '{"filter": {"doc_id": "doc:u5urwk"}, "limit": 1}'
     headers:
       Accept:
       - '*/*'
@@ -1089,70 +895,96 @@ interactions:
       User-Agent:
       - OpenCTI-notes/1.0
       X-RFToken:
-      - 852de2a9e9f745059cc0bbc7e3286c44
+      - bmljZSB0cnkgOikpKSk=
     method: POST
     uri: https://api.recordedfuture.com/detection-rule/search
   response:
     body:
-      string: "{\"count\":1,\"total_count\":1,\"result\":[{\"id\":\"doc:s6WdiU\",\"type\":\"yara\",\"title\":\"Insikt
-        Validated TTP: Detecting Lapsus$ Ransomware, an Attempt to Profit off Lapsus$
-        Group\u2019s Notoriety\",\"description\":\"On October 3, 2023, Insikt Group
-        published a TTP Instance on a purportedly new ransomware called Lapsus$ Ransomware
-        that appends encrypted files with the extension \\\".locked\\\". At the time
-        of publication, Insikt Group reported that Lapsus$ Ransomware is not affiliated
-        with Lapsus$ Group (also referred to as DEV-0537, Strawberry Tempest, and
-        UNC3661). Insikt Group maintains this assessment noting that, while Lapsus$
-        Group engages in threat activities such as exfiltration and extortion, it
-        is not part of the group\u2019s existing TTPs to encrypt files and impact
-        data availability similar to traditional ransomware attacks.\\n\\nAdditionally,
-        further analysis of the previously shared Lapsus$ Ransomware sample (SHA256:
-        d2a75c21c4cc70cb8f09c2f21ba474601b22ab3f17fb0823ecd94d7eab1bc840) shows overlap
-        with a ransomware family called Aloha Crypt first reported in March 2023.
-        The 2 ransomware families use an almost-identical ransom note written in French,
-        have similar debug paths (*\\\\alohacrypt\\\\obj\\\\Debug\\\\alohacrypt.pdb),
-        and implement a 256-bit AES encryption algorithm. Instead of creating a new
-        variant of Aloha Crypt, the operators behind Lapsus$ Ransomware reused the
-        existing alohacrypt.exe file and changed the ransom note contents to identify
-        the ransomware as Lapsus$ Ransomware instead of Aloha Crypt. The ransom note
-        demands victims pay 65\u20AC in Bitcoin, increasing the ransom to 500\u20AC
-        if not paid in 2 days.\\n\\nWhile performing static code analysis of the aforementioned
-        Laspsus$ Ransomware sample, Insikt Group identified an invite link to a Discord
-        server named \u201CLapsus$ Group [Neexsus$]\u201D. While we could not access
-        the contents of this Discord server at the time of analysis to determine how
-        the server is being used by its members, we note that any use of Discord does
-        not match Lapsus$ Group\u2019s (DEV-0537, Strawberry Tempest, and UNC3661)
-        previously reported modus operandi. Lapsus$ Group is known to use a private
-        Telegram group to announce extortion victims. Due to these differences in
-        TTPs, it is likely that the operators of Laspus$ Ransomware are unaffiliated
-        with the threat group and are likely using the Lapsus$ Group name in an attempt
-        to profit off of their notoriety.\\n\\nInsikt Group has created a YARA rule
-        to detect Lapsus$ Ransomware, which can be found attached to this note.\\n\",\"created\":\"2023-10-06T21:09:37.552Z\",\"updated\":\"2023-10-06T21:09:37.552Z\",\"rules\":[{\"entities\":[{\"id\":\"s3b1bO\",\"type\":\"Malware\",\"name\":\"Lapsus$
-        Ransomware\",\"display_name\":\"Lapsus$ Ransomware (Lapsus$ Group Ransomware)\"},{\"id\":\"mitre:T1486\",\"type\":\"MitreAttackIdentifier\",\"name\":\"T1486\",\"display_name\":\"T1486
-        (Data Encrypted for Impact)\"},{\"id\":\"hash:d2a75c21c4cc70cb8f09c2f21ba474601b22ab3f17fb0823ecd94d7eab1bc840\",\"type\":\"Hash\",\"name\":\"d2a75c21c4cc70cb8f09c2f21ba474601b22ab3f17fb0823ecd94d7eab1bc840\"},{\"id\":\"J0Nl-p\",\"type\":\"MalwareCategory\",\"name\":\"Ransomware\"},{\"id\":\"B_HOS\",\"type\":\"Product\",\"name\":\"Microsoft
-        Windows\"},{\"id\":\"k6uG2J\",\"type\":\"Organization\",\"name\":\"Lapsus$
-        Group\",\"display_name\":\"Lapsus$ Group (DEV-0537, Strawberry Tempest, UNC3661)\"},{\"id\":\"K_Rbz_\",\"type\":\"Technology\",\"name\":\"Advanced
-        Encryption Standard\"},{\"id\":\"qf7hAZ\",\"type\":\"Malware\",\"name\":\"AlohaCrypt\"},{\"id\":\"IH6pHd\",\"type\":\"Technology\",\"name\":\"Bitcoin
-        (BTC)\"}],\"content\":\"import \\\"pe\\\"\\n\\nrule MAL_Lapsus_Ransomware
-        {\\n    meta:\\n        author = \\\"KHOR, Insikt Group, Recorded Future\\\"\\n
-        \       date = \\\"2023-10-06\\\"\\n        description = \\\"Detects Lapsus$
-        Ransomware, Variant of Aloha Crypt\\\"\\n        version = \\\"1.0\\\"\\n
-        \       reference = \\\"https://app.recordedfuture.com/portal/analyst-note/shared/true/doc:s4A2kD\\\"\\n
-        \       hash = \\\"d2a75c21c4cc70cb8f09c2f21ba474601b22ab3f17fb0823ecd94d7eab1bc840\\\"\\n
-        \       RF_MALWARE = \\\"Lapsus$ Ransomware\\\"\\n        RF_MALWARE_ID =
-        \\\"s3b1bO\\\"\\n\\n       strings:\\n        $s1 = \\\"LapsusCrypt\\\" ascii
-        fullword\\n        $s2 = \\\"Lapsus$ Ransomware\\\" wide \\n        $s3 =
-        \\\"https://discord.gg/9NAFVgqXa6\\\" ascii //invite link to join Lapsus$
-        Group [Neexsus$] Discord server.\\n\\n    condition:\\n        uint16(0) ==
-        0x5a4d and  \\n        any of ($s*) or\\n        pe.pdb_path == \\\"C:\\\\\\\\Users\\\\\\\\Hadoo\\\\\\\\Desktop\\\\\\\\LapsusCrypt\\\\\\\\src\\\\\\\\stub\\\\\\\\alohacrypt\\\\\\\\obj\\\\\\\\Debug\\\\\\\\alohacrypt.pdb\\\"\\t\\t\\n}\\n\",\"file_name\":\"MAL_Lapsus_Ransomware.yar\"}]}],\"next_offset\":\"eyJvZmZzZXQiOlsxMTEwN119\"}"
+      string: !!binary |
+        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
+        4Q+Xs/67d51vGx//DwAA//8DACiyXSquKAAA
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8665c8c09a9c3938-IAD
       Connection:
       - keep-alive
-      Content-Length:
-      - '4529'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Oct 2023 15:25:58 GMT
+      - Mon, 18 Mar 2024 14:06:35 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
     status:
       code: 200
       message: OK
