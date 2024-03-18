@@ -16,8 +16,8 @@ class TestConnector:
         notes = rf_client.get_notes(10000, limit=20)
         tas = rf_client.get_threat_actors()
         for i, note in enumerate(notes):
-            stixnote = StixNote(opencti_helper, tas)
-            stixnote.from_json(note)
+            stixnote = StixNote(opencti_helper, tas, rf_client)
+            stixnote.from_json(note, stixnote.tlp.serialize())
             #            assert len(stixnote.objects) >= 1
             assert len(stixnote.to_stix_objects()) >= 1
             with open(os.path.join(OUPUT_DIR, f'{i}.json'), 'w') as outfile:
