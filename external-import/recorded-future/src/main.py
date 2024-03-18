@@ -18,6 +18,8 @@ import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from rflib import APP_VERSION, RecordedFutureAlertConnector, RFClient, RiskList, StixNote, ThreatMap, CustomBundles
 
+from rflib import APP_VERSION, CustomBundles, RFClient, RiskList, StixNote, ThreatMap
+
 
 class BaseRFConnector:
     def __init__(self):
@@ -31,7 +33,9 @@ class BaseRFConnector:
 
         # Extra config
         self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config,
+            "RECORDED_FUTURE_TOKEN",
+            ["rf", "token"],
+            config,
         )
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
@@ -236,6 +240,7 @@ class RFNotes:
             f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API"
         )
         for note in notes:
+<<<<<<< HEAD
             try:
                 stixnote = StixNote(
                     self.helper,
@@ -265,6 +270,29 @@ class RFNotes:
                     f"{str(exception)}"
                 )
                 continue
+=======
+            stixnote = StixNote(
+                self.helper,
+                tas,
+                self.rfapi,
+                self.tlp,
+                self.rf_person_to_TA,
+                self.rf_TA_to_intrusion_set,
+                self.risk_as_score,
+                self.risk_threshold,
+            )
+            stixnote.from_json(note)
+            stixnote.create_relations()
+            bundle = stixnote.to_stix_bundle()
+            self.helper.log_info(
+                "[ANALYST NOTES] Sending Bundle to server with "
+                + str(len(bundle.objects))
+                + " objects"
+            )
+            self.helper.send_stix2_bundle(
+                bundle.serialize(), update=self.update_existing_data, work_id=work_id
+            )
+>>>>>>> ready for prod
 
 
 class RFConnector:
@@ -333,7 +361,6 @@ class RFConnector:
                 self.RF.custom_bundle_interval,
                 self.RF.rfapi,
                 self.RF.custom_bundle_paths,
-
             )
             self.CustomBundles.start()
         else:

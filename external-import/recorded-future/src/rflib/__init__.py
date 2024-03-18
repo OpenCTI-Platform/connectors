@@ -13,6 +13,7 @@
 from ._version import __version__ as APP_VERSION
 from .constants import RISK_LIST_TYPE_MAPPER
 from .rf_alerts import RecordedFutureAlertConnector
+from .custom_bundle import CustomBundles
 from .rf_client import RFClient
 from .rf_to_stix2 import (
     TTP,
@@ -26,4 +27,3 @@ from .rf_to_stix2 import (
 )
 from .risk_list import RiskList
 from .threat_map import ThreatMap
-from .custom_bundle import CustomBundles

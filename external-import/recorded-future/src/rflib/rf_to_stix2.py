@@ -83,14 +83,18 @@ class Indicator(RFStixEntity):
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
-        if not (self.stix_indicator and self.stix_observable and self.stix_relationship):
+        if not (
+            self.stix_indicator and self.stix_observable and self.stix_relationship
+        ):
             self.create_stix_objects()
         return [self.stix_indicator, self.stix_observable, self.stix_relationship]
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_indicator = self._create_indicator()
-        self.stix_observable = self._create_obs()  # pylint: disable=assignment-from-no-return
+        self.stix_observable = (
+            self._create_obs()
+        )  # pylint: disable=assignment-from-no-return
         self.stix_relationship = self._create_rel("based-on", self.stix_observable.id)
 
     def _create_indicator(self):
@@ -260,7 +264,6 @@ class IPAddress(Indicator):
             )
 
 
-
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
@@ -314,7 +317,9 @@ class FileHash(Indicator):
         return f"[file:hashes.'{self.algorithm}' = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.File(hashes={self.algorithm: self.name}, object_marking_refs=self.tlp)
+        return stix2.File(
+            hashes={self.algorithm: self.name}, object_marking_refs=self.tlp
+        )
 
 
 class TTP(RFStixEntity):
@@ -415,7 +420,9 @@ class IntrusionSet(RFStixEntity):
     def _create_rel(self, source_id, relationship_type, target_id):
         """Creates Relationship object linking indicator and observable"""
         return stix2.Relationship(
-            id=pycti.StixCoreRelationship.generate_id(relationship_type, source_id, target_id),
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type, source_id, target_id
+            ),
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
@@ -480,13 +487,17 @@ class IntrusionSet(RFStixEntity):
                                 # get string from next character
                                 display_name = display_name[idx1 + len(sub1) : idx2]
 
-                                related_element = TTP(_name, _type, self.author, tlp, display_name)
+                                related_element = TTP(
+                                    _name, _type, self.author, tlp, display_name
+                                )
 
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
                         continue
                     else:
-                        related_element = ENTITY_TYPE_MAPPER[_type](_name, _type, self.author, tlp)
+                        related_element = ENTITY_TYPE_MAPPER[_type](
+                            _name, _type, self.author, tlp
+                        )
                         stix_objs = related_element.to_stix_objects()
                         self.related_entities.extend(stix_objs)
 
@@ -502,13 +513,21 @@ class IntrusionSet(RFStixEntity):
         relationships = []
         for entity in self.related_entities:
             if entity["type"] in ["malware"]:
-                relationships.append(self._create_rel(self.stix_obj.id, "uses", entity.id))
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "uses", entity.id)
+                )
             if entity["type"] in ["indicator"]:
-                relationships.append(self._create_rel(entity.id, "indicates", self.stix_obj.id))
+                relationships.append(
+                    self._create_rel(entity.id, "indicates", self.stix_obj.id)
+                )
             if entity["type"] in ["attack-pattern"]:
-                relationships.append(self._create_rel(self.stix_obj.id, "uses", entity.id))
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "uses", entity.id)
+                )
             if entity["type"] in ["vulnerability"]:
-                relationships.append(self._create_rel(self.stix_obj.id, "targets", entity.id))
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "targets", entity.id)
+                )
         # Add relationships to stix objects
         self.objects.extend(relationships)
 
@@ -541,7 +560,9 @@ class Malware(RFStixEntity):
     def _create_rel(self, source_id, relationship_type, target_id):
         """Creates Relationship object linking indicator and observable"""
         return stix2.Relationship(
-            id=pycti.StixCoreRelationship.generate_id(relationship_type, source_id, target_id),
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type, source_id, target_id
+            ),
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
@@ -601,7 +622,9 @@ class Malware(RFStixEntity):
                                 risk_attribute["id"] == "threat_actor"
                                 and risk_attribute["value"] is True
                             ):
-                                related_element = IntrusionSet(_name, _type, self.author, tlp)
+                                related_element = IntrusionSet(
+                                    _name, _type, self.author, tlp
+                                )
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
                             elif (
@@ -632,13 +655,17 @@ class Malware(RFStixEntity):
                                 # get string from next character
                                 display_name = display_name[idx1 + len(sub1) : idx2]
 
-                                related_element = TTP(_name, _type, self.author, tlp, display_name)
+                                related_element = TTP(
+                                    _name, _type, self.author, tlp, display_name
+                                )
 
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
                         continue
                     else:
-                        related_element = ENTITY_TYPE_MAPPER[_type](_name, _type, self.author, tlp)
+                        related_element = ENTITY_TYPE_MAPPER[_type](
+                            _name, _type, self.author, tlp
+                        )
                         stix_objs = related_element.to_stix_objects()
                         self.related_entities.extend(stix_objs)
 
@@ -654,17 +681,29 @@ class Malware(RFStixEntity):
         relationships = []
         for entity in self.related_entities:
             if entity["type"] in ["malware"]:
-                relationships.append(self._create_rel(self.stix_obj.id, "related-to", entity.id))
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "related-to", entity.id)
+                )
             if entity["type"] in ["indicator"]:
-                relationships.append(self._create_rel(entity.id, "indicates", self.stix_obj.id))
+                relationships.append(
+                    self._create_rel(entity.id, "indicates", self.stix_obj.id)
+                )
             if entity["type"] in ["attack-pattern"]:
-                relationships.append(self._create_rel(self.stix_obj.id, "uses", entity.id))
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "uses", entity.id)
+                )
             if entity["type"] in ["vulnerability"]:
-                relationships.append(self._create_rel(self.stix_obj.id, "exploits", entity.id))
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "exploits", entity.id)
+                )
             if entity["type"] in ["identity"]:
-                relationships.append(self._create_rel(self.stix_obj.id, "targets", entity.id))
+                relationships.append(
+                    self._create_rel(self.stix_obj.id, "targets", entity.id)
+                )
             if entity["type"] in ["intrusion-set"]:
-                relationships.append(self._create_rel(entity.id, "uses", self.stix_obj.id))
+                relationships.append(
+                    self._create_rel(entity.id, "uses", self.stix_obj.id)
+                )
         # Add relationships to stix objects
         self.objects.extend(relationships)
 
@@ -945,12 +984,18 @@ class StixNote:
             type_ = entity["type"]
             name = entity["name"]
             if self.person_to_ta and type_ == "Person":
-                stix_objs = ThreatActor(name, type_, self.author, self.tlp).to_stix_objects()
+                stix_objs = ThreatActor(
+                    name, type_, self.author, self.tlp
+                ).to_stix_objects()
             elif entity["id"] in self.tas:
                 if self.ta_to_intrusion_set and type_ != "Person":
-                    stix_objs = IntrusionSet(name, type_, self.author, self.tlp).to_stix_objects()
+                    stix_objs = IntrusionSet(
+                        name, type_, self.author, self.tlp
+                    ).to_stix_objects()
                 else:
-                    stix_objs = ThreatActor(name, type_, self.author, self.tlp).to_stix_objects()
+                    stix_objs = ThreatActor(
+                        name, type_, self.author, self.tlp
+                    ).to_stix_objects()
             elif type_ == "Source":
                 external_reference = {"source_name": name, "url": name}
                 self.external_references.append(external_reference)
@@ -960,7 +1005,9 @@ class StixNote:
                 self.helper.log_warning(msg)
                 continue
             else:
-                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, self.tlp)
+                rf_object = ENTITY_TYPE_MAPPER[type_](
+                    name, type_, self.author, self.tlp
+                )
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",
@@ -983,7 +1030,9 @@ class StixNote:
                         rf_object.risk_score = (
                             risk_score
                             if risk_score
-                            else self.rfapi.get_risk_score(INDICATOR_TYPE_URL_MAPPER[type_], name)
+                            else self.rfapi.get_risk_score(
+                                INDICATOR_TYPE_URL_MAPPER[type_], name
+                            )
                         )
                 stix_objs = rf_object.to_stix_objects()
             self.objects.extend(stix_objs)
@@ -1019,7 +1068,9 @@ class StixNote:
             if len(entity_possible_relationships) != 0:
                 for to_entity in entity_possible_relationships[0]["to"]:
                     target_entities = list(
-                        filter(lambda obj: obj["type"] == to_entity["entity"], self.objects)
+                        filter(
+                            lambda obj: obj["type"] == to_entity["entity"], self.objects
+                        )
                     )
                     for target_entity in target_entities:
                         if (
@@ -1042,7 +1093,9 @@ class StixNote:
             name = topic["name"]
             if name not in self.report_type_mapper:
                 self.helper.log_warning(
-                    "[ANALYST NOTES] Could not map a report type for type {}".format(name)
+                    "[ANALYST NOTES] Could not map a report type for type {}".format(
+                        name
+                    )
                 )
                 continue
             ret.add(self.report_type_mapper[name])
