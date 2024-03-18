@@ -388,25 +388,8 @@ class Taxii2Connector:
             self.helper.log_info("No objects found in request.")
 
     def _process_objects(self, stix_bundle: Dict) -> Dict:
-        # the list of object types for which the confidence has to be added
-        object_types_with_confidence = [
-            "attack-pattern",
-            "course-of-action",
-            "threat-actor",
-            "intrusion-set",
-            "campaign",
-            "malware",
-            "tool",
-            "vulnerability",
-            "report",
-            "relationship",
-            "indicator",
-        ]
         for obj in stix_bundle["objects"]:
             object_type = obj["type"]
-            if object_type in object_types_with_confidence:
-                if "confidence" not in obj:
-                    obj["confidence"] = int(self.helper.connect_confidence_level)
             if object_type == "indicator":
                 obj["x_opencti_create_observables"] = self.create_observables
             elif StixCyberObservableTypes.has_value(object_type):
