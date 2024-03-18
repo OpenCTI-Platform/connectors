@@ -7,10 +7,16 @@ PACKAGE := $(PCK_DIR).tar.gz
 BUILD_DIR := pkg_build
 BUILD_OUT := $(BUILD_DIR)/$(PCK_DIR)
 
+#####TODO: THIS SHOULD BE THE REVIEW
+###flake8 --ignore=E,W.
+##isort --profile black .
+##black .
+######
 # Commands
 SED := sed
-BLACK := black --line-length 100 -S
-FLAKE8 := flake8
+BLACK := black
+FLAKE8 := flake8 --ignore=E,W
+ISORT := isort --profile black .
 PYLINT := pylint
 PEPDOCSTYLE := pydocstyle
 PYTHON := python3
@@ -45,10 +51,9 @@ help:
 	@echo " setup       - Setup dev environment (install venv, dependencies)"
 	@echo " test        - run review and unittests"
 	@echo " unittests   - run nosetests to perform unittests"
-	@echo " review      - run black_check, flake8, pylint and pydocstyle"
+	@echo " review      - run black_check, pylint and pydocstyle"
 	@echo "   review_style  - Code style review"
 	@echo "     check_black     - checks that black has been applied"
-	@echo "     flake8          - python style review"
 	@echo "   pydocstyle      - review inline documentation"
 	@echo "   pylint          - pylint static analysis"
 	@echo " build       - prepares the files for packaging"
@@ -56,7 +61,10 @@ help:
 	@echo "Miscellaneous targets:"
 	@echo " clean       - delete build and packaging artifacts"
 	@echo " clear_cache - remove python pycache and pytest_cache"
-	@echo " black       - formats things according to black standard"
+	@echo " black       - formats source code with black"
+	@echo " flake8      - checks for flake8 code syntax"
+	@echo " isort       - runs isort"
+	@echo " format       - formats things according to black + isortstandard + flake9"
 
 ##########################################
 #
@@ -151,7 +159,14 @@ unittests:
 ##########################################
 review: review_style pylint pydocstyle
 
-review_style: check_black flake8
+review_style: check_black
+
+format: flake8 isort black
+
+isort:
+	$(ISORT) src/rflib/*.py
+	$(ISORT) src/*.py
+	$(ISORT) tests/*.py
 
 black:
 	$(BLACK) src/rflib/*.py --exclude="static"

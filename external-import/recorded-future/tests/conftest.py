@@ -1,7 +1,8 @@
-import pytest
 import os
-from src.rflib import RFClient
 
+import pytest
+
+from src.rflib import RFClient
 
 RF_API_KEY = "module_token"
 RF_API_KEY_LEGACY = "RF_TOKEN"
@@ -11,13 +12,13 @@ class DummyHelper:
     """Skeleton object to mimic OpenCTIConnectorHelper"""
 
     def log_info(self, message):
-        print('INFO: {}'.format(message))
+        print("INFO: {}".format(message))
 
     def log_error(self, message):
-        print('ERROR: {}'.format(message))
+        print("ERROR: {}".format(message))
 
     def log_warning(self, message):
-        print('WARNING: {}'.format(message))
+        print("WARNING: {}".format(message))
 
 
 @pytest.fixture()
@@ -37,7 +38,7 @@ def opencti_helper():
 
 @pytest.fixture
 def rf_client(rf_token, opencti_helper):
-    return RFClient(rf_token, opencti_helper, header='OpenCTI-notes/1.0')
+    return RFClient(rf_token, opencti_helper, header="OpenCTI-notes/1.0")
 
 
 @pytest.fixture
