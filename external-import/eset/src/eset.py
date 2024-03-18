@@ -138,10 +138,7 @@ class Eset:
                 try:
                     self.helper.log_debug("Objects to be sent " + str(bundle_objects))
                     self.helper.send_stix2_bundle(
-                        stix2.Bundle(
-                            objects=bundle_objects,
-                            allow_custom=True,
-                        ).serialize(),
+                        self.helper.stix2_create_bundle(bundle_objects),
                         update=self.update_existing_data,
                         bypass_split=True,
                         work_id=work_id,
