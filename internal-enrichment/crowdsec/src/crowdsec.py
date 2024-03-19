@@ -32,7 +32,7 @@ class CrowdSecConnector:
             "CROWDSEC_KEY", ["crowdsec", "key"], config
         )
         self.crowdsec_api_version = get_config_variable(
-            "CROWDSEC_VERSION", ["crowdsec", "api_version"], config, default="v1"
+            "CROWDSEC_VERSION", ["crowdsec", "api_version"], config
         )
         self.crowdsec_ent_name = get_config_variable(
             "CROWDSEC_NAME", ["crowdsec", "name"], config
