@@ -181,7 +181,6 @@ class GreyNoiseConnector:
 
         # Create all Labels in entity_tags
         for tag in entity_tags:
-
             tag_details_matching = self._get_match(data_tags["metadata"], "name", tag)
             if tag_details_matching is not None:
                 tag_details = tag_details_matching
@@ -698,7 +697,6 @@ class GreyNoiseConnector:
         return stix2_bundle
 
     def _process_message(self, data: Dict) -> str:
-
         # Security to limit playbook triggers to something other than the scope initial
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
         entity_splited = data["entity_id"].split("--")
@@ -771,7 +769,6 @@ class GreyNoiseConnector:
                     "[ERROR] Unexpected Error occured :", {"Exception": str(e)}
                 )
         else:
-
             return self.helper.connector_logger.info(
                 "[INFO] The trigger does not concern the initial scope found in the config connector, "
                 "maybe choose a more specific filter in the playbook",

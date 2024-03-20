@@ -21,7 +21,6 @@ class CustomConnector(DnsTwistConnector):
         super().__init__()
 
     def _process_message(self, data):
-
         raise NotImplementedError("Method not implemented")
 
 

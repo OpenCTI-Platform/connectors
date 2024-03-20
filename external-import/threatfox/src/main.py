@@ -184,7 +184,6 @@ class ThreatFox:
                             wanted_ioc.append("all_types")
 
                         for i, row in enumerate(csv_reader):
-
                             ioc_object = {
                                 "first_seen_utc": row[0],
                                 "ioc_id": row[1],
