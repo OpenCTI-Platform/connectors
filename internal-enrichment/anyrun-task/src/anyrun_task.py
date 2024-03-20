@@ -305,7 +305,6 @@ class AnyRunTask:
                         proc["scores"]["verdict"]["score"] > 0
                         and proc["important"] is True
                     ):
-
                         # self.helper.log_error(str(proc))
                         process = self.helper.api.stix_cyber_observable.create(
                             observableData={

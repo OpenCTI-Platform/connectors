@@ -91,7 +91,6 @@ class URLScanSubmissionsConnector:
             url_scan_domain_data = response.json()
 
             if len(url_scan_domain_data["results"]) > 0:
-
                 if len(url_scan_domain_data["results"]) > self.domain_note_count:
                     index = self.domain_note_count + 1
                 else:
@@ -130,7 +129,6 @@ class URLScanSubmissionsConnector:
         return None
 
     def urlscan_submission(self, observable):
-
         headers = {"API-Key": self.api_key, "Content-Type": "application/json"}
         data = {"url": observable["value"], "visibility": "public"}
         response = requests.post(
@@ -141,7 +139,6 @@ class URLScanSubmissionsConnector:
             self.helper.log_info("URLScan API call successful")
             url_scan_data = response.json()
             if url_scan_data["message"] == "Submission successful":
-
                 external_reference = self.helper.api.external_reference.create(
                     source_name="urlscan.io",
                     external_id=url_scan_data["uuid"],
@@ -192,7 +189,6 @@ class URLScanSubmissionsConnector:
         return None
 
     def process_message(self, data):
-
         self.helper.log_info("process data: " + str(data))
         self.entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=self.entity_id)

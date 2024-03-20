@@ -9,7 +9,6 @@ from lib.external_import import ExternalImportConnector
 
 class AnyrunFeed(ExternalImportConnector):
     def __init__(self):
-
         super().__init__()
         self.token = os.environ.get("ANYRUN_TI_TOKEN", "")
         self.ti_url = "https://api.any.run/v1/feeds/stix.json"
@@ -27,7 +26,6 @@ class AnyrunFeed(ExternalImportConnector):
         return json.loads(response.text)
 
     def _collect_intelligence(self) -> []:
-
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
