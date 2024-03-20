@@ -78,7 +78,6 @@ class RansomwareAPIConnector:
         external_references = []
 
         for field in ["screenshot", "website", "post_url"]:
-
             if item.get(field):
                 external_reference = ExternalReference(
                     source_name="ransomware.live",
@@ -195,14 +194,12 @@ class RansomwareAPIConnector:
                         print(response.raise_for_status())
 
                         for item in response_json:
-
                             bundle = self.stix_object_generator(
                                 item
                             )  # calling the stix_object_generator method to create stix objects
                             stix_bundles.append(bundle)
                             stix_objects.extend(bundle.objects)
                     else:
-
                         self.helper.log_info(
                             f"Error and response status code {response.status_code}"
                         )
@@ -214,7 +211,6 @@ class RansomwareAPIConnector:
         return stix_objects
 
     def collect_intelligence(self, last_run) -> list:
-
         url = "https://api.ransomware.live/recentvictims"
         headers = {"User-Agent": "OpenCTI Connector", "accept": "application/json"}
         response = requests.get(url, headers=headers)
@@ -226,7 +222,6 @@ class RansomwareAPIConnector:
 
             try:
                 for item in response_json:
-
                     created = datetime.strptime(
                         item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
                     )
@@ -240,7 +235,6 @@ class RansomwareAPIConnector:
                         )  # 30 seconds is added to avoid missing any data that might have caused due to code execution time
 
                     if time_diff > 0:
-
                         bundle = self.stix_object_generator(
                             item
                         )  # calling the stix_object_generator method to create stix objects
@@ -335,7 +329,6 @@ class RansomwareAPIConnector:
                     # testing get_historic or pull history config variable
 
                     try:  # Performing the collection of intelligence
-
                         if last_run is None and self.get_historic:
                             bundle_objects = self.collect_historic_intelligence()
                         else:
