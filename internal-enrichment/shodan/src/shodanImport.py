@@ -41,7 +41,7 @@ class ShodanConnector:
         )
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = get_config_variable(
-            "SHODAN_DEFAULT_SCORE", ["shodan", "default_score"]
+            "SHODAN_DEFAULT_SCORE", ["shodan", "default_score"], isNumber=True
         )
 
         # Shodan Identity

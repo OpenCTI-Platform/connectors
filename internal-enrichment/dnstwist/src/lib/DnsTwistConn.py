@@ -100,9 +100,7 @@ class DnsTwistConnector:
                 ## Creating Name Server records
 
                 if item.get("dns_ns"):
-
                     for ns_record in item.get("dns_ns"):
-
                         if ns_record != "!ServFail":
                             ns_object = DomainName(
                                 type="domain-name", value=ns_record, allow_custom=True
@@ -125,17 +123,13 @@ class DnsTwistConnector:
                 ## Creating A records and relationships
 
                 if item.get("dns_a"):
-
                     for a_record in item.get("dns_a"):
-
                         if a_record != "!ServFail":
-
                             if self.detect_ip_version(a_record, True) == "IPv4-Addr":
                                 a_object = IPv4Address(
                                     type="ipv4-addr", value=a_record, allow_custom=True
                                 )
                             else:
-
                                 a_object = IPv6Address(
                                     type="ipv6-addr", value=a_record, allow_custom=True
                                 )
@@ -157,11 +151,8 @@ class DnsTwistConnector:
                 ## Creating AAAA records and relationships
 
                 if item.get("dns_aaaa"):
-
                     for aaaa_record in item.get("dns_aaaa"):
-
                         if aaaa_record != "!ServFail":
-
                             if self.detect_ip_version(aaaa_record, True) == "IPv4-Addr":
                                 aaaa_object = IPv4Address(
                                     type="ipv4-addr",
@@ -191,7 +182,6 @@ class DnsTwistConnector:
 
                 ## Creating MX records and relationships
                 if item.get("dns_mx"):
-
                     for mx_record in item.get("dns_mx"):
                         # if MX record is not same as the domain name
                         if (

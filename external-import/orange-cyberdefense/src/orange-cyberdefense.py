@@ -1093,7 +1093,6 @@ class OrangeCyberDefense:
 
         # Create a bundle of the processed objects
         if len(objects):
-
             self._log_and_initiate_work("Datalake")
             # Send the created bundle
             self.helper.send_stix2_bundle(
