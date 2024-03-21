@@ -40,8 +40,14 @@ def _convert_timestamp_to_zero_millisecond_format(timestamp: str) -> str:
     :param timestamp: String representing the timestamp in "%Y-%m-%dT%H:%M:%SZ".
     :return: String timestamp with zero milliseconds in "%Y-%m-%dT%H:%M:%S.000000Z".
     """
-    dt_object = datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ")
-    return dt_object.strftime("%Y-%m-%dT%H:%M:%S.000000Z")
+    if timestamp is None:
+        return None
+    try:
+        dt_object = datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ")
+        formatted_timestamp = dt_object.strftime("%Y-%m-%dT%H:%M:%S.000000Z")
+        return formatted_timestamp
+    except ValueError:
+        return None
 
 
 def _is_empty(value):
@@ -214,7 +220,6 @@ class ComlaudeConnector:
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
-        self.helper.log_info(f"{friendly_name}")
 
     def _iterate_events(self):
         """
