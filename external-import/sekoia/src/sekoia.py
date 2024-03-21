@@ -163,40 +163,39 @@ class Sekoia(object):
             if self.requested_types:
                 params["match[type]"] = self.requested_types
 
-            data = None
-            if data is None:
-                cursor = current_cursor
-            else:
-                cursor = (
-                    data["next_cursor"] or current_cursor
-                )  # In case next_cursor is None
+            data = self._send_request(self.get_collection_url(), params)
+            if not data:
+                return cursor
 
-                items = data["items"]
-                if not items or len(items) == 0:
-                    return cursor
+            cursor = (
+                data["next_cursor"] or current_cursor
+            )  # In case next_cursor is None
+            items = data["items"]
+            if not items or len(items) == 0:
+                return cursor
 
-                items = self._retrieve_references(items)
-                self._add_main_observable_type_to_indicators(items)
-                if self.create_observables:
-                    self._add_create_observables_to_indicators(items)
-                self._clean_external_references_fields(items)
-                items = self._clean_ic_fields(items)
-                self._add_files_to_items(items)
-                bundle = self.helper.stix2_create_bundle(items)
-                try:
-                    self.helper.send_stix2_bundle(bundle, work_id=work_id)
-                except RecursionError:
-                    self.helper.log_error(
-                        "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
-                    )
-                    self.helper.send_stix2_bundle(
-                        bundle, work_id=work_id, bypass_split=True
-                    )
+            items = self._retrieve_references(items)
+            self._add_main_observable_type_to_indicators(items)
+            if self.create_observables:
+                self._add_create_observables_to_indicators(items)
+            self._clean_external_references_fields(items)
+            items = self._clean_ic_fields(items)
+            self._add_files_to_items(items)
+            bundle = self.helper.stix2_create_bundle(items)
+            try:
+                self.helper.send_stix2_bundle(bundle, work_id=work_id)
+            except RecursionError:
+                self.helper.log_error(
+                    "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
+                )
+                self.helper.send_stix2_bundle(
+                    bundle, work_id=work_id, bypass_split=True
+                )
 
-                self.helper.set_state({"last_cursor": cursor})
-                if len(items) < self.limit:
-                    # We got the last results
-                    return cursor
+            self.helper.set_state({"last_cursor": cursor})
+            if len(items) < self.limit:
+                # We got the last results
+                return cursor
 
     def _clean_external_references_fields(self, items: List[Dict]):
         """
