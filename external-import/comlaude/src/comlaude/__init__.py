@@ -12,7 +12,7 @@ DEFAULT_TIMEOUT = 30
 
 LOGGER = logging.getLogger(__name__)
 
-# API Documentation: https://api.comlaude.com/docs
+# API Documentation: https://api.comlaude.com
 
 
 class ComLaudeAuth(object):
@@ -115,22 +115,21 @@ class ComLaudeAuth(object):
             timeout=self._timeout,
         )
 
-        LOGGER.debug("Token JSON: %s", self._creds)  # noqa: WPS323
-        LOGGER.debug("Token Response: %s", response.text)  # noqa: WPS323
+        LOGGER.debug("Token JSON: %s", self._creds)
+        LOGGER.debug("Token Response: %s", response.text)
 
-        # Check for response errors.
         _response_error(
             "Can't get token for user {0}".format(self._creds.get("username")), response
         )
-
         return json.loads(response.text)["data"]
 
     def _verify_token(self):
         """Check to see if token is expiring in 12 hours."""
         token_expiration = datetime.fromtimestamp(self._decoded_token["exp"])
-        time_difference = datetime.now() + timedelta(hours=12)  # noqa: E501
-        LOGGER.debug("Token expiration time: %s", token_expiration)  # noqa: E501
-        LOGGER.debug("Token comparison time: %s", time_difference)  # noqa: E501
+        time_difference = datetime.now() + timedelta(hours=12)
+
+        LOGGER.debug("Token expiration time: %s", token_expiration)
+        LOGGER.debug("Token comparison time: %s", time_difference)
 
         if token_expiration <= time_difference:
             self.refresh_token()
@@ -201,9 +200,8 @@ class ComLaudeSearch(object):
             timeout=self._timeout,
         )
 
-        LOGGER.debug("get_events Response: %s", response.text)  # noqa: WPS323
+        LOGGER.debug("get_events Response: %s", response.text)
 
-        # Check for response errors.
         _response_error("Impossible to retreive events", response)
         return response.json()
 
@@ -234,10 +232,10 @@ class ComLaudeSearch(object):
 
 
 def _response_error(message, response):
-    if response.status_code == 200:  # noqa: WPS432
+    if response.status_code == 200:
         return
 
-    if response.status_code == 400:  # noqa: WPS432
+    if response.status_code == 400:
         error_message = json.loads(response.text)
     else:
         error_message = json.loads(response.text)
@@ -245,7 +243,7 @@ def _response_error(message, response):
     raise Exception(
         """Message:{0}.
             Response code returned:{1}.
-            Eror message returned:{2}.""".format(
+            Error message returned:{2}.""".format(
             message, response.status_code, error_message
-        ),
+        )
     )
