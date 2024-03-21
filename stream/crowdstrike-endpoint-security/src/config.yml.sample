@@ -16,6 +16,7 @@ connector:
   ignore_types: 'label,marking-definition,identity'
 
 crowdstrike:
+  api_base_url: 'FIXME'
   client_id: 'FIXME'
   client_secret: 'FIXME'
 
