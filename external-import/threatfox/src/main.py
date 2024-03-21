@@ -438,13 +438,13 @@ class ThreatFox:
 
         # Create the malware object
         stix_malware = stix2.Malware(
-            id=Malware.generate_id(ioc.malware_printable),
-            name=ioc.malware_printable,
+            id=Malware.generate_id(ioc.fk_malware),
+            name=ioc.fk_malware,
             aliases=ioc.malware_aliases,
             created_by_ref=self.identity["standard_id"],
             object_marking_refs=[stix2.TLP_WHITE],
             confidence=ioc.confidence_level,
-            description=f"Threat: {ioc.fk_malware} - Reporter: {ioc.reporter}",
+            description=f"Threat: {ioc.fk_malware}\nReporter: {ioc.reporter}",
             is_family=False,
             labels=ioc.tags,
             malware_types=malware_types,
@@ -514,11 +514,11 @@ class FeedRow:
 
         if self.fk_malware == "unknown":
             self.fk_malware = ""
-        else:
-            self.malware_aliases.insert(0, self.fk_malware)
 
         if self.malware_printable == "Unknown malware":
             self.malware_printable = ""
+        else:
+            self.malware_aliases.insert(0, self.malware_printable)
 
         last_seen = row[8]
         if last_seen:
