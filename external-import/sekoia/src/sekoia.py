@@ -78,10 +78,10 @@ class Sekoia(object):
             friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
             try:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
                 cursor = self._run(cursor, work_id)
                 message = f"Connector successfully run, cursor updated to {cursor}"
                 self.helper.log_info(message)
