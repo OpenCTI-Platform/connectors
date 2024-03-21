@@ -71,8 +71,8 @@ class Crowdstrike:
             "value": ioc.value,
             "platforms": (
                 ["windows", "mac", "linux"]
-                if ioc.type in ["md5", "sha256"]
-                else ["windows", "mac", "linux", "ios", "android"]
+                # if ioc.type in ["md5", "sha256"]
+                # else ["windows", "mac", "linux", "ios", "android"]
             ),
         }
 
@@ -145,7 +145,6 @@ def to_cs_type(octi_type: str) -> str | None:
             return "md5"
 
     return None
-
 
 def extract_iocs(payload: dict) -> list[IOC]:
     parsed = translation.translate("splunk", "parse", "{}", payload["pattern"])
