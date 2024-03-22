@@ -17,6 +17,11 @@ MITRE_CAPEC_FILE_URL = (
     "https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json"
 )
 
+STATEMENT_MARKINGS = [
+    "marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168",
+    "marking-definition--17d82bb2-eeeb-4898-bda5-3ddbcd2b799d",
+]
+
 
 def time_from_unixtime(timestamp):
     if not timestamp:
@@ -149,6 +154,12 @@ class Mitre:
             stix_bundle["objects"] = not_revoked_objects
             # Remove statement marking
             if self.mitre_remove_statement_marking:
+                stix_objects = stix_bundle["objects"]
+                stix_bundle["objects"] = list(
+                    filter(
+                        lambda stix: stix["id"] not in STATEMENT_MARKINGS, stix_objects
+                    )
+                )
                 self.remove_statement_marking(stix_bundle)
             return stix_bundle
         except (
@@ -165,10 +176,7 @@ class Mitre:
             if "object_marking_refs" in obj:
                 new_markings = []
                 for ref in obj["object_marking_refs"]:
-                    if ref not in [
-                        "marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168",
-                        "marking-definition--17d82bb2-eeeb-4898-bda5-3ddbcd2b799d",
-                    ]:
+                    if ref not in STATEMENT_MARKINGS:
                         new_markings.append(ref)
                 if len(new_markings) == 0:
                     del obj["object_marking_refs"]

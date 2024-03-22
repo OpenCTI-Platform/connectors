@@ -16,6 +16,10 @@ STATE_OFFSET = "offset"
 STATE_END = "end_epoch"
 STATE_LAST_RUN = "last_run"
 
+STATEMENT_MARKINGS = [
+    "marking-definition--ad2caa47-58fd-5491-8f67-255377927369",
+]
+
 
 class Mandiant:
     def __init__(self):
@@ -612,10 +616,7 @@ class Mandiant:
             if "object_marking_refs" in obj:
                 new_markings = []
                 for ref in obj["object_marking_refs"]:
-                    if (
-                        ref
-                        != "marking-definition--ad2caa47-58fd-5491-8f67-255377927369"
-                    ):
+                    if ref not in STATEMENT_MARKINGS:
                         new_markings.append(ref)
                 if len(new_markings) == 0:
                     del obj["object_marking_refs"]
@@ -681,6 +682,12 @@ class Mandiant:
                 json.loads(obj.serialize()) for obj in uniq_bundles_objects
             ]
             if self.mandiant_remove_statement_marking:
+                uniq_bundles_objects = list(
+                    filter(
+                        lambda stix: stix["id"] not in STATEMENT_MARKINGS,
+                        uniq_bundles_objects,
+                    )
+                )
                 self.remove_statement_marking(uniq_bundles_objects)
 
             bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
