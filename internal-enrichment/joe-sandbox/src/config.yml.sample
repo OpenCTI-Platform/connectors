@@ -49,7 +49,6 @@ joe_sandbox:
   document_password: '1234'
   archive_password: 'infected'
   command_line_argument:
-  live_interaction: false
   encrypt_with_password:
   browser: false
   url_reputation: false
