@@ -428,7 +428,7 @@ class HatchingTriageSandboxConnector:
                     bundle_objects.append(relationship)
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
