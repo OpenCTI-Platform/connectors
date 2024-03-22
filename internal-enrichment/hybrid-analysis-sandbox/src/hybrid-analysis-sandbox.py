@@ -264,10 +264,7 @@ class HybridAnalysis:
         )
         stix_objects.append(malware_analysis)
         if len(stix_objects) > 0:
-            serialized_bundle = stix2.Bundle(
-                objects=stix_objects,
-                allow_custom=True,
-            ).serialize()
+            serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
             bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
             return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
