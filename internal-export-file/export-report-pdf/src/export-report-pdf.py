@@ -99,20 +99,22 @@ class ExportReportPdf:
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
 
+        # Retrieve markings for export push
+        file_markings = data["file_markings"]
         if entity_type == "Report":
-            self._process_report(entity_id, file_name)
+            self._process_report(entity_id, file_name, file_markings)
         elif entity_type == "Case-Incident":
-            self._process_case(entity_id, file_name, entity_type)
+            self._process_case(entity_id, file_name, entity_type, file_markings)
         elif entity_type == "Case-Rfi":
-            self._process_case(entity_id, file_name, entity_type)
+            self._process_case(entity_id, file_name, entity_type, file_markings)
         elif entity_type == "Case-Rft":
-            self._process_case(entity_id, file_name, entity_type)
+            self._process_case(entity_id, file_name, entity_type, file_markings)
         elif entity_type == "Intrusion-Set":
-            self._process_intrusion_set(entity_id, file_name)
+            self._process_intrusion_set(entity_id, file_name, file_markings)
         elif entity_type == "Threat-Actor-Group":
-            self._process_threat_actor_group(entity_id, file_name)
+            self._process_threat_actor_group(entity_id, file_name, file_markings)
         elif entity_type == "Threat-Actor-Individual":
-            self._process_threat_actor_individual(entity_id, file_name)
+            self._process_threat_actor_individual(entity_id, file_name, file_markings)
         else:
             raise ValueError(
                 f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", not "{entity_type}".'
@@ -120,7 +122,7 @@ class ExportReportPdf:
 
         return "Export done"
 
-    def _process_report(self, entity_id, file_name):
+    def _process_report(self, entity_id, file_name, file_markings):
         """
         Process a Report entity and upload as pdf.
         """
@@ -172,7 +174,7 @@ class ExportReportPdf:
 
             # Handle StixCyberObservables entities
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                obj_entity_type
+                    obj_entity_type
             ):
                 observable_dict = (
                     self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
@@ -227,10 +229,10 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            report_id, file_name, pdf_contents, "application/pdf"
+            report_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_intrusion_set(self, entity_id, file_name):
+    def _process_intrusion_set(self, entity_id, file_name, file_markings):
         """
         Process an Intrusion Set entity and upload as pdf.
         """
@@ -284,9 +286,9 @@ class ExportReportPdf:
             targeted_countries = []
             for relationship in context["entities"]["relationship"]:
                 if (
-                    relationship["entity_type"] == "targets"
-                    and relationship["relationship_type"] == "targets"
-                    and relationship["to"]["entity_type"] == "Country"
+                        relationship["entity_type"] == "targets"
+                        and relationship["relationship_type"] == "targets"
+                        and relationship["to"]["entity_type"] == "Country"
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
@@ -322,10 +324,10 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
+            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_threat_actor_group(self, entity_id, file_name):
+    def _process_threat_actor_group(self, entity_id, file_name, file_markings):
         """
         Process a Threat Actor Group entity and upload as pdf.
         """
@@ -379,9 +381,9 @@ class ExportReportPdf:
             targeted_countries = []
             for relationship in context["entities"]["relationship"]:
                 if (
-                    relationship["entity_type"] == "targets"
-                    and relationship["relationship_type"] == "targets"
-                    and relationship["to"]["entity_type"] == "Country"
+                        relationship["entity_type"] == "targets"
+                        and relationship["relationship_type"] == "targets"
+                        and relationship["to"]["entity_type"] == "Country"
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
@@ -417,10 +419,10 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
+            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_threat_actor_individual(self, entity_id, file_name):
+    def _process_threat_actor_individual(self, entity_id, file_name, file_markings):
         """
         Process a Threat Actor Individual entity and upload as pdf.
         """
@@ -474,9 +476,9 @@ class ExportReportPdf:
             targeted_countries = []
             for relationship in context["entities"]["relationship"]:
                 if (
-                    relationship["entity_type"] == "targets"
-                    and relationship["relationship_type"] == "targets"
-                    and relationship["to"]["entity_type"] == "Country"
+                        relationship["entity_type"] == "targets"
+                        and relationship["relationship_type"] == "targets"
+                        and relationship["to"]["entity_type"] == "Country"
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
@@ -512,10 +514,10 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
+            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_case(self, entity_id, file_name, entity_type):
+    def _process_case(self, entity_id, file_name, entity_type, file_markings):
         """
         Process a Case container and upload as pdf.
         """
@@ -584,7 +586,7 @@ class ExportReportPdf:
             obj_id = case_obj["standard_id"]
             # Handle StixCyberObservables entities
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                obj_entity_type
+                    obj_entity_type
             ):
                 observable_dict = (
                     self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
@@ -640,7 +642,7 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
+            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
     def _set_colors(self):
