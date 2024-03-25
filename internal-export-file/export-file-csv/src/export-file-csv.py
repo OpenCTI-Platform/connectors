@@ -145,10 +145,11 @@ class ExportFileCsv:
                     "entity_id": entity_id,
                     "export_type": export_type,
                     "file_name": file_name,
+                    "file_markings": file_markings,
                 },
             )
             self.helper.api.stix_domain_object.push_entity_export(
-                entity_id, file_name, csv_data
+                entity_id, file_name, file_markings, csv_data
             )
             self.helper.connector_logger.info(
                 "Export done",
@@ -157,6 +158,7 @@ class ExportFileCsv:
                     "entity_id": entity_id,
                     "export_type": export_type,
                     "file_name": file_name,
+                    "file_markings": file_markings,
                 },
             )
 
