@@ -166,7 +166,7 @@ class RecordedFutureAlertConnector(threading.Thread):
             )
             current_state = self.helper.get_state()
             if current_state is not None and 'last_alert_run' in current_state:
-                self.helper.log_info(f'Autostart from {current_state['last_alert_run']} to now')
+                self.helper.log_info('Autostart from ' + str(current_state['last_alert_run']) + ' to now')
                 triggers = self.generate_trigger_from(current_state['last_alert_run'])
                 for trigger in triggers :
                     self.run_for_time_period(trigger)
@@ -174,10 +174,10 @@ class RecordedFutureAlertConnector(threading.Thread):
                 next_time = timestamp + datetime.timedelta(minutes=self.connector_interval)
                 waiting_time = (next_time - datetime.datetime.now(pytz.timezone('UTC'))).total_seconds()
                 if waiting_time > 0 :
-                    self.helper.log_info(f'Going to sleep for {waiting_time} seconds.')
+                    self.helper.log_info('Going to sleep for ' + str(waiting_time) + ' seconds.')
                     sleep(waiting_time)
             else:
-                self.helper.log_info(f'Connector has never run. Doing initial pull of {self.rf_initial_lookback} day(s)')
+                self.helper.log_info('Connector has never run. Doing initial pull of ' + str(self.rf_initial_lookback) + ' day(s)')
                 self.helper.set_state({'last_alert_run': timestamp.strftime('%Y-%m-%dT%H:%M:%S')})
                 from_date_calcul = (datetime.datetime.now() - datetime.timedelta(days=self.connector_initial_pull_off)).strptime('%Y-%m-%d')
                 self.run_from_date_to_date(from_date=from_date_calcul, to_date=(datetime.datetime.now()).strptime('%Y-%m-%d'))
@@ -189,7 +189,7 @@ class RecordedFutureAlertConnector(threading.Thread):
         assert from_date == datetime.datetime.strptime(from_date, '%Y-%m-%d').strftime('%Y-%m-%d'), 'Date format must be : yyyy-MM-dd' 
         assert to_date == datetime.datetime.strptime(to_date, '%Y-%m-%d').strftime('%Y-%m-%d'), 'Date format must be : yyyy-MM-dd' 
         #print(f'Running connector from {from_date} to {to_date}')
-        self.helper.log_info(f'Running connector from {from_date} to {to_date}')
+        self.helper.log_info('Running connector from ' + str(from_date) + ' to ' + str(to_date))
         from_date = datetime.datetime.strptime(from_date, '%Y-%m-%d')
         to_date = datetime.datetime.strptime(to_date, '%Y-%m-%d')
 
@@ -203,7 +203,7 @@ class RecordedFutureAlertConnector(threading.Thread):
         self.recordedfuture_alert_time = trigger
         
         #print(f'Running connector for {trigger}')
-        self.helper.log_info(f'Running connector for {trigger}')
+        self.helper.log_info('Running connector for ' + str(trigger))
         
         self.api_recorded_future.get_alert_by_rule_and_by_trigger(self.recordedfuture_alert_time)
         if len(self.api_recorded_future.alerts) == 0 :
@@ -217,7 +217,7 @@ class RecordedFutureAlertConnector(threading.Thread):
         alert_count_info=0
         for alert in self.api_recorded_future.alerts :
             alert_count_info = alert_count_info + 1
-            self.helper.log_info(f'\n\nCreating incident  {str(alert_count_info)} / {str(len(self.api_recorded_future.alerts))}')
+            self.helper.log_info('\n\nCreating incident  ' + str(str(alert_count_info)) + ' /  ' + str(len(self.api_recorded_future.alerts)))
             #print('\n\nCreating incident ' + str(alert_count_info) + ' / ' + str(len(self.api_recorded_future.alerts)))
             fragment_count = 1
             stix_external_ref_to_add = []
@@ -291,7 +291,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                             )
                             stix_obersable_channels.append(stix_obersable_channel)
                     else :
-                        self.helper.log_info(f'The bug that I never could reproduce is here : {str(alert['id'])}  {str(hit['document'])}')
+                        self.helper.log_info('The bug that I never could reproduce is here : ' + str(alert['id']) +   str(hit['document']))
                         #print(f'The bug that I never could reproduce is here : {str(alert['id'])}  {str(hit['document'])}')
                 if observable_type == 'Text' :
                     observable_value = 'Text Observable of ' + hit['id'] + '. See list below.'

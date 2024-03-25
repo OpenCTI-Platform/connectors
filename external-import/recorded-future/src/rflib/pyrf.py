@@ -110,7 +110,7 @@ class RecordedFutureApiClient:
             assert data['status']['status_code'] == 'Ok', 'Unexpected response status from ApiRecordedFuture : ' + data['status']['status_code']
             assert data['status']['status_message'] == 'Playbook alert search successful', 'Unexpected response message from ApiRecordedFuture : ' + data['status']['status_message']
             if from_api == 0 :
-                self.helper.log_info(f'RF Rule : {str(data['counts']['total'])} category')
+                self.helper.log_info('RF Rule : '  + str(data['counts']['total']) + ' category')
             if data['counts']['total'] == 0 :
                 self.alert_count = 0
                 from_api = 1
