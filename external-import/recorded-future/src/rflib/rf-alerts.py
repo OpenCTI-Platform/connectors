@@ -1,13 +1,15 @@
-import pytz
-import yaml
-import pycti
 import datetime
 import threading
-from os import  path
-from sys import exit
+from os import path
 from re import search
+from sys import exit
 from time import sleep
+
+import pycti
+import pytz
+import yaml
 from pyrf import RecordedFutureApiClient
+
 
 class Vocabulary:
     def __init__(self, vocabulary_id, vocabulary_name):

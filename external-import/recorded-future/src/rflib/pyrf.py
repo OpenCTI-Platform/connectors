@@ -1,8 +1,10 @@
-import requests
-import shutil
 import os
+import shutil
 from re import search
 from time import sleep
+
+import requests
+
 
 class PlaybookId:
     def __init__(self, playbook_alert_id, playbook_alert_status, playbook_alert_priority, playbook_alert_date, playbook_alert_category, playbook_alert_title):
