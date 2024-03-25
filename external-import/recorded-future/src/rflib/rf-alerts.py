@@ -212,11 +212,11 @@ class RecordedFutureAlertConnector(threading.Thread):
             #print('\n\n' + str(len(self.api_recorded_future.alerts)) + ' incidents will be created.')
             self.helper.log_info('\n\n' + str(len(self.api_recorded_future.alerts)) + ' incidents will be created.')
         
-        alert_count_sydney=0
+        alert_count_info=0
         for alert in self.api_recorded_future.alerts :
-            alert_count_sydney = alert_count_sydney + 1
-            self.helper.log_info(f'\n\nCreating incident  {str(alert_count_sydney)} / {str(len(self.api_recorded_future.alerts))}')
-            #print('\n\nCreating incident ' + str(alert_count_sydney) + ' / ' + str(len(self.api_recorded_future.alerts)))
+            alert_count_info = alert_count_info + 1
+            self.helper.log_info(f'\n\nCreating incident  {str(alert_count_info)} / {str(len(self.api_recorded_future.alerts))}')
+            #print('\n\nCreating incident ' + str(alert_count_info) + ' / ' + str(len(self.api_recorded_future.alerts)))
             fragment_count = 1
             stix_external_ref_to_add = []
             stix_observables = []
