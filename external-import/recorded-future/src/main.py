@@ -133,7 +133,7 @@ class RFNotes:
             )
         else:
             self.risklist_related_entities = risklist_related_entities_list.split(",")
-        
+
         self.rf_alert_enable = get_config_variable(
             "ALERT_ENABLE", ["alert", "enable"], config
         )
@@ -233,9 +233,9 @@ class RFNotes:
 if __name__ == "__main__":
     try:
         RF = RFNotes()
-        
+
         # Start RF Alert Connector
-        if RF.rf_alert_enable :
+        if RF.rf_alert_enable:
             RfCon = RecordedFutureAlertConnector(RF.helper)
             RfCon.run()
         # Pull RF risk lists
