@@ -33,24 +33,29 @@ class URLHausRecentPayloads:
             "URLHAUS_RECENT_PAYLOADS_API_URL",
             ["urlhaus_recent_payloads", "api_url"],
             config,
+            default="https://urlhaus-api.abuse.ch/v1/",
         )
 
         self.cooldown_seconds = get_config_variable(
             "URLHAUS_RECENT_PAYLOADS_COOLDOWN_SECONDS",
             ["urlhaus_recent_payloads", "cooldown_seconds"],
             config,
+            isNumber=True,
+            default=300,
         )
 
         self.signature_label_color = get_config_variable(
             "URLHAUS_RECENT_PAYLOADS_SIGNATURE_LABEL_COLOR",
             ["urlhaus_recent_payloads", "signature_label_color"],
             config,
+            default="##0059f7",
         )
 
         self.filetype_label_color = get_config_variable(
             "URLHAUS_RECENT_PAYLOADS_FILETYPE_LABEL_COLOR",
             ["urlhaus_recent_payloads", "filetype_label_color"],
             config,
+            default="54483b",
         )
 
         self.include_filetypes = get_config_variable(
@@ -106,6 +111,7 @@ class URLHausRecentPayloads:
         while True:
             try:
                 current_state = self.helper.get_state()
+                last_first_seen = None
                 last_first_seen_datetime = None
                 if current_state is not None and "last_first_seen" in current_state:
                     last_first_seen = current_state["last_first_seen"]
@@ -127,7 +133,10 @@ class URLHausRecentPayloads:
                     signature = recent_payload_dict["signature"]
                     download_url = recent_payload_dict["urlhaus_download"]
 
-                    if last_first_seen_datetime is not None:
+                    if (
+                        last_first_seen_datetime is not None
+                        and last_first_seen is not None
+                    ):
                         new_first_seen_datetime = datetime.datetime.strptime(
                             first_seen, "%Y-%m-%d %H:%M:%S"
                         )
@@ -229,7 +238,7 @@ class URLHausRecentPayloads:
                     self.helper.set_state({"last_first_seen": first_seen})
 
                 self.helper.log_info(
-                    f"Re-checking for new payloads in {self.cooldown_seconds} seconds..."
+                    f"Re-checking for new payloads in {str(self.cooldown_seconds)} seconds..."
                 )
 
             except (KeyboardInterrupt, SystemExit):
