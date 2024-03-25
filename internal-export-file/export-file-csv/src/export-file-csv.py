@@ -99,6 +99,7 @@ class ExportFileCsv:
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
 
@@ -220,15 +221,15 @@ class ExportFileCsv:
                 )
                 if entity_type == "Stix-Cyber-Observable":
                     self.helper.api.stix_cyber_observable.push_list_export(
-                        entity_id, entity_type, file_name, csv_data, list_filters
+                        entity_id, entity_type, file_name, file_markings, csv_data, list_filters
                     )
                 elif entity_type == "Stix-Core-Object":
                     self.helper.api.stix_core_object.push_list_export(
-                        entity_id, entity_type, file_name, csv_data, list_filters
+                        entity_id, entity_type, file_name, file_markings, csv_data, list_filters
                     )
                 else:
                     self.helper.api.stix_domain_object.push_list_export(
-                        entity_id, entity_type, file_name, csv_data, list_filters
+                        entity_id, entity_type, file_name, file_markings, csv_data, list_filters
                     )
                 self.helper.connector_logger.info(
                     "Export done",
