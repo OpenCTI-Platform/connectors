@@ -216,7 +216,7 @@ class RecordedFutureAlertConnector(threading.Thread):
     def run(self):
         while True:
             timestamp = datetime.datetime.now(pytz.timezone("UTC"))
-            work_id = self.helper.api.work.initiate_work(
+            self.helper.api.work.initiate_work(
                 self.helper.connect_id,
                 "Recorded Future Alert run @ "
                 + timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -393,7 +393,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                                 "(https:\/\/t.me\/.+?(?=\/))|(https:\/\/twitter.com\/.+?(?=\/))",
                                 hit["document"]["url"],
                             )
-                            if value == None:
+                            if value is None:
                                 value = hit["document"]["url"]
                                 description = "Script couldn't parse URL. Channel created automatically based on Recorded Future's alert."
                             else:
@@ -530,7 +530,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     )
                 )
                 if stix_obersable_channel is not None:
-                    stix_relationship = self.opencti_api_client.stix_core_relationship.create(
+                    self.opencti_api_client.stix_core_relationship.create(
                         **{
                             "fromId": stix_obersable_channel["id"],
                             "toId": stix_observable["id"],
@@ -566,7 +566,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                             )
                             stix_user_accounts.append(stix_user_account)
                             if stix_obersable_channel is not None:
-                                stix_relationship = self.opencti_api_client.stix_core_relationship.create(
+                                self.opencti_api_client.stix_core_relationship.create(
                                     **{
                                         "fromId": stix_user_account["id"],
                                         "toId": stix_obersable_channel["id"],
@@ -578,7 +578,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                                         ],
                                     }
                                 )
-                            stix_relationship = self.opencti_api_client.stix_core_relationship.create(
+                            self.opencti_api_client.stix_core_relationship.create(
                                 **{
                                     "fromId": stix_user_account["id"],
                                     "toId": stix_observable["id"],
@@ -626,18 +626,16 @@ class RecordedFutureAlertConnector(threading.Thread):
                 }
             )
             for stix_image in stix_images:
-                stix_image_result = self.opencti_api_client.stix_domain_object.add_file(
+                self.opencti_api_client.stix_domain_object.add_file(
                     **{"id": stix_incident["id"], "file_name": stix_image.image_path}
                 )
             for stix_note in stix_notes:
-                stix_note_related_entities = (
-                    self.opencti_api_client.note.add_stix_object_or_stix_relationship(
-                        **{
-                            "id": stix_note.note_stix_reference["id"],
-                            "stixObjectOrStixRelationshipId": stix_incident["id"],
-                            "objectMarking": self.stix_object_default_marking["id"],
-                        }
-                    )
+                self.opencti_api_client.note.add_stix_object_or_stix_relationship(
+                    **{
+                        "id": stix_note.note_stix_reference["id"],
+                        "stixObjectOrStixRelationshipId": stix_incident["id"],
+                        "objectMarking": self.stix_object_default_marking["id"],
+                    }
                 )
                 for stix_image in stix_images:
                     if stix_image.image_alert_hit_id == stix_note.note_alert_hit_id:
@@ -659,7 +657,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                                 "note_types": "external",
                             }
                         )
-                        stix_note_related_entities = self.opencti_api_client.note.add_stix_object_or_stix_relationship(
+                        self.opencti_api_client.note.add_stix_object_or_stix_relationship(
                             **{
                                 "id": new_note["id"],
                                 "stixObjectOrStixRelationshipId": stix_incident["id"],
@@ -667,7 +665,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                             }
                         )
             for stix_user_account in stix_user_accounts:
-                stix_relationship = self.opencti_api_client.stix_core_relationship.create(
+                self.opencti_api_client.stix_core_relationship.create(
                     **{
                         "fromId": stix_user_account["id"],
                         "toId": stix_incident["id"],
@@ -678,7 +676,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     }
                 )
             for stix_observable in stix_observables:
-                stix_relationship = self.opencti_api_client.stix_core_relationship.create(
+                self.opencti_api_client.stix_core_relationship.create(
                     **{
                         "fromId": stix_observable["id"],
                         "toId": stix_incident["id"],
@@ -689,7 +687,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     }
                 )
             for stix_obersable_channel in stix_obersable_channels:
-                stix_relationship = self.opencti_api_client.stix_core_relationship.create(
+                self.opencti_api_client.stix_core_relationship.create(
                     **{
                         "fromId": stix_obersable_channel["id"],
                         "toId": stix_incident["id"],
