@@ -775,6 +775,7 @@ class ArticleImporter:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.log_info("[RiskIQ] Sending report STIX2 bundle")
             self._send_bundle(bundle)
+            self.helper.metric.inc("record_send", len(bundle_objects))
             return self._create_state(created)
 
     @classmethod
@@ -788,4 +789,3 @@ class ArticleImporter:
 
     def _send_bundle(self, bundle: str) -> None:
         self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
-        self.helper.metric.inc("record_send", len(bundle.objects))
