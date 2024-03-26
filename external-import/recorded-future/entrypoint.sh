@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-recorded-future
 
 # Start the connector
-python main.py
+python3 main.py
