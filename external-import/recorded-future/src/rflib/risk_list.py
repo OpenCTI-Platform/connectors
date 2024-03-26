@@ -73,7 +73,12 @@ class RiskList(threading.Thread):
                     )
 
                     for index, criticality in enumerate(rule_criticality_list):
+                        # If criticality comes with empty string, replace value at 0
+                        if not criticality:
+                            criticality = 0
+
                         criticality_score = int(criticality)
+
                         for corresponding_rule in RISK_RULES_MAPPER:
                             if criticality_score == corresponding_rule["rule_score"]:
                                 description += (
