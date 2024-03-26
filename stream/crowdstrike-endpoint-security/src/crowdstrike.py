@@ -146,6 +146,7 @@ def to_cs_type(octi_type: str) -> str | None:
 
     return None
 
+
 def extract_iocs(payload: dict) -> list[IOC]:
     parsed = translation.translate("splunk", "parse", "{}", payload["pattern"])
 

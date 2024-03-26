@@ -8,14 +8,10 @@ class Metrics:
         self.port = port
 
         self._processed_messages_counter = Counter(
-            "processed_messages",
-            "Number of processed messages",
-            ["name", "action"]
+            "processed_messages", "Number of processed messages", ["name", "action"]
         )
         self._current_state_gauge = Gauge(
-            "current_state",
-            "Current connector state",
-            ["name"]
+            "current_state", "Current connector state", ["name"]
         )
 
     def message(self, action: str) -> None:
