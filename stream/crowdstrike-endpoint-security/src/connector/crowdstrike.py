@@ -15,12 +15,11 @@ class CrowdstrikeConnector:
         with necessary configurations
         """
         self.config = ConfigCrowdstrike()
-        self.helper = OpenCTIConnectorHelper(self.config.load, True)
+        self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = CrowdstrikeClient(self.helper)
         self.metrics = Metrics(
-            self.helper.connect_name,
-            self.config.metrics_addr,
-            self.config.metrics_port)
+            self.helper.connect_name, self.config.metrics_addr, self.config.metrics_port
+        )
 
     def check_stream_id(self) -> None:
         """
@@ -28,14 +27,10 @@ class CrowdstrikeConnector:
         :return: None
         """
         if (
-                self.helper.connect_live_stream_id is None
-                or self.helper.connect_live_stream_id == "ChangeMe"
+            self.helper.connect_live_stream_id is None
+            or self.helper.connect_live_stream_id == "ChangeMe"
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
-
-    @staticmethod
-    def _parse_indicator_pattern(pattern):
-        return pattern.strip("[]").split(" ")[0]
 
     def handle_logger_info(self, action: str, data: dict) -> None:
         """
@@ -46,9 +41,8 @@ class CrowdstrikeConnector:
         """
         self.helper.connector_logger.info(
             action + " Processing indicator",
-            {
-                "Indicator ID": self.helper.get_attribute_in_extension("id", data)
-            })
+            {"Indicator ID": self.helper.get_attribute_in_extension("id", data)},
+        )
 
     def _process_message(self, msg) -> None:
         """
@@ -64,21 +58,31 @@ class CrowdstrikeConnector:
         except Exception:
             raise ValueError("Cannot process the message")
 
+        """
+        Extract data and handle only entity type 'Indicator' from stream
+        """
         if data["type"] == "indicator":
             self.helper.connector_logger.info("Starting to extract data...")
-
-            indicator_pattern = self._parse_indicator_pattern(data["pattern"])
-            indicator_value = data["name"]
 
             # Handle creation
             if msg.event == "create":
                 self.handle_logger_info("[CREATE]", data)
+                self.client.create_indicator(data)
 
+            # Handle update
             if msg.event == "update":
                 self.handle_logger_info("[UPDATE]", data)
+                self.client.update_indicator(data)
 
+            # Handle delete
             if msg.event == "delete":
-                self.handle_logger_info("[DELETE]", data)
+                if self.config.permanent_delete:
+                    self.handle_logger_info("[DELETE]", data)
+                    self.client.delete_indicator(data)
+
+                else:
+                    self.handle_logger_info("[DELETE ON OPENCTI ONLY]", data)
+                    self.client.update_indicator(data)
 
     def start(self) -> None:
         """

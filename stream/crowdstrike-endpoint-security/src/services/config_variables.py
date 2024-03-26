@@ -38,9 +38,7 @@ class ConfigCrowdstrike:
 
         # OpenCTI configurations
         self.ignore_types = get_config_variable(
-            "CONNECTOR_IGNORE_TYPES",
-            ["connector", "ignore_types"],
-            self.load
+            "CONNECTOR_IGNORE_TYPES", ["connector", "ignore_types"], self.load
         ).split(",")
 
         self.consumer_count: int = get_config_variable(
@@ -56,7 +54,7 @@ class ConfigCrowdstrike:
             "CROWDSTRIKE_API_BASE_URL",
             ["crowdstrike", "api_base_url"],
             self.load,
-            default='https://api.crowdstrike.com',
+            default="https://api.crowdstrike.com",
         )
 
         self.client_id: str = get_config_variable(
@@ -73,27 +71,32 @@ class ConfigCrowdstrike:
             default="CHANGEME",
         )
 
+        self.permanent_delete: str = get_config_variable(
+            "CROWDSTRIKE_PERMANENT_DELETE",
+            ["crowdstrike", "permanent_delete"],
+            self.load,
+            default=False,
+        )
+
+        self.falcon_for_mobile_active: str = get_config_variable(
+            "CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE",
+            ["crowdstrike", "falcon_for_mobile_active"],
+            self.load,
+            default=False,
+        )
+
         # Prometheus Metrics configurations
         self.enable_prometheus_metrics: bool = get_config_variable(
-            "METRICS_ENABLE",
-            ["metrics", "enable"],
-            self.load,
-            default=False
+            "METRICS_ENABLE", ["metrics", "enable"], self.load, default=False
         )
 
         self.metrics_port: int = get_config_variable(
-            "METRICS_PORT",
-            ["metrics", "port"],
-            self.load,
-            isNumber=True,
-            default=9113
+            "METRICS_PORT", ["metrics", "port"], self.load, isNumber=True, default=9113
         )
 
         self.metrics_addr: str = get_config_variable(
             "METRICS_ADDR",
             ["metrics", "addr"],
             self.load,
-            default="0.0.0.0"  # no security
+            default="0.0.0.0",  # no security
         )
-
-
