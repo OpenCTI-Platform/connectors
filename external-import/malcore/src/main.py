@@ -1,5 +1,5 @@
 import time
- 
+
 from malcore import Malcore
 
 if __name__ == "__main__":
