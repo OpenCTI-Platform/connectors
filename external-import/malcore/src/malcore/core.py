@@ -58,7 +58,7 @@ class Malcore:
             type="Organization",
             name="Malcore",
             description="Malcore is a project dedicated to helping combat the spread of hackers, spammers, "
-                        "and abusive activity on the internet",
+            "and abusive activity on the internet",
         )
 
     def get_interval(self):
@@ -104,8 +104,7 @@ class Malcore:
             file_objects = []
 
             # Filling the bundle
-            for item in data_json['data']['data']:
-
+            for item in data_json["data"]["data"]:
                 key = next(iter(item))
                 item_data = item[key]
 
@@ -113,9 +112,11 @@ class Malcore:
                     hashes = item_data["hashes"]
                     upload_time = item_data["upload_time"]
                     file_exif_data = item_data["file_exif_data"]
-                    file_extension = file_exif_data['file_information']['file_extension']
-                    mime_type = file_exif_data['mime_type']
-                    file_size = item_data['file_sizes']['raw_byte_size']
+                    file_extension = file_exif_data["file_information"][
+                        "file_extension"
+                    ]
+                    mime_type = file_exif_data["mime_type"]
+                    file_size = item_data["file_sizes"]["raw_byte_size"]
                     hashmd5 = hashes["md5"]
 
                     stix_file = stix2.File(
@@ -132,9 +133,7 @@ class Malcore:
                     file_objects.append(stix_file)
 
             # Creating the bundle from the list
-            bundle = stix2.Bundle(
-                objects=[identity] + file_objects
-            )
+            bundle = stix2.Bundle(objects=[identity] + file_objects)
             bundle_json = bundle.serialize()
 
             # Sending the bundle
@@ -144,9 +143,7 @@ class Malcore:
                 work_id=work_id,
             )
 
-            message = "IOC successfully run, storing last_run as " + str(
-                timestamp
-            )
+            message = "IOC successfully run, storing last_run as " + str(timestamp)
             self.helper.log_info(message)
             self.helper.set_state({"last_run": timestamp})
             self.helper.api.work.to_processed(work_id, message)
@@ -199,10 +196,10 @@ class Malcore:
             indicators = []
             malware_objects = []
             relationships = []
-            labels = ['threat']
+            labels = ["threat"]
 
             # Filling the bundle
-            for item in data_json['data']['data']:
+            for item in data_json["data"]["data"]:
                 hash = item["hash"]
                 score = item["score"]
                 pattern = "[file:hashes.'SHA-256' = '" + hash + "']"
@@ -259,9 +256,7 @@ class Malcore:
                 work_id=work_id,
             )
 
-            message = "Threat successfully run, storing last_run as " + str(
-                timestamp
-            )
+            message = "Threat successfully run, storing last_run as " + str(timestamp)
             self.helper.log_info(message)
             self.helper.set_state({"last_run": timestamp})
             self.helper.api.work.to_processed(work_id, message)
@@ -314,7 +309,7 @@ class Malcore:
             indicators = []
 
             # Filling the bundle
-            for item in data_json['data']['data']:
+            for item in data_json["data"]["data"]:
                 hash = item["hash"]
                 pattern = "[file:hashes.'SHA-256' = '" + hash + "']"
 
@@ -332,10 +327,7 @@ class Malcore:
                 indicators.append(stix_indicator)
 
             # Creating the bundle from the list
-            bundle = stix2.Bundle(
-                objects=[identity] + indicators,
-                allow_custom=True
-            )
+            bundle = stix2.Bundle(objects=[identity] + indicators, allow_custom=True)
             bundle_json = bundle.serialize()
 
             # Sending the bundle
@@ -345,9 +337,7 @@ class Malcore:
                 work_id=work_id,
             )
 
-            message = "Hash successfully run, storing last_run as " + str(
-                timestamp
-            )
+            message = "Hash successfully run, storing last_run as " + str(timestamp)
             self.helper.log_info(message)
             self.helper.set_state({"last_run": timestamp})
             self.helper.api.work.to_processed(work_id, message)
@@ -373,9 +363,9 @@ class Malcore:
                     last_run = None
                     self.helper.log_info("Connector has never run")
 
-                # If the last_run is more than interval-1 day
+                # If the last_run is more than interval hour
                 if last_run is None or (
-                        (timestamp - last_run) > ((int(self.interval) - 1) * 60 * 60 * 24)
+                    (timestamp - last_run) > (int(self.interval) * 60 * 60)
                 ):
                     # Initiate the run
                     self.helper.log_info("Connector will run!")
@@ -389,11 +379,11 @@ class Malcore:
                     # Run for feed type hash
                     self.run_feed_hash(timestamp)
 
-                    # Store the current timestamp as a last run 
+                    # Store the current timestamp as a last run
                     self.helper.log_info(
                         "Last_run stored, next run in: "
-                        + str(round(self.get_interval() / 60 / 60 / 24, 2))
-                        + " days"
+                        + str(round(self.get_interval() / 60 / 60, 2))
+                        + " hours"
                     )
                     time.sleep(self.get_interval())
                 else:
@@ -401,8 +391,8 @@ class Malcore:
                     new_interval = self.get_interval() - (timestamp - last_run)
                     self.helper.log_info(
                         "Connector will not run, next run in: "
-                        + str(round(new_interval / 60 / 60 / 24, 2))
-                        + " days"
+                        + str(round(new_interval / 60 / 60, 2))
+                        + " hours"
                     )
                     time.sleep(60)
             except (KeyboardInterrupt, SystemExit):
