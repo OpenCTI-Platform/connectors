@@ -16,8 +16,11 @@ connector:
   ignore_types: 'label,marking-definition,identity'
 
 crowdstrike:
+  api_base_url: 'FIXME'
   client_id: 'FIXME'
   client_secret: 'FIXME'
+  permanent_delete: False
+  falcon_for_mobile_active: False
 
 metrics:
   enable: true # set to true to expose prometheus metrics
