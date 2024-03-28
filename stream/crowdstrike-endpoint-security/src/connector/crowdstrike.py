@@ -61,8 +61,10 @@ class CrowdstrikeConnector:
         """
         Extract data and handle only entity type 'Indicator' from stream
         """
-        if data["type"] == "indicator":
-            self.helper.connector_logger.info("Starting to extract data...")
+        if data["type"] == "indicator" and data["pattern_type"] in ["stix"]:
+            self.helper.connector_logger.info(
+                "Starting to extract data...", {"pattern_type": data["pattern_type"]}
+            )
 
             # Handle creation
             if msg.event == "create":
@@ -79,10 +81,9 @@ class CrowdstrikeConnector:
                 if self.config.permanent_delete:
                     self.handle_logger_info("[DELETE]", data)
                     self.client.delete_indicator(data)
-
                 else:
                     self.handle_logger_info("[DELETE ON OPENCTI ONLY]", data)
-                    self.client.update_indicator(data)
+                    self.client.update_indicator(data, msg.event)
 
     def start(self) -> None:
         """
