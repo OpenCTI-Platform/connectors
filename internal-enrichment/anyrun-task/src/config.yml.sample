@@ -14,12 +14,14 @@ connector:
 anyrun:
   token: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
-  url: 'https://api.any.run/v1'
+  url: 'https://api.any.run'
   timer: 60
   os: 'windows'
   bitness: '64'
   version: '10'
+  locale: 'en-US'
   browser: 'Google Chrome'
+  privacy: 'bylink'
   automated_interactivity: False
   ioc: True
   mitre: False
