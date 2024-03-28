@@ -208,7 +208,13 @@ class CrowdstrikeClient:
                 {"ioc_value": ioc_value},
             )
 
-    def update_indicator(self, data: dict, event: str | None = None):
+    def update_indicator(self, data: dict, event: str | None = None) -> None:
+        """
+        Update IOC from OpenCTI to Crowdstrike
+        :param data: Data of IOC in dict
+        :param event: Event in string or None
+        :return: None
+        """
         ioc_value = data["name"]
         ioc_cs = self._search_indicator(ioc_value)
 
@@ -243,7 +249,12 @@ class CrowdstrikeClient:
                 {"ioc_value": ioc_value},
             )
 
-    def delete_indicator(self, data):
+    def delete_indicator(self, data: dict) -> None:
+        """
+        Delete IOC from OpenCTI to Crowdstrike
+        :param data: Data of IOC in dict
+        :return: None
+        """
         ioc_value = data["name"]
         ioc_cs = self._search_indicator(ioc_value)
 
