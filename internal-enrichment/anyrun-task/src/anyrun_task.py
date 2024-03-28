@@ -122,7 +122,7 @@ class AnyRunTask:
         while True:
             time.sleep(1)
             num += 1
-            response = self.call_anyrun_api("GET", "v1/analysis/{}".format(task_id))
+            response = self.call_anyrun_api("GET", "analysis/{}".format(task_id))
             try:
                 result = json.loads(response.text)
                 if result["data"]["status"] == "done":
