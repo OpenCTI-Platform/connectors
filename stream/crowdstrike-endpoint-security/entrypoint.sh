@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-crowdstrike-endpoint-security
 
 # Launch the worker
-python3 crowdstrike.py
+python3 main.py

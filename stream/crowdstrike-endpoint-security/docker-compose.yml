@@ -9,12 +9,16 @@ services:
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - "CONNECTOR_NAME=CrowdStrike Endpoint Security"
+      - CONNECTOR_NAME=CrowdStrike Endpoint Security
       - CONNECTOR_SCOPE=crowdstrike
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_IGNORE_TYPES=label,marking-definition,identity
+      - CROWDSTRIKE_API_BASE_URL=FIXME
       - CROWDSTRIKE_CLIENT_ID=FIXME
       - CROWDSTRIKE_CLIENT_SECRET=FIXME
-      - METRICS_ENABLE=1
+      - CROWDSTRIKE_PERMANENT_DELETE=False # optional
+      - CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE=False # optional
+      - METRICS_ENABLE=False # optional
+      - METRICS_PORT=FIXME # optional
+      - METRICS_ADDR=FIXME # optional
     restart: always
