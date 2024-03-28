@@ -10,9 +10,18 @@ observable_type_mapper = {
 
 # Map OpenCTI IOC score to Crowdstrike IOC severity
 severity_mapper = {
-    range(0, 19): "info",
+    range(0, 19): "informational",
     range(20, 39): "low",
     range(40, 59): "medium",
     range(60, 79): "high",
     range(80, 100): "critical",
+}
+
+# Map OpenCTI IOC platforms to Crowdstrike platforms
+platform_mapper = {
+    "windows": "windows",
+    "macos": "mac",
+    "linux": "linux",
+    "android": "android",
+    "ios": "ios",
 }

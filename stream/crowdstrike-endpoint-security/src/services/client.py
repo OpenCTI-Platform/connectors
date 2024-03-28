@@ -1,7 +1,7 @@
 from falconpy import IOC as CrowdstrikeIOC
 
 from .config_variables import ConfigCrowdstrike
-from .constants import observable_type_mapper, severity_mapper
+from .constants import observable_type_mapper, platform_mapper, severity_mapper
 
 
 class CrowdstrikeClient:
@@ -27,7 +27,7 @@ class CrowdstrikeClient:
         if response["status_code"] >= 400:
             error_message = response["body"]["errors"][0]["message"]
             self.helper.connector_logger.error(
-                "[API] Error while searching indicator",
+                "[API] Error while processing indicator",
                 {"error_message": error_message},
             )
 
@@ -62,17 +62,20 @@ class CrowdstrikeClient:
         """
         return pattern.strip("[]").split(" ")[0]
 
-    def _map_indicator_type(self, pattern: str) -> str:
+    def _map_indicator_type(self, pattern: str) -> str | None:
         """
         Map the indicator main observable type in OpenCTI with Crowdstrike IOC type
         :param pattern: Pattern of IOC in string
-        :return: Observable type in string
+        :return: Observable type in string or None no map
         """
         ioc_pattern_type = self._parse_indicator_pattern(pattern)
 
         for obs_type in observable_type_mapper:
             if obs_type == ioc_pattern_type:
                 return observable_type_mapper[obs_type]
+
+        # If OpenCTI observable type is not in Crowdstrike
+        return None
 
     def _map_severity(self, data: dict) -> str:
         """
@@ -86,36 +89,72 @@ class CrowdstrikeClient:
             if indicator_score in score_range:
                 return severity_mapper[score_range]
 
-    def create_indicator(self, data: dict) -> None:
+    def _map_platform(self, data: dict) -> list | None:
         """
-        Create IOC from OpenCTI to Crowdstrike
+        Map OpenCTI indicator platforms to platform value from Crowdstrike
         :param data: Data of IOC in dict
-        :return: None
+        :return: List of platforms
+        """
+        indicator_platforms = self.helper.get_attribute_in_mitre_extension(
+            "platforms", data
+        )
+        platforms = []
+
+        for platform in platform_mapper:
+            if indicator_platforms is not None and platform in indicator_platforms:
+                if self.config.falcon_for_mobile_active:
+                    platforms.append(platform_mapper[platform])
+                elif platform not in ["ios", "android"]:
+                    # If "Falcon for mobile" is not active in Crowdstrike
+                    # API doesn't accept ["ios", "android"]
+                    platforms.append(platform_mapper[platform])
+
+        if indicator_platforms is None:
+            # If there is no platforms in OpenCTI
+            # Add default platforms: "windows", "mac", "linux"
+            platforms.extend(["windows", "mac", "linux"])
+
+        if len(platforms) == 0:
+            return None
+        else:
+            return platforms
+
+    def _generate_indicator_body(
+        self, data: dict, ioc_value: str, ioc_id: str = None
+    ) -> dict | None:
+        """
+        Generate the body for Falcon Crowdstrike API call
+        Required value: ioc_type, ioc_platforms, ioc_value
+        :param data:
+        :return: Body in dict or return None if required value is None
         """
         ioc_type = self._map_indicator_type(data["pattern"])
-        ioc_value = data["name"]
-        ioc_valid_until = data.get("valid_until", None)
-        ioc_tags = data.get("labels", None)
-        ioc_severity = self._map_severity(data)
-        ioc_platforms = ["windows", "mac", "linux"]
 
-        if self.config.falcon_for_mobile_active:
-            ioc_platforms.extend(["ios", "android"])
+        # IOC type is required, return None if no type
+        if ioc_type is not None:
+            ioc_description = data.get("description", None)
+            ioc_valid_until = data.get("valid_until", None)
+            ioc_tags = data.get("labels", None)
+            ioc_severity = self._map_severity(data)
+            ioc_platforms = self._map_platform(data)
 
-        ioc_cs = self._search_indicator(ioc_value)
-
-        # If IOC doesn't exist, create the IOC into Crowdstrike
-        if len(ioc_cs) == 0:
             indicator = {
                 "action": "detect",  # "Detect only" on Falcon web UI
                 "mobile_action": "detect",  # "Detect only" on Falcon web UI
                 "type": ioc_type,
                 "value": ioc_value,
                 "severity": ioc_severity,
-                "platforms": ioc_platforms,
                 "applied_globally": True,
                 "source": "OpenCTI IOC",
             }
+
+            # If description exists, add it in indicator to create in Crowdstrike
+            if ioc_id is not None:
+                indicator["id"] = ioc_id
+
+            # If description exists, add it in indicator to create in Crowdstrike
+            if ioc_description is not None:
+                indicator["description"] = ioc_description
 
             # If valid_until value exists, add it in indicator to create in Crowdstrike
             if ioc_valid_until is not None:
@@ -125,33 +164,103 @@ class CrowdstrikeClient:
             if ioc_tags is not None:
                 indicator["tags"] = ioc_tags
 
+            # If platforms is added, add it in indicator to create in Crowdstrike
+            if ioc_platforms is not None:
+                indicator["platforms"] = ioc_platforms
+
             body = {"comment": "IOC imported from OpenCTI", "indicators": [indicator]}
 
-            response = self.cs.indicator_create(body=body)
-            self._handle_api_error(response)
-
-            if response["status_code"] == 201:
-                self.helper.connector_logger.info(
-                    "[API] IOC successfully created in Crowdstrike"
-                )
-
+            return body
         else:
-            self.helper.connector_logger.info("[API] IOC already exist in Crowdstrike")
+            return None
 
-    def update_indicator(self, data: dict):
+    def create_indicator(self, data: dict) -> None:
+        """
+        Create IOC from OpenCTI to Crowdstrike
+        :param data: Data of IOC in dict
+        :return: None
+        """
         ioc_value = data["name"]
         ioc_cs = self._search_indicator(ioc_value)
 
-        if len(ioc_cs) != 0:
-            response = self.cs.indicator_update()
+        # If IOC doesn't exist, create the IOC into Crowdstrike
+        if len(ioc_cs) == 0:
+            body = self._generate_indicator_body(data, ioc_value)
+
+            if body is not None:
+                response = self.cs.indicator_create(body=body)
+                self._handle_api_error(response)
+
+                if response["status_code"] == 201:
+                    self.helper.connector_logger.info(
+                        "[API] IOC successfully created in Crowdstrike",
+                        {"ioc_value": ioc_value},
+                    )
+            else:
+                self.helper.connector_logger.info(
+                    "[API] IOC cannot be created in Crowdstrike",
+                    {"ioc_value": ioc_value},
+                )
+
         else:
-            self.helper.connector_logger.info("[API] IOC doesn't exist in Crowdstrike")
+            self.helper.connector_logger.info(
+                "[API] IOC already exists in Crowdstrike",
+                {"ioc_value": ioc_value},
+            )
+
+    def update_indicator(self, data: dict, event: str | None = None):
+        ioc_value = data["name"]
+        ioc_cs = self._search_indicator(ioc_value)
+
+        # If IOC exists, update the IOC into Crowdstrike
+        if len(ioc_cs) != 0:
+
+            # In case of falcon_for_mobile is False, update data with label TO_DELETE for Crowdstrike
+            if event == "delete":
+                data["labels"] = ["TO_DELETE"]
+
+            ioc_id = ioc_cs[0]
+            body = self._generate_indicator_body(data, ioc_value, ioc_id)
+
+            if body is not None:
+                response = self.cs.indicator_update(body=body)
+                self._handle_api_error(response)
+
+                if response["status_code"] == 200:
+                    self.helper.connector_logger.info(
+                        "[API] IOC successfully updated in Crowdstrike",
+                        {"ioc_value": ioc_value},
+                    )
+            else:
+                self.helper.connector_logger.info(
+                    "[API] IOC cannot be updated in Crowdstrike",
+                    {"ioc_value": ioc_value},
+                )
+
+        else:
+            self.helper.connector_logger.info(
+                "[API] IOC doesn't exist in Crowdstrike",
+                {"ioc_value": ioc_value},
+            )
 
     def delete_indicator(self, data):
         ioc_value = data["name"]
         ioc_cs = self._search_indicator(ioc_value)
 
+        # If IOC exists and permanent_delete is True, delete the IOC into Crowdstrike
         if len(ioc_cs) != 0:
-            response = self.cs.indicator_delete()
+            ioc_id = ioc_cs[0]
+            response = self.cs.indicator_delete(ioc_id)
+            self._handle_api_error(response)
+
+            if response["status_code"] == 200:
+                self.helper.connector_logger.info(
+                    "[API] IOC successfully deleted in Crowdstrike",
+                    {"ioc_value": ioc_value},
+                )
+
         else:
-            self.helper.connector_logger.info("[API] IOC doesn't exist in Crowdstrike")
+            self.helper.connector_logger.info(
+                "[API] IOC doesn't exist in Crowdstrike",
+                {"ioc_value": ioc_value},
+            )
