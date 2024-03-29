@@ -21,6 +21,7 @@ class ExportFileTxt:
     def _process_message(self, data):
         file_name = data["file_name"]
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
         export_scope = data["export_scope"]
@@ -88,6 +89,7 @@ class ExportFileTxt:
                         entity_id,
                         entity_type,
                         file_name,
+                        file_markings,
                         observable_values_bytes,
                         list_filters,
                     )
@@ -98,6 +100,7 @@ class ExportFileTxt:
                         entity_id,
                         entity_type,
                         file_name,
+                        file_markings,
                         entities_values_bytes,
                         list_filters,
                     )
@@ -111,6 +114,7 @@ class ExportFileTxt:
                         entity_id,
                         entity_type,
                         file_name,
+                        file_markings,
                         entities_values_bytes,
                         list_filters,
                     )

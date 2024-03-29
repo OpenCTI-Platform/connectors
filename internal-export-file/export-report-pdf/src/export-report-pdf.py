@@ -174,7 +174,7 @@ class ExportReportPdf:
 
             # Handle StixCyberObservables entities
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                    obj_entity_type
+                obj_entity_type
             ):
                 observable_dict = (
                     self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
@@ -286,9 +286,9 @@ class ExportReportPdf:
             targeted_countries = []
             for relationship in context["entities"]["relationship"]:
                 if (
-                        relationship["entity_type"] == "targets"
-                        and relationship["relationship_type"] == "targets"
-                        and relationship["to"]["entity_type"] == "Country"
+                    relationship["entity_type"] == "targets"
+                    and relationship["relationship_type"] == "targets"
+                    and relationship["to"]["entity_type"] == "Country"
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
@@ -381,9 +381,9 @@ class ExportReportPdf:
             targeted_countries = []
             for relationship in context["entities"]["relationship"]:
                 if (
-                        relationship["entity_type"] == "targets"
-                        and relationship["relationship_type"] == "targets"
-                        and relationship["to"]["entity_type"] == "Country"
+                    relationship["entity_type"] == "targets"
+                    and relationship["relationship_type"] == "targets"
+                    and relationship["to"]["entity_type"] == "Country"
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
@@ -476,9 +476,9 @@ class ExportReportPdf:
             targeted_countries = []
             for relationship in context["entities"]["relationship"]:
                 if (
-                        relationship["entity_type"] == "targets"
-                        and relationship["relationship_type"] == "targets"
-                        and relationship["to"]["entity_type"] == "Country"
+                    relationship["entity_type"] == "targets"
+                    and relationship["relationship_type"] == "targets"
+                    and relationship["to"]["entity_type"] == "Country"
                 ):
                     country_code = relationship["to"]["name"].lower()
                     if not self._validate_country_code(country_code):
@@ -586,7 +586,7 @@ class ExportReportPdf:
             obj_id = case_obj["standard_id"]
             # Handle StixCyberObservables entities
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                    obj_entity_type
+                obj_entity_type
             ):
                 observable_dict = (
                     self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
