@@ -12,7 +12,7 @@ class CustomConnector(ExternalImportConnector):
 
         Note that additional attributes for the connector can be set after the super() call.
 
-        Standarised way to grab attributes from environment variables is as follows:
+        Standardized way to grab attributes from environment variables is as follows:
 
         >>>         ...
         >>>         super().__init__()
@@ -28,7 +28,7 @@ class CustomConnector(ExternalImportConnector):
     def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
 
-        Aadd your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
+        Add your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
         Some sample code is provided as a guide to add a specific observable and a reference to the main object.
         Consider adding additional methods to the class to make the code more readable.
 
@@ -56,7 +56,6 @@ class CustomConnector(ExternalImportConnector):
             custom_properties={
                 "description": "A sample observable created for the tutorial.",
                 "labels": ["test", "tutorial"],
-                # "created_by_ref": self.creator_org,
                 "x_opencti_create_indicator": False,
                 "external_references": [main_reference],
             },

@@ -16,7 +16,8 @@ class ExternalImportConnector:
 
     Attributes:
         helper (OpenCTIConnectorHelper): The helper to use.
-        interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
+        interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s'
+                        where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
         update_existing_data (str): Whether to update existing data or not in OpenCTI.
     """
 
@@ -33,26 +34,31 @@ class ExternalImportConnector:
             if unit not in ["d", "h", "m", "s"]:
                 raise TypeError
             int(self.interval[:-1])
-        except TypeError as _:
-            msg = f"Error ({_}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively. "
+        except TypeError as ex:
+            msg = (
+                f"Error ({ex}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. "
+                "It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter "
+                "SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively. "
+            )
             self.helper.log_error(msg)
-            raise ValueError(msg)
+            raise ValueError(msg) from ex
 
         update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
         if isinstance(update_existing_data, str) and update_existing_data.lower() in [
             "true",
             "false",
         ]:
-            self.update_existing_data = (
-                True if update_existing_data.lower() == "true" else False
-            )
+            self.update_existing_data = update_existing_data.lower() == "true"
         elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
             True,
             False,
         ]:
             self.update_existing_data = update_existing_data
         else:
-            msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
+            msg = (
+                f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. "
+                "It SHOULD be either `true` or `false`. `false` is assumed. "
+            )
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
 
@@ -63,7 +69,8 @@ class ExternalImportConnector:
     def _get_interval(self) -> int:
         """Returns the interval to use for the connector
 
-        This SHOULD return always the interval in seconds. If the connector is execting that the parameter is received as hoursUncomment as necessary.
+        This SHOULD always return the interval in seconds. If the connector expects
+        the parameter to be received as hours uncomment as necessary.
         """
         unit = self.interval[-1:]
         value = self.interval[:-1]
@@ -72,22 +79,22 @@ class ExternalImportConnector:
             if unit == "d":
                 # In days:
                 return int(value) * 60 * 60 * 24
-            elif unit == "h":
+            if unit == "h":
                 # In hours:
                 return int(value) * 60 * 60
-            elif unit == "m":
+            if unit == "m":
                 # In minutes:
                 return int(value) * 60
-            elif unit == "s":
+            if unit == "s":
                 # In seconds:
                 return int(value)
-        except Exception as e:
+        except Exception as ex:
             self.helper.log_error(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
+                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(ex)}"
             )
             raise ValueError(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
-            )
+                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(ex)}"
+            ) from ex
 
     def run(self) -> None:
         # Main procedure
@@ -101,9 +108,7 @@ class ExternalImportConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         f"{self.helper.connect_name} connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
+                        f'{datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")}'
                     )
                 else:
                     last_run = None
@@ -113,11 +118,11 @@ class ExternalImportConnector:
 
                 # If the last_run is more than interval-1 day
                 if last_run is None or ((timestamp - last_run) >= self._get_interval()):
+                    self.helper.metric.inc("run_count")
+                    self.helper.metric.state("running")
                     self.helper.log_info(f"{self.helper.connect_name} will run!")
                     now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
+                    friendly_name = f'{self.helper.connect_name} run @ {now.strftime("%Y-%m-%d %H:%M:%S")}'
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
@@ -137,14 +142,12 @@ class ExternalImportConnector:
                             update=self.update_existing_data,
                             work_id=work_id,
                         )
+
                     except Exception as e:
                         self.helper.log_error(str(e))
 
                     # Store the current timestamp as a last run
-                    message = (
-                        f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                        + str(timestamp)
-                    )
+                    message = f"{self.helper.connect_name} connector successfully run, storing last_run as {timestamp}"
                     self.helper.log_info(message)
 
                     self.helper.log_debug(
@@ -159,22 +162,22 @@ class ExternalImportConnector:
 
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
-                        "Last_run stored, next run in: "
-                        + str(round(self._get_interval() / 60 / 60, 2))
-                        + " hours"
+                        f"Last_run stored, next run in: {round(self._get_interval() / 60 / 60, 2)} hours"
                     )
                 else:
+                    self.helper.metric.state("idle")
                     new_interval = self._get_interval() - (timestamp - last_run)
                     self.helper.log_info(
-                        f"{self.helper.connect_name} connector will not run, next run in: "
-                        + str(round(new_interval / 60 / 60, 2))
-                        + " hours"
+                        f"{self.helper.connect_name} connector will not run, "
+                        f"next run in: {round(new_interval / 60 / 60, 2)} hours"
                     )
 
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info(f"{self.helper.connect_name} connector stopped")
                 sys.exit(0)
             except Exception as e:
+                self.helper.metric.inc("error_count")
+                self.helper.metric.state("stopped")
                 self.helper.log_error(str(e))
 
             if self.helper.connect_run_and_terminate:
