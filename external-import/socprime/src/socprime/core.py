@@ -394,7 +394,7 @@ class SocprimeConnector:
         if not self._content_list_names:
             return []
         names = str(self._content_list_names).split(",")
-        names = [x for x in names if x.strip()]
+        names = [x.strip() for x in names if x.strip()]
         return names
 
     def _get_rules_from_one_content_list(self, content_list_name: str) -> List[dict]:
