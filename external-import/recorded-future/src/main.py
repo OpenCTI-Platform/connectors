@@ -16,7 +16,8 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, RFClient, RiskList, StixNote, ThreatMap
+
+from rflib import APP_VERSION, CustomBundles, RFClient, RiskList, StixNote, ThreatMap
 
 
 class RFNotes:
@@ -34,7 +35,9 @@ class RFNotes:
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config
+            "RECORDED_FUTURE_TOKEN",
+            ["rf", "token"],
+            config,
         )
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
@@ -113,6 +116,16 @@ class RFNotes:
             ["rf", "threat_maps_interval"],
             config,
         )
+        self.custom_bundle_paths = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_PATHS",
+            ["rf", "custom_bundle_paths"],
+            config,
+        )
+        self.custom_bundle_interval = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_INTERVAL",
+            ["rf", "custom_bundle_interval"],
+            config,
+        )
 
         risklist_related_entities_list = get_config_variable(
             "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES",
@@ -162,14 +175,14 @@ class RFNotes:
 
             try:
                 # Import, convert and send to OpenCTI platform Analyst Notes
-                self.convert_and_send(published, tas, work_id)
+                self.convert_and_send_notes(published, tas, work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
 
             self.helper.set_state({"last_run": timestamp})
             time.sleep(self.get_interval())
 
-    def convert_and_send(self, published, tas, work_id):
+    def convert_and_send_notes(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
         self.helper.log_info(
             f"[ANALYST NOTES] Pull Signatures is {str(self.rf_pull_signatures)} of type "
@@ -206,7 +219,7 @@ class RFNotes:
                 self.risk_as_score,
                 self.risk_threshold,
             )
-            stixnote.from_json(note, self.tlp)
+            stixnote.from_json(note)
             stixnote.create_relations()
             bundle = stixnote.to_stix_bundle()
             self.helper.log_info(
@@ -252,7 +265,20 @@ if __name__ == "__main__":
         else:
             RF.helper.log_info("[THREAT MAPS] Threat maps fetching disabled")
 
+        if RF.custom_bundle_paths:
+            RF.helper.log_info("[CUSTOM BUNDLES] Starting bundles thread...")
+            CustomBundles = CustomBundles(
+                RF.helper,
+                RF.update_existing_data,
+                RF.custom_bundle_interval,
+                RF.rfapi,
+                RF.custom_bundle_paths,
+            )
+            CustomBundles.start()
+        else:
+            RF.helper.log_info("[CUSTOM BUNDLES] Fetching custom bundles disabled")
         RF.run()
+
     except Exception:
         traceback.print_exc()
         time.sleep(10)
