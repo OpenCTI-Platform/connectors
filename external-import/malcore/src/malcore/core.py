@@ -62,7 +62,7 @@ class Malcore:
         )
 
     def get_interval(self):
-        return int(self.interval) * 60 * 60 * 24
+        return int(self.interval) * 60 * 60
 
     def run_feed_ioc(self, timestamp):
         try:
