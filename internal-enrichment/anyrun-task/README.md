@@ -21,25 +21,27 @@ If you are using it independently, remember that the connector will try to conne
 The connector can be configured with the following variables:
 
 
-| Parameter                     | Docker envvar                         | Mandatory | Description                                                                                                  |
-|-------------------------------|---------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------|
-| `opencti_url`                 | `OPENCTI_URL`                         | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080` |
-| `opencti_token`               | `OPENCTI_TOKEN`                       | Yes       | The default admin token configured in the OpenCTI platform parameters file.                                  |
-| `connector_id`                | `CONNECTOR_ID`                        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                           |
-| `connector_name`              | `CONNECTOR_NAME`                      | Yes       | A connector name to be shown in OpenCTI.                                                                     |
-| `connector_scope`             | `CONNECTOR_SCOPE`                     | Yes       | Supported scope. E. g., `text/html`.                                                                         |
-| `connector_confidence_level`  | `CONNECTOR_CONFIDENCE_LEVEL`          | Yes       | The default confidence level for created sightings (a number between 1 and 4).                               |
-| `connector_log_level`         | `CONNECTOR_LOG_LEVEL`                 | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                |
-| `auto`                        | `CONNECTOR_AUTO`                      | Yes       | Enable/disable auto-enrichment of observables.                                                               |
-| `token`                       | `ANYRUN_TOKEN`                        | Yes       | ANY.RUN API Token                                                                                            |
-| `timer`                       | `ANYRUN_TASK_TIMER`                   | No        | Time of task                                                                                                 |
-| `os`                          | `ANYRUN_OS`                           | No        | Operating System in sandbox                                                                                  |
-| `bitness`                     | `ANYRUN_OS_BITNESS`                   | No        | Operating System bitness in sandbox                                                                          |
-| `version`                     | `ANYRUN_OS_VERSION`                   | No        | Operating System version in sandbox                                                                          |
-| `browser`                     | `ANYRUN_OS_BROWSER`                   | No        | Which browser to use to open links                                                                           |
-| `automated_interactivity`     | `ANYRUN_AUTOMATED_INTERACTIVITY`      | No        | Automated Interactivity (ML) option                                                                          |
-| `ioc`                         | `ANYRUN_IOC`                          | No        | Add IOCs                                                                                                     |
-| `mitre`                       | `ANYRUN_MITRE`                        | No        | Add mitre attack patterns relationships                                                                      |
-| `processes`                   | `ANYRUN_PROCESSES`                    | No        | Add malicious processes                                                                                      |
+| Parameter                    | Docker env_var                   | Mandatory | Description                                                                                                  |
+|------------------------------|----------------------------------|-----------|--------------------------------------------------------------------------------------------------------------|
+| `opencti_url`                | `OPENCTI_URL`                    | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080` |
+| `opencti_token`              | `OPENCTI_TOKEN`                  | Yes       | The default admin token configured in the OpenCTI platform parameters file.                                  |
+| `connector_id`               | `CONNECTOR_ID`                   | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                           |
+| `connector_name`             | `CONNECTOR_NAME`                 | Yes       | A connector name to be shown in OpenCTI.                                                                     |
+| `connector_scope`            | `CONNECTOR_SCOPE`                | Yes       | Supported scope. E. g., `text/html`.                                                                         |
+| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL`     | Yes       | The default confidence level for created sightings (a number between 1 and 4).                               |
+| `connector_log_level`        | `CONNECTOR_LOG_LEVEL`            | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                |
+| `auto`                       | `CONNECTOR_AUTO`                 | Yes       | Enable/disable auto-enrichment of observables.                                                               |
+| `token`                      | `ANYRUN_TOKEN`                   | Yes       | ANY.RUN API Token                                                                                            |
+| `timer`                      | `ANYRUN_TASK_TIMER`              | No        | Time of task                                                                                                 |
+| `os`                         | `ANYRUN_OS`                      | No        | Operating System in sandbox                                                                                  |
+| `bitness`                    | `ANYRUN_OS_BITNESS`              | No        | Operating System bitness in sandbox                                                                          |
+| `version`                    | `ANYRUN_OS_VERSION`              | No        | Operating System version in sandbox                                                                          |
+| `locale`                     | `ANYRUN_OS_LOCALE`               | No        | Operating System language. Use locale identifier or country name (Ex: "en-US" or "Brazil").                  |
+| `browser`                    | `ANYRUN_OS_BROWSER`              | No        | Which browser to use to open links                                                                           |
+| `privacy`                    | `ANYRUN_PRIVACY`                 | No        | Privacy settings (Allowed values: "public", "bylink", "owner", "team") / Default value: "bylink"             |
+| `automated_interactivity`    | `ANYRUN_AUTOMATED_INTERACTIVITY` | No        | Automated Interactivity (ML) option                                                                          |
+| `ioc`                        | `ANYRUN_IOC`                     | No        | Add IOCs                                                                                                     |
+| `mitre`                      | `ANYRUN_MITRE`                   | No        | Add mitre attack patterns relationships                                                                      |
+| `processes`                  | `ANYRUN_PROCESSES`               | No        | Add malicious processes                                                                                      |
 
 
