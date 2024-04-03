@@ -8,7 +8,8 @@ from time import sleep
 import pycti
 import pytz
 import yaml
-from pyrf import RecordedFutureApiClient
+
+from .pyrf import RecordedFutureApiClient
 
 
 class Vocabulary:
