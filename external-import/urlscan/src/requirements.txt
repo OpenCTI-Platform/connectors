@@ -1,4 +1,4 @@
 pycti==6.0.8
 requests~=2.31.0
 pydantic==1.10.14
-validators==0.24.0
+validators==0.27.0
