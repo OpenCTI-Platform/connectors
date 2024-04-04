@@ -82,8 +82,8 @@ class ExportFileStix:
                           entity_type
                         }
                     """
-                    stix_object_result = (
-                        self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.read(id=selected_id, customAttributes=custom_attributes)
+                    stix_object_result = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.read(
+                        id=selected_id, customAttributes=custom_attributes
                     )
                     if stix_object_result is not None:
                         entity_type = stix_object_result["entity_type"]
@@ -92,8 +92,10 @@ class ExportFileStix:
                         entity_data = do_read(id=selected_id)
 
                     else:
-                        entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                            id=selected_id, withFiles=True
+                        entity_data = (
+                            self.helper.api_impersonate.stix_domain_object.read(
+                                id=selected_id, withFiles=True
+                            )
                         )
 
                     if entity_data is None:
