@@ -1,9 +1,19 @@
 import base64
 
 from pycti import CustomObservableText, CustomObservableUserAgent
-from stix2 import (URL, AutonomousSystem, DomainName, EmailAddress,
-                   EmailMessage, File, Identity, IPv4Address, IPv6Address,
-                   Vulnerability, WindowsRegistryKey)
+from stix2 import (
+    URL,
+    AutonomousSystem,
+    DomainName,
+    EmailAddress,
+    EmailMessage,
+    File,
+    Identity,
+    IPv4Address,
+    IPv6Address,
+    Vulnerability,
+    WindowsRegistryKey,
+)
 
 from utils import check_hash_type, is_ipv4, is_ipv6  # isort: skip
 
