@@ -1,5 +1,3 @@
-import base64
-
 from pycti import CustomObservableText, CustomObservableUserAgent
 from stix2 import (
     URL,

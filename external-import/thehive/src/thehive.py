@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 import time
@@ -488,8 +487,6 @@ class TheHive:
                     stix_observable = self.convert_observable(observable, markings)
                     if stix_observable:
                         if hasattr(stix_observable, "id"):
-                            h = hasattr(stix_observable, "id")
-
                             processed_observables.append(stix_observable)
                             object_refs.append(stix_observable.id)
 
