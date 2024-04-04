@@ -7,18 +7,27 @@ from datetime import datetime
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import (CaseIncident, CustomObjectCaseIncident, CustomObjectTask,
-                   Incident, OpenCTIConnectorHelper, StixCoreRelationship,
-                   StixSightingRelationship, Task, get_config_variable)
+from pycti import (
+    CaseIncident,
+    CustomObjectCaseIncident,
+    CustomObjectTask,
+    Incident,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    StixSightingRelationship,
+    Task,
+    get_config_variable,
+)
 from thehive4py import TheHiveApi
 from thehive4py.query import Gt
 from thehive4py.query.page import Paginate
 from thehive4py.query.sort import Asc
 
-from constants import (DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS,
-                       TLP_MAPPINGS)
-from hive_observable_transform import (HiveObservableTransform,
-                                       UnsupportedIndicatorTypeError)
+from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
+from hive_observable_transform import (
+    HiveObservableTransform,
+    UnsupportedIndicatorTypeError,
+)
 
 from utils import format_datetime  # isort: skip
 
