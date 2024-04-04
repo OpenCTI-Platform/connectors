@@ -110,8 +110,7 @@ class DiodeImport:
             for delete_file in file_paths:
                 file_time = os.stat(delete_file).st_mtime
                 is_expired_file = (
-                    file_time
-                    < current_time - 86400 * self.get_from_directory_retention
+                    file_time < current_time - 86400 * self.get_from_directory_retention
                 )  # 86400 = 1 day
                 if is_expired_file:
                     os.remove(delete_file)
