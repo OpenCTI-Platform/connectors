@@ -78,6 +78,7 @@ class Malcore:
             req = urllib.request.Request(self.api_url)
             req.add_header("apikey", self.api_key)
             req.add_header("Accept", "application/json")
+            req.add_header("User-Agent", "Malcore/OpenCTI")
             req.method = "POST"
             body = parse.urlencode(
                 {
@@ -165,6 +166,7 @@ class Malcore:
             req = urllib.request.Request(self.api_url)
             req.add_header("apikey", self.api_key)
             req.add_header("Accept", "application/json")
+            req.add_header("User-Agent", "Malcore/OpenCTI")
             req.method = "POST"
             body = parse.urlencode(
                 {
@@ -278,6 +280,7 @@ class Malcore:
             req = urllib.request.Request(self.api_url)
             req.add_header("apikey", self.api_key)
             req.add_header("Accept", "application/json")
+            req.add_header("User-Agent", "Malcore/OpenCTI")
             req.method = "POST"
             body = parse.urlencode(
                 {
