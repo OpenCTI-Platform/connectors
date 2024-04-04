@@ -39,7 +39,7 @@ class HiveObservableTransform:
     def standardize_data_type(self):
         """Standardize a set of observables like hash, file, and ip."""
         data_type = None
-        if self.observable.get("dataType") in ["hash", "file"]:
+        if self.observable.get("dataType") in ["hash"]:
             data_type = f'file_{check_hash_type(self.observable.get("data")).replace("-","").lower()}'
         if self.observable.get("dataType") in ["ip", "ipv4"] and is_ipv4(
             self.observable.get("data")
@@ -71,6 +71,8 @@ class HiveObservableTransform:
             "fqdn": self.create_domain_name,
             "domain": self.create_domain_name,
             "email_address": self.create_email_address,
+            "hash": self.create_file_hash,
+            "file": self.create_file,
             "file_md5": self.create_file_hash,
             "file_sha1": self.create_file_hash,
             "file_sha256": self.create_file_hash,
@@ -79,7 +81,7 @@ class HiveObservableTransform:
             "identity": self.create_identity,
             "ipv4": self.create_ipv4_address,
             "ipv6": self.create_ipv6_address,
-            "mail": self.create_email_message,
+            "mail": self.create_email_address,
             "mail_subject": self.create_email_message_subject,
             "email_subject": self.create_email_message_subject,
             "mail-subject": self.create_email_message_subject,
@@ -145,6 +147,17 @@ class HiveObservableTransform:
         return File(
             hashes={hash_type: self.observable.get("data")},
             object_marking_refs=self.markings,
+            custom_properties=self.create_custom_properties(),
+        )
+
+    def create_file(self):
+        hash_type = check_hash_type(
+            self.observable.get("attachment", {}).get("hashes")[0]
+        )
+        return File(
+            hashes={hash_type: self.observable.get("attachment", {}).get("hashes")[0]},
+            object_marking_refs=self.markings,
+            name=self.observable.get("attachment", {}).get("names"),
             custom_properties=self.create_custom_properties(),
         )
 
