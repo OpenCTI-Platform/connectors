@@ -41,7 +41,7 @@ class DiodeImport:
             "DIODE_IMPORT_GET_FROM_DIRECTORY_RETENTION",
             ["diode_import", "get_from_directory_retention"],
             config,
-            False,
+            True,
             7,
         )
         self.connectors_cache = {}
@@ -73,7 +73,7 @@ class DiodeImport:
             if connector is None or applicant_id is None:
                 self.helper.connector_logger.error(
                     "An error occurred because JSON keys are incorrect or missing.",
-                    {"connector": connector, "applicant_id": applicant_id}
+                    {"connector": connector, "applicant_id": applicant_id},
                 )
                 continue
 
