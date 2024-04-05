@@ -1,13 +1,13 @@
 version: '3'
 services:
-  connector-google-drive:
-    image: opencti/connector-diode-bundle-import:6.0.9
+  connector-diode-import:
+    image: opencti/connector-diode-import:6.0.9
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_APPLICANT_MAPPINGS=id1:id2,id3:id4
-      - CONNECTOR_GET_FROM_DIRECTORY_PATH=/path
-      - CONNECTOR_GET_FROM_DIRECTORY_RETENTION=7
+      - DIODE_IMPORT_APPLICANT_MAPPINGS=id1:id2,id3:id4
+      - DIODE_IMPORT_GET_FROM_DIRECTORY_PATH=/path
+      - DIODE_IMPORT_GET_FROM_DIRECTORY_RETENTION=7
     restart: always

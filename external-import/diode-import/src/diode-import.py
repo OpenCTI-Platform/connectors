@@ -20,8 +20,8 @@ class DiodeImport:
         )
         # Build applicant mappings
         opencti_applicant_mappings = get_config_variable(
-            "CONNECTOR_APPLICANT_MAPPINGS",
-            ["diode_bundle_import", "applicant_mappings"],
+            "DIODE_IMPORT_APPLICANT_MAPPINGS",
+            ["diode_import", "applicant_mappings"],
             config,
             False,
         )
@@ -32,14 +32,14 @@ class DiodeImport:
         self.applicant_mappings = mappings_dict
         # Other configurations
         self.get_from_directory_path = get_config_variable(
-            "CONNECTOR_GET_FROM_DIRECTORY_PATH",
-            ["diode_bundle_import", "get_from_directory_path"],
+            "DIODE_IMPORT_GET_FROM_DIRECTORY_PATH",
+            ["diode_import", "get_from_directory_path"],
             config,
             False,
         )
         self.get_from_directory_retention = get_config_variable(
-            "CONNECTOR_GET_FROM_DIRECTORY_RETENTION",
-            ["diode_bundle_import", "get_from_directory_retention"],
+            "DIODE_IMPORT_GET_FROM_DIRECTORY_RETENTION",
+            ["diode_import", "get_from_directory_retention"],
             config,
             False,
             7,
@@ -55,6 +55,7 @@ class DiodeImport:
         file_paths = glob.glob(path, recursive=True)
         file_paths.sort(key=os.path.getctime)
         for file_path in file_paths:
+
             # Fetch file content
             file = open(file_path, mode="r")
             file_content = file.read()
@@ -65,9 +66,19 @@ class DiodeImport:
                 continue
             # region Parse and handle
             json_content = json.loads(file_content)
+
             connector = json_content.get("connector")
+            applicant_id = json_content.get("applicant_id")
+
+            if connector is None or applicant_id is None:
+                self.helper.connector_logger.error(
+                    "An error occurred because JSON keys are incorrect or missing.",
+                    {"connector": connector, "applicant_id": applicant_id}
+                )
+                continue
+
             connector_id = connector.get("id")
-            applicant_id = json_content.get("applicant_id", "<not found>")
+
             # endregion
             # region Register the connector in OpenCTI to simulate the real activity if not in cache
             if self.connectors_cache.get(connector_id) is None:
@@ -116,7 +127,7 @@ class DiodeImport:
                     os.remove(delete_file)
 
     def run(self):
-        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
+        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", False)
         if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
             self.process()
             self.helper.force_ping()
