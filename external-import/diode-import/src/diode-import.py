@@ -112,7 +112,7 @@ class DiodeImport:
                 update=json_content.get("update", False),
                 work_id=work_id,
             )
-            self.helper.api.work.to_processed(work_id, "")
+            self.helper.api.work.to_processed(work_id, "Connector successfully run")
             self.helper.set_state({"last_run": ti_m})
             # endregion
         # Remove files
