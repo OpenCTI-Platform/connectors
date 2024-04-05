@@ -2,6 +2,8 @@ import unittest
 
 import pytest
 
+from .common_fixtures import setup_config, stream_event, api_response
+
 
 @pytest.mark.usefixtures("stream_event", "setup_config")
 class TestCrowdstrikeConnector(unittest.TestCase):

@@ -1,6 +1,6 @@
 import time
 
-from connector.crowdstrike import CrowdstrikeConnector
+from connector import CrowdstrikeConnector
 
 if __name__ == "__main__":
     """

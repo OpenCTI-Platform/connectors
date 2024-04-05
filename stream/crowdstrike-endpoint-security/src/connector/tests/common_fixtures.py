@@ -1,27 +1,10 @@
+import pytest
+
 import json
 import os
 from unittest.mock import Mock
 
-import pytest
-import requests
-from connector import CrowdstrikeConnector
-from services.client import CrowdstrikeClient
-
-
-@pytest.fixture(autouse=True)
-def disable_network_calls(monkeypatch):
-    """
-    Make a fixture available for whole project without having to import it
-    Ensure that network calls will be disabled in every test across the suite
-    Adding scope="session" will execute only once per whole test run
-    :param monkeypatch:
-    :return:
-    """
-
-    def stunted_get():
-        raise RuntimeError("Network access not allowed during testing!")
-
-    monkeypatch.setattr(requests, "get", lambda *args, **kwargs: stunted_get())
+from ..crowdstrike import CrowdstrikeConnector
 
 
 @pytest.fixture(scope="class")
@@ -31,7 +14,7 @@ def setup_config(request):
     Create fake pycti OpenCTI helper
     """
     request.cls.mock_helper = Mock()
-    request.cls.mock_client = CrowdstrikeClient(request.cls.mock_helper)
+    # request.cls.mock_client = CrowdstrikeClient(request.cls.mock_helper)
     request.cls.connector = CrowdstrikeConnector()
     request.cls.connector.helper = request.cls.mock_helper
 
