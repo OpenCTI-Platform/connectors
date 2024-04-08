@@ -123,6 +123,9 @@ class Malcore:
                     file_size = item_data["file_sizes"]["raw_byte_size"]
                     hashmd5 = hashes["md5"]
 
+                    custom_properties = {
+                        "created_by_ref": malcore_org_id,
+                    }
                     stix_file = stix2.File(
                         name=upload_time + file_extension,
                         hashes={
@@ -132,6 +135,7 @@ class Malcore:
                         },
                         size=file_size,
                         mime_type=mime_type,
+                        custom_properties=custom_properties,
                     )
                     file_objects.append(stix_file)
 
