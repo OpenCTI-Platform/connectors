@@ -1,10 +1,9 @@
-import pytest
-
 import json
 import os
 from unittest.mock import Mock
 
-from ..crowdstrike import CrowdstrikeConnector
+import pytest
+from connector import CrowdstrikeConnector
 
 
 @pytest.fixture(scope="class")
