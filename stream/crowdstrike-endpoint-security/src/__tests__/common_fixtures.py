@@ -3,7 +3,7 @@ import os
 from unittest.mock import Mock
 
 import pytest
-from connector import CrowdstrikeConnector
+from services import CrowdstrikeClient
 
 
 @pytest.fixture(scope="class")
@@ -13,12 +13,9 @@ def setup_config(request):
     Create fake pycti OpenCTI helper
     """
     request.cls.mock_helper = Mock()
-    # request.cls.mock_client = CrowdstrikeClient(request.cls.mock_helper)
-    request.cls.connector = CrowdstrikeConnector()
-    request.cls.connector.helper = request.cls.mock_helper
+    request.cls.mock_client = CrowdstrikeClient(request.cls.mock_helper)
 
     yield
-    print("Teardown configuration")
 
 
 @pytest.fixture(scope="class")

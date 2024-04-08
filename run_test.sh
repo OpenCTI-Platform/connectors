@@ -11,6 +11,6 @@ do
   pip install -r $file
 done
 
-python -m pytest --verbose --import-mode=append
+python -m pytest --verbose
 
 
