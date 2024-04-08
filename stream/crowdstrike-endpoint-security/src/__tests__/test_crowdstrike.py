@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from .common_fixtures import api_response, setup_config, stream_event
+from .common_fixtures import setup_config, stream_event  # noqa: F401
 
 
 @pytest.mark.usefixtures("stream_event", "setup_config")

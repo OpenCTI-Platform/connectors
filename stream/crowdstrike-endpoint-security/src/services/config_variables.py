@@ -37,10 +37,6 @@ class ConfigCrowdstrike:
         """
 
         # OpenCTI configurations
-        self.ignore_types = get_config_variable(
-            "CONNECTOR_IGNORE_TYPES", ["connector", "ignore_types"], self.load
-        ).split(",")
-
         self.consumer_count: int = get_config_variable(
             "CONNECTOR_CONSUMER_COUNT",
             ["connector", "consumer_count"],
