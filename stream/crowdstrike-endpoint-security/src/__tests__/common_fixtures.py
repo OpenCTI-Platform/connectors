@@ -1,6 +1,6 @@
 import json
 import os
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from services import CrowdstrikeClient
@@ -23,6 +23,7 @@ def stream_event(request):
     request.cls.ioc_event_create = load_file("event_create_indicator_sample.json")
     request.cls.ioc_event_update = load_file("event_update_indicator_sample.json")
     request.cls.ioc_event_delete = load_file("event_delete_indicator_sample.json")
+    request.cls.ioc_data = load_file("data_stream_sample.json")
 
 
 @pytest.fixture(scope="class")

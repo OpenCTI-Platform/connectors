@@ -11,6 +11,7 @@ class TestCrowdstrikeConnector(object):
     ipv6_pattern = "[ipv6-addr:value = '2a02:2f01:7504:5000:0:0:7429:4782']"
     sha256_pattern = "[file:hashes.'SHA-256' = '37c09c95f77e5677332de338b7e972cff67347ed2c807c15b415c41b0d4a9ac4']"
     md5_pattern = "[file:hashes.'MD5' = '7a465344a58a6c67d5a733a815ef4cb7']"
+    bad_pattern = "[url:value = 'https://t.me/karl3on']"
 
     def test_parse_indicator_pattern(self) -> None:
         """
@@ -38,3 +39,32 @@ class TestCrowdstrikeConnector(object):
         obs_type = self.mock_client._map_indicator_type(pattern)
 
         assert obs_type == expected_result
+
+    def test_incorrect_ioc_type_mapping(self):
+        """
+        Check if indicator types from OpenCTI mapper return "None"
+        if pattern not found
+        """
+        obs_type = self.mock_client._map_indicator_type(self.bad_pattern)
+
+        assert obs_type is None
+
+    @pytest.mark.parametrize(
+        "score, expected_result",
+        [
+            (10, "informational"),
+            (30, "low"),
+            (50, "medium"),
+            (70, "high"),
+            (90, "critical"),
+        ],
+    )
+    def test_correct_severity_mapping(self, score, expected_result):
+        """
+        Check
+        """
+        self.mock_helper.get_attribute_in_extension.return_value = score
+
+        indicator_severity = self.mock_client._map_severity(self.ioc_data)
+
+        assert indicator_severity == expected_result

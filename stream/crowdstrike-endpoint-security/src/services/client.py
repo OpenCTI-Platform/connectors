@@ -221,7 +221,7 @@ class CrowdstrikeClient:
         # If IOC exists, update the IOC into Crowdstrike
         if len(ioc_cs) != 0:
 
-            # In case of falcon_for_mobile is False, update data with label TO_DELETE for Crowdstrike
+            # In case of permanent_delete is False, update data with label TO_DELETE for Crowdstrike
             if event == "delete":
                 data["labels"] = ["TO_DELETE"]
 
