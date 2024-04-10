@@ -421,7 +421,7 @@ class SocprimeConnector:
         if not self._job_ids:
             return []
         ids = str(self._job_ids).split(",")
-        ids = [x for x in ids if x.strip()]
+        ids = [x.strip() for x in ids if x.strip()]
         return ids
 
     def _get_rules_from_one_job(self, job_id: str) -> List[dict]:
