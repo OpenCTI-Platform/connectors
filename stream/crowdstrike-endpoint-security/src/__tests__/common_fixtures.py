@@ -1,6 +1,6 @@
 import json
 import os
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 from services import CrowdstrikeClient
