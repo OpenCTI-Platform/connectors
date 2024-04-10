@@ -142,7 +142,7 @@ class SocprimeConnector:
             name=parsed_rule.name,
             description=parsed_rule.description,
             pattern=parsed_rule.pattern,
-            pattern_type=parsed_rule.siem_type,
+            pattern_type=self._get_pattern_type(parsed_rule),
             labels=labels,
             confidence=self.convert_sigma_status_to_stix_confidence(
                 sigma_level=parsed_rule.status
@@ -177,6 +177,13 @@ class SocprimeConnector:
         )
 
         return stix_objects
+
+    @staticmethod
+    def _get_pattern_type(parsed_rule: ParsedRule) -> str:
+        pattern_type = parsed_rule.siem_type
+        if pattern_type == "powershell":
+            pattern_type = "powershell query"
+        return pattern_type
 
     @classmethod
     def _parse_rule(cls, rule: dict) -> ParsedRule:
