@@ -32,15 +32,18 @@ class TestCrowdstrikeConnector(object):
             (md5_pattern, "md5"),
         ],
     )
-    def test_correct_ioc_type_mapping(self, pattern, expected_result) -> None:
+    def test_correct_ioc_type_mapping(self, pattern: str, expected_result: str) -> None:
         """
         Check if indicator types from OpenCTI map properly with Crowdstrike types
+        :param pattern: Pattern in string
+        :param expected_result: Result in string
+        :return: None
         """
         obs_type = self.mock_client._map_indicator_type(pattern)
 
         assert obs_type == expected_result
 
-    def test_incorrect_ioc_type_mapping(self):
+    def test_incorrect_ioc_type_mapping(self) -> None:
         """
         Check if indicator types from OpenCTI mapper return "None"
         if pattern not found
@@ -59,12 +62,27 @@ class TestCrowdstrikeConnector(object):
             (90, "critical"),
         ],
     )
-    def test_correct_severity_mapping(self, score, expected_result):
+    def test_correct_severity_mapping(self, score: int, expected_result: str) -> None:
         """
-        Check
+        Check if severity in Crowdstrike is properly mapped with integer scoring from OpenCTI
+        :param score: Score in int
+        :param expected_result: Result in str
+        :return: None
         """
         self.mock_helper.get_attribute_in_extension.return_value = score
 
         indicator_severity = self.mock_client._map_severity(self.ioc_data)
 
         assert indicator_severity == expected_result
+
+    def test_incorrect_severity_mapping(self) -> None:
+        """
+        Check if indicator score from OpenCTI mapper return "None"
+        if score is not found
+        :return: None
+        """
+        self.mock_helper.get_attribute_in_extension.return_value = None
+
+        indicator_severity = self.mock_client._map_severity(self.ioc_data)
+
+        assert indicator_severity is None

@@ -119,6 +119,29 @@ class CrowdstrikeClient:
         else:
             return platforms
 
+    def _handle_labels(self, data: dict, event: str) -> None:
+        """
+        Handle labels in case permanent_delete configuration is False
+        :param data: Data of IOC in dict
+        :param event: Event in string
+        :return: None
+        """
+        if event == "delete":
+            if "labels" in data:
+                labels = data["labels"]
+                labels.append("TO_DELETE")
+                data["labels"] = labels
+            else:
+                data["labels"] = ["TO_DELETE"]
+        if event == "create":
+            if "labels" in data:
+                # Keep the new labels added, TO_DELETE is removed here
+                labels = data["labels"]
+                data["labels"] = labels
+            else:
+                # Remove TO_DELETE tag
+                data["labels"] = []
+
     def _generate_indicator_body(
         self, data: dict, ioc_value: str, ioc_id: str = None
     ) -> dict | None:
@@ -174,10 +197,11 @@ class CrowdstrikeClient:
         else:
             return None
 
-    def create_indicator(self, data: dict) -> None:
+    def create_indicator(self, data: dict, event: str | None = None) -> None:
         """
         Create IOC from OpenCTI to Crowdstrike
         :param data: Data of IOC in dict
+        :param event: Event in string or None
         :return: None
         """
         ioc_value = data["name"]
@@ -202,6 +226,13 @@ class CrowdstrikeClient:
                     {"ioc_value": ioc_value},
                 )
 
+        elif self.config.permanent_delete is False:
+            self.update_indicator(data, event)
+
+            self.helper.connector_logger.info(
+                "[API] IOC already exists in Crowdstrike",
+                {"ioc_value": ioc_value},
+            )
         else:
             self.helper.connector_logger.info(
                 "[API] IOC already exists in Crowdstrike",
@@ -221,9 +252,10 @@ class CrowdstrikeClient:
         # If IOC exists, update the IOC into Crowdstrike
         if len(ioc_cs) != 0:
 
-            # In case of permanent_delete is False, update data with label TO_DELETE for Crowdstrike
-            if event == "delete":
-                data["labels"] = ["TO_DELETE"]
+            # In case of permanent_delete is False
+            # Update data with label TO_DELETE for Crowdstrike
+            if self.config.permanent_delete is False:
+                self._handle_labels(data, event)
 
             ioc_id = ioc_cs[0]
             body = self._generate_indicator_body(data, ioc_value, ioc_id)

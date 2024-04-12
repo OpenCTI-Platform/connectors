@@ -69,7 +69,7 @@ class CrowdstrikeConnector:
             # Handle creation
             if msg.event == "create":
                 self.handle_logger_info("[CREATE]", data)
-                self.client.create_indicator(data)
+                self.client.create_indicator(data, msg.event)
 
             # Handle update
             if msg.event == "update":
