@@ -105,7 +105,7 @@ class SafeBrowsingConnector:
             data (dict): The data to process. The `enrichment_entity` attribute contains the object to enrich.
         """
         self.entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=self.entity_id)
+        observable = data["stix_entity"]
 
         if observable["entity_type"] == "DomainName":
             return self.google_safe_browsing(observable)
