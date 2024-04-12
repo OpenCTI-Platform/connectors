@@ -221,7 +221,7 @@ class ThreatFox:
             ).serialize()
 
             self.helper.log_debug(bundle)
-            if 'objects' in bundle:
+            if "objects" in bundle:
                 self.helper.send_stix2_bundle(
                     bundle,
                     update=self.update_existing_data,
