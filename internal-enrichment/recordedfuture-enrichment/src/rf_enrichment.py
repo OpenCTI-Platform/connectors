@@ -20,7 +20,7 @@ class RFEnrichmentConnector:
         )
 
         self.work_id = None
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
 
         self.token = get_config_variable(
             "RECORDED_FUTURE_TOKEN",
