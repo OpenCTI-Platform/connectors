@@ -43,12 +43,12 @@ class RiskIQConnector:
         self.interval_sec = get_config_variable(
             "RISKIQ_INTERVAL_SEC", ["riskiq", "interval_sec"], config
         )
-        self.import_from_timestamp= get_config_variable(
+        self.import_from_timestamp = get_config_variable(
             "RISKIQ_IMPORT_FROM_TIMESTAMP",
-             ["riskiq", "import_from_timestamp"],
-             config,
-             True,
-             default=None,
+            ["riskiq", "import_from_timestamp"],
+            config,
+            True,
+            default=None,
         )
         user = get_config_variable("RISKIQ_USER", ["riskiq", "user"], config)
         password = get_config_variable(
@@ -148,7 +148,7 @@ class RiskIQConnector:
                     self.helper.metric.state("running")
                     work_id = self._initiate_work(timestamp)
                     new_state = current_state.copy()
-                    
+
                     last_article = self._get_state_value(
                         current_state, ArticleImporter._LATEST_ARTICLE_TIMESTAMP
                     )
@@ -161,7 +161,9 @@ class RiskIQConnector:
                     # if the last_article_date is None (first run), we check if IMPORT_FROM_TIMESTAMP is set
                     if last_article_date is None:
                         if self.import_from_timestamp is not None:
-                            last_article_date = timestamp_to_datetime(self.import_from_timestamp).date()
+                            last_article_date = timestamp_to_datetime(
+                                self.import_from_timestamp
+                            ).date()
                             self.helper.log_debug(
                                 f"[RiskIQ] Import from date configured, articles will be fetch from date: {last_article_date}"
                             )
@@ -178,7 +180,9 @@ class RiskIQConnector:
                     response = self.client.get_articles(last_article_date)
 
                     if self.client.is_correct(response):
-                        self.helper.log_debug(f"[RiskIQ] The response contains {len(response['articles'])} articles to process")
+                        self.helper.log_debug(
+                            f"[RiskIQ] The response contains {len(response['articles'])} articles to process"
+                        )
 
                         for article in response["articles"]:
                             importer = ArticleImporter(
