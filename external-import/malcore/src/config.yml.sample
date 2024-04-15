@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe' # OpenCTI API Key
+
+connector:
+  id: 'ChangeMe' # Valid UUIDv4
+  type: 'EXTERNAL_IMPORT'
+  name: 'Malcore'
+  scope: 'malcore' # MIME type or SCO
+  log_level: 'info'
+
+malcore:
+  api_url: 'https://api.malcore.io/api/feed'
+  api_key: 'ChangeMe'
+  score: 100
+  limit: 10000
+  interval: 12 # In hours, must be strictly greater than 1
