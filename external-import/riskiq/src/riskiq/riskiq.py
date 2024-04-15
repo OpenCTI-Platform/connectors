@@ -43,6 +43,13 @@ class RiskIQConnector:
         self.interval_sec = get_config_variable(
             "RISKIQ_INTERVAL_SEC", ["riskiq", "interval_sec"], config
         )
+        self.import_from_timestamp= get_config_variable(
+            "RISKIQ_IMPORT_FROM_TIMESTAMP",
+             ["riskiq", "import_from_timestamp"],
+             config,
+             True,
+             default=None,
+        )
         user = get_config_variable("RISKIQ_USER", ["riskiq", "user"], config)
         password = get_config_variable(
             "RISKIQ_PASSWORD", ["riskiq", "password"], config
@@ -135,11 +142,13 @@ class RiskIQConnector:
                 last_run = self._get_state_value(
                     current_state, self._STATE_LATEST_RUN_TIMESTAMP
                 )
+
                 if self._is_scheduled(last_run, timestamp):
                     self.helper.metric.inc("run_count")
                     self.helper.metric.state("running")
                     work_id = self._initiate_work(timestamp)
                     new_state = current_state.copy()
+                    
                     last_article = self._get_state_value(
                         current_state, ArticleImporter._LATEST_ARTICLE_TIMESTAMP
                     )
@@ -148,12 +157,29 @@ class RiskIQConnector:
                     last_article_date = (
                         timestamp_to_datetime(last_article).date() if last_run else None
                     )
+
+                    # if the last_article_date is None (first run), we check if IMPORT_FROM_TIMESTAMP is set
+                    if last_article_date is None:
+                        if self.import_from_timestamp is not None:
+                            last_article_date = timestamp_to_datetime(self.import_from_timestamp).date()
+                            self.helper.log_debug(
+                                f"[RiskIQ] Import from date configured, articles will be fetch from date: {last_article_date}"
+                            )
+                        else:
+                            self.helper.log_debug(
+                                "[RiskIQ] Import from date not configured, all existing articles will be fetch"
+                            )
+
                     self.helper.log_debug(
                         f"[RiskIQ] retrieving data from {last_article_date}"
                     )
+
+                    # Get the RiskIQ articles from last_article_date
                     response = self.client.get_articles(last_article_date)
 
                     if self.client.is_correct(response):
+                        self.helper.log_debug(f"[RiskIQ] The response contains {len(response['articles'])} articles to process")
+
                         for article in response["articles"]:
                             importer = ArticleImporter(
                                 self.helper,
