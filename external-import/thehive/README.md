@@ -13,7 +13,6 @@ Setting up TheHive Connector is straightforward. The following table provides de
 | `connector.id`                  | `CONNECTOR_ID`                | Yes       | A unique `UUIDv4` identifier for this connector instance.       |
 | `connector.name`                | `CONNECTOR_NAME`              | Yes       | Name of the connector. Should always be "TheHive".              |
 | `connector.scope`               | `CONNECTOR_SCOPE`             | Yes       | The scope of data the connector is importing.                   |
-| `connector.confidence_level`    | `CONNECTOR_CONFIDENCE_LEVEL`  | Yes       | Confidence level for the data imported.                         |
 | `connector.update_existing_data`| `CONNECTOR_UPDATE_EXISTING_DATA`| Yes     | Decide whether the connector should update already existing data.|
 | `connector.log_level`           | `CONNECTOR_LOG_LEVEL`         | Yes       | Logging level. Choices: `info`, `error`, etc.                   |
 | `thehive.url`                   | `THEHIVE_URL`                 | Yes       | URL of your TheHive instance.                                   |
