@@ -170,7 +170,6 @@ class TheHive:
             object_marking_refs=markings,
             labels=alert.get("tags", []),
             created_by_ref=self.identity.get("standard_id", ""),
-            confidence=self.helper.connect_confidence_level,
             allow_custom=True,
             custom_properties={
                 "source": alert.get("source", ""),
@@ -278,7 +277,6 @@ class TheHive:
                     format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                     format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 ),
-                confidence=int(self.helper.connect_confidence_level),
                 first_seen=format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                 last_seen=format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 where_sighted_refs=[self.identity.get("standard_id")],
@@ -446,7 +444,6 @@ class TheHive:
                 if case.get("severity") in self.severity_mapping
                 else None
             ),
-            confidence=int(self.helper.connect_confidence_level),
             x_opencti_workflow_id=opencti_case_status,
             x_opencti_assignee_ids=(
                 [opencti_case_user] if opencti_case_user is not None else None
@@ -523,7 +520,6 @@ class TheHive:
                     created_by_ref=self.identity.get("standard_id", ""),
                     source_ref=stix_observable.id,
                     target_ref=stix_incident.id,
-                    confidence=int(self.helper.connect_confidence_level),
                     object_marking_refs=markings,
                     allow_custom=True,
                 )
@@ -578,7 +574,6 @@ class TheHive:
                     if "dueDate" in task
                     else None
                 ),
-                confidence=int(self.helper.connect_confidence_level),
                 object_refs=[stix_case.id],
                 x_opencti_workflow_id=opencti_task_status,
                 x_opencti_assignee_ids=(
