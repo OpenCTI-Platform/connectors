@@ -13,6 +13,7 @@ services:
       - CONNECTOR_SCOPE=crowdstrike
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_IGNORE_TYPES=label,marking-definition,identity
+      - CONNECTOR_CONSUMER_COUNT=10
       - CROWDSTRIKE_API_BASE_URL=FIXME
       - CROWDSTRIKE_CLIENT_ID=FIXME
       - CROWDSTRIKE_CLIENT_SECRET=FIXME
