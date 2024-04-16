@@ -23,7 +23,7 @@ rf:
   risk_as_score: True # optional
   risk_threshold: 60 # optional
   pull_risk_list: False
-  risk_list_interval: 6 # Required, in hours
+  risk_list_interval: 48 # Required, in hours
   risk_list_threshold: 70 # optional
   # if pull_risk_list is true, risklist_related_entities is required.
   # Available choices: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
