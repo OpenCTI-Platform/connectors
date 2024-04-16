@@ -16,6 +16,6 @@ services:
       QRADAR_URL: https://QRADAR1.changeme.com
       QRADAR_TOKEN: Token1
       QRADAR_SSL_VERIFY: true
-      QRADAR_RFERENCE_NAME: opencti
+      QRADAR_REFERENCE_NAME: opencti
       QRADAR_IGNORE_TYPES: label,marking-definition,identity
     restart: always
