@@ -66,27 +66,41 @@ class GreyNoiseConnector:
         try:
             key_check = session.test_connection()
 
-            today = datetime.today().strftime('%Y-%m-%d')
+            today = datetime.today().strftime("%Y-%m-%d")
 
             if "offering" in key_check:
-                self.helper.log_info("GreyNoise API Key Status: " + str(key_check.get("offering","")) + "/" + str(key_check.get('expiration','')))
-                if key_check.get("offering") == 'community_trial':
+                self.helper.log_info(
+                    "GreyNoise API Key Status: "
+                    + str(key_check.get("offering", ""))
+                    + "/"
+                    + str(key_check.get("expiration", ""))
+                )
+                if key_check.get("offering") == "community_trial":
                     self.helper.log_info("GreyNoise API key is valid!")
-                elif key_check.get("offering") == 'community':
+                elif key_check.get("offering") == "community":
                     raise ValueError(
                         "[API] GreyNoise Community API keys are not supported for this integration."
                     )
-                elif key_check.get("offering") != 'community' and key_check.get('expiration') > today:
+                elif (
+                    key_check.get("offering") != "community"
+                    and key_check.get("expiration") > today
+                ):
                     self.helper.log_info("GreyNoise API key is valid!")
-                elif key_check.get("offering") != 'community' and key_check.get('expiration') < today:
+                elif (
+                    key_check.get("offering") != "community"
+                    and key_check.get("expiration") < today
+                ):
                     raise ValueError(
                         "[API] GreyNoise API key appears to be expired, please contact support@greynoise.io."
                     )
         except Exception as e:
-            self.helper.log_error("[API] GreyNoise API key is not valid or not supported for this integration. API "
-                                  "Response: " + str(e))
+            self.helper.log_error(
+                "[API] GreyNoise API key is not valid or not supported for this integration. API "
+                "Response: " + str(e)
+            )
             raise Exception(
-                "[API] GreyNoise API key is not valid or not supported for this integration. API Response: " + str(e)
+                "[API] GreyNoise API key is not valid or not supported for this integration. API Response: "
+                + str(e)
             )
 
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
