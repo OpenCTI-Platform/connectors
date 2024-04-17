@@ -20,7 +20,10 @@ class AnyRunTask:
 
         self.token = get_config_variable("ANYRUN_TOKEN", ["anyrun", "token"], config)
         self.anyrun_url = get_config_variable(
-            "ANYRUN_API_URL", ["anyrun", "url"], config, default="https://api.any.run"
+            "ANYRUN_API_URL",
+            ["anyrun", "url"],
+            config,
+            default="https://api.any.run",
         )
         self.organization = self.helper.api.identity.create(
             type="Organization",
@@ -42,8 +45,14 @@ class AnyRunTask:
         self.task_os_version = get_config_variable(
             "ANYRUN_OS_VERSION", ["anyrun", "version"], config, default="10"
         )
+        self.task_os_locale = get_config_variable(
+            "ANYRUN_OS_LOCALE", ["anyrun", "locale"], config, default="en-US"
+        )
         self.task_os_browser = get_config_variable(
             "ANYRUN_OS_BROWSER", ["anyrun", "browser"], config, default="Google Chrome"
+        )
+        self.task_privacy = get_config_variable(
+            "ANYRUN_PRIVACY", ["anyrun", "privacy"], config, default="bylink"
         )
         self.automated_interactivity = get_config_variable(
             "ANYRUN_AUTOMATED_INTERACTIVITY",
@@ -97,6 +106,7 @@ class AnyRunTask:
         rdata = {
             "env_os": self.task_os,
             "env_bitness": self.task_os_bitness,
+            "env_locale": self.task_os_locale,
             "env_version": self.task_os_version,
             "obj_url": data.get("value"),
             "obj_type": type,
@@ -104,6 +114,7 @@ class AnyRunTask:
             "obj_ext_browser": self.task_os_browser,
             "opt_timeout": self.task_timer,
             "opt_automated_interactivity": self.automated_interactivity,
+            "opt_privacy_type": self.task_privacy,
         }
 
         response = self.call_anyrun_api("POST", "v1/analysis", rdata, file)
@@ -302,7 +313,6 @@ class AnyRunTask:
                         proc["scores"]["verdict"]["score"] > 0
                         and proc["important"] is True
                     ):
-
                         # self.helper.log_error(str(proc))
                         process = self.helper.api.stix_cyber_observable.create(
                             observableData={

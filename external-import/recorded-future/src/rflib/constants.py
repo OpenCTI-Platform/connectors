@@ -16,6 +16,7 @@ THREAT_MAP_TYPE_MAPPER = {
 }
 
 RISK_RULES_MAPPER = [
+    {"rule_score": 0, "severity": "No current evidence of risk", "risk_score": "0"},
     {"rule_score": 1, "severity": "Unusual", "risk_score": "5-24"},
     {"rule_score": 2, "severity": "Suspicious", "risk_score": "25-64"},
     {"rule_score": 3, "severity": "Malicious", "risk_score": "65-89"},

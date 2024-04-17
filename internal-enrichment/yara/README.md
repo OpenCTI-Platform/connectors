@@ -10,7 +10,7 @@ connector creates a relationship between the Artifact and Indicator.
 
 ### Requirements
 
-- OpenCTI Platform >= 6.0.4
+- OpenCTI Platform >= 6.0.9
 
 ### Configuration
 

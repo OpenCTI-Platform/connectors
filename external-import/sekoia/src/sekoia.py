@@ -14,7 +14,7 @@ from dateutil.parser import ParserError, parse
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
 
-## MODIFICATION BY CYRILYXE (OPENCTI 6.0.4, the 2022-08-12)
+## MODIFICATION BY CYRILYXE (OPENCTI 6.0.5, the 2022-08-12)
 # By default, the def '_load_data_sets' (line 370ish in this file) uses relative path
 #   But from a manual deployement, we have to use a Daemon for launching the service
 #   So i added a global var : gbl_scriptDir (not mandatory but for visibility purpose only)
@@ -78,10 +78,10 @@ class Sekoia(object):
             friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
             try:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
                 cursor = self._run(cursor, work_id)
                 message = f"Connector successfully run, cursor updated to {cursor}"
                 self.helper.log_info(message)
@@ -462,6 +462,7 @@ if __name__ == "__main__":
     try:
         sekoiaConnector = Sekoia()
         sekoiaConnector.run()
-    except Exception:
+    except Exception as err:
+        print(err)
         time.sleep(10)
         sys.exit(0)

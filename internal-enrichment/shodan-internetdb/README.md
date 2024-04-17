@@ -33,10 +33,12 @@ Then, start the docker container with the provided `docker-compose.yml`
 
 ### Manual/VM Deployment
 
-Create a file `config.yml` based off the provided `config.yml.sample`.
+Create a file `config.yml` based off the provided `config.yml.sample`. 
 Replace the configuration variables (especially the "ChangeMe" variables) with the appropriate configurations for you environment.
-Install the required python dependencies (preferably in a virtual environment) with `poetry install --no-dev`.
+The `id` attribute of the `connector` should be a freshly generated UUID. 
+Install the required python dependencies (preferably in a virtual environment) with `pip3 install -r requirements.txt` 
 Then, run the `python3 -m shodan_internetdb` command to start the connector
+
 
 ## Usage
 

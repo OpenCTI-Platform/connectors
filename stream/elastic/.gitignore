@@ -6,4 +6,3 @@ logs
 .python-version
 .vscode
 dist
-poetry.lock

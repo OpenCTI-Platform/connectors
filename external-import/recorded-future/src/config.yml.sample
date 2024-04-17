@@ -23,10 +23,21 @@ rf:
   risk_as_score: True # optional
   risk_threshold: 60 # optional
   pull_risk_list: False
-  risk_list_interval: 6 # Required, in hours
+  risk_list_interval: 48 # Required, in hours
   risk_list_threshold: 70 # optional
   # if pull_risk_list is true, risklist_related_entities is required.
   # Available choices: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
   risklist_related_entities: 'Malware,Threat Actor,MitreAttackIdentifier',
   pull_threat_maps: False # optional - Pull Threat Actors and Malware maps
   threat_maps_interval: 24 # Required in hours
+
+alert:
+  enable: False
+  incident_vocabulary_name: 'incident_type_ov'
+  channels_vocabulary_name: 'channel_types_ov'
+  default_marking: 'TLP:AMBER'
+  incident_default_description : 'Analyst's comment : \n\n'
+  logo_abuse_rule_id: 'ChangeMe'
+  initial_pull_off: 1
+  download_path: 'images/'
+  logo_abuse_rule_id: 'ChangeMe'

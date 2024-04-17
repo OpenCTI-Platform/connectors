@@ -263,7 +263,12 @@ class CPEConnector:
         if cpe.split(":")[8] == "*":
             language = ""
         else:
-            language = langcodes.standardize_tag(cpe.split(":")[8], "ietf")
+            try:
+                language = langcodes.standardize_tag(cpe.split(":")[8], "ietf")
+            except Exception as e:
+                language = ""
+
+                self.helper.log_error(f"Error while getting language. {str(e)}")
 
         return {
             "is_hardware": is_hardware,
@@ -307,7 +312,7 @@ class CPEConnector:
                     type="software",
                     spec_version="2.1",
                     id=self._get_id("software"),
-                    name=cpe_infos["name"],
+                    name=self._get_cpe_title(json_objects["products"][i]["cpe"]),
                     cpe=json_objects["products"][i]["cpe"]["cpeName"],
                     languages=cpe_infos["language"],
                     vendor=cpe_infos["vendor"],
@@ -318,6 +323,29 @@ class CPEConnector:
         self.helper.log_info(f"{len(stix_objects)} STIX2 objects have been created!")
 
         return stix_objects
+
+    def _get_cpe_title(self, cpe: dict) -> str:
+        """
+        Extracts the title from the cpe.
+
+        Args:
+            self
+            cpe (dict): The cpe where the title is extracted
+
+        Returns:
+            str: The title of the cpe.
+        """
+
+        cpe_title = ""
+
+        for title in cpe["titles"]:
+            if title["lang"] == "en":
+                cpe_title = title["title"]
+
+        if cpe_title == "":
+            cpe_title = self._get_cpe_infos(cpe["cpeName"])["name"]
+
+        return cpe_title
 
     def _import_all(self, work_id) -> None:
         """

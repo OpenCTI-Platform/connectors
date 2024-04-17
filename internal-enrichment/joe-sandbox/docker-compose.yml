@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-joe-sandbox:
-    image: opencti/connector-joe-sandbox:6.0.4
+    image: opencti/connector-joe-sandbox:6.0.9
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
@@ -88,8 +88,6 @@ services:
       - JOE_SANDBOX_ARCHIVE_PASSWORD=infected
       # Will start the sample with the given command-line argument. Currently only available on Windows analyzers.
       - JOE_SANDBOX_COMMAND_LINE_ARGUMENT=
-      # If this is used, the sample will not be started automatically!
-      - JOE_SANDBOX_LIVE_INTERACTION=false
       # Encryption password for analyses, AES-256 is used to encrypt files and the password is deleted on the backend after encrypting files
       - JOE_SANDBOX_ENCRYPT_WITH_PASSWORD=
       # Use a browser for analysis of URLs, false == download/execute

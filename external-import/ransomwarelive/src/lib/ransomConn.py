@@ -78,7 +78,6 @@ class RansomwareAPIConnector:
         external_references = []
 
         for field in ["screenshot", "website", "post_url"]:
-
             if item.get(field):
                 external_reference = ExternalReference(
                     source_name="ransomware.live",
@@ -171,7 +170,8 @@ class RansomwareAPIConnector:
     def collect_historic_intelligence(self):
         """Collects historic intelligence from ransomware.live"""
         base_url = "https://api.ransomware.live/victims/"
-        headers = {"accept": "application/json"}
+        headers = {"User-Agent": "OpenCTI Connector", "accept": "application/json"}
+
         curent_year = int(dt.date.today().year)
         # Checking if the historic year is less than 2020 as there is no data past 2020
         if int(self.get_historic_year) < 2020:
@@ -194,14 +194,12 @@ class RansomwareAPIConnector:
                         print(response.raise_for_status())
 
                         for item in response_json:
-
                             bundle = self.stix_object_generator(
                                 item
                             )  # calling the stix_object_generator method to create stix objects
                             stix_bundles.append(bundle)
                             stix_objects.extend(bundle.objects)
                     else:
-
                         self.helper.log_info(
                             f"Error and response status code {response.status_code}"
                         )
@@ -213,9 +211,8 @@ class RansomwareAPIConnector:
         return stix_objects
 
     def collect_intelligence(self, last_run) -> list:
-
         url = "https://api.ransomware.live/recentvictims"
-        headers = {"accept": "application/json"}
+        headers = {"User-Agent": "OpenCTI Connector", "accept": "application/json"}
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             response_json = response.json()
@@ -225,7 +222,6 @@ class RansomwareAPIConnector:
 
             try:
                 for item in response_json:
-
                     created = datetime.strptime(
                         item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
                     )
@@ -239,7 +235,6 @@ class RansomwareAPIConnector:
                         )  # 30 seconds is added to avoid missing any data that might have caused due to code execution time
 
                     if time_diff > 0:
-
                         bundle = self.stix_object_generator(
                             item
                         )  # calling the stix_object_generator method to create stix objects
@@ -334,7 +329,6 @@ class RansomwareAPIConnector:
                     # testing get_historic or pull history config variable
 
                     try:  # Performing the collection of intelligence
-
                         if last_run is None and self.get_historic:
                             bundle_objects = self.collect_historic_intelligence()
                         else:

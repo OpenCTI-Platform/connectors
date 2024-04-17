@@ -222,9 +222,6 @@ class JoeSandboxConnector:
             ["joe_sandbox", "command_line_argument"],
             config,
         )
-        self._live_interaction = get_config_variable(
-            "JOE_SANDBOX_LIVE_INTERACTION", ["joe_sandbox", "live_interaction"], config
-        )
         self._encrypt_with_password = get_config_variable(
             "JOE_SANDBOX_ENCRYPT_WITH_PASSWORD",
             ["joe_sandbox", "encrypt_with_password"],
@@ -296,7 +293,6 @@ class JoeSandboxConnector:
             "secondary-results": self._secondary_results,  # Enables secondary results such as Yara rule generation, classification via Joe Sandbox Class as well as several detail reports. Analysis will run faster with disabled secondary results
             "apk-instrumentation": self._apk_instrumentation,  # Perform APK DEX code instrumentation.
             "amsi-unpacking": self._amsi_unpacking,  # Perform generic unpacking using the Microsoft Antimalware Scan Interface (AMSI).
-            "live-interaction": self._live_interaction,  # Use Live Interaction. Requires user interaction via the web UI. If enabled, disables VBA instrumentation (on Windows).
             "encrypt-with-password": self._encrypt_with_password,  # Encryption password for analyses
             # JOE SANDBOX CLOUD EXCLUSIVE PARAMETERS - Only include these if they are defined
             **(
@@ -390,7 +386,7 @@ class JoeSandboxConnector:
 
         # Serialize and send bundles
         if bundle_objects:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:

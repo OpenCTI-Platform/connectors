@@ -11,7 +11,7 @@ By integrating Comlaude's domain information with OpenCTI, the connector aids in
 
 ### Requirements
 
-- OpenCTI Platform >= 6.0.4
+- OpenCTI Platform >= 6.0.9
 - Username, Password, and API Key for Comlaude
 
 ### Configuration

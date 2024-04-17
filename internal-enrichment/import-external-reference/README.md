@@ -21,7 +21,7 @@ OpenCTI data is coming from *import* connectors.
 | `opencti_token`                              | `OPENCTI_TOKEN`                              | Yes       | The default admin token configured in the OpenCTI platform parameters file.              |
 | `connector_id`                               | `CONNECTOR_ID`                               | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                       |
 | `connector_name`                             | `CONNECTOR_NAME`                             | Yes       | Option `ImportExternalReference`                                                         |
-| `connector_auto`                             | `CONNCETOR_AUTO`                             | Yes       | `false` Enable/disable auto-import of external references                                |
+| `connector_auto`                             | `CONNECTOR_AUTO`                             | Yes       | `false` Enable/disable auto-import of external references                                |
 | `connector_scope`                            | `CONNECTOR_SCOPE`                            | Yes       | Supported file types: `'External-Reference'`                                             |
 | `connector_confidence_level`                 | `CONNECTOR_CONFIDENCE_LEVEL`                 | Yes       | The default confidence level for created sightings (a number between 1 and 100).         |
 | `connector_log_level`                        | `CONNECTOR_LOG_LEVEL`                        | Yes       | Connector logging verbosity, could be `debug`, `info`, `warn` or `error` (less verbose). |

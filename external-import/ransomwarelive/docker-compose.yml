@@ -1,11 +1,10 @@
 version: '3'
 services:
   connector-ransomware:
-    build: .
+    image: opencti/connector-ransomwarelive:6.0.9
     container_name: ransomware-connector
     environment:
       # Connector's definition parameters:
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Ransomware Connector
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report
       # Connector's generic execution parameters:

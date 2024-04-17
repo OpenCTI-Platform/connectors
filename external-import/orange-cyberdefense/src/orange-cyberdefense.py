@@ -194,7 +194,10 @@ class OrangeCyberDefense:
             "OCD_DATALAKE_PASSWORD", ["ocd", "datalake_password"], config
         )
         self.ocd_datalake_zip_file_path = get_config_variable(
-            "OCD_DATALAKE_ZIP_FILE_PATH", ["ocd", "datalake_zip_file_path"], config
+            "OCD_DATALAKE_ZIP_FILE_PATH",
+            ["ocd", "datalake_zip_file_path"],
+            config,
+            default="/opt/opencti-connector-orange-cyberdefense",
         )
         self.ocd_vulnerabilities_login = get_config_variable(
             "OCD_VULNERABILITIES_LOGIN", ["ocd", "vulnerabilities_login"], config
@@ -203,7 +206,7 @@ class OrangeCyberDefense:
             "OCD_VULNERABILITIES_PASSWORD", ["ocd", "vulnerabilities_password"], config
         )
         self.ocd_import_worldwatch = get_config_variable(
-            "OCD_IMPORT_WORLDWATCH", ["ocd", "import_worldwatch"], config, False, True
+            "OCD_IMPORT_WORLDWATCH", ["ocd", "import_worldwatch"], config, default=True
         )
         self.ocd_import_worldwatch_start_date = get_config_variable(
             "OCD_IMPORT_WORLDWATCH_START_DATE",
@@ -211,7 +214,7 @@ class OrangeCyberDefense:
             config,
         )
         self.ocd_import_cybercrime = get_config_variable(
-            "OCD_IMPORT_CYBERCRIME", ["ocd", "import_cybercrime"], config, False, True
+            "OCD_IMPORT_CYBERCRIME", ["ocd", "import_cybercrime"], config, default=True
         )
         self.ocd_import_cybercrime_start_date = get_config_variable(
             "OCD_IMPORT_CYBERCRIME_START_DATE",
@@ -222,11 +225,10 @@ class OrangeCyberDefense:
             "OCD_IMPORT_VULNERABILITIES",
             ["ocd", "import_vulnerabilities"],
             config,
-            False,
-            True,
+            default=True,
         )
         self.ocd_import_datalake = get_config_variable(
-            "OCD_IMPORT_DATALAKE", ["ocd", "import_datalake"], config, False, True
+            "OCD_IMPORT_DATALAKE", ["ocd", "import_datalake"], config, default=True
         )
         self.ocd_import_datalake_atom_types = get_config_variable(
             "OCD_IMPORT_DATALAKE_ATOM_TYPES",
@@ -242,24 +244,26 @@ class OrangeCyberDefense:
             "OCD_IMPORT_DATALAKE_MINIMUM_RISK_SCORE",
             ["ocd", "import_datalake_minimum_risk_score"],
             config,
-            True,
-            0,
+            isNumber=True,
+            default=80,
         )
         self.ocd_create_observables = get_config_variable(
-            "OCD_CREATE_OBSERVABLES", ["ocd", "create_observables"], config, False, True
+            "OCD_CREATE_OBSERVABLES",
+            ["ocd", "create_observables"],
+            config,
+            default=True,
         )
         self.ocd_curate_labels = get_config_variable(
-            "OCD_CURATE_LABELS", ["ocd", "curate_labels"], config, False, True
+            "OCD_CURATE_LABELS", ["ocd", "curate_labels"], config, default=True
         )
         self.ocd_interval = get_config_variable(
-            "OCD_INTERVAL", ["ocd", "interval"], config, True
+            "OCD_INTERVAL", ["ocd", "interval"], config, isNumber=True, default=5
         )
         self.ocd_threat_actor_as_intrusion_set = get_config_variable(
             "OCD_THREAT_ACTOR_AS_INTRUSION_SET",
             ["ocd", "threat_actor_as_intrusion_set"],
             config,
-            False,
-            True,
+            default=True,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -1093,7 +1097,6 @@ class OrangeCyberDefense:
 
         # Create a bundle of the processed objects
         if len(objects):
-
             self._log_and_initiate_work("Datalake")
             # Send the created bundle
             self.helper.send_stix2_bundle(
