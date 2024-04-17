@@ -3,10 +3,10 @@ from datetime import datetime
 from typing import Dict
 
 import pycountry
-import requests
 import stix2
 import yaml
 from dateutil.parser import parse
+from greynoise import GreyNoise
 from pycti import (
     Identity,
     Indicator,
@@ -20,8 +20,6 @@ from pycti import (
     Vulnerability,
     get_config_variable,
 )
-
-from greynoise import GreyNoise
 
 
 class GreyNoiseConnector:
