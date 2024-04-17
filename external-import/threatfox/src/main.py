@@ -219,12 +219,14 @@ class ThreatFox:
                 objects=bundle_objects,
                 allow_custom=True,
             ).serialize()
-            self.helper.send_stix2_bundle(
-                bundle,
-                update=self.update_existing_data,
-                work_id=work_id,
-            )
+
             self.helper.log_debug(bundle)
+            if "objects" in bundle:
+                self.helper.send_stix2_bundle(
+                    bundle,
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
 
             if os.path.exists(CSV_PATH):
                 os.remove(CSV_PATH)
