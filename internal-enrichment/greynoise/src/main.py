@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from typing import Dict
+from greynoise import GreyNoise
 
 import pycountry
 import requests
@@ -20,11 +21,6 @@ from pycti import (
     Vulnerability,
     get_config_variable,
 )
-
-# GREYNOISE API
-API_URL = "https://api.greynoise.io"
-API_VERSION = "/v2"
-BASE_URL = API_URL + API_VERSION
 
 
 class GreyNoiseConnector:
@@ -52,10 +48,6 @@ class GreyNoiseConnector:
         self.greynoise_ent_desc = get_config_variable(
             "GREYNOISE_DESCRIPTION", ["greynoise", "description"], config
         )
-        self.headers = {
-            "key": self.greynoise_key,
-            "Accept": "application/json",
-        }
         self.default_score = get_config_variable(
             "GREYNOISE_DEFAULT_SCORE",
             ["greynoise", "default_score"],
@@ -65,8 +57,6 @@ class GreyNoiseConnector:
 
         # Define variables
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
-        self.API_URL_NOISE = BASE_URL + "/noise/context/"
-        self.API_URL_META = BASE_URL + "/meta/metadata/"
         self.tlp = None
         self.stix_objects = []
 
@@ -721,11 +711,11 @@ class GreyNoiseConnector:
             try:
                 # Get "IP Context" Greynoise API Response
                 # https://docs.greynoise.io/reference/noisecontextip-1
-                response = requests.get(
-                    self.API_URL_NOISE + opencti_entity_value,
-                    headers=self.headers,
+                session = GreyNoise(
+                    api_key=self.greynoise_key, integration_name="opencti-enricher-v3.0"
                 )
-                json_data: dict = response.json()
+
+                json_data = session.ip(opencti_entity_value)
 
                 if (
                     "seen" in json_data
@@ -738,17 +728,8 @@ class GreyNoiseConnector:
 
                 # Get "Tag Metadata" Greynoise API Response
                 # https://docs.greynoise.io/reference/metadata-3
-                tags_response = requests.get(
-                    self.API_URL_META,
-                    headers=self.headers,
-                )
-                json_data_tags: dict = tags_response.json()
 
-                # Handling specific errors for Greynoise API
-                if response.status_code >= 400 or tags_response.status_code >= 400:
-                    raise ValueError(
-                        f"[API] Error - Status code : {response.status_code}, {response.text}",
-                    )
+                json_data_tags = session.metadata()
 
                 # Generate a stix bundle
                 stix_bundle = self._generate_stix_bundle(
@@ -766,7 +747,7 @@ class GreyNoiseConnector:
             except Exception as e:
                 # Handling other unexpected exceptions
                 raise ValueError(
-                    "[ERROR] Unexpected Error occured :", {"Exception": str(e)}
+                    "[ERROR] Unexpected Error occurred :", {"Exception": str(e)}
                 )
         else:
             return self.helper.connector_logger.info(
