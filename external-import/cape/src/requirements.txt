@@ -1,7 +1,7 @@
 antlr4-python3-runtime
 chardet==5.2.0
 datefinder==0.7.3
-idna==3.6
+idna==3.7
 pycti==6.0.9
 python-dateutil==2.9.0.post0
 pytz==2024.1
