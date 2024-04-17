@@ -3,10 +3,10 @@ from datetime import datetime
 from typing import Dict
 
 import pycountry
-import requests
 import stix2
 import yaml
 from dateutil.parser import parse
+from greynoise import GreyNoise
 from pycti import (
     Identity,
     Indicator,
@@ -20,11 +20,6 @@ from pycti import (
     Vulnerability,
     get_config_variable,
 )
-
-# GREYNOISE API
-API_URL = "https://api.greynoise.io"
-API_VERSION = "/v2"
-BASE_URL = API_URL + API_VERSION
 
 
 class GreyNoiseConnector:
@@ -52,10 +47,6 @@ class GreyNoiseConnector:
         self.greynoise_ent_desc = get_config_variable(
             "GREYNOISE_DESCRIPTION", ["greynoise", "description"], config
         )
-        self.headers = {
-            "key": self.greynoise_key,
-            "Accept": "application/json",
-        }
         self.default_score = get_config_variable(
             "GREYNOISE_DEFAULT_SCORE",
             ["greynoise", "default_score"],
@@ -65,10 +56,52 @@ class GreyNoiseConnector:
 
         # Define variables
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
-        self.API_URL_NOISE = BASE_URL + "/noise/context/"
-        self.API_URL_META = BASE_URL + "/meta/metadata/"
         self.tlp = None
         self.stix_objects = []
+
+        # Validate GreyNoise API Key
+        session = GreyNoise(
+            api_key=self.greynoise_key, integration_name="opencti-enricher-v3.0"
+        )
+        try:
+            key_check = session.test_connection()
+
+            today = datetime.today().strftime("%Y-%m-%d")
+
+            if "offering" in key_check:
+                self.helper.log_info(
+                    "GreyNoise API Key Status: "
+                    + str(key_check.get("offering", ""))
+                    + "/"
+                    + str(key_check.get("expiration", ""))
+                )
+                if key_check.get("offering") == "community_trial":
+                    self.helper.log_info("GreyNoise API key is valid!")
+                elif key_check.get("offering") == "community":
+                    raise ValueError(
+                        "[API] GreyNoise Community API keys are not supported for this integration."
+                    )
+                elif (
+                    key_check.get("offering") != "community"
+                    and key_check.get("expiration") > today
+                ):
+                    self.helper.log_info("GreyNoise API key is valid!")
+                elif (
+                    key_check.get("offering") != "community"
+                    and key_check.get("expiration") < today
+                ):
+                    raise ValueError(
+                        "[API] GreyNoise API key appears to be expired, please contact support@greynoise.io."
+                    )
+        except Exception as e:
+            self.helper.log_error(
+                "[API] GreyNoise API key is not valid or not supported for this integration. API "
+                "Response: " + str(e)
+            )
+            raise Exception(
+                "[API] GreyNoise API key is not valid or not supported for this integration. API Response: "
+                + str(e)
+            )
 
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
@@ -249,7 +282,7 @@ class GreyNoiseConnector:
         # Generate ExternalReference
         external_reference = stix2.ExternalReference(
             source_name=self.greynoise_ent_name,
-            url=f"https://www.greynoise.io/viz/ip/{data['ip']}",
+            url=f"https://viz.greynoise.io/ip/{data['ip']}",
             external_id=data["ip"],
             description=description,
         )
@@ -719,13 +752,13 @@ class GreyNoiseConnector:
             opencti_entity_value = stix_entity["value"]
 
             try:
-                # Get "IP Context" Greynoise API Response
+                # Get "IP Context" GreyNoise API Response
                 # https://docs.greynoise.io/reference/noisecontextip-1
-                response = requests.get(
-                    self.API_URL_NOISE + opencti_entity_value,
-                    headers=self.headers,
+                session = GreyNoise(
+                    api_key=self.greynoise_key, integration_name="opencti-enricher-v3.0"
                 )
-                json_data: dict = response.json()
+
+                json_data = session.ip(opencti_entity_value)
 
                 if (
                     "seen" in json_data
@@ -738,17 +771,8 @@ class GreyNoiseConnector:
 
                 # Get "Tag Metadata" Greynoise API Response
                 # https://docs.greynoise.io/reference/metadata-3
-                tags_response = requests.get(
-                    self.API_URL_META,
-                    headers=self.headers,
-                )
-                json_data_tags: dict = tags_response.json()
 
-                # Handling specific errors for Greynoise API
-                if response.status_code >= 400 or tags_response.status_code >= 400:
-                    raise ValueError(
-                        f"[API] Error - Status code : {response.status_code}, {response.text}",
-                    )
+                json_data_tags = session.metadata()
 
                 # Generate a stix bundle
                 stix_bundle = self._generate_stix_bundle(
@@ -766,7 +790,7 @@ class GreyNoiseConnector:
             except Exception as e:
                 # Handling other unexpected exceptions
                 raise ValueError(
-                    "[ERROR] Unexpected Error occured :", {"Exception": str(e)}
+                    "[ERROR] Unexpected Error occurred :", {"Exception": str(e)}
                 )
         else:
             return self.helper.connector_logger.info(
