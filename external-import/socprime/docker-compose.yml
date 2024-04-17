@@ -11,6 +11,8 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - SOCPRIME_API_KEY=ChangeMe
       - SOCPRIME_CONTENT_LIST_NAME=ChangeMe
+      - SOCPRIME_INDICATOR_SIEM_TYPE=sigma
+      # - SOCPRIME_JOB_IDS=ChangeMe
       - SOCPRIME_INTERVAL_SEC=3600
       - SOCPRIME_SIEM_TYPE=
     restart: always
