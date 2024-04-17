@@ -2,10 +2,12 @@ import datetime
 import os
 import sys
 import time
-from typing import Any, Dict, List, Mapping, Optional, Union
+from copy import deepcopy
+from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
 
 import pycti
 import yaml
+from dateutil.parser import parse as parse_date_str
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
@@ -25,6 +27,17 @@ from stix2 import (
 )
 
 
+class ParsedRule(NamedTuple):
+    name: str
+    description: str | None
+    siem_type: str
+    pattern: str
+    status: str | None
+    author: str | None
+    sigma_tags: list[str]
+    release_date: datetime.datetime | None
+
+
 class SocprimeConnector:
     _DEFAULT_CONNECTOR_RUN_INTERVAL_SEC = 3600
     _STATE_LAST_RUN = "last_run"
@@ -36,11 +49,22 @@ class SocprimeConnector:
         tdm_api_key = get_config_variable(
             "SOCPRIME_API_KEY", ["socprime", "api_key"], config
         )
-        self.tdm_content_list_name = get_config_variable(
+        if not tdm_api_key:
+            raise Exception("Configuration error. SOCPRIME_API_KEY is required.")
+        self._content_list_names = get_config_variable(
             "SOCPRIME_CONTENT_LIST_NAME", ["socprime", "content_list_name"], config
         )
-        self._siem_type = get_config_variable(
+        self._job_ids = get_config_variable(
+            "SOCPRIME_JOB_IDS", ["socprime", "job_ids"], config
+        )
+        self._siem_types_for_refs = get_config_variable(
             "SOCPRIME_SIEM_TYPE", ["socprime", "siem_type"], config
+        )
+        self._indicator_siem_type = get_config_variable(
+            "SOCPRIME_INDICATOR_SIEM_TYPE",
+            ["socprime", "indicator_siem_type"],
+            config,
+            default="sigma",
         )
         self.interval_sec = get_config_variable(
             env_var="SOCPRIME_INTERVAL_SEC",
@@ -64,13 +88,13 @@ class SocprimeConnector:
             return {}
         return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
 
-    def get_siem_types(self) -> List[str]:
-        if not self._siem_type:
+    def get_siem_types_for_refs(self) -> List[str]:
+        if not self._siem_types_for_refs:
             return []
-        elif isinstance(self._siem_type, list):
-            return self._siem_type
+        elif isinstance(self._siem_types_for_refs, list):
+            return self._siem_types_for_refs
         else:
-            return [x.strip() for x in str(self._siem_type).split(",")]
+            return [x.strip() for x in str(self._siem_types_for_refs).split(",")]
 
     @staticmethod
     def _current_unix_timestamp() -> int:
@@ -108,23 +132,27 @@ class SocprimeConnector:
         author_id: Optional[str] = None,
     ) -> List:
         stix_objects = []
-        sigma_body = self._get_sigma_body_from_rule(rule)
+        parsed_rule = self._parse_rule(rule)
+        labels = deepcopy(parsed_rule.sigma_tags)
+        if parsed_rule.author:
+            labels.append(f"Sigma Author: {parsed_rule.author}")
         indicator = Indicator(
-            id=f'indicator--{sigma_body["id"]}' if sigma_body.get("id") else None,
+            id=pycti.Indicator.generate_id(pattern=parsed_rule.pattern),
             type="indicator",
-            name=rule["case"]["name"],
-            description=rule.get("description"),
-            pattern=rule["sigma"]["text"],
-            pattern_type="sigma",
-            labels=sigma_body.get("tags", [])
-            + ["Sigma Author: " + sigma_body.get("author")],
+            name=parsed_rule.name,
+            description=parsed_rule.description,
+            pattern=parsed_rule.pattern,
+            pattern_type=self._get_pattern_type(parsed_rule),
+            labels=labels,
             confidence=self.convert_sigma_status_to_stix_confidence(
-                sigma_level=sigma_body.get("status")
+                sigma_level=parsed_rule.status
             ),
             external_references=self._get_external_refs_from_rule(
                 rule, siem_types=siem_types
             ),
             created_by_ref=author_id,
+            valid_from=parsed_rule.release_date,
+            valid_until=None,
         )
         stix_objects.append(indicator)
 
@@ -149,6 +177,46 @@ class SocprimeConnector:
         )
 
         return stix_objects
+
+    @staticmethod
+    def _get_pattern_type(parsed_rule: ParsedRule) -> str:
+        pattern_type = parsed_rule.siem_type
+        if pattern_type == "powershell":
+            pattern_type = "powershell query"
+        return pattern_type
+
+    @classmethod
+    def _parse_rule(cls, rule: dict) -> ParsedRule:
+        siem_type = rule["siem_type"]
+        if siem_type == "sigma":
+            sigma_body = cls._get_sigma_body_from_rule(rule)
+            sigma_status = sigma_body.get("status")
+            sigma_author = sigma_body.get("author")
+            sigma_tags = sigma_body.get("tags") or []
+        else:
+            sigma_status = rule["sigma"].get("status")
+            sigma_author = rule["tags"].get("author") if rule.get("tags") else None
+            if not sigma_author:
+                sigma_author = None
+            if isinstance(sigma_author, list):
+                sigma_author = ", ".join(sigma_author)
+            sigma_tags = []
+
+        try:
+            release_date = parse_date_str(rule.get("release_date"))
+        except Exception:
+            release_date = None
+
+        return ParsedRule(
+            pattern=rule["sigma"]["text"],
+            status=sigma_status,
+            author=sigma_author,
+            sigma_tags=sigma_tags,
+            name=rule["case"]["name"],
+            description=rule.get("description"),
+            release_date=release_date,
+            siem_type=siem_type,
+        )
 
     @staticmethod
     def _get_tools_from_rule(rule: dict) -> List[str]:
@@ -267,7 +335,10 @@ class SocprimeConnector:
                                     }
                                 )
 
-        res.append({"source_name": "SOC Prime", "url": cls._get_link_to_socprime(rule)})
+        if rule["siem_type"] == "sigma":
+            link_to_socprime = cls._get_link_to_socprime(rule)
+            if link_to_socprime:
+                res.append({"source_name": "SOC Prime", "url": link_to_socprime})
         return res
 
     @staticmethod
@@ -275,10 +346,11 @@ class SocprimeConnector:
         return yaml.safe_load(rule["sigma"]["text"].replace("---", ""))
 
     @classmethod
-    def _get_link_to_socprime(cls, rule: dict) -> str:
+    def _get_link_to_socprime(cls, rule: dict) -> str | None:
         body = cls._get_sigma_body_from_rule(rule)
-        sigma_id = body["id"]
-        return f"https://socprime.com/rs/rule/{sigma_id}"
+        if isinstance(body, dict) and body.get("id"):
+            sigma_id = body["id"]
+            return f"https://socprime.com/rs/rule/{sigma_id}"
 
     @staticmethod
     def convert_sigma_status_to_stix_confidence(sigma_level: str) -> Optional[int]:
@@ -296,7 +368,7 @@ class SocprimeConnector:
         if rule_ids:
             try:
                 query = "case.id: (" + " OR ".join(rule_ids) + ")"
-                for siem_type in self.get_siem_types():
+                for siem_type in self.get_siem_types_for_refs():
                     rules = self.tdm_api_client.search_rules(
                         siem_type=siem_type, client_query_string=query
                     )
@@ -309,15 +381,55 @@ class SocprimeConnector:
                 self.helper.log_error("Error while getting availables siem types.")
         return res
 
-    def _get_rules_from_content_list(self) -> List[dict]:
+    def _get_rules_from_content_lists_and_jobs(self) -> list[str]:
+        list_names = self._get_content_list_names()
+        job_ids = self._get_job_ids()
+        if not list_names and not job_ids:
+            raise Exception(
+                "Configuration error. At least one job id or one content list name must be provided."
+            )
+        res = []
+        for list_name in list_names:
+            res.extend(
+                self._get_rules_from_one_content_list(content_list_name=list_name)
+            )
+        for job_id in job_ids:
+            res.extend(self._get_rules_from_one_job(job_id=job_id))
+        return res
+
+    def _get_content_list_names(self) -> list[str]:
+        if not self._content_list_names:
+            return []
+        names = str(self._content_list_names).split(",")
+        names = [x.strip() for x in names if x.strip()]
+        return names
+
+    def _get_rules_from_one_content_list(self, content_list_name: str) -> List[dict]:
+        self.helper.log_info(f"Getting rules from content list {content_list_name}")
         try:
             return self.tdm_api_client.get_rules_from_content_list(
-                content_list_name=self.tdm_content_list_name, siem_type="sigma"
+                content_list_name=content_list_name,
+                siem_type=self._indicator_siem_type,
             )
         except Exception as err:
             self.helper.log_error(
                 f"Error while getting rules from content list - {err}"
             )
+            return []
+
+    def _get_job_ids(self) -> list[str]:
+        if not self._job_ids:
+            return []
+        ids = str(self._job_ids).split(",")
+        ids = [x.strip() for x in ids if x.strip()]
+        return ids
+
+    def _get_rules_from_one_job(self, job_id: str) -> List[dict]:
+        self.helper.log_info(f"Getting rules from job {job_id}")
+        try:
+            return self.tdm_api_client.get_rules_from_job(job_id=job_id)
+        except Exception as err:
+            self.helper.log_error(f"Error while getting rules from job - {err}")
             return []
 
     def _create_author_identity(self, work_id: str) -> str:
@@ -348,24 +460,26 @@ class SocprimeConnector:
         author_id = self._create_author_identity(work_id)
 
         bundle_objects = []
-        rules = self._get_rules_from_content_list()
+        rules = self._get_rules_from_content_lists_and_jobs()
         available_siem_types = self._get_available_siem_types(
             rule_ids=[x["case"]["id"] for x in rules]
         )
 
+        rules_count = 0
         for rule in rules:
             try:
                 rule_stix_objects = self.get_stix_objects_from_rule(
-                    rule,
+                    rule=rule,
                     siem_types=available_siem_types.get(rule["case"]["id"]),
                     author_id=author_id,
                 )
                 bundle_objects.extend(rule_stix_objects)
+                rules_count += 1
             except Exception as err:
                 case_id = rule.get("case", {}).get("id")
                 self.helper.log_error(f"Error while parsing rule {case_id} - {err}")
 
-        self.helper.log_info(f"Sending {len(rules)} sigma rules")
+        self.helper.log_info(f"Sending {rules_count} rules")
 
         self._send_stix_objects(objects_list=bundle_objects, work_id=work_id)
 
