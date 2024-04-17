@@ -13,7 +13,7 @@ connector:
 greynoise:
   key: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
-  name: 'GreyNoise sensors'
-  description: 'GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.'
+  name: 'GreyNoise Internet Scanner'
+  description: 'GreyNoise collects and analyzes opportunistic scan and attack activity for devices connected directly to the Internet.'
   sighting_not_seen: false
   default_score: 50 # Former confidence_level deprecated in OpenCTI version >= 6.0
