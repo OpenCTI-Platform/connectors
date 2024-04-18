@@ -1,4 +1,4 @@
-pycti==6.0.9
+pycti==6.0.10
 prometheus-client==0.20.0
 crowdstrike-falconpy==1.4.2
 stix-shifter==7.0.6

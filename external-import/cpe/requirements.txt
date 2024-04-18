@@ -1,4 +1,4 @@
-pycti==6.0.9
+pycti==6.0.10
 requests
 stix2
 langcodes
