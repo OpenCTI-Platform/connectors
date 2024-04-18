@@ -47,7 +47,7 @@ class RiskIQConnector:
             "RISKIQ_IMPORT_FROM_TIMESTAMP",
             ["riskiq", "import_from_timestamp"],
             config,
-            True,
+            isNumber=True,
             default=None,
         )
         user = get_config_variable("RISKIQ_USER", ["riskiq", "user"], config)
@@ -58,8 +58,8 @@ class RiskIQConnector:
             "RISKIQ_CREATE_OBSERVABLES",
             ["riskiq", "create_observables"],
             config,
-            False,
-            True,
+            isNumber=False,
+            default=True,
         )
         # Create the author for all reports.
         self.author = Identity(
