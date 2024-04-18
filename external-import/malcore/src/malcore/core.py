@@ -54,12 +54,14 @@ class Malcore:
             ["connector", "update_existing_data"],
             config,
         )
-        self.identity = self.helper.api.identity.create(
-            type="Organization",
-            name="Malcore",
-            description="Malcore is a tool designed to simplify reverse engineering and malware analysis through "
-                        "simple file analysis."
-        ),
+        self.identity = (
+            self.helper.api.identity.create(
+                type="Organization",
+                name="Malcore",
+                description="Malcore is a tool designed to simplify reverse engineering and malware analysis through "
+                "simple file analysis.",
+            ),
+        )
 
     def get_interval(self):
         return int(self.interval) * 60 * 60
@@ -379,7 +381,7 @@ class Malcore:
 
                 # If the last_run is more than interval hour
                 if last_run is None or (
-                        (timestamp - last_run) > (int(self.interval) * 60 * 60)
+                    (timestamp - last_run) > (int(self.interval) * 60 * 60)
                 ):
                     # Initiate the run
                     self.helper.log_info("Connector will run!")
