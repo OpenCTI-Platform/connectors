@@ -32,9 +32,10 @@ class OpenCTI:
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
             config,
+            default=True
         )
         self.config_interval = get_config_variable(
-            "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True
+            "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True, default=7
         )
         self.remove_creator = get_config_variable(
             "CONFIG_REMOVE_CREATOR", ["config", "remove_creator"], config, default=False

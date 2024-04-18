@@ -47,16 +47,16 @@ class RFNotes:
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
             ["rf", "initial_lookback"],
             config,
-            True,
+            isNumber=True,
         )
         self.rf_interval = get_config_variable(
-            "RECORDED_FUTURE_INTERVAL", ["rf", "interval"], config, True
+            "RECORDED_FUTURE_INTERVAL", ["rf", "interval"], config, isNumber=True
         )
         self.rf_risk_list_interval = get_config_variable(
             "RECORDED_FUTURE_RISK_LIST_INTERVAL",
             ["rf", "risk_list_interval"],
             config,
-            True,
+            isNumber=True,
         )
         self.tlp = get_config_variable(
             "RECORDED_FUTURE_TLP", ["rf", "TLP"], config
