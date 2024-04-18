@@ -32,7 +32,7 @@ class OpenCTI:
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
             config,
-            default=True
+            default=True,
         )
         self.config_interval = get_config_variable(
             "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True, default=7
