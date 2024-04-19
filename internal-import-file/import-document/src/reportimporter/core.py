@@ -1,9 +1,9 @@
 import base64
 import os
-import re
+import tempfile
 import time
 from datetime import datetime
-from typing import Callable, Dict, List
+from typing import IO, Callable, Dict, List
 
 import stix2
 import yaml
@@ -67,33 +67,37 @@ class ReportImporter:
 
     def _process_message(self, data: Dict) -> str:
         self.helper.log_info("Processing new message")
-        file_name = self._download_import_file(data)
-        entity_id = data.get("entity_id", None)
-        bypass_validation = data.get("bypass_validation", False)
-        entity = (
-            self.helper.api.stix_domain_object.read(id=entity_id)
-            if entity_id is not None
-            else None
-        )
-        if self.helper.get_only_contextual() and entity is None:
-            return "Connector is only contextual and entity is not defined. Nothing was imported"
 
-        # Retrieve entity set from OpenCTI
-        entity_indicators = self._collect_stix_objects(self.entity_config)
+        with tempfile.TemporaryFile(mode="w+b") as file_data:
+            self._download_import_file(data, file_data)
+            entity_id = data.get("entity_id", None)
+            bypass_validation = data.get("bypass_validation", False)
+            entity = (
+                self.helper.api.stix_domain_object.read(id=entity_id)
+                if entity_id is not None
+                else None
+            )
+            if self.helper.get_only_contextual() and entity is None:
+                return "Connector is only contextual and entity is not defined. Nothing was imported"
 
-        # Parse report
-        parser = ReportParser(self.helper, entity_indicators, self.observable_config)
+            # Retrieve entity set from OpenCTI
+            entity_indicators = self._collect_stix_objects(self.entity_config)
 
-        if data["file_id"].startswith("import/global"):
-            file_data = open(file_name, "rb").read()
-            file_data_encoded = base64.b64encode(file_data)
-            self.file = {
-                "name": data["file_id"].replace("import/global/", ""),
-                "data": file_data_encoded,
-                "mime_type": "application/pdf",
-            }
-        parsed = parser.run_parser(file_name, data["file_mime"])
-        os.remove(file_name)
+            # Parse report
+            parser = ReportParser(
+                self.helper, entity_indicators, self.observable_config
+            )
+
+            if data["file_id"].startswith("import/global"):
+                file_data.seek(0)
+                file_data_encoded = base64.b64encode(file_data.read())
+                self.file = {
+                    "name": data["file_id"].replace("import/global/", ""),
+                    "data": file_data_encoded,
+                    "mime_type": "application/pdf",
+                }
+            file_data.seek(0)
+            parsed = parser.run_parser(file_data, data["file_mime"])
 
         if not parsed:
             return "No information extracted from report"
@@ -103,7 +107,7 @@ class ReportImporter:
         observables, entities = self._process_parsing_results(parsed, entity)
         # Send results to OpenCTI
         observable_cnt = self._process_parsed_objects(
-            entity, observables, entities, bypass_validation, file_name
+            entity, observables, entities, bypass_validation, data["file_fetch"]
         )
         entity_cnt = len(entities)
 
@@ -118,29 +122,15 @@ class ReportImporter:
     def start(self) -> None:
         self.helper.listen(self._process_message)
 
-    def _download_import_file(self, data: Dict) -> str:
+    def _download_import_file(self, data: Dict, file_data: IO) -> None:
         file_fetch = data["file_fetch"]
         file_uri = self.helper.opencti_url + file_fetch
 
         # Downloading and saving file to connector
         self.helper.log_info("Importing the file " + file_uri)
-        file_name = os.path.basename(file_fetch)
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
 
-        """
-        On Windows, the invalid characters are different, so the behavior is not the same as Linux
-        It only happens with free text on local setup running on windows. Never on prod.
-        """
-        os_system = os.name
-
-        # If windows detection, replacement of invalid characters
-        if os_system == "nt":
-            file_name = re.sub(r'[\\/:*?"<>|]', "_", file_name)
-
-        with open(file_name, "wb") as f:
-            f.write(file_content)
-
-        return file_name
+        file_data.write(file_content)
 
     def _collect_stix_objects(
         self, entity_config_list: List[EntityConfig]
