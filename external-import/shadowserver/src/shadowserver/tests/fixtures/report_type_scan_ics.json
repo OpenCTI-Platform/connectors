@@ -1,0 +1,25 @@
+[
+    {
+        "asn": 11351,
+        "city": "SCHENECTADY",
+        "device_id": "",
+        "device_model": "Niagara 4",
+        "device_type": "",
+        "device_vendor": "Tridium",
+        "device_version": "",
+        "geo": "US",
+        "hostname": "024-097-024-171.biz.spectrum.com",
+        "hostname_source": "ptr",
+        "ip": "24.97.24.171",
+        "naics": 517311,
+        "port": 1911,
+        "protocol": "tcp",
+        "raw_response": "eyJpZCI6IjAiLCJ2ZXJzaW9uIjoiTmlhZ2FyYSA0In0=",
+        "region": "NEW YORK",
+        "response_size": "",
+        "sector": "Communications, Service Provider, and Hosting Service",
+        "severity": "high",
+        "tag": "fox",
+        "timestamp": "2024-01-04 04:51:09Z"
+    }
+]
