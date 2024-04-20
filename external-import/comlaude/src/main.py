@@ -132,7 +132,7 @@ def _create_stix_create_bundle(helper, domain_object, labels, score):
 
     # Create relationships
     sro_object = Relationship(
-        relationship_type='based-on',
+        relationship_type="based-on",
         source_ref=sdo_indicator.id,
         target_ref=sco_domain_name.id,
         start_time=start_time,
@@ -287,7 +287,9 @@ class ComlaudeConnector:
 
         if self.helper.connect_run_and_terminate:
             self.helper.log_info(
-                "Connector stop: ({})".format(_format_time(datetime.datetime.now(datetime.UTC)))
+                "Connector stop: ({})".format(
+                    _format_time(datetime.datetime.now(datetime.UTC))
+                )
             )
             self.helper.force_ping()
             sys.exit(0)
