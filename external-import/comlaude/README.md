@@ -34,4 +34,5 @@ By integrating Comlaude's domain information with OpenCTI, the connector aids in
 | `comlaude_group_id`                  | `COMLAUDE_GROUP_ID`                 | Yes          | Group ID for API in Comlaude.                                                                                                                              |
 | `comlaude_start_time`                | `COMLAUDE_START_TIME`               | Yes          | Earliest entry to retrieve (e.g., 1970-01-01T00:00:00Z).                                                                                                   |
 | `comlaude_labels`                    | `COMLAUDE_LABELS`                   | Yes          | Labels to apply to Stix Objects (e.g., comlaude,safelist).                                                                                                 |
+| `comlaude_score`                | `COMLAUDE_SCORE`               | No          | Provide score for Indicator, if not provided default is 0. |
 
