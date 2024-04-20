@@ -383,7 +383,7 @@ class Taxii2Connector:
                 "spec_version": version,
                 "objects": objects,
             }
-            self.send_to_server(new_bundle,collection)
+            self.send_to_server(new_bundle, collection)
         else:
             self.helper.log_info("No objects found in request.")
 
@@ -409,8 +409,13 @@ class Taxii2Connector:
 
         # Create work id
         now = datetime.now(timezone.utc)
-        friendly_name = f"{self.helper.connect_name} - {collection.title} run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+        friendly_name = (
+            f"{self.helper.connect_name} - {collection.title} run @ "
+            + now.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
 
         try:
             self.helper.send_stix2_bundle(
