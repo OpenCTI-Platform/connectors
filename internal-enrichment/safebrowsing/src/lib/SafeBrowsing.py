@@ -116,7 +116,7 @@ class SafeBrowsingConnector:
                             "x_opencti_score": 100,
                         },
                     )
-                    self.helper.log_info(f"Hostname flagged by Safe Browsing")
+
                     stix_objects.append(new_hostname_object)
 
                 # creating a bundle
