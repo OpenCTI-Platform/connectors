@@ -16,6 +16,7 @@ services:
       - COMLAUDE_PASSWORD=ChangeMe
       - COMLAUDE_API_KEY=ChangeMe
       - COMLAUDE_GROUP_ID=ChangeMe
+      - COMLAUDE_SCORE=15 # From 0 to 100
       - COMLAUDE_START_TIME=1970-01-01T00:00:00Z
       - CONNECTOR_RUN_AND_TERMINATE=true
       - COMLAUDE_LABELS="comlaude,safelist"
