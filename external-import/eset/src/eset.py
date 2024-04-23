@@ -11,7 +11,7 @@ import pytz
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, Report, get_config_variable
+from pycti import Malware, OpenCTIConnectorHelper, Report, get_config_variable
 
 TMP_DIR = "TMP"
 
@@ -195,12 +195,35 @@ class Eset:
                         continue
                     parsed_content = json.loads(item.content)
                     objects = []
+                    id_remaps = {}
                     for object in parsed_content["objects"]:
                         if "confidence" in object_types_with_confidence:
                             if "confidence" not in object:
                                 object["confidence"] = int(
                                     self.helper.connect_confidence_level
                                 )
+                        # Malware STIX IDs need to be manually recomputed so they're
+                        # deterministic by malware name
+                        if object["type"] == "malware" and "name" in object:
+                            new_id = Malware.generate_id(object["name"])
+                            if object["id"] in id_remaps:
+                                new_id = id_remaps[object["id"]]
+                            else:
+                                id_remaps[object["id"]] = new_id
+                            object["id"] = new_id
+                        # If we remapped a STIX id earlier to a pycti one, we need  to
+                        # reflect that properly in any relevant relationship too
+                        if object["type"] == "relationship":
+                            if (
+                                "source_ref" in object
+                                and object["source_ref"] in id_remaps
+                            ):
+                                object["source_ref"] = id_remaps[object["source_ref"]]
+                            if (
+                                "target_ref" in object
+                                and object["target_ref"] in id_remaps
+                            ):
+                                object["target_ref"] = id_remaps[object["target_ref"]]
                         if object["type"] == "indicator":
                             object["name"] = object["pattern"]
                             object["pattern_type"] = "stix"
