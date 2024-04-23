@@ -196,11 +196,12 @@ class Eset:
                     parsed_content = json.loads(item.content)
                     objects = []
                     for object in parsed_content["objects"]:
-                        if "confidence" in object_types_with_confidence:
+                        if object["type"] in object_types_with_confidence:
                             if "confidence" not in object:
-                                object["confidence"] = int(
+                                object["confidence"] = (
                                     self.helper.connect_confidence_level
                                 )
+
                         if object["type"] == "indicator":
                             object["name"] = object["pattern"]
                             object["pattern_type"] = "stix"
