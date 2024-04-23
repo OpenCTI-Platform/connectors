@@ -212,7 +212,7 @@ class Eset:
                             object["type"] == "identity"
                             and "name" in object
                             and object["name"] == "customer"
-                        ):
+                        ) or object["type"] == "observed-data":
                             removed_ids.add(object["id"])
                             continue
 
