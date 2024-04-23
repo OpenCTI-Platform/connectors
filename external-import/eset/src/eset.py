@@ -196,6 +196,10 @@ class Eset:
                     parsed_content = json.loads(item.content)
                     objects = []
                     for object in parsed_content["objects"]:
+                        # If no author provided in the entity, then default to set
+                        # author to ESET
+                        if not "created_by_ref" in object:
+                            object["created_by_ref"] = self.identity["standard_id"]
                         if "confidence" in object_types_with_confidence:
                             if "confidence" not in object:
                                 object["confidence"] = int(
