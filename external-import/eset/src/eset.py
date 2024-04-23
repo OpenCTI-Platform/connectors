@@ -196,12 +196,26 @@ class Eset:
                     parsed_content = json.loads(item.content)
                     objects = []
                     id_remaps = {}
+                    removed_ids = set()
                     for object in parsed_content["objects"]:
                         if "confidence" in object_types_with_confidence:
                             if "confidence" not in object:
                                 object["confidence"] = int(
                                     self.helper.connect_confidence_level
                                 )
+                        # Don't consume identity entities w/ "customer" as the name.
+                        # ESET uses this to indicate country targeting, and consuming
+                        # these causes problems due to dedupe.
+                        # TODO: Convert these & relevant relationship refs to country
+                        # locations.
+                        if (
+                            object["type"] == "identity"
+                            and "name" in object
+                            and object["name"] == "customer"
+                        ):
+                            removed_ids.add(object["id"])
+                            continue
+
                         # Malware STIX IDs need to be manually recomputed so they're
                         # deterministic by malware name
                         if object["type"] == "malware" and "name" in object:
@@ -211,19 +225,25 @@ class Eset:
                             else:
                                 id_remaps[object["id"]] = new_id
                             object["id"] = new_id
+
                         # If we remapped a STIX id earlier to a pycti one, we need  to
                         # reflect that properly in any relevant relationship too
                         if object["type"] == "relationship":
-                            if (
-                                "source_ref" in object
-                                and object["source_ref"] in id_remaps
-                            ):
-                                object["source_ref"] = id_remaps[object["source_ref"]]
-                            if (
-                                "target_ref" in object
-                                and object["target_ref"] in id_remaps
-                            ):
-                                object["target_ref"] = id_remaps[object["target_ref"]]
+                            if "source_ref" in object:
+                                if object["source_ref"] in removed_ids:
+                                    continue  # skip relationship if either ref is in removed_ids
+                                if object["source_ref"] in id_remaps:
+                                    object["source_ref"] = id_remaps[
+                                        object["source_ref"]
+                                    ]
+                            if "target_ref" in object:
+                                if object["target_ref"] in removed_ids:
+                                    continue  # skip relationship if either ref is in removed_ids
+                                if object["target_ref"] in id_remaps:
+                                    object["target_ref"] = id_remaps[
+                                        object["target_ref"]
+                                    ]
+
                         if object["type"] == "indicator":
                             object["name"] = object["pattern"]
                             object["pattern_type"] = "stix"
