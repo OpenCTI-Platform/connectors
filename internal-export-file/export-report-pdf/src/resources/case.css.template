@@ -248,6 +248,16 @@ tr:nth-child(even) {
 #break {
   page-break-before: always;
 }
+
+#entities td {
+  word-wrap: break-word;
+}
+
+td pre {
+    white-space: pre-wrap;
+    max-width: 600px;
+}
+
 #external-references ul {
   list-style: none;
   padding-left: 0;
