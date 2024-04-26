@@ -225,7 +225,7 @@ class IvreConnector:
         cert_id = self.helper.api.stix_cyber_observable.create(
             observableData=data,
         )["id"]
-        self.link_cyber(obs_id, cert_id, firstseen, lastseen)
+        self.link_core(obs_id, cert_id, firstseen, lastseen)
         if not cert.get("self_signed") and all(
             TOR_CERT_SUBJECT.search(cert.get(f"{fld}_text", ""))
             for fld in ["issuer", "subject"]
@@ -245,9 +245,7 @@ class IvreConnector:
         label_id = self.helper.api.label.create(value=value, color=color)["id"]
         self.helper.api.stix_cyber_observable.add_label(id=obs_id, label_id=label_id)
 
-    def link_cyber(
-        self, from_id, to_id, firstseen, lastseen, rel_type="x_opencti_linked-to"
-    ):
+    def link_cyber(self, from_id, to_id, firstseen, lastseen, rel_type="resolves-to"):
         self.helper.api.stix_nested_ref_relationship.create(
             fromId=from_id,
             toId=to_id,
@@ -258,13 +256,23 @@ class IvreConnector:
             stop_time=lastseen.strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
 
-    def link_core(self, from_id, to_id, rel_type="related-to"):
+    def link_core(
+        self, from_id, to_id, firstseen=None, lastseen=None, rel_type="related-to"
+    ):
+        starttime = None
+        if firstseen is not None:
+            starttime = firstseen.strftime("%Y-%m-%dT%H:%M:%SZ")
+        stoptime = None
+        if lastseen is not None:
+            stoptime = lastseen.strftime("%Y-%m-%dT%H:%M:%SZ")
         self.helper.api.stix_core_relationship.create(
             fromId=from_id,
             toId=to_id,
             createdBy=self.ivre_entity,
             relationship_type=rel_type,
             confidence=self.confidence,
+            start_time=starttime,
+            stop_time=stoptime,
         )
 
     def link_domain_parent(self, domain, parent, parent_id):
@@ -303,24 +311,14 @@ class IvreConnector:
                 name = hname["name"].lower().rstrip(".")
                 if obs_type == TYPE_DOMAIN:
                     if name == obs_name:
-                        self.link_cyber(
-                            obs_id, addr_id, firstseen, lastseen, rel_type="resolves-to"
-                        )
+                        self.link_cyber(obs_id, addr_id, firstseen, lastseen)
                         continue
                     if name.endswith(f".{obs_name}"):
                         new_obs_id = self.link_domain_parent(name, obs_name, obs_id)
-                        self.link_cyber(
-                            new_obs_id,
-                            addr_id,
-                            firstseen,
-                            lastseen,
-                            rel_type="resolves-to",
-                        )
+                        self.link_cyber(new_obs_id, addr_id, firstseen, lastseen)
                         continue
                 name_id = self.add_domain(name)
-                self.link_cyber(
-                    name_id, addr_id, firstseen, lastseen, rel_type="resolves-to"
-                )
+                self.link_cyber(name_id, addr_id, firstseen, lastseen)
         for port in record.get("ports", []):
             for script in port.get("scripts", []):
                 if script["id"] == "ssl-cert":
@@ -356,45 +354,32 @@ class IvreConnector:
                     new_ids[fld] = self.add_domain(val)
             try:
                 self.link_cyber(
-                    new_ids["value"],
-                    new_ids["targetval"],
-                    firstseen,
-                    lastseen,
-                    rel_type="resolves-to",
+                    new_ids["value"], new_ids["targetval"], firstseen, lastseen
                 )
             except ValueError:
                 # Workaround for a bug fixed in
                 # e38bf150ab70b145bafcdea77351bf4199078401 (GH#1692)
-                self.link_cyber(
-                    new_ids["value"],
-                    new_ids["targetval"],
-                    firstseen,
-                    lastseen,
+                self.link_core(
+                    new_ids["value"], new_ids["targetval"], firstseen, lastseen
                 )
             return
         addr_id = self.add_addr(record["addr"])
         if obs_type == TYPE_AS:
             self.link_core(addr_id, obs_id, rel_type="belongs-to")
         if obs_type == TYPE_CERT:
-            self.link_cyber(addr_id, obs_id, firstseen, lastseen)
+            self.link_core(addr_id, obs_id, firstseen, lastseen)
             return
         if obs_type == TYPE_MAC_ADDR:
-            self.link_cyber(
-                addr_id, obs_id, firstseen, lastseen, rel_type="resolves-to"
-            )
+            self.link_cyber(addr_id, obs_id, firstseen, lastseen)
             return
         if obs_type == TYPE_DOMAIN:
             obs_name = observable["value"].lower().rstrip(".")
             value = record["value"].lower().rstrip(".")
             if value == obs_name:
-                self.link_cyber(
-                    obs_id, addr_id, firstseen, lastseen, rel_type="resolves-to"
-                )
+                self.link_cyber(obs_id, addr_id, firstseen, lastseen)
             elif value.endswith(f".{obs_name}"):
                 new_obs_id = self.link_domain_parent(value, obs_name, obs_id)
-                self.link_cyber(
-                    new_obs_id, addr_id, firstseen, lastseen, rel_type="resolves-to"
-                )
+                self.link_cyber(new_obs_id, addr_id, firstseen, lastseen)
             else:
                 self.helper.log_warning(
                     f"BUG! Unexpected record found for domain {obs_name} [{record!r}]"
@@ -405,9 +390,7 @@ class IvreConnector:
         if record["recontype"] == "DNS_ANSWER":
             value = record["value"].lower().rstrip(".")
             name_id = self.add_domain(value)
-            self.link_cyber(
-                name_id, addr_id, firstseen, lastseen, rel_type="resolves-to"
-            )
+            self.link_cyber(name_id, addr_id, firstseen, lastseen)
             return
         if record["recontype"] == "SSL_SERVER":
             if record.get("source") != "cert":
@@ -417,13 +400,7 @@ class IvreConnector:
             self.add_and_link_cert(record["infos"], addr_id, firstseen, lastseen)
             return
         if record["recontype"] == "MAC_ADDRESS":
-            self.link_cyber(
-                addr_id,
-                self.add_mac(record["value"]),
-                firstseen,
-                lastseen,
-                rel_type="resolves-to",
-            )
+            self.link_cyber(addr_id, self.add_mac(record["value"]), firstseen, lastseen)
             return
         if record.get("infos", {}).get("service_name") == "scanner":
             # if record["recontype"] == "UDP_HONEYPOT_HIT":  # spoofable
