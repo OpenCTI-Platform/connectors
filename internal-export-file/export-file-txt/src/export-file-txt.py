@@ -5,6 +5,7 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper
+from pycti.utils.opencti_utils import OpenCTIUtils
 
 
 class ExportFileTxt:
@@ -20,7 +21,7 @@ class ExportFileTxt:
 
     def _process_message(self, data):
         file_name = data["file_name"]
-        # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        content_markings = data["content_markings"]
         file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
@@ -43,33 +44,44 @@ class ExportFileTxt:
         else:  # export_scope = 'selection' or 'query'
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
-                entities_list = []
                 list_filters = "selected_ids"
 
-                for selected_id in selected_ids:
-                    entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                        id=selected_id
+                selection_filter = OpenCTIUtils.build_marking_filter(
+                    selected_ids, content_markings
+                )
+
+                entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
+                    filters=selection_filter
+                )
+                entity_data_sco = (
+                    self.helper.api_impersonate.stix_cyber_observable.list(
+                        filters=selection_filter
                     )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_core_relationship.read(
-                                id=selected_id
-                            )
-                        )
-                    entities_list.append(entity_data)
+                )
+                entity_data_scr = (
+                    self.helper.api_impersonate.stix_core_relationship.list(
+                        filters=selection_filter
+                    )
+                )
+
+                entities_list = entity_data_sdo + entity_data_sco + entity_data_scr
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
+                selection_filter = OpenCTIUtils.build_marking_filter(
+                    None, content_markings
+                )
+
+                export_query_filter = {
+                    "mode": "and",
+                    "filterGroups": [list_params.get("filters"), selection_filter],
+                    "filters": [],
+                }
+
                 entities_list = self.helper.api_impersonate.stix2.export_entities_list(
                     entity_type=entity_type,
                     search=list_params.get("search"),
-                    filters=list_params.get("filters"),
+                    filters=export_query_filter,
                     orderBy=list_params["orderBy"],
                     orderMode=list_params["orderMode"],
                     getAll=True,

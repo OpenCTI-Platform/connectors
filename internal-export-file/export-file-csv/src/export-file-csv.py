@@ -7,6 +7,7 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti.utils.opencti_utils import OpenCTIUtils
 
 
 class ExportFileCsv:
@@ -98,7 +99,7 @@ class ExportFileCsv:
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
-        # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        content_markings = data["content_markings"]
         file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
@@ -125,15 +126,20 @@ class ExportFileCsv:
                 )
             entities_list = []
             if "objectsIds" in entity_data:
-                for id in entity_data["objectsIds"]:
-                    entity = self.helper.api_impersonate.stix_domain_object.read(id=id)
-                    if entity is None:
-                        entity = self.helper.api_impersonate.stix_cyber_observable.read(
-                            id=id
-                        )
-                    if entity is not None:
-                        del entity["objectLabelIds"]
-                        entities_list.append(entity)
+                marking_filters = OpenCTIUtils.build_marking_filter(
+                    entity_data["objectsIds"], content_markings
+                )
+
+                entities_sdo = self.helper.api_impersonate.stix_domain_object.list(
+                    filters=marking_filters
+                )
+                entities_sco = self.helper.api_impersonate.stix_cyber_observable.list(
+                    filters=marking_filters
+                )
+
+                entities_list = entities_sdo + entities_sco
+                for entity in entities_list:
+                    del entity["objectLabelIds"]
                 del entity_data["objectsIds"]
             if "objectLabelIds" in entity_data:
                 del entity_data["objectLabelIds"]
@@ -166,35 +172,41 @@ class ExportFileCsv:
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
                 list_filters = "selected_ids"
-                entities_list = []
 
-                for selected_id in selected_ids:
-                    entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                        id=selected_id
+                selection_filter = OpenCTIUtils.build_marking_filter(
+                    selected_ids, content_markings
+                )
+
+                entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
+                    filters=selection_filter
+                )
+                entity_data_sco = (
+                    self.helper.api_impersonate.stix_cyber_observable.list(
+                        filters=selection_filter
                     )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_core_relationship.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_sighting_relationship.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        raise ValueError(
-                            "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
-                        )
-                    entities_list.append(entity_data)
+                )
+                entity_data_scr = (
+                    self.helper.api_impersonate.stix_core_relationship.list(
+                        filters=selection_filter
+                    )
+                )
+                entity_data_ssr = (
+                    self.helper.api_impersonate.stix_sighting_relationship.list(
+                        filters=selection_filter
+                    )
+                )
+
+                entities_list = (
+                    entity_data_sdo
+                    + entity_data_sco
+                    + entity_data_scr
+                    + entity_data_ssr
+                )
+
+                if entities_list is None:
+                    raise ValueError(
+                        "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
+                    )
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
@@ -206,10 +218,21 @@ class ExportFileCsv:
                         "file_name": file_name,
                     },
                 )
+
+                selection_filter = OpenCTIUtils.build_marking_filter(
+                    None, content_markings
+                )
+
+                export_query_filter = {
+                    "mode": "and",
+                    "filterGroups": [list_params.get("filters"), selection_filter],
+                    "filters": [],
+                }
+
                 entities_list = self.helper.api_impersonate.stix2.export_entities_list(
                     entity_type=entity_type,
                     search=list_params.get("search"),
-                    filters=list_params.get("filters"),
+                    filters=export_query_filter,
                     orderBy=list_params["orderBy"],
                     orderMode=list_params["orderMode"],
                     getAll=True,
