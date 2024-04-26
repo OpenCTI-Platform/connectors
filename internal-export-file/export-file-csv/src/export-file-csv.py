@@ -7,6 +7,7 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti.utils.opencti_utils import OpenCTIUtils
 
 
 class ExportFileCsv:

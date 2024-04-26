@@ -5,6 +5,7 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper
+from pycti.utils.opencti_utils import OpenCTIUtils
 
 
 class ExportFileTxt:
