@@ -154,6 +154,8 @@ class AbuseIPDBConnector:
                         )
 
             for ckey in list(cl.keys()):
+                if ckey is None:
+                    continue
                 country_location = stix2.Location(
                     id=Location.generate_id(ckey, "Country"),
                     name=ckey,
