@@ -47,7 +47,7 @@ class ExportFileTxt:
                 list_filters = "selected_ids"
 
                 selection_filter = OpenCTIUtils.build_marking_filter(
-                    selected_ids, content_markings
+                    content_markings, entity_id, selected_ids
                 )
 
                 entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
@@ -69,9 +69,8 @@ class ExportFileTxt:
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
                 selection_filter = OpenCTIUtils.build_marking_filter(
-                    None, content_markings
+                    content_markings, entity_id, None
                 )
-
                 export_query_filter = {
                     "mode": "and",
                     "filterGroups": [list_params.get("filters"), selection_filter],

@@ -127,9 +127,8 @@ class ExportFileCsv:
             entities_list = []
             if "objectsIds" in entity_data:
                 marking_filters = OpenCTIUtils.build_marking_filter(
-                    entity_data["objectsIds"], content_markings
+                    content_markings, entity_id, entity_data["objectsIds"]
                 )
-
                 entities_sdo = self.helper.api_impersonate.stix_domain_object.list(
                     filters=marking_filters
                 )
@@ -174,7 +173,7 @@ class ExportFileCsv:
                 list_filters = "selected_ids"
 
                 selection_filter = OpenCTIUtils.build_marking_filter(
-                    selected_ids, content_markings
+                    content_markings, entity_id, selected_ids
                 )
 
                 entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
@@ -220,7 +219,7 @@ class ExportFileCsv:
                 )
 
                 selection_filter = OpenCTIUtils.build_marking_filter(
-                    None, content_markings
+                    content_markings, entity_id, None
                 )
 
                 export_query_filter = {

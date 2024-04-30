@@ -13,6 +13,7 @@ from pycti.utils.constants import StixCyberObservableTypes
 from pygal_maps_world.i18n import COUNTRIES
 from pygal_maps_world.maps import World
 from weasyprint import HTML
+from pycti.utils.opencti_utils import OpenCTIUtils
 
 
 class ExportReportPdf:
@@ -98,17 +99,24 @@ class ExportReportPdf:
             )
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
+        content_markings = data.get("content_markings")
 
         # Retrieve markings for export push
         file_markings = data["file_markings"]
         if entity_type == "Report":
-            self._process_report(entity_id, file_name, file_markings)
+            self._process_report(entity_id, file_name, file_markings, content_markings)
         elif entity_type == "Case-Incident":
-            self._process_case(entity_id, file_name, entity_type, file_markings)
+            self._process_case(
+                entity_id, file_name, entity_type, file_markings, content_markings
+            )
         elif entity_type == "Case-Rfi":
-            self._process_case(entity_id, file_name, entity_type, file_markings)
+            self._process_case(
+                entity_id, file_name, entity_type, file_markings, content_markings
+            )
         elif entity_type == "Case-Rft":
-            self._process_case(entity_id, file_name, entity_type, file_markings)
+            self._process_case(
+                entity_id, file_name, entity_type, file_markings, content_markings
+            )
         elif entity_type == "Intrusion-Set":
             self._process_intrusion_set(entity_id, file_name, file_markings)
         elif entity_type == "Threat-Actor-Group":
@@ -122,7 +130,7 @@ class ExportReportPdf:
 
         return "Export done"
 
-    def _process_report(self, entity_id, file_name, file_markings):
+    def _process_report(self, entity_id, file_name, file_markings, content_markings):
         """
         Process a Report entity and upload as pdf.
         """
@@ -167,24 +175,24 @@ class ExportReportPdf:
             "observables": {},
         }
 
-        # Process each STIX Object
+        object_ids = []
         for report_obj in report_objs:
-            obj_entity_type = report_obj["entity_type"]
-            obj_id = report_obj["standard_id"]
+            object_ids.append(report_obj["id"])
 
-            # Handle StixCyberObservables entities
+        entities_list = self._process_entities_list(
+            content_markings, entity_id, object_ids
+        )
+
+        for entity in entities_list:
+            obj_entity_type = entity["entity_type"]
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
                 obj_entity_type
             ):
-                observable_dict = (
-                    self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
-                )
-
                 # If only include indicators and
                 # the observable doesn't have an indicator, skip it
-                if self.indicators_only and not observable_dict["indicators"]:
+                if self.indicators_only and not entity["indicators"]:
                     self.helper.log_info(
-                        f"Skipping {obj_entity_type} observable with value {observable_dict['observable_value']} as it was not an Indicator."
+                        f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
                     )
                     continue
 
@@ -193,26 +201,17 @@ class ExportReportPdf:
 
                 # Defang urls
                 if self.defang_urls and obj_entity_type == "Url":
-                    observable_dict["observable_value"] = observable_dict[
-                        "observable_value"
-                    ].replace("http", "hxxp", 1)
-
-                context["observables"][obj_entity_type].append(observable_dict)
-
-            # Handle all other entities
-            else:
-                reader_func = self._get_reader(obj_entity_type)
-                if reader_func is None:
-                    self.helper.log_error(
-                        f'Could not find a function to read entity with type "{obj_entity_type}"'
+                    entity["observable_value"] = entity["observable_value"].replace(
+                        "http", "hxxp", 1
                     )
-                    continue
-                entity_dict = reader_func(id=obj_id)
 
+                context["observables"][obj_entity_type].append(entity)
+
+            else:
                 if obj_entity_type not in context["entities"]:
                     context["entities"][obj_entity_type] = []
 
-                context["entities"][obj_entity_type].append(entity_dict)
+                context["entities"][obj_entity_type].append(entity)
 
         # Render html with input variables
         env = Environment(
@@ -517,7 +516,9 @@ class ExportReportPdf:
             entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_case(self, entity_id, file_name, entity_type, file_markings):
+    def _process_case(
+        self, entity_id, file_name, entity_type, file_markings, content_markings
+    ):
         """
         Process a Case container and upload as pdf.
         """
@@ -580,23 +581,25 @@ class ExportReportPdf:
             "observables": {},
         }
 
-        # Process each STIX Object
+        object_ids = []
         for case_obj in case_objs:
-            obj_entity_type = case_obj["entity_type"]
-            obj_id = case_obj["standard_id"]
-            # Handle StixCyberObservables entities
+            object_ids.append(case_obj["id"])
+
+        entities_list = self._process_entities_list(
+            content_markings, entity_id, object_ids
+        )
+
+        # Process each STIX Object
+        for entity in entities_list:
+            obj_entity_type = entity["entity_type"]
             if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
                 obj_entity_type
             ):
-                observable_dict = (
-                    self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
-                )
-
                 # If only include indicators and
                 # the observable doesn't have an indicator, skip it
-                if self.indicators_only and not observable_dict["indicators"]:
+                if self.indicators_only and not entity["indicators"]:
                     self.helper.log_info(
-                        f"Skipping {obj_entity_type} observable with value {observable_dict['observable_value']} as it was not an Indicator."
+                        f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
                     )
                     continue
 
@@ -605,26 +608,16 @@ class ExportReportPdf:
 
                 # Defang urls
                 if self.defang_urls and obj_entity_type == "Url":
-                    observable_dict["observable_value"] = observable_dict[
-                        "observable_value"
-                    ].replace("http", "hxxp", 1)
-
-                context["observables"][obj_entity_type].append(observable_dict)
-
-            # Handle all other entities
-            else:
-                reader_func = self._get_reader(obj_entity_type)
-                if reader_func is None:
-                    self.helper.log_error(
-                        f'Could not find a function to read entity with type "{obj_entity_type}"'
+                    entity["observable_value"] = entity["observable_value"].replace(
+                        "http", "hxxp", 1
                     )
-                    continue
-                entity_dict = reader_func(id=obj_id)
 
+                context["observables"][obj_entity_type].append(entity)
+            else:
                 if obj_entity_type not in context["entities"]:
                     context["entities"][obj_entity_type] = []
 
-                context["entities"][obj_entity_type].append(entity_dict)
+                context["entities"][obj_entity_type].append(entity)
 
         # Render html with input variables
         env = Environment(
@@ -673,6 +666,23 @@ class ExportReportPdf:
         Used for rendering jinja2 template to supress None
         """
         return data if data is not None else "N/A"
+
+    def _process_entities_list(self, content_markings, entity_id, object_ids):
+        selection_filter = OpenCTIUtils.build_marking_filter(
+            content_markings, entity_id, object_ids
+        )
+
+        entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
+            filters=selection_filter
+        )
+        entity_data_sco = self.helper.api_impersonate.stix_cyber_observable.list(
+            filters=selection_filter
+        )
+        entity_data_scr = self.helper.api_impersonate.stix_core_relationship.list(
+            filters=selection_filter
+        )
+
+        return entity_data_sdo + entity_data_sco + entity_data_scr
 
     def _get_reader(self, entity_type):
         """
