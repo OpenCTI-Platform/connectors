@@ -62,6 +62,15 @@ class CrowdstrikeClient:
         """
         return pattern.strip("[]").split(" ")[0]
 
+    @staticmethod
+    def _extract_indicator_value(pattern: str) -> str:
+        """
+        Extract the indicator value got from stream data pattern
+        :param pattern: Pattern of IOC in string
+        :return: String of IOC value extracted
+        """
+        return pattern.strip("[]").split(" ")[2].replace("'","")
+
     def _map_indicator_type(self, pattern: str) -> str | None:
         """
         Map the indicator main observable type in OpenCTI with Crowdstrike IOC type
@@ -119,7 +128,8 @@ class CrowdstrikeClient:
         else:
             return platforms
 
-    def _handle_labels(self, data: dict, event: str) -> None:
+    @staticmethod
+    def _handle_labels(data: dict, event: str) -> None:
         """
         Handle labels in case permanent_delete configuration is False
         :param data: Data of IOC in dict
@@ -204,7 +214,7 @@ class CrowdstrikeClient:
         :param event: Event in string or None
         :return: None
         """
-        ioc_value = data["name"]
+        ioc_value = self._extract_indicator_value(data["pattern"])
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC doesn't exist, create the IOC into Crowdstrike
