@@ -22,12 +22,11 @@ class ExportFileStix:
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
-        main_filter = data.get("main_filter")
-        access_filter = data.get("access_filter")
         file_markings = data["file_markings"]
-
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
+        main_filter = data.get("main_filter")
+        access_filter = data.get("access_filter")
 
         if export_scope == "single":
             self.helper.connector_logger.info(
@@ -63,7 +62,7 @@ class ExportFileStix:
                 },
             )
 
-        else:  # export_scope = 'query' or 'selection'
+        else:  # export_scope = 'query' or 'selection' # ICI -> remove max marking
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
                 list_filters = "selected_ids"
@@ -102,12 +101,11 @@ class ExportFileStix:
                     "filters": [],
                 }
 
-                stix_objects = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
+                stix_objects = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(  # ICI .list
                     filters=export_selection_filter, customAttributes=custom_attributes
                 )
 
                 for stix_object_result in stix_objects:
-
                     if stix_object_result is not None:
                         current_entity_type = stix_object_result["entity_type"]
                         # Reader
@@ -140,7 +138,12 @@ class ExportFileStix:
                     main_filter,
                     access_filter,
                 )
-                list_filters = json.dumps(list_params)
+                export_query_filter = {
+                    "mode": "and",
+                    "filterGroups": [list_params.get("filters"), access_filter],
+                    "filters": [],
+                }
+                list_filters = json.dumps({**list_params, "filters": export_query_filter})
 
             json_bundle = json.dumps(bundle, indent=4)
             self.helper.connector_logger.info(
@@ -149,10 +152,11 @@ class ExportFileStix:
                     "entity_type": entity_type,
                     "export_type": export_type,
                     "file_name": file_name,
+                    "list_filters": list_filters,
                 },
             )
             if entity_type == "Stix-Cyber-Observable":
-                self.helper.api.stix_cyber_observable.push_list_export(
+                self.helper.api.stix_cyber_observable.push_list_export(  # ICI update
                     entity_id,
                     entity_type,
                     file_name,
@@ -161,7 +165,7 @@ class ExportFileStix:
                     list_filters,
                 )
             elif entity_type == "Stix-Core-Object":
-                self.helper.api.stix_core_object.push_list_export(
+                self.helper.api.stix_core_object.push_list_export(  # ICI update
                     entity_id,
                     entity_type,
                     file_name,
@@ -170,7 +174,7 @@ class ExportFileStix:
                     list_filters,
                 )
             else:
-                self.helper.api.stix_domain_object.push_list_export(
+                self.helper.api.stix_domain_object.push_list_export(  # ICI update
                     entity_id,
                     entity_type,
                     file_name,
@@ -181,9 +185,11 @@ class ExportFileStix:
             self.helper.connector_logger.info(
                 "Export done",
                 {
+                    "entity_id": entity_id,
                     "entity_type": entity_type,
                     "export_type": export_type,
                     "file_name": file_name,
+                    "json_bundle": json_bundle,
                 },
             )
 
