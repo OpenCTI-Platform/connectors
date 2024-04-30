@@ -13,7 +13,6 @@ from pycti.utils.constants import StixCyberObservableTypes
 from pygal_maps_world.i18n import COUNTRIES
 from pygal_maps_world.maps import World
 from weasyprint import HTML
-from pycti.utils.opencti_utils import OpenCTIUtils
 
 
 class ExportReportPdf:
@@ -99,23 +98,23 @@ class ExportReportPdf:
             )
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
-        content_markings = data.get("content_markings")
+        access_filter = data.get("access_filter")
 
         # Retrieve markings for export push
         file_markings = data["file_markings"]
         if entity_type == "Report":
-            self._process_report(entity_id, file_name, file_markings, content_markings)
+            self._process_report(entity_id, file_name, file_markings, access_filter)
         elif entity_type == "Case-Incident":
             self._process_case(
-                entity_id, file_name, entity_type, file_markings, content_markings
+                entity_id, file_name, entity_type, file_markings, access_filter
             )
         elif entity_type == "Case-Rfi":
             self._process_case(
-                entity_id, file_name, entity_type, file_markings, content_markings
+                entity_id, file_name, entity_type, file_markings, access_filter
             )
         elif entity_type == "Case-Rft":
             self._process_case(
-                entity_id, file_name, entity_type, file_markings, content_markings
+                entity_id, file_name, entity_type, file_markings, access_filter
             )
         elif entity_type == "Intrusion-Set":
             self._process_intrusion_set(entity_id, file_name, file_markings)
@@ -130,7 +129,7 @@ class ExportReportPdf:
 
         return "Export done"
 
-    def _process_report(self, entity_id, file_name, file_markings, content_markings):
+    def _process_report(self, entity_id, file_name, file_markings, access_filter):
         """
         Process a Report entity and upload as pdf.
         """
@@ -179,9 +178,8 @@ class ExportReportPdf:
         for report_obj in report_objs:
             object_ids.append(report_obj["id"])
 
-        entities_list = self._process_entities_list(
-            content_markings, entity_id, object_ids
-        )
+        export_filter = self._get_access_filter(object_ids, access_filter)
+        entities_list = self._process_entities_list(export_filter)
 
         for entity in entities_list:
             obj_entity_type = entity["entity_type"]
@@ -517,7 +515,7 @@ class ExportReportPdf:
         )
 
     def _process_case(
-        self, entity_id, file_name, entity_type, file_markings, content_markings
+        self, entity_id, file_name, entity_type, file_markings, access_filter
     ):
         """
         Process a Case container and upload as pdf.
@@ -585,9 +583,8 @@ class ExportReportPdf:
         for case_obj in case_objs:
             object_ids.append(case_obj["id"])
 
-        entities_list = self._process_entities_list(
-            content_markings, entity_id, object_ids
-        )
+        export_filter = self._get_access_filter(object_ids, access_filter)
+        entities_list = self._process_entities_list(export_filter)
 
         # Process each STIX Object
         for entity in entities_list:
@@ -667,19 +664,35 @@ class ExportReportPdf:
         """
         return data if data is not None else "N/A"
 
-    def _process_entities_list(self, content_markings, entity_id, object_ids):
-        selection_filter = OpenCTIUtils.build_marking_filter(
-            content_markings, entity_id, object_ids
-        )
+    @staticmethod
+    def _get_access_filter(object_ids_list, access_filter):
+        return {
+            "mode": "and",
+            "filterGroups": [
+                {
+                    "mode": "or",
+                    "filters": [
+                        {
+                            "key": "id",
+                            "values": object_ids_list,
+                        }
+                    ],
+                    "filterGroups": [],
+                },
+                access_filter,
+            ],
+            "filters": [],
+        }
 
+    def _process_entities_list(self, export_filter):
         entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
-            filters=selection_filter
+            filters=export_filter
         )
         entity_data_sco = self.helper.api_impersonate.stix_cyber_observable.list(
-            filters=selection_filter
+            filters=export_filter
         )
         entity_data_scr = self.helper.api_impersonate.stix_core_relationship.list(
-            filters=selection_filter
+            filters=export_filter
         )
 
         return entity_data_sdo + entity_data_sco + entity_data_scr

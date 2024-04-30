@@ -7,7 +7,6 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from pycti.utils.opencti_utils import OpenCTIUtils
 
 
 class ExportFileCsv:
@@ -99,10 +98,11 @@ class ExportFileCsv:
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
-        content_markings = data["content_markings"]
         file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
+        main_filter = data.get("main_filter")
+        access_filter = data.get("access_filter")
 
         if export_scope == "single":
             self.helper.connector_logger.info(
@@ -126,14 +126,29 @@ class ExportFileCsv:
                 )
             entities_list = []
             if "objectsIds" in entity_data:
-                marking_filters = OpenCTIUtils.build_marking_filter(
-                    content_markings, entity_id, entity_data["objectsIds"]
-                )
+                export_selection_filter = {
+                    "mode": "and",
+                    "filterGroups": [
+                        {
+                            "mode": "or",
+                            "filters": [
+                                {
+                                    "key": "id",
+                                    "values": entity_data["objectsIds"],
+                                }
+                            ],
+                            "filterGroups": [],
+                        },
+                        access_filter,
+                    ],
+                    "filters": [],
+                }
+
                 entities_sdo = self.helper.api_impersonate.stix_domain_object.list(
-                    filters=marking_filters
+                    filters=export_selection_filter
                 )
                 entities_sco = self.helper.api_impersonate.stix_cyber_observable.list(
-                    filters=marking_filters
+                    filters=export_selection_filter
                 )
 
                 entities_list = entities_sdo + entities_sco
@@ -169,29 +184,24 @@ class ExportFileCsv:
 
         else:  # list export: export_scope = 'query' or 'selection'
             if export_scope == "selection":
-                selected_ids = data["selected_ids"]
                 list_filters = "selected_ids"
 
-                selection_filter = OpenCTIUtils.build_marking_filter(
-                    content_markings, entity_id, selected_ids
-                )
-
                 entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
-                    filters=selection_filter
+                    filters=main_filter
                 )
                 entity_data_sco = (
                     self.helper.api_impersonate.stix_cyber_observable.list(
-                        filters=selection_filter
+                        filters=main_filter
                     )
                 )
                 entity_data_scr = (
                     self.helper.api_impersonate.stix_core_relationship.list(
-                        filters=selection_filter
+                        filters=main_filter
                     )
                 )
                 entity_data_ssr = (
                     self.helper.api_impersonate.stix_sighting_relationship.list(
-                        filters=selection_filter
+                        filters=main_filter
                     )
                 )
 
@@ -218,13 +228,9 @@ class ExportFileCsv:
                     },
                 )
 
-                selection_filter = OpenCTIUtils.build_marking_filter(
-                    content_markings, entity_id, None
-                )
-
                 export_query_filter = {
                     "mode": "and",
-                    "filterGroups": [list_params.get("filters"), selection_filter],
+                    "filterGroups": [list_params.get("filters"), access_filter],
                     "filters": [],
                 }
 

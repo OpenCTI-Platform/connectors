@@ -5,7 +5,6 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper
-from pycti.utils.opencti_utils import OpenCTIUtils
 
 
 class ExportFileTxt:
@@ -21,11 +20,12 @@ class ExportFileTxt:
 
     def _process_message(self, data):
         file_name = data["file_name"]
-        content_markings = data["content_markings"]
         file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
         export_scope = data["export_scope"]
+        main_filter = data.get("main_filter")
+        access_filter = data.get("access_filter")
 
         if export_scope == "single":
             raise ValueError("This connector only supports list exports")
@@ -43,24 +43,19 @@ class ExportFileTxt:
 
         else:  # export_scope = 'selection' or 'query'
             if export_scope == "selection":
-                selected_ids = data["selected_ids"]
                 list_filters = "selected_ids"
 
-                selection_filter = OpenCTIUtils.build_marking_filter(
-                    content_markings, entity_id, selected_ids
-                )
-
                 entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
-                    filters=selection_filter
+                    filters=main_filter
                 )
                 entity_data_sco = (
                     self.helper.api_impersonate.stix_cyber_observable.list(
-                        filters=selection_filter
+                        filters=main_filter
                     )
                 )
                 entity_data_scr = (
                     self.helper.api_impersonate.stix_core_relationship.list(
-                        filters=selection_filter
+                        filters=main_filter
                     )
                 )
 
@@ -68,12 +63,10 @@ class ExportFileTxt:
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
-                selection_filter = OpenCTIUtils.build_marking_filter(
-                    content_markings, entity_id, None
-                )
+
                 export_query_filter = {
                     "mode": "and",
-                    "filterGroups": [list_params.get("filters"), selection_filter],
+                    "filterGroups": [list_params.get("filters"), access_filter],
                     "filters": [],
                 }
 
