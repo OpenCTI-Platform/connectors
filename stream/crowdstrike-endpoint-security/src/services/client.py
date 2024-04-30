@@ -69,7 +69,7 @@ class CrowdstrikeClient:
         :param pattern: Pattern of IOC in string
         :return: String of IOC value extracted
         """
-        return pattern.strip("[]").split(" ")[2].replace("'","")
+        return pattern.strip("[]").split(" ")[2].replace("'", "")
 
     def _map_indicator_type(self, pattern: str) -> str | None:
         """
@@ -109,6 +109,7 @@ class CrowdstrikeClient:
         )
         platforms = []
 
+        # Only loop in available platforms, else continue
         for platform in platform_mapper:
             if indicator_platforms is not None and platform in indicator_platforms:
                 if self.config.falcon_for_mobile_active:
@@ -117,6 +118,15 @@ class CrowdstrikeClient:
                     # If "Falcon for mobile" is not active in Crowdstrike
                     # API doesn't accept ["ios", "android"]
                     platforms.append(platform_mapper[platform])
+                else:
+                    self.helper.connector_logger.info(
+                        "[API] Some value cannot be added or updated in Crowdstrike ",
+                        {
+                            "ioc_platforms_expected": ["windows", "mac", "linux"],
+                            "ioc_platform_received": indicator_platforms,
+                        },
+                    )
+                    continue
 
         if indicator_platforms is None:
             # If there is no platforms in OpenCTI
