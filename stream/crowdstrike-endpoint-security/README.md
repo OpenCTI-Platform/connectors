@@ -39,6 +39,12 @@ Summary
 
 ## Introduction
 
+[CrowdStrike](https://www.crowdstrike.com/about-us/) is a technology company that specializes in cybersecurity. It is well-known for providing cloud-based solutions to protect organizations from cyber threats. The company offers a range of services, including endpoint security, threat intelligence, and incident response.
+
+One of CrowdStrike's flagship products is CrowdStrike Falcon® platform. The CrowdStrike Falcon® platform utilizes real-time attack indicators, continuously updated threat intelligence, and extensive telemetry data from across the enterprise to provide highly precise threat detection, automated protection and remediation, expert threat hunting, and prioritized vulnerability observability. All of these capabilities are delivered through a single, lightweight agent.
+
+The connector will use the [FalconPy SDK](https://www.falconpy.io/Home.html) that contains a collection of Python classes that abstract CrowdStrike Falcon OAuth2 API interaction.
+
 ## Requirements
 
 To use the connector, you need to have a Recorded Future account.
