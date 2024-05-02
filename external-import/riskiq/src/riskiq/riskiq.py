@@ -61,8 +61,11 @@ class RiskIQConnector:
             isNumber=False,
             default=True,
         )
+
+        identity_id = Identity.generate_id("RiskIQ", "organization")
         # Create the author for all reports.
         self.author = Identity(
+            id=identity_id,
             name=self._DEFAULT_AUTHOR,
             identity_class="organization",
             description=" RiskIQ is a cyber security company based in San Francisco, California."
