@@ -520,7 +520,7 @@ cs.indicator_delete(
 ```
 
 
-## Known Issues and Workarounds
+## IOC supported
 
 For now, only these observable types are handled:
 

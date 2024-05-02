@@ -266,7 +266,7 @@ class CrowdstrikeClient:
         :param event: Event in string or None
         :return: None
         """
-        ioc_value = data["name"]
+        ioc_value = self._extract_indicator_value(data["pattern"])
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC exists, update the IOC into Crowdstrike
@@ -307,7 +307,7 @@ class CrowdstrikeClient:
         :param data: Data of IOC in dict
         :return: None
         """
-        ioc_value = data["name"]
+        ioc_value = self._extract_indicator_value(data["pattern"])
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC exists and permanent_delete is True, delete the IOC into Crowdstrike
