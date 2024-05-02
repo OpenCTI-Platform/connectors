@@ -1,0 +1,38 @@
+{
+  "data": {
+    "data": {
+      "id": "identity--b2a8fbec-b4fb-563c-a052-7b5b4ab23070",
+      "spec_version": "2.1",
+      "type": "identity",
+      "extensions": {
+        "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba": {
+          "extension_type": "property-extension",
+          "id": "f905c1c3-2716-45ac-8abb-89f71eff82da",
+          "type": "Organization",
+          "created_at": "2024-02-28T07:41:55.948Z",
+          "updated_at": "2024-02-28T07:41:55.948Z",
+          "is_inferred": false,
+          "creator_ids": [
+            "88ec0c6a-13ce-5e39-b486-354fe4a7084f"
+          ]
+        }
+      },
+      "created": "2024-02-28T07:41:54.621Z",
+      "modified": "2024-02-28T07:41:54.621Z",
+      "revoked": false,
+      "confidence": 100,
+      "lang": "en",
+      "name": "Recorded Future",
+      "identity_class": "organization"
+    },
+    "message": "creates a Organization `Recorded Future`",
+    "origin": {
+      "referer": "init-dependencies"
+    },
+    "version": "4"
+  },
+  "event": "update",
+  "id": "1711633413527-0"
+}
+
+

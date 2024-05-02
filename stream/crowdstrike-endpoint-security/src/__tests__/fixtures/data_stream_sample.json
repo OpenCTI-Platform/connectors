@@ -1,0 +1,38 @@
+{
+  "id": "indicator--6e7b0da6-5dc0-5407-9d1f-d6489e394c7e",
+  "spec_version": "2.1",
+  "type": "indicator",
+  "extensions": {
+    "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba": {
+      "extension_type": "property-extension",
+      "id": "148b6b59-72cd-4c9f-9893-b17e183dbd22",
+      "type": "Indicator",
+      "created_at": "2024-04-09T06:58:40.678Z",
+      "updated_at": "2024-04-09T06:58:40.678Z",
+      "is_inferred": "False",
+      "creator_ids": [
+        "88ec0c6a-13ce-5e39-b486-354fe4a7084f"
+      ],
+      "labels_ids": [
+        "925a53b3-7196-425e-90f0-806edec45bcb"
+      ],
+      "detection": "False",
+      "score": 50,
+      "main_observable_type": "IPv4-Addr"
+    }
+  },
+  "created": "2024-04-09T06:58:40.678Z",
+  "modified": "2024-04-09T06:58:40.678Z",
+  "revoked": "False",
+  "confidence": 100,
+  "lang": "en",
+  "labels": [
+    "threat lead"
+  ],
+  "name": "42.194.210.177",
+  "description": "Simple indicator of observable {42.194.210.177}",
+  "pattern": "[ipv4-addr:value = '42.194.210.177']",
+  "pattern_type": "stix",
+  "valid_from": "2024-04-09T06:58:40.664Z",
+  "valid_until": "2024-04-29T12:33:20.098Z"
+}
