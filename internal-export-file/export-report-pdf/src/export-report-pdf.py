@@ -178,38 +178,39 @@ class ExportReportPdf:
         for report_obj in report_objs:
             object_ids.append(report_obj["id"])
 
-        export_filter = self._get_access_filter(object_ids, access_filter)
-        entities_list = self._process_entities_list(export_filter)
+        if len(object_ids) != 0:
+            export_filter = self._get_access_filter(object_ids, access_filter)
+            entities_list = self._process_entities_list(export_filter)
 
-        for entity in entities_list:
-            obj_entity_type = entity["entity_type"]
-            if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                obj_entity_type
-            ):
-                # If only include indicators and
-                # the observable doesn't have an indicator, skip it
-                if self.indicators_only and not entity["indicators"]:
-                    self.helper.log_info(
-                        f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
-                    )
-                    continue
+            for entity in entities_list:
+                obj_entity_type = entity["entity_type"]
+                if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
+                    obj_entity_type
+                ):
+                    # If only include indicators and
+                    # the observable doesn't have an indicator, skip it
+                    if self.indicators_only and not entity["indicators"]:
+                        self.helper.log_info(
+                            f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
+                        )
+                        continue
 
-                if obj_entity_type not in context["observables"]:
-                    context["observables"][obj_entity_type] = []
+                    if obj_entity_type not in context["observables"]:
+                        context["observables"][obj_entity_type] = []
 
-                # Defang urls
-                if self.defang_urls and obj_entity_type == "Url":
-                    entity["observable_value"] = entity["observable_value"].replace(
-                        "http", "hxxp", 1
-                    )
+                    # Defang urls
+                    if self.defang_urls and obj_entity_type == "Url":
+                        entity["observable_value"] = entity["observable_value"].replace(
+                            "http", "hxxp", 1
+                        )
 
-                context["observables"][obj_entity_type].append(entity)
+                    context["observables"][obj_entity_type].append(entity)
 
-            else:
-                if obj_entity_type not in context["entities"]:
-                    context["entities"][obj_entity_type] = []
+                else:
+                    if obj_entity_type not in context["entities"]:
+                        context["entities"][obj_entity_type] = []
 
-                context["entities"][obj_entity_type].append(entity)
+                    context["entities"][obj_entity_type].append(entity)
 
         # Render html with input variables
         env = Environment(
@@ -583,38 +584,39 @@ class ExportReportPdf:
         for case_obj in case_objs:
             object_ids.append(case_obj["id"])
 
-        export_filter = self._get_access_filter(object_ids, access_filter)
-        entities_list = self._process_entities_list(export_filter)
+        if len(object_ids) != 0:
+            export_filter = self._get_access_filter(object_ids, access_filter)
+            entities_list = self._process_entities_list(export_filter)
 
-        # Process each STIX Object
-        for entity in entities_list:
-            obj_entity_type = entity["entity_type"]
-            if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                obj_entity_type
-            ):
-                # If only include indicators and
-                # the observable doesn't have an indicator, skip it
-                if self.indicators_only and not entity["indicators"]:
-                    self.helper.log_info(
-                        f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
-                    )
-                    continue
+            # Process each STIX Object
+            for entity in entities_list:
+                obj_entity_type = entity["entity_type"]
+                if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
+                    obj_entity_type
+                ):
+                    # If only include indicators and
+                    # the observable doesn't have an indicator, skip it
+                    if self.indicators_only and not entity["indicators"]:
+                        self.helper.log_info(
+                            f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
+                        )
+                        continue
 
-                if obj_entity_type not in context["observables"]:
-                    context["observables"][obj_entity_type] = []
+                    if obj_entity_type not in context["observables"]:
+                        context["observables"][obj_entity_type] = []
 
-                # Defang urls
-                if self.defang_urls and obj_entity_type == "Url":
-                    entity["observable_value"] = entity["observable_value"].replace(
-                        "http", "hxxp", 1
-                    )
+                    # Defang urls
+                    if self.defang_urls and obj_entity_type == "Url":
+                        entity["observable_value"] = entity["observable_value"].replace(
+                            "http", "hxxp", 1
+                        )
 
-                context["observables"][obj_entity_type].append(entity)
-            else:
-                if obj_entity_type not in context["entities"]:
-                    context["entities"][obj_entity_type] = []
+                    context["observables"][obj_entity_type].append(entity)
+                else:
+                    if obj_entity_type not in context["entities"]:
+                        context["entities"][obj_entity_type] = []
 
-                context["entities"][obj_entity_type].append(entity)
+                    context["entities"][obj_entity_type].append(entity)
 
         # Render html with input variables
         env = Environment(

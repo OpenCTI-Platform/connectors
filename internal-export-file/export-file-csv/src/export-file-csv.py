@@ -125,7 +125,8 @@ class ExportFileCsv:
                     "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
                 )
             entities_list = []
-            if "objectsIds" in entity_data:
+            object_ids = entity_data.get('objectsIds')
+            if object_ids is not None and len(object_ids) != 0:
                 export_selection_filter = {
                     "mode": "and",
                     "filterGroups": [
