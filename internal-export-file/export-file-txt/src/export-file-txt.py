@@ -63,12 +63,19 @@ class ExportFileTxt:
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
+                list_params_filters = list_params.get("filters")
+                access_filter_content = access_filter.get("filters")
 
-                export_query_filter = {
-                    "mode": "and",
-                    "filterGroups": [list_params.get("filters"), access_filter],
-                    "filters": [],
-                }
+                if len(access_filter_content) != 0 and list_params_filters is not None:
+                    export_query_filter = {
+                        "mode": "and",
+                        "filterGroups": [list_params_filters, access_filter],
+                        "filters": [],
+                    }
+                elif len(access_filter_content) == 0:
+                    export_query_filter = list_params_filters
+                else:
+                    export_query_filter = access_filter
 
                 entities_list = self.helper.api_impersonate.stix2.export_entities_list(
                     entity_type=entity_type,
