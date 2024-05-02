@@ -15,7 +15,11 @@ Summary
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
+    - [Attention ! ⚠️](#attention--️)
+    - [Create a stream](#create-a-stream)
+    - [Event stream and first run](#event-stream-and-first-run)
   - [Behavior](#behavior)
+    - [Common behavior](#common-behavior)
     - [Search an IOC](#search-an-ioc)
       - [Specifications](#specifications)
       - [Method and API response](#method-and-api-response)
@@ -134,11 +138,73 @@ python3 main.py
 
 ## Usage
 
+After installation, the connector should require minimal interaction to use, and some configurations should be specified in your `docker-compose.yml` or `config.yml`.
+
+### Attention ! ⚠️ 
+
+If you have the falcon for mobile active in Crowdstrike, you can change `falcon_for_mobile_active` (config.yml) or `CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE` (docker-compose.yml) to `True`.
+
+You have the possibility to delete permanently a data into Crowdstrike **OR NOT**. For this, you can change `permanent_delete` (config.yml) or `CROWDSTRIKE_PERMANENT_DELETE` (docker-compose.yml) configuration.
+
+### Create a stream
+
+The type of connector is a `stream` and has the capability to listen a live stream from the platform. A stream connector can react and take decision in real time.
+
+In most cases, they are used to consume OpenCTI data and insert them in third-party platforms such as SIEMs, XDRs, EDRS, etc. In some cases, stream connectors can also query the external system on a regular basis and act as import connector for instance to gather alerts and sightings related to CTI data and push them to OpenCTI (bi-directional).
+
+In our case with Crowdstrike Endpoint Security connector, we will only listen to OpenCTI platform stream and continously *do* something with the received event (uni-directional).
+
+In order to use a specific stream for the connector to listen to, you need to create it on OpenCTI platform in `Data sharing` -> `Live streams`
+
+![Create stream](./__docs__/media/create-stream.png)
+
+For the connector case, you **should** configure your stream to listen to `Entity type = Indicator` as the connector only handles IOC (Indicator Of Compromise) and add the `Revoked` field to `No` as we want to listen to any event from an IOC that it is NOT revoked at this time.
+
+You can add more filters to get only the events you are interested in. 
+For example, in the case where you only want to listen to all IOC events EXCEPT file hashes:
+
+![Stream no file](./__docs__/media/stream-no-file.png)
+
+### Event stream and first run
+
+On the first run of the connector, according to your filters, it will create all entities in OpenCTI to Crowdstrike instance.
+
+The event stream will start from the current date (`now`) and will add to a queue all actions taken on the OpenCTI platform. The connector will take these events one by one and apply the appropriate action.
+
+Example of events added in queue on OpenCTI action:
+
+*Left panel: stream on IOC / Right panel: action on OpenCTI platform*
+![Event CES](./__docs__/media/event-ces.gif)
+
+However, if you would like to force an immediate reset of the state, go to:
+
+`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform. 
+
+Find the "Crowdstrike Endpoint Security" connector, and click on the refresh button to reset the connector's state and force a new creation of data by re-running the connector.
+
+![Reset the connector state](./__docs__/media/ces-demo.gif)
+
 ## Behavior
+
+### Common behavior
+
+When creating an IOC, you can specify a `platform' on which the IOC have been seen.
+Only these platform are accepted on Crowdstrike instance:
+- linux
+- windows
+- mac
+- android (only accepted if `falcon for mobile` is active)
+- ios (only accepted if `falcon for mobile` is active)
+
+If you specify another platform, you will see it into OpenCTI platform and NOT on Crowdstrike.
 
 ### Search an IOC
 
+Searching for an IOC on the Crowdstrike platform allows you to confirm whether or not an IOC already exists.
+
 #### Specifications
+
+For the connector usage, we will search the IOC only with its value.
 
 #### Method and API response
 
@@ -147,7 +213,7 @@ python3 main.py
 Indicator does not exists:
 
 ```python
-cs.indicator_search(filter=f'value:"doesnotexists.local"+created_by:"{client_id}"')
+cs.indicator_search(filter=f'value:"{ioc_value}"+created_by:"{self.config.client_id}"')
 
 # API Crowdstrike response
 {
@@ -167,21 +233,26 @@ cs.indicator_search(filter=f'value:"doesnotexists.local"+created_by:"{client_id}
     },
     "body": {
         "meta": {
-            "query_time": 0.013197571,
-            "pagination": {"limit": 100, "total": 0, "offset": 0},
+            "query_time": 0.008002393,
+            "pagination": {
+                "limit": 100,
+                "total": 1,
+                "offset": 1,
+                "after": "WzE3MTQ0NjU5ODE4MjcsIjIwMjIxODIzYzUwNmRjZTQ4MGNmM2RlNGMzYjFhNWUzNmYxNTQxOGZjOGE4N2M5MTdjZmMyOGVjYzU2MDQyNDgiXQ=="
+            },
             "powered_by": "ioc-manager",
-            "trace_id": "61003bcd-a5f3-436a-939e-0d74bb9570c6",
+            "trace_id": "8f0d3453-dc83-4c29-a85d-e1e8270776f1"
         },
-        "resources": [],
-        "errors": [],
+        "errors": null,
+        "resources": []
     },
 }
 ```
 
-Indicator exists:
+Indicator exists, a resource is found:
 
 ```python
-cs.indicator_search(filter=f'value:"itexists.local"+created_by:"{client_id}"')
+cs.indicator_search(filter=f'value:"{ioc_value}"+created_by:"{self.config.client_id}"')
 
 # API Crowdstrike response
 {
@@ -221,7 +292,13 @@ cs.indicator_search(filter=f'value:"itexists.local"+created_by:"{client_id}"')
 
 ### Create an IOC
 
+After searching for an IOC, if no resource is found, the connector will **create** the IOC from OpenCTI in the Crowdstrike instance.
+
 #### Specifications
+
+If `CROWDSTRIKE_PERMANENT_DELETE` is `False`, if you re-create an IOC on OpenCTI platform with the same value, it will **update** the data that already exist on Crowdstrike platform.
+
+If you create an IOC with a platform that is not on the accepted list, it will be ignored when the IOC is created in Crowdstrike.
 
 #### Method and API response
 
@@ -295,21 +372,162 @@ cs.indicator_create(
 }
 ```
 
-
 ### Update an IOC
+
+After searching for an IOC, if the resource is found, the connector will **update** the IOC from OpenCTI in the Crowdstrike instance.
 
 #### Specifications
 
+There are some specific cases where `update` an IOC will be used especially when `permanent_delete` is on `False`.
+
+When an update is made instead of a *true* delete on Crowdstrike when `permanent_delete` is `False`, the update will add a label `TO_DELETE`.
+
+When an update is made instead of a *true* creation of IOC on Crowdstrike, it will remove `TO_DELETE` tag. An example of case is when `permanent_delete` is `false` and an IOC is deleted from OpenCTI, if you re-create the same entity, it will be updated instead.
+
+If `falcon_for_mobile` is `false` and you try anyway to add `android`, here an example of logs you may have:
+
+![Logs platform](./__docs__/media/logs-platform.png)
+
 #### Method and API response
+
+**indicator_update method behavior**
+
+```python
+cs.indicator_update(
+    body={
+        "comment": "OpenCTI IOC",
+        "indicators": [
+            {
+                "source": "OpenCTI IOC",
+                "applied_globally": True,
+                "type": "domain",
+                "value": "test.aztyop.local",
+                "platforms": [
+                    "windows",
+                    "mac",
+                    "linux",
+                ],
+            }
+        ],
+    }
+)
+
+# API Crowdstrike response
+{
+    "status_code": 200,
+    "headers": {
+        "Server": "nginx",
+        "Date": "Wed, 20 Dec 2023 15:23:16 GMT",
+        "Content-Type": "application/json",
+        "Content-Length": "476",
+        "Connection": "keep-alive",
+        "Content-Encoding": "gzip",
+        "Strict-Transport-Security": "max-age=15724800; includeSubDomains, max-age=31536000; includeSubDomains",
+        "X-Cs-Region": "eu-1",
+        "X-Cs-Traceid": "e3af1a02-xxxx-462a-8acd-b4f817252944",
+        "X-Ratelimit-Limit": "6000",
+        "X-Ratelimit-Remaining": "5995",
+    },
+    "body": {
+        "meta": {
+            "query_time": 0.335613776,
+            "pagination": {"limit": 0, "total": 1},
+            "powered_by": "ioc-manager",
+            "trace_id": "e3af1a02-xxxx-462a-8acd-b4f817252944",
+        },
+        "resources": [
+            {
+                "id": "8de59b570d3fb6aecb0e872cc2dece513aa3f121e94be2803423372eef2023a5",
+                "type": "domain",
+                "value": "test.aztyop.local",
+                "source": "OpenCTI IOC",
+                "action": "no_action",
+                "mobile_action": "no_action",
+                "severity": "",
+                "platforms": ["windows", "mac", "linux"],
+                "expired": False,
+                "deleted": False,
+                "applied_globally": True,
+                "from_parent": False,
+                "created_on": "2023-12-20T15:23:16.135988021Z",
+                "created_by": "ed578da6b8d84d1e9312e833e493773a",
+                "modified_on": "2023-12-20T15:23:16.135988021Z",
+                "modified_by": "ed578da6b8d84d1e9312e833e493773a",
+            }
+        ],
+        "errors": [],
+    },
+}
+```
 
 ### Delete an IOC
 
+After searching for an IOC, if the resource is found, the connector will **delete** the IOC from OpenCTI in the Crowdstrike instance.
+
 #### Specifications
+
+There are some specific cases where `update` an IOC will be used instead of `delete` the IOC especially when `permanent_delete` is on `False`.
+
+When an update is made instead of a *true* delete on Crowdstrike when `permanent_delete` is `False`, the update will add a label `TO_DELETE`.
 
 #### Method and API response
 
+**indicator_delete method behavior**
+
+```python
+cs.indicator_delete(
+    body={
+        "ids": [
+            "8de59b570d3fb6aecb0e872cc2dece513aa3f121e94be2803423372eef2023a5"
+        ]
+    }
+)
+
+# API Crowdstrike response
+{
+    "status_code": 200,
+    "headers": {
+        "Server": "nginx",
+        "Date": "Wed, 20 Dec 2023 15:23:16 GMT",
+        "Content-Type": "application/json",
+        "Content-Length": "476",
+        "Connection": "keep-alive",
+        "Content-Encoding": "gzip",
+        "Strict-Transport-Security": "max-age=15724800; includeSubDomains, max-age=31536000; includeSubDomains",
+        "X-Cs-Region": "eu-1",
+        "X-Cs-Traceid": "e3af1a02-xxxx-462a-8acd-b4f817252944",
+        "X-Ratelimit-Limit": "6000",
+        "X-Ratelimit-Remaining": "5995",
+    },
+    "body": {
+        "meta": {
+            "query_time": 0.116738247,
+            "powered_by": "ioc-manager",
+            "trace_id": "26e28d2a-dd11-4960-8d98-b12c5ec0cefa"
+        },
+        "errors": null,
+        "resources": [
+            "8de59b570d3fb6aecb0e872cc2dece513aa3f121e94be2803423372eef2023a5"
+        ]
+    },
+}
+```
+
 
 ## Known Issues and Workarounds
+
+For now, only these observable types are handled:
+
+```python
+observable_type_mapper = {
+    "domain-name:value": "domain",
+    "hostname:value": "domain",
+    "ipv4-addr:value": "ipv4",
+    "ipv6-addr:value": "ipv6",
+    "file:hashes.'SHA-256'": "sha256",
+    "file:hashes.'MD5'": "md5",
+}
+```
 
 ---
 
@@ -320,6 +538,7 @@ OpenCTI documentation for connectors:
 - [OpenCTI Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
 - [Connectors Deployment](https://docs.opencti.io/latest/deployment/connectors/)
 - [Connectors Development](https://docs.opencti.io/latest/development/connectors/)
+- [Connectors Stream](https://docs.opencti.io/latest/deployment/connectors/#:~:text=the%20concerned%20object.-,Stream,-These%20connectors%20connect)
 
 You will find IOC on the web UI:
 - [falcon.eu-1.crowdstrike.com/iocs/indicators](https://falcon.eu-1.crowdstrike.com/iocs/indicators).
