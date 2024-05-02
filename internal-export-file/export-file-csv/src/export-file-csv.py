@@ -125,7 +125,7 @@ class ExportFileCsv:
                     "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
                 )
             entities_list = []
-            object_ids = entity_data.get('objectsIds')
+            object_ids = entity_data.get("objectsIds")
             if object_ids is not None and len(object_ids) != 0:
                 export_selection_filter = {
                     "mode": "and",
@@ -229,11 +229,15 @@ class ExportFileCsv:
                     },
                 )
 
-                export_query_filter = {
-                    "mode": "and",
-                    "filterGroups": [list_params.get("filters"), access_filter],
-                    "filters": [],
-                }
+                export_query_filter = list_params.get("filters")
+
+                access_filter_content = access_filter.get("filters")
+                if len(access_filter_content) != 0:
+                    export_query_filter = {
+                        "mode": "and",
+                        "filterGroups": [list_params.get("filters"), access_filter],
+                        "filters": [],
+                    }
 
                 entities_list = self.helper.api_impersonate.stix2.export_entities_list(
                     entity_type=entity_type,
