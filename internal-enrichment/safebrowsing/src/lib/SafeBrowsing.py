@@ -7,7 +7,7 @@ from stix2 import URL, DomainName
 
 
 class SafeBrowsingConnector:
-    """ internal-enrichment connector
+    """internal-enrichment connector
 
     This class encapsulates the main actions, expected to be run by the
     any external-import connector. Note that the attributes defined below
