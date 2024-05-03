@@ -6,16 +6,21 @@ from datetime import datetime
 from typing import Any
 
 import stix2
-from pycti import OpenCTIConnectorHelper
-from pydantic import ValidationError
-from services import (
+from malpedia_services import (
     MalpediaClient,
     MalpediaConfig,
     MalpediaConverter,
     MalpediaModels,
     MalpediaUtils,
 )
-from services.constants import LAST_RUN, LAST_VERSION, TLP_MAPPING, URLS_MAPPING
+from malpedia_services.constants import (
+    LAST_RUN,
+    LAST_VERSION,
+    TLP_MAPPING,
+    URLS_MAPPING,
+)
+from pycti import OpenCTIConnectorHelper
+from pydantic import ValidationError
 
 
 class MalpediaConnector:

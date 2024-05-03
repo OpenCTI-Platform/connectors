@@ -2,7 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from services.client import MalpediaClient
+from malpedia_services.client import MalpediaClient
 
 
 @pytest.mark.usefixtures("setup_config")
@@ -111,7 +111,7 @@ class TestMalpediaClient:
     def test_api_response(
         self, malpedia_client, authenticated, status_code, expected_result
     ):
-        with patch("services.client.requests.get") as mock_get:
+        with patch("malpedia_services.client.requests.get") as mock_get:
             mock_get.return_value.status_code = status_code
             if status_code == 403:
                 mock_get.return_value.text = '{"detail": "Invalid token."}'

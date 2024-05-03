@@ -3,7 +3,7 @@ import os
 from unittest.mock import Mock
 
 import pytest
-from services import CrowdstrikeClient
+from crowdstrike_services import CrowdstrikeClient
 
 
 @pytest.fixture(scope="class")
