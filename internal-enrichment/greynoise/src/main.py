@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 from typing import Dict
@@ -61,12 +62,18 @@ class GreyNoiseConnector:
 
         # Validate GreyNoise API Key
         session = GreyNoise(
-            api_key=self.greynoise_key, integration_name="opencti-enricher-v3.0"
+            api_key=self.greynoise_key, integration_name="opencti-enricher-v3.1"
         )
         try:
             key_check = session.test_connection()
 
             today = datetime.today().strftime("%Y-%m-%d")
+
+            key_state = {
+                "offering": key_check.get("offering"),
+                "expiration": key_check.get("expiration"),
+                "last_checked": today
+            }
 
             if "offering" in key_check:
                 self.helper.log_info(
@@ -76,23 +83,27 @@ class GreyNoiseConnector:
                     + str(key_check.get("expiration", ""))
                 )
                 if key_check.get("offering") == "community_trial":
+                    key_state["valid"] = True
                     self.helper.log_info("GreyNoise API key is valid!")
                 elif key_check.get("offering") == "community":
-                    raise ValueError(
-                        "[API] GreyNoise Community API keys are not supported for this integration."
-                    )
+                    key_state["valid"] = False
+                    self.helper.log_info("GreyNoise API key NOT valid! Update to use connector!")
                 elif (
-                    key_check.get("offering") != "community"
-                    and key_check.get("expiration") > today
+                        key_check.get("offering") != "community"
+                        and key_check.get("expiration") > today
                 ):
+                    key_state["valid"] = True
                     self.helper.log_info("GreyNoise API key is valid!")
                 elif (
-                    key_check.get("offering") != "community"
-                    and key_check.get("expiration") < today
+                        key_check.get("offering") != "community"
+                        and key_check.get("expiration") < today
                 ):
-                    raise ValueError(
-                        "[API] GreyNoise API key appears to be expired, please contact support@greynoise.io."
-                    )
+                    key_state["valid"] = False
+
+            with open("KEY_INFO", "w") as text_file:
+                key_state = json.dumps(key_state)
+                print(f"{key_state}", file=text_file)
+
         except Exception as e:
             self.helper.log_error(
                 "[API] GreyNoise API key is not valid or not supported for this integration. API "
@@ -123,12 +134,12 @@ class GreyNoiseConnector:
         return is_valid_max_tlp
 
     def _generate_stix_relationship(
-        self,
-        source_ref: str,
-        stix_core_relationship_type: str,
-        target_ref: str,
-        start_time: str | None = None,
-        stop_time: str | None = None,
+            self,
+            source_ref: str,
+            stix_core_relationship_type: str,
+            target_ref: str,
+            start_time: str | None = None,
+            stop_time: str | None = None,
     ) -> dict:
         """
         This method allows you to create a relationship in Stix2 format.
@@ -243,8 +254,8 @@ class GreyNoiseConnector:
 
             # If category is malicious and activity, prepare malware object
             elif (
-                tag_details["intention"] == "malicious"
-                and tag_details["category"] == "activity"
+                    tag_details["intention"] == "malicious"
+                    and tag_details["category"] == "activity"
             ):
                 malware_malicious_activity = {
                     "name": f"{tag}",
@@ -261,7 +272,7 @@ class GreyNoiseConnector:
         return self.all_labels, all_malwares
 
     def _generate_stix_external_reference(
-        self, data: dict, sighting_not_seen: bool = False
+            self, data: dict, sighting_not_seen: bool = False
     ) -> list:
         """
         This method allows you to create an external reference in Stix2 format.
@@ -468,10 +479,10 @@ class GreyNoiseConnector:
             self.stix_objects.append(observable_to_tool)
 
     def _generate_stix_sighting(
-        self,
-        external_reference: list,
-        stix_indicator: dict,
-        sighting_not_seen: bool = False,
+            self,
+            external_reference: list,
+            stix_indicator: dict,
+            sighting_not_seen: bool = False,
     ):
         """
         This method creates a sighting.
@@ -559,9 +570,9 @@ class GreyNoiseConnector:
 
         # Create threat actor for non-benign when known
         if (
-            data["actor"]
-            and data["actor"] != "unknown"
-            and data["classification"] != "benign"
+                data["actor"]
+                and data["actor"] != "unknown"
+                and data["classification"] != "benign"
         ):
             # Generate Threat Actor
             stix_threat_actor = stix2.ThreatActor(
@@ -582,7 +593,7 @@ class GreyNoiseConnector:
             self.stix_objects.append(observable_to_threat_actor)
 
     def _generate_stix_indicator_with_relationship(
-        self, data: dict, detection: bool, external_reference: list, labels: list = None
+            self, data: dict, detection: bool, external_reference: list, labels: list = None
     ) -> dict:
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Indicator"
@@ -625,7 +636,7 @@ class GreyNoiseConnector:
         return stix_indicator
 
     def _generate_stix_observable(
-        self, detection: bool, external_reference: list, labels: list = None
+            self, detection: bool, external_reference: list, labels: list = None
     ):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Observable"
@@ -651,7 +662,7 @@ class GreyNoiseConnector:
         self.stix_objects.append(stix_observable)
 
     def _generate_stix_bundle(
-        self, data: dict, data_tags: dict, stix_entity: dict
+            self, data: dict, data_tags: dict, stix_entity: dict
     ) -> str:
         """
         This method create a bundle in Stix2 format.
@@ -735,7 +746,20 @@ class GreyNoiseConnector:
         entity_splited = data["entity_id"].split("--")
         entity_type = entity_splited[0].lower()
 
+        with open("KEY_INFO") as text_file:
+            key_info = text_file.read()
+
+        key_state = json.loads(key_info)
+
+        if not key_state.get("valid"):
+            self.helper.log_error(f"Current GreyNoise API is NOT VALID: {key_state}")
+            raise ValueError(
+                "GreyNoise API Key is NOT valid. Update to Enterprise API key to use this connector."
+            )
+
         if entity_type in scopes:
+            print(scopes)
+            print(data)
             # OpenCTI entity information retrieval
             stix_entity = data["stix_entity"]
             opencti_entity = data["enrichment_entity"]
@@ -755,15 +779,15 @@ class GreyNoiseConnector:
                 # Get "IP Context" GreyNoise API Response
                 # https://docs.greynoise.io/reference/noisecontextip-1
                 session = GreyNoise(
-                    api_key=self.greynoise_key, integration_name="opencti-enricher-v3.0"
+                    api_key=self.greynoise_key, integration_name="opencti-enricher-v3.1"
                 )
 
                 json_data = session.ip(opencti_entity_value)
 
                 if (
-                    "seen" in json_data
-                    and json_data["seen"] is False
-                    and self.sighting_not_seen is False
+                        "seen" in json_data
+                        and json_data["seen"] is False
+                        and self.sighting_not_seen is False
                 ):
                     raise ValueError(
                         "[API] This IP has not yet been identified by GreyNoise"
@@ -782,9 +806,9 @@ class GreyNoiseConnector:
                 # Send stix2 bundle
                 bundles_sent = self.helper.send_stix2_bundle(stix_bundle)
                 return (
-                    "[CONNECTOR] Sent "
-                    + str(len(bundles_sent))
-                    + " stix bundle(s) for worker import"
+                        "[CONNECTOR] Sent "
+                        + str(len(bundles_sent))
+                        + " stix bundle(s) for worker import"
                 )
 
             except Exception as e:
