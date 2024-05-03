@@ -1,7 +1,7 @@
 import json
 
-from pycti import OpenCTIConnectorHelper
 from crowdstrike_services import ConfigCrowdstrike, CrowdstrikeClient, Metrics
+from pycti import OpenCTIConnectorHelper
 
 
 class CrowdstrikeConnector:
