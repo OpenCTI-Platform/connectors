@@ -98,6 +98,7 @@ class ExportReportPdf:
             )
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
+        main_filter = data.get("main_filter")
         access_filter = data.get("access_filter")
 
         # Retrieve markings for export push
@@ -117,11 +118,11 @@ class ExportReportPdf:
                 entity_id, file_name, entity_type, file_markings, access_filter
             )
         elif entity_type == "Intrusion-Set":
-            self._process_intrusion_set(entity_id, file_name, file_markings)
+            self._process_intrusion_set(entity_id, file_name, file_markings, main_filter, access_filter)
         elif entity_type == "Threat-Actor-Group":
-            self._process_threat_actor_group(entity_id, file_name, file_markings)
+            self._process_threat_actor_group(entity_id, file_name, file_markings, main_filter, access_filter)
         elif entity_type == "Threat-Actor-Individual":
-            self._process_threat_actor_individual(entity_id, file_name, file_markings)
+            self._process_threat_actor_individual(entity_id, file_name, file_markings, main_filter, access_filter)
         else:
             raise ValueError(
                 f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", not "{entity_type}".'
@@ -230,7 +231,7 @@ class ExportReportPdf:
             report_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_intrusion_set(self, entity_id, file_name, file_markings):
+    def _process_intrusion_set(self, entity_id, file_name, file_markings, main_filter, access_filter):
         """
         Process an Intrusion Set entity and upload as pdf.
         """
@@ -252,7 +253,7 @@ class ExportReportPdf:
 
         # Get a bundle of all objects affiliated with the intrusion set
         intrusion_set_objs = self.helper.api_impersonate.stix2.export_entity(
-            "Intrusion-Set", entity_id, "full"
+            "Intrusion-Set", entity_id, "full", main_filter, access_filter
         )
 
         for intrusion_set_obj in intrusion_set_objs["objects"]:
@@ -325,7 +326,7 @@ class ExportReportPdf:
             entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_threat_actor_group(self, entity_id, file_name, file_markings):
+    def _process_threat_actor_group(self, entity_id, file_name, file_markings, main_filter, access_filter):
         """
         Process a Threat Actor Group entity and upload as pdf.
         """
@@ -347,7 +348,7 @@ class ExportReportPdf:
 
         # Get a bundle of all objects affiliated with the threat actor group
         bundle = self.helper.api_impersonate.stix2.export_entity(
-            "Threat-Actor-Group", entity_id, "full"
+            "Threat-Actor-Group", entity_id, "full", main_filter, access_filter
         )
 
         for bundle_obj in bundle["objects"]:
@@ -420,7 +421,7 @@ class ExportReportPdf:
             entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_threat_actor_individual(self, entity_id, file_name, file_markings):
+    def _process_threat_actor_individual(self, entity_id, file_name, file_markings, main_filter, access_filter):
         """
         Process a Threat Actor Individual entity and upload as pdf.
         """
@@ -442,7 +443,7 @@ class ExportReportPdf:
 
         # Get a bundle of all objects affiliated with the threat actor individual
         bundle = self.helper.api_impersonate.stix2.export_entity(
-            "Threat-Actor-Individual", entity_id, "full"
+            "Threat-Actor-Individual", entity_id, "full", main_filter, access_filter
         )
 
         for bundle_obj in bundle["objects"]:
