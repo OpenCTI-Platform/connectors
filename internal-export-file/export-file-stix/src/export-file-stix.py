@@ -22,7 +22,8 @@ class ExportFileStix:
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
-        max_marking = data["content_max_markings"][0]  # remove index on in chunk #2
+        main_filter = data.get("main_filter")
+        access_filter = data.get("access_filter")
         file_markings = data["file_markings"]
 
         entity_id = data.get("entity_id")
@@ -38,7 +39,7 @@ class ExportFileStix:
                 },
             )
             bundle = self.helper.api_impersonate.stix2.export_entity(
-                entity_type, entity_id, export_type, max_marking
+                entity_type, entity_id, export_type, main_filter, access_filter
             )
             json_bundle = json.dumps(bundle, indent=4)
             self.helper.connector_logger.info(
@@ -68,8 +69,7 @@ class ExportFileStix:
                 list_filters = "selected_ids"
                 entities_list = []
 
-                for selected_id in selected_ids:
-                    custom_attributes = """
+                custom_attributes = """
                         ... on StixCoreObject {
                           id
                           entity_type
@@ -83,44 +83,41 @@ class ExportFileStix:
                           entity_type
                         }
                     """
-                    stix_object_result = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.read(
-                        id=selected_id, customAttributes=custom_attributes
-                    )
+
+                export_selection_filter = {
+                    "mode": "and",
+                    "filterGroups": [
+                        {
+                            "mode": "or",
+                            "filters": [
+                                {
+                                    "key": "id",
+                                    "values": selected_ids,
+                                }
+                            ],
+                            "filterGroups": [],
+                        },
+                        access_filter,
+                    ],
+                    "filters": [],
+                }
+
+                stix_objects = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
+                    filters=export_selection_filter, customAttributes=custom_attributes
+                )
+
+                for stix_object_result in stix_objects:
+
                     if stix_object_result is not None:
-                        entity_type = stix_object_result["entity_type"]
+                        current_entity_type = stix_object_result["entity_type"]
                         # Reader
-                        do_read = self.helper.api.stix2.get_reader(entity_type)
-                        entity_data = do_read(id=selected_id)
+                        do_read = self.helper.api.stix2.get_reader(current_entity_type)
+                        entity_data = do_read(id=stix_object_result["id"])
 
-                    else:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_domain_object.read(
-                                id=selected_id, withFiles=True
-                            )
-                        )
-
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=selected_id, withFiles=True
-                            )
-                        )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_core_relationship.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_sighting_relationship.read(
-                                id=selected_id
-                            )
-                        )
                     entities_list.append(entity_data)
 
                 bundle = self.helper.api_impersonate.stix2.export_selected(
-                    entities_list, export_type, max_marking
+                    entities_list, export_type, main_filter, access_filter
                 )
 
             else:  # export_scope = 'query'
@@ -140,7 +137,7 @@ class ExportFileStix:
                     list_params["orderBy"],
                     list_params["orderMode"],
                     export_type,
-                    max_marking,
+                    access_filter,
                 )
                 list_filters = json.dumps(list_params)
 
