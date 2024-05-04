@@ -11,7 +11,13 @@ import pytz
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, Report, get_config_variable
+from pycti import (
+    Indicator,
+    Malware,
+    OpenCTIConnectorHelper,
+    Report,
+    get_config_variable,
+)
 
 TMP_DIR = "TMP"
 
@@ -195,6 +201,8 @@ class Eset:
                         continue
                     parsed_content = json.loads(item.content)
                     objects = []
+                    id_remaps = {}
+                    removed_ids = set()
                     for object in parsed_content["objects"]:
                         # If no author provided in the entity, then default to set
                         # author to ESET
@@ -205,6 +213,47 @@ class Eset:
                                 object["confidence"] = int(
                                     self.helper.connect_confidence_level
                                 )
+                        # Don't consume identity entities w/ "customer" as the name.
+                        # ESET uses this to indicate country targeting, and consuming
+                        # these causes problems due to dedupe.
+                        # TODO: Convert these & relevant relationship refs to country
+                        # locations.
+                        if (
+                            object["type"] == "identity"
+                            and "name" in object
+                            and object["name"] == "customer"
+                        ) or object["type"] == "observed-data":
+                            removed_ids.add(object["id"])
+                            continue
+
+                        # Malware STIX IDs need to be manually recomputed so they're
+                        # deterministic by malware name
+                        if object["type"] == "malware" and "name" in object:
+                            new_id = Malware.generate_id(object["name"])
+                            if object["id"] in id_remaps:
+                                new_id = id_remaps[object["id"]]
+                            else:
+                                id_remaps[object["id"]] = new_id
+                            object["id"] = new_id
+
+                        # If we remapped a STIX id earlier to a pycti one, we need  to
+                        # reflect that properly in any relevant relationship too
+                        if object["type"] == "relationship":
+                            if "source_ref" in object:
+                                if object["source_ref"] in removed_ids:
+                                    continue  # skip relationship if either ref is in removed_ids
+                                if object["source_ref"] in id_remaps:
+                                    object["source_ref"] = id_remaps[
+                                        object["source_ref"]
+                                    ]
+                            if "target_ref" in object:
+                                if object["target_ref"] in removed_ids:
+                                    continue  # skip relationship if either ref is in removed_ids
+                                if object["target_ref"] in id_remaps:
+                                    object["target_ref"] = id_remaps[
+                                        object["target_ref"]
+                                    ]
+
                         if object["type"] == "indicator":
                             object["name"] = object["pattern"]
                             object["pattern_type"] = "stix"
@@ -213,6 +262,12 @@ class Eset:
                                 .replace("SHA1", "'SHA-1'")
                                 .replace("SHA256", "'SHA-256'")
                             )
+                            new_id = Indicator.generate_id(object["pattern"])
+                            if object["id"] in id_remaps:
+                                new_id = id_remaps[object["id"]]
+                            else:
+                                id_remaps[object["id"]] = new_id
+                            object["id"] = new_id
                             if self.eset_create_observables:
                                 object["x_opencti_create_observables"] = (
                                     self.eset_create_observables
