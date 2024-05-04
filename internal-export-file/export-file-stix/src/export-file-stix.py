@@ -62,7 +62,7 @@ class ExportFileStix:
                 },
             )
 
-        else:  # export_scope = 'query' or 'selection' # ICI -> remove max marking
+        else:  # export_scope = 'query' or 'selection'
             if export_scope == "selection":
                 selected_ids = data["selected_ids"]
                 list_filters = "selected_ids"
@@ -101,7 +101,7 @@ class ExportFileStix:
                     "filters": [],
                 }
 
-                stix_objects = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(  # ICI .list
+                stix_objects = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
                     filters=export_selection_filter, customAttributes=custom_attributes
                 )
 
@@ -156,7 +156,7 @@ class ExportFileStix:
                 },
             )
             if entity_type == "Stix-Cyber-Observable":
-                self.helper.api.stix_cyber_observable.push_list_export(  # ICI update
+                self.helper.api.stix_cyber_observable.push_list_export(
                     entity_id,
                     entity_type,
                     file_name,
@@ -165,7 +165,7 @@ class ExportFileStix:
                     list_filters,
                 )
             elif entity_type == "Stix-Core-Object":
-                self.helper.api.stix_core_object.push_list_export(  # ICI update
+                self.helper.api.stix_core_object.push_list_export(
                     entity_id,
                     entity_type,
                     file_name,
@@ -174,7 +174,7 @@ class ExportFileStix:
                     list_filters,
                 )
             else:
-                self.helper.api.stix_domain_object.push_list_export(  # ICI update
+                self.helper.api.stix_domain_object.push_list_export(
                     entity_id,
                     entity_type,
                     file_name,
