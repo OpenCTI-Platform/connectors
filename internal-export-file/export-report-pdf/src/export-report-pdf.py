@@ -118,11 +118,17 @@ class ExportReportPdf:
                 entity_id, file_name, entity_type, file_markings, access_filter
             )
         elif entity_type == "Intrusion-Set":
-            self._process_intrusion_set(entity_id, file_name, file_markings, main_filter, access_filter)
+            self._process_intrusion_set(
+                entity_id, file_name, file_markings, main_filter, access_filter
+            )
         elif entity_type == "Threat-Actor-Group":
-            self._process_threat_actor_group(entity_id, file_name, file_markings, main_filter, access_filter)
+            self._process_threat_actor_group(
+                entity_id, file_name, file_markings, main_filter, access_filter
+            )
         elif entity_type == "Threat-Actor-Individual":
-            self._process_threat_actor_individual(entity_id, file_name, file_markings, main_filter, access_filter)
+            self._process_threat_actor_individual(
+                entity_id, file_name, file_markings, main_filter, access_filter
+            )
         else:
             raise ValueError(
                 f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", not "{entity_type}".'
@@ -231,7 +237,9 @@ class ExportReportPdf:
             report_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_intrusion_set(self, entity_id, file_name, file_markings, main_filter, access_filter):
+    def _process_intrusion_set(
+        self, entity_id, file_name, file_markings, main_filter, access_filter
+    ):
         """
         Process an Intrusion Set entity and upload as pdf.
         """
@@ -326,7 +334,9 @@ class ExportReportPdf:
             entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_threat_actor_group(self, entity_id, file_name, file_markings, main_filter, access_filter):
+    def _process_threat_actor_group(
+        self, entity_id, file_name, file_markings, main_filter, access_filter
+    ):
         """
         Process a Threat Actor Group entity and upload as pdf.
         """
@@ -421,7 +431,9 @@ class ExportReportPdf:
             entity_id, file_name, pdf_contents, file_markings, "application/pdf"
         )
 
-    def _process_threat_actor_individual(self, entity_id, file_name, file_markings, main_filter, access_filter):
+    def _process_threat_actor_individual(
+        self, entity_id, file_name, file_markings, main_filter, access_filter
+    ):
         """
         Process a Threat Actor Individual entity and upload as pdf.
         """

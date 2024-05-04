@@ -143,7 +143,9 @@ class ExportFileStix:
                     "filterGroups": [list_params.get("filters"), access_filter],
                     "filters": [],
                 }
-                list_filters = json.dumps({**list_params, "filters": export_query_filter})
+                list_filters = json.dumps(
+                    {**list_params, "filters": export_query_filter}
+                )
 
             json_bundle = json.dumps(bundle, indent=4)
             self.helper.connector_logger.info(
