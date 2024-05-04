@@ -133,7 +133,6 @@ class Eset:
                     description=name,
                     published=date,
                     labels=["apt", "eset"],
-                    confidence=self.helper.connect_confidence_level,
                     created_by_ref=self.identity["standard_id"],
                     object_refs=[self.identity["standard_id"]],
                     allow_custom=True,
@@ -159,19 +158,6 @@ class Eset:
                     os.remove(file_path + ".zip")
 
     def _import_collection(self, collection, work_id, start_epoch):
-        object_types_with_confidence = [
-            "attack-pattern",
-            "course-of-action",
-            "threat-actor",
-            "intrusion-set",
-            "campaign",
-            "malware",
-            "tool",
-            "vulnerability",
-            "report",
-            "relationship",
-            "indicator",
-        ]
         client = cabby.create_client(
             self.eset_api_url, discovery_path="/taxiiservice/discovery", use_https=True
         )
@@ -208,11 +194,6 @@ class Eset:
                         # author to ESET
                         if not "created_by_ref" in object:
                             object["created_by_ref"] = self.identity["standard_id"]
-                        if "confidence" in object_types_with_confidence:
-                            if "confidence" not in object:
-                                object["confidence"] = int(
-                                    self.helper.connect_confidence_level
-                                )
                         # Don't consume identity entities w/ "customer" as the name.
                         # ESET uses this to indicate country targeting, and consuming
                         # these causes problems due to dedupe.
