@@ -189,12 +189,12 @@ class ExportFileCsv:
 
                 entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
                     filters=main_filter
-                )[0]
+                )
                 entity_data_sco = (
                     self.helper.api_impersonate.stix_cyber_observable.list(
                         filters=main_filter
                     )
-                )[0]
+                )
                 entity_data_scr = (
                     self.helper.api_impersonate.stix_core_relationship.list(
                         filters=main_filter
@@ -203,7 +203,7 @@ class ExportFileCsv:
                 entity_data_ssr = (
                     self.helper.api_impersonate.stix_sighting_relationship.list(
                         filters=main_filter
-                    )[0]
+                    )
                 )
 
                 entities_list = (
