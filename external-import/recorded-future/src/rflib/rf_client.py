@@ -49,7 +49,7 @@ class RFClient:
         pull_signatures: bool = False,
         insikt_only: bool = True,
         topic: str = None,
-        limit: int = 100,
+        limit: int = 10000,
     ):
         """Pulls Insikt Notes from API
         Args:
