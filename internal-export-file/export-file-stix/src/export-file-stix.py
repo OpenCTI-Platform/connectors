@@ -112,7 +112,7 @@ class ExportFileStix:
                         do_read = self.helper.api.stix2.get_reader(current_entity_type)
                         entity_data = do_read(id=stix_object_result["id"])
 
-                    entities_list.append(entity_data)
+                        entities_list.append(entity_data)
 
                 bundle = self.helper.api_impersonate.stix2.export_selected(
                     entities_list, export_type, main_filter, access_filter
