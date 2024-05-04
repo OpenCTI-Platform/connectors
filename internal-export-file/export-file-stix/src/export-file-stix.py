@@ -138,9 +138,12 @@ class ExportFileStix:
                     main_filter,
                     access_filter,
                 )
+                filter_groups = [list_params.get("filters")]
+                if access_filter is not None:
+                    filter_groups.append(access_filter)
                 export_query_filter = {
                     "mode": "and",
-                    "filterGroups": [list_params.get("filters"), access_filter],
+                    "filterGroups": filter_groups,
                     "filters": [],
                 }
                 list_filters = json.dumps(
