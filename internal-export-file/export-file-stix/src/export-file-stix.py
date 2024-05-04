@@ -137,6 +137,7 @@ class ExportFileStix:
                     list_params["orderBy"],
                     list_params["orderMode"],
                     export_type,
+                    main_filter,
                     access_filter,
                 )
                 list_filters = json.dumps(list_params)
