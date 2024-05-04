@@ -162,7 +162,7 @@ class IntezerSandboxConnector:
             )
 
     def _process_message(self, data: Dict):
-        observable = data["opencti_entity_id"]
+        observable = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
