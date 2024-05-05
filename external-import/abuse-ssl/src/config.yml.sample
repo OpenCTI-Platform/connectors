@@ -7,8 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Abuse.ch SSL Blacklist'
   scope: 'abuse-ssl'
-  confidence_level: 70
-  update_existing_data: True
   log_level: 'info'
 
 abusessl:
