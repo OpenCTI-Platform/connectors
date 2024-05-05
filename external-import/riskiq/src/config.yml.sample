@@ -7,8 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'RiskIQ'
   scope: 'riskiq'
-  confidence_level: 30 # 0 (Unknown) or from 1 to 100 (Fully trusted)
-  update_existing_data: False
   log_level: 'info'
   expose_metrics: False
 
