@@ -8,9 +8,7 @@ services:
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=ANY.RUN feed
       - CONNECTOR_SCOPE=stix2
-      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_RUN_EVERY=1d
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - ANYRUN_TI_TOKEN=ChangeMe # Required
     restart: always
