@@ -1,5 +1,4 @@
 """Custom exceptions for ZeroFox client."""
-
 # standard library
 import json
 
