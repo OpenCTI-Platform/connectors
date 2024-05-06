@@ -100,7 +100,7 @@ def convert_to_stix_botnet(data, helper):
                     created=parse(listed_at),
                 )
                 relationships.append(relationship)
-
+        print(f"Indicators: {indicators}")
         bundle = stix2.Bundle(
             objects=[identity] + indicators + malware_objects + relationships
         )
