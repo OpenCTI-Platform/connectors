@@ -50,7 +50,6 @@ class ZeroFox():
             data=data,
             ok_code=200,
         )
-        print(f"status code: {response.status_code}")
 
         for result in response["results"]:
             yield constructor(**result)
