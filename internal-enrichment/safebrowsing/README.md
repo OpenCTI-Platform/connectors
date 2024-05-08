@@ -46,7 +46,7 @@ Finally, the ones that follow are connector's specific execution parameters expe
 
 | Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
 | ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `extra_parameter`                    | `EXTRA_PARAMETER`                   | Yes          | Any extra parameter.                                                                                                                                       |
+| `GOOGLE_SAFE_BROWSING_API_KEY`                    | `GOOGLE_SAFE_BROWSING_API_KEY`                   | Yes          | The API key from Google safebrowsing                                                                                                                                      |
 
 ### Debugging ###
 
