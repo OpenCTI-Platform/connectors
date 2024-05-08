@@ -189,7 +189,7 @@ class Taxii2Connector:
                 self.helper.log_info("Connector has never run")
             else:
                 last_run = datetime.fromtimestamp(
-                    self.helper.get_state()["last_run"]
+                    self.helper.get_state()["last_run"], tz=timezone.utc
                 ).strftime("%Y-%m-%d %H:%M:%S")
                 self.helper.log_info("Connector last run: " + last_run)
 
