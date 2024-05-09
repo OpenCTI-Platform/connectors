@@ -13,5 +13,5 @@ class Ransomware(BaseModel):
     sha512: str
     emails: list[str] | None
     ransom_note: str
-    ransomware_name: list[str]
+    ransomware_name: list[str] | None
     tags: list[str]
