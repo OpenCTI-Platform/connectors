@@ -8,7 +8,6 @@ connector:
   name: 'CRITs'
   scope: 'crits' # MIME type or SCO
   log_level: 'info'
-  update_existing_data: false
 
 crits:
   url: 'http://localhost'

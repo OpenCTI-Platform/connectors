@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Common Platform Enumeration'
   scope: 'software'
-  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 cpe:
