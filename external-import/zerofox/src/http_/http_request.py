@@ -1,4 +1,5 @@
 """ Wrapper function for http requests."""
+
 # third-party
 import requests
 

@@ -1,23 +1,32 @@
 from typing import List, Union
 
 from stix2 import (
+    URL,
+    AutonomousSystem,
     Infrastructure,
+    IPv4Address,
     Relationship,
     X509Certificate,
-    URL,
-    IPv4Address,
-    AutonomousSystem
 )
 from zerofox.domain import Phishing
 
 
-def phishing_to_infrastructure(now: str, entry: Phishing) -> List[Union[Infrastructure, Relationship, X509Certificate, URL, IPv4Address, AutonomousSystem]]:
+def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
+    Union[
+        Infrastructure,
+        Relationship,
+        X509Certificate,
+        URL,
+        IPv4Address,
+        AutonomousSystem,
+    ]
+]:
     phishing = Infrastructure(
         name=f"Phishing domain -- {entry.domain}",
         created=now,
         infrastructure_types=["phishing"],
         first_seen=entry.scanned,
-        external_references=[]
+        external_references=[],
     )
     certificate_objects = build_certificate_objects(entry, phishing)
 
@@ -51,16 +60,15 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[Union[Infrastr
         relationship_type="consists-of",
     )
 
-    return (
-        [
-            phishing,
-            url, url_relationship,
-            ip, ip_relationship,
-            asn, asn_relationship
-        ]
-        + certificate_objects
-
-    )
+    return [
+        phishing,
+        url,
+        url_relationship,
+        ip,
+        ip_relationship,
+        asn,
+        asn_relationship,
+    ] + certificate_objects
 
 
 def build_certificate_objects(entry: Phishing, stix_phishing):
@@ -68,9 +76,7 @@ def build_certificate_objects(entry: Phishing, stix_phishing):
         return []
     certificate = X509Certificate(
         issuer=entry.cert.authority,
-        hashes={
-            "SHA-1": entry.cert.fingerprint
-        } if entry.cert.fingerprint else None,
+        hashes={"SHA-1": entry.cert.fingerprint} if entry.cert.fingerprint else None,
     )
     certificate_relationship = Relationship(
         source_ref=stix_phishing.id,
