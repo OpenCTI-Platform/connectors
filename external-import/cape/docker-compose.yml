@@ -7,7 +7,6 @@ services:
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=CAPE
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - CAPE_CREATE_INDICATORS=true
       - CAPE_ENABLE_NETWORK_TRAFFIC=false # enable creation of net Traffic (Very Loud)

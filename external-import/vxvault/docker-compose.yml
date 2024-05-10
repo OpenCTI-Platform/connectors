@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=VX Vault URL list"
       - CONNECTOR_SCOPE=vxvault
-      - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - VXVAULT_URL=https://vxvault.net/URL_List.php
       - VXVAULT_CREATE_INDICATORS=true

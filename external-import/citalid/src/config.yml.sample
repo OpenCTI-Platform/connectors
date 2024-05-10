@@ -7,8 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Citalid'
   scope: 'citalid'
-  confidence_level: 30 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: true
   run_and_terminate: false
   log_level: 'info'
 
