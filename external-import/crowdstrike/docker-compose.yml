@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=CrowdStrike
       - CONNECTOR_SCOPE=crowdstrike
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - CROWDSTRIKE_BASE_URL=https://api.crowdstrike.com
       - CROWDSTRIKE_CLIENT_ID=ChangeMe

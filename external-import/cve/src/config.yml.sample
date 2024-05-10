@@ -7,8 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Common Vulnerabilities and Exposures'
   scope: 'identity,vulnerability'
-  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: false
   run_and_terminate: false
   log_level: 'info'
 

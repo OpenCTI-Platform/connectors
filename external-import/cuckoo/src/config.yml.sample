@@ -6,8 +6,6 @@ connector:
   id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
   name: 'cuckoo_Import' # Required
-  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: false
   log_level: 'info'
 
 cuckoo:
