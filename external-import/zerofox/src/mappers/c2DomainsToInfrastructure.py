@@ -6,7 +6,7 @@ from zerofox.domain import C2Domain
 
 def c2_domains_to_infrastructure(now: str, entry: C2Domain) -> List[Union[Infrastructure, Relationship]]:
     infrastructure = Infrastructure(
-        name=f"Infrastructure -- {entry.domain}",
+        name=f"Command and Control -- {entry.domain}",
         labels=entry.tags,
         created=now,
         first_seen = entry.created_at,
