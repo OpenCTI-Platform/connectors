@@ -7,9 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'VX Vault URL list'
   scope: 'vxvault'
-  confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
   create_indicator: False
-  update_existing_data: false
   log_level: 'info'
 
 vxvault:
