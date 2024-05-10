@@ -9,15 +9,38 @@ from lib.external_import import ExternalImportConnector
 from mappers import threat_feed_to_stix
 from zerofox.app import CTIEndpoint, ZeroFox
 
+ZEROFOX_REFERENCE = stix2.ExternalReference(
+    source_name="ZeroFox Threat Intelligence",
+    url="https://www.zerofox.com/threat-intelligence/",
+    description="ZeroFox provides comprehensive, accurate, and timely intelligence bundles through its API.",
+)
+
 
 class ZeroFoxConnector(ExternalImportConnector):
     def __init__(self):
-        """ ZeroFox connector for OpenCTI."""
+        """ZeroFox connector for OpenCTI."""
         super().__init__()
         self.zerofox_username = os.environ.get("ZEROFOX_USERNAME", "")
         self.zerofox_password = os.environ.get("ZEROFOX_PASSWORD", "")
-        self.client = ZeroFox(user=self.zerofox_username,
-                              token=self.zerofox_password)
+        self.client = ZeroFox(user=self.zerofox_username, token=self.zerofox_password)
+
+    def fetch_stix_from_endpoint(
+        self, endpoint: CTIEndpoint, now: datetime, last_run: datetime
+    ) -> List[Any]:
+        stix_objects = []
+        self.helper.log_debug(f"Fetching data from {endpoint}")
+        try:
+            for entry in self.client.fetch_feed(endpoint, last_run):
+                self.helper.log_debug(entry)
+                stix_data = threat_feed_to_stix(endpoint)(now, entry)
+                self.helper.log_debug(
+                    f"{len(stix_data)} STIX2 objects have been obtained from malware entry {entry}."
+                )
+                stix_objects.extend(stix_data)
+            return stix_objects
+        except Exception as e:
+            self.helper.log_error(f"Error fetching data from {endpoint}: {str(e)}")
+            return stix_objects
 
     def _collect_intelligence(self, now: datetime, last_run: datetime) -> List[Any]:
         """
@@ -35,18 +58,9 @@ class ZeroFoxConnector(ExternalImportConnector):
         )
         stix_objects = []
         # ===========================
-        for endpoint in [CTIEndpoint.Malware]:
-            print(f"Fetching data from {endpoint}")
-            for entry in self.client.fetch_feed(endpoint, last_run):
-                stix_data = threat_feed_to_stix(endpoint)(now, entry)
-                print(
-                    f"{len(stix_data)} STIX2 objects have been obtained from malware entry {entry}.")
-                stix_objects.extend(stix_data)
-        main_reference = stix2.ExternalReference(
-            source_name="ZeroFox Threat Intelligence",
-            url="https://www.zerofox.com/threat-intelligence/",
-            description="ZeroFox provides comprehensive, accurate, and timely intelligence bundles through its API.",
-        )
+        for endpoint in [CTIEndpoint.Phishing]:
+            self.helper.log_debug(f"Fetching data from {endpoint}")
+            stix_objects += self.fetch_stix_from_endpoint(endpoint, now, last_run)
         # ===========================
 
         self.helper.log_info(

@@ -62,7 +62,7 @@ class ExternalImportConnector:
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
 
-    def _collect_intelligence(self, now:datetime, last_run : datetime) -> list:
+    def _collect_intelligence(self, now: datetime, last_run: datetime) -> list:
         """Collect intelligence from the source"""
         raise NotImplementedError
 
@@ -113,7 +113,7 @@ class ExternalImportConnector:
                     )
                 else:
                     last_run = None
-                    last_run_date = (datetime.now(UTC) - timedelta(days=1))
+                    last_run_date = datetime.now(UTC) - timedelta(days=1)
                     self.helper.log_info(
                         f"{self.helper.connect_name} connector has never run"
                     )
@@ -131,7 +131,10 @@ class ExternalImportConnector:
 
                     try:
                         # Performing the collection of intelligence
-                        bundle_objects = self._collect_intelligence(now=datetime.fromtimestamp(timestamp), last_run=last_run_date)
+                        bundle_objects = self._collect_intelligence(
+                            now=datetime.fromtimestamp(timestamp),
+                            last_run=last_run_date,
+                        )
                         if len(bundle_objects) > 0:
                             self.send_bundle(work_id, bundle_objects)
 
@@ -143,7 +146,7 @@ class ExternalImportConnector:
                     self.helper.log_info(message)
 
                     self.helper.log_debug(
-                        f"Grabbing current state and update it with last_run: {timestamp}"
+                        f"Grabbing current state and update it with last_run: {now.isoformat()}"
                     )
                     current_state = self.helper.get_state()
                     if current_state:
@@ -179,15 +182,13 @@ class ExternalImportConnector:
             time.sleep(60)
 
     def send_bundle(self, work_id, bundle_objects):
-        bundle = stix2.Bundle(
-                            objects=bundle_objects, allow_custom=True
-                        ).serialize()
+        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
 
         self.helper.log_info(
-                            f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
-                        )
+            f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+        )
         self.helper.send_stix2_bundle(
-                            bundle,
-                            update=self.update_existing_data,
-                            work_id=work_id,
-                        )
+            bundle,
+            update=self.update_existing_data,
+            work_id=work_id,
+        )
