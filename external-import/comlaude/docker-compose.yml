@@ -8,9 +8,7 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME="Comlaude"
       - CONNECTOR_SCOPE=comlaude,stix # MIME type or Stix Object
-      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
-      - CONFIG_UPDATE_EXISTING_DATA=True
       - CONFIG_INTERVAL=2
       - COMLAUDE_USERNAME=ChangeMe
       - COMLAUDE_PASSWORD=ChangeMe

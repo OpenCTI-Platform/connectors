@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Cluster25'
   scope: 'cluster25'
-  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 cluster25:
