@@ -7,21 +7,23 @@ from http_ import http_request
 from zerofox.app.endpoints import CTIEndpoint
 
 
-class ZeroFox():
+class ZeroFox:
     """ZeroFox client for the different Cyber Threat Intelligence Endpoints."""
 
     def __init__(self, user, token) -> None:
         """Client requires user and token for retrieving CTI token."""
         self._base_url = "https://api.zerofox.com"
         print("retrieving CTI token...")
-        self.cti_token = self._get_cti_authorization_token(
-            username=user, token=token)
+        self.cti_token = self._get_cti_authorization_token(username=user, token=token)
         print("CTI token retrieved successfully!")
 
-    def fetch_feed(self, endpoint: CTIEndpoint, last_run: datetime) -> Generator[Any, None, None]:
+    def fetch_feed(
+        self, endpoint: CTIEndpoint, last_run: datetime
+    ) -> Generator[Any, None, None]:
         return self._cti_request(
-            constructor=endpoint.factory, endpoint=endpoint.value, params={
-                endpoint.after_key: last_run.isoformat()}
+            constructor=endpoint.factory,
+            endpoint=endpoint.value,
+            params={endpoint.after_key: last_run.isoformat()},
         )
 
     def _cti_request(
@@ -41,7 +43,6 @@ class ZeroFox():
         headers = self._get_cti_request_header()
 
         url = f"{self._base_url}/cti/{endpoint}/"
-        print(f"Fetching data from {url}")
         response = http_request(
             method="GET",
             url=url,
@@ -54,7 +55,6 @@ class ZeroFox():
         for result in response["results"]:
             yield constructor(**result)
         while response["next"]:
-            print(f"Fetching data from {response['next']}")
             response = http_request(
                 method="GET",
                 headers=headers,

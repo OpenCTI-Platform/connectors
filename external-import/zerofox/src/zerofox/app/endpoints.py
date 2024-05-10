@@ -12,11 +12,6 @@ from zerofox.domain import (
 )
 
 
-class CTIEndpointType(Enum):
-    GROUP = "group"
-    INDICATOR = "indicator"
-
-
 class CTIEndpoint(Enum):
     """Enum class containing endpoint suffixes for CTI feeds."""
 
@@ -26,6 +21,9 @@ class CTIEndpoint(Enum):
         obj.factory = factory
         obj.after_key = after_key
         return obj
+
+    def __str__(self):
+        return self.value
 
     Botnet = (
         "botnet",

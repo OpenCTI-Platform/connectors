@@ -6,12 +6,13 @@ from pydantic import BaseModel
 
 
 class Vulnerability(BaseModel):
-    base_score: int
+    base_score: float
     description: str
-    exploitability_score: int
-    impact_score: int
+    exploitability_score: float
+    impact_score: float
     created_at: datetime
     updated_at: datetime
     vector_string: str
     cve: str
-    summary: str
+    summary: str | None
+    remediation: str | None
