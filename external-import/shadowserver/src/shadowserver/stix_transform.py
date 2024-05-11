@@ -1,9 +1,11 @@
 import logging
+import copy
+import base64
 from datetime import datetime
-from stix2 import MarkingDefinition, Identity
+from stix2 import MarkingDefinition, Identity, Artifact
 from pycti import OpenCTIConnectorHelper, Identity as pycti_identity
 import magic
-from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dict_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence
+from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dict_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,6 +20,10 @@ class ShadowServerStixTransformation:
         self.labels = labels
         self.stix_objects = []
         self.object_refs = []
+        self.custom_properties = {}
+        self.external_reference = None
+        self.author_id = None
+
         self.published = self.get_published_date(report_list)
         self.marking_refs = [marking_refs] if isinstance(marking_refs, MarkingDefinition) else []
         self.create_stix_objects()
@@ -27,7 +33,7 @@ class ShadowServerStixTransformation:
         self.default_labels_id = self.create_labels(self.labels)
         self.create_author()
         self.create_external_reference()
-        # self.create_report()
+        self.create_report()
 
     def handle_stix_object_creation(self, key:str, create_method, element:dict, labels:list = []):
         value = element.get(key)
@@ -64,14 +70,12 @@ class ShadowServerStixTransformation:
         return self.stix_objects
     
     def create_external_reference(self):
-        self.helper.log_debug(f"Creating external reference: {self.url}")
-        kwargs = {
+        self.helper.log_info(f"Creating external reference: ({self.url}).")
+        self.external_reference = {
             "source_name": "source",
             "description": "ShadowServer Report",
             "url": f"{self.url}",
         }
-        external_ref = self.helper.api.external_reference.create(**kwargs)
-        self.external_ref_id = external_ref.get('id')
     
     def create_opencti_case(self):
         self.helper.log_debug(f"Creating OpenCTI case: {self.report.get('id')}")
@@ -91,15 +95,52 @@ class ShadowServerStixTransformation:
         opencti_obj = self.helper.api.case_incident.create(**kwargs)
         self.case_id = opencti_obj.get('id')
         self.object_refs.append(self.case_id)
+    
+    def upload_stix2_artifact(self, report_list):
+        self.helper.log_debug(f"Uploading ShadowServer report as artifact.")
+        csv_str_enc = from_list_to_csv(report_list).encode()
+        mime_type = magic.from_buffer(csv_str_enc, mime=True)
+        base64_encoded_str = base64.b64encode(csv_str_enc).decode('utf-8')
+
+        kwargs = {
+            "payload_bin": base64_encoded_str,
+            "mime_type": mime_type,
+            "type": "artifact",
+            "hashes": calculate_hashes(csv_str_enc),
+        }
+
+        self.helper.log_info(f"Uploading ShadowServer report as artifact: {self.report}.")
+
+        # Add custom properties
+        custom_properties = copy.deepcopy(self.custom_properties)
+        custom_properties["x_opencti_description"] = f"ShadowServer Report Type ({self.type}) Report ID ({self.report.get('id')})"
+        custom_properties["x_opencti_additional_names"] = [self.report.get('file', 'default_file_name.csv')]
+        custom_properties["x_opencti_score"] = 0 # Set score to 0 due to trusted source.
+        custom_properties["created_by_ref"] = self.author_id
+        custom_properties["external_references"] = [self.external_reference]
+
+        # Add custom properties and marking definition
+        if self.custom_properties:
+            kwargs.update(custom_properties=custom_properties)
+        if self.marking_refs:
+            kwargs.update(object_marking_refs=self.marking_refs)
+
+        artifact = Artifact(**kwargs)
+
+        if artifact.get('id'):
+            self.artifact_id = artifact.get('id')
+            self.stix_objects.append(artifact)
+
 
     def create_report(self):
         self.helper.log_debug(f"Creating report: {self.report.get('id')}")
         description = []
-        self.upload_opencti_artifact(self.report_list)
-        for element in self.report_list:
-            description.append(dict_to_markdown(element))
-            self.map_to_stix(element)
-        self.create_opencti_case()
+        self.upload_stix2_artifact(self.report_list)
+        # TODO: Creat OpenCTI case
+        # for element in self.report_list:
+        #     description.append(dict_to_markdown(element))
+        #     self.map_to_stix(element)
+        # self.create_opencti_case()
         
         # TODO: Create Report? 
         # self.stix_report = Report(
@@ -156,53 +197,43 @@ class ShadowServerStixTransformation:
 
     def create_labels(self, labels:list):
         """Creates labels in OpenCTI."""
-        self.helper.log_debug(f"Creating labels: {labels}")
-        label_ids = []
-        for label_str in labels:
-            label = self.helper.api.label.create(value=label_str)
-            if label and label.get('id'):
-                self.helper.log_debug(f"Created label: {label.get('id')}")
-                label_ids.append(label.get('id'))
-        return label_ids
+        if labels:
+            self.helper.log_debug(f"Creating labels: {labels}")
+            self.custom_properties["x_opencti_labels"] = labels
+        else:
+            self.helper.log_debug("No labels to create.")
 
     def create_author(self):
         """Creates the author of the report."""
         self.helper.log_debug(f"Creating author: ShadowServer Connector")
         """Creates ShadowServer Author"""
         kwargs = {
+            "id": pycti_identity.generate_id("ShadowServer Connector", "Organization"),
             "name": "ShadowServer Connector",
-            "type": "Organization",
+            "identity_class": "Organization",
+            "type": "identity",
             "description": "ShadowServer Connector",
+            "sectors": "non-profit",
         }
-        # Create the author in OpenCTI
-        opencti_obj = self.helper.api.identity.create(**kwargs)
-        self.helper.log_debug(f"Created author: {opencti_obj.get('id')}")
-        # Add marking definition
-        self.add_marking_definition(opencti_obj)
-        # Add default labels
-        self.add_default_labels(opencti_obj)
-        # Set the author ID
-        self.author_id = opencti_obj.get('id')
 
-    def upload_opencti_artifact(self, report_list:list):
-        self.helper.log_debug(f"Uploading ShadowServer report as artifact.")
-        csv_str_enc = from_list_to_csv(report_list).encode()
-        mime_type = magic.from_buffer(csv_str_enc, mime=True)
-        kwargs = {
-            "file_name": self.report.get('file', 'default_file_name.csv'),
-            "data": csv_str_enc,
-            "mime_type": mime_type,
-            "x_opencti_description": f"ShadowServer Report Type ({self.type}) Report ID ({self.report.get('id')})",
-        }
-        stix_artifact = self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
+        # Add custom properties and marking definition
+        if self.custom_properties:
+            # Add custom properties to the author.
+            customer_properties = copy.deepcopy(self.custom_properties)
+            customer_properties["x_opencti_reliability"] = "A - Completely reliable" # TODO: Make it configurable
+            customer_properties["x_opencti_organization_type"] = "non-profit"
+            kwargs.update(custom_properties=customer_properties)
+        if self.marking_refs:
+            kwargs.update(object_marking_refs=self.marking_refs)
 
-        if stix_artifact and stix_artifact.get('id'):
-            self.object_refs.append(stix_artifact.get('id'))
+        # Create author
+        author = Identity(
+            **kwargs
+            )
 
-        # Add marking definition
-        self.add_marking_definition(stix_artifact)
-        # Add default labels
-        self.add_default_labels(stix_artifact)
+        if author.get('id'):
+            self.author_id = author.get('id')
+            self.stix_objects.append(author)
 
     def map_to_stix(self, element):
         # Define a mapping of object types to their creation functions

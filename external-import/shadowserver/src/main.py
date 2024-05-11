@@ -18,7 +18,6 @@ class CustomConnector(ExternalImportConnector):
         self.marking = os.environ.get("SHADOWSERVER_MARKING", None)
         # TODO: Add interval (Look back X days).
 
-
     def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
 
@@ -28,7 +27,7 @@ class CustomConnector(ExternalImportConnector):
 
         Returns:
             stix_objects: A list of STIX2 objects."""
-        self.helper.log_debug(
+        self.helper.log_info(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
         stix_objects = []
@@ -41,19 +40,27 @@ class CustomConnector(ExternalImportConnector):
             api_secret=self.api_secret,
             marking_refs=self.marking,
         )
-        report_list = shadowserver_api.get_report_list(date='2024-01-12')
 
-        for report in report_list:
-            report_stix_objects = shadowserver_api.get_stix_report(
-                    report=report,
-                    api_helper=self.helper,
-                )
-            stix_objects.extend(
-                report_stix_objects
-            )
-            for stix_object in report_stix_objects:
-                if not stix_object:
-                    raise ValueError(f"No STIX object found {report}.")
+        # Get support Report types
+        subscription_list = shadowserver_api.get_subscriptions()
+        self.helper.log_info(f"Available report types: {subscription_list}.")
+
+        for subscription in subscription_list:
+            # TODO: Need to handle date, potentially also address paging for lists? 
+            report_list = shadowserver_api.get_report_list(date='2024-05-08', type=subscription)
+
+            self.helper.log_debug(f"Found {len(report_list)} reports.")
+            for report in report_list:
+                report_stix_objects = shadowserver_api.get_stix_report(
+                        report=report,
+                        api_helper=self.helper,
+                    )
+                
+                # Filter out duplicates and append to stix_objects.
+                for stix_object in report_stix_objects:
+                    if stix_object not in stix_objects and stix_object:
+                        stix_objects.append(stix_object)
+
         # ===========================
         # === Add your code above ===
         # ===========================

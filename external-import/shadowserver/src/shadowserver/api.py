@@ -128,8 +128,7 @@ class ShadowServerAPI:
 
         return None
 
-    
-    def get_report_list(self, date:str=None):
+    def get_report_list(self, date:str=None, limit: int = 1000, reports: list = None, type:str = None) -> dict:
         """Submit API request, iterate through response, update attributes."""
         try:
             if not validate_date_format(date):
@@ -137,7 +136,12 @@ class ShadowServerAPI:
                 raise ValueError(f"Invalid date format: {date}")
             request = {
                 'date': date,
+                'limit': limit,
             }
+            if reports:
+                request['reports'] = reports
+            if type:
+                request['type'] = type
             response = self._request(uri_path='reports/list', request=request)
             return response
         except ValueError as e:
@@ -201,11 +205,13 @@ class ShadowServerAPI:
         """
         if report.get('id') and report.get('report'):
             # Get the report list using the provided report ID, report type, and limit
+            LOGGER.debug(f"Getting report: {report.get('id')}, {report.get('report')}, {limit}")
             report_list = self.get_report(report_id=report.get('id'), report=report.get('report'), limit=limit)
         else:
             raise ValueError(f"Invalid report: {report}")
 
         # If the report list is not empty, transform it using the ShadowServerStixTransformation class
+        LOGGER.debug(f"Report list length: {len(report_list)}")
         if report_list:
             stix_transformation = ShadowServerStixTransformation(
                 marking_refs=self.marking_refs,

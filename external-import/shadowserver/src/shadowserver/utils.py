@@ -3,9 +3,20 @@ from .constants import (
     TLP_MAP,
 )
 import pandas as pd
+import hashlib
 from datetime import datetime
 from stix2 import parse, properties
 from stix2.base import _Observable as Observable
+
+# Function to calculate different hashes
+def calculate_hashes(data):
+    hashes = {
+        "MD5": hashlib.md5(data).hexdigest(),
+        "SHA-1": hashlib.sha1(data).hexdigest(),
+        "SHA-256": hashlib.sha256(data).hexdigest(),
+        "SHA-512": hashlib.sha512(data).hexdigest()
+    }
+    return hashes
 
 def validate_date_format(date_string):
     """
