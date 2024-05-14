@@ -104,7 +104,10 @@ class ExportFileStix:
                 },
             )
             self.helper.api.stix_domain_object.push_entity_export(
-                entity_id, file_name, json_bundle, file_markings
+                entity_id=entity_id,
+                file_name=file_name,
+                data=json_bundle,
+                file_markings=file_markings,
             )
             self.helper.connector_logger.info(
                 "Export done",

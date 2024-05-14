@@ -229,7 +229,10 @@ class ExportFileCsv:
                 },
             )
             self.helper.api.stix_domain_object.push_entity_export(
-                entity_id, file_name, csv_data, file_markings
+                entity_id=entity_id,
+                file_name=file_name,
+                data=csv_data,
+                file_markings=file_markings,
             )
             self.helper.connector_logger.info(
                 "Export done",
@@ -272,7 +275,7 @@ class ExportFileCsv:
                 filter_groups.append(access_filter)
             export_query_filter = {
                 "mode": "and",
-                "filter_groups": filter_groups,
+                "filterGroups": filter_groups,
                 "filters": [],
             }
 

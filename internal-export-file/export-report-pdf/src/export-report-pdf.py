@@ -233,7 +233,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            report_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=report_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _process_intrusion_set(self, entity_id, file_name, file_markings):
@@ -330,7 +334,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _process_threat_actor_group(self, entity_id, file_name, file_markings):
@@ -427,7 +435,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _process_threat_actor_individual(self, entity_id, file_name, file_markings):
@@ -524,7 +536,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _process_case(
@@ -652,7 +668,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _set_colors(self):
