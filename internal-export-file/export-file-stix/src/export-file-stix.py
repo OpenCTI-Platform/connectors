@@ -134,8 +134,8 @@ class ExportFileStix:
                     entity_type,
                     list_params.get("search"),
                     list_params.get("filters"),
-                    list_params["orderBy"],
-                    list_params["orderMode"],
+                    list_params.get("orderBy"),
+                    list_params.get("orderMode"),
                     export_type,
                     main_filter,
                     access_filter,
@@ -146,6 +146,7 @@ class ExportFileStix:
             self.helper.connector_logger.info(
                 "Uploading",
                 {
+                    "entity_type": entity_type,
                     "entity_type": entity_type,
                     "export_type": export_type,
                     "file_name": file_name,
