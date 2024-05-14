@@ -2,7 +2,7 @@
 """OpenCTI Malpedia connector main module."""
 import time
 
-from connector import MalpediaConnector
+from malpedia_connector import MalpediaConnector
 
 if __name__ == "__main__":
     try:
