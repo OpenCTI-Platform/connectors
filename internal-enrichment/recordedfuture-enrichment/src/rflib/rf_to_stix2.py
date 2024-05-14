@@ -259,11 +259,13 @@ class TTP(RFStixEntity):
                 filters=attack_pattern_filter
             )
             if opencti_attack_pattern and "id" in opencti_attack_pattern:
-                opencti_stix_object = self.helper.api.stix2.export_entity(
-                    "Attack-Pattern",
-                    opencti_attack_pattern.get("id"),
-                    "simple",
-                    only_entity=True,
+                opencti_stix_object = (
+                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                        entity_type="Attack-Pattern",
+                        entity_id=opencti_attack_pattern.get("id"),
+                        mode="simple",
+                        only_entity=True,
+                    )
                 )
                 keys_list = ["id", "name", "x_mitre_id"]
                 if (

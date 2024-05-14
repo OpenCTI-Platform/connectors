@@ -65,7 +65,10 @@ This is a sample markdown file.
         # Upload the ouptut contents
         self.helper.log_info(f"Uploading file as '{file_name}'...")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, contents, "text/markdown"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=contents,
+            file_markings="text/markdown",
         )
 
 

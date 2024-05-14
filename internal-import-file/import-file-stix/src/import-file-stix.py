@@ -83,8 +83,10 @@ class ImportFileStix:
 
     def _update_container(self, bundle: List, entity_id: int) -> List:
         container = self.helper.api.stix_domain_object.read(id=entity_id)
-        container_stix_bundle = self.helper.api.stix2.export_entity(
-            container["entity_type"], container["id"]
+        container_stix_bundle = (
+            self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type=container["entity_type"], entity_id=container["id"]
+            )
         )
         if len(container_stix_bundle["objects"]) > 0:
             container_stix = [

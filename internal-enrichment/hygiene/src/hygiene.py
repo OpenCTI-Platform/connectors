@@ -230,8 +230,12 @@ class HygieneConnector:
 
                 # Add indicators
                 for indicator_id in opencti_entity["indicatorsIds"]:
-                    stix_indicator = self.helper.api.stix2.export_entity(
-                        "Indicator", indicator_id, only_entity=True
+                    stix_indicator = (
+                        self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                            entity_type="Indicator",
+                            entity_id=indicator_id,
+                            only_entity=True,
+                        )
                     )
 
                     # Add labels
