@@ -164,12 +164,14 @@ class ExportFileCsv:
 
             # Fetch the base element
             # No usage of any filter because user ask directly for this specific export
-            readers = self.helper.api.get_readers()
+            readers = self.helper.api.stix2.get_readers()
             do_read = readers.get(
                 entity_type,
-                lambda **kwargs: self.helper.api.unknown_type({"type": entity_type}),
+                lambda **kwargs: self.helper.api.stix2.unknown_type(
+                    {"type": entity_type}
+                ),
             )
-            entity_data = do_read(entity_id=entity_id)
+            entity_data = do_read(id=entity_id)
             # If the entity is not found, raise on error
             # This is not something that should happen. Rare case of concurrent deletion or rights modification
             if entity_data is None:

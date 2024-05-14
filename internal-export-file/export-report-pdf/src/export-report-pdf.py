@@ -179,8 +179,14 @@ class ExportReportPdf:
             object_ids.append(report_obj["id"])
 
         if len(object_ids) != 0:
-            export_filter = self._get_access_filter(object_ids, access_filter)
-            entities_list = self._process_entities_list(export_filter)
+            export_filter = self.helper.api.stix2.prepare_id_filters_export(
+                object_ids, access_filter
+            )
+            entities_list = (
+                self.helper.api.opencti_stix_object_or_stix_relationship.list(
+                    filters=export_filter
+                )
+            )
 
             for entity in entities_list:
                 obj_entity_type = entity["entity_type"]
@@ -591,8 +597,14 @@ class ExportReportPdf:
             object_ids.append(case_obj["id"])
 
         if len(object_ids) != 0:
-            export_filter = self._get_access_filter(object_ids, access_filter)
-            entities_list = self._process_entities_list(export_filter)
+            export_filter = self.helper.api.stix2.prepare_id_filters_export(
+                object_ids, access_filter
+            )
+            entities_list = (
+                self.helper.api.opencti_stix_object_or_stix_relationship.list(
+                    filters=export_filter
+                )
+            )
 
             # Process each STIX Object
             for entity in entities_list:
@@ -671,39 +683,6 @@ class ExportReportPdf:
         Used for rendering jinja2 template to supress None
         """
         return data if data is not None else "N/A"
-
-    @staticmethod
-    def _get_access_filter(object_ids_list, access_filter):
-        return {
-            "mode": "and",
-            "filterGroups": [
-                {
-                    "mode": "or",
-                    "filters": [
-                        {
-                            "key": "id",
-                            "values": object_ids_list,
-                        }
-                    ],
-                    "filterGroups": [],
-                },
-                access_filter,
-            ],
-            "filters": [],
-        }
-
-    def _process_entities_list(self, export_filter):
-        entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
-            filters=export_filter
-        )
-        entity_data_sco = self.helper.api_impersonate.stix_cyber_observable.list(
-            filters=export_filter
-        )
-        entity_data_scr = self.helper.api_impersonate.stix_core_relationship.list(
-            filters=export_filter
-        )
-
-        return entity_data_sdo + entity_data_sco + entity_data_scr
 
     def _get_reader(self, entity_type):
         """
