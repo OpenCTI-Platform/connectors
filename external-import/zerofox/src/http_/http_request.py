@@ -6,14 +6,14 @@ import requests
 # first-party
 from http_.exceptions import ApiResponseException
 
-TIMEOUT = 10.0
+TIMEOUT = 60.0
 
 
 def http_request(
     method,
     url: str,
     ok_code: int,
-    timeout: int = TIMEOUT,
+    timeout: float = TIMEOUT,
     **kwargs,
 ):
     """Wrap request method for handling status codes."""
