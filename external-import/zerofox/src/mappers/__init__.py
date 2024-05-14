@@ -1,12 +1,12 @@
 from typing import Any
 
+from mappers.botnetToInfrastructure import botnet_to_infrastructure
 from mappers.c2DomainsToInfrastructure import c2_domains_to_infrastructure
 from mappers.exploitToTool import exploit_to_tool
 from mappers.malwareToMalware import malware_to_malware
 from mappers.phishingToInfrastructure import phishing_to_infrastructure
 from mappers.ransomwareToMalware import ransomware_to_malware
 from mappers.vulnerabilityToVulnerability import vulnerability_to_vulnerability
-from mappers.botnetToInfrastructure import botnet_to_infrastructure
 from zerofox.app.endpoints import CTIEndpoint
 
 
