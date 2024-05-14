@@ -201,8 +201,10 @@ class ReportImporter:
                             f"found. Is the CVE Connector activated?"
                         )
                         continue
-                    entity_stix_bundle = self.helper.api.stix2.export_entity(
-                        entity["entity_type"], entity["id"]
+                    entity_stix_bundle = (
+                        self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                            entity_type=entity["entity_type"], entity_id=entity["id"]
+                        )
                     )
                     if len(entity_stix_bundle["objects"]) == 0:
                         raise ValueError("Entity cannot be found or exported")
@@ -232,8 +234,10 @@ class ReportImporter:
                             f"found. Is the MITRE Connector activated?"
                         )
                         continue
-                    entity_stix_bundle = self.helper.api.stix2.export_entity(
-                        entity["entity_type"], entity["id"]
+                    entity_stix_bundle = (
+                        self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                            entity_type=entity["entity_type"], entity_id=entity["id"]
+                        )
                     )
                     if len(entity_stix_bundle["objects"]) == 0:
                         raise ValueError("Entity cannot be found or exported")
@@ -365,8 +369,10 @@ class ReportImporter:
                     x[:1].upper() + x[1:]
                     for x in match[RESULT_FORMAT_CATEGORY].split("_")
                 )
-                entity_stix_bundle = self.helper.api.stix2.export_entity(
-                    stix_type, match[RESULT_FORMAT_MATCH]
+                entity_stix_bundle = (
+                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                        entity_type=stix_type, entity_id=match[RESULT_FORMAT_MATCH]
+                    )
                 )
                 if len(entity_stix_bundle["objects"]) == 0:
                     raise ValueError("Entity cannot be found or exported")
@@ -420,8 +426,10 @@ class ReportImporter:
                 entities_ids.append(e["id"])
                 ids.append(e["id"])
         if entity is not None:
-            entity_stix_bundle = self.helper.api.stix2.export_entity(
-                entity["entity_type"], entity["id"]
+            entity_stix_bundle = (
+                self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                    entity_type=entity["entity_type"], entity_id=entity["id"]
+                )
             )
             if len(entity_stix_bundle["objects"]) == 0:
                 raise ValueError("Entity cannot be found or exported")
