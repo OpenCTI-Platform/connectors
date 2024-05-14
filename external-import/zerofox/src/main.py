@@ -7,7 +7,8 @@ from typing import Any, List
 import stix2
 from lib.external_import import ExternalImportConnector
 from mappers import threat_feed_to_stix
-from zerofox.app import CTIEndpoint, ZeroFox
+from zerofox.app.endpoints import CTIEndpoint
+from zerofox.app.zerofox import ZeroFox
 
 ZEROFOX_REFERENCE = stix2.ExternalReference(
     source_name="ZeroFox Threat Intelligence",

@@ -1,15 +1,13 @@
 # standard library
 from enum import Enum
 
-from zerofox.domain import (
-    Botnet,
-    C2Domain,
-    Exploit,
-    Malware,
-    Phishing,
-    Ransomware,
-    Vulnerability,
-)
+from zerofox.domain.botnet import Botnet
+from zerofox.domain.c2Domains import C2Domain
+from zerofox.domain.exploits import Exploit
+from zerofox.domain.malware import Malware
+from zerofox.domain.phishing import Phishing
+from zerofox.domain.ransomware import Ransomware
+from zerofox.domain.vulnerabilities import Vulnerability
 
 
 class CTIEndpoint(Enum):

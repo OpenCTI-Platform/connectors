@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, Generator
 
 # first-party
-from http_ import http_request
+from http_.http_request import http_request
 from zerofox.app.endpoints import CTIEndpoint
 
 
