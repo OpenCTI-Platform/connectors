@@ -179,8 +179,14 @@ class ExportReportPdf:
             object_ids.append(report_obj["id"])
 
         if len(object_ids) != 0:
-            export_filter = self._get_access_filter(object_ids, access_filter)
-            entities_list = self._process_entities_list(export_filter)
+            export_filter = self.helper.api.stix2.prepare_id_filters_export(
+                object_ids, access_filter
+            )
+            entities_list = (
+                self.helper.api.opencti_stix_object_or_stix_relationship.list(
+                    filters=export_filter
+                )
+            )
 
             for entity in entities_list:
                 obj_entity_type = entity["entity_type"]
@@ -227,7 +233,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            report_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=report_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _process_intrusion_set(self, entity_id, file_name, file_markings):
@@ -251,8 +261,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the intrusion set
-        intrusion_set_objs = self.helper.api_impersonate.stix2.export_entity(
-            "Intrusion-Set", entity_id, "full"
+        intrusion_set_objs = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Intrusion-Set", entity_id=entity_id, mode="full"
+            )
         )
 
         for intrusion_set_obj in intrusion_set_objs["objects"]:
@@ -322,7 +334,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _process_threat_actor_group(self, entity_id, file_name, file_markings):
@@ -346,8 +362,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor group
-        bundle = self.helper.api_impersonate.stix2.export_entity(
-            "Threat-Actor-Group", entity_id, "full"
+        bundle = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Threat-Actor-Group", entity_id=entity_id, mode="full"
+            )
         )
 
         for bundle_obj in bundle["objects"]:
@@ -417,7 +435,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _process_threat_actor_individual(self, entity_id, file_name, file_markings):
@@ -441,8 +463,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor individual
-        bundle = self.helper.api_impersonate.stix2.export_entity(
-            "Threat-Actor-Individual", entity_id, "full"
+        bundle = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Threat-Actor-Individual", entity_id=entity_id, mode="full"
+            )
         )
 
         for bundle_obj in bundle["objects"]:
@@ -512,7 +536,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _process_case(
@@ -585,8 +613,14 @@ class ExportReportPdf:
             object_ids.append(case_obj["id"])
 
         if len(object_ids) != 0:
-            export_filter = self._get_access_filter(object_ids, access_filter)
-            entities_list = self._process_entities_list(export_filter)
+            export_filter = self.helper.api.stix2.prepare_id_filters_export(
+                object_ids, access_filter
+            )
+            entities_list = (
+                self.helper.api.opencti_stix_object_or_stix_relationship.list(
+                    filters=export_filter
+                )
+            )
 
             # Process each STIX Object
             for entity in entities_list:
@@ -634,7 +668,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, file_markings, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _set_colors(self):
@@ -665,39 +703,6 @@ class ExportReportPdf:
         Used for rendering jinja2 template to supress None
         """
         return data if data is not None else "N/A"
-
-    @staticmethod
-    def _get_access_filter(object_ids_list, access_filter):
-        return {
-            "mode": "and",
-            "filterGroups": [
-                {
-                    "mode": "or",
-                    "filters": [
-                        {
-                            "key": "id",
-                            "values": object_ids_list,
-                        }
-                    ],
-                    "filterGroups": [],
-                },
-                access_filter,
-            ],
-            "filters": [],
-        }
-
-    def _process_entities_list(self, export_filter):
-        entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
-            filters=export_filter
-        )
-        entity_data_sco = self.helper.api_impersonate.stix_cyber_observable.list(
-            filters=export_filter
-        )
-        entity_data_scr = self.helper.api_impersonate.stix_core_relationship.list(
-            filters=export_filter
-        )
-
-        return entity_data_sdo + entity_data_sco + entity_data_scr
 
     def _get_reader(self, entity_type):
         """
