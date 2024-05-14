@@ -1,6 +1,13 @@
 from typing import List, Union
 
-from stix2 import URL, AutonomousSystem, Infrastructure, IPv4Address, Relationship, X509Certificate
+from stix2 import (
+    URL,
+    AutonomousSystem,
+    Infrastructure,
+    IPv4Address,
+    Relationship,
+    X509Certificate,
+)
 from zerofox.domain import Phishing
 
 
