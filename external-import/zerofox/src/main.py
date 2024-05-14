@@ -16,12 +16,6 @@ ZEROFOX_REFERENCE = stix2.ExternalReference(
     description="ZeroFox provides comprehensive, accurate, and timely intelligence bundles through its API.",
 )
 
-ZEROFOX_REFERENCE = stix2.ExternalReference(
-    source_name="ZeroFox Threat Intelligence",
-    url="https://www.zerofox.com/threat-intelligence/",
-    description="ZeroFox provides comprehensive, accurate, and timely intelligence bundles through its API.",
-)
-
 
 class ZeroFoxConnector(ExternalImportConnector):
     def __init__(self):
