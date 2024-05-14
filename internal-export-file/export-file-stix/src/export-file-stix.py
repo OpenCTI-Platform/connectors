@@ -90,7 +90,10 @@ class ExportFileStix:
                 },
             )
             bundle = self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
-                entity_type=entity_type, entity_id=entity_id, mode=export_type, access_filter=access_filter
+                entity_type=entity_type,
+                entity_id=entity_id,
+                mode=export_type,
+                access_filter=access_filter,
             )
             json_bundle = json.dumps(bundle, indent=4)
             self.helper.connector_logger.info(

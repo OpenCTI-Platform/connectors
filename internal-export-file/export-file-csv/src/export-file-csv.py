@@ -166,7 +166,8 @@ class ExportFileCsv:
             # No usage of any filter because user ask directly for this specific export
             readers = self.helper.api.get_readers()
             do_read = readers.get(
-                entity_type, lambda **kwargs: self.helper.api.unknown_type({"type": entity_type})
+                entity_type,
+                lambda **kwargs: self.helper.api.unknown_type({"type": entity_type}),
             )
             entity_data = do_read(entity_id=entity_id)
             # If the entity is not found, raise on error

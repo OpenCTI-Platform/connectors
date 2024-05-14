@@ -251,8 +251,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the intrusion set
-        intrusion_set_objs = self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
-            entity_type="Intrusion-Set", entity_id=entity_id, mode="full"
+        intrusion_set_objs = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Intrusion-Set", entity_id=entity_id, mode="full"
+            )
         )
 
         for intrusion_set_obj in intrusion_set_objs["objects"]:
@@ -346,8 +348,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor group
-        bundle = self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
-            entity_type="Threat-Actor-Group", entity_id=entity_id, mode="full"
+        bundle = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Threat-Actor-Group", entity_id=entity_id, mode="full"
+            )
         )
 
         for bundle_obj in bundle["objects"]:
@@ -441,8 +445,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor individual
-        bundle = self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
-            entity_type="Threat-Actor-Individual", entity_id=entity_id, mode="full"
+        bundle = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Threat-Actor-Individual", entity_id=entity_id, mode="full"
+            )
         )
 
         for bundle_obj in bundle["objects"]:
