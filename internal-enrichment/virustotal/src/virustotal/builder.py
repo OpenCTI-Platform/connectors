@@ -86,18 +86,20 @@ class VirusTotalBuilder:
             raise ValueError(
                 "Cannot compute score. VirusTotal may have no record of the observable or it is currently being processed"
             ) from err
-        opencti_score = (
-            self.stix_entity["x_opencti_score"]
-            if "x_opencti_score" in self.stix_entity
-            else self.helper.api.get_attribute_in_extension("score", self.stix_entity)
+
+        observable = self.helper.api.stix_cyber_observable.read(
+            id=self.stix_entity["id"]
         )
-        if opencti_score is not None and not self.replace_with_lower_score:
-            if vt_score < opencti_score:
-                self.create_note(
-                    "VirusTotal Score",
-                    f"```\n{vt_score}\n```",
-                )
-                return opencti_score
+        if observable is not None:
+            if "x_opencti_score" in observable:
+                opencti_score = observable["x_opencti_score"]
+
+                if vt_score < opencti_score and not self.replace_with_lower_score:
+                    self.create_note(
+                        "VirusTotal Score",
+                        f"```\n{vt_score}\n```",
+                    )
+                    return opencti_score
         return vt_score
 
     def create_asn_belongs_to(self):
