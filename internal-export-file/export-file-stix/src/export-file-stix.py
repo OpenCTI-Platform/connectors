@@ -147,7 +147,6 @@ class ExportFileStix:
                 "Uploading",
                 {
                     "entity_type": entity_type,
-                    "entity_type": entity_type,
                     "export_type": export_type,
                     "file_name": file_name,
                 },
