@@ -6,7 +6,7 @@ from typing import Any, Dict, Generator, List, Optional
 
 from .builder import ActorBundleBuilder
 from ..importer import BaseImporter
-from ..utils import datetime_to_timestamp, paginate, timestamp_to_datetime
+from crowdstrike_feeds_services.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 from crowdstrike_client.api.intel.actors import Actors
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.actor import Actor

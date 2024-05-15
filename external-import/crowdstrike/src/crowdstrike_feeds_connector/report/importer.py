@@ -6,7 +6,7 @@ from typing import Any, Dict, Generator, List, Mapping, Optional
 
 from ..importer import BaseImporter
 from .builder import ReportBundleBuilder
-from ..utils import (
+from crowdstrike_feeds_services.utils import (
     create_file_from_download,
     datetime_to_timestamp,
     paginate,

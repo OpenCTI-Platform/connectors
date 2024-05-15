@@ -4,7 +4,7 @@
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
-from ..utils import (
+from crowdstrike_feeds_services.utils import (
     create_indicates_relationships,
     create_indicator,
     create_intrusion_sets_from_names,
@@ -13,8 +13,8 @@ from ..utils import (
     create_stix2_report_from_report,
     create_uses_relationships,
 )
-from ..utils.report_fetcher import FetchedReport
-from ..utils.yara_parser import YaraRule
+from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
+from crowdstrike_feeds_services.utils.yara_parser import YaraRule
 from crowdstrike_client.api.models.report import Report
 from stix2 import (
     Bundle,

@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike connector main module."""
 import time
 
-from crowdstrike import CrowdStrike
+from crowdstrike_feeds_connector import CrowdStrike
 
 if __name__ == "__main__":
     """

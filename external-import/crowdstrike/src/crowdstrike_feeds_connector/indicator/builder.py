@@ -4,7 +4,7 @@
 import logging
 from typing import List, Mapping, NamedTuple, Optional, Set
 
-from ..utils import (
+from crowdstrike_feeds_services.utils import (
     DEFAULT_X_OPENCTI_SCORE,
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,

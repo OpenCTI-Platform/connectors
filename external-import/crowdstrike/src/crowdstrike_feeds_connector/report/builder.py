@@ -4,7 +4,7 @@
 import logging
 from typing import List, Mapping, Optional, Tuple, Union
 
-from ..utils import (
+from crowdstrike_feeds_services.utils import (
     create_external_reference,
     create_intrusion_set_from_name,
     create_malware,

@@ -14,14 +14,14 @@ from .indicator.importer import IndicatorImporter, IndicatorImporterConfig
 from .report.importer import ReportImporter
 from .rule.snort_suricata_master_importer import SnortMasterImporter
 from .rule.yara_master_importer import YaraMasterImporter
-from .utils import (
+from crowdstrike_feeds_services.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
     is_timestamp_in_future,
     timestamp_to_datetime,
 )
-from .utils.constants import DEFAULT_TLP_MARKING_DEFINITION
+from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 from crowdstrike_client.client import CrowdStrikeClient
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore

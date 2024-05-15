@@ -4,13 +4,13 @@
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
-from ..utils import (
+from crowdstrike_feeds_services.utils import (
     create_indicator,
     create_object_refs,
     create_stix2_report_from_report,
 )
-from ..utils.report_fetcher import FetchedReport
-from ..utils.snort_parser import SnortRule
+from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
+from crowdstrike_feeds_services.utils.snort_parser import SnortRule
 from crowdstrike_client.api.models.report import Report
 from stix2 import Bundle, Identity, Indicator, MarkingDefinition
 from stix2 import Report as STIXReport  # type: ignore
