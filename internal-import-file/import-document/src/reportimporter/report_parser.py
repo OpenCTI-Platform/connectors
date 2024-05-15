@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 from typing import IO, Dict, List, Pattern, Tuple
 
 import chardet
@@ -129,17 +130,21 @@ class ReportParser(object):
             parse_info.update(self._parse(text))
         return parse_info
 
-    def run_parser(self, file_data: IO, file_type: str) -> List[Dict]:
+    def run_parser(self, file_path: str, file_type: str) -> List[Dict]:
         parsing_results = []
 
         file_parser = self.supported_file_types.get(file_type, None)
         if not file_parser:
             raise NotImplementedError(f"No parser available for file type {file_type}")
 
-        self.helper.log_info(f"Parsing report as {file_type}")
+        if not os.path.isfile(file_path):
+            raise IOError(f"File path is not a file: {file_path}")
+
+        self.helper.log_info(f"Parsing report {file_path} {file_type}")
 
         try:
-            parsing_results = file_parser(file_data)
+            with open(file_path, "rb") as file_data:
+                parsing_results = file_parser(file_data)
         except Exception as e:
             logging.exception(f"Parsing Error: {e}")
 
