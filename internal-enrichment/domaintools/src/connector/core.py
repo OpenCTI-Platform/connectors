@@ -3,6 +3,7 @@
 
 from datetime import datetime
 from pathlib import Path
+from typing import Dict
 
 import domaintools
 import stix2
@@ -242,15 +243,8 @@ class DomainToolsConnector:
         self.helper.metric.state("idle")
         return result
 
-    def _process_message(self, data):
-        opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
-        )
-        if opencti_entity is None:
-            raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
-            )
-        result = self.helper.get_data_from_enrichment(data, opencti_entity)
+    def _process_message(self, data: Dict):
+        opencti_entity = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -263,8 +257,9 @@ class DomainToolsConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
-        return self._process_file(result["stix_objects"], opencti_entity)
+        stix_objects = data["stix_objects"]
+        return self._process_file(stix_objects, opencti_entity)
 
     def start(self):
         """Start the main loop."""
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)

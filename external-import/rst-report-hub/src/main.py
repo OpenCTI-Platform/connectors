@@ -60,40 +60,16 @@ class ReportHub:
         # Parse the STIX bundle
         parsed_bundle = json.loads(stix_bundle)
         stix_bundle_main = []
-        stix_bundle_base = []
-        stix_bundle_relationships = []
-
-        # Find the STIX report entry in the bundle, orgs and then
-        # split main objects from other objects and relationships
         for entry in parsed_bundle.get("objects", []):
-            t = entry.get("type")
-            if t == "relationship":
-                stix_bundle_relationships.append(entry)
-            elif t == "report" or t == "identity":
-                # Update the specified parameters
-                if x_opencti_file:
-                    entry["x_opencti_files"] = [x_opencti_file]
-                stix_bundle_main.append(entry)
-            else:
-                stix_bundle_base.append(entry)
+            stix_bundle_main.append(entry)
+            # attach a pdf
+            if x_opencti_file:
+                entry["x_opencti_files"] = [x_opencti_file]
 
         message = "Importing " + report_id.replace("_", " ")
         work_id = self.helper.api.work.initiate_work(self.helper.connect_id, message)
-
-        # first push orgs and reports that reference the orgs
-        if len(stix_bundle_main) > 0:
-            self._send_stix_data(work_id, stix_bundle_main)
-            time.sleep(1)
-        # then push all other objects
-        if len(stix_bundle_base) > 0:
-            self._send_stix_data(work_id, stix_bundle_base)
-            time.sleep(1)
-        # the last task is to push relationships between all of these objects
-        # to minimise errors like "MissingReferenceError" in OpenCTI platform as
-        # messages arrive not in order via a message queue
-        if len(stix_bundle_relationships) > 0:
-            self._send_stix_data(work_id, stix_bundle_relationships)
-        message = f"Processed from RST Report Hub {len(stix_bundle_main)} main objects, {len(stix_bundle_base)} base objects, and {len(stix_bundle_relationships)} relationships"
+        self._send_stix_data(work_id, stix_bundle_main)
+        message = f"Processed {len(stix_bundle_main)} objects from RST Report Hub for {report_id}"
         self.helper.api.work.to_processed(work_id, message)
         self.helper.log_info(message)
         return True
@@ -135,11 +111,11 @@ class ReportHub:
                             "data": base64.b64encode(pdf_report).decode("utf-8"),
                         }
                         self._combine_report_and_send(stix_report, file_pdf, report_id)
-                except requests.exceptions.RequestException:
+                except requests.exceptions.RequestException as ex:
                     self.helper.log_error(
-                        f"Failed to download and save entry {report_id} as PDF."
+                        f"Failed to download and save entry {report_id} as PDF. {ex}"
                     )
-                    self._combine_report_and_send(stix_report, "")
+                    self._combine_report_and_send(stix_report, {}, "")
         return True
 
     def _fetch_stix_reports(self, current_state):

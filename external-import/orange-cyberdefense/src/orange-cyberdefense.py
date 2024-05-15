@@ -131,7 +131,6 @@ def generate_markdown_table(data):
     spam = threat_scores.get("spam", "-")
 
     markdown_str += f"| {ddos} | {fraud} | {hack} | {leak} | {malware} | {phishing} | {scam} | {scan} | {spam} |\n"
-
     markdown_str += "## Threat intelligence sources\n"
     markdown_str += (
         "| source_id | count | first_seen | last_updated | min_depth | max_depth |\n"
@@ -142,11 +141,24 @@ def generate_markdown_table(data):
 
     threat_sources = data.get("x_datalake_sources", [])
 
+    # Sort the threat_sources by 'last_updated' in descending order
+    threat_sources.sort(key=lambda x: x.get("last_updated", ""), reverse=True)
+
     for source in threat_sources:
         source_id = source.get("source_id", "-")
         count = source.get("count", "-")
         first_seen = source.get("first_seen", "-")
+        if first_seen != "-":
+            # Format 'first_seen' to 'YYYY-MM-DD'
+            first_seen = datetime.datetime.fromisoformat(
+                first_seen.rstrip("Z")
+            ).strftime("%Y-%m-%d %H:%M")
         last_updated = source.get("last_updated", "-")
+        if last_updated != "-":
+            # Format 'last_updated' to 'YYYY-MM-DD'
+            last_updated = datetime.datetime.fromisoformat(
+                last_updated.rstrip("Z")
+            ).strftime("%Y-%m-%d %H:%M")
         min_depth = source.get("min_depth", "-")
         max_depth = source.get("max_depth", "-")
 
@@ -182,10 +194,19 @@ class OrangeCyberDefense:
             "OCD_DATALAKE_PASSWORD", ["ocd", "datalake_password"], config
         )
         self.ocd_datalake_zip_file_path = get_config_variable(
-            "OCD_DATALAKE_ZIP_FILE_PATH", ["ocd", "datalake_zip_file_path"], config
+            "OCD_DATALAKE_ZIP_FILE_PATH",
+            ["ocd", "datalake_zip_file_path"],
+            config,
+            default="/opt/opencti-connector-orange-cyberdefense",
+        )
+        self.ocd_vulnerabilities_login = get_config_variable(
+            "OCD_VULNERABILITIES_LOGIN", ["ocd", "vulnerabilities_login"], config
+        )
+        self.ocd_vulnerabilities_password = get_config_variable(
+            "OCD_VULNERABILITIES_PASSWORD", ["ocd", "vulnerabilities_password"], config
         )
         self.ocd_import_worldwatch = get_config_variable(
-            "OCD_IMPORT_WORLDWATCH", ["ocd", "import_worldwatch"], config, False, True
+            "OCD_IMPORT_WORLDWATCH", ["ocd", "import_worldwatch"], config, default=True
         )
         self.ocd_import_worldwatch_start_date = get_config_variable(
             "OCD_IMPORT_WORLDWATCH_START_DATE",
@@ -193,7 +214,7 @@ class OrangeCyberDefense:
             config,
         )
         self.ocd_import_cybercrime = get_config_variable(
-            "OCD_IMPORT_CYBERCRIME", ["ocd", "import_cybercrime"], config, False, True
+            "OCD_IMPORT_CYBERCRIME", ["ocd", "import_cybercrime"], config, default=True
         )
         self.ocd_import_cybercrime_start_date = get_config_variable(
             "OCD_IMPORT_CYBERCRIME_START_DATE",
@@ -204,11 +225,10 @@ class OrangeCyberDefense:
             "OCD_IMPORT_VULNERABILITIES",
             ["ocd", "import_vulnerabilities"],
             config,
-            False,
-            True,
+            default=True,
         )
         self.ocd_import_datalake = get_config_variable(
-            "OCD_IMPORT_DATALAKE", ["ocd", "import_datalake"], config, False, True
+            "OCD_IMPORT_DATALAKE", ["ocd", "import_datalake"], config, default=True
         )
         self.ocd_import_datalake_atom_types = get_config_variable(
             "OCD_IMPORT_DATALAKE_ATOM_TYPES",
@@ -224,24 +244,26 @@ class OrangeCyberDefense:
             "OCD_IMPORT_DATALAKE_MINIMUM_RISK_SCORE",
             ["ocd", "import_datalake_minimum_risk_score"],
             config,
-            True,
-            0,
+            isNumber=True,
+            default=80,
         )
         self.ocd_create_observables = get_config_variable(
-            "OCD_CREATE_OBSERVABLES", ["ocd", "create_observables"], config, False, True
+            "OCD_CREATE_OBSERVABLES",
+            ["ocd", "create_observables"],
+            config,
+            default=True,
         )
         self.ocd_curate_labels = get_config_variable(
-            "OCD_CURATE_LABELS", ["ocd", "curate_labels"], config, False, True
+            "OCD_CURATE_LABELS", ["ocd", "curate_labels"], config, default=True
         )
         self.ocd_interval = get_config_variable(
-            "OCD_INTERVAL", ["ocd", "interval"], config, True
+            "OCD_INTERVAL", ["ocd", "interval"], config, isNumber=True, default=5
         )
         self.ocd_threat_actor_as_intrusion_set = get_config_variable(
             "OCD_THREAT_ACTOR_AS_INTRUSION_SET",
             ["ocd", "threat_actor_as_intrusion_set"],
             config,
-            False,
-            True,
+            default=True,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -614,9 +636,11 @@ class OrangeCyberDefense:
             created=parse(report["timestamp_detected"]),
             published=parse(report["timestamp_detected"]),
             modified=parse(report["timestamp_updated"]),
-            object_refs=[x["id"] for x in report_objects]
-            if len(report_objects) > 0
-            else [self.identity["standard_id"]],
+            object_refs=(
+                [x["id"] for x in report_objects]
+                if len(report_objects) > 0
+                else [self.identity["standard_id"]]
+            ),
             labels=["severity-" + str(report["severity"]), report["source_name"]],
             allow_custom=True,
             object_marking_refs=[
@@ -1044,9 +1068,10 @@ class OrangeCyberDefense:
                                     object_refs=[processed_object.get("id")],
                                 )
                                 objects.append(note_stix)
-                                objects.append(processed_object)
+                            objects.append(processed_object)
                             if "modified" in object:
                                 last_entity_timestamp = object.get("modified")
+
                     else:
                         logging.warning("'objects' key is not in data")
 
@@ -1131,12 +1156,12 @@ class OrangeCyberDefense:
                             self.marking["standard_id"],
                         ],
                         custom_properties={
-                            "x_opencti_aliases": vuln["tags"]
-                            if vuln["tags"] is not None
-                            else None,
-                            "x_opencti_base_score": float(cvss_score)
-                            if cvss_score is not None
-                            else None,
+                            "x_opencti_aliases": (
+                                vuln["tags"] if vuln["tags"] is not None else None
+                            ),
+                            "x_opencti_base_score": (
+                                float(cvss_score) if cvss_score is not None else None
+                            ),
                         },
                         external_references=external_references,
                         labels=vuln["tags"],

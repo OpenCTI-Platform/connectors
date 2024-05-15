@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-import-:
-    image: opencti/connector-import-external-reference:5.12.15
+    image: opencti/connector-import-external-reference:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=ImportExternalReference
       - CONNECTOR_SCOPE=External-Reference
       - CONNECTOR_AUTO=false # Enable/disable auto-import of external references
@@ -15,4 +14,5 @@ services:
       - IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF=true # Import as PDF file
       - IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD=true # Import as MarkDown file
       - IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD=true # If import_as_md is true, try to convert PDF as Markdown
+      - WKHTMLTOPDF_PATH=ChangeMe
     restart: always

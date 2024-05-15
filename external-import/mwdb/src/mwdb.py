@@ -17,7 +17,7 @@ from pycti import Malware, OpenCTIConnectorHelper, get_config_variable
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "5.12.15"
+__version__ = "6.0.10"
 BANNER = f"""
 
  ██████   ██████ █████   ███   █████ ██████████   ███████████
@@ -308,7 +308,7 @@ class MWDB:
         for tag in tags:
             if "yara" in tag["tag"]:
                 color = "%06x" % random.randint(0, 0xFFFFFF)
-                self.helper.api.label.create(
+                self.helper.api.label.read_or_create_unchecked(
                     value=tag["tag"].split(":")[1], color=color
                 )
                 attributes["yara"].append(tag["tag"].split(":")[1])
@@ -611,9 +611,9 @@ class MWDB:
     def run(self):
         self.helper.log_info("Fetching MWDB dataset...")
         color = "%06x" % random.randint(0, 0xFFFFFF)
-        self.helper.api.label.create(value="C2", color=color)
+        self.helper.api.label.read_or_create_unchecked(value="C2", color=color)
         color = "%06x" % random.randint(0, 0xFFFFFF)
-        self.helper.api.label.create(value="C2 LIST", color=color)
+        self.helper.api.label.read_or_create_unchecked(value="C2 LIST", color=color)
         self.start_up()
         exit(0)
 

@@ -1,0 +1,3 @@
+pycti==6.0.10
+stix2==3.0.1
+# requests

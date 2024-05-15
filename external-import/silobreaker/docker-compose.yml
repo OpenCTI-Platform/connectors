@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-silobreaker:
-    image: opencti/connector-silobreaker:5.12.15
+    image: opencti/connector-silobreaker:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=Silobreaker Cyber Threat Intelligence"
       - CONNECTOR_SCOPE=silobreaker
       - CONNECTOR_CONFIDENCE_LEVEL=25 # From 0 (Unknown) to 100 (Fully trusted)

@@ -4,7 +4,7 @@ import os
 import uuid
 from collections import OrderedDict
 from typing import Dict, List, Tuple
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 import yaml
 from pycti import (
@@ -48,6 +48,7 @@ class ThreatTypes:
     BACKDOOR = "malware_backdoor"
     EXPLOIT = "malware_exploit"
     CRYPTOMINER = "malware_miner"
+    VULNERABILITY = "vulnerability"
 
 
 # to map sectors into the correct IDs in OpenCTI
@@ -121,7 +122,12 @@ def custom_mapping_industry_sector(input_name):
 
 
 def feed_converter(
-    tmp_dir: str, state: dict, feed_type: str, min_score=0, only_new=False
+    tmp_dir: str,
+    state: dict,
+    feed_type: str,
+    min_score=0,
+    only_new=True,
+    attributed_only=True,
 ):
     ret_iocs: Dict = dict()
     ret_threats: Dict = dict()
@@ -133,10 +139,14 @@ def feed_converter(
             for line in raw_file:
                 ioc_raw = json.loads(line, object_hook=OrderedDict)
 
+                if only_new and (ioc_raw["lseen"] != ioc_raw["collect"]):
+                    continue
+
                 # Skip IOCs w/o attribution
                 threats: List = ioc_raw.get("threat", [])
-                if len(threats) == 0 or (len(threats) == 1 and threats[0] == ""):
-                    continue
+                if attributed_only:
+                    if len(threats) == 0 or (len(threats) == 1 and threats[0] == ""):
+                        continue
 
                 ioc: Dict = dict()
                 ioc["tags"]: List = ioc_raw["tags"]["str"]
@@ -156,8 +166,6 @@ def feed_converter(
                 ioc["collect"] = datetime.datetime.fromtimestamp(
                     ioc_raw["collect"], tz=datetime.timezone.utc
                 )
-                if only_new and (ioc["fseen"] != ioc["collect"]):
-                    continue
 
                 indicator_pattern = None
                 indicator_name = None
@@ -167,27 +175,29 @@ def feed_converter(
                     indicator_pattern = "[ipv4-addr:value='{}']".format(indicator_name)
                     main_observable_type = "IPv4-Addr"
                 elif feed_type == FeedType.DOMAIN:
-                    indicator_name = quote(ioc_raw["domain"])
+                    indicator_name = ioc_raw["domain"]
                     indicator_pattern = "[domain-name:value='{}']".format(
                         indicator_name
                     )
                     main_observable_type = "Domain-Name"
                 elif feed_type == FeedType.URL:
-                    indicator_name = quote(ioc_raw["url"])
+                    # encode apostrophe to avoid escaping as it is required
+                    # in "9.2 Constants", STIX v2.1 OASIS Standard
+                    indicator_name = ioc_raw["url"].replace("'", "%27")
                     indicator_pattern = "[url:value='{}']".format(indicator_name)
                     main_observable_type = "Url"
                 elif feed_type == FeedType.HASH:
                     hashes = list()
                     names = list()
-                    if ioc_raw["md5"] is not None and ioc_raw["md5"] != "":
+                    if ioc_raw["md5"] and len(ioc_raw["md5"]) == 32:
                         hashes.append("file:hashes.MD5 = '{}'".format(ioc_raw["md5"]))
                         names.append(ioc_raw["md5"])
-                    if ioc_raw["sha1"] is not None and ioc_raw["sha1"] != "":
+                    if ioc_raw["sha1"] and len(ioc_raw["sha1"]) == 40:
                         hashes.append(
                             "file:hashes.'SHA-1' = '{}'".format(ioc_raw["sha1"])
                         )
                         names.append(ioc_raw["sha1"])
-                    if ioc_raw["sha256"] is not None and ioc_raw["sha256"] != "":
+                    if ioc_raw["sha256"] and len(ioc_raw["sha256"]) == 64:
                         hashes.append(
                             "file:hashes.'SHA-256' = '{}'".format(ioc_raw["sha256"])
                         )

@@ -32,7 +32,7 @@ class CrowdSecConnector:
             "CROWDSEC_KEY", ["crowdsec", "key"], config
         )
         self.crowdsec_api_version = get_config_variable(
-            "CROWDSEC_VERSION", ["crowdsec", "api_version"], config, default="v1"
+            "CROWDSEC_VERSION", ["crowdsec", "api_version"], config
         )
         self.crowdsec_ent_name = get_config_variable(
             "CROWDSEC_NAME", ["crowdsec", "name"], config
@@ -128,10 +128,11 @@ class CrowdSecConnector:
         scenarios = [attack["name"] for attack in cti_data["attack_details"]]
         labels.extend(scenarios)
         for label in labels:
-            label_id = self.helper.api.label.create(value=label)["id"]
-            self.helper.api.stix_cyber_observable.add_label(
-                id=observable_id, label_id=label_id
-            )
+            label = self.helper.api.label.read_or_create_unchecked(value=label)
+            if label is not None:
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable_id, label_id=label["id"]
+                )
 
         for scenario in scenarios:
             cves = find_all_cve(scenario)
@@ -150,15 +151,19 @@ class CrowdSecConnector:
             country = self.helper.api.location.create(
                 name=country_info.name,
                 type="Country",
-                country=country_info.official_name
-                if hasattr(country_info, "official_name")
-                else country_info.name,
+                country=(
+                    country_info.official_name
+                    if hasattr(country_info, "official_name")
+                    else country_info.name
+                ),
                 custom_properties={
                     "x_opencti_location_type": "Country",
                     "x_opencti_aliases": [
-                        country_info.official_name
-                        if hasattr(country_info, "official_name")
-                        else country_info.name
+                        (
+                            country_info.official_name
+                            if hasattr(country_info, "official_name")
+                            else country_info.name
+                        )
                     ],
                 },
             )
@@ -170,13 +175,8 @@ class CrowdSecConnector:
             )
         return f"{ip} found in CrowdSec CTI. Enrichment complete"
 
-    def _process_message(self, data: Dict) -> str:
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
-            raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
-            )
+    def _process_message(self, data: Dict):
+        observable = data["enrichment_entity"]
 
         tlp = "TLP:WHITE"
         for marking_definition in observable["objectMarking"]:
@@ -191,7 +191,7 @@ class CrowdSecConnector:
 
     def start(self) -> None:
         self.helper.log_info("CrowdSec connector started")
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

@@ -771,12 +771,11 @@ class ArticleImporter:
             )
             self.helper.log_debug(f"[RiskIQ] Report = {report}")
 
-            bundle = stix2.Bundle(
-                objects=objects + [report, self.author], allow_custom=True
-            )
+            bundle_objects = objects + [report, self.author]
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.log_info("[RiskIQ] Sending report STIX2 bundle")
             self._send_bundle(bundle)
-
+            self.helper.metric.inc("record_send", len(bundle_objects))
             return self._create_state(created)
 
     @classmethod
@@ -788,7 +787,5 @@ class ArticleImporter:
 
         return {cls._LATEST_ARTICLE_TIMESTAMP: datetime_to_timestamp(latest_datetime)}
 
-    def _send_bundle(self, bundle: stix2.Bundle) -> None:
-        serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)
-        self.helper.metric.inc("record_send", len(bundle.objects))
+    def _send_bundle(self, bundle: str) -> None:
+        self.helper.send_stix2_bundle(bundle, work_id=self.work_id)

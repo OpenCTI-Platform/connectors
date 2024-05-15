@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-yara:
-    image: opencti/connector-yara:5.12.15
+    image: opencti/connector-yara:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=YARA
       - CONNECTOR_SCOPE=Artifact # MIME type or Stix Object
       - CONNECTOR_AUTO=true

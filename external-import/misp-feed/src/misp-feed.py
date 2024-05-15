@@ -650,7 +650,11 @@ class MispFeed:
                         )
                         added_names.append(name)
             # Get the linked attack_patterns
-            if tag["name"].startswith("mitre-attack:attack-pattern"):
+            if (
+                tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
+                or tag["name"].startswith("misp-galaxy:attack-pattern")
+                or tag["name"].startswith("mitre-attack:attack-pattern")
+            ):
                 tag_value_split = tag["name"].split('="')
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
                     tag_value = tag_value_split[1][:-1].strip()
@@ -851,7 +855,7 @@ class MispFeed:
         else:
             return None
 
-    def detect_ip_version(self, value, type=False):
+    def _detect_ip_version(self, value, type=False):
         if re.match(
             r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
             value,
@@ -1114,9 +1118,9 @@ class MispFeed:
                             )
                         elif OPENCTISTIX2[observable_resolver]["path"][0] == "hashes":
                             hashes = {}
-                            hashes[
-                                OPENCTISTIX2[observable_resolver]["path"][1]
-                            ] = observable_value
+                            hashes[OPENCTISTIX2[observable_resolver]["path"][1]] = (
+                                observable_value
+                            )
                             observable = stix2.File(
                                 name=file_name,
                                 hashes=hashes,
@@ -1205,9 +1209,9 @@ class MispFeed:
                             last_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"]) + 3600
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            where_sighted_refs=[sighted_by]
-                            if sighted_by is not None
-                            else None,
+                            where_sighted_refs=(
+                                [sighted_by] if sighted_by is not None else None
+                            ),
                         )
                         sightings.append(sighting)
                     # if observable is not None:
@@ -1265,9 +1269,9 @@ class MispFeed:
                         relationship_type="related-to",
                         created_by_ref=author["id"],
                         source_ref=object_observable.id,
-                        target_ref=observable.id
-                        if (observable is not None)
-                        else indicator.id,
+                        target_ref=(
+                            observable.id if (observable is not None) else indicator.id
+                        ),
                         allow_custom=True,
                     )
                 )
@@ -1902,7 +1906,13 @@ class MispFeed:
 
         # Create the report if needed
         # Report in STIX must have at least one object_refs
-        if self.misp_feed_create_reports and len(object_refs) > 0:
+        if self.misp_feed_create_reports:
+            # Report in STIX lib must have at least one object_refs
+            if len(object_refs) == 0:
+                # Put a fake ID in the report
+                object_refs.append(
+                    "intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e"
+                )
             report = stix2.Report(
                 id=Report.generate_id(
                     event["Event"]["info"],

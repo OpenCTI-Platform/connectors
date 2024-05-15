@@ -1,10 +1,10 @@
 import importlib
+import json
 import os
 import sys
 import time
 from datetime import timedelta
 
-import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -15,6 +15,10 @@ STATE_START = "start_epoch"
 STATE_OFFSET = "offset"
 STATE_END = "end_epoch"
 STATE_LAST_RUN = "last_run"
+
+STATEMENT_MARKINGS = [
+    "marking-definition--ad2caa47-58fd-5491-8f67-255377927369",
+]
 
 
 class Mandiant:
@@ -55,11 +59,17 @@ class Mandiant:
             ["mandiant", "import_period"],
             config,
             isNumber=True,
-            default=7,
+            default=3,
         )
         self.mandiant_create_notes = get_config_variable(
             "MANDIANT_CREATE_NOTES",
             ["mandiant", "create_notes"],
+            config,
+            default=False,
+        )
+        self.mandiant_remove_statement_marking = get_config_variable(
+            "MANDIANT_REMOVE_STATEMENT_MARKING",
+            ["mandiant", "remove_statement_marking"],
             config,
             default=False,
         )
@@ -79,7 +89,7 @@ class Mandiant:
             ["mandiant", "import_actors_interval"],
             config,
             isNumber=True,
-            default=2,
+            default=1,
         )
         self.mandiant_actors_interval = timedelta(hours=mandiant_actors_interval)
 
@@ -113,7 +123,7 @@ class Mandiant:
             ["mandiant", "import_malwares_interval"],
             config,
             isNumber=True,
-            default=96,
+            default=1,
         )
         self.mandiant_malwares_interval = timedelta(hours=mandiant_malwares_interval)
 
@@ -130,7 +140,7 @@ class Mandiant:
             ["mandiant", "import_campaigns_interval"],
             config,
             isNumber=True,
-            default=2,
+            default=1,
         )
         self.mandiant_campaigns_interval = timedelta(hours=mandiant_campaigns_interval)
 
@@ -214,9 +224,9 @@ class Mandiant:
                 config,
                 default="event-coverage",
             )
-            self.mandiant_report_types[
-                "Event Coverage/Implication"
-            ] = event_coverage_implication_report_type
+            self.mandiant_report_types["Event Coverage/Implication"] = (
+                event_coverage_implication_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT",
@@ -230,9 +240,9 @@ class Mandiant:
                 config,
                 default="executive-perspective",
             )
-            self.mandiant_report_types[
-                "Executive Perspective"
-            ] = executive_perspective_report_type
+            self.mandiant_report_types["Executive Perspective"] = (
+                executive_perspective_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_ICS_SECURITY_ROUNDUP_REPORT",
@@ -246,9 +256,9 @@ class Mandiant:
                 config,
                 default="ics-security-roundup",
             )
-            self.mandiant_report_types[
-                "ICS Security Roundup"
-            ] = ics_security_roundup_report_type
+            self.mandiant_report_types["ICS Security Roundup"] = (
+                ics_security_roundup_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_INDUSTRY_REPORTING_REPORT",
@@ -262,9 +272,9 @@ class Mandiant:
                 config,
                 default="industry",
             )
-            self.mandiant_report_types[
-                "Industry Reporting"
-            ] = industry_reporting_report_type
+            self.mandiant_report_types["Industry Reporting"] = (
+                industry_reporting_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_MALWARE_PROFILE_REPORT",
@@ -292,9 +302,9 @@ class Mandiant:
                 config,
                 default="network-activity",
             )
-            self.mandiant_report_types[
-                "Network Activity Reports"
-            ] = network_activity_report_type
+            self.mandiant_report_types["Network Activity Reports"] = (
+                network_activity_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_PATCH_REPORT",
@@ -336,9 +346,9 @@ class Mandiant:
                 config,
                 default="threat-alert",
             )
-            self.mandiant_report_types[
-                "Threat Activity Alert"
-            ] = threat_activity_alert_report_type
+            self.mandiant_report_types["Threat Activity Alert"] = (
+                threat_activity_alert_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_THREAT_ACTIVITY_REPORT",
@@ -352,9 +362,9 @@ class Mandiant:
                 config,
                 default="threat-activity",
             )
-            self.mandiant_report_types[
-                "Threat Activity Report"
-            ] = threat_activity_report_type
+            self.mandiant_report_types["Threat Activity Report"] = (
+                threat_activity_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_TRENDS_AND_FORECASTING_REPORT",
@@ -368,9 +378,9 @@ class Mandiant:
                 config,
                 default="trends-forecasting",
             )
-            self.mandiant_report_types[
-                "Trends and Forecasting"
-            ] = trends_and_forecasting_report_type
+            self.mandiant_report_types["Trends and Forecasting"] = (
+                trends_and_forecasting_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_VULNERABILITY_REPORT",
@@ -384,9 +394,9 @@ class Mandiant:
                 config,
                 default="vulnerability",
             )
-            self.mandiant_report_types[
-                "Vulnerability Report"
-            ] = vulnerability_report_type
+            self.mandiant_report_types["Vulnerability Report"] = (
+                vulnerability_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT",
@@ -400,9 +410,9 @@ class Mandiant:
                 config,
                 default="vulnerability-exploitation",
             )
-            self.mandiant_report_types[
-                "Weekly Vulnerability Exploitation Report"
-            ] = weekly_vulnerability_exploitation_report_type
+            self.mandiant_report_types["Weekly Vulnerability Exploitation Report"] = (
+                weekly_vulnerability_exploitation_report_type
+            )
 
         if get_config_variable(
             "MANDIANT_NEWS_ANALYSIS_REPORT",
@@ -482,45 +492,102 @@ class Mandiant:
         }
 
     def run(self):
-        mandiant_state = self.helper.get_state()
+        state = self.helper.get_state()
         for collection in self.mandiant_collections:
-            if collection in ["reports", "vulnerabilities", "indicators"]:
-                start = Timestamp.from_iso(
-                    mandiant_state[collection][STATE_START]
-                ).short_format
-                state_end = (
-                    mandiant_state[collection][STATE_END]
-                    if mandiant_state[collection][STATE_END]
-                    else Timestamp.now().iso_format
+            # Handle interval config
+            date_now_value = Timestamp.now().value
+            collection_interval = getattr(self, f"mandiant_{collection}_interval")
+            last_run_value = Timestamp.from_iso(state[collection][STATE_LAST_RUN]).value
+
+            # API types related to simple offset
+            collection_with_offset = ["malwares", "actors", "campaigns"]
+            # Start and End, Offset
+            start_offset = state[collection][STATE_OFFSET]
+            end_offset = start_offset + OFFSET_PAGINATION
+
+            # API types related to start_epoch
+            collection_with_start_epoch = ["reports", "vulnerabilities", "indicators"]
+            # Start and End, Timestamp short format
+            start_short_format = Timestamp.from_iso(
+                state[collection][STATE_START]
+            ).short_format
+            end_short_format = (
+                Timestamp.from_iso(state[collection][STATE_END]).short_format
+                if state[collection][STATE_END] is not None
+                else Timestamp.now().short_format
+            )
+
+            # Additional information for the "work" depending on the collection (offset, epoch)
+            start_work = (
+                start_short_format
+                if collection in collection_with_start_epoch
+                else start_offset
+            )
+            end_work = (
+                end_short_format
+                if collection in collection_with_start_epoch
+                else end_offset
+            )
+
+            import_start_date = (
+                self.mandiant_indicator_import_start_date
+                if collection == "indicators"
+                else self.mandiant_import_start_date
+            )
+
+            if collection in collection_with_start_epoch:
+                first_run = (
+                    True
+                    if state[collection][STATE_START]
+                    == Timestamp.from_iso(import_start_date).iso_format
+                    else False
                 )
-                end = Timestamp.from_iso(state_end).short_format
             else:
-                start = mandiant_state[collection][STATE_OFFSET]
-                end = start + OFFSET_PAGINATION
+                first_run = True if start_offset == 0 else False
+
+            """
+            We check that after each API call the collection respects the interval, 
+            either the default or the one specified in the config.
+            If it does not, we terminate the job and move on to the next collection.
+            """
+
+            if (
+                first_run is False
+                and date_now_value - collection_interval < last_run_value
+            ):
+                diff_time = round(
+                    ((date_now_value - last_run_value).total_seconds()) / 60
+                )
+                remaining_time = round(
+                    (
+                        (
+                            (
+                                collection_interval - timedelta(minutes=diff_time)
+                            ).total_seconds()
+                        )
+                        / 60
+                    )
+                )
+                self.helper.connector_logger.info(
+                    f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time for the next run : {remaining_time} min"
+                )
+                continue
 
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id,
-                f"{collection.title()} {start} - {end}",
+                f"{collection.title()} {start_work} - {end_work}",
             )
-
-            now = Timestamp.now().value
-
-            _last_run = mandiant_state[collection][STATE_LAST_RUN]
-            last_run = Timestamp.from_iso(_last_run).value
-
-            interval = getattr(self, f"mandiant_{collection}_interval")
-
-            if now - interval < last_run:
-                self.helper.connector_logger.debug(
-                    "Skipping collecting due interval configuration",
-                    {"collection": collection},
-                )
-
             try:
                 self.helper.connector_logger.info(
                     "Start collecting", {"collection": collection}
                 )
-                self._run(collection, work_id)
+                self._run(
+                    work_id,
+                    collection,
+                    state,
+                    collection_with_offset,
+                    collection_with_start_epoch,
+                )
                 self.helper.connector_logger.info(
                     "Collection", {"collection": collection}
                 )
@@ -544,10 +611,28 @@ class Mandiant:
 
         time.sleep(self.mandiant_interval)
 
-    def _run(self, collection, work_id):
+    def remove_statement_marking(self, stix_objects):
+        for obj in stix_objects:
+            if "object_marking_refs" in obj:
+                new_markings = []
+                for ref in obj["object_marking_refs"]:
+                    if ref not in STATEMENT_MARKINGS:
+                        new_markings.append(ref)
+                if len(new_markings) == 0:
+                    del obj["object_marking_refs"]
+                else:
+                    obj["object_marking_refs"] = new_markings
+
+    def _run(
+        self,
+        work_id,
+        collection,
+        state,
+        collection_with_offset,
+        collection_with_start_epoch,
+    ):
         module = importlib.import_module(f".{collection}", package=__package__)
         collection_api = getattr(self.api, collection)
-        state = self.helper.get_state()
 
         """
         If work in progress, then the new in progress will
@@ -565,28 +650,20 @@ class Mandiant:
 
         parameters = {}
 
-        # API types related to start_epoch
-        if collection == "reports":
+        if collection in collection_with_offset:
+            parameters[STATE_OFFSET] = offset
+
+        elif collection in collection_with_start_epoch:
             parameters[STATE_START] = start.unix_format
-            if end is not None:
-                parameters[STATE_END] = end.unix_format
-        if collection == "vulnerabilities":
-            parameters[STATE_START] = start.unix_format
-            if end is not None:
-                parameters[STATE_END] = end.unix_format
-        if collection == "indicators":
-            parameters["gte_mscore"] = self.mandiant_indicator_minimum_score
-            parameters[STATE_START] = start.unix_format
+            if collection == "indicators":
+                parameters["gte_mscore"] = self.mandiant_indicator_minimum_score
             if end is not None:
                 parameters[STATE_END] = end.unix_format
 
-        # API types related to simple offset
-        if collection == "malwares":
-            parameters[STATE_OFFSET] = offset
-        if collection == "actors":
-            parameters[STATE_OFFSET] = offset
-        if collection == "campaigns":
-            parameters[STATE_OFFSET] = offset
+        else:
+            self.helper.connector_logger.error(
+                f"The '{collection}' collection has not been correctly identified"
+            )
 
         data = collection_api(**parameters)
         bundles_objects = []
@@ -600,52 +677,43 @@ class Mandiant:
             uniq_bundles_objects = list(
                 {obj["id"]: obj for obj in bundles_objects}.values()
             )
-            bundle = stix2.Bundle(objects=uniq_bundles_objects, allow_custom=True)
+            # Transform objects to dicts
+            uniq_bundles_objects = [
+                json.loads(obj.serialize()) for obj in uniq_bundles_objects
+            ]
+            if self.mandiant_remove_statement_marking:
+                uniq_bundles_objects = list(
+                    filter(
+                        lambda stix: stix["id"] not in STATEMENT_MARKINGS,
+                        uniq_bundles_objects,
+                    )
+                )
+                self.remove_statement_marking(uniq_bundles_objects)
+
+            bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
             self.helper.send_stix2_bundle(
-                bundle.serialize(),
+                bundle,
                 update=self.update_existing_data,
                 work_id=work_id,
             )
+            if collection in collection_with_offset:
+                state[collection][STATE_OFFSET] = offset
+        else:
+            self.helper.connector_logger.info(
+                f"No data has been imported for the '{collection}' collection since the last run"
+            )
 
-        after_process_now = Timestamp.now()
-        next_start = (
-            end if end is not None else before_process_now
-        )  # next start is the previous end
-        next_end = next_start.delta(days=self.mandiant_import_period)
-        if next_end.value > after_process_now.value:
-            next_end = None
-
-        if collection == "reports":
+        if collection in collection_with_start_epoch:
+            after_process_now = Timestamp.now()
+            next_start = (
+                end if end is not None else before_process_now
+            )  # next start is the previous end
+            next_end = next_start.delta(days=self.mandiant_import_period)
+            if next_end.value > after_process_now.value:
+                next_end = None
             state[collection][STATE_START] = next_start.iso_format
             state[collection][STATE_END] = (
                 next_end.iso_format if next_end is not None else None
             )
-            state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-
-        if collection == "vulnerabilities":
-            state[collection][STATE_START] = next_start.iso_format
-            state[collection][STATE_END] = (
-                next_end.iso_format if next_end is not None else None
-            )
-            state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-
-        if collection == "indicators":
-            state[collection][STATE_START] = next_start.iso_format
-            state[collection][STATE_END] = (
-                next_end.iso_format if next_end is not None else None
-            )
-            state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-
-        if collection == "malwares":
-            state[collection][STATE_OFFSET] = offset
-            state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-
-        if collection == "actors":
-            state[collection][STATE_OFFSET] = offset
-            state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-
-        if collection == "campaigns":
-            state[collection][STATE_OFFSET] = offset
-            state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-
+        state[collection][STATE_LAST_RUN] = before_process_now.iso_format
         self.helper.set_state(state)

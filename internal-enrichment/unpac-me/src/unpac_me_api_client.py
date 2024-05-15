@@ -157,9 +157,11 @@ class UnpacMeUnpackedSample:
                 if "hashes" in result.keys()
                 else result["sha256"]
             ),
-            list(malware["name"] for malware in result["malware_id"])
-            if "malware_id" in result.keys()
-            else [],
+            (
+                list(malware["name"] for malware in result["malware_id"])
+                if "malware_id" in result.keys()
+                else []
+            ),
         )
         if "autoit" in result.keys():
             unpacked_sample.autoit_original_file_name = result["autoit"][
@@ -344,9 +346,11 @@ class UnpacMeApi:
                 Sha256(result["sha256"]),
                 [malware["match"] for malware in result["malwareid"]],
                 datetime.datetime.utcfromtimestamp(result["created"]),
-                [Sha256(sha256) for sha256 in result["children"]]
-                if isinstance(result["children"], list)
-                else [],
+                (
+                    [Sha256(sha256) for sha256 in result["children"]]
+                    if isinstance(result["children"], list)
+                    else []
+                ),
                 result["children"],
             )
 

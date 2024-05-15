@@ -1,12 +1,11 @@
 version: "3"
 services:
   connector-splunk:
-    image: opencti/connector-splunk:5.12.15
+    image: opencti/connector-splunk:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=STREAM
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true

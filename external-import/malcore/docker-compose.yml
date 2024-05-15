@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-malcore:
+    image: opencti/connector-malcore:6.0.10
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe # Valid UUIDv4
+      - CONNECTOR_NAME=Malcore
+      - CONNECTOR_SCOPE=malcore
+      - CONNECTOR_LOG_LEVEL=info
+      - MALCORE_API_URL=https://api.malcore.io
+      - MALCORE_API_KEY=ChangeMe
+      - MALCORE_SCORE=100
+      - MALCORE_LIMIT=10000
+      - MALCORE_INTERVAL=12 #Hours
+    restart: always

@@ -1,4 +1,5 @@
 FROM python:3.11-alpine
+ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
 
 # Copy the worker
 COPY src /opt/opencti-connector-export-file-txt

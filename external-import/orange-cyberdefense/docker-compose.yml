@@ -1,15 +1,14 @@
 version: '3'
 services:
   connector-orange-cyberdefense:
-    image: opencti/connector-orange-cyberdefense:5.12.15
+    image: opencti/connector-orange-cyberdefense:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=Orange Cyberdefense Cyber Threat Intelligence"
       - CONNECTOR_SCOPE=ocd
-      - CONNECTOR_CONFIDENCE_LEVEL=55 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - OCD_PORTAL_API_LOGIN=ChangeMe
       - OCD_PORTAL_API_KEY=ChangeMe

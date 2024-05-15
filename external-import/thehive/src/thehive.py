@@ -23,8 +23,10 @@ from pycti import (
     Task,
     get_config_variable,
 )
-from thehive4py.api import TheHiveApi
-from thehive4py.query import Child, Gt, Or
+from thehive4py import TheHiveApi
+from thehive4py.query import Gt
+from thehive4py.query.page import Paginate
+from thehive4py.query.sort import Asc
 
 from utils import format_datetime  # isort: skip
 
@@ -117,9 +119,8 @@ class TheHive:
         self.severity_mapping = {}
         for mapping in self.thehive_severity_mapping:
             self.severity_mapping[int(mapping.split(":")[0])] = mapping.split(":")[1]
-        self.thehive_api = TheHiveApi(
-            self.thehive_url, self.thehive_api_key, cert=self.thehive_check_ssl
-        )
+
+        self.thehive_api = TheHiveApi(self.thehive_url, self.thehive_api_key)
 
     def construct_query(self, type, last_date):
         """Construct query for alert or cases based on the last_date."""
@@ -127,16 +128,13 @@ class TheHive:
             f"Constructing query with last date: {format_datetime(last_date, DEFAULT_UTC_DATETIME)}"
         )
         if type == "case":
-            return Or(
-                Gt("updatedAt", int(last_date * 1000)),
-                Gt("createdAt", int(last_date * 1000)),
-                Child("case_task", Gt("createdAt", int(last_date * 1000))),
-                Child("case_artifact", Gt("createdAt", int(last_date * 1000))),
+            return Gt("_updatedAt", int(last_date * 1000)) | Gt(
+                "_createdAt", int(last_date * 1000)
             )
+
         elif type == "alert":
-            return Or(
-                Gt("updatedAt", int(last_date * 1000)),
-                Gt("createdAt", int(last_date * 1000)),
+            return Gt("_updatedAt", int(last_date * 1000)) | Gt(
+                "_createdAt", int(last_date * 1000)
             )
         else:
             raise ValueError(f"Unsupported type in construct_query: {type}")
@@ -172,7 +170,6 @@ class TheHive:
             object_marking_refs=markings,
             labels=alert.get("tags", []),
             created_by_ref=self.identity.get("standard_id", ""),
-            confidence=self.helper.connect_confidence_level,
             allow_custom=True,
             custom_properties={
                 "source": alert.get("source", ""),
@@ -197,7 +194,7 @@ class TheHive:
             self.helper.log_error(f"Error processing markings: {str(e)}")
 
         # Extract and format alert creation and modification times.
-        created_epoch = alert.get("createdAt", 0) / 1000
+        created_epoch = alert.get("_createdAt", 0) / 1000
         created = format_datetime(created_epoch, DEFAULT_UTC_DATETIME)
         modified = format_datetime(
             self.get_updated_date(item=alert, last_date=created_epoch),
@@ -280,7 +277,6 @@ class TheHive:
                     format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                     format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 ),
-                confidence=int(self.helper.connect_confidence_level),
                 first_seen=format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                 last_seen=format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 where_sighted_refs=[self.identity.get("standard_id")],
@@ -320,11 +316,24 @@ class TheHive:
                 f"Using 'updatedAt' for last date calculation: {last_date} new date calculation: {new_date}"
             )
         else:
-            new_date = int(item.get("createdAt") / 1000) + 1
+            new_date = int(item.get("_createdAt") / 1000) + 1
             self.helper.log_debug(
                 f"Using 'createdAt' for last date calculation: {last_date} new date calculation: {new_date}"
             )
         return max(last_date, new_date)
+
+    def not_found_items(self, items, type):
+        api_error_msg = (
+            "There is an error with your The Hive URL: "
+            + self.thehive_url
+            + items["message"]
+            + " as the type <"
+            + type
+            + "> is not found and the API message error is: "
+            + items["type"]
+        )
+
+        raise Exception({"message": api_error_msg})
 
     def process_items(self, type, items, process_func, last_date_key):
         """Process items, execute process_func, and send_stix2_bundle."""
@@ -356,21 +365,37 @@ class TheHive:
 
     def process_logic(self, type, last_date_key, bundle_func):
         """Process case or alert based on returned query. Update state once complete."""
+        self.helper.log_error(
+            f"here the cureent state of the connector : {self.current_state}..."
+        )
+
         last_date = self.get_last_date(last_date_key, self.thehive_import_from_date)
         self.helper.log_info(f"Last Date: {last_date}(s)...")
         query = self.construct_query(type, last_date)
         self.helper.log_info(f"Start Processing {type}(s)...")
+
         # check if type is case or alert, run search based on provided type.
         if type == "case":
-            items = self.thehive_api.find_cases(
-                query=query, sort="+updatedAt", range="0-10000"
-            ).json()
+            items = self.thehive_api.case.find(
+                filters=query,
+                sortby=Asc("_updatedAt"),
+                paginate=Paginate(start=0, end=100),
+            )
+            if items.__class__ != list:
+                self.not_found_items(items, type)
+
         elif type == "alert":
-            items = self.thehive_api.find_alerts(
-                query=query, sort="+updatedAt", range="0-10000"
-            ).json()
+            items = self.thehive_api.alert.find(
+                filters=query,
+                sortby=Asc("_updatedAt"),
+                paginate=Paginate(start=0, end=100),
+            )
+
+            if items.__class__ != list:
+                self.not_found_items(items, type)
         else:
             raise ValueError(f"Unsupported type in process_logic: {type}")
+
         updated_last_date = self.process_items(
             type=type,
             items=items,
@@ -389,7 +414,7 @@ class TheHive:
     def process_main_case(self, case, markings, object_refs=None):
         """Process Hive case and return CustomObjectCaseIncident"""
         created = format_datetime(
-            int(case.get("createdAt")) / 1000, DEFAULT_UTC_DATETIME
+            int(case.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME
         )
 
         opencti_case_status = None
@@ -414,14 +439,15 @@ class TheHive:
             object_marking_refs=markings,
             labels=case.get("tags") if case.get("tags") else None,
             created_by_ref=self.identity.get("standard_id"),
-            severity=self.severity_mapping[case.get("severity")]
-            if case.get("severity") in self.severity_mapping
-            else None,
-            confidence=int(self.helper.connect_confidence_level),
+            severity=(
+                self.severity_mapping[case.get("severity")]
+                if case.get("severity") in self.severity_mapping
+                else None
+            ),
             x_opencti_workflow_id=opencti_case_status,
-            x_opencti_assignee_ids=[opencti_case_user]
-            if opencti_case_user is not None
-            else None,
+            x_opencti_assignee_ids=(
+                [opencti_case_user] if opencti_case_user is not None else None
+            ),
             object_refs=object_refs if object_refs is not None else [],
         )
 
@@ -437,27 +463,36 @@ class TheHive:
     def process_observables(self, case, markings):
         """Process all observables from a case."""
         try:
-            response = self.thehive_api.get_case_observables(case_id=case.get("id"))
-            if response.ok:
-                observables = response.json()
+            case_id = case.get("_id")
+            self.helper.log_error(f"!!! here the value of case_id : {case_id}")
+            response = self.thehive_api.case.find_observables(case_id=case.get("_id"))
+
+            if len(response) > 0:
+                observables = response
+
                 self.helper.log_info(
                     f"Processing {len(observables)} observables for case: {case.get('title')}"
                 )
 
                 processed_observables = []
                 object_refs = []
-
+                i = 1
                 for observable in observables:
+                    self.helper.log_error(f"!!! !!! observale n° {i}")
+                    i = i + 1
                     stix_observable = self.convert_observable(observable, markings)
                     if stix_observable:
                         if hasattr(stix_observable, "id"):
                             processed_observables.append(stix_observable)
                             object_refs.append(stix_observable.id)
+
                             sighting = self.generate_sighting(
                                 observable, stix_observable
                             )
+
                             if sighting:
                                 processed_observables.append(sighting)
+
                 return processed_observables, object_refs
             else:
                 self.helper.log_error(
@@ -485,7 +520,6 @@ class TheHive:
                     created_by_ref=self.identity.get("standard_id", ""),
                     source_ref=stix_observable.id,
                     target_ref=stix_incident.id,
-                    confidence=int(self.helper.connect_confidence_level),
                     object_marking_refs=markings,
                     allow_custom=True,
                 )
@@ -503,7 +537,8 @@ class TheHive:
 
     def process_tasks(self, case, stix_case):
         """Function to process all tasks within a case."""
-        tasks = self.thehive_api.get_case_tasks(case_id=case.get("id")).json()
+        tasks = self.thehive_api.case.find_tasks(case_id=case.get("_id"))
+
         self.helper.log_info(
             f"Processing {len(tasks)} tasks for case: {case.get('title')}"
         )
@@ -512,7 +547,7 @@ class TheHive:
 
         for task in tasks:
             created = format_datetime(
-                int(task.get("createdAt")) / 1000, DEFAULT_UTC_DATETIME
+                int(task.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME
             )
 
             opencti_task_status = None
@@ -526,7 +561,7 @@ class TheHive:
             if len(self.thehive_user_mapping) > 0:
                 for user_mapping in self.thehive_user_mapping:
                     user_mapping_split = user_mapping.split(":")
-                    if task.get("owner") == user_mapping_split[0]:
+                    if task.get("assignee") == user_mapping_split[0]:
                         opencti_task_user = user_mapping_split[1]
 
             stix_task = CustomObjectTask(
@@ -534,17 +569,16 @@ class TheHive:
                 name=task.get("title"),
                 description=task.get("description"),
                 created=created,
-                due_date=format_datetime(
-                    task.get("dueDate") / 1000, DEFAULT_UTC_DATETIME
-                )
-                if "dueDate" in task
-                else None,
-                confidence=int(self.helper.connect_confidence_level),
+                due_date=(
+                    format_datetime(task.get("dueDate") / 1000, DEFAULT_UTC_DATETIME)
+                    if "dueDate" in task
+                    else None
+                ),
                 object_refs=[stix_case.id],
                 x_opencti_workflow_id=opencti_task_status,
-                x_opencti_assignee_ids=[opencti_task_user]
-                if opencti_task_user is not None
-                else None,
+                x_opencti_assignee_ids=(
+                    [opencti_task_user] if opencti_task_user is not None else None
+                ),
             )
             processed_tasks.append(stix_task)
 

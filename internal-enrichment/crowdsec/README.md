@@ -10,13 +10,29 @@ Architecturally it is an independent python process which has access to the Open
 - OpenCTI Platform >= 5.3.7
 
 ### Configuration
+#### Recommanded default
+
+  - OPENCTI_URL=http://opencti:8080
+  - OPENCTI_TOKEN=<your OpenCTI API token>
+  - CONNECTOR_ID=<a valid UUIV_v4>
+  - CROWDSEC_MAX_TLP=TLP:AMBER
+  - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+  - CONNECTOR_NAME=crowdsec
+  - CROWDSEC_NAME=crowdsec
+  - CROWDSEC_DESCRIPTION="CrowdSec CTI enrichment"
+  - CONNECTOR_SCOPE=IPv4-Addr # MIME type or Stix Object
+  - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+  - CONNECTOR_LOG_LEVEL=error
+  - CROWDSEC_KEY=<your API Key>
+  - CROWDSEC_VERSION=v2 #v2 is the only supported version for now
+
+#### Parameters meaning
 
 | Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
 | ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `opencti_url`                        | `OPENCTI_URL`                       | Yes          | The URL of the OpenCTI platform.                                                                                                                           |
 | `opencti_token`                      | `OPENCTI_TOKEN`                     | Yes          | The default admin token configured in the OpenCTI platform parameters file.                                                                                |
 | `connector_id`                       | `CONNECTOR_ID`                      | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                         |
-| `connector_type`                     | `CONNECTOR_TYPE`                    | Yes          | Must be `Template_Type` (this is the connector type).                                                                                                      |
 | `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | Option `Template`                                                                                                                                          |
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope: Template Scope (MIME Type or Stix Object)                                                                                                 |
 | `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 4).                                                                             |

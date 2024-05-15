@@ -381,14 +381,16 @@ class TaniumApiHandler:
             {
                 "exact": True,
                 "name": name,
-                "description": OpenCTIConnectorHelper.get_attribute_in_extension(
-                    "description", entity
-                )
-                if OpenCTIConnectorHelper.get_attribute_in_extension(
-                    "description", entity
-                )
-                is not None
-                else "",
+                "description": (
+                    OpenCTIConnectorHelper.get_attribute_in_extension(
+                        "description", entity
+                    )
+                    if OpenCTIConnectorHelper.get_attribute_in_extension(
+                        "description", entity
+                    )
+                    is not None
+                    else ""
+                ),
                 "type": intel_type,
                 "text": value,
             },

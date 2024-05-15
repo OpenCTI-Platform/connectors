@@ -13,10 +13,20 @@ import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
 import yaml
 from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes, get_config_variable
-from requests.auth import HTTPBasicAuth
+from requests.auth import AuthBase, HTTPBasicAuth
 from requests.exceptions import HTTPError
 from taxii2client.common import TokenAuth
 from taxii2client.exceptions import TAXIIServiceException
+
+
+class ApiKeyAuth(AuthBase):
+    def __init__(self, api_key, value):
+        self.api_key = api_key
+        self.value = value
+
+    def __call__(self, r):
+        r.headers[self.api_key] = "{}".format(self.value)
+        return r
 
 
 class Taxii2Connector:
@@ -43,6 +53,15 @@ class Taxii2Connector:
             "TAXII2_USE_TOKEN", ["taxii2", "use_token"], config, default=False
         )
         token = get_config_variable("TAXII2_TOKEN", ["taxii2", "token"], config)
+        use_apikey = get_config_variable(
+            "TAXII2_USE_APIKEY", ["taxii2", "use_apikey"], config, default=False
+        )
+        apikey_key = get_config_variable(
+            "TAXII2_APIKEY_KEY", ["taxii2", "apikey_key"], config
+        )
+        apikey_value = get_config_variable(
+            "TAXII2_APIKEY_VALUE", ["taxii2", "apikey_value"], config
+        )
         server_url = get_config_variable(
             "TAXII2_DISCOVERY_URL", ["taxii2", "discovery_url"], config
         )
@@ -58,6 +77,8 @@ class Taxii2Connector:
         )
         if use_token:
             auth = TokenAuth(token)
+        elif use_apikey:
+            auth = ApiKeyAuth(apikey_key, apikey_value)
         else:
             auth = HTTPBasicAuth(username, password)
         if self.taxii2v21:
@@ -74,13 +95,6 @@ class Taxii2Connector:
                 verify=self.verify_ssl,
                 cert=cert_path,
             )
-        self.available_collections = []
-        if hasattr(self.server, "api_roots") and self.server.api_roots:
-            for api_root in self.server.api_roots:
-                if hasattr(api_root, "collections"):
-                    self.available_collections.extend(
-                        [c.id for c in api_root.collections]
-                    )
         self.collections = get_config_variable(
             "TAXII2_COLLECTIONS", ["taxii2", "collections"], config
         ).split(",")
@@ -357,11 +371,7 @@ class Taxii2Connector:
                     # Check if "more" exists in response and its value is True
                     if "more" in response and response["more"] == True:
                         filters["next"] = response["next"]
-                        if (
-                            response["next"] in self.available_collections
-                            and len(self.available_collections) > 0
-                        ):
-                            response = collection.get_objects(**filters)
+                        response = collection.get_objects(**filters)
                     else:
                         # "more" doesn't exist or is not True, exit the loop
                         break
@@ -378,25 +388,8 @@ class Taxii2Connector:
             self.helper.log_info("No objects found in request.")
 
     def _process_objects(self, stix_bundle: Dict) -> Dict:
-        # the list of object types for which the confidence has to be added
-        object_types_with_confidence = [
-            "attack-pattern",
-            "course-of-action",
-            "threat-actor",
-            "intrusion-set",
-            "campaign",
-            "malware",
-            "tool",
-            "vulnerability",
-            "report",
-            "relationship",
-            "indicator",
-        ]
         for obj in stix_bundle["objects"]:
             object_type = obj["type"]
-            if object_type in object_types_with_confidence:
-                if "confidence" not in obj:
-                    obj["confidence"] = int(self.helper.connect_confidence_level)
             if object_type == "indicator":
                 obj["x_opencti_create_observables"] = self.create_observables
             elif StixCyberObservableTypes.has_value(object_type):

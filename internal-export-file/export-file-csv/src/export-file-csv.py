@@ -7,7 +7,6 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 
 class ExportFileCsv:
@@ -100,19 +99,17 @@ class ExportFileCsv:
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
         # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
 
         if export_scope == "single":
-            entity_id = data["entity_id"]
-            self.helper.log_info(
-                "Exporting: "
-                + entity_type
-                + "/"
-                + export_type
-                + "("
-                + entity_id
-                + ") to "
-                + file_name
+            self.helper.connector_logger.info(
+                "Exporting",
+                {
+                    "entity_id": entity_id,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
             )
             entity_data = self.helper.api_impersonate.stix_domain_object.read(
                 id=entity_id
@@ -141,28 +138,25 @@ class ExportFileCsv:
                 del entity_data["objectLabelIds"]
             entities_list.append(entity_data)
             csv_data = self.export_dict_list_to_csv(entities_list)
-            self.helper.log_info(
-                "Uploading: "
-                + entity_type
-                + "/"
-                + export_type
-                + "("
-                + entity_id
-                + ") to "
-                + file_name
+            self.helper.connector_logger.info(
+                "Uploading",
+                {
+                    "entity_id": entity_id,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
             )
             self.helper.api.stix_domain_object.push_entity_export(
                 entity_id, file_name, csv_data
             )
-            self.helper.log_info(
-                "Export done: "
-                + entity_type
-                + "/"
-                + export_type
-                + "("
-                + entity_id
-                + ") to "
-                + file_name
+            self.helper.connector_logger.info(
+                "Export done",
+                {
+                    "entity_type": entity_type,
+                    "entity_id": entity_id,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
             )
 
         else:  # list export: export_scope = 'query' or 'selection'
@@ -171,26 +165,26 @@ class ExportFileCsv:
                 list_filters = "selected_ids"
                 entities_list = []
 
-                for entity_id in selected_ids:
+                for selected_id in selected_ids:
                     entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                        id=entity_id
+                        id=selected_id
                     )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=entity_id
+                                id=selected_id
                             )
                         )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_core_relationship.read(
-                                id=entity_id
+                                id=selected_id
                             )
                         )
                     if entity_data is None:
                         entity_data = (
                             self.helper.api_impersonate.stix_sighting_relationship.read(
-                                id=entity_id
+                                id=selected_id
                             )
                         )
                     if entity_data is None:
@@ -201,158 +195,20 @@ class ExportFileCsv:
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
-                self.helper.log_info(
-                    "Exporting list: "
-                    + entity_type
-                    + "/"
-                    + export_type
-                    + " to "
-                    + file_name
+                self.helper.connector_logger.info(
+                    "Exporting list: ",
+                    {
+                        "entity_type": entity_type,
+                        "export_type": export_type,
+                        "file_name": file_name,
+                    },
                 )
-
-                final_entity_type = entity_type
-                if IdentityTypes.has_value(entity_type):
-                    if list_params["filters"] is not None:
-                        list_params["filters"].append(
-                            {"key": "entity_type", "values": [entity_type]}
-                        )
-                    else:
-                        list_params["filters"] = [
-                            {"key": "entity_type", "values": [entity_type]}
-                        ]
-                    final_entity_type = "Identity"
-
-                if LocationTypes.has_value(entity_type):
-                    if list_params["filters"] is not None:
-                        list_params["filters"].append(
-                            {"key": "entity_type", "values": [entity_type]}
-                        )
-                    else:
-                        list_params["filters"] = [
-                            {"key": "entity_type", "values": [entity_type]}
-                        ]
-                    final_entity_type = "Location"
-
-                if StixCyberObservableTypes.has_value(entity_type):
-                    if list_params["filters"] is not None:
-                        list_params["filters"].append(
-                            {"key": "entity_type", "values": [entity_type]}
-                        )
-                    else:
-                        list_params["filters"] = [
-                            {"key": "entity_type", "values": [entity_type]}
-                        ]
-                    final_entity_type = "Stix-Cyber-Observable"
-
-                if final_entity_type == "Container":
-                    if list_params["filters"] is not None:
-                        list_params["filters"].append(
-                            {
-                                "key": "entity_type",
-                                "values": [
-                                    "Report",
-                                    "Grouping",
-                                    "Note",
-                                    "Observed-Data",
-                                    "Opinion",
-                                    "Case-Incident",
-                                    "Feedback",
-                                    "Case-Rfi",
-                                    "Case-Rft",
-                                    "Task",
-                                ],
-                            }
-                        )
-                    else:
-                        list_params["filters"] = [
-                            {
-                                "key": "entity_type",
-                                "values": [
-                                    "Report",
-                                    "Grouping",
-                                    "Note",
-                                    "Observed-Data",
-                                    "Opinion",
-                                    "Case-Rfi",
-                                    "Case-Rft",
-                                    "Case-Incident",
-                                    "Feedback",
-                                    "Task",
-                                ],
-                            }
-                        ]
-                    final_entity_type = "Stix-Domain-Object"
-                # List
-                lister = {
-                    "Stix-Core-Object": self.helper.api_impersonate.stix_core_object.list,
-                    "Stix-Domain-Object": self.helper.api_impersonate.stix_domain_object.list,
-                    "Attack-Pattern": self.helper.api_impersonate.attack_pattern.list,
-                    "Campaign": self.helper.api_impersonate.campaign.list,
-                    "Channel": self.helper.api_impersonate.channel.list,
-                    "Event": self.helper.api_impersonate.event.list,
-                    "Note": self.helper.api_impersonate.note.list,
-                    "Observed-Data": self.helper.api_impersonate.observed_data.list,
-                    "Opinion": self.helper.api_impersonate.opinion.list,
-                    "Report": self.helper.api_impersonate.report.list,
-                    "Grouping": self.helper.api_impersonate.grouping.list,
-                    "Case-Incident": self.helper.api_impersonate.case_incident.list,
-                    "Feedback": self.helper.api_impersonate.feedback.list,
-                    "Case-Rfi": self.helper.api_impersonate.case_rfi.list,
-                    "Case-Rft": self.helper.api_impersonate.case_rft.list,
-                    "Task": self.helper.api_impersonate.task.list,
-                    "Course-Of-Action": self.helper.api_impersonate.course_of_action.list,
-                    "Identity": self.helper.api_impersonate.identity.list,
-                    "Indicator": self.helper.api_impersonate.indicator.list,
-                    "Infrastructure": self.helper.api_impersonate.infrastructure.list,
-                    "Intrusion-Set": self.helper.api_impersonate.intrusion_set.list,
-                    "Location": self.helper.api_impersonate.location.list,
-                    "Language": self.helper.api_impersonate.language.list,
-                    "Malware": self.helper.api_impersonate.malware.list,
-                    "Malware-Analysis": self.helper.api_impersonate.malware_analysis.list,
-                    "Threat-Actor-Group": self.helper.api_impersonate.threat_actor_group.list,
-                    "Threat-Actor-Individual": self.helper.api_impersonate.threat_actor_individual.list,
-                    "Tool": self.helper.api_impersonate.tool.list,
-                    "Narrative": self.helper.api_impersonate.narrative.list,
-                    "Vulnerability": self.helper.api_impersonate.vulnerability.list,
-                    "Incident": self.helper.api_impersonate.incident.list,
-                    "Data-Source": self.helper.api_impersonate.data_source.list,
-                    "Data-Component": self.helper.api_impersonate.data_component.list,
-                    "Stix-Cyber-Observable": self.helper.api_impersonate.stix_cyber_observable.list,
-                    "Stix-Core-Relationship": self.helper.api_impersonate.stix_core_relationship.list,
-                    "stix-core-relationship": self.helper.api_impersonate.stix_core_relationship.list,
-                    "stix-sighting-relationship": self.helper.api_impersonate.stix_sighting_relationship.list,
-                }
-                do_list = lister.get(
-                    final_entity_type,
-                    lambda **kwargs: self.helper.log_error(
-                        'Unknown object type "'
-                        + final_entity_type
-                        + '", doing nothing...'
-                    ),
-                )
-                entities_list = do_list(
-                    search=list_params["search"],
-                    filters=list_params["filters"],
+                entities_list = self.helper.api_impersonate.stix2.export_entities_list(
+                    entity_type=entity_type,
+                    search=list_params.get("search"),
+                    filters=list_params.get("filters"),
                     orderBy=list_params["orderBy"],
                     orderMode=list_params["orderMode"],
-                    relationship_type=list_params["relationship_type"]
-                    if "relationship_type" in list_params
-                    else None,
-                    elementId=list_params["elementId"]
-                    if "elementId" in list_params
-                    else None,
-                    fromId=list_params["fromId"] if "fromId" in list_params else None,
-                    toId=list_params["toId"] if "toId" in list_params else None,
-                    elementWithTargetTypes=list_params["elementWithTargetTypes"]
-                    if "elementWithTargetTypes" in list_params
-                    else None,
-                    fromTypes=list_params["fromTypes"]
-                    if "fromTypes" in list_params
-                    else None,
-                    toTypes=list_params["toTypes"]
-                    if "toTypes" in list_params
-                    else None,
-                    types=list_params["types"] if "types" in list_params else None,
                     getAll=True,
                 )
                 list_filters = json.dumps(list_params)
@@ -364,23 +220,23 @@ class ExportFileCsv:
                 )
                 if entity_type == "Stix-Cyber-Observable":
                     self.helper.api.stix_cyber_observable.push_list_export(
-                        file_name, csv_data, list_filters
+                        entity_id, entity_type, file_name, csv_data, list_filters
                     )
                 elif entity_type == "Stix-Core-Object":
                     self.helper.api.stix_core_object.push_list_export(
-                        entity_type, file_name, csv_data, list_filters
+                        entity_id, entity_type, file_name, csv_data, list_filters
                     )
                 else:
                     self.helper.api.stix_domain_object.push_list_export(
-                        entity_type, file_name, csv_data, list_filters
+                        entity_id, entity_type, file_name, csv_data, list_filters
                     )
-                self.helper.log_info(
-                    "Export done: "
-                    + entity_type
-                    + "/"
-                    + export_type
-                    + " to "
-                    + file_name
+                self.helper.connector_logger.info(
+                    "Export done",
+                    {
+                        "entity_type": entity_type,
+                        "export_type": export_type,
+                        "file_name": file_name,
+                    },
                 )
             else:
                 raise ValueError("An error occurred, the list is empty")

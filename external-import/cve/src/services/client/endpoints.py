@@ -1,6 +1,7 @@
 """
 API URL VARIABLES
 """
+
 from services.utils.configVariables import ConfigCVE  # type: ignore
 
 # Base

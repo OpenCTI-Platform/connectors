@@ -32,12 +32,6 @@ class Valhalla:
             else {}
         )
         # Extra config
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-            isNumber=True,
-        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -64,7 +58,6 @@ class Valhalla:
 
         self.knowledge_importer = KnowledgeImporter(
             self.helper,
-            self.confidence_level,
             self.update_existing_data,
             self.default_marking,
             self.valhalla_client,

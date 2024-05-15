@@ -2,6 +2,7 @@ import base64
 import logging
 import os
 import time
+from typing import Dict
 
 import requests
 import yaml
@@ -45,10 +46,9 @@ class ConnectorStart:
         else:
             raise ValueError("Unable to authenticate with Intelix")
 
-    def _process_message(self, data) -> str:
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        observable_id = observable["id"]
+    def _process_message(self, data: Dict) -> str:
+        observable = data["enrichment_entity"]
+        observable_id = observable["standard_id"]
         observable_value = observable["observable_value"]
         observable_type = observable["entity_type"]
         self.helper.log_info(observable)
@@ -85,7 +85,7 @@ class ConnectorStart:
 
     # Start the main loop
     def start(self) -> None:
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

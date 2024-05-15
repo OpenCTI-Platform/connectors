@@ -1,2 +1,2 @@
-pycti==5.12.15
-sixgill-clients==0.2.24
+pycti==6.0.10
+sixgill-clients==0.2.26

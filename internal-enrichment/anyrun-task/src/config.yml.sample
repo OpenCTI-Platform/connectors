@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'anyrun_task'
+  scope: 'Artifact,Url'
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+anyrun:
+  token: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'
+  url: 'https://api.any.run'
+  timer: 60
+  os: 'windows'
+  bitness: '64'
+  version: '10'
+  locale: 'en-US'
+  browser: 'Google Chrome'
+  privacy: 'bylink'
+  automated_interactivity: False
+  ioc: True
+  mitre: False
+  processes: False

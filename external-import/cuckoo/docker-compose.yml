@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-cuckoo:
-    image: opencti/connector-cuckoo:5.12.15
+    image: opencti/connector-cuckoo:6.0.10
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=cuckoo
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error

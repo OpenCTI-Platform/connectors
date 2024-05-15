@@ -101,7 +101,6 @@ class DataExport:
         order_by: str = "created_at",
         order_mode: str = "asc",
         max_marking_definition: Dict = None,
-        types: List = None,
         n_threads=4,
     ) -> list:
         max_marking_definition_entity = (
@@ -177,7 +176,6 @@ class DataExport:
             filters=filters,
             orderBy=order_by,
             orderMode=order_mode,
-            types=types,
             getAll=True,
         )
 
@@ -576,9 +574,11 @@ class DataExport:
             for stix_core_relationship in stix_core_relationships:
                 if self.check_max_marking_definition(
                     max_marking_definition_entity,
-                    stix_core_relationship["objectMarking"]
-                    if "objectMarking" in stix_core_relationship
-                    else None,
+                    (
+                        stix_core_relationship["objectMarking"]
+                        if "objectMarking" in stix_core_relationship
+                        else None
+                    ),
                 ):
                     objects_to_get.append(
                         stix_core_relationship["to"]
@@ -610,9 +610,11 @@ class DataExport:
             for stix_sighting_relationship in stix_sighting_relationships:
                 if self.check_max_marking_definition(
                     max_marking_definition_entity,
-                    stix_sighting_relationship["objectMarking"]
-                    if "objectMarking" in stix_sighting_relationship
-                    else None,
+                    (
+                        stix_sighting_relationship["objectMarking"]
+                        if "objectMarking" in stix_sighting_relationship
+                        else None
+                    ),
                 ):
                     objects_to_get.append(
                         stix_sighting_relationship["to"]

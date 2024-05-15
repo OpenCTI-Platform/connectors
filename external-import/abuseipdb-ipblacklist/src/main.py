@@ -266,6 +266,7 @@ if __name__ == "__main__":
     try:
         connector = abuseipdbipblacklistimport()
         connector.run()
-    except:
+    except Exception as e:
+        print(e)
         time.sleep(10)
         exit(0)

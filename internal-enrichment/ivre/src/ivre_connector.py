@@ -13,6 +13,7 @@ about IVRE.
 
 import os
 import re
+from typing import Dict
 
 import yaml
 from ivre import config as ivre_config
@@ -104,7 +105,7 @@ class IvreConnector:
         self.ivre_instance_name = get_config_variable(
             "CONNECTOR_NAME", ["connector", "name"], config, default="IVRE"
         )
-        self.confidence = int(self.helper.connect_confidence_level)
+        self.confidence = self.helper.connect_confidence_level
         self.max_tlp = get_config_variable("IVRE_MAX_TLP", ["ivre", "max_tlp"], config)
 
     @property
@@ -568,12 +569,9 @@ class IvreConnector:
         for rec in self.dbase.nmap.get(flt):
             self.process_scans_record(rec, observable)
 
-    def _process_message(self, data):
+    def _process_message(self, data: Dict):
         """Process a message, depending on its type."""
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if observable is None:
-            return
+        observable = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -595,7 +593,7 @@ class IvreConnector:
 
     def start(self):
         """Starts the connector."""
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

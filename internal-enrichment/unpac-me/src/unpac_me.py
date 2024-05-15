@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+from typing import Dict
 
 import magic
 import stix2
@@ -157,7 +158,7 @@ class UnpacMeConnector:
 
         # Serialize and send all bundles
         if bundle_objects:
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
             bundles_sent = self.helper.send_stix2_bundle(bundle)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
@@ -207,16 +208,8 @@ class UnpacMeConnector:
                 f"Failed to process observable, {observable['entity_type']} is not a supported entity type."
             )
 
-    def _process_message(self, data):
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(
-            id=entity_id, withFiles=True
-        )
-        if observable is None:
-            raise ValueError(
-                "Observable not found "
-                "(may be linked to data seggregation, check your group and permissions)"
-            )
+    def _process_message(self, data: Dict):
+        observable = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -232,7 +225,7 @@ class UnpacMeConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 """OpenCTI CVE connector main module"""
+
 import time
 
 from connector import CVEConnector

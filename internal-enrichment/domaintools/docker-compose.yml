@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-domaintools:
-    image: opencti/connector-domaintools:5.12.15
+    image: opencti/connector-domaintools:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=DomainTools
       - CONNECTOR_SCOPE=Domain-Name,Ipv4-Addr
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables

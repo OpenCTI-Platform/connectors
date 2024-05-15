@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import time
+import uuid
 from datetime import datetime
 
 import pytz
@@ -27,7 +28,7 @@ from pycti import (
     Tool,
     get_config_variable,
 )
-from pymisp import ExpandedPyMISP
+from pymisp import PyMISP
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -65,6 +66,14 @@ OPENCTISTIX2 = {
     "phone-number": {"type": "phone-number", "path": ["value"]},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
+
+
+def is_uuid(val):
+    try:
+        uuid.UUID(str(val))
+        return True
+    except ValueError:
+        return False
 
 
 def filter_event_attributes(event, **filters):
@@ -112,6 +121,9 @@ class Misp:
         self.misp_key = get_config_variable("MISP_KEY", ["misp", "key"], config)
         self.misp_ssl_verify = get_config_variable(
             "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
+        )
+        self.misp_client_cert = get_config_variable(
+            "MISP_CLIENT_CERT", ["misp", "client_cert"], config
         )
         self.misp_datetime_attribute = get_config_variable(
             "MISP_DATETIME_ATTRIBUTE",
@@ -265,8 +277,12 @@ class Misp:
         )
 
         # Initialize MISP
-        self.misp = ExpandedPyMISP(
-            url=self.misp_url, key=self.misp_key, ssl=self.misp_ssl_verify, debug=False
+        self.misp = PyMISP(
+            url=self.misp_url,
+            key=self.misp_key,
+            cert=self.misp_client_cert,
+            ssl=self.misp_ssl_verify,
+            debug=False,
         )
 
     def get_interval(self):
@@ -891,8 +907,13 @@ class Misp:
                     )
 
             # Create the report if needed
-            # Report in STIX must have at least one object_refs
-            if self.misp_create_reports and len(object_refs) > 0:
+            if self.misp_create_reports:
+                # Report in STIX lib must have at least one object_refs
+                if len(object_refs) == 0:
+                    # Put a fake ID in the report
+                    object_refs.append(
+                        "intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e"
+                    )
                 attributes = filter_event_attributes(
                     event, **self.misp_report_description_attribute_filter
                 )
@@ -1218,9 +1239,9 @@ class Misp:
                             )
                         elif OPENCTISTIX2[observable_resolver]["path"][0] == "hashes":
                             hashes = {}
-                            hashes[
-                                OPENCTISTIX2[observable_resolver]["path"][1]
-                            ] = observable_value
+                            hashes[OPENCTISTIX2[observable_resolver]["path"][1]] = (
+                                observable_value
+                            )
                             observable = stix2.File(
                                 name=file_name,
                                 hashes=hashes,
@@ -1310,9 +1331,9 @@ class Misp:
                             last_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"]) + 3600
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            where_sighted_refs=[sighted_by]
-                            if sighted_by is not None
-                            else None,
+                            where_sighted_refs=(
+                                [sighted_by] if sighted_by is not None else None
+                            ),
                         )
                         sightings.append(sighting)
                     # if observable is not None:
@@ -1370,9 +1391,9 @@ class Misp:
                         relationship_type="related-to",
                         created_by_ref=author["id"],
                         source_ref=object_observable.id,
-                        target_ref=observable.id
-                        if (observable is not None)
-                        else indicator.id,
+                        target_ref=(
+                            observable.id if (observable is not None) else indicator.id
+                        ),
                         allow_custom=True,
                     )
                 )
@@ -1682,7 +1703,7 @@ class Misp:
                         aliases = galaxy_entity["meta"]["synonyms"]
                     else:
                         aliases = [name]
-                    if name not in added_names:
+                    if name not in added_names and not is_uuid(name):
                         elements["intrusion_sets"].append(
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
@@ -1863,7 +1884,9 @@ class Misp:
                     )
                     if len(threats) > 0:
                         threat = threats[0]
-                        if threat["name"] not in added_names:
+                        if threat["name"] not in added_names and not is_uuid(
+                            threat["name"]
+                        ):
                             if threat["entity_type"] == "Intrusion-Set":
                                 elements["intrusion_sets"].append(
                                     stix2.IntrusionSet(
@@ -1938,7 +1961,7 @@ class Misp:
                         name = tag_value.replace("APT ", "APT")
                     else:
                         name = tag_value
-                    if name not in added_names:
+                    if name not in added_names and not is_uuid(name):
                         elements["intrusion_sets"].append(
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
@@ -2003,7 +2026,11 @@ class Misp:
                         )
                         added_names.append(name)
             # Get the linked attack_patterns
-            if tag["name"].startswith("mitre-attack:attack-pattern"):
+            if (
+                tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
+                or tag["name"].startswith("misp-galaxy:attack-pattern")
+                or tag["name"].startswith("mitre-attack:attack-pattern")
+            ):
                 tag_value_split = tag["name"].split('="')
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
                     tag_value = tag_value_split[1][:-1].strip()

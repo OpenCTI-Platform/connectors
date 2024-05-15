@@ -1,2 +1,3 @@
-pycti==5.12.15
+pycti==6.0.10
 pycountry==23.12.11
+greynoise==2.1.0

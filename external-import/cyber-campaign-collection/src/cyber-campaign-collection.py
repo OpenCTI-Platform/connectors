@@ -1,4 +1,5 @@
 """Cyber Monitor connector module."""
+
 import base64
 import mimetypes
 import os
@@ -52,11 +53,6 @@ class CyberMonitor:
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
-            config,
-        )
-        self.confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
             config,
         )
 

@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-intel471:
-    image: opencti/connector-intel471:5.12.15
+    image: opencti/connector-intel471:6.0.10
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Intel471
       - CONNECTOR_SCOPE=malware,vulnerability,indicator
       - CONNECTOR_CONFIDENCE_LEVEL=70

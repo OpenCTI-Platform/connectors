@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 
 import pycountry
 import requests
@@ -32,16 +33,20 @@ class IpInfoConnector:
         country_location = stix2.Location(
             id=Location.generate_id(country.name, "Country"),
             name=country.name,
-            country=country.official_name
-            if hasattr(country, "official_name")
-            else country.name,
+            country=(
+                country.official_name
+                if hasattr(country, "official_name")
+                else country.name
+            ),
             confidence=self.helper.connect_confidence_level,
             custom_properties={
                 "x_opencti_location_type": "Country",
                 "x_opencti_aliases": [
-                    country.official_name
-                    if hasattr(country, "official_name")
-                    else country.name
+                    (
+                        country.official_name
+                        if hasattr(country, "official_name")
+                        else country.name
+                    )
                 ],
             },
         )
@@ -50,9 +55,11 @@ class IpInfoConnector:
         city_location = stix2.Location(
             id=Location.generate_id(city, "City"),
             name=city,
-            country=country.official_name
-            if hasattr(country, "official_name")
-            else country.name,
+            country=(
+                country.official_name
+                if hasattr(country, "official_name")
+                else country.name
+            ),
             latitude=loc_split[0],
             longitude=loc_split[1],
             confidence=self.helper.connect_confidence_level,
@@ -81,19 +88,10 @@ class IpInfoConnector:
         stix_objects.append(observable_to_city)
         return self.helper.stix2_create_bundle(stix_objects)
 
-    def _process_message(self, data):
-        opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
-        )
-        if opencti_entity is None:
-            raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
-            )
-        result = self.helper.get_data_from_enrichment(data, opencti_entity)
-        stix_objects = result["stix_objects"]
-        stix_entity = result["stix_entity"]
+    def _process_message(self, data: Dict):
+        opencti_entity = data["enrichment_entity"]
 
-        # Extract TLP
+        # Extract TLP and validate
         tlp = "TLP:CLEAR"
         for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
@@ -104,6 +102,9 @@ class IpInfoConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
+        # Enrich the bundle with ip info
+        stix_entity = data["stix_entity"]
+        stix_objects = data["stix_objects"]
         # Get the geo loc from the API
         api_url = (
             "https://ipinfo.io/" + stix_entity["value"] + "/json/?token=" + self.token
@@ -131,7 +132,7 @@ class IpInfoConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

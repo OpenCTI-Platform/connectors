@@ -1,12 +1,11 @@
 version: '3'
 services:
   sophoslabs-intelix:
-    image: opencti/connector-sophoslabs-intelix:5.12.15
+    image: opencti/connector-sophoslabs-intelix:6.0.10
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=SophosLabs Intelix Lookup
       - CONNECTOR_SCOPE=Url,IPv4-Addr,Domain,File,File-Sha256,Artifact,StixFile
       - CONNECTOR_AUTO=true

@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-lastinfosec-enrichment:
-    image: opencti/connector-lastinfosec-enrichment:5.12.15
+    image: opencti/connector-lastinfosec-enrichment:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=Last Info Sec Enrichment
       - CONNECTOR_SCOPE=StixFile,Domain-Name,Hostname,Url
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables

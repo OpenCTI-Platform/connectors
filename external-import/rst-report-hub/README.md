@@ -2,15 +2,15 @@
 
 The **RST Report Hub Connector** integrates various APT reports from security companies, research groups, cyber communities, and individuals into OpenCTI. RST Cloud manages the conversion of human-readable reports into STIX bundles. This connector retrieves data from RST Cloud, importing the PDF version of each report along with a corresponding summary, key ideas, and facts into OpenCTI. It also includes extracted objects and relationships between them, such as Intrusion Sets (threat actors), campaigns, malware, TTPs, tools, geographic data, sectors, CVEs, indicators, and other relevant objects. This integration enhances the capabilities of OpenCTI by providing valuable threat intelligence data, enabling CTI analysts to streamline APT report processing through automation via the [RST Report Hub](https://www.rstcloud.com/rst-report-hub/) integration, ultimately saving time.
 
-## Key Features:
+## Key Features
 
 - **Brilliant Time Saver**: Manual import of threat reports is a time consuming activity that does not need to happen anymore.
-- **Threat Report Library**: Keep all APT reports and their metadata, extracted objects in one place. 
+- **Threat Report Library**: Keep all APT reports and their metadata, extracted objects in one place.
 - **OpenCTI Integration**: Seamlessly integrates the fetched data into OpenCTI's database.
 
 This connector provides users with an enhanced and comprehensive understanding of the cybersecurity threat landscape by leveraging the detailed threat intelligence provided by RST Cloud.
 
-## Requirements:
+## Requirements
 - OpenCTI Platform version 5.10.x or higher.
 - An API Key for accessing RST Cloud.
 
@@ -31,7 +31,6 @@ Configuration of the connector is straightforward. The minimal configuration req
 | OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform. |
 | OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token set in the OpenCTI platform. |
 | Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` identifier for this connector instance. |
-| Connector Type | `CONNECTOR_TYPE` | Yes | Should always be set to `EXTERNAL_IMPORT` for this connector. |
 | Connector Name | `CONNECTOR_NAME` | Yes | Name of the connector. For example: `RST Report Hub`. |
 | Connector Scope | `CONNECTOR_SCOPE` | Yes | The scope or type of data the connector is importing, either a MIME type or Stix Object. E.g. application/json |
 | Confidence Level | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | The default confidence level for created sightings. It's a number between 1 and 100, with 100 being the most confident. |

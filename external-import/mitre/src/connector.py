@@ -17,6 +17,11 @@ MITRE_CAPEC_FILE_URL = (
     "https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json"
 )
 
+STATEMENT_MARKINGS = [
+    "marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168",
+    "marking-definition--17d82bb2-eeeb-4898-bda5-3ddbcd2b799d",
+]
+
 
 def time_from_unixtime(timestamp):
     if not timestamp:
@@ -65,6 +70,12 @@ class Mitre:
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
             config,
+        )
+        self.mitre_remove_statement_marking = get_config_variable(
+            "MITRE_REMOVE_STATEMENT_MARKING",
+            ["mitre", "remove_statement_marking"],
+            config,
+            default=False,
         )
         self.mitre_interval = get_config_variable(
             "MITRE_INTERVAL", ["mitre", "interval"], config, isNumber=True
@@ -122,7 +133,6 @@ class Mitre:
                 .read()
                 .decode("utf-8")
             )
-
             # Convert the data to python dictionary
             stix_bundle = json.loads(serialized_bundle)
             stix_objects = stix_bundle["objects"]
@@ -135,17 +145,22 @@ class Mitre:
                 )
             )
             revoked_ids = list(map(lambda stix: stix["id"], revoked_objects))
-
             # Filter every revoked MITRE elements
             not_revoked_objects = list(
                 filter(
                     lambda stix: filter_stix_revoked(revoked_ids, stix), stix_objects
                 )
             )
-
             stix_bundle["objects"] = not_revoked_objects
-            # Add default confidence for each object that require this field
-            self.add_confidence_to_bundle_objects(stix_bundle)
+            # Remove statement marking
+            if self.mitre_remove_statement_marking:
+                stix_objects = stix_bundle["objects"]
+                stix_bundle["objects"] = list(
+                    filter(
+                        lambda stix: stix["id"] not in STATEMENT_MARKINGS, stix_objects
+                    )
+                )
+                self.remove_statement_marking(stix_bundle)
             return stix_bundle
         except (
             urllib.error.URLError,
@@ -156,26 +171,17 @@ class Mitre:
             self.helper.metric.inc("client_error_count")
         return None
 
-    def add_confidence_to_bundle_objects(self, stix_bundle: dict):
-        # the list of object types for which the confidence has to be added
-        # (skip marking-definition, identity, external-reference-as-report)
-        object_types_with_confidence = [
-            "attack-pattern",
-            "course-of-action",
-            "threat-actor",
-            "intrusion-set",
-            "campaign",
-            "malware",
-            "tool",
-            "vulnerability",
-            "report",
-            "relationship",
-        ]
+    def remove_statement_marking(self, stix_bundle: dict):
         for obj in stix_bundle["objects"]:
-            object_type = obj["type"]
-            if object_type in object_types_with_confidence:
-                # self.helper.log_info(f"Adding confidence to {object_type} object")
-                obj["confidence"] = int(self.helper.connect_confidence_level)
+            if "object_marking_refs" in obj:
+                new_markings = []
+                for ref in obj["object_marking_refs"]:
+                    if ref not in STATEMENT_MARKINGS:
+                        new_markings.append(ref)
+                if len(new_markings) == 0:
+                    del obj["object_marking_refs"]
+                else:
+                    obj["object_marking_refs"] = new_markings
 
     def process_data(self):
         unixtime_now = get_unixtime_now()

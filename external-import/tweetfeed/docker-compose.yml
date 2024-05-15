@@ -1,12 +1,11 @@
 version: "3"
 services:
   connector-tweetfeed:
-    image: opencti/connector-tweetfeed:5.12.15
+    image: opencti/connector-tweetfeed:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Tweetfeed
       - CONNECTOR_SCOPE=tweetfeed
       - CONNECTOR_CONFIDENCE_LEVEL=15

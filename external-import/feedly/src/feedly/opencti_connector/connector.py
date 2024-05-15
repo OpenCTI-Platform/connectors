@@ -3,7 +3,7 @@ from datetime import datetime
 
 from feedly.api_client.enterprise.indicators_of_compromise import StixIoCDownloader
 from feedly.api_client.session import FeedlySession
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils
 from stix2 import Note
 
 FEEDLY_AI_UUID = "identity--477866fd-8784-46f9-ab40-5592ed4eddd7"
@@ -27,6 +27,7 @@ class FeedlyConnector:
             self.feedly_session, newer_than, stream_id
         ).download_all()
         _replace_description_with_note(bundle)
+        _add_main_observable_type_to_indicators(bundle)
         self.cti_helper.log_info(f"Found {_count_reports(bundle)} new reports")
         return bundle
 
@@ -48,3 +49,13 @@ def _replace_description_with_note(bundle: dict) -> None:
             )
             o["description"] = ""
     bundle["objects"].extend([json.loads(note.serialize()) for note in notes])
+
+
+def _add_main_observable_type_to_indicators(bundle: dict) -> None:
+    for o in bundle["objects"]:
+        if o["type"] == "indicator" and "pattern" in o:
+            pattern = o["pattern"]
+            stix_type = pattern.removeprefix("[").split(":")[0].strip()
+            o["x_opencti_main_observable_type"] = (
+                OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
+            )

@@ -397,9 +397,9 @@ class KasperskyConnector:
                             )
                             new_state.update(importer_state)
 
-                    new_state[
-                        self._STATE_LATEST_RUN_TIMESTAMP
-                    ] = self._current_unix_timestamp()
+                    new_state[self._STATE_LATEST_RUN_TIMESTAMP] = (
+                        self._current_unix_timestamp()
+                    )
 
                     self._info("Storing new state: {0}", new_state)
 

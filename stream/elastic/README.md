@@ -51,7 +51,6 @@ variable `CONNECTOR_JSON_CONFIG` takes a JSON equivalent of the `config.yml` and
 | `connector.mode`                  | `CONNECTOR_MODE`             | No        | Must be 'ecs' for ECS-formatted threat indicator documents, 'ecs_no_signals' if signal polling is not desired, or 'stix' for raw OpenCTI STIX documents. Defaults to 'ecs'.                                                  |
 | `connector.name`                  | `CONNECTOR_NAME`             | Yes       | The name of the Elastic instance, to identify it if you have multiple Elastic instances connectors.                                                                      |
 | `connector.scope`                 | `CONNECTOR_SCOPE`            | Yes       | Must be `elastic`, not used in this connector.                                                                                                                           |
-| `connector.type`                  | `CONNECTOR_TYPE`             | Yes       | Must be `STREAM` (this is the connector type).                                                                                                                           |
 | `connector.start_timestamp`       | `CONNECTOR_START_TIMESTAMP`  | No        | Must be a Unix timestamp like `1655890657402` or an ISO date like `2022-05-22T09:17:08.520Z`                                                                             |
 | `connector.live_stream_id`        | `CONNECTOR_LIVE_STREAM_ID`   | No        | Must be a generated guid or a string `live` if you want to collect all events type                                                                                       |
 | `connector.live_stream_start_timestamp`   | `CONNECTOR_LIVE_STREAM_START_TIMESTAMP`   | No        | Must be a Unix timestamp like `1655890657402` or an ISO date like `2022-05-22T09:17:08.520Z`                                                        |
@@ -74,29 +73,17 @@ To build the container to run on Docker, Kubernetes, or other OCI runtime, simpl
 docker build -t elastic-connector:latest .
 ```
 
-## Building virtual environment
-
-This connector uses [Python Poetry](https://python-poetry.org/) to manage dependencies. If you want to run the project locally, create a virtual environment using your favorite tool (I like pyenv, but the virtualenv module would be just fine). See the
-Poetry installation docs on how to install it.
+## Configuration file
 
 ```shell
-# Install runtime dependencies
-poetry install --no-dev
-
 # Configure connector as noted above
-cp config.reference.yml config.yml
-
-# Run main script, it was installed to your virtualenv bin/ dir.
-elastic-connector
+cp config.yml.sample config.yml
 ```
 
-If you want to run tests and do other development things use poetry to install those deps.
+And run main script from src:
 
 ```shell
-poetry install
-
-# Run all tests tests (flake8, black, isort, unit tests in tests/ dir)
-pytest
+python3 -m elastic
 ```
 
 ### Using a Constrained API key

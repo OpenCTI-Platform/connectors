@@ -1,4 +1,4 @@
-pycti==5.12.15
+pycti==6.0.10
 requests
 python-dateutil
 validators

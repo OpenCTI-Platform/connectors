@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-export-ttps-file-navigator:
-    image: opencti/connector-export-ttps-file-navigator:5.12.15
+    image: opencti/connector-export-ttps-file-navigator:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
       - CONNECTOR_NAME=ExportTTPsFileNavigator
       - CONNECTOR_SCOPE=application/vnd.mitre.navigator+json
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)

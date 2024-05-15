@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from typing import Dict
 
 import requests
 import stix2
@@ -44,7 +45,7 @@ class HybridAnalysis:
         self.api_url = "https://www.hybrid-analysis.com/api/v2"
         self.headers = {
             "api-key": self.api_key,
-            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 5.12.15",
+            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 6.0.5",
             "accept": "application/json",
         }
         self.identity = self.helper.api.identity.create(
@@ -255,18 +256,15 @@ class HybridAnalysis:
             result=report["verdict"],
             sample_ref=stix_entity["id"],
             created_by_ref=self.identity,
-            operating_system_ref=operating_system["id"]
-            if operating_system is not None
-            else None,
+            operating_system_ref=(
+                operating_system["id"] if operating_system is not None else None
+            ),
             analysis_sco_refs=analysis_sco_refs,
             external_references=[external_reference],
         )
         stix_objects.append(malware_analysis)
         if len(stix_objects) > 0:
-            serialized_bundle = stix2.Bundle(
-                objects=stix_objects,
-                allow_custom=True,
-            ).serialize()
+            serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
             bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
             return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
@@ -404,15 +402,10 @@ class HybridAnalysis:
             return "Observable not found and no file to upload in the sandbox"
         return self._trigger_sandbox(stix_objects, stix_entity, opencti_entity)
 
-    def _process_message(self, data):
-        opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"], withFiles=True
-        )
-        if opencti_entity is None:
-            raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
-            )
-        result = self.helper.get_data_from_enrichment(data, opencti_entity)
+    def _process_message(self, data: Dict):
+        stix_objects = data["stix_objects"]
+        stix_entity = data["stix_entity"]
+        opencti_entity = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -423,13 +416,11 @@ class HybridAnalysis:
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-        return self._process_observable(
-            result["stix_objects"], result["stix_entity"], opencti_entity
-        )
+        return self._process_observable(stix_objects, stix_entity, opencti_entity)
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
     def detect_ip_version(self, value):
         if len(value) > 16:

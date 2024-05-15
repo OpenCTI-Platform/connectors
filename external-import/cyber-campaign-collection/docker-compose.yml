@@ -1,15 +1,13 @@
 version: '3'
 services:
   connector-cyber-campaign-collection:
-    image: opencti/connector-cyber-campaign-collection:5.12.15
+    image: opencti/connector-cyber-campaign-collection:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=APT & Cybercriminals Campaign Collection"
       - CONNECTOR_SCOPE=report
-      - CONNECTOR_CONFIDENCE_LEVEL=0 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=error
       - CYBER_MONITOR_GITHUB_TOKEN= # If not provided, rate limit will be very low

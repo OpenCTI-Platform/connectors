@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from typing import Dict
 
 import requests
 import stix2
@@ -31,9 +32,13 @@ class AbuseIPDBConnector:
         self.max_tlp = get_config_variable(
             "ABUSEIPDB_MAX_TLP", ["abuseipdb", "max_tlp"], config
         )
-        self.whitelist_label = self.helper.api.label.create(
+        self.whitelist_label = self.helper.api.label.read_or_create_unchecked(
             value="whitelist", color="#4caf50"
         )
+        if self.whitelist_label is None:
+            raise ValueError(
+                "The whitelist label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
+            )
 
     @staticmethod
     def extract_abuse_ipdb_category(category_number):
@@ -63,17 +68,8 @@ class AbuseIPDBConnector:
         }
         return mapping.get(str(category_number), "unknown category")
 
-    def _process_message(self, data):
-        opencti_entity = self.helper.api.stix_cyber_observable.read(
-            id=data["entity_id"]
-        )
-        if opencti_entity is None:
-            raise ValueError(
-                "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
-            )
-        result = self.helper.get_data_from_enrichment(data, opencti_entity)
-        stix_objects = result["stix_objects"]
-        stix_entity = result["stix_entity"]
+    def _process_message(self, data: Dict) -> str:
+        opencti_entity = data["enrichment_entity"]
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -85,6 +81,9 @@ class AbuseIPDBConnector:
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
+
+        stix_objects = data["stix_objects"]
+        stix_entity = data["stix_entity"]
         # Extract IP from entity data
         url = "https://api.abuseipdb.com/api/v2/check"
         headers = {
@@ -187,7 +186,7 @@ class AbuseIPDBConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

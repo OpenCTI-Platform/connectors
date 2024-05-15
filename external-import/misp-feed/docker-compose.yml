@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-misp-feed:
-    image: opencti/connector-misp-feed:5.12.15
+    image: opencti/connector-misp-feed:6.0.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=MISP Feed"
       - CONNECTOR_SCOPE=misp-feed
       - CONNECTOR_CONFIDENCE_LEVEL=20 # From 0 (Unknown) to 100 (Fully trusted)

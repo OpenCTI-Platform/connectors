@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-virustotal-livehunt-notifications:
-    image: opencti/connector-virustotal-livehunt-notifications:5.12.15
+    image: opencti/connector-virustotal-livehunt-notifications:6.0.10
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=Virustotal_Livehunt_Notifications
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - "CONNECTOR_NAME=VirusTotal Livehunt Notifications"
       - CONNECTOR_SCOPE=StixFile,Indicator,Incident
       - CONNECTOR_CONFIDENCE_LEVEL=50 # From 0 (Unknown) to 100 (Fully trusted)

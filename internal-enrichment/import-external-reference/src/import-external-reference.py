@@ -1,6 +1,7 @@
 import os
 import ssl
 import urllib.request
+from typing import Dict
 
 import html2text
 import pdfkit
@@ -44,6 +45,11 @@ class ImportExternalReferenceConnector:
             True,
         )
         self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"}
+        self.wkhtmltopdf_path = get_config_variable(
+            "WKHTMLTOPDF_PATH",
+            ["import_external_reference", "wkhtmltopdf_path"],
+            config,
+        )
 
     def delete_files(self):
         if os.path.exists("data.html"):
@@ -86,7 +92,20 @@ class ImportExternalReferenceConnector:
                                 ),
                             ],
                         }
-                        data = pdfkit.from_url(url_to_import, False, options=options)
+                        if self.wkhtmltopdf_path:
+                            config = pdfkit.configuration(
+                                wkhtmltopdf=self.wkhtmltopdf_path
+                            )
+                            data = pdfkit.from_url(
+                                url_to_import,
+                                False,
+                                options=options,
+                                configuration=config,
+                            )
+                        else:
+                            data = pdfkit.from_url(
+                                url_to_import, False, options=options
+                            )
                         self.helper.api.external_reference.add_file(
                             id=external_reference["id"],
                             file_name=file_name,
@@ -97,7 +116,7 @@ class ImportExternalReferenceConnector:
                         if "Done" not in str(e):
                             raise e
             except Exception as e:
-                self.helper.log_error(e)
+                raise ValueError(e)
         if self.import_as_md:
             if url_to_import.endswith(".pdf") and self.import_pdf_as_md:
                 try:
@@ -176,9 +195,8 @@ class ImportExternalReferenceConnector:
                     self.helper.log_error(e)
         return "Import process is finished."
 
-    def _process_message(self, data):
-        entity_id = data["entity_id"]
-        external_reference = self.helper.api.external_reference.read(id=entity_id)
+    def _process_message(self, data: Dict):
+        external_reference = data["enrichment_entity"]
         self.helper.log_info(
             "External reference found: " + external_reference["source_name"]
         )
@@ -186,7 +204,7 @@ class ImportExternalReferenceConnector:
 
     # Start the main loop
     def start(self):
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

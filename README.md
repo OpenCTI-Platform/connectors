@@ -22,5 +22,4 @@ If you want to help use improve or develop new connector, please check out the *
 
 OpenCTI is a product designed and developed by the company [Filigran](https://filigran.io).
 
-<a href="https://filigran.io" alt="Filigran"><img src="https://filigran.io/wp-content/uploads/2023/08/filigran_text_medium.png" width="200" /></a>
-
+<a href="https://filigran.io" alt="Filigran"><img src="https://github.com/OpenCTI-Platform/opencti/raw/master/.github/img/logo_filigran.png" width="300" /></a>

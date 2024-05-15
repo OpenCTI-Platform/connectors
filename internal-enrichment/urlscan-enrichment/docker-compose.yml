@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-urlscan-enrichment:
+    image: opencti/connector-urlscan-enrichment:6.0.10
+    environment:
+      - CONNECTOR_NAME=connector-urlscanio
+      - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN= ChangeMe
+      - CONNECTOR_ID= ChangeMe
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted).
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_AUTO=true
+      - URLSCAN_API_KEY=ChangeMe
+      - CONNECTOR_WANT_RESULTS=true
+      - CONNECTOR_DOMAIN_ENRICHMENT_COUNT=5 # Maximum Number of domain enrichment results added to notes.
+    restart: always

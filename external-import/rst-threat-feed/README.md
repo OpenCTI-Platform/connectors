@@ -2,7 +2,7 @@
 
 The **RST Threat Feed Connector** integrates RST Cloud threat intelligence feeds into OpenCTI. This connector imports Indicators (IP, Domain, URL, Hash) with their relationships to malware, TTPs, tools, threat groups, sectors, CVE, and other objects. This enhances the capability of OpenCTI by providing actionable threat intelligence data, allowing users to make informed decisions based on the latest information from ([RST Threat Feed](https://www.rstcloud.com/rst-threat-feed/)).
 
-## Key Features:
+## Key Features
 
 - **Lots of contextual information**: Indicators come with additional info including threat category, malware name, threat actor names, tools and frameworks, TTPs, CVE, industry tags, reference to the source of the indicator and more.
 - **OpenCTI Integration**: Seamlessly integrates the fetched data into OpenCTI's database.
@@ -11,7 +11,7 @@ The **RST Threat Feed Connector** integrates RST Cloud threat intelligence feeds
 
 This connector empowers users with an expanded and in-depth insight into the cyber threat landscape by tapping into the detailed threat intelligence delivered by RST Cloud.
 
-## Requirements:
+## Requirements
 - OpenCTI Platform version 5.10.x or higher.
 - An API Key for accessing RST Cloud.
 
@@ -23,7 +23,7 @@ This connector is aligned with data populated by common OpenCTI connectors. We r
  - CISA Known Exploited Vulnerabilities (https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cisa-known-exploited-vulnerabilities)
 
 
-## Configuration:
+## Configuration
 
 Configuration of the connector is straightforward. The minimal configuration requires you just enter the RST Cloud API key to be provided and OpenCTI connection settings specified. Below is the full list of parameters you can set:
 
@@ -32,10 +32,8 @@ Configuration of the connector is straightforward. The minimal configuration req
 | OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform. |
 | OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token set in the OpenCTI platform. |
 | Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` identifier for this connector instance. |
-| Connector Type | `CONNECTOR_TYPE` | Yes | Should always be set to `EXTERNAL_IMPORT` for this connector. |
 | Connector Name | `CONNECTOR_NAME` | Yes | Name of the connector. For example: `RST Threat Feed`. |
 | Connector Scope | `CONNECTOR_SCOPE` | Yes | The scope or type of data the connector is importing, either a MIME type or Stix Object. E.g. application/json |
-| Confidence Level | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | The default confidence level for created sightings. It's a number between 1 and 100, with 100 being the most confident. |
 | Log Level | `CONNECTOR_LOG_LEVEL` | Yes | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 | Run and Terminate | `CONNECTOR_RUN_AND_TERMINATE` | Yes | If set to true, the connector will terminate after a successful run. Useful for debugging or one-time runs. |
 | Update Existing Data | `CONFIG_UPDATE_EXISTING_DATA` | Yes | Decide whether the connector should update already existing data in the database. |

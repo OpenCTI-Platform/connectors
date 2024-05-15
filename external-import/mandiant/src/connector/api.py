@@ -155,6 +155,10 @@ class MandiantAPI:
             data = response.json()
             data_response = data.get(result)
             next_parameter = data.get("next", None)
+
+            if data_response is None:
+                return mandiant_data
+
             for item in data_response:
                 mandiant_data.append(item)
 

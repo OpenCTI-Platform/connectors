@@ -17,7 +17,6 @@ If you are using it independently, remember that the connector will try to conne
 | `opencti_url`                            | `OPENCTI_URL`                     | Yes          | The URL of the OpenCTI platform.                                                                     |
 | `opencti_token`                          | `OPENCTI_TOKEN`                   | Yes          | The default admin token configured in the OpenCTI platform parameters file.                          |
 | `connector_id`                           | `CONNECTOR_ID`                    | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                   |
-| `connector_type`                         | `CONNECTOR_TYPE`                  | Yes          | Must be `EXTERNAL_IMPORT` (this is the connector type).                                              |
 | `connector_name`                         | `CONNECTOR_NAME`                  | Yes          | The name of the MISP instance, to identify it if you have multiple MISP connectors.                  |
 | `connector_scope`                        | `CONNECTOR_SCOPE`                 | Yes          | Must be `misp`, not used in this connector.                                                          |
 | `connector_confidence_level`             | `CONNECTOR_CONFIDENCE_LEVEL`      | Yes          | The default confidence level for created relationships (a number between 1 and 4).                   |
@@ -26,6 +25,7 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_url`                               | `MISP_URL`                        | Yes          | The MISP instance URL.                                                                               |
 | `misp_reference_url`                     | `MISP_REFERENCE_URL`              | Yes          | The MISP instance reference URL (used to create external reference, optional)                        |
 | `misp_key`                               | `MISP_KEY`                        | Yes          | The MISP instance key.                                                                               |
+| `misp_client_cert`                       | `MISP_CLIENT_CERT`                | No           | The client certificate of the MISP instance. It must be a path to the client certificate and readable |
 | `misp_ssl_verify`                        | `MISP_SSL_VERIFY`                 | Yes          | A boolean (`True` or `False`), check if the SSL certificate is valid when using `https`.             |
 | `misp_datetime_attribute`                | `MISP_DATETIME_ATTRIBUTE`         | Yes          | The attribute to be used in filter to query new MISP events.                                         |
 | `misp_report_description_attribute_filter`                | `MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER`         | No          |  Filter to be used to find the attribute with report description (example: "type=comment,category=Internal reference").                                         |

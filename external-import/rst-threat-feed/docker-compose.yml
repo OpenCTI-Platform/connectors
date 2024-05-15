@@ -1,15 +1,13 @@
 version: '3'
 services:
   connector-rst-threat-feed:
-    image: opencti/connector-rst-threat-feed:5.12.15
+    image: opencti/connector-rst-threat-feed:6.0.10
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=9288e3aa-3f94-4505-b31b-69585c47081b
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=RST Threat Feed
       - CONNECTOR_SCOPE=application/json
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1/
       - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}

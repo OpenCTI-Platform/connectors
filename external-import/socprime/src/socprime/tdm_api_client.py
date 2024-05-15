@@ -77,6 +77,11 @@ class ApiClient:
         }
         return self._make_request(method, endpoint, headers=headers)
 
+    def get_rules_from_job(self, job_id: str) -> list[dict]:
+        method = "GET"
+        endpoint = f"/v1/ccm/jobs/{job_id}/get-content"
+        return self._make_request(method=method, endpoint=endpoint)
+
     def search_rules(self, siem_type: str, **kwargs) -> List[dict]:
         rules_list = []
         method = "GET"

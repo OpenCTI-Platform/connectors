@@ -15,7 +15,6 @@ from pycti import Indicator
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 from .client import IronNetClient, IronNetItem
-from .config import RootConfig
 from .loop import ConnectorLoop
 
 __all__ = [
@@ -39,7 +38,6 @@ class IronNetConnector:
             else {}
         )
 
-        self._config = RootConfig.parse_obj(config)
         self._helper = OpenCTIConnectorHelper(config)
 
         self._identity = self._helper.api.identity.create(
@@ -50,14 +48,14 @@ class IronNetConnector:
         self._identity_id = self._identity["standard_id"]
 
         self._client = IronNetClient(
-            self._config.ironnet.api_url,
-            self._config.ironnet.api_key,
-            self._config.ironnet.verify,
+            self._helper.config["ironnet"]["api_url"],
+            self._helper.config["ironnet"]["api_key"],
+            self._helper.config["ironnet"]["verify"],
         )
         self._loop = ConnectorLoop(
             self._helper,
-            self._config.connector.interval,
-            self._config.connector.loop_interval,
+            self._helper.config["connector"]["interval"],
+            self._helper.config["connector"]["loop_interval"],
             self._process_feed,
             True,
         )
@@ -107,13 +105,11 @@ class IronNetConnector:
                 objects=bundle_objects,
                 allow_custom=True,
             ).serialize(),
-            update=self._config.connector.update_existing_data,
+            update=self._helper.config["connector"]["update_existing_data"],
             work_id=work_id,
         )
 
-    def _create_stix(
-        self, results: List[IronNetItem]
-    ) -> Iterable[
+    def _create_stix(self, results: List[IronNetItem]) -> Iterable[
         Union[
             ObservableType,
             stix2.Indicator,
@@ -235,15 +231,15 @@ class IronNetConnector:
             log.warning("Could not determine observable type: %s", value)
             return None
 
-        create_indicator = self._config.ironnet.create_indicators
+        create_indicator = self._helper.config["ironnet"]["create_indicators"]
         if is_ip_indicator:
-            create_indicator &= self._config.ironnet.create_ip_indicators
+            create_indicator &= self._helper.config["ironnet"]["create_ip_indicators"]
 
         if not create_indicator:
             return None
 
         valid_until = (
-            (date.today() + self._config.ironnet.ip_indicator_valid_until)
+            (date.today() + self._helper.config["ironnet"]["ip_indicator_valid_until"])
             if is_ip_indicator
             else None
         )

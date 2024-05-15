@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-cape:
-    image: opencti/connector-cape:5.12.15
+    image: opencti/connector-cape:6.0.10
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CAPE
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error

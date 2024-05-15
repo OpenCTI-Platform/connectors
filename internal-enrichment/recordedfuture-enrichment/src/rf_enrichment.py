@@ -1,4 +1,5 @@
 """Connector to enrich IOCs with Recorded Future data"""
+
 import os
 
 import yaml
@@ -19,7 +20,7 @@ class RFEnrichmentConnector:
         )
 
         self.work_id = None
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
 
         self.token = get_config_variable(
             "RECORDED_FUTURE_TOKEN",
@@ -90,8 +91,7 @@ class RFEnrichmentConnector:
         in the OpenCTI platform
         """
 
-        entity_id = data["entity_id"]
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        observable = data["enrichment_entity"]
         # Extract IOC from entity data
         observable_value = observable["observable_value"]
         observable_id = observable["standard_id"]
@@ -153,7 +153,7 @@ class RFEnrichmentConnector:
 
     def start(self):
         """Start the main loop"""
-        self.helper.listen(self._process_message)
+        self.helper.listen(message_callback=self._process_message)
 
 
 if __name__ == "__main__":

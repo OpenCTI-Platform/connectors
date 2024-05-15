@@ -1,2 +1,2 @@
-pycti==5.12.15
-html2text==2020.1.16
+pycti==6.0.10
+html2text==2024.2.26

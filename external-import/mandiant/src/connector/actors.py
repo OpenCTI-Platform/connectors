@@ -83,6 +83,6 @@ def _get_actor_motivations(actor_details):
         if primary_motivation is None:
             primary_motivation = motivation["name"]
         else:
-            secondary_motivations.append(motivation)
+            secondary_motivations.append(motivation["name"])
 
     return primary_motivation, secondary_motivations

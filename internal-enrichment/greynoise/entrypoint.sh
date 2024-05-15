@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-greynoise
 
 # Launch the worker
-python3 greynoise.py
+python3 main.py

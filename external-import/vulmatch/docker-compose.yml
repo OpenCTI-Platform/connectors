@@ -1,12 +1,11 @@
 version: '3'
 services:
   connector-taxii2:
-    image: opencti/connector-vulmatch:5.12.15
+    image: opencti/connector-vulmatch:6.0.10
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=VULMATCH
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software
       - CONNECTOR_CONFIDENCE_LEVEL=70

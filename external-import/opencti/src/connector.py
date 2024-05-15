@@ -5,7 +5,6 @@ import sys
 import time
 import urllib.request
 from datetime import datetime
-from typing import Optional
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -33,9 +32,10 @@ class OpenCTI:
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
             config,
+            default=True,
         )
         self.config_interval = get_config_variable(
-            "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True
+            "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True, default=7
         )
         self.remove_creator = get_config_variable(
             "CONFIG_REMOVE_CREATOR", ["config", "remove_creator"], config, default=False
@@ -62,7 +62,7 @@ class OpenCTI:
         self.urls = list(filter(lambda url: url is not False, urls))
         self.interval = days_to_seconds(self.config_interval)
 
-    def retrieve_data(self, url: str) -> Optional[str]:
+    def retrieve_data(self, url: str) -> dict:
         """
         Retrieve data from the given url.
 
@@ -73,8 +73,8 @@ class OpenCTI:
 
         Returns
         -------
-        str
-            A string with the content or None in case of failure.
+        dict
+            A bundle in dict
         """
         try:
             return json.loads(
@@ -92,16 +92,6 @@ class OpenCTI:
         ) as urllib_error:
             self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
         return None
-
-    def add_confidence(self, bundle: dict) -> dict:
-        confidence = int(self.helper.connect_confidence_level)
-        types = ["identity", "location", "relationship"]
-
-        for obj in bundle["objects"]:
-            if obj["type"] in types:
-                obj["confidence"] = confidence
-
-        return bundle
 
     def creator_removal(self, bundle: dict) -> dict:
         for obj in bundle["objects"]:
@@ -138,7 +128,6 @@ class OpenCTI:
                 for url in self.urls:
                     try:
                         data = self.retrieve_data(url)
-                        data = self.add_confidence(data)
                         if self.remove_creator:
                             data = self.creator_removal(data)
                         self.send_bundle(work_id, data)

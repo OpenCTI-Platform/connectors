@@ -1,2 +1,2 @@
-pycti==5.12.15
+pycti==6.0.10
 vmray-rest-api==6.0.0

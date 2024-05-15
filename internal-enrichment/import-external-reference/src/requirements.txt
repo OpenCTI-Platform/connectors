@@ -1,5 +1,5 @@
-pycti==5.12.15
-weasyprint==60.2
-html2text==2020.1.16
+pycti==6.0.10
+weasyprint==61.2
+html2text==2024.2.26
 pdfminer.six==20231228
 pdfkit==1.0.0
