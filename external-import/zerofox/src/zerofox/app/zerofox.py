@@ -1,5 +1,5 @@
 # standard library
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Generator
 
 # first-party
@@ -14,7 +14,12 @@ class ZeroFox:
         """Client requires user and token for retrieving CTI token."""
         self._base_url = "https://api.zerofox.com"
         print("retrieving CTI token...")
-        self.cti_token = self._get_cti_authorization_token(username=user, token=token)
+        self.cti_token = {
+            "token": self._get_cti_authorization_token(username=user, token=token),
+            "registered": datetime.now(),
+        }
+        self.user = user
+        self.token = token
         print("CTI token retrieved successfully!")
 
     def fetch_feed(
@@ -76,9 +81,19 @@ class ZeroFox:
         return access
 
     def _get_cti_request_header(self):
+        now = datetime.now()
+        if now - self.cti_token["registered"] <= timedelta(minutes=29):
+            return self._build_auth_header(self.cti_token["token"])
+        else:
+            self.cti_token["token"] = self._get_cti_authorization_token(self.user, self.token)
+            self.cti_token["registered"] = now
+            return self._build_auth_header(self.cti_token["token"])
+
+    def _build_auth_header(self, token):
         return {
-            "Authorization": f"Bearer {self.cti_token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "zf-source": "OpenCTI",
-        }
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "zf-source": "OpenCTI",
+            }
+

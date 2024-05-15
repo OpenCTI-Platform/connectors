@@ -1,12 +1,12 @@
 from typing import List, Union
-
-from stix2 import Infrastructure, Relationship
-from zerofox.domain import C2Domain
+import ipaddress
+from stix2 import Infrastructure, Relationship, IPv4Address, IPv6Address
+from zerofox.domain.c2Domains import C2Domain
 
 
 def c2_domains_to_infrastructure(
     now: str, entry: C2Domain
-) -> List[Union[Infrastructure, Relationship]]:
+) -> List[Union[Infrastructure, Relationship, IPv4Address, IPv6Address]]:
     infrastructure = Infrastructure(
         name=f"Command and Control -- {entry.domain}",
         labels=entry.tags,
@@ -17,10 +17,7 @@ def c2_domains_to_infrastructure(
     )
     ip_addresses = (
         [
-            Infrastructure(
-                name=f"IP Address -- {ip}",
-                infrastructure_types="command-and-control",
-            )
+            build_ip_stix_object(ip)
             for ip in entry.ip_addresses
         ]
         if entry.ip_addresses
@@ -31,8 +28,18 @@ def c2_domains_to_infrastructure(
             source_ref=infrastructure.id,
             target_ref=ip.id,
             relationship_type="consists-of",
+            start_time=entry.created_at,
         )
         for ip in ip_addresses
     ]
 
     return [infrastructure] + ip_addresses + c2_ip_relationships
+
+def build_ip_stix_object(ip):
+    version = ipaddress.ip_address(ip).version
+    if version == 4:
+        return IPv4Address(value=ip)
+    elif version == 6:
+        return IPv6Address(value=ip)
+    else:
+        raise ValueError(f"Invalid IP address: {ip}")

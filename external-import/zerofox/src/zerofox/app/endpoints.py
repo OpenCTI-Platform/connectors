@@ -23,11 +23,6 @@ class CTIEndpoint(Enum):
     def __str__(self):
         return self.value
 
-    Botnet = (
-        "botnet",
-        Botnet,
-        "listed_after",
-    )
     C2Domains = (
         "c2-domains",
         C2Domain,
@@ -52,4 +47,10 @@ class CTIEndpoint(Enum):
     Vulnerabilities = (
         "vulnerabilities",
         Vulnerability,
+    )
+
+    Botnet = (
+        "botnet",
+        Botnet,
+        "listed_after",
     )

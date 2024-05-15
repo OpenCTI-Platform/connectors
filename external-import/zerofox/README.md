@@ -29,15 +29,17 @@ the RabbitMQ on the port configured in the OpenCTI platform.
 
 ### Configuration
 
-| Parameter            | Docker envvar        | Mandatory    | Description                                                                 |
-|----------------------|----------------------| ------------ |-----------------------------------------------------------------------------|
-| `opencti_url`        | `OPENCTI_URL`        | Yes          | The URL of the OpenCTI platform.                                            |
-| `opencti_token`      | `OPENCTI_TOKEN`      | Yes          | The default admin token configured in the OpenCTI platform parameters file. |
-| `connector_id`       | `CONNECTOR_ID`       | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.          |
-| `connector_name`     | `CONNECTOR_NAME`     | Yes          | Option `ZeroFox`                                                            |
-| `connector_scope`    | `CONNECTOR_SCOPE`    | Yes          | Supported scope: Template Scope (MIME Type or Stix Object)                  |
-| `connector_run_every`| `CONNECTOR_RUN_EVERY`| Yes          | How often data ingestion occurs, in format `{number}{s, m, h, d}`, reccommended value is 24h |
-| `username`           | `ZEROFOX_USERNAME`   | Yes          | A ZeroFox platform username                                                 |
-| `password`           | `ZEROFOX_PASSWORD`   | Yes          | A personal access token for accesing the ZeroFox API                        |
-
+| Parameter                        | Docker envvar                    | Mandatory    | Description                                                                                     |
+| -------------------------------- | -------------------------------- | ------------ | ----------------------------------------------------------------------------------------------- |
+| `opencti_url`                    | `OPENCTI_URL`                    | Yes          | The URL of the OpenCTI platform.                                                                |
+| `opencti_token`                  | `OPENCTI_TOKEN`                  | Yes          | The default admin token configured in the OpenCTI platform parameters file.                     |
+| `connector_id`                   | `CONNECTOR_ID`                   | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                              |
+| `connector_name`                 | `CONNECTOR_NAME`                 | Yes          | Option `ZeroFox`                                                                                |
+| `connector_scope`                | `CONNECTOR_SCOPE`                | Yes          | Supported scope: Template Scope (MIME Type or Stix Object)                                      |
+| `connector_run_every`            | `CONNECTOR_RUN_EVERY`            | No           | How often data ingestion occurs, in format `{number}{s, m, h, d}`, reccommended value is 24h    |
+| `connector_first_run`            | `CONNECTOR_FIRST_RUN`            | No           | The scope of data queried when the connector is initialized in format `{number}{s, m, h, d}`, defaults to 1d|
+| `connector_update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | No           | If an entity already exists, update its attributes with information provided by this connector. |
+| `username`                       | `ZEROFOX_USERNAME`               | Yes          | A ZeroFox platform username                                                                     |
+| `password`                       | `ZEROFOX_PASSWORD`               | Yes          | A personal access token for accesing the ZeroFox API                                            |
+| `zerofox_collectors`             | `ZEROFOX_COLLECTORS`             | No           | A comma-separated list of collector names to use by the connector. Uses all of them if ommited  |
 
