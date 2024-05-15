@@ -42,7 +42,7 @@ class ExportTTPsFileNavigator:
                 "Uploading: " + entity_id + "(" + export_type + ") to " + file_name
             )
             self.helper.api.stix_domain_object.push_entity_export(
-                entity_id, file_name, json_bundle
+                entity_id=entity_id, file_name=file_name, data=json_bundle
             )
             self.helper.log_info(
                 "Export done: "

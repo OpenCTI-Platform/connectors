@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crtsh:
-    image: opencti/connector-crtsh:6.0.10
+    image: opencti/connector-crtsh:6.1.0
     environment:
       # Connector's definition parameters:
       - CONNECTOR_NAME=${CONNECTOR_NAME}
@@ -10,10 +10,8 @@ services:
       - OPENCTI_URL=${OPENCTI_URL}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
       - CONNECTOR_ID=${CONNECTOR_ID}
-      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL} # From 0 (Unknown) to 100 (Fully trusted).
       - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
       - CONNECTOR_RUN_EVERY=${CONNECTOR_RUN_EVERY}
-      - CONNECTOR_UPDATE_EXISTING_DATA=${CONNECTOR_UPDATE_EXISTING_DATA}
       # Connector's custom execution parameters:
       # Domain to search for e.g., google.com
       - CRTSH_DOMAIN=${CRTSH_DOMAIN}

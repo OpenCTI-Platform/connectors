@@ -6,7 +6,7 @@ import re
 import sys
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict
 
 import taxii2client.v20 as tx20
@@ -188,8 +188,8 @@ class Taxii2Connector:
             if self.first_run:
                 self.helper.log_info("Connector has never run")
             else:
-                last_run = datetime.utcfromtimestamp(
-                    self.helper.get_state()["last_run"]
+                last_run = datetime.fromtimestamp(
+                    self.helper.get_state()["last_run"], tz=timezone.utc
                 ).strftime("%Y-%m-%d %H:%M:%S")
                 self.helper.log_info("Connector last run: " + last_run)
 
@@ -383,7 +383,7 @@ class Taxii2Connector:
                 "spec_version": version,
                 "objects": objects,
             }
-            self.send_to_server(new_bundle)
+            self.send_to_server(new_bundle, collection)
         else:
             self.helper.log_info("No objects found in request.")
 
@@ -396,7 +396,7 @@ class Taxii2Connector:
                 obj["x_opencti_create_indicators"] = self.create_indicators
         return stix_bundle
 
-    def send_to_server(self, bundle):
+    def send_to_server(self, bundle, collection):
         """
         Sends a STIX2 bundle to OpenCTI Server
         Args:
@@ -407,10 +407,21 @@ class Taxii2Connector:
             f"Sending Bundle to server with '{len(bundle.get('objects', []))}' objects"
         )
 
+        # Create work id
+        now = datetime.now(timezone.utc)
+        friendly_name = (
+            f"{self.helper.connect_name} - {collection.title} run @ "
+            + now.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+
         try:
             self.helper.send_stix2_bundle(
                 json.dumps(self._process_objects(bundle)),
                 update=self.update_existing_data,
+                work_id=work_id,
             )
 
         except Exception as e:

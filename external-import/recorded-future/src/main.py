@@ -207,27 +207,36 @@ class RFNotes:
             f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API"
         )
         for note in notes:
-            stixnote = StixNote(
-                self.helper,
-                tas,
-                self.rfapi,
-                self.tlp,
-                self.rf_person_to_TA,
-                self.rf_TA_to_intrusion_set,
-                self.risk_as_score,
-                self.risk_threshold,
-            )
-            stixnote.from_json(note, self.tlp)
-            stixnote.create_relations()
-            bundle = stixnote.to_stix_bundle()
-            self.helper.log_info(
-                "[ANALYST NOTES] Sending Bundle to server with "
-                + str(len(bundle.objects))
-                + " objects"
-            )
-            self.helper.send_stix2_bundle(
-                bundle.serialize(), update=self.update_existing_data, work_id=work_id
-            )
+            try:
+                stixnote = StixNote(
+                    self.helper,
+                    tas,
+                    self.rfapi,
+                    self.tlp,
+                    self.rf_person_to_TA,
+                    self.rf_TA_to_intrusion_set,
+                    self.risk_as_score,
+                    self.risk_threshold,
+                )
+                stixnote.from_json(note, self.tlp)
+                stixnote.create_relations()
+                bundle = stixnote.to_stix_bundle()
+                self.helper.log_info(
+                    "[ANALYST NOTES] Sending Bundle to server with "
+                    + str(len(bundle.objects))
+                    + " objects"
+                )
+                self.helper.send_stix2_bundle(
+                    bundle.serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+            except Exception as exception:
+                self.helper.log_error(
+                    f"[ANALYST NOTES] Bundle has been skipped due to exception: "
+                    f"{str(exception)}"
+                )
+                continue
 
 
 if __name__ == "__main__":

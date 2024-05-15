@@ -20,10 +20,12 @@ class ExportFileTxt:
 
     def _process_message(self, data):
         file_name = data["file_name"]
-        # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
         export_scope = data["export_scope"]
+        main_filter = data.get("main_filter")
+        access_filter = data.get("access_filter")
 
         if export_scope == "single":
             raise ValueError("This connector only supports list exports")
@@ -41,36 +43,46 @@ class ExportFileTxt:
 
         else:  # export_scope = 'selection' or 'query'
             if export_scope == "selection":
-                selected_ids = data["selected_ids"]
-                entities_list = []
                 list_filters = "selected_ids"
 
-                for selected_id in selected_ids:
-                    entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                        id=selected_id
+                entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
+                    filters=main_filter
+                )
+                entity_data_sco = (
+                    self.helper.api_impersonate.stix_cyber_observable.list(
+                        filters=main_filter
                     )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_core_relationship.read(
-                                id=selected_id
-                            )
-                        )
-                    entities_list.append(entity_data)
+                )
+                entity_data_scr = (
+                    self.helper.api_impersonate.stix_core_relationship.list(
+                        filters=main_filter
+                    )
+                )
+
+                entities_list = entity_data_sdo + entity_data_sco + entity_data_scr
 
             else:  # export_scope = 'query'
                 list_params = data["list_params"]
+                list_params_filters = list_params.get("filters")
+                access_filter_content = access_filter.get("filters")
+
+                if len(access_filter_content) != 0 and list_params_filters is not None:
+                    export_query_filter = {
+                        "mode": "and",
+                        "filterGroups": [list_params_filters, access_filter],
+                        "filters": [],
+                    }
+                elif len(access_filter_content) == 0:
+                    export_query_filter = list_params_filters
+                else:
+                    export_query_filter = access_filter
+
                 entities_list = self.helper.api_impersonate.stix2.export_entities_list(
                     entity_type=entity_type,
                     search=list_params.get("search"),
-                    filters=list_params.get("filters"),
-                    orderBy=list_params["orderBy"],
-                    orderMode=list_params["orderMode"],
+                    filters=export_query_filter,
+                    orderBy=list_params.get("orderBy"),
+                    orderMode=list_params.get("orderMode"),
                     getAll=True,
                 )
                 self.helper.log_info("Uploading: " + entity_type + " to " + file_name)
@@ -88,6 +100,7 @@ class ExportFileTxt:
                         entity_id,
                         entity_type,
                         file_name,
+                        file_markings,
                         observable_values_bytes,
                         list_filters,
                     )
@@ -98,6 +111,7 @@ class ExportFileTxt:
                         entity_id,
                         entity_type,
                         file_name,
+                        file_markings,
                         entities_values_bytes,
                         list_filters,
                     )
@@ -111,6 +125,7 @@ class ExportFileTxt:
                         entity_id,
                         entity_type,
                         file_name,
+                        file_markings,
                         entities_values_bytes,
                         list_filters,
                     )

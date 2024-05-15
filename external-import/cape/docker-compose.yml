@@ -1,13 +1,12 @@
 version: '3'
 services:
   connector-cape:
-    image: opencti/connector-cape:6.0.10
+    image: opencti/connector-cape:6.1.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=CAPE
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - CAPE_CREATE_INDICATORS=true
       - CAPE_ENABLE_NETWORK_TRAFFIC=false # enable creation of net Traffic (Very Loud)

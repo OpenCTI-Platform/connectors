@@ -7,8 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'ESET Cyber Threat Intelligence'
   scope: 'eset'
-  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: false
   log_level: 'info'
 
 eset:

@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Cyber Monitor Github'
   scope: 'report'
-  update_existing_data: false
   run_and_terminate: false
   log_level: 'info'
 

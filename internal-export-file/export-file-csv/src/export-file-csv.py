@@ -94,14 +94,64 @@ class ExportFileCsv:
         writer.writerows(csv_data)
         return output.getvalue()
 
+    def _export_list(self, data, entities_list, list_filters):
+        file_name = data["file_name"]
+        export_type = data["export_type"]
+        file_markings = data["file_markings"]
+        entity_id = data.get("entity_id")
+        entity_type = data["entity_type"]
+        csv_data = self.export_dict_list_to_csv(entities_list)
+        self.helper.log_info(
+            "Uploading: " + entity_type + "/" + export_type + " to " + file_name
+        )
+        if entity_type == "Stix-Cyber-Observable":
+            self.helper.api.stix_cyber_observable.push_list_export(
+                entity_id,
+                entity_type,
+                file_name,
+                file_markings,
+                csv_data,
+                list_filters,
+            )
+        elif entity_type == "Stix-Core-Object":
+            self.helper.api.stix_core_object.push_list_export(
+                entity_id,
+                entity_type,
+                file_name,
+                file_markings,
+                csv_data,
+                list_filters,
+            )
+        else:
+            self.helper.api.stix_domain_object.push_list_export(
+                entity_id,
+                entity_type,
+                file_name,
+                file_markings,
+                csv_data,
+                list_filters,
+            )
+        self.helper.connector_logger.info(
+            "Export done",
+            {
+                "entity_type": entity_type,
+                "export_type": export_type,
+                "file_name": file_name,
+            },
+        )
+
     def _process_message(self, data):
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
-        # max_marking = data["max_marking"]  # TODO Implement marking restriction
+        file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
+        main_filter = data.get("main_filter")
+        access_filter = data.get("access_filter")
 
+        # Single export always containing object_refs
+        # Full but no relationships
         if export_scope == "single":
             self.helper.connector_logger.info(
                 "Exporting",
@@ -111,31 +161,62 @@ class ExportFileCsv:
                     "file_name": file_name,
                 },
             )
-            entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                id=entity_id
+
+            # Fetch the base element
+            # No usage of any filter because user ask directly for this specific export
+            readers = self.helper.api.stix2.get_readers()
+            do_read = readers.get(
+                entity_type,
+                lambda **kwargs: self.helper.api.stix2.unknown_type(
+                    {"type": entity_type}
+                ),
             )
-            if entity_data is None:
-                entity_data = self.helper.api_impersonate.stix_cyber_observable.read(
-                    id=entity_id
-                )
+            entity_data = do_read(id=entity_id)
+            # If the entity is not found, raise on error
+            # This is not something that should happen. Rare case of concurrent deletion or rights modification
             if entity_data is None:
                 raise ValueError(
                     "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
                 )
+
+            # If the entity is a container
+            # We have the objectsIds resolved coming from the data load
+            # Due to usage of process_multiple_fields
             entities_list = []
-            if "objectsIds" in entity_data:
-                for id in entity_data["objectsIds"]:
-                    entity = self.helper.api_impersonate.stix_domain_object.read(id=id)
-                    if entity is None:
-                        entity = self.helper.api_impersonate.stix_cyber_observable.read(
-                            id=id
-                        )
-                    if entity is not None:
-                        del entity["objectLabelIds"]
-                        entities_list.append(entity)
+            object_ids = entity_data.get("objectsIds")
+            if object_ids is not None and len(object_ids) != 0:
+                # Filters need to cumulate the access markings + the list of inner object ids
+                export_selection_filter = {
+                    "mode": "and",
+                    "filterGroups": [
+                        {
+                            "mode": "or",
+                            "filters": [
+                                {
+                                    "key": "ids",
+                                    "values": entity_data["objectsIds"],
+                                }
+                            ],
+                            "filterGroups": [],
+                        },
+                        access_filter,
+                    ],
+                    "filters": [],
+                }
+                entities_list = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
+                    filters=export_selection_filter, getAll=True
+                )
+                # Cleanup object extra information
+                # Due to lack of support of this in export_dict_list_to_csv
+                for entity in entities_list:
+                    del entity["objectLabelIds"]
                 del entity_data["objectsIds"]
+
+            # Cleanup object extra information
+            # Due to lack of support of this in export_dict_list_to_csv
             if "objectLabelIds" in entity_data:
                 del entity_data["objectLabelIds"]
+
             entities_list.append(entity_data)
             csv_data = self.export_dict_list_to_csv(entities_list)
             self.helper.connector_logger.info(
@@ -144,10 +225,14 @@ class ExportFileCsv:
                     "entity_id": entity_id,
                     "export_type": export_type,
                     "file_name": file_name,
+                    "file_markings": file_markings,
                 },
             )
             self.helper.api.stix_domain_object.push_entity_export(
-                entity_id, file_name, csv_data
+                entity_id=entity_id,
+                file_name=file_name,
+                data=csv_data,
+                file_markings=file_markings,
             )
             self.helper.connector_logger.info(
                 "Export done",
@@ -156,90 +241,54 @@ class ExportFileCsv:
                     "entity_id": entity_id,
                     "export_type": export_type,
                     "file_name": file_name,
+                    "file_markings": file_markings,
                 },
             )
 
-        else:  # list export: export_scope = 'query' or 'selection'
-            if export_scope == "selection":
-                selected_ids = data["selected_ids"]
-                list_filters = "selected_ids"
-                entities_list = []
+        # Selection export without object_refs/relationships
+        # = Only simple
+        if export_scope == "selection":
+            list_filters = "selected_ids"
+            entities_list = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
+                filters=main_filter, getAll=True
+            )
+            self._export_list(data, entities_list, list_filters)
 
-                for selected_id in selected_ids:
-                    entity_data = self.helper.api_impersonate.stix_domain_object.read(
-                        id=selected_id
-                    )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_cyber_observable.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_core_relationship.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        entity_data = (
-                            self.helper.api_impersonate.stix_sighting_relationship.read(
-                                id=selected_id
-                            )
-                        )
-                    if entity_data is None:
-                        raise ValueError(
-                            "Unable to read/access to the entity, please check that the connector permission. Please note that all export files connectors should have admin permission as they impersonate the user requesting the export to avoir data leak."
-                        )
-                    entities_list.append(entity_data)
+        # Query export without object_refs/relationships
+        # = Only simple
+        if export_scope == "query":
+            list_params = data["list_params"]
+            list_params_filters = list_params.get("filters")
+            self.helper.connector_logger.info(
+                "Exporting list: ",
+                {
+                    "entity_type": entity_type,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
+            )
 
-            else:  # export_scope = 'query'
-                list_params = data["list_params"]
-                self.helper.connector_logger.info(
-                    "Exporting list: ",
-                    {
-                        "entity_type": entity_type,
-                        "export_type": export_type,
-                        "file_name": file_name,
-                    },
-                )
-                entities_list = self.helper.api_impersonate.stix2.export_entities_list(
-                    entity_type=entity_type,
-                    search=list_params.get("search"),
-                    filters=list_params.get("filters"),
-                    orderBy=list_params["orderBy"],
-                    orderMode=list_params["orderMode"],
-                    getAll=True,
-                )
-                list_filters = json.dumps(list_params)
+            filter_groups = []
+            if list_params_filters is not None:
+                filter_groups.append(list_params_filters)
+            if access_filter is not None:
+                filter_groups.append(access_filter)
+            export_query_filter = {
+                "mode": "and",
+                "filterGroups": filter_groups,
+                "filters": [],
+            }
 
-            if entities_list is not None:
-                csv_data = self.export_dict_list_to_csv(entities_list)
-                self.helper.log_info(
-                    "Uploading: " + entity_type + "/" + export_type + " to " + file_name
-                )
-                if entity_type == "Stix-Cyber-Observable":
-                    self.helper.api.stix_cyber_observable.push_list_export(
-                        entity_id, entity_type, file_name, csv_data, list_filters
-                    )
-                elif entity_type == "Stix-Core-Object":
-                    self.helper.api.stix_core_object.push_list_export(
-                        entity_id, entity_type, file_name, csv_data, list_filters
-                    )
-                else:
-                    self.helper.api.stix_domain_object.push_list_export(
-                        entity_id, entity_type, file_name, csv_data, list_filters
-                    )
-                self.helper.connector_logger.info(
-                    "Export done",
-                    {
-                        "entity_type": entity_type,
-                        "export_type": export_type,
-                        "file_name": file_name,
-                    },
-                )
-            else:
-                raise ValueError("An error occurred, the list is empty")
+            entities_list = self.helper.api_impersonate.stix2.export_entities_list(
+                entity_type=entity_type,
+                search=list_params.get("search"),
+                filters=export_query_filter,
+                orderBy=list_params["orderBy"],
+                orderMode=list_params["orderMode"],
+                getAll=True,
+            )
+            list_filters = json.dumps(list_params)
+            self._export_list(data, entities_list, list_filters)
 
         return "Export done"
 

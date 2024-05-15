@@ -7,8 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'VULMATCH'
   scope:'=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software'
-  confidence_level: 70
-  update_existing_data: false
   log_level: 'info'
 
 taxii2:

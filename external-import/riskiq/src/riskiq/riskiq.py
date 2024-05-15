@@ -7,9 +7,9 @@ import time
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
+import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Identity
+from pycti import Identity, OpenCTIConnectorHelper, get_config_variable
 
 from .article_importer import ArticleImporter
 from .client import RiskIQClient
@@ -61,8 +61,10 @@ class RiskIQConnector:
             isNumber=False,
             default=True,
         )
+
         # Create the author for all reports.
-        self.author = Identity(
+        self.author = stix2.Identity(
+            id=Identity.generate_id("RiskIQ", "organization"),
             name=self._DEFAULT_AUTHOR,
             identity_class="organization",
             description=" RiskIQ is a cyber security company based in San Francisco, California."

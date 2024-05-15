@@ -10,7 +10,7 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Bundle, DomainName, Indicator
+from stix2 import Bundle, DomainName, Indicator, Relationship
 
 import comlaude
 
@@ -30,7 +30,7 @@ def _format_time(utc_time):
 
 # Defines a time delta of 5 minutes.
 TIME_DELTA = datetime.timedelta(minutes=5)
-COMLAUDE_END_TIME = _format_time(datetime.datetime.utcnow() - TIME_DELTA)
+COMLAUDE_END_TIME = _format_time(datetime.datetime.now(datetime.UTC) - TIME_DELTA)
 
 
 def _convert_timestamp_to_zero_millisecond_format(timestamp: str) -> str:
@@ -64,7 +64,7 @@ def _is_empty(value):
     return False
 
 
-def _generate_dynamic_custom_properties(helper, domain_object):
+def _generate_dynamic_custom_properties(helper, domain_object, score):
     """
     Generate custom properties for domain objects dynamically with a specific prefix.
 
@@ -73,7 +73,10 @@ def _generate_dynamic_custom_properties(helper, domain_object):
     :return: Tuple containing domain name and a dictionary of custom properties.
     """
     helper.log_debug(f"Generate Dynamic Properties with prefix ({X_OPENCTI_PREFIX})")
-    custom_properties = {}
+    custom_properties = {
+        "x_opencti_score": score,
+        "x_opencti_description": "This domain is known infrastructure managed by Comlaude.",
+    }
     for key, value in domain_object.items():
         if not _is_empty(value):
             custom_key = X_OPENCTI_PREFIX + key
@@ -84,7 +87,7 @@ def _generate_dynamic_custom_properties(helper, domain_object):
     return domain_name, custom_properties
 
 
-def _create_stix_create_bundle(helper, domain_object, labels):
+def _create_stix_create_bundle(helper, domain_object, labels, score):
     """
     Create a STIX bundle containing domain and indicator objects.
 
@@ -94,7 +97,7 @@ def _create_stix_create_bundle(helper, domain_object, labels):
     :return: Tuple containing domain name and a list of STIX objects.
     """
     domain_name, custom_properties = _generate_dynamic_custom_properties(
-        helper, domain_object
+        helper, domain_object, score
     )
     helper.log_debug(f"Create STIX Domain Name object: {domain_name}")
 
@@ -107,28 +110,37 @@ def _create_stix_create_bundle(helper, domain_object, labels):
         labels=labels,
     )
     helper.log_debug(f"Create STIX Indicator object: {domain_name}")
+    start_time = _convert_timestamp_to_zero_millisecond_format(
+        domain_object["created_at"]
+    )
+    end_time = _convert_timestamp_to_zero_millisecond_format(
+        domain_object["updated_at"]
+    )
 
     # Create Indicator object
     sdo_indicator = Indicator(
-        created=_convert_timestamp_to_zero_millisecond_format(
-            domain_object["created_at"]
-        ),
-        modified=_convert_timestamp_to_zero_millisecond_format(
-            domain_object["updated_at"]
-        ),
+        created=start_time,
+        modified=end_time,
         name=domain_name,
         description="This domain is known infrastructure managed by Comlaude.",
         pattern_type="stix",
         pattern=f"[domain-name:value = '{domain_name}']",
-        valid_from=_convert_timestamp_to_zero_millisecond_format(
-            domain_object["created_at"]
-        ),
+        valid_from=start_time,
         labels=labels,
+        custom_properties=custom_properties,
+    )
+
+    # Create relationships
+    sro_object = Relationship(
+        relationship_type="based-on",
+        source_ref=sdo_indicator.id,
+        target_ref=sco_domain_name.id,
+        start_time=start_time,
     )
 
     helper.log_debug(f"Create relationships: {domain_name}")
     helper.log_debug(f"Bundle Objects: {domain_name}")
-    return domain_name, [sco_domain_name, sdo_indicator]
+    return domain_name, [sco_domain_name, sdo_indicator, sro_object]
 
 
 class ComlaudeConnector:
@@ -170,6 +182,9 @@ class ComlaudeConnector:
         comlaude_start_time = get_config_variable(
             "COMLAUDE_START_TIME", ["comlaude", "start_time"], self.config, False
         )
+        comlaude_score = get_config_variable(
+            "COMLAUDE_SCORE", ["comlaude", "score"], self.config, isNumber=True
+        )
 
         comlaude_labels = get_config_variable(
             "COMLAUDE_LABELS", ["comlaude", "labels"], self.config, False
@@ -189,6 +204,7 @@ class ComlaudeConnector:
 
         self.work_id = None
         self.labels = comlaude_labels.split(",")
+        self.score = comlaude_score if comlaude_score else 0
 
     def _load_config(self) -> dict:
         """
@@ -215,7 +231,7 @@ class ComlaudeConnector:
         """
         Refresh the work ID for the current process.
         """
-        update_end_time = _format_time(datetime.datetime.utcnow() - TIME_DELTA)
+        update_end_time = _format_time(datetime.datetime.now(datetime.UTC) - TIME_DELTA)
         friendly_name = f"Comlaude run @ {update_end_time}"
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
@@ -233,7 +249,7 @@ class ComlaudeConnector:
             stix_objects = []
             for event in self.comlaude_search.results["data"]:
                 domain_name, objects = _create_stix_create_bundle(
-                    self.helper, event, self.labels
+                    self.helper, event, self.labels, self.score
                 )
                 self.helper.log_debug(f"Adding Stix Objects for ({domain_name}).")
                 stix_objects.extend(objects)
@@ -255,7 +271,7 @@ class ComlaudeConnector:
         """
         self.helper.log_info(
             "Start Comluade Connector ({}).".format(
-                _format_time(datetime.datetime.utcnow())
+                _format_time(datetime.datetime.now(datetime.UTC))
             )
         )
         self._iterate_events()
@@ -271,7 +287,9 @@ class ComlaudeConnector:
 
         if self.helper.connect_run_and_terminate:
             self.helper.log_info(
-                "Connector stop: ({})".format(_format_time(datetime.datetime.utcnow()))
+                "Connector stop: ({})".format(
+                    _format_time(datetime.datetime.now(datetime.UTC))
+                )
             )
             self.helper.force_ping()
             sys.exit(0)

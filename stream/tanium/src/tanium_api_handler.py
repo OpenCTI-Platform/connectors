@@ -156,12 +156,11 @@ class TaniumApiHandler:
 
     def create_indicator_stix(self, entity):
         # Export to STIX bundle
-        stix2_bundle = self.helper.api.stix2.export_entity(
-            "Indicator",
-            entity["id"],
-            "simple",
-            None,
-            True,
+        stix2_bundle = self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+            entity_type="Indicator",
+            entity_id=entity["id"],
+            mode="simple",
+            no_custom_attribute=True,
         )
         stix_entity = [e for e in stix2_bundle["objects"] if e["id"] == entity["id"]][0]
         if "indicator_types" not in stix_entity:
@@ -183,12 +182,11 @@ class TaniumApiHandler:
 
     def update_indicator_stix(self, intel_id, entity):
         # Export to STIX bundle
-        stix2_bundle = self.helper.api.stix2.export_entity(
-            "Indicator",
-            entity["id"],
-            "simple",
-            None,
-            True,
+        stix2_bundle = self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+            entity_type="Indicator",
+            entity_id=entity["id"],
+            mode="simple",
+            no_custom_attributes=True,
         )
         # Convert the STIX 2 bundle in STIX 1
         try:

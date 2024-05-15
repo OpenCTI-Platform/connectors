@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Comlaude'
   scope: 'SCO' # MIME type or SCO
-  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 comlaude:
@@ -19,3 +18,4 @@ comlaude:
   start_time: '1970-01-01T00:00:00Z'
   update_existing_data: 'True'
   labels: 'comlaude,safelist'
+  indicator_score: 0

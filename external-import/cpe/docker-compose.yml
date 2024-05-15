@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cpe:
-    image: opencti/connector-cpe:6.0.10
+    image: opencti/connector-cpe:6.1.0
     environment:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -9,7 +9,6 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Common Platform Enumeration
       - CONNECTOR_SCOPE=software
-      - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted).
       - CONNECTOR_LOG_LEVEL=info
       - CPE_BASE_URL=https://services.nvd.nist.gov/rest/json/cpes/2.0
       - NIST_API_KEY=ChangeMe # Required

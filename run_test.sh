@@ -11,6 +11,6 @@ do
   pip install -r $file
 done
 
-pytest --verbose
+python -m pytest --verbose
 
 

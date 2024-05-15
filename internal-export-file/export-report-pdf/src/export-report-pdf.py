@@ -98,21 +98,30 @@ class ExportReportPdf:
             )
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
+        access_filter = data.get("access_filter")
 
+        # Retrieve markings for export push
+        file_markings = data["file_markings"]
         if entity_type == "Report":
-            self._process_report(entity_id, file_name)
+            self._process_report(entity_id, file_name, file_markings, access_filter)
         elif entity_type == "Case-Incident":
-            self._process_case(entity_id, file_name, entity_type)
+            self._process_case(
+                entity_id, file_name, entity_type, file_markings, access_filter
+            )
         elif entity_type == "Case-Rfi":
-            self._process_case(entity_id, file_name, entity_type)
+            self._process_case(
+                entity_id, file_name, entity_type, file_markings, access_filter
+            )
         elif entity_type == "Case-Rft":
-            self._process_case(entity_id, file_name, entity_type)
+            self._process_case(
+                entity_id, file_name, entity_type, file_markings, access_filter
+            )
         elif entity_type == "Intrusion-Set":
-            self._process_intrusion_set(entity_id, file_name)
+            self._process_intrusion_set(entity_id, file_name, file_markings)
         elif entity_type == "Threat-Actor-Group":
-            self._process_threat_actor_group(entity_id, file_name)
+            self._process_threat_actor_group(entity_id, file_name, file_markings)
         elif entity_type == "Threat-Actor-Individual":
-            self._process_threat_actor_individual(entity_id, file_name)
+            self._process_threat_actor_individual(entity_id, file_name, file_markings)
         else:
             raise ValueError(
                 f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", not "{entity_type}".'
@@ -120,7 +129,7 @@ class ExportReportPdf:
 
         return "Export done"
 
-    def _process_report(self, entity_id, file_name):
+    def _process_report(self, entity_id, file_name, file_markings, access_filter):
         """
         Process a Report entity and upload as pdf.
         """
@@ -165,52 +174,49 @@ class ExportReportPdf:
             "observables": {},
         }
 
-        # Process each STIX Object
+        object_ids = []
         for report_obj in report_objs:
-            obj_entity_type = report_obj["entity_type"]
-            obj_id = report_obj["standard_id"]
+            object_ids.append(report_obj["id"])
 
-            # Handle StixCyberObservables entities
-            if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                obj_entity_type
-            ):
-                observable_dict = (
-                    self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
+        if len(object_ids) != 0:
+            export_filter = self.helper.api.stix2.prepare_id_filters_export(
+                object_ids, access_filter
+            )
+            entities_list = (
+                self.helper.api.opencti_stix_object_or_stix_relationship.list(
+                    filters=export_filter
                 )
+            )
 
-                # If only include indicators and
-                # the observable doesn't have an indicator, skip it
-                if self.indicators_only and not observable_dict["indicators"]:
-                    self.helper.log_info(
-                        f"Skipping {obj_entity_type} observable with value {observable_dict['observable_value']} as it was not an Indicator."
-                    )
-                    continue
+            for entity in entities_list:
+                obj_entity_type = entity["entity_type"]
+                if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
+                    obj_entity_type
+                ):
+                    # If only include indicators and
+                    # the observable doesn't have an indicator, skip it
+                    if self.indicators_only and not entity["indicators"]:
+                        self.helper.log_info(
+                            f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
+                        )
+                        continue
 
-                if obj_entity_type not in context["observables"]:
-                    context["observables"][obj_entity_type] = []
+                    if obj_entity_type not in context["observables"]:
+                        context["observables"][obj_entity_type] = []
 
-                # Defang urls
-                if self.defang_urls and obj_entity_type == "Url":
-                    observable_dict["observable_value"] = observable_dict[
-                        "observable_value"
-                    ].replace("http", "hxxp", 1)
+                    # Defang urls
+                    if self.defang_urls and obj_entity_type == "Url":
+                        entity["observable_value"] = entity["observable_value"].replace(
+                            "http", "hxxp", 1
+                        )
 
-                context["observables"][obj_entity_type].append(observable_dict)
+                    context["observables"][obj_entity_type].append(entity)
 
-            # Handle all other entities
-            else:
-                reader_func = self._get_reader(obj_entity_type)
-                if reader_func is None:
-                    self.helper.log_error(
-                        f'Could not find a function to read entity with type "{obj_entity_type}"'
-                    )
-                    continue
-                entity_dict = reader_func(id=obj_id)
+                else:
+                    if obj_entity_type not in context["entities"]:
+                        context["entities"][obj_entity_type] = []
 
-                if obj_entity_type not in context["entities"]:
-                    context["entities"][obj_entity_type] = []
-
-                context["entities"][obj_entity_type].append(entity_dict)
+                    context["entities"][obj_entity_type].append(entity)
 
         # Render html with input variables
         env = Environment(
@@ -227,10 +233,14 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            report_id, file_name, pdf_contents, "application/pdf"
+            entity_id=report_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
-    def _process_intrusion_set(self, entity_id, file_name):
+    def _process_intrusion_set(self, entity_id, file_name, file_markings):
         """
         Process an Intrusion Set entity and upload as pdf.
         """
@@ -251,8 +261,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the intrusion set
-        intrusion_set_objs = self.helper.api_impersonate.stix2.export_entity(
-            "Intrusion-Set", entity_id, "full"
+        intrusion_set_objs = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Intrusion-Set", entity_id=entity_id, mode="full"
+            )
         )
 
         for intrusion_set_obj in intrusion_set_objs["objects"]:
@@ -322,10 +334,14 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
-    def _process_threat_actor_group(self, entity_id, file_name):
+    def _process_threat_actor_group(self, entity_id, file_name, file_markings):
         """
         Process a Threat Actor Group entity and upload as pdf.
         """
@@ -346,8 +362,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor group
-        bundle = self.helper.api_impersonate.stix2.export_entity(
-            "Threat-Actor-Group", entity_id, "full"
+        bundle = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Threat-Actor-Group", entity_id=entity_id, mode="full"
+            )
         )
 
         for bundle_obj in bundle["objects"]:
@@ -417,10 +435,14 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
-    def _process_threat_actor_individual(self, entity_id, file_name):
+    def _process_threat_actor_individual(self, entity_id, file_name, file_markings):
         """
         Process a Threat Actor Individual entity and upload as pdf.
         """
@@ -441,8 +463,10 @@ class ExportReportPdf:
         }
 
         # Get a bundle of all objects affiliated with the threat actor individual
-        bundle = self.helper.api_impersonate.stix2.export_entity(
-            "Threat-Actor-Individual", entity_id, "full"
+        bundle = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Threat-Actor-Individual", entity_id=entity_id, mode="full"
+            )
         )
 
         for bundle_obj in bundle["objects"]:
@@ -512,10 +536,16 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
-    def _process_case(self, entity_id, file_name, entity_type):
+    def _process_case(
+        self, entity_id, file_name, entity_type, file_markings, access_filter
+    ):
         """
         Process a Case container and upload as pdf.
         """
@@ -578,51 +608,49 @@ class ExportReportPdf:
             "observables": {},
         }
 
-        # Process each STIX Object
+        object_ids = []
         for case_obj in case_objs:
-            obj_entity_type = case_obj["entity_type"]
-            obj_id = case_obj["standard_id"]
-            # Handle StixCyberObservables entities
-            if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
-                obj_entity_type
-            ):
-                observable_dict = (
-                    self.helper.api_impersonate.stix_cyber_observable.read(id=obj_id)
+            object_ids.append(case_obj["id"])
+
+        if len(object_ids) != 0:
+            export_filter = self.helper.api.stix2.prepare_id_filters_export(
+                object_ids, access_filter
+            )
+            entities_list = (
+                self.helper.api.opencti_stix_object_or_stix_relationship.list(
+                    filters=export_filter
                 )
+            )
 
-                # If only include indicators and
-                # the observable doesn't have an indicator, skip it
-                if self.indicators_only and not observable_dict["indicators"]:
-                    self.helper.log_info(
-                        f"Skipping {obj_entity_type} observable with value {observable_dict['observable_value']} as it was not an Indicator."
-                    )
-                    continue
+            # Process each STIX Object
+            for entity in entities_list:
+                obj_entity_type = entity["entity_type"]
+                if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
+                    obj_entity_type
+                ):
+                    # If only include indicators and
+                    # the observable doesn't have an indicator, skip it
+                    if self.indicators_only and not entity["indicators"]:
+                        self.helper.log_info(
+                            f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
+                        )
+                        continue
 
-                if obj_entity_type not in context["observables"]:
-                    context["observables"][obj_entity_type] = []
+                    if obj_entity_type not in context["observables"]:
+                        context["observables"][obj_entity_type] = []
 
-                # Defang urls
-                if self.defang_urls and obj_entity_type == "Url":
-                    observable_dict["observable_value"] = observable_dict[
-                        "observable_value"
-                    ].replace("http", "hxxp", 1)
+                    # Defang urls
+                    if self.defang_urls and obj_entity_type == "Url":
+                        entity["observable_value"] = entity["observable_value"].replace(
+                            "http", "hxxp", 1
+                        )
 
-                context["observables"][obj_entity_type].append(observable_dict)
+                    context["observables"][obj_entity_type].append(entity)
+                else:
+                    if obj_entity_type not in context["entities"]:
+                        context["entities"][obj_entity_type] = []
 
-            # Handle all other entities
-            else:
-                reader_func = self._get_reader(obj_entity_type)
-                if reader_func is None:
-                    self.helper.log_error(
-                        f'Could not find a function to read entity with type "{obj_entity_type}"'
-                    )
-                    continue
-                entity_dict = reader_func(id=obj_id)
-
-                if obj_entity_type not in context["entities"]:
-                    context["entities"][obj_entity_type] = []
-
-                context["entities"][obj_entity_type].append(entity_dict)
+                    context["entities"][obj_entity_type].append(entity)
 
         # Render html with input variables
         env = Environment(
@@ -640,7 +668,11 @@ class ExportReportPdf:
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
-            entity_id, file_name, pdf_contents, "application/pdf"
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
         )
 
     def _set_colors(self):

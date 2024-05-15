@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-malpedia
 
 # Start the connector
-python3 malpedia.py
+python3 main.py
