@@ -20,7 +20,7 @@ from typing import (
 )
 
 import stix2
-from crowdstrike.utils.constants import (
+from .constants import (
     DEFAULT_X_OPENCTI_SCORE,
     TLP_MARKING_DEFINITION_MAPPING,
     X_OPENCTI_ALIASES,
@@ -31,7 +31,7 @@ from crowdstrike.utils.constants import (
     X_OPENCTI_SCORE,
     T,
 )
-from crowdstrike.utils.indicators import (
+from .indicators import (
     IndicatorPattern,
     create_indicator_pattern_cryptocurrency_wallet,
     create_indicator_pattern_domain_name,
@@ -51,7 +51,7 @@ from crowdstrike.utils.indicators import (
     create_indicator_pattern_x509_certificate_serial_number,
     create_indicator_pattern_x509_certificate_subject,
 )
-from crowdstrike.utils.observables import (
+from .observables import (
     ObservableProperties,
     create_observable_cryptocurrency_wallet,
     create_observable_domain_name,

@@ -4,13 +4,13 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, NamedTuple, Optional, Set
 
-from crowdstrike.importer import BaseImporter
-from crowdstrike.indicator.builder import (
+from ..importer import BaseImporter
+from .builder import (
     IndicatorBundleBuilder,
     IndicatorBundleBuilderConfig,
 )
-from crowdstrike.utils import datetime_to_timestamp, timestamp_to_datetime
-from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
+from ..utils import datetime_to_timestamp, timestamp_to_datetime
+from ..utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_client.api.intel import Indicators, Reports
 from crowdstrike_client.api.models import Indicator
 from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501

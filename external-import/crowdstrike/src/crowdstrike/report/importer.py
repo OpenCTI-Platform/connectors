@@ -4,9 +4,9 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Mapping, Optional
 
-from crowdstrike.importer import BaseImporter
-from crowdstrike.report.builder import ReportBundleBuilder
-from crowdstrike.utils import (
+from ..importer import BaseImporter
+from .builder import ReportBundleBuilder
+from ..utils import (
     create_file_from_download,
     datetime_to_timestamp,
     paginate,

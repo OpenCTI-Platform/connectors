@@ -4,7 +4,7 @@
 import logging
 from typing import List, Mapping, NamedTuple, Optional, Set
 
-from crowdstrike.utils import (
+from ..utils import (
     DEFAULT_X_OPENCTI_SCORE,
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,
@@ -34,7 +34,7 @@ from crowdstrike.utils import (
     create_vulnerability,
     create_vulnerability_external_references,
 )
-from crowdstrike.utils.report_fetcher import FetchedReport
+from ..utils.report_fetcher import FetchedReport
 from crowdstrike_client.api.models import Indicator
 from crowdstrike_client.api.models.report import Report
 from stix2 import Bundle, Identity

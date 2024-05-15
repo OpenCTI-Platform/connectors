@@ -4,7 +4,7 @@
 import logging
 from typing import Any, Dict, List, Mapping, Optional, Union
 
-from crowdstrike.utils import create_file_from_download
+from . import create_file_from_download
 from crowdstrike_client.api.intel import Reports
 from crowdstrike_client.api.models.report import Report
 from pydantic import BaseModel

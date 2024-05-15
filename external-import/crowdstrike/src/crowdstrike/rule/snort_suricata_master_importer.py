@@ -7,11 +7,11 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
-from crowdstrike.importer import BaseImporter
-from crowdstrike.rule.snort_suricata_master_builder import SnortRuleBundleBuilder
-from crowdstrike.utils import datetime_to_timestamp, timestamp_to_datetime
-from crowdstrike.utils.report_fetcher import FetchedReport, ReportFetcher
-from crowdstrike.utils.snort_parser import SnortParser, SnortRule
+from ..importer import BaseImporter
+from .snort_suricata_master_builder import SnortRuleBundleBuilder
+from ..utils import datetime_to_timestamp, timestamp_to_datetime
+from ..utils.report_fetcher import FetchedReport, ReportFetcher
+from ..utils.snort_parser import SnortParser, SnortRule
 from crowdstrike_client.api.intel import Reports, Rules
 from crowdstrike_client.api.models.download import Download
 from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501

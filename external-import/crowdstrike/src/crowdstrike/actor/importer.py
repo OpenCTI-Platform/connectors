@@ -4,9 +4,9 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
-from crowdstrike.actor.builder import ActorBundleBuilder
-from crowdstrike.importer import BaseImporter
-from crowdstrike.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
+from .builder import ActorBundleBuilder
+from ..importer import BaseImporter
+from ..utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 from crowdstrike_client.api.intel.actors import Actors
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.actor import Actor

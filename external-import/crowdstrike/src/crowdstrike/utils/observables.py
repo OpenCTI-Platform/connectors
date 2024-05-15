@@ -3,7 +3,7 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
-from crowdstrike.utils.constants import (
+from .constants import (
     X_OPENCTI_CREATED_BY_REF,
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,

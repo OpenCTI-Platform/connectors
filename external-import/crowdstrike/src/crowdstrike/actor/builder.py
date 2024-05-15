@@ -4,7 +4,7 @@
 import logging
 from typing import List, Optional, Tuple
 
-from crowdstrike.utils import (
+from ..utils import (
     create_external_reference,
     create_intrusion_set,
     create_originates_from_relationships,
