@@ -1,7 +1,7 @@
 import copy
 import base64
 from datetime import datetime
-from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability
+from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress
 from pycti import OpenCTIConnectorHelper, Identity as pycti_identity
 import magic
 from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dict_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes
@@ -48,17 +48,17 @@ class ShadowServerStixTransformation:
 
         # Create the STIX object
         if value:
-            self.helper.log_info(f"Creating {key} STIX object: {value}")
+            self.helper.log_debug(f"Creating {key} STIX object: {value}")
             stix_object = create_method(value = value, labels = labels)
         
         # Add the STIX object to the list of objects
         if stix_object:
-            self.helper.log_info(f"Created {key} STIX object: {stix_object.get('id')}")
+            self.helper.log_debug(f"Created {key} STIX object: {stix_object.get('id')}")
             self.object_refs.append(stix_object.get('id'))
             self.stix_objects.append(stix_object)
             return stix_object.get('id')
-        else:
-            self.helper.log_info(f"{key} is empty, {type(stix_object)}")
+        elif stix_object is None and value:
+            self.helper.log_error(f"Failed to create {key} STIX object: {value}")
 
     def validate_inputs(self, marking_refs, report_list, report):
         self.helper.log_debug("Validating inputs.")
@@ -235,9 +235,9 @@ class ShadowServerStixTransformation:
         # Define a mapping of object types to their creation functions
         object_types = {
             'asn': self.create_asn,
-            # 'ip': self.create_ip,
-            # 'hostname': self.create_hostname,
-            # 'mac_address': self.create_mac_address,
+            'ip': self.create_ip,
+            'hostname': self.create_hostname,
+            'mac_address': self.create_mac_address,
         }
         self.helper.log_debug(f"Mapping ShadowServer report to STIX.")
         observed_data_list = list()
@@ -320,48 +320,46 @@ class ShadowServerStixTransformation:
         self.extend_stix_object(kwargs, labels)
         return AutonomousSystem(**kwargs)
 
-    # TODO: Implement the following methods
-    def create_ip(self, ip: str):
-        self.helper.log_debug(f"Creating IP STIX object: {ip}")
-        if check_ip_address(ip).startswith('IPv4'):
-            observable_data = {
-                "type": "IPv4-Addr",
-                "value": ip,
-            }
-        elif check_ip_address(ip).startswith('IPv6'):
-            observable_data = {
-                "type": "IPv6-Addr",
-                "value": ip,
-            }
+    def create_ip(self, value: str, labels:list = []):
+        """Creates an IP address STIX object."""
+        self.helper.log_debug(f"Creating IP STIX object: {value}")
+        kwargs = {
+            "value": value
+        }
+        # Add custom properties and marking definition
+        self.extend_stix_object(kwargs, labels)
+        
+        if check_ip_address(value).startswith('IPv4'):
+            kwargs["type"] = "ipv4-addr"
+            return IPv4Address(**kwargs)
+        elif check_ip_address(value).startswith('IPv6'):
+            kwargs["type"] = "ipv6-addr"
+            return IPv6Address(**kwargs)
         else:
-            self.helper.log_error(f"Invalid IP address: {ip}")
+            self.helper.log_error(f"Invalid IP address: {value}")
             return None
-        return self.helper.api.stix_cyber_observable.create(
-            observableData=observable_data
-        )
     
-    # TODO: Implement the following methods
-    def create_hostname(self, hostname: str):
-        self.helper.log_debug(f"Creating hostname STIX object: {hostname}")
-        observed_data = {
-            "type": "Domain-Name",
-            "value": hostname,
+    def create_hostname(self, value: str, labels:list = []):
+        """Creates a hostname STIX object."""
+        self.helper.log_debug(f"Creating hostname STIX object: {value}")
+        kwargs = {
+            "type": "domain-name",
+            "value": value,
         }
+        # Add custom properties and marking definition
+        self.extend_stix_object(kwargs, labels)
+        return DomainName(**kwargs)
 
-        return self.helper.api.stix_cyber_observable.create(
-            ObservedData = observed_data
-        )
-    
-    # TODO: Implement the following methods
-    def create_mac_address(self, mac_address: str):
-        self.helper.log_debug(f"Creating MAC address STIX object: {mac_address}")
-        observed_data = {
-            "type": "MAC-Addr",
-            "value": mac_address,
+    def create_mac_address(self, value: str, labels:list = []):
+        """Creates a MAC address STIX object."""
+        self.helper.log_debug(f"value MAC address STIX object: {value}")
+        kwargs = {
+            "type": "mac-addr",
+            "value": value,
         }
-        return self.helper.api.stix_cyber_observable.create(    
-            ObservedData = observed_data
-        )
+        # Add custom properties and marking definition
+        self.extend_stix_object(kwargs, labels)
+        return MACAddress(**kwargs)
         
     # TODO: Implement the following methods
     def create_network_traffic(self, port: int, protocol: str, dst_ref:str = None):
