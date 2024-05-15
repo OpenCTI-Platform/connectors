@@ -38,9 +38,9 @@ class RFClient:
     def __init__(self, token, helper, header="PS_Custom_Script/0.0"):
         """Inits function"""
         self.token = token
-        headers = {"X-RFToken": token, "User-Agent": header}
+        self.headers = {"X-RFToken": token, "User-Agent": header}
         self.session = requests.Session()
-        self.session.headers.update(headers)
+        self.session.headers.update(self.headers)
         self.helper = helper
 
     def get_notes(
@@ -132,6 +132,8 @@ class RFClient:
         Returns
             The body of the file as a string
         """
+        self.session = requests.Session()
+        self.session.headers.update(self.headers)
         res = self.session.get(FUSION_FILE_BASE, params={"path": path})
         res.raise_for_status()
         return res.text
