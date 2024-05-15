@@ -1,6 +1,7 @@
-from typing import List, Union
 import ipaddress
-from stix2 import Infrastructure, Relationship, IPv4Address, IPv6Address
+from typing import List, Union
+
+from stix2 import Infrastructure, IPv4Address, IPv6Address, Relationship
 from zerofox.domain.c2Domains import C2Domain
 
 
@@ -16,10 +17,7 @@ def c2_domains_to_infrastructure(
         infrastructure_types="command-and-control",
     )
     ip_addresses = (
-        [
-            build_ip_stix_object(ip)
-            for ip in entry.ip_addresses
-        ]
+        [build_ip_stix_object(ip) for ip in entry.ip_addresses]
         if entry.ip_addresses
         else []
     )
@@ -34,6 +32,7 @@ def c2_domains_to_infrastructure(
     ]
 
     return [infrastructure] + ip_addresses + c2_ip_relationships
+
 
 def build_ip_stix_object(ip):
     version = ipaddress.ip_address(ip).version

@@ -85,15 +85,16 @@ class ZeroFox:
         if now - self.cti_token["registered"] <= timedelta(minutes=29):
             return self._build_auth_header(self.cti_token["token"])
         else:
-            self.cti_token["token"] = self._get_cti_authorization_token(self.user, self.token)
+            self.cti_token["token"] = self._get_cti_authorization_token(
+                self.user, self.token
+            )
             self.cti_token["registered"] = now
             return self._build_auth_header(self.cti_token["token"])
 
     def _build_auth_header(self, token):
         return {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "zf-source": "OpenCTI",
-            }
-
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "zf-source": "OpenCTI",
+        }

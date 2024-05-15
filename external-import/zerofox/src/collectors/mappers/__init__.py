@@ -6,7 +6,9 @@ from collectors.mappers.exploitToTool import exploit_to_tool
 from collectors.mappers.malwareToMalware import malware_to_malware
 from collectors.mappers.phishingToInfrastructure import phishing_to_infrastructure
 from collectors.mappers.ransomwareToMalware import ransomware_to_malware
-from collectors.mappers.vulnerabilityToVulnerability import vulnerability_to_vulnerability
+from collectors.mappers.vulnerabilityToVulnerability import (
+    vulnerability_to_vulnerability,
+)
 from zerofox.app.endpoints import CTIEndpoint
 
 

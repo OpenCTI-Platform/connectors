@@ -27,8 +27,7 @@ class ZeroFoxConnector:
         self.interval = os.environ.get("CONNECTOR_RUN_EVERY", "1d").lower()
         self._validate_interval("CONNECTOR_RUN_EVERY", self.interval)
 
-        self.first_run_interval = os.environ.get(
-            "CONNECTOR_FIRST_RUN", "1d").lower()
+        self.first_run_interval = os.environ.get("CONNECTOR_FIRST_RUN", "1d").lower()
         self._validate_interval("CONNECTOR_FIRST_RUN", self.first_run_interval)
 
         self.update_existing_data = self._parse_update_existing_data(
@@ -37,13 +36,12 @@ class ZeroFoxConnector:
 
         self.zerofox_username = os.environ.get("ZEROFOX_USERNAME", "")
         self.zerofox_password = os.environ.get("ZEROFOX_PASSWORD", "")
-        self.client = ZeroFox(user=self.zerofox_username,
-                              token=self.zerofox_password)
+        self.client = ZeroFox(user=self.zerofox_username, token=self.zerofox_password)
 
         self.collectors: Dict[str, Collector] = build_collectors(
             client=self.client,
             feeds=os.environ.get("ZEROFOX_COLLECTORS", None),
-            logger=self.helper.connector_logger
+            logger=self.helper.connector_logger,
         )
 
     def _validate_interval(self, env_var, interval):
@@ -84,8 +82,7 @@ class ZeroFoxConnector:
             return False
 
     def send_bundle(self, work_id, bundle_objects):
-        bundle = stix2.Bundle(objects=bundle_objects,
-                              allow_custom=True).serialize()
+        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
 
         self.helper.log_info(
             f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
@@ -97,7 +94,11 @@ class ZeroFoxConnector:
         )
 
     def _parse_last_run(self, endpoint, current_state):
-        if current_state and endpoint in current_state and "last_run" in current_state[endpoint]:
+        if (
+            current_state
+            and endpoint in current_state
+            and "last_run" in current_state[endpoint]
+        ):
             last_run = current_state[endpoint]["last_run"]
             last_run_date = datetime.fromtimestamp(last_run, UTC)
             self.helper.log_info(
@@ -105,20 +106,25 @@ class ZeroFoxConnector:
                 f'{datetime.fromtimestamp(last_run, UTC).strftime("%Y-%m-%d %H:%M:%S")}'
             )
             return last_run, last_run_date
-        last_run_date = datetime.now(
-            UTC) - delta_from_interval(self.first_run_interval)
+        last_run_date = datetime.now(UTC) - delta_from_interval(self.first_run_interval)
         last_run = last_run_date.timestamp()
         self.helper.log_info(
             f"{self.helper.connect_name} connector has never run on endpoint {endpoint}, parsing data"
         )
         return last_run, last_run_date
 
-    def collect_intelligence_for_endpoint(self, timestamp: int, last_run, last_run_date: datetime, collector_name: str, collector: Collector):
+    def collect_intelligence_for_endpoint(
+        self,
+        timestamp: int,
+        last_run,
+        last_run_date: datetime,
+        collector_name: str,
+        collector: Collector,
+    ):
         # If the last_run is less than interval, skip
-        if ((timestamp - last_run) < seconds_from_interval(self.interval)):
+        if (timestamp - last_run) < seconds_from_interval(self.interval):
             self.helper.metric.state("idle")
-            new_interval = seconds_from_interval(
-                self.interval) - (timestamp - last_run)
+            new_interval = seconds_from_interval(self.interval) - (timestamp - last_run)
             self.helper.log_info(
                 f"{self.helper.connect_name} connector will not run for {collector_name}, "
                 f"next run in: {round(new_interval / 60 / 60, 2)} hours"
@@ -128,7 +134,8 @@ class ZeroFoxConnector:
         self.helper.metric.inc("run_count")
         self.helper.metric.state("running")
         self.helper.log_info(
-            f"{self.helper.connect_name} will run on endpoint {collector_name}!")
+            f"{self.helper.connect_name} will run on endpoint {collector_name}!"
+        )
         now = datetime.fromtimestamp(timestamp, UTC)
         friendly_name = f'{self.helper.connect_name} - {collector_name} run @ {now.strftime("%Y-%m-%d %H:%M:%S")}'
         work_id = self.helper.api.work.initiate_work(
@@ -140,10 +147,10 @@ class ZeroFoxConnector:
             self.helper.log_debug(
                 f"{self.helper.connect_name} connector is starting the collection of objects..."
             )
-            self.helper.log_info(
-                f"Running collector: {collector_name}")
+            self.helper.log_info(f"Running collector: {collector_name}")
             missed_entries, bundle_objects = collector.collect_intelligence(
-                now, last_run_date, self.helper.connector_logger)
+                now, last_run_date, self.helper.connector_logger
+            )
             if missed_entries > 0:
                 self.helper.log_warning(
                     f"Collector {collector_name} missed {missed_entries} entries"
@@ -163,15 +170,9 @@ class ZeroFoxConnector:
         )
         current_state = self.helper.get_state()
         if current_state:
-            current_state[collector_name] = {
-                "last_run": timestamp
-            }
+            current_state[collector_name] = {"last_run": timestamp}
         else:
-            current_state = {
-                collector_name: {
-                    "last_run": timestamp
-                }
-            }
+            current_state = {collector_name: {"last_run": timestamp}}
         self.helper.set_state(current_state)
 
         self.helper.api.work.to_processed(work_id, message)
@@ -181,8 +182,7 @@ class ZeroFoxConnector:
 
     def run(self) -> None:
         # Main procedure
-        self.helper.log_info(
-            f"Starting {self.helper.connect_name} connector...")
+        self.helper.log_info(f"Starting {self.helper.connect_name} connector...")
         while True:
             try:
                 # Get the current timestamp and check
@@ -190,16 +190,15 @@ class ZeroFoxConnector:
                 current_state = self.helper.get_state()
                 for collector_name, collector in self.collectors.items():
                     last_run, last_run_date = self._parse_last_run(
-                        endpoint=collector_name,
-                        current_state=current_state
+                        endpoint=collector_name, current_state=current_state
                     )
 
                     self.collect_intelligence_for_endpoint(
-                        timestamp, last_run, last_run_date, collector_name, collector)
+                        timestamp, last_run, last_run_date, collector_name, collector
+                    )
 
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info(
-                    f"{self.helper.connect_name} connector stopped")
+                self.helper.log_info(f"{self.helper.connect_name} connector stopped")
                 sys.exit(0)
             except Exception as e:
                 self.helper.metric.inc("error_count")
@@ -207,8 +206,7 @@ class ZeroFoxConnector:
                 self.helper.log_error(str(e))
 
             if self.helper.connect_run_and_terminate:
-                self.helper.log_info(
-                    f"{self.helper.connect_name} connector ended")
+                self.helper.log_info(f"{self.helper.connect_name} connector ended")
                 sys.exit(0)
 
             time.sleep(60)
