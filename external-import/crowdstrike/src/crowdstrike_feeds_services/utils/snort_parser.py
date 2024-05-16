@@ -7,8 +7,9 @@ from datetime import date, datetime
 from io import StringIO
 from typing import Any, List, Optional
 
-from . import convert_comma_separated_str_to_list
 from pydantic import BaseModel
+
+from . import convert_comma_separated_str_to_list
 
 logger = logging.getLogger(__name__)
 

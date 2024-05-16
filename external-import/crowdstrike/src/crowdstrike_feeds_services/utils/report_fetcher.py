@@ -4,10 +4,11 @@
 import logging
 from typing import Any, Dict, List, Mapping, Optional, Union
 
-from . import create_file_from_download
 from crowdstrike_client.api.intel import Reports
 from crowdstrike_client.api.models.report import Report
 from pydantic import BaseModel
+
+from . import create_file_from_download
 
 logger = logging.getLogger(__name__)
 

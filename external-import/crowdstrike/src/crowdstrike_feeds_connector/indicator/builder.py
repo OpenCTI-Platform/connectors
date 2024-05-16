@@ -4,6 +4,8 @@
 import logging
 from typing import List, Mapping, NamedTuple, Optional, Set
 
+from crowdstrike_client.api.models import Indicator
+from crowdstrike_client.api.models.report import Report
 from crowdstrike_feeds_services.utils import (
     DEFAULT_X_OPENCTI_SCORE,
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
@@ -34,9 +36,7 @@ from crowdstrike_feeds_services.utils import (
     create_vulnerability,
     create_vulnerability_external_references,
 )
-from ..utils.report_fetcher import FetchedReport
-from crowdstrike_client.api.models import Indicator
-from crowdstrike_client.api.models.report import Report
+from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
 from stix2 import Bundle, Identity
 from stix2 import Indicator as STIXIndicator  # type: ignore
 from stix2 import IntrusionSet, KillChainPhase, Malware, MarkingDefinition, Relationship

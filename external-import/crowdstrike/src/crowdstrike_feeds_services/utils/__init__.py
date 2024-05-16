@@ -20,6 +20,16 @@ from typing import (
 )
 
 import stix2
+from crowdstrike_client.api.models import Response
+from crowdstrike_client.api.models.download import Download
+from crowdstrike_client.api.models.report import Entity, Report
+from lxml.html import fromstring  # type: ignore
+from pycti import Identity, Indicator, IntrusionSet, Location, Malware
+from pycti import Report as PyCTIReport
+from pycti import StixCoreRelationship, Vulnerability
+from pycti.utils.constants import LocationTypes  # type: ignore
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
+
 from .constants import (
     DEFAULT_X_OPENCTI_SCORE,
     TLP_MARKING_DEFINITION_MAPPING,
@@ -71,15 +81,6 @@ from .observables import (
     create_observable_x509_certificate_serial_number,
     create_observable_x509_certificate_subject,
 )
-from crowdstrike_client.api.models import Response
-from crowdstrike_client.api.models.download import Download
-from crowdstrike_client.api.models.report import Entity, Report
-from lxml.html import fromstring  # type: ignore
-from pycti import Identity, Indicator, IntrusionSet, Location, Malware
-from pycti import Report as PyCTIReport
-from pycti import StixCoreRelationship, Vulnerability
-from pycti.utils.constants import LocationTypes  # type: ignore
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
 logger = logging.getLogger(__name__)
 

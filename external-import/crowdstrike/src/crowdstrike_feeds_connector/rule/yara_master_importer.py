@@ -7,19 +7,23 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
-from ..importer import BaseImporter
-from .yara_master_builder import YaraRuleBundleBuilder
-from crowdstrike_feeds_services.utils import datetime_to_timestamp, timestamp_to_datetime
-from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
-from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
 from crowdstrike_client.api.intel import Reports, Rules
 from crowdstrike_client.api.models.download import Download
+from crowdstrike_feeds_services.utils import (
+    datetime_to_timestamp,
+    timestamp_to_datetime,
+)
+from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
+from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
 from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
     OpenCTIConnectorHelper,
 )
 from requests import RequestException
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore
+
+from ..importer import BaseImporter
+from .yara_master_builder import YaraRuleBundleBuilder
 
 
 class YaraMaster(NamedTuple):

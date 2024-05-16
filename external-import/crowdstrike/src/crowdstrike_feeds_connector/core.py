@@ -8,12 +8,7 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
 import yaml
-from .actor.importer import ActorImporter
-from .importer import BaseImporter
-from .indicator.importer import IndicatorImporter, IndicatorImporterConfig
-from .report.importer import ReportImporter
-from .rule.snort_suricata_master_importer import SnortMasterImporter
-from .rule.yara_master_importer import YaraMasterImporter
+from crowdstrike_client.client import CrowdStrikeClient
 from crowdstrike_feeds_services.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
@@ -21,39 +16,21 @@ from crowdstrike_feeds_services.utils import (
     is_timestamp_in_future,
     timestamp_to_datetime,
 )
+from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from crowdstrike_client.client import CrowdStrikeClient
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
+
+from .actor.importer import ActorImporter
+from .importer import BaseImporter
+from .indicator.importer import IndicatorImporter, IndicatorImporterConfig
+from .report.importer import ReportImporter
+from .rule.snort_suricata_master_importer import SnortMasterImporter
+from .rule.yara_master_importer import YaraMasterImporter
 
 
 class CrowdStrike:
     """CrowdStrike connector."""
-
-    _CONFIG_NAMESPACE = "crowdstrike"
-
-    _CONFIG_BASE_URL = f"{_CONFIG_NAMESPACE}.base_url"
-    _CONFIG_CLIENT_ID = f"{_CONFIG_NAMESPACE}.client_id"
-    _CONFIG_CLIENT_SECRET = f"{_CONFIG_NAMESPACE}.client_secret"
-    _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
-    _CONFIG_SCOPES = f"{_CONFIG_NAMESPACE}.scopes"
-    _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
-    _CONFIG_CREATE_OBSERVABLES = f"{_CONFIG_NAMESPACE}.create_observables"
-    _CONFIG_CREATE_INDICATORS = f"{_CONFIG_NAMESPACE}.create_indicators"
-    _CONFIG_ACTOR_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.actor_start_timestamp"
-    _CONFIG_REPORT_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.report_start_timestamp"
-    _CONFIG_REPORT_INCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.report_include_types"
-    _CONFIG_REPORT_STATUS = f"{_CONFIG_NAMESPACE}.report_status"
-    _CONFIG_REPORT_TYPE = f"{_CONFIG_NAMESPACE}.report_type"
-    _CONFIG_REPORT_GUESS_MALWARE = f"{_CONFIG_NAMESPACE}.report_guess_malware"
-    _CONFIG_INDICATOR_START_TIMESTAMP = f"{_CONFIG_NAMESPACE}.indicator_start_timestamp"
-    _CONFIG_INDICATOR_EXCLUDE_TYPES = f"{_CONFIG_NAMESPACE}.indicator_exclude_types"
-    _CONFIG_INDICATOR_LOW_SCORE = f"{_CONFIG_NAMESPACE}.indicator_low_score"
-    _CONFIG_INDICATOR_LOW_SCORE_LABELS = (
-        f"{_CONFIG_NAMESPACE}.indicator_low_score_labels"
-    )
-
-    _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
 
     _CONFIG_SCOPE_ACTOR = "actor"
     _CONFIG_SCOPE_REPORT = "report"
@@ -78,114 +55,94 @@ class CrowdStrike:
     _STATE_LAST_RUN = "last_run"
 
     def __init__(self) -> None:
-        """Initialize CrowdStrike connector."""
-        config = self._read_configuration()
+        """
+        Initialize the connector with necessary configurations
+        """
+
+        # Load configuration file and connection helper
+        self.config = ConfigCrowdstrike()
 
         # CrowdStrike connector configuration
-        base_url = self._get_configuration(config, self._CONFIG_BASE_URL)
-        client_id = self._get_configuration(config, self._CONFIG_CLIENT_ID)
-        client_secret = self._get_configuration(config, self._CONFIG_CLIENT_SECRET)
+        base_url = self.config.base_url
+        client_id = self.config.client_id
+        client_secret = self.config.client_secret
 
-        self.interval_sec = self._get_configuration(
-            config, self._CONFIG_INTERVAL_SEC, is_number=True
-        )
+        self.interval_sec = self.config.interval_sec
 
-        scopes_str = self._get_configuration(config, self._CONFIG_SCOPES)
+        scopes_str = self.config.scopes
         scopes = set()
         if scopes_str is not None:
             scopes = set(convert_comma_separated_str_to_list(scopes_str))
 
-        tlp = self._get_configuration(config, self._CONFIG_TLP)
+        tlp = self.config.tlp
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
 
-        create_observables = self._get_configuration(
-            config, self._CONFIG_CREATE_OBSERVABLES
-        )
+        create_observables = self.config.create_observables
         if create_observables is None:
             create_observables = self._DEFAULT_CREATE_OBSERVABLES
         else:
             create_observables = bool(create_observables)
 
-        create_indicators = self._get_configuration(
-            config, self._CONFIG_CREATE_INDICATORS
-        )
+        create_indicators = self.config.create_indicators
         if create_indicators is None:
             create_indicators = self._DEFAULT_CREATE_INDICATORS
         else:
             create_indicators = bool(create_indicators)
 
-        actor_start_timestamp = self._get_configuration(
-            config, self._CONFIG_ACTOR_START_TIMESTAMP, is_number=True
-        )
+        actor_start_timestamp = self.config.actor_start_timestamp
         if is_timestamp_in_future(actor_start_timestamp):
             raise ValueError("Actor start timestamp is in the future")
 
-        report_start_timestamp = self._get_configuration(
-            config, self._CONFIG_REPORT_START_TIMESTAMP, is_number=True
-        )
+        report_start_timestamp = self.config.report_start_timestamp
         if is_timestamp_in_future(report_start_timestamp):
             raise ValueError("Report start timestamp is in the future")
 
-        report_status_str = self._get_configuration(config, self._CONFIG_REPORT_STATUS)
+        report_status_str = self.config.report_status
         report_status = self._convert_report_status_str_to_report_status_int(
             report_status_str
         )
 
-        report_type = self._get_configuration(config, self._CONFIG_REPORT_TYPE)
+        report_type = self.config.report_type
         if not report_type:
             report_type = self._DEFAULT_REPORT_TYPE
 
-        report_include_types_str = self._get_configuration(
-            config, self._CONFIG_REPORT_INCLUDE_TYPES
-        )
+        report_include_types_str = self.config.report_include_types
         report_include_types = []
         if report_include_types_str is not None:
             report_include_types = convert_comma_separated_str_to_list(
                 report_include_types_str
             )
 
-        report_guess_malware = bool(
-            self._get_configuration(config, self._CONFIG_REPORT_GUESS_MALWARE)
-        )
+        report_guess_malware = bool(self.config.report_guess_malware)
 
-        indicator_start_timestamp = self._get_configuration(
-            config, self._CONFIG_INDICATOR_START_TIMESTAMP, is_number=True
-        )
+        indicator_start_timestamp = self.config.indicator_start_timestamp
         if is_timestamp_in_future(indicator_start_timestamp):
             raise ValueError("Indicator start timestamp is in the future")
 
-        indicator_exclude_types_str = self._get_configuration(
-            config, self._CONFIG_INDICATOR_EXCLUDE_TYPES
-        )
+        indicator_exclude_types_str = self.config.indicator_exclude_types
         indicator_exclude_types = []
         if indicator_exclude_types_str is not None:
             indicator_exclude_types = convert_comma_separated_str_to_list(
                 indicator_exclude_types_str
             )
 
-        indicator_low_score = self._get_configuration(
-            config, self._CONFIG_INDICATOR_LOW_SCORE, is_number=True
-        )
+        indicator_low_score = self.config.indicator_low_score
         if indicator_low_score is None:
             indicator_low_score = self._DEFAULT_INDICATOR_LOW_SCORE
 
-        indicator_low_score_labels_str = self._get_configuration(
-            config, self._CONFIG_INDICATOR_LOW_SCORE_LABELS
-        )
+        indicator_low_score_labels_str = self.config.indicator_low_score_labels
         indicator_low_score_labels = []
         if indicator_low_score_labels_str is not None:
             indicator_low_score_labels = convert_comma_separated_str_to_list(
                 indicator_low_score_labels_str
             )
 
-        update_existing_data = bool(
-            self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
-        )
+        update_existing_data = bool(self.config.update_existing_data)
 
         author = self._create_author()
 
         # Create OpenCTI connector helper.
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(self.config.load)
 
         # Create CrowdStrike client and importers.
         client = CrowdStrikeClient(base_url, client_id, client_secret)
@@ -290,17 +247,6 @@ class CrowdStrike:
     @staticmethod
     def _get_environment_variable_name(yaml_path: List[str]) -> str:
         return "_".join(yaml_path).upper()
-
-    @classmethod
-    def _get_configuration(
-        cls, config: Dict[str, Any], config_name: str, is_number: bool = False
-    ) -> Any:
-        yaml_path = cls._get_yaml_path(config_name)
-        env_var_name = cls._get_environment_variable_name(yaml_path)
-        config_value = get_config_variable(
-            env_var_name, yaml_path, config, isNumber=is_number
-        )
-        return config_value
 
     @classmethod
     def _convert_tlp_to_marking_definition(

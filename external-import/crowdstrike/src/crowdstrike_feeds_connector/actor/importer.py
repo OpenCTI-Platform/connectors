@@ -4,16 +4,21 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
-from .builder import ActorBundleBuilder
-from ..importer import BaseImporter
-from crowdstrike_feeds_services.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
 from crowdstrike_client.api.intel.actors import Actors
 from crowdstrike_client.api.models import Response
 from crowdstrike_client.api.models.actor import Actor
+from crowdstrike_feeds_services.utils import (
+    datetime_to_timestamp,
+    paginate,
+    timestamp_to_datetime,
+)
 from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
     OpenCTIConnectorHelper,
 )
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+
+from ..importer import BaseImporter
+from .builder import ActorBundleBuilder
 
 
 class ActorImporter(BaseImporter):

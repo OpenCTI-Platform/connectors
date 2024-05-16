@@ -3,11 +3,6 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
-from .constants import (
-    X_OPENCTI_CREATED_BY_REF,
-    X_OPENCTI_LABELS,
-    X_OPENCTI_SCORE,
-)
 from pycti import (
     CustomObservableCryptocurrencyWallet,
     CustomObservableHostname,
@@ -27,6 +22,8 @@ from stix2 import (
     Process,
     X509Certificate,
 )
+
+from .constants import X_OPENCTI_CREATED_BY_REF, X_OPENCTI_LABELS, X_OPENCTI_SCORE
 
 
 def _get_default_custom_properties(

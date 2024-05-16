@@ -4,6 +4,8 @@
 import logging
 from typing import List, Optional, Tuple
 
+from crowdstrike_client.api.models.actor import Actor
+from crowdstrike_client.api.models.base import Entity
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
     create_intrusion_set,
@@ -16,8 +18,6 @@ from crowdstrike_feeds_services.utils import (
     normalize_start_time_and_stop_time,
     remove_html_tags,
 )
-from crowdstrike_client.api.models.actor import Actor
-from crowdstrike_client.api.models.base import Entity
 from stix2 import Identity  # type: ignore
 from stix2 import (
     Bundle,
