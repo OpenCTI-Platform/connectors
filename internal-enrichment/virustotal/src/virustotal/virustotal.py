@@ -369,7 +369,7 @@ class VirusTotalConnector:
                 return self._process_file(stix_objects, stix_entity, opencti_entity)
             case "IPv4-Addr":
                 return self._process_ip(stix_objects, stix_entity, opencti_entity)
-            case "Domain-Name":
+            case "Domain-Name" | "Hostname":
                 return self._process_domain(stix_objects, stix_entity, opencti_entity)
             case "Url":
                 return self._process_url(stix_objects, stix_entity, opencti_entity)
