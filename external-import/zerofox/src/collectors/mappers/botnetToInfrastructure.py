@@ -1,7 +1,7 @@
 from typing import List, Union
 
 from stix2 import Infrastructure, Location, Relationship
-from zerofox.domain import Botnet
+from zerofox.domain.botnet import Botnet
 
 
 def botnet_to_infrastructure(
@@ -28,6 +28,7 @@ def botnet_to_infrastructure(
             source_ref=botnet.id,
             target_ref=ip_address.id,
             relationship_type="controls",
+            start_time=entry.listed_at,
         )
     )
 
@@ -50,6 +51,7 @@ def get_location_objects(entry, ip_address):
         source_ref=ip_address.id,
         target_ref=country.id,
         relationship_type="located-at",
+        start_time=entry.listed_at,
     )
     return [country, rel]
 
@@ -67,11 +69,13 @@ def get_c2_objects(entry, botnet):
         source_ref=c2_domain.id,
         target_ref=c2_ip.id,
         relationship_type="consists-of",
+        start_time=entry.listed_at,
     )
     botnet_domain_rel = Relationship(
         source_ref=botnet.id,
         target_ref=c2_domain.id,
         relationship_type="controls",
+        start_time=entry.listed_at,
     )
 
     return [c2_domain, c2_ip, domain_ip_rel, botnet_domain_rel]
