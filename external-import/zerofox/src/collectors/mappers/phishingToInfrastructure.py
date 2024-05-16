@@ -8,7 +8,7 @@ from stix2 import (
     Relationship,
     X509Certificate,
 )
-from zerofox.domain import Phishing
+from zerofox.domain.phishing import Phishing
 
 
 def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
@@ -38,6 +38,7 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
         source_ref=phishing.id,
         target_ref=url.id,
         relationship_type="consists-of",
+        start_time=entry.scanned,
     )
 
     ip = IPv4Address(
@@ -48,6 +49,7 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
         source_ref=phishing.id,
         target_ref=ip.id,
         relationship_type="consists-of",
+        start_time=entry.scanned,
     )
 
     asn = AutonomousSystem(
@@ -58,6 +60,7 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
         source_ref=phishing.id,
         target_ref=asn.id,
         relationship_type="consists-of",
+        start_time=entry.scanned,
     )
 
     return [
@@ -82,6 +85,7 @@ def build_certificate_objects(entry: Phishing, stix_phishing):
         source_ref=stix_phishing.id,
         target_ref=certificate.id,
         relationship_type="consists-of",
+        start_time=entry.scanned,
     )
 
     return [certificate, certificate_relationship]
