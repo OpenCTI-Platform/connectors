@@ -1,7 +1,7 @@
 import copy
 import base64
 from datetime import datetime
-from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress, NetworkTraffic, X509Certificate
+from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress, NetworkTraffic, X509Certificate, ObservedData
 from pycti import OpenCTIConnectorHelper, Identity as pycti_identity
 import magic
 from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dict_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes, find_stix_object_by_id
@@ -271,12 +271,15 @@ class ShadowServerStixTransformation:
             if isinstance(stix_object_str, str):
                 self.helper.log_debug(f"Created x509-certificate STIX object: {stix_object_str}")
                 observed_data_list.append(stix_object_str)
-        # if observed_data_list:
-        #     first_observed=note_timestamp_to_datetime(element.get('timestamp'))
-        #     self.create_observed_data(observables_list=observed_data_list, element=element, labels_list=labels_list,first_observed=first_observed)
+        if observed_data_list:
+            first_observed=note_timestamp_to_datetime(element.get('timestamp'))
+            self.create_observed_data(
+                observables_list=observed_data_list,
+                labels_list=labels_list,
+                first_observed=first_observed
+                )
         else:
-            #self.helper.log_error(f"Unable to create observed data for element: {element}")
-            pass
+            self.helper.log_error(f"Unable to create observed data for element: {element}")
 
     def extend_stix_object(self, kwargs: dict, labels:list = []):
         """Extends the specified STIX object with custom properties and marking definitions."""
@@ -400,6 +403,7 @@ class ShadowServerStixTransformation:
             return stix_object.get('id')
 
     def create_x509_certificate(self, data: dict, labels: list = []):
+        """Creates an X509 certificate STIX object."""
         self.helper.log_debug(f"Creating X509 certificate STIX object: {data}")
         kwargs = {
             "type": "x509-certificate",
@@ -445,43 +449,36 @@ class ShadowServerStixTransformation:
             self.stix_objects.append(stix_object)
             return stix_object.get('id')
     
-    # TODO: Implement the following methods
-    def create_observed_data(self, observables_list: list, element: dict, labels_list: list, first_observed: datetime = None, last_observed: datetime = None):
+    def create_observed_data(self, observables_list: list, labels_list: list, first_observed: datetime = datetime.now(), last_observed: datetime = None):
+        """Creates an observed data STIX object."""
         self.helper.log_debug(f"Creating observed data STIX object: {observables_list}")
         try:
             observables = [obs for obs in observables_list if obs is not None]
             if not observables:
                 return None
-            
-            for stix_obj_id in observables:
-                # Add marking definition
-                self.add_marking_definition(stix_obj_id)
-                # Add labels
-                for label_id in labels_list:
-                    if isinstance(label_id, str) and stix_obj_id:
-                        self.helper.api.stix_cyber_observable.add_label(
-                            id=stix_obj_id, label_id=label_id
-                        )
-                    else:
-                        self.helper.log_error(f"Invalid label: {label_id}")
 
-            first_observed = first_observed or datetime.utcnow()
+            first_observed = first_observed
             last_observed = last_observed or first_observed
 
             # Create observed data
-            observed_data = {
-                "objects": observables,  # Reference to the created observable
+            kwargs = {
+                "object_refs": observables,  # Reference to the created observable
                 "first_observed": first_observed.isoformat(timespec='milliseconds') + 'Z',
                 "last_observed": last_observed.isoformat(timespec='milliseconds') + 'Z',
                 "number_observed": len(observables),
             }
 
-            # Create the observed data in OpenCTI
-            self.helper.api.observed_data.create(**observed_data)
-            
+            # Add custom properties and marking definition
+            self.extend_stix_object(kwargs, labels_list)
+            # Create the STIX object
+            stix_object = ObservedData(**kwargs)
+
+            # Add the STIX object to the list of objects
+            if stix_object:
+                self.helper.log_debug(f"Created observed data STIX object: {stix_object.get('id')}")
+                self.stix_objects.append(stix_object)
         except Exception as e:
             self.helper.log_error(f"Error creating observed data: {e}")
-            return None
 
 
 
