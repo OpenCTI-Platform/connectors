@@ -2,9 +2,9 @@ import copy
 import base64
 from datetime import datetime
 from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress, NetworkTraffic, X509Certificate, ObservedData
-from pycti import OpenCTIConnectorHelper, Identity as pycti_identity
+from pycti import OpenCTIConnectorHelper, Identity as pycti_identity, CustomObjectCaseIncident
 import magic
-from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dict_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes, find_stix_object_by_id
+from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dicts_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes, find_stix_object_by_id
 
 class ShadowServerStixTransformation:
     def __init__(self, marking_refs: MarkingDefinition, report_list: list, report: dict, api_helper: OpenCTIConnectorHelper, labels: list = ['ShadowServer']):
@@ -89,24 +89,36 @@ class ShadowServerStixTransformation:
             "url": f"{self.url}",
         }
     
-    def create_opencti_case(self):
+    def create_opencti_case(self, labels:list = []):
         self.helper.log_debug(f"Creating OpenCTI case: {self.report.get('id')}")
+
+        # Create the OpenCTI case description.
         description = str()
         for key, value in self.report.items():
-            description += f"{key}: {value}\n"
+            description += f"**{key}**: {value}\n\n"
+        
+        # Create the OpenCTI case
         kwargs = {
             "name": f"ShadowServer Report {self.type}: {self.report.get('id')}",
+            "severity": "low", # TODO: hardcoded, may want to adjust? 
+            "priority": "P4", # TODO: hardcoded, may want to adjust?
+            "created": self.published,
+            "created_by_ref": self.author_id,
             "description": description,
-            "externalReferences": self.external_ref_id,
-            "objectLabel": self.labels,
+            "external_references": [self.external_reference],
+            "labels": labels,
+            "object_marking_refs": self.marking_refs,
+            "object_refs": self.stix_objects,
         }
-        if isinstance(self.marking_refs, list) and len(self.marking_refs) > 0 and self.marking_refs[0].get('id'):
-            kwargs.update(objectMarking=self.marking_refs[0].get('id'))
-        if self.object_refs:
-            kwargs.update(externalReferences=self.object_refs)
-        opencti_obj = self.helper.api.case_incident.create(**kwargs)
-        self.case_id = opencti_obj.get('id')
-        self.object_refs.append(self.case_id)
+
+        # Add custom properties
+        opencti_obj = CustomObjectCaseIncident(**kwargs)
+
+        self.case_id = opencti_obj.get('id', None)
+        if self.case_id:
+            self.stix_objects.append(opencti_obj)
+        else:
+            self.helper.log_error(f"Failed to create OpenCTI case: {self.report.get('id', None)}")
     
     def upload_stix2_artifact(self, report_list):
         self.helper.log_debug(f"Uploading ShadowServer report as artifact.")
@@ -135,15 +147,6 @@ class ShadowServerStixTransformation:
         if self.marking_refs:
             kwargs.update(object_marking_refs=self.marking_refs)
 
-        # TODO: Delete this
-        # Write the CSV string to a file
-        try:
-            with open(self.report.get('file', 'default_file_name.csv'), 'w') as file:
-                file.write(csv_str_enc.decode())
-        except Exception as e:
-            self.helper.log_error(f"Failed to write CSV file to disk: {e}")
-        # TODO: Delete to here.
-
         artifact = Artifact(**kwargs)
 
         if artifact.get('id'):
@@ -155,15 +158,12 @@ class ShadowServerStixTransformation:
 
     def create_report(self):
         self.helper.log_debug(f"Creating report: {self.report.get('id')}")
-        description = []
         self.upload_stix2_artifact(self.report_list)
-
         for element in self.report_list:
-            description.append(dict_to_markdown(element))
-            self.map_to_stix(element)
-        # TODO: Creat OpenCTI case
-        # self.create_opencti_case()
+            label_list = self.map_to_stix(element)
+        self.create_opencti_case(labels=label_list)
         
+        # TODO: Create note for each element?
         # TODO: Create Report? 
         # self.stix_report = Report(
         #     id=pycti_report.generate_id(name=self.report.get("id"), published=self.published),
@@ -280,6 +280,8 @@ class ShadowServerStixTransformation:
                 )
         else:
             self.helper.log_error(f"Unable to create observed data for element: {element}")
+
+        return labels_list
 
     def extend_stix_object(self, kwargs: dict, labels:list = []):
         """Extends the specified STIX object with custom properties and marking definitions."""
@@ -480,12 +482,9 @@ class ShadowServerStixTransformation:
         except Exception as e:
             self.helper.log_error(f"Error creating observed data: {e}")
 
-
-
-
     # def create_stix_note_from_data(self):
     #     for element in self.report_list:
-    #         content = dict_to_markdown(element)
+    #         content = dicts_to_markdown(element)
     #         abstract = f'ShadowServer {self.type} Report {element.get("timestamp")}'
     #         stix_object = Note(
     #             id = pycti_note.generate_id(abstract, content),

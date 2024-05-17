@@ -3,6 +3,7 @@ from .constants import (
     TLP_MAP,
 )
 import pandas as pd
+import ipaddress
 import hashlib
 from datetime import datetime
 from stix2 import parse, properties
@@ -92,22 +93,33 @@ def string_to_datetime(date_string: str) -> datetime:
 def note_timestamp_to_datetime(date_string: str):
     return datetime.strptime(date_string, '%Y-%m-%d %H:%M:%SZ')
 
-def dict_to_markdown(data_dict):
-    # Filter out empty strings
-    cleaned_dict = {k: v for k, v in data_dict.items() if v != ''}
+def dicts_to_markdown(dicts_list):
+    """
+    Converts a list of dictionaries to a Markdown formatted string.
     
-    # Create a dataframe from the dictionary, and transpose it
-    df = pd.DataFrame(cleaned_dict, index=[0]).T.reset_index()
+    Args:
+    dicts_list (list of dict): A list of dictionaries to be converted to Markdown.
     
-    # Rename columns
-    df.columns = ["Key", "Value"]
+    Returns:
+    str: A Markdown string representing all the dictionaries.
+    """
+    markdown_output = ""
     
-    # Convert the DataFrame to Markdown
-    markdown = df.to_markdown(index=False)
-    
-    return markdown
+    for data_dict in dicts_list:
+        # Filter out empty strings
+        cleaned_dict = {k: v for k, v in data_dict.items() if v != ''}
+        
+        # Create a DataFrame from the dictionary, and transpose it
+        df = pd.DataFrame(cleaned_dict, index=[0]).T.reset_index()
+        
+        # Rename columns
+        df.columns = ["Key", "Value"]
+        
+        # Convert the DataFrame to Markdown and add to the output string
+        markdown = df.to_markdown(index=False)
+        markdown_output += markdown + "\n\n"  # Add an extra newline for spacing between tables
 
-import ipaddress
+    return markdown_output
 
 def check_ip_address(ip_str):
     try:
