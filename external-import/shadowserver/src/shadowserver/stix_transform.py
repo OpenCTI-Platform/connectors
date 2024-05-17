@@ -1,7 +1,7 @@
 import copy
 import base64
 from datetime import datetime
-from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress, NetworkTraffic
+from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress, NetworkTraffic, X509Certificate
 from pycti import OpenCTIConnectorHelper, Identity as pycti_identity
 import magic
 from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dict_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes, find_stix_object_by_id
@@ -266,11 +266,11 @@ class ShadowServerStixTransformation:
             if isinstance(stix_object_str, str):
                 self.helper.log_debug(f"Created network-traffic STIX object: {stix_object_str}")
                 observed_data_list.append(stix_object_str)
-        # if element.get('cert_serial_number'):
-        #     stix_object = self.create_x509_certificate(element)
-        #     if stix_object and isinstance(stix_object, dict):
-        #         self.object_refs.append(stix_object.get('id'))
-        #         observed_data_list.append(stix_object)
+        if element.get('cert_serial_number'):
+            stix_object_str = self.create_x509_certificate(element, labels_list)
+            if isinstance(stix_object_str, str):
+                self.helper.log_debug(f"Created x509-certificate STIX object: {stix_object_str}")
+                observed_data_list.append(stix_object_str)
         # if observed_data_list:
         #     first_observed=note_timestamp_to_datetime(element.get('timestamp'))
         #     self.create_observed_data(observables_list=observed_data_list, element=element, labels_list=labels_list,first_observed=first_observed)
@@ -399,10 +399,11 @@ class ShadowServerStixTransformation:
             self.stix_objects.append(stix_object)
             return stix_object.get('id')
 
-    # TODO: Implement the following methods
-    def create_x509_certificate(self, data: dict):
+    def create_x509_certificate(self, data: dict, labels: list = []):
         self.helper.log_debug(f"Creating X509 certificate STIX object: {data}")
-        kwargs = dict()
+        kwargs = {
+            "type": "x509-certificate",
+        }
         # Remove unwanted characters from hashes
         hashes = {
                 'SHA-1': data.get('sha1_fingerprint', None),
@@ -431,14 +432,18 @@ class ShadowServerStixTransformation:
         if data.get('subject_common_name'):
             kwargs.update(subject=data.get('subject_common_name'))
 
-        observed_data = {
-            "type": "X509-Certificate",
-            **kwargs
-        }
-        
-        return self.helper.api.stix_cyber_observable.create(
-            ObservedData = observed_data
-        )
+        # Add custom properties and marking definition
+        self.extend_stix_object(kwargs, labels)
+
+        # Create the STIX object
+        stix_object = X509Certificate(**kwargs)
+
+        # Add the STIX object to the list of objects
+        if stix_object:
+            self.helper.log_debug(f"Created X509 certificate STIX object: {stix_object.get('id')}")
+            self.object_refs.append(stix_object.get('id'))
+            self.stix_objects.append(stix_object)
+            return stix_object.get('id')
     
     # TODO: Implement the following methods
     def create_observed_data(self, observables_list: list, element: dict, labels_list: list, first_observed: datetime = None, last_observed: datetime = None):
