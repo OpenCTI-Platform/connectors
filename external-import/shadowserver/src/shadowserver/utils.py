@@ -164,3 +164,19 @@ def get_stix_id_precedence(stix_id_list:list):
         elif stix_id.startswith('domain-name'):
             return stix_id
     return None
+
+def find_stix_object_by_id(stix_objects, target_id):
+    """
+    Search through a list of STIX2 objects and return the object with the specified ID.
+
+    Args:
+    stix_objects (list): A list of STIX2 objects.
+    target_id (str): The ID of the STIX2 object to find.
+
+    Returns:
+    stix2.BaseObject: The STIX2 object with the matching ID, or None if no match is found.
+    """
+    for obj in stix_objects:
+        if obj.id == target_id:
+            return obj.get("value", None)
+    return None  

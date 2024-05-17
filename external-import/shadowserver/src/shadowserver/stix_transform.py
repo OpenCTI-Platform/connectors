@@ -1,10 +1,10 @@
 import copy
 import base64
 from datetime import datetime
-from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress
+from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress, NetworkTraffic
 from pycti import OpenCTIConnectorHelper, Identity as pycti_identity
 import magic
-from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dict_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes
+from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dict_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes, find_stix_object_by_id
 
 class ShadowServerStixTransformation:
     def __init__(self, marking_refs: MarkingDefinition, report_list: list, report: dict, api_helper: OpenCTIConnectorHelper, labels: list = ['ShadowServer']):
@@ -260,12 +260,12 @@ class ShadowServerStixTransformation:
             if isinstance(stix_object_str, str):
                 self.helper.log_debug(f"Created {object_type} STIX object: {stix_object_str}")
                 observed_data_list.append(stix_object_str)
-        # if element.get('port') and element.get('protocol'):
-        #     dst_ref = get_stix_id_precedence(observed_data_list)
-        #     stix_object = self.create_network_traffic(port=element.get('port'), protocol=element.get('protocol'), dst_ref=dst_ref)
-        #     if stix_object and isinstance(stix_object, dict):
-        #         self.object_refs.append(stix_object.get('id'))
-        #         observed_data_list.append(stix_object)
+        if element.get('port') and element.get('protocol'):
+            dst_ref = get_stix_id_precedence(observed_data_list)
+            stix_object_str = self.create_network_traffic(port=element.get('port'), protocol=element.get('protocol'), dst_ref=dst_ref, labels=labels_list)
+            if isinstance(stix_object_str, str):
+                self.helper.log_debug(f"Created network-traffic STIX object: {stix_object_str}")
+                observed_data_list.append(stix_object_str)
         # if element.get('cert_serial_number'):
         #     stix_object = self.create_x509_certificate(element)
         #     if stix_object and isinstance(stix_object, dict):
@@ -282,6 +282,8 @@ class ShadowServerStixTransformation:
         """Extends the specified STIX object with custom properties and marking definitions."""
         # Add custom properties
         custom_properties = copy.deepcopy(self.custom_properties)
+        # Add score
+        custom_properties["x_opencti_score"] = 0
         # Add labels
         if len(labels) > 0:
             custom_properties["x_opencti_labels"] = labels
@@ -360,19 +362,42 @@ class ShadowServerStixTransformation:
         # Add custom properties and marking definition
         self.extend_stix_object(kwargs, labels)
         return MACAddress(**kwargs)
-        
-    # TODO: Implement the following methods
-    def create_network_traffic(self, port: int, protocol: str, dst_ref:str = None):
+
+    def create_network_traffic(self, port: int, protocol: str, dst_ref:str = None, labels: list = []):
+        """Creates a network traffic STIX object."""
         self.helper.log_debug(f"Creating network traffic STIX object. Port: {port}, Protocol: {protocol}.")
-        observed_data = {
-            "type": "Network-Traffic",
+        kwargs = {
+            "type": "network-traffic",
             "dst_port": port,
             "protocols": [protocol],
-            'dst_ref': dst_ref,
+            "dst_ref": dst_ref,
+            "is_active": False,
+            "start": self.published,
+            "end": self.published,
         }
-        return self.helper.api.stix_cyber_observable.create(    
-            ObservedData = observed_data
+
+        dst_value = find_stix_object_by_id(self.stix_objects, dst_ref)
+        self.helper.log_debug(f"Value of stix object: {dst_value}")
+
+        description = f"Network Traffic {dst_value} - {protocol}:{port}"
+
+        # Add custom properties and marking definition
+        self.extend_stix_object(kwargs, labels)
+        kwargs["custom_properties"].update(
+            {
+                'x_opencti_description': description
+            }
         )
+
+        # Create the STIX object
+        stix_object = NetworkTraffic(**kwargs)
+
+        # Add the STIX object to the list of objects
+        if stix_object:
+            self.helper.log_debug(f"Created network traffic STIX object: {stix_object.get('id')}")
+            self.object_refs.append(stix_object.get('id'))
+            self.stix_objects.append(stix_object)
+            return stix_object.get('id')
 
     # TODO: Implement the following methods
     def create_x509_certificate(self, data: dict):
