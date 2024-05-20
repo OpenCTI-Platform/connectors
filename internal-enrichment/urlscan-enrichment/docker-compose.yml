@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-urlscan-enrichment:
-    image: opencti/connector-urlscan-enrichment:6.1.2
+    image: opencti/connector-urlscan-enrichment:6.1.3
     environment:
       - CONNECTOR_NAME=connector-urlscanio
       - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
