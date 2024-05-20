@@ -203,7 +203,8 @@ class ExportFileCsv:
                 # Cleanup object extra information
                 # Due to lack of support of this in export_dict_list_to_csv
                 for entity in entities_list:
-                    del entity["objectLabelIds"]
+                    if "objectLabelIds" in entity:
+                        del entity["objectLabelIds"]
                 del entity_data["objectsIds"]
 
             # Cleanup object extra information
