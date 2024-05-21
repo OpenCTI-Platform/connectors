@@ -151,8 +151,8 @@ class ExportFileStix:
                 entity_type,
                 list_params.get("search"),
                 list_params.get("filters"),
-                list_params.get("orderBy"),
-                list_params.get("orderMode"),
+                list_params["orderBy"],
+                list_params["orderMode"],
                 export_type,
                 access_filter,  # To restrict markings
             )
