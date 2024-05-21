@@ -283,8 +283,8 @@ class ExportFileCsv:
                 entity_type=entity_type,
                 search=list_params.get("search"),
                 filters=export_query_filter,
-                orderBy=list_params["orderBy"],
-                orderMode=list_params["orderMode"],
+                orderBy=list_params.get("orderBy"),
+                orderMode=list_params.get("orderMode"),
                 getAll=True,
             )
             list_filters = json.dumps(list_params)
