@@ -95,7 +95,8 @@ After installation, the connector should require minimal interaction to use, and
 
 ## Warnings
 
-- If you have the variable auto is true, then it is important to choose the correct scope by selecting only one type of scope-submission (url or hostname or domain-name) to avoid looping ingestions.
+- If you have the variable auto set to true, then it is important to choose the correct scope by selecting only one type of scope-submission (url or hostname or domain-name) to avoid looping ingestions.
+    - This is an example of looping ingestion: you have set a scope submission of URL and Domain name. When you will search for URL, it will retrieve lots of entities, including some domain names. These domain names will then be searched too. However, they can bring you some URLs too, creating this infinite loop.
 
 - If you enrich IPv4 and IPv6 observables, only a link to URLScan search in external reference (OpenCTI) will be generated, but you can play with the search period with the environment variable search_filtered_by_date to refine the search.
 
