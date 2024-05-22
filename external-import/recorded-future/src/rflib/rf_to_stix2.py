@@ -897,6 +897,7 @@ class StixNote:
         "Actor Profile": "Threat-Actor",
         "Analyst On-Demand Report": "Threat-Report",
         "Cyber Threat Analysis": "Threat-Report",
+        "Executive Insights": "Threat-Report",
         "Flash Report": "Threat-Report",
         "Geopolitical Flash Event": "Threat-Report",
         "Geopolitical Intelligence Summary": "Threat-Report",
