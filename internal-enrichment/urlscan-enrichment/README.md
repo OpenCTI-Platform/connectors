@@ -100,4 +100,4 @@ After installation, the connector should require minimal interaction to use, and
 
 - If you enrich IPv4 and IPv6 observables, only a link to URLScan search in external reference (OpenCTI) will be generated, but you can play with the search period with the environment variable search_filtered_by_date to refine the search.
 
-- While the analysis is still in progress, the Result API endpoint will respond with an HTTP status code of 404. The connector's polling logic is to wait 10 seconds and retry 6 times, for a maximum wait time of 1 minute, until the analysis is complete or the maximum wait time is reached.
+- While the analysis is still in progress, the Result API endpoint will respond with an HTTP status code of 404. The connector's polling logic is to wait 10 seconds and retry 12 times, for a maximum wait time of 2 minutes, until the analysis is complete or the maximum wait time is reached.

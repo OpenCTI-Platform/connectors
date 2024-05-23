@@ -97,14 +97,14 @@ class UrlscanClient:
 
     def urlscan_result(self, uuid: str) -> dict:
         """
-        This method allows you to check the user quota available for URLScan,
-        depending on the visibility in the configuration.
+        This method recovers all the data of the entity scanned by URLScan, its data may take a moment to be processed
+        by URLScan, if there is a 404 return and a message "Scan is not finished yet" then we make several attempts.
 
         :param uuid: This parameter contains the uuid of the submitted request.
         :return: dict
         """
         try:
-            max_retries = 6
+            max_retries = 12
             retry_delay = 10  # in second
 
             response = self.session.get(
