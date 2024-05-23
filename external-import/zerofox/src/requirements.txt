@@ -1,5 +1,5 @@
 requests==2.31.0
 pydantic==2.7.1
-pytest==7.4.2
+pytest==7.4.4
 pycti==6.0.10
 urllib3==2.2.1
