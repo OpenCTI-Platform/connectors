@@ -34,7 +34,7 @@ class QradarReference:
 
     @property
     def collection_url(self) -> str:
-        return f"{self.qradar_url}/api/reference_data/sets/{self.qradar_reference_name}"
+        return f"{self.qradar_url}/api/reference_data_collections/sets/{self.qradar_reference_name}"
 
     @property
     def headers(self) -> dict:
@@ -59,7 +59,7 @@ class QradarReference:
             url_request = (
                 f"{self.collection_url}_{self.get_type(payload)}"
                 if not create_alphanumeric
-                else f"{self.qradar_url}/api/reference_data/sets?element_type=ALN&name={self.qradar_reference_name}_{self.get_type(payload)}"
+                else f"{self.qradar_url}/api/reference_data_collections/sets?element_type=ALN&name={self.qradar_reference_name}_{self.get_type(payload)}"
             )
             payload["_key"] = id
 
