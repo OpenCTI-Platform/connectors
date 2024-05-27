@@ -1,5 +1,5 @@
 import stix2
-from pycti import Indicator, Report
+from pycti import Indicator
 
 from . import utils
 from .common import create_stix_relationship
