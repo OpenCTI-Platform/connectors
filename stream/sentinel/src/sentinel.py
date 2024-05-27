@@ -252,7 +252,7 @@ class SentinelConnector:
                 ioc_type: data["value"],
                 "action": action,
                 "description": description,
-                "expiration_datetime": expiration_datetime,
+                "expirationDateTime": expiration_datetime,
                 "targetProduct": self.target_product,
                 "threatType": threat_type,
                 "tlpLevel": tlpLevel,
