@@ -160,23 +160,6 @@ def process(connector, indicator):
             )
         )
 
-    for report in indicator.get("reports", []):
-        # {
-        # "report_id": "20-00015687",
-        # "type": "Vulnerability Report",
-        # "title": "Title - 1afddaa7 3bf50d632cd9fa2e-1605910297",
-        # "published_date": "2020-11-20T22:11:45.213Z"
-        # }
-        stix_report = stix2.Report(
-            id=Report.generate_id(report["title"], report["published_date"]),
-            name=report["title"],
-            published=report["published_date"],
-            object_refs=list(map(lambda item: item["id"], items)),
-            created_by_ref=connector.identity.get("standard_id"),
-            allow_custom=True,
-        )
-        items.append(stix_report)
-
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
     if bundle is None:
