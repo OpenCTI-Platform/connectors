@@ -54,7 +54,7 @@ class ReportHub:
     def get_config(name: str, config, default=None):
         env_name = "RST_REPORT_HUB_{}".format(name.upper())
         # usually this connector gets its config from variables
-        # but if these are not defined, then it 
+        # but if these are not defined, then it
         # reads 'rst-report-hub' property in the file config.yml
         result = get_config_variable(env_name, ["rst-report-hub", name], config)
         return result or default
