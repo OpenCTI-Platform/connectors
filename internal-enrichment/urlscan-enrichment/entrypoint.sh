@@ -1,4 +1,7 @@
 #!/bin/sh
 
-# Start the connector (WORKDIR is /opt/connector as set in the Dockerfile)
+# Correct working directory
+cd /opt/opencti-connector-urlscan-enrichment
+
+# Start the connector
 python3 main.py
