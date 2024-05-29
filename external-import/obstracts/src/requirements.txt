@@ -7,9 +7,7 @@ pika
 python-dateutil
 python-magic
 pytz
-PyYAML
 regex
-requests
 simplejson
 six
 sseclient
