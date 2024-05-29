@@ -261,15 +261,16 @@ class UrlscanConnector:
 
     def _process_message(self, data: Dict) -> str:
 
+        # OpenCTI entity information retrieval
+        stix_entity = data["stix_entity"]
+        opencti_entity = data["enrichment_entity"]
+        self.stix_objects = data["stix_objects"]
+
         # Security to limit playbook triggers to something other than the scope initial
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        entity_type = data["entity_type"].lower()
+        entity_type = stix_entity["type"].lower()
 
         if entity_type in scopes:
-            # OpenCTI entity information retrieval
-            stix_entity = data["stix_entity"]
-            opencti_entity = data["enrichment_entity"]
-            self.stix_objects = data["stix_objects"]
 
             is_valid_max_tlp = self.extract_and_check_markings(opencti_entity)
             if not is_valid_max_tlp:
