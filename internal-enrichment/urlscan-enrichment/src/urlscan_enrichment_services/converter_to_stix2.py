@@ -143,7 +143,9 @@ class UrlscanConverter:
             "custom_properties": {
                 "x_opencti_external_references": external_reference,
                 "x_opencti_labels": labels,
-                "x_opencti_files": [prepared_file_png] if prepared_file_png is not None else [],
+                "x_opencti_files": (
+                    [prepared_file_png] if prepared_file_png is not None else []
+                ),
             },
         }
         data_search = {
@@ -207,7 +209,9 @@ class UrlscanConverter:
             "pattern_type": "stix",
             "custom_properties": {
                 "x_opencti_main_observable_type": x_opencti_type,
-                "x_opencti_files": [prepared_file_png] if prepared_file_png is not None else [],
+                "x_opencti_files": (
+                    [prepared_file_png] if prepared_file_png is not None else []
+                ),
             },
         }
 
@@ -360,7 +364,9 @@ class UrlscanConverter:
                     custom_properties={
                         "x_opencti_external_references": external_reference,
                         "x_opencti_labels": labels,
-                        "x_opencti_files": [prepared_file_png] if prepared_file_png is not None else [],
+                        "x_opencti_files": (
+                            [prepared_file_png] if prepared_file_png is not None else []
+                        ),
                         "created_by_ref": self.identity["id"],
                     },
                 )
