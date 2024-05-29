@@ -1,6 +1,5 @@
 pycti==6.1.5
 countryinfo
-requests
 validators
 ipinfo
 pandas
