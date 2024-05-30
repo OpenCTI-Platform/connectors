@@ -13,6 +13,7 @@ services:
       - CONNECTOR_SCOPE=qradar
       - CONNECTOR_LOG_LEVEL=error
       - QRADAR_URL=https://QRADAR1.changeme.com
+      - QRADAR_URL_REFERENCE=ChangeMe # Default /api/reference_data_collections/sets
       - QRADAR_TOKEN=Token1
       - QRADAR_SSL_VERIFY=true
       - QRADAR_REFERENCE_NAME=opencti
