@@ -14,6 +14,7 @@ connector:
 
 qradar:
   url: 'https://QRADAR1.ChangeMe.com'
+  url_reference: '/api/reference_data_collections/sets'
   ssl_verify: true
   token: 'ChangeMe' # Token for bearer auth (if set, will ignore basic auth params)
   reference_name: 'OpenCTI'
