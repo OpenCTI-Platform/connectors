@@ -1,2 +1,2 @@
-pycti==6.1.7
+pycti==6.1.8
 validators==0.28.1
