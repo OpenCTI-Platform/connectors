@@ -166,7 +166,7 @@ class ReportImporter:
 
         # TODO: handle observable field retrieval
         base_func = self.helper.api
-        entity_type_function = getattr(base_func, entity_type.lower())
+        entity_type_function = getattr(base_func, entity_type.lower().replace("-", "_"))
         entity = entity_type_function.read(id=entity_id, customAttributes=fields)
         fields_dict = {}
         if entity is None:
