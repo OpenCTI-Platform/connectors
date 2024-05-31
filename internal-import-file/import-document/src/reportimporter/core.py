@@ -195,9 +195,7 @@ class ReportImporter:
         entity_indicators = self._collect_stix_objects(self.entity_config)
 
         # Parse report
-        parser = ReportParser(
-            self.helper, entity_indicators, self.observable_config, False
-        )
+        parser = ReportParser(self.helper, entity_indicators, self.observable_config)
 
         if data["file_id"].startswith("import/global"):
             file_data = open(file_name, "rb").read()
