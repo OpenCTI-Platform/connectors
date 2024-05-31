@@ -372,7 +372,7 @@ class ReportImporter:
                 for object in entity_stix_bundle["objects"]
                 if "x_opencti_id" in object and object["x_opencti_id"] == entity["id"]
             ][0]
-            if entities:
+            if entities is not None:
                 entities.append(entity_stix)
             return entity_stix
         elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
@@ -406,7 +406,7 @@ class ReportImporter:
                 for object in entity_stix_bundle["objects"]
                 if "x_opencti_id" in object and object["x_opencti_id"] == entity["id"]
             ][0]
-            if entities:
+            if entities is not None:
                 entities.append(entity_stix)
             return entity_stix
         else:
@@ -522,7 +522,7 @@ class ReportImporter:
                         "created_by_ref": author,
                     },
                 )
-            if observable is not None and observables:
+            if observable is not None and observables is not None:
                 observables.append(observable)
             return observable
 
