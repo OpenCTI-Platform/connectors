@@ -149,7 +149,6 @@ class ReportImporter:
     def _extract_element_id(self, data: Dict):
         stix_object = self._process_observable(data)
         stix_id = stix_object["id"]
-        element = self.helper.api.stix_core_object.read(id=stix_id)
         if stix_id:
             return stix_id
 
