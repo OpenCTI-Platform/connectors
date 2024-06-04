@@ -100,13 +100,11 @@ class ReportImporter:
         parsed_data = parser.run_raw_parser(file_name, data["file_mime"])
         os.remove(file_name)
 
-        parsed_existing_data = self._extract_existing_elements(parsed_data)
+        parsed_result = self._extract_elements_id(parsed_data)
 
         # TODO: upload parsed data to analysis
 
-        return (
-            "Analysis finished, found " + str(len(parsed_existing_data)) + " elements"
-        )
+        return "Analysis finished, found " + str(len(parsed_result)) + " elements"
 
     def _process_fields_analysis(self, data: Dict) -> str:
         if "content_fields" not in data:
@@ -130,34 +128,30 @@ class ReportImporter:
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
         parsed_data = parser.parse(raw_text_to_analyze)
 
-        parsed_existing_data = self._extract_existing_elements(parsed_data)
+        parsed_result = self._extract_elements_id(parsed_data)
         # TODO: upload parsed data to analysis
 
-        return (
-            "Analysis finished, found " + str(len(parsed_existing_data)) + " elements"
-        )
+        return "Analysis finished, found " + str(len(parsed_result)) + " elements"
 
-    def _extract_existing_elements(self, parsed_elements: Dict):
-        existing_elements = {}
+    def _extract_elements_id(self, parsed_elements: Dict):
+        result = {}
         for parse_element_key in parsed_elements:
             parsed_element_value = parsed_elements[parse_element_key]
             if parsed_element_value[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
-                existing_elements[parse_element_key] = parsed_element_value["match"]
+                result[parse_element_key] = parsed_element_value["match"]
             elif parsed_element_value[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
-                existing_element_id = self._extract_existing_observable(
-                    parsed_element_value
-                )
-                if existing_element_id:
-                    existing_elements[parse_element_key] = existing_element_id
+                element_id = self._extract_element_id(parsed_element_value)
+                if element_id:
+                    result[parse_element_key] = element_id
 
-        return existing_elements
+        return result
 
-    def _extract_existing_observable(self, data: Dict):
+    def _extract_element_id(self, data: Dict):
         stix_object = self._process_observable(data)
         stix_id = stix_object["id"]
         element = self.helper.api.stix_core_object.read(id=stix_id)
-        if element and element["id"]:
-            return element["id"]
+        if stix_id:
+            return stix_id
 
     def _resolve_fields_to_analyze(
         self, entity_id: str, entity_type: str, fields: str
