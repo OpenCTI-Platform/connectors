@@ -1,9 +1,10 @@
 import os
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+
 import requests
-import yaml
 import stix2
+import yaml
 from pycti import (
     Identity,
     Indicator,
