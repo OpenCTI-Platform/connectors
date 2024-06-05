@@ -16,7 +16,9 @@ from pycti import (
 
 class RedFlagDomainImportConnector:
     def __init__(self):
-        config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yml")
+        config_file_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "config.yml"
+        )
         if os.path.isfile(config_file_path):
             with open(config_file_path, "r") as f:
                 config = yaml.safe_load(f)
@@ -27,7 +29,8 @@ class RedFlagDomainImportConnector:
         except Exception as e:
             print(e)
         name = get_config_variable(
-            "CONNECTOR_NAME", ["connector", "name"], config).capitalize()
+            "CONNECTOR_NAME", ["connector", "name"], config
+        ).capitalize()
         self.author = stix2.Identity(
             id=Identity.generate_id(name, "organization"),
             name=name,
@@ -84,8 +87,12 @@ class RedFlagDomainImportConnector:
                 )
 
                 time_now = datetime.now(timezone(timedelta(hours=2)))
-                time_until_2am = timedelta(days=1, hours=2 - time_now.hour, minutes=-time_now.minute,
-                                           seconds=-time_now.second)
+                time_until_2am = timedelta(
+                    days=1,
+                    hours=2 - time_now.hour,
+                    minutes=-time_now.minute,
+                    seconds=-time_now.second,
+                )
                 time.sleep(time_until_2am.total_seconds())
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
@@ -108,7 +115,9 @@ class RedFlagDomainImportConnector:
                         domain_list.append(line)
                 return domain_list
             else:
-                self.helper.log_error(f"Failed to retrieve file from {file_url}: {response.status_code}")
+                self.helper.log_error(
+                    f"Failed to retrieve file from {file_url}: {response.status_code}"
+                )
         except Exception as e:
             self.helper.log_error(f"Error while fetching domains: {str(e)}")
 
