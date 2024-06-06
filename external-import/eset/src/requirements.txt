@@ -1,3 +1,3 @@
-pycti==6.1.9
+pycti==6.1.10
 cabby
 
