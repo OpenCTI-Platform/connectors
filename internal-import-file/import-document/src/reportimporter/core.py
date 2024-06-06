@@ -394,7 +394,9 @@ class ReportImporter:
                     if object["id"] == match[RESULT_FORMAT_MATCH]
                 ]
                 if len(entity_stix) == 0:
-                    log_message = "Couldn't find entity {} bundle {}".format(match, entity_stix_bundle)
+                    log_message = "Couldn't find entity {} bundle {}".format(
+                        match, entity_stix_bundle
+                    )
                     self.helper.log_error(log_message)
                     raise ValueError("Entity cannot be found or exported")
 
