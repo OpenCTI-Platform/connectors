@@ -398,7 +398,7 @@ class ReportImporter:
                         match, entity_stix_bundle
                     )
                     self.helper.log_error(log_message)
-                    raise ValueError("Entity cannot be found or exported")
+                    raise ValueError("Entity cannot be found in bundle")
 
                 entities.append(entity_stix[0])
             else:
