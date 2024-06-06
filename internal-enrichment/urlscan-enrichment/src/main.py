@@ -18,7 +18,7 @@ class UrlscanConnector:
         self.helper = OpenCTIConnectorHelper(self.config.load, True)
         self.client = UrlscanClient(self.helper)
         self.converter = UrlscanConverter(self.helper)
-        self.constants = UrlscanConstants()
+        self.constants = UrlscanConstants
         self.utils = UrlscanUtils
 
         # Define variables
