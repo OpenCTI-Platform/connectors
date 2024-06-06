@@ -14,8 +14,7 @@ class MalbeaconConverter:
     Convert data from Malbeacon to STIX 2 object
     """
 
-    def __init__(self, helper):
-        self.helper = helper
+    def __init__(self):
         self.config = ConfigMalbeacon()
         self.author = self.create_author()
         self.external_reference = self.create_external_reference()

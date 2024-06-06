@@ -18,7 +18,7 @@ class MalBeaconConnector:
         self.config = ConfigMalbeacon()
         self.helper = OpenCTIConnectorHelper(self.config.load, True)
         self.client = MalbeaconClient(self.helper)
-        self.converter = MalbeaconConverter(self.helper)
+        self.converter = MalbeaconConverter()
 
         # Define variables
         self.author = None
