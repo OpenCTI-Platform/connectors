@@ -3,6 +3,7 @@ from datetime import datetime
 
 import stix2
 import validators
+from malbeacon_config_variables import ConfigMalbeacon
 from malbeacon_endpoints import SOURCE_URL
 from malbeacon_utils import STIX_OBS_MAP
 from pycti import Identity, Indicator, StixCoreRelationship
@@ -15,7 +16,7 @@ class MalbeaconConverter:
 
     def __init__(self, helper):
         self.helper = helper
-        self.config = self.helper.config["malbeacon"]
+        self.config = ConfigMalbeacon()
         self.author = self.create_author()
         self.external_reference = self.create_external_reference()
 
@@ -128,7 +129,7 @@ class MalbeaconConverter:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
-                    "x_opencti_score": self.config["indicator_score_level"],
+                    "x_opencti_score": self.config.indicator_score_level,
                 },
             )
         elif self._is_ipv4(value) is True:
@@ -138,7 +139,7 @@ class MalbeaconConverter:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
-                    "x_opencti_score": self.config["indicator_score_level"],
+                    "x_opencti_score": self.config.indicator_score_level,
                 },
             )
         elif self._is_domain(value) is True:
@@ -148,7 +149,7 @@ class MalbeaconConverter:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
-                    "x_opencti_score": self.config["indicator_score_level"],
+                    "x_opencti_score": self.config.indicator_score_level,
                 },
             )
         else:
@@ -212,7 +213,7 @@ class MalbeaconConverter:
             created_by_ref=self.author["id"],
             external_references=self.external_reference,
             custom_properties={
-                "x_opencti_score": self.config["indicator_score_level"],
+                "x_opencti_score": self.config.indicator_score_level,
                 "x_opencti_main_observable_type": obs_type,
             },
         )
