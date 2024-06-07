@@ -3,6 +3,7 @@ from datetime import datetime
 import stix2
 from pycti import CustomObservableHostname, Identity, Indicator, StixCoreRelationship
 
+from .config_variables import UrlscanConfig
 from .constants import UrlscanConstants
 from .utils import UrlscanUtils
 
@@ -14,7 +15,7 @@ class UrlscanConverter:
 
     def __init__(self, helper):
         self.helper = helper
-        self.config = self.helper.config["urlscan_enrichment"]
+        self.config = UrlscanConfig()
         self.identity = self.generate_urlscan_stix_identity()
         self.constants = UrlscanConstants
         self.utils = UrlscanUtils
@@ -104,7 +105,7 @@ class UrlscanConverter:
                     + search_entity_type
                     + entity_value
                     + " AND date:"
-                    + self.config["search_filtered_by_date"]
+                    + self.config.search_filtered_by_date
                 )
             else:
                 return []
