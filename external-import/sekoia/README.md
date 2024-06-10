@@ -1,12 +1,12 @@
-# Sekoia Connector
+# Sekoia CTI Connector
 
 ## Objective
-Collect Sekoia.io CTI feed in an existing self-managed OpenCTI instance for any operational purpose (such as CTI aggregation, dissemination, hunting...).
+Collect Sekoia.io CTI data in an existing self-managed OpenCTI instance for any operational purpose (such as CTI aggregation, dissemination, hunting...).
 
 ## Prerequisites
 - An operational OpenCTI instance with administrator privileges
-- An active Sekoia.io licence with access to the CTI
-- An access to Sekoia.io User Center with the permissions to create an API key with all [CTI permissions](https://docs.sekoia.io/)
+- An active Sekoia.io subscription. It could be a CTI-only subscription ([Sekoia Intelligence](https://www.sekoia.io/en/product/cti/)) or a XDR/SOC platform subscription ([Sekoia Defend](https://www.sekoia.io/en/product/xdr/)) which natively includes Sekoia CTI
+- [Creating a Sekoia.io API KEY](https://docs.sekoia.io/getting_started/manage_api_keys/) with the "View intelligence" premission (at least)
 
 ## Configuration
 
