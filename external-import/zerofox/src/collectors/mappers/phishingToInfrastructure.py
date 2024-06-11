@@ -22,7 +22,7 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
     ]
 ]:
     phishing = Infrastructure(
-        name=f"Phishing domain -- {entry.domain}",
+        name=f"{entry.domain}",
         created=now,
         infrastructure_types=["phishing"],
         first_seen=entry.scanned,

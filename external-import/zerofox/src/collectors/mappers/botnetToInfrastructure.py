@@ -1,6 +1,7 @@
 from typing import List, Union
 
 from stix2 import Infrastructure, Location, Relationship
+from stix2.v21.vocab import INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL
 from zerofox.domain.botnet import Botnet
 
 
@@ -10,7 +11,7 @@ def botnet_to_infrastructure(
     objects = []
 
     botnet = Infrastructure(
-        name=f"Botnet -- {entry.bot_name}",
+        name=f"{entry.bot_name}",
         labels=entry.tags,
         created=now,
         first_seen=entry.listed_at,
@@ -19,7 +20,7 @@ def botnet_to_infrastructure(
     objects.append(botnet)
 
     ip_address = Infrastructure(
-        name=f"IP Address -- {entry.ip_address}",
+        name=f"{entry.ip_address}",
         infrastructure_types="botnet",
     )
     objects.append(ip_address)
@@ -58,12 +59,12 @@ def get_location_objects(entry, ip_address):
 
 def get_c2_objects(entry, botnet):
     c2_domain = Infrastructure(
-        name=f"Command and Control -- {entry.c2_domain}",
-        infrastructure_types="command-and-control",
+        name=f"{entry.c2_domain}",
+        infrastructure_types=INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL,
     )
     c2_ip = Infrastructure(
-        name=f"IP Address -- {entry.c2_ip_address}",
-        infrastructure_types="command-and-control",
+        name=f"{entry.c2_ip_address}",
+        infrastructure_types=INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL,
     )
     domain_ip_rel = Relationship(
         source_ref=c2_domain.id,

@@ -9,7 +9,7 @@ def c2_domains_to_infrastructure(
     now: str, entry: C2Domain
 ) -> List[Union[Infrastructure, Relationship, IPv4Address, IPv6Address]]:
     infrastructure = Infrastructure(
-        name=f"Command and Control -- {entry.domain}",
+        name=f"{entry.domain}",
         labels=entry.tags,
         created=now,
         first_seen=entry.created_at,
