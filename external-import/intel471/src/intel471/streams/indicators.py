@@ -11,10 +11,7 @@ class Intel471IndicatorsStream(Intel471Stream):
     initial_history_key = "indicators_initdate"
 
     def _get_api_kwargs(self, cursor: Union[None, str]) -> dict:
-        kwargs = {
-            "last_updated_from": self._get_initial_history(),
-            "count": 100
-        }
+        kwargs = {"last_updated_from": self._get_initial_history(), "count": 100}
         if cursor:
             kwargs["cursor"] = cursor
         return kwargs
