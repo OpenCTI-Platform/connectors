@@ -1,3 +1,11 @@
+# v1.1.3
+
+- Upgraded `Titan-Client` to version `1.20.0.1`. It provides following changes to STIX mappers:
+  + Adding `x_opencti_main_observable_type` property to Observables
+  + Adding author to Observables
+  + Adding relationships between Observable and Indicator to related reports, so they are mapped correctly in Knowledge tab
+- Fixed paging on IoCs
+
 # v1.1.2  
 
 - Upgraded `Titan-Client` to version `1.19.7.3` to properly handle CVE reports without GiRs.

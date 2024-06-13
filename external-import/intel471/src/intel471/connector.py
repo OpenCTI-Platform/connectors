@@ -107,7 +107,7 @@ class Intel471Connector:
                     state[k] = v
                 self.helper.set_state(state)
                 out_queue.put("ACK")
-            self.helper.log_info(f"Done. Put ACK into queue for task {str(request)}")
+            self.helper.log_info(f"Put ACK into queue for task {str(request)}")
 
     def add_job(self, stream_obj: Intel471Stream, interval: int) -> None:
         self.scheduler.add_job(
