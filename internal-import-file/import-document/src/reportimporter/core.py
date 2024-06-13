@@ -141,15 +141,17 @@ class ReportImporter:
                 result[parse_element_key] = parsed_element_value["match"]
             elif parsed_element_value[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
                 element_id = self._extract_element_id(parsed_element_value)
-                if element_id:
+                if element_id is not None:
                     result[parse_element_key] = element_id
 
         return result
 
     def _extract_element_id(self, data: Dict):
         stix_object = self._process_observable(data)
+        if stix_object is None:
+            return None
         stix_id = stix_object["id"]
-        if stix_id:
+        if stix_id is not None:
             return stix_id
 
     def _resolve_fields_to_analyze(
