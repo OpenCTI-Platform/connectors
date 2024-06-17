@@ -1,5 +1,6 @@
 import base64
 import os
+import json
 import re
 import time
 from datetime import datetime
@@ -20,6 +21,7 @@ from reportimporter.constants import (
     RESULT_FORMAT_CATEGORY,
     RESULT_FORMAT_MATCH,
     RESULT_FORMAT_TYPE,
+    ANALYSIS_TYPE,
 )
 from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
@@ -101,8 +103,7 @@ class ReportImporter:
         os.remove(file_name)
 
         parsed_result = self._extract_elements_id(parsed_data)
-
-        # TODO: upload parsed data to analysis
+        self._push_analysis_results(data, parsed_result)
 
         return "Analysis finished, found " + str(len(parsed_result)) + " elements"
 
@@ -129,9 +130,17 @@ class ReportImporter:
         parsed_data = parser.parse(raw_text_to_analyze)
 
         parsed_result = self._extract_elements_id(parsed_data)
-        # TODO: upload parsed data to analysis
+        self._push_analysis_results(data, parsed_result)
 
         return "Analysis finished, found " + str(len(parsed_result)) + " elements"
+
+    def _push_analysis_results(self, request_data: Dict, parsed_data: Dict):
+        analysis_name = request_data.get("analysis_name", None)
+        content_source = request_data.get("content_source", None)
+        content_type = request_data.get("content_type", None)
+        entity_id = request_data.get("entity_id", None)
+        parsed_data_json = json.dumps(parsed_data)
+        self.helper.api.stix_core_object.push_analysis(entity_id, analysis_name, parsed_data_json, content_source, content_type, ANALYSIS_TYPE)
 
     def _extract_elements_id(self, parsed_elements: Dict):
         result = {}
