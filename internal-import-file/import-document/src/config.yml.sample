@@ -4,7 +4,7 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_IMPORT_FILE'
+  type: 'INTERNAL_IMPORT_FILE' # Or can also be INTERNAL_ANALYSIS for content analysis
   name: 'ImportDocument'
   validate_before_import: true # Validate any bundle before import
   scope: 'application/pdf,text/plain,text/html,text/markdown'
