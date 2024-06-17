@@ -151,9 +151,6 @@ class CrowdStrike:
         importers: List[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
-            crowdstrike = BaseCrowdstrikeClient(self.helper)
-            actors_test = crowdstrike.cs.query_actor_entities("uuu")
-            crowdstrike.handle_api_error(actors_test)
             actor_importer = ActorImporter(
                 self.helper,
                 client.intel_api.actors,

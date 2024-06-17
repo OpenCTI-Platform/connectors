@@ -20,9 +20,6 @@ from typing import (
 )
 
 import stix2
-from crowdstrike_client.api.models import Response
-from crowdstrike_client.api.models.download import Download
-from crowdstrike_client.api.models.report import Entity, Report
 from lxml.html import fromstring  # type: ignore
 from pycti import Identity, Indicator, IntrusionSet, Location, Malware
 from pycti import Report as PyCTIReport
@@ -152,8 +149,8 @@ OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT = ObservationFactory(
 
 
 def paginate(
-    func: Callable[..., Response[T]]
-) -> Callable[..., Generator[List[T], None, None]]:
+    func
+):
     """Paginate API calls."""
 
     @functools.wraps(func)
@@ -177,7 +174,7 @@ def paginate(
         while _next_batch(_limit, _offset, _total):
             response = func(*args, limit=_limit, offset=_offset, **kwargs)
 
-            errors = response.errors
+            errors = response["errors"]
             if errors:
                 logger.error("Query completed with errors")
                 for error in errors:
@@ -485,7 +482,7 @@ def create_sector(name: str, created_by: stix2.Identity) -> stix2.Identity:
 
 
 def create_sector_from_entity(
-    entity: Entity, created_by: stix2.Identity
+    entity, created_by
 ) -> Optional[stix2.Identity]:
     """Create a sector from an entity."""
     name = entity.value
@@ -496,7 +493,7 @@ def create_sector_from_entity(
 
 
 def create_sectors_from_entities(
-    entities: List[Entity], created_by: stix2.Identity
+    entities, created_by: stix2.Identity
 ) -> List[stix2.Identity]:
     """Create sectors from entities."""
     sectors = []
@@ -547,7 +544,7 @@ def create_region(name: str, created_by: stix2.Identity) -> stix2.Location:
 
 
 def create_region_from_entity(
-    entity: Entity, created_by: stix2.Identity
+    entity, created_by: stix2.Identity
 ) -> stix2.Location:
     """Create a region from an entity."""
     name = entity.value
@@ -573,7 +570,7 @@ def create_country(name: str, code: str, created_by: stix2.Identity) -> stix2.Lo
 
 
 def create_country_from_entity(
-    entity: Entity, created_by: stix2.Identity
+    entity, created_by: stix2.Identity
 ) -> stix2.Location:
     """Create a country from an entity."""
     name = entity.value
@@ -770,7 +767,7 @@ def create_object_refs(
     return object_refs
 
 
-def create_tag(entity: Entity, source_name: str, color: str) -> Mapping[str, str]:
+def create_tag(entity, source_name: str, color: str) -> Mapping[str, str]:
     """Create a tag."""
     value = entity.value
     if value is None:
@@ -779,7 +776,7 @@ def create_tag(entity: Entity, source_name: str, color: str) -> Mapping[str, str
     return {"tag_type": source_name, "value": value, "color": color}
 
 
-def create_tags(entities: List[Entity], source_name: str) -> List[Mapping[str, str]]:
+def create_tags(entities, source_name: str) -> List[Mapping[str, str]]:
     """Create tags."""
     color = "#cf3217"
 
@@ -837,7 +834,7 @@ def create_report(
 
 
 def create_stix2_report_from_report(
-    report: Report,
+    report,
     source_name: str,
     created_by: stix2.Identity,
     objects: List[Union[_DomainObject, _RelationshipObject]],
@@ -907,7 +904,7 @@ def create_stix2_report_from_report(
 
 
 def create_regions_and_countries_from_entities(
-    entities: List[Entity], author: stix2.Identity
+    entities: list, author: stix2.Identity
 ) -> Tuple[List[stix2.Location], List[stix2.Location]]:
     """Create regions and countries from given entities."""
     regions = []
@@ -935,7 +932,7 @@ def create_regions_and_countries_from_entities(
     return regions, countries
 
 
-def create_file_from_download(download: Download) -> Mapping[str, Union[str, bool]]:
+def create_file_from_download(download) -> Mapping[str, Union[str, bool]]:
     """Create file mapping from Download model."""
     filename = download.filename
     if filename is None or not filename:

@@ -4,9 +4,7 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
-from crowdstrike_client.api.intel.actors import Actors
-from crowdstrike_client.api.models import Response
-from crowdstrike_client.api.models.actor import Actor
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     paginate,
@@ -29,7 +27,6 @@ class ActorImporter(BaseImporter):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        actors_api: Actors,
         update_existing_data: bool,
         author: Identity,
         default_latest_timestamp: int,
@@ -37,9 +34,7 @@ class ActorImporter(BaseImporter):
     ) -> None:
         """Initialize CrowdStrike actor importer."""
         super().__init__(helper, author, tlp_marking, update_existing_data)
-
-        self.actors_api = actors_api
-
+        self.actors_api_cs = ActorsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -77,7 +72,7 @@ class ActorImporter(BaseImporter):
 
         return {self._LATEST_ACTOR_TIMESTAMP: latest_actor_timestamp}
 
-    def _fetch_actors(self, start_timestamp: int) -> Generator[List[Actor], None, None]:
+    def _fetch_actors(self, start_timestamp: int) -> Generator[List, None, None]:
         limit = 50
         sort = "created_date|asc"
         fql_filter = f"created_date:>{start_timestamp}"
@@ -96,7 +91,7 @@ class ActorImporter(BaseImporter):
         sort: Optional[str] = None,
         fql_filter: Optional[str] = None,
         fields: Optional[List[str]] = None,
-    ) -> Response[Actor]:
+    ):
         self._info(
             "Query actors limit: {0}, offset: {1}, sort: {2}, filter: {3}, fields: {4}",
             limit,
@@ -106,11 +101,12 @@ class ActorImporter(BaseImporter):
             fields,
         )
 
-        return self.actors_api.query_entities(
-            limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
-        )
+        actors = self.actors_api_cs.get_combined_actor_entities(
+            limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields)
 
-    def _process_actors(self, actors: List[Actor]) -> Optional[datetime]:
+        return actors
+
+    def _process_actors(self, actors: List) -> Optional[datetime]:
         actor_count = len(actors)
         self._info("Processing {0} actors...", actor_count)
 
@@ -142,7 +138,7 @@ class ActorImporter(BaseImporter):
 
         return latest_created_datetime
 
-    def _process_actor(self, actor: Actor) -> None:
+    def _process_actor(self, actor) -> None:
         self._info("Processing actor {0} ({1})...", actor.name, actor.id)
 
         actor_bundle = self._create_actor_bundle(actor)
@@ -152,7 +148,7 @@ class ActorImporter(BaseImporter):
 
         self._send_bundle(actor_bundle)
 
-    def _create_actor_bundle(self, actor: Actor) -> Bundle:
+    def _create_actor_bundle(self, actor) -> Bundle:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]
