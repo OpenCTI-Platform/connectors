@@ -140,7 +140,14 @@ class ReportImporter:
         content_type = request_data.get("content_type", None)
         entity_id = request_data.get("entity_id", None)
         parsed_data_json = json.dumps(parsed_data)
-        self.helper.api.stix_core_object.push_analysis(entity_id, analysis_name, parsed_data_json, content_source, content_type, ANALYSIS_TYPE)
+        self.helper.api.stix_core_object.push_analysis(
+            entity_id,
+            analysis_name,
+            parsed_data_json,
+            content_source,
+            content_type,
+            ANALYSIS_TYPE,
+        )
 
     def _extract_elements_id(self, parsed_elements: Dict):
         result = {}
