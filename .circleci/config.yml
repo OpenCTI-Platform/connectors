@@ -894,6 +894,10 @@ jobs:
       - setup_remote_docker
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
+          working_directory: ~/opencti
+          name: Replace pycti requirement of stable version with latest master branch code
+          command: find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
+      - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
           command: docker build -t opencti/connector-import-file-stix:rolling .
@@ -1227,6 +1231,10 @@ jobs:
       - setup_remote_docker
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
+          working_directory: ~/opencti
+          name: Replace pycti requirement of stable version with latest master branch code
+          command: find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
+      - run:
           working_directory: ~/opencti/external-import/sekoia
           name: Build Docker image opencti/connector-sekoia
           command: docker build -t opencti/connector-sekoia:rolling .
@@ -1544,6 +1552,10 @@ jobs:
       - checkout
       - setup_remote_docker
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run:
+          working_directory: ~/opencti
+          name: Replace pycti requirement of stable version with latest master branch code
+          command: find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
           name: Build Docker image opencti/connector-import-file-stix
